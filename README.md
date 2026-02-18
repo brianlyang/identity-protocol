@@ -15,7 +15,29 @@ Identity defines:
 
 - `identity/catalog/` — identity metadata registry and schema
 - `identity/protocol/` — protocol and runtime integration specs
+- `identity/runtime/` — compiled runtime brief
 - `skills/identity-creator/` — creator skill to scaffold/validate identity packs
+- `scripts/` — deterministic compile/validate tooling
+- `docs/` — ADR, roundtable, research, review, migration playbooks
+
+## Quickstart
+
+```bash
+pip install -r requirements-dev.txt
+python scripts/validate_identity_protocol.py
+python scripts/compile_identity_runtime.py
+```
+
+## Governance and operations
+
+- Review checklist:
+  - `docs/review/protocol-review-checklist.md`
+- Roundtable decision notes:
+  - `docs/roundtable/RT-2026-02-18-identity-creator-design.md`
+- Research and source cross-validation:
+  - `docs/research/cross-validation-and-sources.md`
+- Consumer integration and rollback playbook:
+  - `docs/playbooks/weixinstore-consumer-integration.md`
 
 ## Design principles
 
