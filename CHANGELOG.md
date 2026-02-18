@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.3 - 2026-02-18
+
+Protocol completion and consumer ops guidance:
+- added identity-creator command contract draft:
+  - `docs/specs/identity-creator-cli-contract.md`
+- added consumer integration and rollback playbook:
+  - `docs/playbooks/weixinstore-consumer-integration.md`
+- updated root quickstart and governance links:
+  - `README.md`
+
 ## v0.1.2 - 2026-02-18
 
 Protocol operations hardening:
