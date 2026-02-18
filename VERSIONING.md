@@ -5,9 +5,25 @@ This repository uses semantic versioning for protocol releases:
 - MINOR: backward-compatible additions
 - PATCH: fixes and clarifications
 
+## Stable baseline
+
+- `v1.0.0` is the first stable baseline.
+- `v1.x` must preserve the frozen required contract in:
+  - `docs/specs/identity-protocol-contract-v1.0.0.md`
+
 ## Compatibility
 
-Consumer repositories should pin a tag release and upgrade intentionally.
+Consumer repositories should pin a release tag and upgrade intentionally.
+
+### Required compatibility promises in v1.x
+
+- Required catalog fields stay backward compatible.
+- Required runtime keys in `CURRENT_TASK.json` stay backward compatible.
+- Core compile/validate scripts remain functionally available.
+
+### Breaking changes
+
+Any breaking change to required contract must bump MAJOR (`v2.0.0`).
 
 ## Minimum release checklist
 
@@ -15,3 +31,5 @@ Consumer repositories should pin a tag release and upgrade intentionally.
 - registry/schema compatibility reviewed
 - creator scripts validated
 - migration note included if behavior changes
+- changelog updated
+- release tag created
