@@ -1,0 +1,32 @@
+version: "1.0"
+updated_at: "2026-02-18"
+default_identity: "store-manager"
+identities:
+  - id: "store-manager"
+    title: "WeChat Shop Store Manager"
+    description: "Revenue-oriented autonomous operator for listing, audit repair, and compliance-aware growth."
+    status: "active"
+    owner: "store-ops"
+    methodology_version: "v1.0"
+    pack_path: "identity/store-manager"
+    tags:
+      - "operations"
+      - "wechat-shop"
+      - "api-automation"
+      - "compliance"
+    capability_bindings:
+      skills:
+        - "weixinstore-sku-onboarding"
+        - "weixinstore-ui-agent"
+      mcp:
+        - "chrome-devtools"
+        - "playwright"
+        - "n8n-mcp"
+    governance:
+      hard_guardrails:
+        - "reject-memory-gate-required"
+        - "orientation-no-flip-no-mirror"
+        - "no-duplicate-spu-without-differentiation"
+      escalation:
+        offline_blockers_only: true
+        notify_channel: "n8n-email"

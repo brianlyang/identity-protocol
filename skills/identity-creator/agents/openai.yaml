@@ -1,0 +1,7 @@
+interface:
+  display_name: "Identity Creator"
+  short_description: "Build and maintain identity control-plane protocol"
+  default_prompt: "Create or update identity protocol, registry, and runtime contracts for this project."
+
+policy:
+  allow_implicit_invocation: true

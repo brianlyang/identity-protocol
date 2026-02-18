@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://weixinstore.local/identity/catalog/schema/identities.schema.json",
+  "title": "Identity Catalog Schema",
+  "type": "object",
+  "required": ["version", "default_identity", "identities"],
+  "properties": {
+    "version": { "type": "string", "minLength": 1 },
+    "updated_at": { "type": "string", "minLength": 1 },
+    "default_identity": { "type": "string", "minLength": 1 },
+    "identities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "status",
+          "methodology_version",
+          "pack_path"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]{2,64}$" },
+          "title": { "type": "string", "minLength": 3 },
+          "description": { "type": "string", "minLength": 8 },
+          "status": { "type": "string", "enum": ["active", "inactive", "deprecated"] },
+          "owner": { "type": "string" },
+          "methodology_version": { "type": "string" },
+          "pack_path": { "type": "string" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "capability_bindings": {
+            "type": "object",
+            "properties": {
+              "skills": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "mcp": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": true
+          },
+          "governance": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

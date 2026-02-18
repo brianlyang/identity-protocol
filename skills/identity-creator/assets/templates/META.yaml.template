@@ -1,0 +1,8 @@
+id: "<identity-id>"
+title: "<title>"
+description: "<description>"
+status: "active"
+methodology_version: "v1.0"
+owner: "<owner>"
+tags:
+  - "<tag1>"
