@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.0 - 2026-02-18
+
+First stable release:
+- froze protocol contract in:
+  - `docs/specs/identity-protocol-contract-v1.0.0.md`
+- added formal release notes:
+  - `docs/release/v1.0.0-release-notes.md`
+- formalized stable compatibility policy in:
+  - `VERSIONING.md`
+- validated end-to-end workflow with compile/validate scripts and CI pass records
+
 ## v0.1.4 - 2026-02-18
 
 First complete baseline pass with operational closure:
