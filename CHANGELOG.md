@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.4 - 2026-02-18
+
+First complete baseline pass with operational closure:
+- added governance audit template:
+  - `docs/governance/catalog-change-audit-template.md`
+- added v1 completion roadmap:
+  - `docs/release/v1-roadmap.md`
+- added weixinstore upgrade execution checklist:
+  - `docs/playbooks/weixinstore-upgrade-checklist-v0.1.3.md`
+- added deterministic e2e smoke script:
+  - `scripts/e2e_smoke_test.sh`
+- executed local end-to-end tests and confirmed CI success runs on main
+
 ## v0.1.3 - 2026-02-18
 
 Protocol completion and consumer ops guidance:
