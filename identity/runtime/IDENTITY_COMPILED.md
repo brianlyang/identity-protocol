@@ -10,9 +10,11 @@ Hard guardrails:
 - no-duplicate-spu-without-differentiation
 
 Current objective:
-- stable listing throughput with compliance-safe audit pass
+- Run stable listing and reject-recovery with event-first feedback
+
+Current state:
+- doc_crosscheck
 
 See source:
 - identity/catalog/identities.yaml
 - identity/store-manager/CURRENT_TASK.json
-- identity/store-manager/IDENTITY_PROMPT.md

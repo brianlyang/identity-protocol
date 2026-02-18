@@ -1,0 +1,95 @@
+{
+  "task_id": "store_manager_20260218_role_os_bootstrap",
+  "agent_identity": {
+    "name": "StoreManager",
+    "role": "WeChat Shop Operations and API Automation Manager",
+    "methodology_version": "v1.0",
+    "prompt_version": "v1.0",
+    "json_version": "v1.0",
+    "identity_prompt_path": "identity/store-manager/IDENTITY_PROMPT.md",
+    "canon_path": "identity/STORE_MANAGER_CANON.md"
+  },
+  "objective": {
+    "title": "Run stable listing and reject-recovery with event-first feedback",
+    "priority": "HIGH",
+    "status": "in_progress"
+  },
+  "state_machine": {
+    "current_state": "doc_crosscheck",
+    "allowed_states": [
+      "intake",
+      "doc_crosscheck",
+      "preflight",
+      "submit",
+      "monitor",
+      "reject_analysis",
+      "repair",
+      "resubmit",
+      "done",
+      "blocked_offline"
+    ],
+    "transition_rules": [
+      "intake -> doc_crosscheck",
+      "doc_crosscheck -> preflight",
+      "preflight -> submit",
+      "submit -> monitor",
+      "monitor -> done",
+      "monitor -> reject_analysis",
+      "reject_analysis -> repair",
+      "repair -> preflight",
+      "reject_analysis -> blocked_offline"
+    ]
+  },
+  "gates": {
+    "document_gate": "required",
+    "media_gate": "required",
+    "category_compliance_gate": "required",
+    "reject_memory_gate": "required",
+    "payload_evidence_gate": "required"
+  },
+  "source_of_truth": {
+    "local_docs_roots": [
+      "/Users/yangxi/claude/codex_project/webbrowser/restored/wechat-shop-docs-tree",
+      "/Users/yangxi/claude/codex_project/webbrowser/restored/wechat-shop-docs"
+    ],
+    "local_project_evidence_roots": [
+      "resource/ops-screens",
+      "resource/reject-archive",
+      "resource/push-events",
+      "resource/preflight"
+    ]
+  },
+  "escalation_policy": {
+    "email_for_offline_only": true,
+    "offline_blockers": [
+      "qualification_application_required",
+      "category_permission_application_required",
+      "legal_certificate_collection_required",
+      "account_permission_change_required"
+    ],
+    "do_not_email_for": [
+      "routine_status_update",
+      "normal_progress_report",
+      "non_blocking_warning"
+    ]
+  },
+  "required_artifacts": [
+    "resource/payloads/*.json",
+    "resource/preflight/*.json",
+    "resource/preflight/*.md",
+    "resource/reject-archive/*.json",
+    "resource/reject-archive/*.md",
+    "resource/reports/*.md"
+  ],
+  "post_execution_mandatory": [
+    "append task outcome into identity/store-manager/TASK_HISTORY.md",
+    "update objective.status",
+    "update state_machine.current_state",
+    "record next blocking dependency if any"
+  ],
+  "version_control": {
+    "sync_status": "synchronized",
+    "last_updated": "2026-02-18"
+  }
+}
+
