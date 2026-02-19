@@ -14,10 +14,16 @@
 - added validator scripts:
   - `scripts/validate_identity_manifest.py`
   - `scripts/test_identity_discovery_contract.py`
+- added deterministic identity scaffolder:
+  - `scripts/create_identity_pack.py`
 - upgraded e2e smoke test to include manifest + discovery checks
 - upgraded `identity-creator` scaffold to generate `agents/identity.yaml`
 - added benchmark report:
   - `docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md`
+- added operations docs:
+  - `docs/specs/identity-compatibility-matrix.md`
+  - `docs/operations/identity-rollback-drill.md`
+  - `docs/guides/identity-creator-operations.md`
 
 ## v1.0.0 - 2026-02-18
 

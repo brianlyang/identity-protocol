@@ -28,6 +28,8 @@ python scripts/validate_identity_protocol.py
 python scripts/compile_identity_runtime.py
 python scripts/validate_identity_manifest.py
 python scripts/test_identity_discovery_contract.py
+# optional: scaffold a new identity pack
+python scripts/create_identity_pack.py --id quality-supervisor --title \"Quality Supervisor\" --description \"Cross-checks listing quality\" --register
 ```
 
 ## Governance and operations
@@ -38,8 +40,12 @@ python scripts/test_identity_discovery_contract.py
   - `docs/roundtable/RT-2026-02-18-identity-creator-design.md`
 - Research and source cross-validation:
   - `docs/research/cross-validation-and-sources.md`
+  - `docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md`
 - Consumer integration and rollback playbook:
   - `docs/playbooks/weixinstore-consumer-integration.md`
+  - `docs/operations/identity-rollback-drill.md`
+  - `docs/specs/identity-compatibility-matrix.md`
+  - `docs/guides/identity-creator-operations.md`
 
 ## Design principles
 
