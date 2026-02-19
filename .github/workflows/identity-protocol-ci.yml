@@ -1,0 +1,45 @@
+name: identity-protocol-ci
+
+on:
+  pull_request:
+    paths:
+      - 'identity/**'
+      - 'skills/identity-creator/**'
+      - 'scripts/**'
+      - '.github/workflows/identity-protocol-ci.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'identity/**'
+      - 'skills/identity-creator/**'
+      - 'scripts/**'
+
+jobs:
+  validate-identity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install -r requirements-dev.txt
+
+      - name: Validate protocol base
+        run: python3 scripts/validate_identity_protocol.py
+
+      - name: Compile runtime
+        run: python3 scripts/compile_identity_runtime.py
+
+      - name: Validate identity manifest
+        run: python3 scripts/validate_identity_manifest.py
+
+      - name: Discovery contract smoke test
+        run: python3 scripts/test_identity_discovery_contract.py
+
+      - name: Identity creator protocol checks
+        run: bash skills/identity-creator/scripts/validate_identity_protocol.sh .
