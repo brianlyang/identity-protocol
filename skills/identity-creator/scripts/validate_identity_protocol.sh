@@ -8,6 +8,7 @@ required_files=(
   "identity/catalog/identities.yaml"
   "identity/protocol/IDENTITY_PROTOCOL.md"
   "identity/protocol/IDENTITY_RUNTIME.md"
+  "identity/protocol/IDENTITY_DISCOVERY.md"
   "identity/runtime/IDENTITY_COMPILED.md"
 )
 

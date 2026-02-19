@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- benchmarked against:
+  - OpenAI Codex Skills docs (`skills`, `app/features`, `app-server`)
+  - Agent Skills standard (`home`, `specification`, `integrate-skills`, `what-are-skills`)
+- added identity discovery contract draft:
+  - `identity/protocol/IDENTITY_DISCOVERY.md`
+- extended catalog schema and manifest fields:
+  - `interface`, `policy`, `dependencies`, `observability`
+- upgraded reference identity metadata in:
+  - `identity/catalog/identities.yaml`
+- added validator scripts:
+  - `scripts/validate_identity_manifest.py`
+  - `scripts/test_identity_discovery_contract.py`
+- upgraded e2e smoke test to include manifest + discovery checks
+- upgraded `identity-creator` scaffold to generate `agents/identity.yaml`
+- added benchmark report:
+  - `docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md`
+
 ## v1.0.0 - 2026-02-18
 
 First stable release:

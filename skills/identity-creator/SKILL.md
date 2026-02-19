@@ -69,12 +69,15 @@ Use references:
 ### 3) Scaffold identity package
 
 - Use `scripts/init_identity_pack.sh` to generate a new pack scaffold.
+- This scaffold now includes `agents/identity.yaml` (identity manifest draft) for interface/policy/dependencies/observability.
 - Register identity in `identity/catalog/identities.yaml`.
 - Ensure title/description and capability bindings are explicit.
 
 ### 4) Validate runtime contracts
 
 - Use `scripts/validate_identity_protocol.sh` to verify required files and runtime keys.
+- Use `scripts/identity/validate_identity_manifest.py` to validate identity manifest semantics.
+- Use `scripts/identity/test_identity_discovery_contract.py` to verify local `identity/list` draft output.
 - Use `scripts/check_codex_config_paths.py` to verify `.codex/config.toml` path resolution.
 - Ensure runtime task contains mandatory blocks:
   - `objective`

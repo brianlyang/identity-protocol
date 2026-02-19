@@ -36,6 +36,14 @@ Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_p
 
 `default_identity` must reference a valid id.
 
+Optional v1.1 metadata blocks per identity:
+- `interface` (display_name, short_description, default_prompt)
+- `policy` (allow_implicit_activation, activation_priority, conflict_resolution)
+- `dependencies` (tool/env/network/filesystem requirements)
+- `observability` (event_topics, required_artifacts)
+
+See discovery draft: `identity/protocol/IDENTITY_DISCOVERY.md`.
+
 ## Dual-track governance model
 
 ### Track A: hard guardrails

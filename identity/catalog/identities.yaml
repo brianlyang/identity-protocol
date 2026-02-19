@@ -30,3 +30,30 @@ identities:
       escalation:
         offline_blockers_only: true
         notify_channel: "n8n-email"
+    interface:
+      display_name: "Store Manager"
+      short_description: "Autonomous WeChat Shop operator with compliance-first growth."
+      default_prompt: "Operate as store-manager and complete the task with audit-safe outputs."
+    policy:
+      allow_implicit_activation: true
+      activation_priority: 90
+      conflict_resolution: "priority_then_objective"
+    dependencies:
+      tools:
+        - type: "mcp"
+          value: "n8n-mcp"
+          description: "Message push, escalation, and task routing."
+        - type: "mcp"
+          value: "chrome-devtools"
+          description: "Browser validation and visual audit."
+        - type: "network"
+          value: "official-doc-sites"
+          description: "Official docs + web verification when local docs are insufficient."
+    observability:
+      event_topics:
+        - "product.audit_rejected"
+        - "product.audit_passed"
+        - "compliance.offline_required"
+      required_artifacts:
+        - "submission_snapshot.json"
+        - "listing_gate_summary.json"

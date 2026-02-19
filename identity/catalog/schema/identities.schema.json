@@ -50,6 +50,64 @@
           "governance": {
             "type": "object",
             "additionalProperties": true
+          },
+          "interface": {
+            "type": "object",
+            "properties": {
+              "display_name": { "type": "string", "minLength": 1 },
+              "short_description": { "type": "string", "minLength": 1 },
+              "default_prompt": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          },
+          "policy": {
+            "type": "object",
+            "properties": {
+              "allow_implicit_activation": { "type": "boolean" },
+              "activation_priority": { "type": "integer", "minimum": 0, "maximum": 100 },
+              "conflict_resolution": {
+                "type": "string",
+                "enum": [
+                  "priority_then_objective",
+                  "objective_then_priority",
+                  "manual_review"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "dependencies": {
+            "type": "object",
+            "properties": {
+              "tools": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["type", "value"],
+                  "properties": {
+                    "type": { "type": "string", "enum": ["mcp", "env_var", "network", "filesystem_scope"] },
+                    "value": { "type": "string", "minLength": 1 },
+                    "description": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "observability": {
+            "type": "object",
+            "properties": {
+              "event_topics": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "required_artifacts": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": true

@@ -13,6 +13,7 @@ PACK_ROOT="${4:-identity/packs}"
 PACK_DIR="${PACK_ROOT}/${IDENTITY_ID}"
 
 mkdir -p "${PACK_DIR}"
+mkdir -p "${PACK_DIR}/agents"
 
 cat > "${PACK_DIR}/META.yaml" <<META
 id: "${IDENTITY_ID}"
@@ -52,6 +53,25 @@ cat > "${PACK_DIR}/TASK_HISTORY.md" <<'HISTORY'
 
 ## Entries
 HISTORY
+
+cat > "${PACK_DIR}/agents/identity.yaml" <<META
+interface:
+  display_name: "${TITLE}"
+  short_description: "${DESCRIPTION}"
+  default_prompt: "Operate as ${IDENTITY_ID} and satisfy runtime gates."
+
+policy:
+  allow_implicit_activation: true
+  activation_priority: 50
+  conflict_resolution: "priority_then_objective"
+
+dependencies:
+  tools: []
+
+observability:
+  event_topics: []
+  required_artifacts: []
+META
 
 echo "Initialized identity pack at ${PACK_DIR}"
 echo "Next: register this pack in identity/catalog/identities.yaml"

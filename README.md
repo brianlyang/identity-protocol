@@ -26,6 +26,8 @@ Identity defines:
 pip install -r requirements-dev.txt
 python scripts/validate_identity_protocol.py
 python scripts/compile_identity_runtime.py
+python scripts/validate_identity_manifest.py
+python scripts/test_identity_discovery_contract.py
 ```
 
 ## Governance and operations
@@ -48,5 +50,6 @@ python scripts/compile_identity_runtime.py
 
 ## Status
 
-- Protocol version: `v1.0` (draft)
-- Creator skill: `identity-creator` (bootstrap)
+- Protocol version: `v1.1` (benchmark-hardened draft)
+- Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
+- Creator skill: `identity-creator` (manifest-aware scaffold + validators)
