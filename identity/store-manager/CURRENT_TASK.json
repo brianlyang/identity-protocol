@@ -117,7 +117,8 @@
       "required_checks": [
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
-        "scripts/validate_identity_update_lifecycle.py"
+        "scripts/validate_identity_update_lifecycle.py",
+        "scripts/validate_identity_trigger_regression.py"
       ],
       "must_pass_all": true
     },
@@ -126,6 +127,20 @@
       "replay_same_case_required": true,
       "replay_fail_action": "reenter_identity_update_loop"
     }
+  },
+  "trigger_regression_contract": {
+    "required": true,
+    "required_suites": [
+      "positive_cases",
+      "boundary_cases",
+      "negative_cases"
+    ],
+    "result_enum": [
+      "PASS",
+      "FAIL"
+    ],
+    "sample_report_path_pattern": "identity/runtime/examples/*trigger-regression*.json",
+    "fail_action": "block_merge_and_reenter_identity_update"
   },
   "evaluation_contract": {
     "required_evidence_triplet": [
