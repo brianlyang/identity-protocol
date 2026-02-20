@@ -45,11 +45,53 @@
     "media_gate": "required",
     "category_compliance_gate": "required",
     "reject_memory_gate": "required",
+    "protocol_baseline_review_gate": "required",
     "payload_evidence_gate": "required",
     "multimodal_consistency_gate": "required",
     "reasoning_loop_gate": "required",
     "routing_gate": "required",
     "rulebook_gate": "required"
+  },
+  "protocol_review_contract": {
+    "required_before": [
+      "identity_capability_upgrade",
+      "identity_architecture_decision"
+    ],
+    "must_review_sources": [
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "identity/protocol/IDENTITY_PROTOCOL.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://developers.openai.com/codex/skills/"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://agentskills.io/specification"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://modelcontextprotocol.io/specification/latest"
+      }
+    ],
+    "required_evidence_fields": [
+      "review_id",
+      "reviewed_at",
+      "reviewer_identity",
+      "purpose",
+      "sources_reviewed",
+      "findings",
+      "decision"
+    ],
+    "evidence_report_path_pattern": "identity/runtime/examples/protocol-baseline-review-*.json",
+    "max_review_age_days": 7
   },
   "evaluation_contract": {
     "required_evidence_triplet": [

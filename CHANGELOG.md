@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **baseline-review hardening for identity upgrades**:
+  - README now documents a mandatory protocol baseline review gate for identity capability upgrades
+  - protocol upgraded to `v1.2.3 (draft)` with `protocol_review_contract` requirements
+  - runtime integration spec now includes baseline-review validation before identity-upgrade conclusions
+- runtime contract control capability added:
+  - `identity/store-manager/CURRENT_TASK.json` now includes `gates.protocol_baseline_review_gate=required`
+  - `identity/store-manager/CURRENT_TASK.json` now includes `protocol_review_contract` and evidence-path requirement
+  - sample evidence added: `identity/runtime/examples/protocol-baseline-review-sample.json`
+- validator hardening:
+  - `scripts/validate_identity_runtime_contract.py` now validates protocol baseline review evidence when gate is required
+  - checks required evidence fields + mandatory source coverage (identity-protocol + skills + MCP references)
+
 - protocol alignment hardening for skill/mcp-style determinism:
   - upgraded `identity/protocol/IDENTITY_PROTOCOL.md` to `v1.2.2 (draft)`
   - added explicit four core capability contracts (judgement/reasoning/routing/rule-learning)

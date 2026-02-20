@@ -34,6 +34,15 @@ REQ_GATES = [
 ]
 
 
+REQUIRED_PROTOCOL_SOURCES = [
+    "brianlyang/identity-protocol::identity/protocol/IDENTITY_PROTOCOL.md",
+    "brianlyang/identity-protocol::docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md",
+    "https://developers.openai.com/codex/skills/",
+    "https://agentskills.io/specification",
+    "https://modelcontextprotocol.io/specification/latest",
+]
+
+
 def _fail(msg: str) -> int:
     print(f"[FAIL] {msg}")
     return 1
@@ -75,6 +84,96 @@ def _resolve_current_task(catalog_path: Path, override: str) -> Path:
         return legacy
 
     raise FileNotFoundError("CURRENT_TASK.json not found from catalog default identity")
+
+
+def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[str]]:
+    rc = 0
+    logs: list[str] = []
+
+    gates = data.get("gates") or {}
+    needs_protocol_gate = gates.get("protocol_baseline_review_gate") == "required"
+    if not needs_protocol_gate:
+        return rc, logs
+
+    logs.append("[OK]   gates.protocol_baseline_review_gate=required")
+
+    prc = data.get("protocol_review_contract") or {}
+    if not isinstance(prc, dict) or not prc:
+        return 1, logs + ["[FAIL] protocol_review_contract must exist when protocol_baseline_review_gate is required"]
+
+    sources = prc.get("must_review_sources") or []
+    if not isinstance(sources, list) or not sources:
+        rc = 1
+        logs.append("[FAIL] protocol_review_contract.must_review_sources must be non-empty array")
+    else:
+        logs.append("[OK]   protocol_review_contract.must_review_sources is non-empty")
+
+    req_fields = prc.get("required_evidence_fields") or []
+    if not isinstance(req_fields, list) or not req_fields:
+        rc = 1
+        logs.append("[FAIL] protocol_review_contract.required_evidence_fields must be non-empty array")
+    else:
+        logs.append("[OK]   protocol_review_contract.required_evidence_fields is non-empty")
+
+    pattern = str(prc.get("evidence_report_path_pattern") or "")
+    if not pattern:
+        rc = 1
+        logs.append("[FAIL] protocol_review_contract.evidence_report_path_pattern missing")
+        return rc, logs
+
+    evidence_files = sorted(Path(".").glob(pattern))
+    if not evidence_files:
+        rc = 1
+        logs.append(f"[FAIL] no protocol review evidence file matched: {pattern}")
+        return rc, logs
+
+    latest = evidence_files[-1]
+    logs.append(f"[OK]   found protocol review evidence: {latest}")
+    try:
+        evidence = _load_json(latest)
+    except Exception as e:
+        return 1, logs + [f"[FAIL] protocol review evidence invalid json: {e}"]
+
+    missing_fields = [k for k in req_fields if k not in evidence]
+    if missing_fields:
+        rc = 1
+        logs.append(f"[FAIL] protocol review evidence missing fields: {missing_fields}")
+    else:
+        logs.append("[OK]   protocol review evidence required fields present")
+
+    source_sig: set[str] = set()
+    for s in evidence.get("sources_reviewed") or []:
+        if not isinstance(s, dict):
+            continue
+        if s.get("repo") and s.get("path"):
+            source_sig.add(f"{s.get('repo')}::{s.get('path')}")
+        if s.get("url"):
+            source_sig.add(str(s.get("url")))
+
+    expected_sig: list[str] = []
+    for s in sources:
+        if not isinstance(s, dict):
+            continue
+        if s.get("repo") and s.get("path"):
+            expected_sig.append(f"{s.get('repo')}::{s.get('path')}")
+        elif s.get("url"):
+            expected_sig.append(str(s.get("url")))
+
+    missing_sources = [sig for sig in expected_sig if sig not in source_sig]
+    if missing_sources:
+        rc = 1
+        logs.append(f"[FAIL] protocol review evidence missing mandatory source(s): {missing_sources}")
+    else:
+        logs.append("[OK]   protocol review evidence covers mandatory sources")
+
+    baseline_missing = [sig for sig in REQUIRED_PROTOCOL_SOURCES if sig not in source_sig]
+    if baseline_missing:
+        rc = 1
+        logs.append(f"[FAIL] protocol review evidence missing baseline source(s): {baseline_missing}")
+    else:
+        logs.append("[OK]   protocol review evidence covers skill/mcp/protocol baseline set")
+
+    return rc, logs
 
 
 def main() -> int:
@@ -132,6 +231,11 @@ def main() -> int:
         rc = 1
     else:
         print("[OK]   evaluation_contract.consistency_required=true")
+
+    prc_rc, prc_logs = _validate_protocol_review_contract(data)
+    for ln in prc_logs:
+        print(ln)
+    rc = max(rc, prc_rc)
 
     rl = data.get("reasoning_loop_contract") or {}
     required_attempt_fields = {"attempt", "hypothesis", "patch", "expected_effect", "result"}

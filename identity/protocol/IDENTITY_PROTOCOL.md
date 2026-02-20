@@ -1,4 +1,4 @@
-# Identity Protocol v1.2.2 (draft)
+# Identity Protocol v1.2.3 (draft)
 
 ## Goal
 
@@ -66,6 +66,25 @@ Identity protocol must be verifiable against four capability contracts:
    - Requires append-only rulebook linkage to run evidence.
    - Requires both negative and positive rule accumulation over time.
 
+## Protocol baseline review contract (new in v1.2.3)
+
+To avoid identity-level drift and unsupported architectural conclusions, identity upgrades MUST include baseline protocol review evidence.
+
+When task intent involves identity-capability upgrades or architecture decisions:
+
+- `gates.protocol_baseline_review_gate` MUST be `required`.
+- `protocol_review_contract` MUST exist in CURRENT_TASK and include:
+  - `must_review_sources` (required canonical references)
+  - `required_evidence_fields`
+  - `evidence_report_path_pattern`
+
+A valid review evidence record MUST include, at minimum:
+- review id/time/reviewer
+- purpose
+- reviewed source list
+- findings
+- decision
+
 ## Dual-track governance model
 
 ### Track A: hard guardrails
@@ -75,6 +94,7 @@ Non-bypassable constraints:
 - rejection memory constraints
 - media integrity constraints
 - escalation triggers
+- protocol baseline review gate for identity-upgrade decisions
 
 ### Track B: adaptive growth
 
@@ -98,6 +118,9 @@ Minimum required blocks:
 - `routing_contract`
 - `rulebook_contract`
 
+Conditional required block for identity-upgrade tasks:
+- `protocol_review_contract`
+
 ## Conflict resolution
 
 Priority order:
@@ -112,6 +135,7 @@ To reduce protocol drift and avoid ad-hoc logic:
 - Identity must remain declarative and schema-verifiable (like skill metadata discipline).
 - Runtime decisions must be contract-driven and testable (like MCP interface determinism).
 - Discovery, validation, and release gates must be explicit and automated.
+- Identity conclusions for protocol upgrades must be source-cited and evidence-backed.
 
 ## Email escalation policy
 

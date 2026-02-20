@@ -24,7 +24,8 @@ Project extension features:
 3. Read active identity from `identity/catalog/identities.yaml` (`default_identity` or override).
 4. Validate identity pack exists and required files are present.
 5. Validate CURRENT_TASK minimum required blocks.
-6. Allow execution.
+6. Validate baseline-review evidence if `protocol_baseline_review_gate` is `required`.
+7. Allow execution.
 
 If validation fails, block high-impact actions and require repair.
 
@@ -42,6 +43,10 @@ Before high-impact actions (listing/relisting/repricing):
 - guardrails present
 - reject-memory gate present
 - payload evidence path present
+
+Before identity-level capability upgrade conclusions:
+- protocol baseline review gate must pass
+- review evidence must include mandatory sources and decision trace
 
 ## Post-action requirements
 
