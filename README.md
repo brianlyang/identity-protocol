@@ -28,8 +28,9 @@ python scripts/validate_identity_protocol.py
 python scripts/compile_identity_runtime.py
 python scripts/validate_identity_manifest.py
 python scripts/test_identity_discovery_contract.py
+python scripts/validate_identity_runtime_contract.py
 # optional: scaffold a new identity pack
-python scripts/create_identity_pack.py --id quality-supervisor --title \"Quality Supervisor\" --description \"Cross-checks listing quality\" --register
+python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 ```
 
 ## Governance and operations
@@ -46,6 +47,8 @@ python scripts/create_identity_pack.py --id quality-supervisor --title \"Quality
   - `docs/operations/identity-rollback-drill.md`
   - `docs/specs/identity-compatibility-matrix.md`
   - `docs/guides/identity-creator-operations.md`
+- Runtime bottom guardrails (ORRL):
+  - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
 
 ## Design principles
 
@@ -53,9 +56,10 @@ python scripts/create_identity_pack.py --id quality-supervisor --title \"Quality
 2. Keep compatibility with native Codex config (`skills`, `mcp_servers`, `model_instructions_file`).
 3. Keep identity concise, deterministic, and auditable.
 4. Keep conflict resolution explicit: `canon > runtime > skill > tool preference`.
+5. Require ORRL (Observe/Reason/Route/Ledger) gates for high-impact runs.
 
 ## Status
 
-- Protocol version: `v1.1` (benchmark-hardened draft)
+- Protocol version: `v1.2` (ORRL-bottom-guardrail draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (manifest-aware scaffold + validators)
