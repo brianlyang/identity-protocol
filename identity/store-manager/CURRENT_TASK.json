@@ -126,6 +126,12 @@
         "RULEBOOK.jsonl",
         "TASK_HISTORY.md"
       ],
+      "required_file_paths": [
+        "identity/store-manager/CURRENT_TASK.json",
+        "identity/store-manager/IDENTITY_PROMPT.md",
+        "identity/store-manager/RULEBOOK.jsonl",
+        "identity/store-manager/TASK_HISTORY.md"
+      ],
       "required_rulebook_update": true
     },
     "validation_contract": {
@@ -140,7 +146,14 @@
     "replay_contract": {
       "replay_required": true,
       "replay_same_case_required": true,
-      "replay_fail_action": "reenter_identity_update_loop"
+      "replay_fail_action": "reenter_identity_update_loop",
+      "evidence_path_pattern": "identity/runtime/examples/*update-replay*.json",
+      "required_fields": [
+        "identity_id",
+        "replay_status",
+        "patched_files",
+        "validation_checks_passed"
+      ]
     }
   },
   "trigger_regression_contract": {
@@ -225,8 +238,8 @@
   },
   "source_of_truth": {
     "local_docs_roots": [
-      "/Users/yangxi/claude/codex_project/webbrowser/restored/wechat-shop-docs-tree",
-      "/Users/yangxi/claude/codex_project/webbrowser/restored/wechat-shop-docs"
+      "../webbrowser/restored/wechat-shop-docs-tree",
+      "../webbrowser/restored/wechat-shop-docs"
     ],
     "local_project_evidence_roots": [
       "resource/ops-screens",

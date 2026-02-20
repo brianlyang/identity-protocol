@@ -11,8 +11,18 @@ import yaml
 from jsonschema import validate as jsonschema_validate
 
 REQ_TASK_KEYS = {
-    "objective", "state_machine", "gates", "source_of_truth",
-    "escalation_policy", "required_artifacts", "post_execution_mandatory",
+    "objective",
+    "state_machine",
+    "gates",
+    "source_of_truth",
+    "escalation_policy",
+    "required_artifacts",
+    "post_execution_mandatory",
+    "evaluation_contract",
+    "reasoning_loop_contract",
+    "routing_contract",
+    "rulebook_contract",
+    "learning_verification_contract",
 }
 
 REQ_PACK_FILES = [
@@ -115,12 +125,25 @@ def main() -> int:
                 print(f"[FAIL] {prefix} invalid CURRENT_TASK.json: {e}")
                 rc = 1
                 continue
+
             missing = [k for k in sorted(REQ_TASK_KEYS) if k not in task]
             if missing:
-                print(f"[FAIL] {prefix} CURRENT_TASK missing keys: {missing}")
+                print(f"[FAIL] {prefix} CURRENT_TASK missing core runtime keys: {missing}")
                 rc = 1
             else:
-                print(f"[OK]   {identity_id}: CURRENT_TASK minimum keys present")
+                print(f"[OK]   {identity_id}: CURRENT_TASK core runtime keys present")
+
+            gates = task.get("gates") or {}
+            if gates.get("protocol_baseline_review_gate") == "required" and "protocol_review_contract" not in task:
+                print(f"[FAIL] {prefix} protocol_baseline_review_gate=required but protocol_review_contract missing")
+                rc = 1
+            if gates.get("identity_update_gate") == "required" and "identity_update_lifecycle_contract" not in task:
+                print(f"[FAIL] {prefix} identity_update_gate=required but identity_update_lifecycle_contract missing")
+                rc = 1
+
+            if "identity_update_lifecycle_contract" in task and "trigger_regression_contract" not in task:
+                print(f"[FAIL] {prefix} identity_update_lifecycle_contract exists but trigger_regression_contract missing")
+                rc = 1
 
     if not has_default:
         print(f"[FAIL] default_identity {default_id} is not present in identities")
