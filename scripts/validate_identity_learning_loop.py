@@ -25,31 +25,31 @@ def _fail(msg: str) -> int:
     return 1
 
 
-def _resolve_current_task(catalog_path: Path, override: str) -> tuple[Path, str]:
+def _resolve_current_task(catalog_path: Path, override: str, identity_id: str) -> tuple[Path, str]:
     if override:
         p = Path(override)
         if not p.exists():
             raise FileNotFoundError(f"override current task not found: {p}")
-        return p, "(override)"
+        return p, identity_id or "(override)"
 
     catalog = _load_yaml(catalog_path)
-    default_id = str(catalog.get("default_identity", "")).strip()
+    target_id = identity_id or str(catalog.get("default_identity", "")).strip()
     identities = catalog.get("identities") or []
-    active = next((x for x in identities if str(x.get("id", "")).strip() == default_id), None)
+    active = next((x for x in identities if str(x.get("id", "")).strip() == target_id), None)
     if not active:
-        raise FileNotFoundError(f"default identity not found in catalog: {default_id}")
+        raise FileNotFoundError(f"identity not found in catalog: {target_id}")
 
     pack_path = str(active.get("pack_path", "")).strip()
     if pack_path:
         p = Path(pack_path) / "CURRENT_TASK.json"
         if p.exists():
-            return p, default_id
+            return p, target_id
 
-    legacy = Path("identity") / default_id / "CURRENT_TASK.json"
+    legacy = Path("identity") / target_id / "CURRENT_TASK.json"
     if legacy.exists():
-        return legacy, default_id
+        return legacy, target_id
 
-    raise FileNotFoundError("CURRENT_TASK.json not found from catalog default identity")
+    raise FileNotFoundError("CURRENT_TASK.json not found from catalog identity")
 
 
 def _resolve_run_report(identity_id: str, override: str) -> Path:
@@ -67,6 +67,7 @@ def _resolve_run_report(identity_id: str, override: str) -> Path:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity learning loop evidence (reasoning + rulebook linkage)")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--identity-id", default="", help="validate for explicit identity id")
     ap.add_argument("--current-task", default="")
     ap.add_argument("--run-report", default="")
     ap.add_argument("--rulebook", default="")
@@ -77,7 +78,7 @@ def main() -> int:
         return _fail(f"missing catalog: {catalog_path}")
 
     try:
-        task_path, identity_id = _resolve_current_task(catalog_path, args.current_task)
+        task_path, identity_id = _resolve_current_task(catalog_path, args.current_task, args.identity_id)
     except Exception as e:
         return _fail(str(e))
 
