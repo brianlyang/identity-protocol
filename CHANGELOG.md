@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+- **master/sub anti-drift handoff contract hardening (v1.2.7 draft)**:
+  - added canonical handoff spec:
+    - `identity/protocol/AGENT_HANDOFF_CONTRACT.md`
+  - added validator:
+    - `scripts/validate_agent_handoff_contract.py`
+  - validator enforces:
+    - required handoff payload fields
+    - artifacts path + kind checks
+    - executable next_action fields
+    - forbidden mutation detection
+    - rulebook evidence linkage when rulebook update applied
+  - added self-test sample packs:
+    - positive samples: `identity/runtime/examples/handoff/positive/*.json`
+    - negative samples: `identity/runtime/examples/handoff/negative/*.json`
+  - added evidence artifacts for positive samples:
+    - `identity/runtime/examples/handoff/artifacts/*`
+  - runtime contract upgraded:
+    - `gates.agent_handoff_gate=required`
+    - `agent_handoff_contract` block added in `identity/store-manager/CURRENT_TASK.json`
+    - lifecycle `validation_contract.required_checks` now includes handoff validator
+  - CI required pipeline updated (both workflows):
+    - `.github/workflows/protocol-ci.yml`
+    - `.github/workflows/identity-protocol-ci.yml`
+    - now runs `python scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test`
+  - e2e smoke updated to include handoff validator in gate chain:
+    - `scripts/e2e_smoke_test.sh`
+  - protocol and README fast-review path updated to include handoff contract:
+    - `identity/protocol/IDENTITY_PROTOCOL.md`
+    - `README.md`
+
 - **audit hardening (v1.2.6 draft)**:
   - CI now enforces required gate chain for active identities in both workflows:
     - `.github/workflows/protocol-ci.yml`

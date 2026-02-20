@@ -1,0 +1,27 @@
+{
+  "handoff_id": "handoff-2026-02-20-neg-003",
+  "task_id": "task-10000514174106-visual-repair",
+  "from_agent": "store-manager-master",
+  "to_agent": "weixinstore-ui-agent",
+  "input_scope": "negative sample: artifact file missing",
+  "actions_taken": [
+    "prepared replay request"
+  ],
+  "artifacts": [
+    {
+      "path": "identity/runtime/examples/handoff/artifacts/not-exists.md",
+      "kind": "replay_evidence"
+    }
+  ],
+  "result": "BLOCKED",
+  "next_action": {
+    "owner": "weixinstore-ui-agent",
+    "action": "Upload valid artifact and retry",
+    "input": "replay_case=visual_quality_regression"
+  },
+  "rulebook_update": {
+    "applied": false,
+    "evidence_run_id": ""
+  },
+  "attempted_mutations": []
+}

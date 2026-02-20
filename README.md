@@ -33,6 +33,7 @@ python scripts/validate_identity_upgrade_prereq.py --identity-id store-manager
 python scripts/validate_identity_update_lifecycle.py --identity-id store-manager
 python scripts/validate_identity_trigger_regression.py --identity-id store-manager
 python scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
+python scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test
 # optional: scaffold a new identity pack
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 ```
@@ -46,6 +47,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 3. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md` (strategy/capability/execution collaboration)
 4. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
 5. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
+6. `identity/protocol/AGENT_HANDOFF_CONTRACT.md` (master/sub anti-drift contract)
 
 ## Governance and operations
 
@@ -119,6 +121,17 @@ This is enforced via runtime key:
 Validation is executed by:
 - `scripts/validate_identity_trigger_regression.py`
 
+## Master/Sub handoff contract (MUST)
+
+Delegated execution must emit structured handoff payloads and must not mutate top-level runtime contracts.
+
+This is enforced via runtime keys:
+- `gates.agent_handoff_gate = "required"`
+- `agent_handoff_contract`
+
+Validation is executed by:
+- `scripts/validate_agent_handoff_contract.py`
+
 ## Design principles
 
 1. Align with official Codex skills model and discovery behavior.
@@ -130,9 +143,10 @@ Validation is executed by:
 7. Require protocol baseline review evidence before identity-level upgrade conclusions.
 8. Require skill-style identity update lifecycle (trigger/patch/validate/replay).
 9. Require skill-style identity trigger regression (positive/boundary/negative).
+10. Require master/sub handoff payload validation and mutation-safety checks.
 
 ## Status
 
-- Protocol version: `v1.2.5` (draft)
+- Protocol version: `v1.2.7` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

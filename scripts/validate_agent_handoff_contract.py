@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-REQ_FIELDS = [
+DEFAULT_REQ_FIELDS = [
     "handoff_id",
     "task_id",
     "from_agent",
@@ -21,8 +21,8 @@ REQ_FIELDS = [
     "rulebook_update",
 ]
 
-ALLOWED_RESULTS = {"PASS", "FAIL", "BLOCKED"}
-FORBIDDEN_MUTATIONS = {
+DEFAULT_ALLOWED_RESULTS = {"PASS", "FAIL", "BLOCKED"}
+DEFAULT_FORBIDDEN_MUTATIONS = {
     "gates",
     "protocol_review_contract",
     "identity_update_lifecycle_contract",
@@ -38,7 +38,10 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be object: {path}")
+    return data
 
 
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
@@ -68,7 +71,18 @@ def _iter_handoff_files(pattern: str, explicit_file: str) -> list[Path]:
     return sorted(Path(".").glob(pattern))
 
 
-def _validate_record(path: Path) -> tuple[int, list[str]]:
+def _bad_placeholder(value: str) -> bool:
+    v = value.strip().lower()
+    return v in {"todo", "tbd", "n/a", "none", "pending", "later"}
+
+
+def _validate_record(
+    path: Path,
+    *,
+    req_fields: list[str],
+    allowed_results: set[str],
+    forbidden_mutations: set[str],
+) -> tuple[int, list[str]]:
     logs: list[str] = []
     rc = 0
 
@@ -77,13 +91,13 @@ def _validate_record(path: Path) -> tuple[int, list[str]]:
     except Exception as e:
         return 1, [f"[FAIL] invalid handoff json {path}: {e}"]
 
-    missing = [k for k in REQ_FIELDS if k not in rec]
+    missing = [k for k in req_fields if k not in rec]
     if missing:
         logs.append(f"[FAIL] {path} missing required fields: {missing}")
         return 1, logs
 
-    if str(rec.get("result")) not in ALLOWED_RESULTS:
-        logs.append(f"[FAIL] {path} result must be one of {sorted(ALLOWED_RESULTS)}")
+    if str(rec.get("result")) not in allowed_results:
+        logs.append(f"[FAIL] {path} result must be one of {sorted(allowed_results)}")
         rc = 1
 
     if not isinstance(rec.get("actions_taken"), list) or not rec.get("actions_taken"):
@@ -100,12 +114,19 @@ def _validate_record(path: Path) -> tuple[int, list[str]]:
                 logs.append(f"[FAIL] {path} artifacts[{i}] must be object")
                 rc = 1
                 continue
+
             p = str(a.get("path") or "").strip()
+            k = str(a.get("kind") or "").strip()
             if not p:
                 logs.append(f"[FAIL] {path} artifacts[{i}].path missing")
                 rc = 1
                 continue
-            if not Path(p).exists():
+            if not k:
+                logs.append(f"[FAIL] {path} artifacts[{i}].kind missing")
+                rc = 1
+
+            artifact_path = Path(p)
+            if not artifact_path.exists():
                 logs.append(f"[FAIL] {path} artifacts[{i}].path not found: {p}")
                 rc = 1
 
@@ -115,12 +136,16 @@ def _validate_record(path: Path) -> tuple[int, list[str]]:
         rc = 1
     else:
         for k in ["owner", "action", "input"]:
-            if not str(next_action.get(k) or "").strip():
+            value = str(next_action.get(k) or "").strip()
+            if not value:
                 logs.append(f"[FAIL] {path} next_action.{k} missing/empty")
+                rc = 1
+            elif _bad_placeholder(value):
+                logs.append(f"[FAIL] {path} next_action.{k} is placeholder: {value}")
                 rc = 1
 
     attempted = set(rec.get("attempted_mutations") or [])
-    forbidden = sorted(FORBIDDEN_MUTATIONS.intersection(attempted))
+    forbidden = sorted(forbidden_mutations.intersection(attempted))
     if forbidden:
         logs.append(f"[FAIL] {path} attempted forbidden mutations: {forbidden}")
         rc = 1
@@ -130,6 +155,9 @@ def _validate_record(path: Path) -> tuple[int, list[str]]:
         logs.append(f"[FAIL] {path} rulebook_update must be object")
         rc = 1
     else:
+        if "applied" not in rulebook:
+            logs.append(f"[FAIL] {path} rulebook_update.applied missing")
+            rc = 1
         applied = bool(rulebook.get("applied"))
         if applied and not str(rulebook.get("evidence_run_id") or "").strip():
             logs.append(f"[FAIL] {path} rulebook_update.applied=true requires evidence_run_id")
@@ -140,7 +168,13 @@ def _validate_record(path: Path) -> tuple[int, list[str]]:
     return rc, logs
 
 
-def _run_self_test(sample_root: Path) -> int:
+def _run_self_test(
+    sample_root: Path,
+    *,
+    req_fields: list[str],
+    allowed_results: set[str],
+    forbidden_mutations: set[str],
+) -> int:
     pos = sorted((sample_root / "positive").glob("*.json"))
     neg = sorted((sample_root / "negative").glob("*.json"))
 
@@ -150,7 +184,12 @@ def _run_self_test(sample_root: Path) -> int:
 
     rc = 0
     for p in pos:
-        prc, logs = _validate_record(p)
+        prc, logs = _validate_record(
+            p,
+            req_fields=req_fields,
+            allowed_results=allowed_results,
+            forbidden_mutations=forbidden_mutations,
+        )
         for ln in logs:
             print(ln)
         if prc != 0:
@@ -158,7 +197,12 @@ def _run_self_test(sample_root: Path) -> int:
             rc = 1
 
     for n in neg:
-        nrc, logs = _validate_record(n)
+        nrc, logs = _validate_record(
+            n,
+            req_fields=req_fields,
+            allowed_results=allowed_results,
+            forbidden_mutations=forbidden_mutations,
+        )
         for ln in logs:
             print(ln)
         if nrc == 0:
@@ -185,10 +229,21 @@ def main() -> int:
         return 1
 
     task = _load_json(task_path)
+
+    gates = task.get("gates") or {}
+    if gates.get("agent_handoff_gate") != "required":
+        print("[FAIL] gates.agent_handoff_gate must be required")
+        return 1
+    print("[OK] gates.agent_handoff_gate=required")
+
     contract = task.get("agent_handoff_contract") or {}
     if not isinstance(contract, dict) or not contract:
         print("[FAIL] missing agent_handoff_contract in CURRENT_TASK")
         return 1
+
+    req_fields = [str(x) for x in (contract.get("required_fields") or DEFAULT_REQ_FIELDS)]
+    allowed_results = set(contract.get("result_enum") or DEFAULT_ALLOWED_RESULTS)
+    forbidden_mutations = set(contract.get("forbidden_mutations") or DEFAULT_FORBIDDEN_MUTATIONS)
 
     pattern = str(contract.get("handoff_log_path_pattern") or "")
     if not pattern and not args.file:
@@ -202,14 +257,27 @@ def main() -> int:
 
     rc = 0
     for p in files:
-        irc, logs = _validate_record(p)
+        irc, logs = _validate_record(
+            p,
+            req_fields=req_fields,
+            allowed_results=allowed_results,
+            forbidden_mutations=forbidden_mutations,
+        )
         for ln in logs:
             print(ln)
         rc = max(rc, irc)
 
     if args.self_test:
         sample_root = Path("identity/runtime/examples/handoff")
-        rc = max(rc, _run_self_test(sample_root))
+        rc = max(
+            rc,
+            _run_self_test(
+                sample_root,
+                req_fields=req_fields,
+                allowed_results=allowed_results,
+                forbidden_mutations=forbidden_mutations,
+            ),
+        )
 
     if rc == 0:
         print("validate_agent_handoff_contract PASSED")

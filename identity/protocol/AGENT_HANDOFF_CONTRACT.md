@@ -1,10 +1,10 @@
-# Agent Handoff Contract (Master/Sub) v1.0
+# Agent Handoff Contract v1.2.7 (draft)
 
 ## Purpose
 
 Define a strict, auditable handoff protocol between master and sub agents to prevent scope drift.
 
-This contract is identity-level control plane policy and is scenario-agnostic.
+This contract is identity-level control-plane policy and is scenario-agnostic.
 
 ---
 
@@ -69,7 +69,7 @@ The following are contract violations:
 
 - each artifact item should include `path` and `kind`
 - artifact path must be readable from repo context
-- `rulebook_update.evidence_run_id` required when `rulebook_update.applied=true`
+- `rulebook_update.evidence_run_id` is required when `rulebook_update.applied=true`
 
 ---
 
@@ -95,6 +95,10 @@ Use:
 Recommended CI mode:
 - run handoff validator for active identities
 - run positive and negative samples in self-test mode
+
+Sample logs live in:
+- `identity/runtime/examples/handoff/positive/`
+- `identity/runtime/examples/handoff/negative/`
 
 ---
 
