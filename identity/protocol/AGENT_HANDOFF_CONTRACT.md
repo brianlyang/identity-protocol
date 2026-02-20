@@ -73,21 +73,23 @@ The following are contract violations:
 
 ---
 
-## Production log contract (new in v1.2.9)
+## Production + sample dual-track validation (new in v1.2.9)
 
-Handoff validation must not rely only on example/self-test logs.
+Handoff validation must run in two tracks:
 
-Runtime contract should point to production path, e.g.:
-- `identity/runtime/logs/handoff/*.json`
+1) Production track:
+- validate runtime logs from production path, e.g.:
+  - `identity/runtime/logs/handoff/*.json`
+- enforce minimum log count
+- enforce freshness (`generated_at` max age)
+- enforce cross-file consistency (`task_id` + `identity_id`)
 
-Recommended runtime keys in `agent_handoff_contract`:
-- `handoff_log_path_pattern`
-- `minimum_logs_required`
-- `require_generated_at`
-- `max_log_age_days`
-- `sample_log_path_pattern` (for self-test fixtures)
+2) Sample track:
+- run self-test fixtures under:
+  - `identity/runtime/examples/handoff/positive/`
+  - `identity/runtime/examples/handoff/negative/`
 
-This enforces that CI validates real runtime logs plus sample regression tests.
+This prevents "sample always passes while runtime logs are unconstrained".
 
 ---
 

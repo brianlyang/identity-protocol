@@ -95,6 +95,10 @@ def _validate_record(
     forbidden_mutations: set[str],
     require_generated_at: bool,
     max_log_age_days: int,
+    current_task_id: str,
+    identity_id: str,
+    enforce_task_id_match: bool,
+    require_identity_id_match: bool,
 ) -> tuple[int, list[str]]:
     logs: list[str] = []
     rc = 0
@@ -130,6 +134,25 @@ def _validate_record(
             except Exception as e:
                 logs.append(f"[FAIL] {path} generated_at invalid ISO timestamp: {generated_at} ({e})")
                 rc = 1
+
+    if enforce_task_id_match:
+        record_task_id = str(rec.get("task_id") or "").strip()
+        if current_task_id and record_task_id != current_task_id:
+            logs.append(
+                f"[FAIL] {path} task_id mismatch: expected={current_task_id}, got={record_task_id}"
+            )
+            rc = 1
+
+    if require_identity_id_match:
+        record_identity_id = str(rec.get("identity_id") or "").strip()
+        if not record_identity_id:
+            logs.append(f"[FAIL] {path} identity_id missing")
+            rc = 1
+        elif record_identity_id != identity_id:
+            logs.append(
+                f"[FAIL] {path} identity_id mismatch: expected={identity_id}, got={record_identity_id}"
+            )
+            rc = 1
 
     if str(rec.get("result")) not in allowed_results:
         logs.append(f"[FAIL] {path} result must be one of {sorted(allowed_results)}")
@@ -226,6 +249,10 @@ def _run_self_test(
             forbidden_mutations=forbidden_mutations,
             require_generated_at=False,
             max_log_age_days=0,
+            current_task_id="",
+            identity_id="",
+            enforce_task_id_match=False,
+            require_identity_id_match=False,
         )
         for ln in logs:
             print(ln)
@@ -241,6 +268,10 @@ def _run_self_test(
             forbidden_mutations=forbidden_mutations,
             require_generated_at=False,
             max_log_age_days=0,
+            current_task_id="",
+            identity_id="",
+            enforce_task_id_match=False,
+            require_identity_id_match=False,
         )
         for ln in logs:
             print(ln)
@@ -287,7 +318,9 @@ def main() -> int:
     pattern = str(contract.get("handoff_log_path_pattern") or "")
     minimum_logs_required = int(contract.get("minimum_logs_required") or 1)
     require_generated_at = bool(contract.get("require_generated_at", True))
-    max_log_age_days = int(contract.get("max_log_age_days") or 30)
+    max_log_age_days = int(contract.get("max_log_age_days") or 7)
+    enforce_task_id_match = bool(contract.get("enforce_task_id_match", True))
+    require_identity_id_match = bool(contract.get("require_identity_id_match", True))
 
     if not pattern and not args.file:
         print("[FAIL] agent_handoff_contract.handoff_log_path_pattern missing")
@@ -301,6 +334,8 @@ def main() -> int:
         print(f"[FAIL] handoff logs insufficient: found={len(files)}, required={minimum_logs_required}")
         return 1
 
+    current_task_id = str(task.get("task_id") or "").strip()
+
     rc = 0
     for p in files:
         irc, logs = _validate_record(
@@ -310,6 +345,10 @@ def main() -> int:
             forbidden_mutations=forbidden_mutations,
             require_generated_at=require_generated_at,
             max_log_age_days=max_log_age_days,
+            current_task_id=current_task_id,
+            identity_id=args.identity_id,
+            enforce_task_id_match=enforce_task_id_match,
+            require_identity_id_match=require_identity_id_match,
         )
         for ln in logs:
             print(ln)
