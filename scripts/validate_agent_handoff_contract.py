@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -76,12 +77,24 @@ def _bad_placeholder(value: str) -> bool:
     return v in {"todo", "tbd", "n/a", "none", "pending", "later"}
 
 
+def _parse_iso_dt(value: str) -> datetime:
+    v = value.strip()
+    if v.endswith("Z"):
+        v = v[:-1] + "+00:00"
+    dt = datetime.fromisoformat(v)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def _validate_record(
     path: Path,
     *,
     req_fields: list[str],
     allowed_results: set[str],
     forbidden_mutations: set[str],
+    require_generated_at: bool,
+    max_log_age_days: int,
 ) -> tuple[int, list[str]]:
     logs: list[str] = []
     rc = 0
@@ -95,6 +108,28 @@ def _validate_record(
     if missing:
         logs.append(f"[FAIL] {path} missing required fields: {missing}")
         return 1, logs
+
+    if require_generated_at:
+        generated_at = str(rec.get("generated_at") or "").strip()
+        if not generated_at:
+            logs.append(f"[FAIL] {path} generated_at missing")
+            rc = 1
+        else:
+            try:
+                ts = _parse_iso_dt(generated_at)
+                now = datetime.now(timezone.utc)
+                age_days = (now - ts).total_seconds() / 86400.0
+                if age_days < 0:
+                    logs.append(f"[FAIL] {path} generated_at is in the future: {generated_at}")
+                    rc = 1
+                elif max_log_age_days > 0 and age_days > max_log_age_days:
+                    logs.append(
+                        f"[FAIL] {path} generated_at too old: {generated_at} (age_days={age_days:.1f}, max={max_log_age_days})"
+                    )
+                    rc = 1
+            except Exception as e:
+                logs.append(f"[FAIL] {path} generated_at invalid ISO timestamp: {generated_at} ({e})")
+                rc = 1
 
     if str(rec.get("result")) not in allowed_results:
         logs.append(f"[FAIL] {path} result must be one of {sorted(allowed_results)}")
@@ -189,6 +224,8 @@ def _run_self_test(
             req_fields=req_fields,
             allowed_results=allowed_results,
             forbidden_mutations=forbidden_mutations,
+            require_generated_at=False,
+            max_log_age_days=0,
         )
         for ln in logs:
             print(ln)
@@ -202,6 +239,8 @@ def _run_self_test(
             req_fields=req_fields,
             allowed_results=allowed_results,
             forbidden_mutations=forbidden_mutations,
+            require_generated_at=False,
+            max_log_age_days=0,
         )
         for ln in logs:
             print(ln)
@@ -246,6 +285,10 @@ def main() -> int:
     forbidden_mutations = set(contract.get("forbidden_mutations") or DEFAULT_FORBIDDEN_MUTATIONS)
 
     pattern = str(contract.get("handoff_log_path_pattern") or "")
+    minimum_logs_required = int(contract.get("minimum_logs_required") or 1)
+    require_generated_at = bool(contract.get("require_generated_at", True))
+    max_log_age_days = int(contract.get("max_log_age_days") or 30)
+
     if not pattern and not args.file:
         print("[FAIL] agent_handoff_contract.handoff_log_path_pattern missing")
         return 1
@@ -253,6 +296,9 @@ def main() -> int:
     files = _iter_handoff_files(pattern, args.file)
     if not files:
         print(f"[FAIL] no handoff logs found (pattern={pattern}, file={args.file})")
+        return 1
+    if len(files) < minimum_logs_required:
+        print(f"[FAIL] handoff logs insufficient: found={len(files)}, required={minimum_logs_required}")
         return 1
 
     rc = 0
@@ -262,13 +308,16 @@ def main() -> int:
             req_fields=req_fields,
             allowed_results=allowed_results,
             forbidden_mutations=forbidden_mutations,
+            require_generated_at=require_generated_at,
+            max_log_age_days=max_log_age_days,
         )
         for ln in logs:
             print(ln)
         rc = max(rc, irc)
 
     if args.self_test:
-        sample_root = Path("identity/runtime/examples/handoff")
+        sample_pattern = str(contract.get("sample_log_path_pattern") or "identity/runtime/examples/handoff")
+        sample_root = Path(sample_pattern)
         rc = max(
             rc,
             _run_self_test(

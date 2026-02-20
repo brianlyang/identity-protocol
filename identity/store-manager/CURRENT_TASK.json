@@ -259,7 +259,11 @@
       "identity_update_lifecycle_contract",
       "trigger_regression_contract"
     ],
-    "handoff_log_path_pattern": "identity/runtime/examples/handoff/positive/*.json",
+    "handoff_log_path_pattern": "identity/runtime/logs/handoff/*.json",
+    "minimum_logs_required": 1,
+    "require_generated_at": true,
+    "max_log_age_days": 30,
+    "sample_log_path_pattern": "identity/runtime/examples/handoff",
     "result_enum": [
       "PASS",
       "FAIL",

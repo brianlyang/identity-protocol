@@ -1,4 +1,4 @@
-# Agent Handoff Contract v1.2.7 (draft)
+# Agent Handoff Contract v1.2.9 (draft)
 
 ## Purpose
 
@@ -73,6 +73,24 @@ The following are contract violations:
 
 ---
 
+## Production log contract (new in v1.2.9)
+
+Handoff validation must not rely only on example/self-test logs.
+
+Runtime contract should point to production path, e.g.:
+- `identity/runtime/logs/handoff/*.json`
+
+Recommended runtime keys in `agent_handoff_contract`:
+- `handoff_log_path_pattern`
+- `minimum_logs_required`
+- `require_generated_at`
+- `max_log_age_days`
+- `sample_log_path_pattern` (for self-test fixtures)
+
+This enforces that CI validates real runtime logs plus sample regression tests.
+
+---
+
 ## Result and next-action contract
 
 `result` allowed values:
@@ -91,14 +109,18 @@ The following are contract violations:
 
 Use:
 - `scripts/validate_agent_handoff_contract.py --identity-id <id>`
+- `scripts/validate_agent_handoff_contract.py --identity-id <id> --self-test`
 
 Recommended CI mode:
-- run handoff validator for active identities
+- validate production handoff logs from runtime path
 - run positive and negative samples in self-test mode
 
 Sample logs live in:
 - `identity/runtime/examples/handoff/positive/`
 - `identity/runtime/examples/handoff/negative/`
+
+Production logs live in:
+- `identity/runtime/logs/handoff/`
 
 ---
 

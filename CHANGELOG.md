@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **handoff production-log gate hardening (v1.2.9 draft)**:
+  - `agent_handoff_contract.handoff_log_path_pattern` switched from example path to production runtime path:
+    - `identity/runtime/logs/handoff/*.json`
+  - added runtime handoff controls in `CURRENT_TASK`:
+    - `minimum_logs_required`
+    - `require_generated_at`
+    - `max_log_age_days`
+    - `sample_log_path_pattern`
+  - `validate_agent_handoff_contract.py` now enforces:
+    - minimum production log count
+    - `generated_at` timestamp presence/ISO validity
+    - max log age policy (freshness gate)
+  - added production handoff evidence sample:
+    - `identity/runtime/logs/handoff/handoff-2026-02-20-store-manager-10000514174106.json`
+    - `identity/runtime/logs/handoff/artifacts/task-10000514174106-production-visual-check.md`
+  - upgraded handoff protocol spec to v1.2.9 draft with production-log contract section
+
 - **ci maintainability hardening (v1.2.8 draft)**:
   - consolidated duplicate workflow logic into reusable workflow:
     - `.github/workflows/_identity-required-gates.yml`

@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-02-20T10:30:00Z",
+  "handoff_id": "handoff-prod-2026-02-20-001",
+  "task_id": "task-10000514174106-visual-repair",
+  "from_agent": "store-manager-master",
+  "to_agent": "product-visual-qa",
+  "input_scope": "Production handoff for resolving hero image quality mismatch on item 10000514174106",
+  "actions_taken": [
+    "validated multimodal mismatch persists after API payload fix",
+    "routed issue to visual QA lane",
+    "required deterministic replay evidence"
+  ],
+  "artifacts": [
+    {
+      "path": "identity/runtime/logs/handoff/artifacts/task-10000514174106-production-visual-check.md",
+      "kind": "ui_evidence"
+    }
+  ],
+  "result": "PASS",
+  "next_action": {
+    "owner": "product-visual-qa",
+    "action": "Produce high-resolution compliant hero image and publish replay screenshot pack",
+    "input": "item_id=10000514174106"
+  },
+  "rulebook_update": {
+    "applied": true,
+    "evidence_run_id": "run-2026-02-20-prod-visual-001"
+  },
+  "attempted_mutations": []
+}
