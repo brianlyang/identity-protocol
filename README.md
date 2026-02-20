@@ -29,6 +29,7 @@ python scripts/compile_identity_runtime.py
 python scripts/validate_identity_manifest.py
 python scripts/test_identity_discovery_contract.py
 python scripts/validate_identity_runtime_contract.py
+python scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
 # optional: scaffold a new identity pack
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 ```
@@ -49,6 +50,7 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
   - `docs/guides/identity-creator-operations.md`
 - Runtime bottom guardrails (ORRL):
   - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
+  - `docs/specs/identity-learning-loop-validation-v1.2.1.md`
 
 ## Design principles
 
@@ -57,9 +59,10 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
 3. Keep identity concise, deterministic, and auditable.
 4. Keep conflict resolution explicit: `canon > runtime > skill > tool preference`.
 5. Require ORRL (Observe/Reason/Route/Ledger) gates for high-impact runs.
+6. Require learning-loop validation to prove reasoning and rulebook linkage.
 
 ## Status
 
-- Protocol version: `v1.2` (ORRL-bottom-guardrail draft)
+- Protocol version: `v1.2.1` (learning-loop-verifiable draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (manifest-aware scaffold + validators)

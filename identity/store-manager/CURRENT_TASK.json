@@ -107,6 +107,13 @@
     ],
     "rulebook_path": "identity/store-manager/RULEBOOK.jsonl"
   },
+  "learning_verification_contract": {
+    "run_id_required": true,
+    "reasoning_trace_required": true,
+    "reasoning_trace_path_pattern": "resource/reports/*reasoning*.json",
+    "rulebook_update_required": true,
+    "rulebook_link_field": "evidence_run_id"
+  },
   "source_of_truth": {
     "local_docs_roots": [
       "/Users/yangxi/claude/codex_project/webbrowser/restored/wechat-shop-docs-tree",
