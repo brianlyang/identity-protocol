@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **trigger-regression hardening (skill-style)**:
+  - protocol upgraded to `v1.2.5 (draft)`
+  - added `docs/specs/identity-trigger-regression-contract-v1.2.5.md`
+  - added `trigger_regression_contract` runtime block in `identity/store-manager/CURRENT_TASK.json`
+  - added validator: `scripts/validate_identity_trigger_regression.py`
+  - e2e smoke test now includes trigger regression validation
+  - lifecycle validator now requires trigger regression validator in required checks
+  - added sample regression record: `identity/runtime/examples/store-manager-trigger-regression-sample.json`
+
+- **skill protocol baseline references for identity reviewers**:
+  - added canonical reference path: `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+  - added detailed versioned reference: `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+  - merged detailed mechanism for skill update handling:
+    - update = creator-plane content patch + installer-plane runtime distribution
+    - trigger/patch/validate/replay chain
+    - post-update 4-layer validation (structure/resource/trigger-regression/smoke)
+  - README and runtime baseline review sources now include canonical skill reference paths
+
 - **identity update lifecycle contract hardening (skill-style)**:
   - protocol upgraded to `v1.2.4 (draft)`
   - added `docs/specs/identity-update-lifecycle-contract-v1.2.4.md`

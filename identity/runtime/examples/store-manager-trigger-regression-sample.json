@@ -1,0 +1,48 @@
+{
+  "report_id": "trigger-regression-store-manager-2026-02-20",
+  "identity_id": "store-manager",
+  "generated_at": "2026-02-20T21:00:00Z",
+  "version": "v1.2.5-draft",
+  "positive_cases": [
+    {
+      "case_id": "pos-001-capability-gap-visual",
+      "input_summary": "主图与标题语义不一致，且现有图源不足",
+      "expected_route": "capability_gap -> identity-creator",
+      "expected_trigger": true,
+      "observed_route": "capability_gap -> identity-creator",
+      "observed_trigger": true,
+      "result": "PASS",
+      "notes": "should enter identity update loop"
+    }
+  ],
+  "boundary_cases": [
+    {
+      "case_id": "bnd-001-mixed-signal",
+      "input_summary": "价格已修复，但图像质量待验证，存在多路由候选",
+      "expected_route": "visual_quality -> product-visual-qa",
+      "expected_trigger": true,
+      "observed_route": "visual_quality -> product-visual-qa",
+      "observed_trigger": true,
+      "result": "PASS",
+      "notes": "boundary route should remain deterministic"
+    }
+  ],
+  "negative_cases": [
+    {
+      "case_id": "neg-001-routine-status",
+      "input_summary": "仅查询流程状态，不涉及失败或能力缺口",
+      "expected_route": "none",
+      "expected_trigger": false,
+      "observed_route": "none",
+      "observed_trigger": false,
+      "result": "PASS",
+      "notes": "must not trigger identity update"
+    }
+  ],
+  "summary": {
+    "total_cases": 3,
+    "pass_cases": 3,
+    "fail_cases": 0,
+    "overall_result": "PASS"
+  }
+}
