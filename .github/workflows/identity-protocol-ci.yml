@@ -7,12 +7,15 @@ on:
       - 'skills/identity-creator/**'
       - 'scripts/**'
       - '.github/workflows/identity-protocol-ci.yml'
+      - '.github/workflows/protocol-ci.yml'
   push:
     branches: [ main ]
     paths:
       - 'identity/**'
       - 'skills/identity-creator/**'
       - 'scripts/**'
+      - '.github/workflows/identity-protocol-ci.yml'
+      - '.github/workflows/protocol-ci.yml'
 
 jobs:
   validate-identity:
@@ -27,7 +30,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install deps
-        run: pip install -r requirements-dev.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
 
       - name: Validate protocol base
         run: python3 scripts/validate_identity_protocol.py
@@ -35,11 +40,36 @@ jobs:
       - name: Compile runtime
         run: python3 scripts/compile_identity_runtime.py
 
-      - name: Validate identity manifest
-        run: python3 scripts/validate_identity_manifest.py
+      - name: Validate identity manifest + discovery
+        run: |
+          python3 scripts/validate_identity_manifest.py
+          python3 scripts/test_identity_discovery_contract.py
 
-      - name: Discovery contract smoke test
-        run: python3 scripts/test_identity_discovery_contract.py
+      - name: Validate required runtime gates across active identities
+        run: |
+          IDS=$(python - <<'PY'
+import yaml
+from pathlib import Path
+c=yaml.safe_load(Path('identity/catalog/identities.yaml').read_text())
+ids=[x['id'] for x in c.get('identities',[]) if isinstance(x,dict) and str(x.get('status','')).lower()=='active']
+if not ids:
+    d=c.get('default_identity')
+    if d:
+        ids=[d]
+print(' '.join(ids))
+PY
+)
+          echo "active identities: $IDS"
+          for ID in $IDS; do
+            python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
+            python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
+            python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
+            python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
+            python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
+          done
 
       - name: Identity creator protocol checks
         run: bash skills/identity-creator/scripts/validate_identity_protocol.sh .
+
+      - name: Check generated runtime brief is up to date
+        run: git diff --exit-code -- identity/runtime/IDENTITY_COMPILED.md
