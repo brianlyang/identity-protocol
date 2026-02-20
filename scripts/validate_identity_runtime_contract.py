@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 
 REQ_TOP_LEVEL = [
@@ -40,10 +43,56 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"YAML root must be object: {path}")
+    return data
+
+
+def _resolve_current_task(catalog_path: Path, override: str) -> Path:
+    if override:
+        p = Path(override)
+        if p.exists():
+            return p
+        raise FileNotFoundError(f"override current task not found: {p}")
+
+    catalog = _load_yaml(catalog_path)
+    default_id = str(catalog.get("default_identity", "")).strip()
+    identities = catalog.get("identities") or []
+    active = next((x for x in identities if str(x.get("id", "")).strip() == default_id), None)
+    if not active:
+        raise FileNotFoundError(f"default identity not found in catalog: {default_id}")
+
+    pack_path = str(active.get("pack_path", "")).strip()
+    if pack_path:
+        p = Path(pack_path) / "CURRENT_TASK.json"
+        if p.exists():
+            return p
+
+    legacy = Path("identity") / default_id / "CURRENT_TASK.json"
+    if legacy.exists():
+        return legacy
+
+    raise FileNotFoundError("CURRENT_TASK.json not found from catalog default identity")
+
+
 def main() -> int:
-    path = Path("identity/store-manager/CURRENT_TASK.json")
-    if not path.exists():
-        return _fail(f"missing {path}")
+    ap = argparse.ArgumentParser(description="Validate identity runtime ORRL contract")
+    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--current-task", default="", help="optional explicit CURRENT_TASK path")
+    args = ap.parse_args()
+
+    catalog_path = Path(args.catalog)
+    if not catalog_path.exists():
+        return _fail(f"missing catalog: {catalog_path}")
+
+    try:
+        path = _resolve_current_task(catalog_path, args.current_task)
+    except Exception as e:
+        return _fail(str(e))
+
+    print(f"[INFO] validating CURRENT_TASK: {path}")
 
     try:
         data = _load_json(path)
@@ -128,7 +177,7 @@ def main() -> int:
             rc = 1
         else:
             ok_rows = 0
-            for i, ln in enumerate(lines[:20], start=1):
+            for i, ln in enumerate(lines[:50], start=1):
                 try:
                     row = json.loads(ln)
                 except Exception as e:
