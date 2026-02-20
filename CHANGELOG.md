@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- protocol alignment hardening for skill/mcp-style determinism:
+  - upgraded `identity/protocol/IDENTITY_PROTOCOL.md` to `v1.2.2 (draft)`
+  - added explicit four core capability contracts (judgement/reasoning/routing/rule-learning)
+  - clarified scenario-agnostic protocol boundary (identity != business payload)
+- validator hardening:
+  - `scripts/validate_identity_protocol.py` now validates **all identities** in catalog
+  - pack contract now enforces `META.yaml` in addition to prompt/task/history
+  - schema validation is now enforced in protocol validator via `jsonschema`
+- runtime validator hardening:
+  - `scripts/validate_identity_runtime_contract.py` now resolves CURRENT_TASK from catalog default identity
+  - supports `--current-task` override for deterministic checks
+- learning-loop validator hardening:
+  - `scripts/validate_identity_learning_loop.py` now resolves CURRENT_TASK from catalog default identity
+  - supports `--current-task` and `--run-report` overrides
+  - adds run-report auto fallback by identity id
 - benchmarked against:
   - OpenAI Codex Skills docs (`skills`, `app/features`, `app-server`)
   - Agent Skills standard (`home`, `specification`, `integrate-skills`, `what-are-skills`)
