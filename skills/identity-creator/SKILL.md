@@ -28,12 +28,13 @@ Create and maintain identity as a first-class control-plane protocol.
 2. Keep hard guardrails and adaptive learning as dual tracks.
 3. Keep runtime state as single source of truth.
 4. Keep compatibility with official Codex config and skill standards.
+5. Enforce source-backed protocol baseline review before identity-upgrade conclusions.
 
 ## Required outputs
 
 - Identity protocol docs under `identity/protocol/`.
 - Identity metadata registry under `identity/catalog/`.
-- Identity pack files (`IDENTITY_PROMPT.md`, `CURRENT_TASK.json`, `TASK_HISTORY.md`, `META.yaml`).
+- Identity pack files (`IDENTITY_PROMPT.md`, `CURRENT_TASK.json`, `TASK_HISTORY.md`, `META.yaml`, `RULEBOOK.jsonl`).
 - Runtime brief at `identity/runtime/IDENTITY_COMPILED.md`.
 - Project config integration in `.codex/config.toml`.
 
@@ -49,9 +50,11 @@ Create and maintain identity as a first-class control-plane protocol.
   - Codex skills structure and discovery
   - AGENTS instruction chain precedence
   - config layering and security controls
+  - MCP specification baseline
 
 Use references:
 - `references/standards-alignment.md`
+- `references/protocol-baseline-review.md`
 
 ### 2) Define identity protocol contract
 
@@ -62,6 +65,9 @@ Use references:
   - register -> activate -> execute -> learn -> update
 - Define conflict priority:
   - canon > runtime state > skill > tool preference
+- For identity-upgrade scopes, require:
+  - `gates.protocol_baseline_review_gate = required`
+  - `protocol_review_contract` with mandatory sources + evidence fields
 
 Use references:
 - `references/identity-protocol-v1.md`
@@ -69,7 +75,11 @@ Use references:
 ### 3) Scaffold identity package
 
 - Use `scripts/init_identity_pack.sh` to generate a new pack scaffold.
-- This scaffold now includes `agents/identity.yaml` (identity manifest draft) for interface/policy/dependencies/observability.
+- This scaffold includes:
+  - `agents/identity.yaml`
+  - ORRL-ready runtime skeleton
+  - `protocol_baseline_review_gate` and `protocol_review_contract`
+  - review evidence sample under `identity/runtime/examples/`
 - For deterministic/automated creation, use root script `scripts/create_identity_pack.py`
   from repository root.
 - Register identity in `identity/catalog/identities.yaml`.
@@ -81,12 +91,10 @@ Use references:
 - Use `scripts/validate_identity_manifest.py` to validate identity manifest semantics.
 - Use `scripts/test_identity_discovery_contract.py` to verify local `identity/list` draft output.
 - Use `scripts/check_codex_config_paths.py` to verify `.codex/config.toml` path resolution.
-- Ensure runtime task contains mandatory blocks:
-  - `objective`
-  - `state_machine`
-  - `gates`
-  - `source_of_truth`
-  - `escalation_policy`
+- Use `scripts/validate_identity_runtime_contract.py` to enforce:
+  - required gates
+  - protocol baseline review evidence completeness
+  - mandatory source coverage
 
 ### 5) Compile runtime brief and integrate config
 
@@ -111,6 +119,8 @@ Use references:
 - Identity registry has valid schema shape.
 - Active identity exists and pack path resolves.
 - Runtime contract is complete and parseable.
+- Protocol baseline review gate is present for identity-upgrade scopes.
+- Baseline review evidence cites identity-protocol + skill + mcp standards.
 - Compiled runtime brief is concise and current.
 - No conflict with existing skills/MCP config.
 

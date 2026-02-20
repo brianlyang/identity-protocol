@@ -20,16 +20,28 @@
 - `CURRENT_TASK.json`
 - `TASK_HISTORY.md`
 - `META.yaml`
+- `RULEBOOK.jsonl`
+- `agents/identity.yaml`
 
-5. Integrate `.codex/config.toml`:
+5. Enforce baseline review controls for identity upgrades:
+- Ensure `gates.protocol_baseline_review_gate = "required"` in runtime task.
+- Ensure `protocol_review_contract` exists with:
+  - mandatory review source list
+  - required evidence fields
+  - evidence artifact path pattern
+- Create/update evidence artifact under:
+  - `identity/runtime/examples/protocol-baseline-review-*.json`
+
+6. Integrate `.codex/config.toml`:
 - set `model_instructions_file = "../identity/runtime/IDENTITY_COMPILED.md"` (resolved from `.codex/`)
 - keep skills and MCP in native keys
 
-6. Validate:
+7. Validate:
 - run `scripts/validate_identity_protocol.sh`
 - run `scripts/check_codex_config_paths.py`
+- run `scripts/validate_identity_runtime_contract.py`
 
-7. Record rollout note:
+8. Record rollout note:
 - what changed
 - affected guardrails
 - rollback path
