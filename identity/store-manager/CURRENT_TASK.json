@@ -46,6 +46,7 @@
     "category_compliance_gate": "required",
     "reject_memory_gate": "required",
     "protocol_baseline_review_gate": "required",
+    "identity_update_gate": "required",
     "payload_evidence_gate": "required",
     "multimodal_consistency_gate": "required",
     "reasoning_loop_gate": "required",
@@ -93,6 +94,39 @@
     "evidence_report_path_pattern": "identity/runtime/examples/protocol-baseline-review-*.json",
     "max_review_age_days": 7
   },
+  "identity_update_lifecycle_contract": {
+    "trigger_contract": {
+      "mandatory_conditions": [
+        "operational_failure",
+        "repeat_failure",
+        "route_exhausted",
+        "new_domain_gap"
+      ],
+      "max_attempts_before_update": 2
+    },
+    "patch_surface_contract": {
+      "required_files": [
+        "CURRENT_TASK.json",
+        "IDENTITY_PROMPT.md",
+        "RULEBOOK.jsonl",
+        "TASK_HISTORY.md"
+      ],
+      "required_rulebook_update": true
+    },
+    "validation_contract": {
+      "required_checks": [
+        "scripts/validate_identity_runtime_contract.py",
+        "scripts/validate_identity_upgrade_prereq.py",
+        "scripts/validate_identity_update_lifecycle.py"
+      ],
+      "must_pass_all": true
+    },
+    "replay_contract": {
+      "replay_required": true,
+      "replay_same_case_required": true,
+      "replay_fail_action": "reenter_identity_update_loop"
+    }
+  },
   "evaluation_contract": {
     "required_evidence_triplet": [
       "api_evidence",
@@ -128,6 +162,9 @@
       ],
       "offline_compliance_blocker": [
         "ops-notification-router"
+      ],
+      "capability_gap": [
+        "identity-creator"
       ]
     }
   },

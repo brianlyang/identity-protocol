@@ -1,4 +1,4 @@
-# Identity Protocol v1.2.3 (draft)
+# Identity Protocol v1.2.4 (draft)
 
 ## Goal
 
@@ -66,7 +66,7 @@ Identity protocol must be verifiable against four capability contracts:
    - Requires append-only rulebook linkage to run evidence.
    - Requires both negative and positive rule accumulation over time.
 
-## Protocol baseline review contract (new in v1.2.3)
+## Protocol baseline review contract (v1.2.3)
 
 To avoid identity-level drift and unsupported architectural conclusions, identity upgrades MUST include baseline protocol review evidence.
 
@@ -85,6 +85,32 @@ A valid review evidence record MUST include, at minimum:
 - findings
 - decision
 
+## Identity update lifecycle contract (new in v1.2.4)
+
+To match skill update discipline (`trigger -> patch -> validate -> replay`), identity updates MUST define and pass an explicit lifecycle contract.
+
+When runtime detects operational failure or capability gap:
+
+- `gates.identity_update_gate` MUST be `required`.
+- `identity_update_lifecycle_contract` MUST exist in CURRENT_TASK and include:
+  - `trigger_contract` (when update is mandatory)
+  - `patch_surface_contract` (what files/contracts must be changed)
+  - `validation_contract` (which checks must pass)
+  - `replay_contract` (same-case regression requirements)
+
+Mandatory patch surfaces:
+- `CURRENT_TASK.json`
+- `IDENTITY_PROMPT.md`
+- `RULEBOOK.jsonl`
+- `TASK_HISTORY.md`
+
+Mandatory validators:
+- `scripts/validate_identity_runtime_contract.py`
+- `scripts/validate_identity_upgrade_prereq.py`
+- `scripts/validate_identity_update_lifecycle.py`
+
+No replay pass -> no identity learning completion.
+
 ## Dual-track governance model
 
 ### Track A: hard guardrails
@@ -95,6 +121,7 @@ Non-bypassable constraints:
 - media integrity constraints
 - escalation triggers
 - protocol baseline review gate for identity-upgrade decisions
+- identity update lifecycle gate for runtime evolution decisions
 
 ### Track B: adaptive growth
 
@@ -118,8 +145,9 @@ Minimum required blocks:
 - `routing_contract`
 - `rulebook_contract`
 
-Conditional required block for identity-upgrade tasks:
-- `protocol_review_contract`
+Conditional required blocks:
+- `protocol_review_contract` (identity upgrade tasks)
+- `identity_update_lifecycle_contract` (runtime evolution / update tasks)
 
 ## Conflict resolution
 
@@ -136,6 +164,7 @@ To reduce protocol drift and avoid ad-hoc logic:
 - Runtime decisions must be contract-driven and testable (like MCP interface determinism).
 - Discovery, validation, and release gates must be explicit and automated.
 - Identity conclusions for protocol upgrades must be source-cited and evidence-backed.
+- Identity updates must follow explicit trigger/patch/validate/replay lifecycle, mirroring skill update discipline.
 
 ## Email escalation policy
 
