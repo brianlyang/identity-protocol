@@ -51,7 +51,8 @@
     "multimodal_consistency_gate": "required",
     "reasoning_loop_gate": "required",
     "routing_gate": "required",
-    "rulebook_gate": "required"
+    "rulebook_gate": "required",
+    "agent_handoff_gate": "required"
   },
   "protocol_review_contract": {
     "required_before": [
@@ -139,7 +140,9 @@
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
         "scripts/validate_identity_update_lifecycle.py",
-        "scripts/validate_identity_trigger_regression.py"
+        "scripts/validate_identity_trigger_regression.py",
+        "scripts/validate_identity_learning_loop.py",
+        "scripts/validate_agent_handoff_contract.py"
       ],
       "must_pass_all": true
     },
@@ -235,6 +238,35 @@
     "reasoning_trace_path_pattern": "resource/reports/*reasoning*.json",
     "rulebook_update_required": true,
     "rulebook_link_field": "evidence_run_id"
+  },
+  "agent_handoff_contract": {
+    "required": true,
+    "required_fields": [
+      "handoff_id",
+      "task_id",
+      "from_agent",
+      "to_agent",
+      "input_scope",
+      "actions_taken",
+      "artifacts",
+      "result",
+      "next_action",
+      "rulebook_update"
+    ],
+    "forbidden_mutations": [
+      "gates",
+      "protocol_review_contract",
+      "identity_update_lifecycle_contract",
+      "trigger_regression_contract"
+    ],
+    "handoff_log_path_pattern": "identity/runtime/examples/handoff/positive/*.json",
+    "result_enum": [
+      "PASS",
+      "FAIL",
+      "BLOCKED"
+    ],
+    "self_test_required": true,
+    "validator": "scripts/validate_agent_handoff_contract.py"
   },
   "source_of_truth": {
     "local_docs_roots": [

@@ -1,0 +1,29 @@
+{
+  "handoff_id": "handoff-2026-02-20-003",
+  "task_id": "task-10000514174106-visual-repair",
+  "from_agent": "store-manager-master",
+  "to_agent": "weixinstore-ui-agent",
+  "input_scope": "Request replay capture after second repair iteration",
+  "actions_taken": [
+    "validated previous patch chain",
+    "prepared replay task and expected route",
+    "checked replay artifact availability"
+  ],
+  "artifacts": [
+    {
+      "path": "identity/runtime/examples/handoff/artifacts/task-10000514174106-replay-result.md",
+      "kind": "replay_evidence"
+    }
+  ],
+  "result": "BLOCKED",
+  "next_action": {
+    "owner": "weixinstore-ui-agent",
+    "action": "Collect missing screenshot evidence and rerun replay",
+    "input": "replay_case=visual_quality_regression"
+  },
+  "rulebook_update": {
+    "applied": false,
+    "evidence_run_id": ""
+  },
+  "attempted_mutations": []
+}

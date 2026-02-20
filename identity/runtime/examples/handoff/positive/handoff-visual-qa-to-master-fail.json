@@ -1,0 +1,29 @@
+{
+  "handoff_id": "handoff-2026-02-20-002",
+  "task_id": "task-10000514174106-visual-repair",
+  "from_agent": "product-visual-qa",
+  "to_agent": "store-manager-master",
+  "input_scope": "Return remediation result after first image quality repair attempt",
+  "actions_taken": [
+    "re-generated hero image export",
+    "ran multimodal quality check",
+    "captured route audit artifact"
+  ],
+  "artifacts": [
+    {
+      "path": "identity/runtime/examples/handoff/artifacts/task-10000514174106-route-audit.md",
+      "kind": "route_audit"
+    }
+  ],
+  "result": "FAIL",
+  "next_action": {
+    "owner": "store-manager-master",
+    "action": "Switch route to product-asset-bootstrap for source replacement",
+    "input": "route=visual_quality"
+  },
+  "rulebook_update": {
+    "applied": false,
+    "evidence_run_id": ""
+  },
+  "attempted_mutations": []
+}

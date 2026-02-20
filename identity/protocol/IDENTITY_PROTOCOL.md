@@ -1,4 +1,4 @@
-# Identity Protocol v1.2.5 (draft)
+# Identity Protocol v1.2.7 (draft)
 
 ## Goal
 
@@ -111,7 +111,7 @@ Mandatory validators:
 
 No replay pass -> no identity learning completion.
 
-## Identity trigger regression contract (new in v1.2.5)
+## Identity trigger regression contract (v1.2.5+)
 
 To mirror mature skill trigger stability practice, identity route/update changes MUST pass trigger regression.
 
@@ -128,6 +128,27 @@ Mandatory validator:
 - `scripts/validate_identity_trigger_regression.py`
 
 No trigger-regression pass -> no identity update completion/merge.
+
+## Agent handoff contract (v1.2.7+)
+
+To prevent master/sub execution drift, identity updates with delegated sub-agent execution MUST pass handoff contract validation.
+
+When handoff is used:
+
+- `gates.agent_handoff_gate` MUST be `required`.
+- `agent_handoff_contract` MUST exist in CURRENT_TASK and include:
+  - required handoff fields
+  - forbidden mutation list
+  - handoff log pattern
+  - allowed result enum
+
+Mandatory validator:
+- `scripts/validate_agent_handoff_contract.py`
+
+No handoff pass -> no merge.
+
+Contract reference:
+- `identity/protocol/AGENT_HANDOFF_CONTRACT.md`
 
 ## Skill + MCP + Tool collaboration contract (new baseline in v1.2.5)
 
@@ -156,6 +177,7 @@ Non-bypassable constraints:
 - protocol baseline review gate for identity-upgrade decisions
 - identity update lifecycle gate for runtime evolution decisions
 - trigger regression gate for route/update changes
+- agent handoff gate for delegated execution changes
 
 ### Track B: adaptive growth
 
@@ -183,6 +205,7 @@ Conditional required blocks:
 - `protocol_review_contract` (identity upgrade tasks)
 - `identity_update_lifecycle_contract` (runtime evolution / update tasks)
 - `trigger_regression_contract` (routing/trigger/update gate changes)
+- `agent_handoff_contract` (master/sub delegated execution)
 
 ## Conflict resolution
 
@@ -202,6 +225,7 @@ To reduce protocol drift and avoid ad-hoc logic:
 - Identity updates must follow explicit trigger/patch/validate/replay lifecycle, mirroring skill update discipline.
 - Identity route/update behavior must pass positive/boundary/negative trigger regression.
 - Identity review must include skill+mcp+tool collaboration boundary checks.
+- Identity delegation must pass master/sub handoff payload and mutation-safety checks.
 
 ## Email escalation policy
 

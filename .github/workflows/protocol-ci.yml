@@ -52,6 +52,7 @@ PY
             python scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
             python scripts/validate_identity_trigger_regression.py --identity-id "$ID"
             python scripts/validate_identity_learning_loop.py --identity-id "$ID"
+            python scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
           done
 
       - name: Identity creator protocol checks
