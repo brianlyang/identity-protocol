@@ -54,6 +54,22 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
   - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
   - `docs/specs/identity-learning-loop-validation-v1.2.1.md`
 
+## Protocol baseline review gate (MUST)
+
+For any **identity capability upgrade** or **identity architecture decision**, maintainers must review and cite protocol baselines **before** giving conclusions:
+
+1. `identity-protocol` canonical protocol files (this repository)
+2. OpenAI Codex Skills official docs
+3. Agent Skills specification
+4. MCP official specification
+
+This requirement is enforced via runtime contract keys:
+- `gates.protocol_baseline_review_gate = "required"`
+- `protocol_review_contract` (mandatory sources + evidence schema)
+
+Validation is executed by:
+- `scripts/validate_identity_runtime_contract.py`
+
 ## Design principles
 
 1. Align with official Codex skills model and discovery behavior.
@@ -62,9 +78,10 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
 4. Keep conflict resolution explicit: `canon > runtime > skill > tool preference`.
 5. Require ORRL (Observe/Reason/Route/Ledger) gates for high-impact runs.
 6. Require learning-loop validation to prove reasoning and rulebook linkage.
+7. Require protocol baseline review evidence before identity-level upgrade conclusions.
 
 ## Status
 
-- Protocol version: `v1.2.1` (learning-loop-verifiable draft)
+- Protocol version: `v1.2.3` (baseline-review-enforced draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (manifest-aware scaffold + validators)

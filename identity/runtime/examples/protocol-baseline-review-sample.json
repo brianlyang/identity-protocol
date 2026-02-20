@@ -1,0 +1,38 @@
+{
+  "review_id": "protocol-baseline-review-sample-2026-02-20",
+  "reviewed_at": "2026-02-20T00:00:00Z",
+  "reviewer_identity": "store-manager",
+  "purpose": "identity capability upgrade must be grounded in protocol baselines and external standards before conclusions",
+  "sources_reviewed": [
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "identity/protocol/IDENTITY_PROTOCOL.md"
+    },
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md"
+    },
+    {
+      "type": "official_doc",
+      "url": "https://developers.openai.com/codex/skills/"
+    },
+    {
+      "type": "official_doc",
+      "url": "https://agentskills.io/specification"
+    },
+    {
+      "type": "official_doc",
+      "url": "https://modelcontextprotocol.io/specification/latest"
+    }
+  ],
+  "findings": [
+    "Identity conclusions require source-cited protocol review evidence.",
+    "Completion must be blocked if baseline review gate fails for identity-upgrade tasks."
+  ],
+  "decision": {
+    "result": "approved",
+    "notes": "Sample artifact for validator and CI smoke checks"
+  }
+}
