@@ -8,6 +8,13 @@
   - documented skill+mcp+tool collaboration boundary as baseline review requirement
   - synced conflict and alignment section with trigger-regression and collaboration checks
 
+- **runtime baseline validator expanded for reference coverage**:
+  - updated `scripts/validate_identity_runtime_contract.py`
+  - baseline source set now also requires:
+    - `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+    - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+    - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+
 - **skill + mcp + tool collaboration baseline (new)**:
   - added `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
   - defines three-layer collaboration model:
