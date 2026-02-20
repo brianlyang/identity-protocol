@@ -140,11 +140,19 @@ def main() -> int:
     expected_checks = {
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
+        "scripts/validate_identity_update_lifecycle.py",
+        "scripts/validate_identity_trigger_regression.py",
     }
     if not expected_checks.issubset(required_checks):
         print(f"[FAIL] validation_contract.required_checks missing expected checks: {sorted(expected_checks - required_checks)}")
         return 1
     print("[OK] validation_contract.required_checks contains mandatory validators")
+
+    trigger_regression = task.get("trigger_regression_contract") or {}
+    if not isinstance(trigger_regression, dict) or not trigger_regression:
+        print("[FAIL] missing trigger_regression_contract")
+        return 1
+    print("[OK] trigger_regression_contract present")
 
     routes = ((task.get("routing_contract") or {}).get("problem_type_routes") or {})
     cap_gap = routes.get("capability_gap") or []
