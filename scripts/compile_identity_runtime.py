@@ -19,6 +19,16 @@ def load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _format_source_entry(src: dict[str, Any]) -> str:
+    if not isinstance(src, dict):
+        return ""
+    if src.get("repo") and src.get("path"):
+        return f"{src.get('repo')}::{src.get('path')}"
+    if src.get("url"):
+        return str(src.get("url"))
+    return ""
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -54,6 +64,13 @@ def main() -> int:
         if isinstance(active.get("governance"), dict)
         else [])
 
+    review_sources = []
+    protocol_review_contract = current_task.get("protocol_review_contract") or {}
+    for src in protocol_review_contract.get("must_review_sources") or []:
+        formatted = _format_source_entry(src)
+        if formatted:
+            review_sources.append(formatted)
+
     lines = [
         "# Identity Runtime Brief",
         "",
@@ -64,6 +81,7 @@ def main() -> int:
         "Hard guardrails:",
     ]
     lines.extend([f"- {g}" for g in hard_guardrails] or ["- (none)"])
+
     lines += [
         "",
         "Current objective:",
@@ -71,6 +89,16 @@ def main() -> int:
         "",
         "Current state:",
         f"- {state}",
+    ]
+
+    if review_sources:
+        lines += [
+            "",
+            "Runtime baseline review references:",
+        ]
+        lines.extend([f"- {s}" for s in review_sources])
+
+    lines += [
         "",
         "See source:",
         f"- {catalog_path.as_posix()}",
