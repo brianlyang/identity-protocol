@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[1/12] validate protocol"
+echo "[1/13] validate protocol"
 python3 scripts/validate_identity_protocol.py
 
-echo "[2/12] compile runtime brief"
+echo "[2/13] compile runtime brief"
 python3 scripts/compile_identity_runtime.py
 
-echo "[3/12] validate manifest semantics"
+echo "[3/13] validate manifest semantics"
 python3 scripts/validate_identity_manifest.py
 
-echo "[4/12] test discovery contract"
+echo "[4/13] test discovery contract"
 python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
 
 IDS=$(python3 - <<'PY'
@@ -26,29 +26,32 @@ print(' '.join(ids))
 PY
 )
 
-echo "[5/12] active identities: $IDS"
+echo "[5/13] active identities: $IDS"
 
 for ID in $IDS; do
-  echo "[6/12][$ID] validate runtime ORRL contract"
+  echo "[6/13][$ID] validate runtime ORRL contract"
   python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
 
-  echo "[7/12][$ID] validate update prereq baseline gate"
+  echo "[7/13][$ID] validate update prereq baseline gate"
   python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
 
-  echo "[8/12][$ID] validate update lifecycle contract"
+  echo "[8/13][$ID] validate update lifecycle contract"
   python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
 
-  echo "[9/12][$ID] validate trigger regression contract"
+  echo "[9/13][$ID] validate trigger regression contract"
   python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
 
-  echo "[10/12][$ID] validate learning-loop linkage"
+  echo "[10/13][$ID] validate learning-loop linkage"
   python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
 
-  echo "[11/12][$ID] validate master/sub handoff contract"
+  echo "[11/13][$ID] validate master/sub handoff contract"
   python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
+
+  echo "[12/13][$ID] export route quality metrics"
+  python3 scripts/export_route_quality_metrics.py --identity-id "$ID"
 done
 
-echo "[12/12] ensure compile output is stable and contains baseline refs"
+echo "[13/13] ensure compile output is stable and contains baseline refs"
 python3 scripts/compile_identity_runtime.py >/dev/null
 grep -q "Runtime baseline review references:" identity/runtime/IDENTITY_COMPILED.md
 

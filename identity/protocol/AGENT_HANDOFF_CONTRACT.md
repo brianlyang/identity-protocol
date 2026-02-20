@@ -1,4 +1,4 @@
-# Agent Handoff Contract v1.2.7 (draft)
+# Agent Handoff Contract v1.2.9 (draft)
 
 ## Purpose
 
@@ -73,6 +73,26 @@ The following are contract violations:
 
 ---
 
+## Production + sample dual-track validation (new in v1.2.9)
+
+Handoff validation must run in two tracks:
+
+1) Production track:
+- validate runtime logs from production path, e.g.:
+  - `identity/runtime/logs/handoff/*.json`
+- enforce minimum log count
+- enforce freshness (`generated_at` max age)
+- enforce cross-file consistency (`task_id` + `identity_id`)
+
+2) Sample track:
+- run self-test fixtures under:
+  - `identity/runtime/examples/handoff/positive/`
+  - `identity/runtime/examples/handoff/negative/`
+
+This prevents "sample always passes while runtime logs are unconstrained".
+
+---
+
 ## Result and next-action contract
 
 `result` allowed values:
@@ -91,14 +111,18 @@ The following are contract violations:
 
 Use:
 - `scripts/validate_agent_handoff_contract.py --identity-id <id>`
+- `scripts/validate_agent_handoff_contract.py --identity-id <id> --self-test`
 
 Recommended CI mode:
-- run handoff validator for active identities
+- validate production handoff logs from runtime path
 - run positive and negative samples in self-test mode
 
 Sample logs live in:
 - `identity/runtime/examples/handoff/positive/`
 - `identity/runtime/examples/handoff/negative/`
+
+Production logs live in:
+- `identity/runtime/logs/handoff/`
 
 ---
 

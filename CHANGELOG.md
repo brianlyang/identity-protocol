@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+- **handoff dual-track + freshness + consistency hardening (v1.2.9 draft)**:
+  - `agent_handoff_contract.handoff_log_path_pattern` switched from example path to production runtime path:
+    - `identity/runtime/logs/handoff/*.json`
+  - added runtime handoff controls in `CURRENT_TASK`:
+    - `minimum_logs_required`
+    - `require_generated_at`
+    - `max_log_age_days` (7-day freshness gate)
+    - `enforce_task_id_match`
+    - `require_identity_id_match`
+    - `sample_log_path_pattern`
+  - `validate_agent_handoff_contract.py` now enforces:
+    - minimum production log count
+    - `generated_at` timestamp presence/ISO validity/freshness
+    - cross-file consistency (`task_id`, `identity_id`)
+  - added production handoff evidence sample:
+    - `identity/runtime/logs/handoff/handoff-2026-02-20-store-manager-10000514174106.json`
+    - `identity/runtime/logs/handoff/artifacts/task-10000514174106-production-visual-check.md`
+  - upgraded handoff protocol spec to v1.2.9 draft with dual-track section
+
+- **route quality metrics export (new)**:
+  - added `scripts/export_route_quality_metrics.py`
+  - exports:
+    - `route_hit_rate`
+    - `misroute_rate`
+    - `fallback_rate`
+  - metrics artifact path:
+    - `identity/runtime/metrics/store-manager-route-quality.json`
+  - required-gates CI and e2e now execute metrics export per active identity
+
 - **ci maintainability hardening (v1.2.8 draft)**:
   - consolidated duplicate workflow logic into reusable workflow:
     - `.github/workflows/_identity-required-gates.yml`
