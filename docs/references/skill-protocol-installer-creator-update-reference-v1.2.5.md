@@ -1,154 +1,226 @@
-# Skill Protocol Reference: Installer vs Creator vs Update Lifecycle (v1.2.5)
+# Skill Protocol Reference: Trigger / Create / Update / Validate (v1.2.5)
 
-This reference is a **baseline review artifact** for identity protocol maintainers.
+This document is the long-form reference for identity-protocol reviewers.
 
-It captures skill protocol mechanics in a way identity maintainers can reuse directly, instead of inventing ad-hoc naming or ad-hoc flows.
-
----
-
-## 1) Strict role split: installer vs creator
-
-### 1.1 skill-installer (distribution plane)
-
-Use when the task is:
-- list installable skills
-- install/reinstall a skill to local runtime
-- install from curated source or GitHub path/repo
-
-Responsibilities:
-- fetch/install package into local skills directory
-- handle installation source selection
-- support re-install in target runtime
-
-Non-responsibilities:
-- no authoring of skill semantics
-- no business workflow design
-- no quality policy definition
-
-### 1.2 skill-creator (authoring plane)
-
-Use when the task is:
-- create a new skill
-- update existing skill behavior/structure/trigger semantics
-- add scripts/references/assets and validate quality
-
-Responsibilities:
-- maintain `SKILL.md` trigger + execution semantics
-- maintain `scripts/`, `references/`, `assets/`, optional UI metadata files
-- define post-update validation and replay tests
-
-Non-responsibilities:
-- no package distribution/install orchestration
-- no bypass of runtime governance contracts
-
-**Operational summary**:
-- content changes: creator path
-- distribution to target runtime: installer path
+It captures the complete operational model for skill behavior under Codex-like AGENTS governance, including:
+- trigger/discovery behavior
+- installer vs creator boundaries
+- update flow and distribution flow
+- post-update validation and continuous trigger stability
 
 ---
 
-## 2) Skill update mechanism (canonical)
+## 0) Unified runtime model (very important)
 
-Skill update is a two-part operation:
+Skill behavior is layered:
 
-1. update skill content (creator plane)
-2. distribute updated version (installer plane)
+1. **Resident layer**: only `name + description` metadata is always considered.
+2. **Trigger layer**: once a request matches a skill, load `SKILL.md` body.
+3. **Execution layer**: load `scripts/`, `references/`, `assets/` only when needed.
+4. **Turn continuity layer**: no automatic cross-turn persistence unless re-mentioned/re-matched.
 
-This is the baseline chain:
-
-1. trigger (why update is needed)
-2. patch surface (what changed)
-3. validation (which checks must pass)
-4. replay/regression (rerun original failing case)
-
-Identity update lifecycle mirrors this same chain.
+Operational implication:
+- trigger quality depends more on metadata quality than on long body text.
 
 ---
 
-## 3) Patch surface priority (when updating a skill)
+## 1) Skill trigger mechanism
 
-Patch in this order to reduce drift:
+### 1.1 Discovery stage
 
-1. trigger instability -> patch `SKILL.md` description first
-2. workflow instability -> patch `SKILL.md` body steps
-3. repetitive/error-prone actions -> patch/add `scripts/`
-4. overloaded domain details -> move to `references/`
-5. output/template drift -> patch `assets/`
+- runtime first discovers available skills from injected environment rules (e.g. AGENTS skill list)
+- discovery is based on current session skill registry, not implicit historical memory
+
+### 1.2 Trigger decision rules
+
+- explicit trigger: user names skill directly (`$skill-name` or literal mention)
+- semantic trigger: user request strongly matches description intent
+- multi-skill cases: choose minimal covering set and declare order
+
+### 1.3 Non-trigger scenarios
+
+- if no registered skill matches, fallback to generic toolchain (shell/MCP/code edits)
+
+### 1.4 Governance constraints
+
+- if matched, skill should be used (cannot silently skip)
+- no cross-turn carry unless re-matched/re-mentioned
+- if path/resource unreadable: report + fallback
+
+---
+
+## 2) Skill creation mechanism (creator plane)
+
+### 2.1 Minimal structure
+
+- `<skill>/SKILL.md` (required)
+- `<skill>/scripts/*` (optional, recommended)
+- `<skill>/references/*` (optional)
+- `<skill>/assets/*` (optional)
+
+### 2.2 SKILL.md content contract
+
+Should include:
+- use scope and non-scope
+- input contract
+- executable/reproducible workflow steps
+- output contract and quality criteria
+- fallback behavior
+- validation steps
+
+### 2.3 Creation principles
+
+- prefer scripts/templates over long hand-written chat logic
+- resolve relative paths from skill root first
+- load only necessary references (progressive disclosure)
+
+### 2.4 Registration reality
+
+- creating files alone is not enough
+- skill must be discoverable by session registry to trigger in future turns
+
+---
+
+## 3) Installer vs Creator (boundary contract)
+
+### 3.1 skill-installer responsibilities
+
+- list installable skills (curated/experimental/remote)
+- install existing skills into local skill directory
+- install from GitHub repo/path/url (public/private depending on auth)
+- remind runtime reload/restart requirement where applicable
+
+Not responsible for:
+- authoring semantics
+- quality policy design
+
+### 3.2 skill-creator responsibilities
+
+- define/update skill semantics and resources
+- maintain trigger wording quality
+- enforce update validation and regression discipline
+
+Not responsible for:
+- distribution to all runtime targets
+
+### 3.3 Operational rule
+
+- content changes => creator plane
+- distribution/reinstallation => installer plane
+
+---
+
+## 4) Skill update mechanism (existing skill)
+
+Skill update has two linked operations:
+
+1. update skill content
+2. distribute updated version to target runtimes
+
+### 4.1 Update triggers
+
+- explicit user request to update skill
+- observed mis-trigger/under-trigger
+- workflow failures or repeated manual patches
+- new scenario coverage need
+
+### 4.2 Patch priority order (recommended)
+
+1. trigger mismatch -> patch `description`
+2. execution mismatch -> patch `SKILL.md` body
+3. fragile ops -> patch/add `scripts/`
+4. context overload -> move details to `references/`
+5. template/output drift -> patch `assets/`
 6. UI metadata drift -> patch `agents/openai.yaml` (if used)
 
-Keep patches atomic and evidence-backed.
+### 4.3 Update hygiene
+
+- avoid pseudo-updates (docs changed but runtime behavior unchanged)
+- keep changes atomic and reversible
+- maintain backward compatibility where possible
 
 ---
 
-## 4) Post-update validation (mandatory)
+## 5) Post-update validation (4 layers)
 
-A skill update is not complete until all four checks pass.
+### 5.1 Static/structure validation
 
-### 4.1 Structure validation
-- run a structural validator (e.g., quick validate script)
-- ensure required files resolve
+- required files exist
+- SKILL references resolve
+- command/parameter docs match scripts
 
-### 4.2 Resource validation
+### 5.2 Dynamic/resource validation
+
 - run changed scripts at least once
-- verify references linked from `SKILL.md` are reachable
+- verify expected output fields/artifacts
+- verify failure branches produce explicit diagnostics
 
-### 4.3 Trigger regression validation (must include 3 suites)
-- positive cases (should trigger)
-- boundary cases (should route deterministically)
-- negative cases (should not trigger)
+### 5.3 Trigger regression validation
 
-### 4.4 Real task smoke test
-- run one real/representative task
-- confirm stability and quality improvement
+Must include three suites:
+- positive cases (must trigger)
+- boundary cases (must route deterministically)
+- negative cases (must not trigger)
 
----
+### 5.4 Real-task smoke validation
 
-## 5) Continuous triggering strategy
+- run one representative real task
+- verify stability and output quality improvements
 
-### 5.1 Mechanism layer
-- trigger by metadata + request semantics
-- explicit skill mention must strongly trigger
-- non-matching tasks must not trigger
-
-### 5.2 Prompt layer
-- include stable action phrases in metadata
-- include common synonyms used by operators
-
-### 5.3 Engineering layer
-- maintain prompt regression set
-- record trigger failures and patch metadata regularly
+Success criteria:
+- validation passes
+- trigger behavior is correct
+- real task is more stable than before
 
 ---
 
-## 6) Identity protocol mapping (direct reuse)
+## 6) Continuous trigger stability
 
-- skill metadata trigger discipline -> identity routing + trigger regression contract
-- skill update chain -> identity update lifecycle contract
-- skill validator/replay discipline -> identity validator chain + replay requirement
-- installer/creator separation -> identity routing between runtime updater and capability builder
+### 6.1 Mechanism layer
+
+- explicit mention has top priority
+- semantic match acts as fallback trigger
+- multi-skill routing should minimize scope and overlap
+
+### 6.2 Prompting layer
+
+- keep action phrases stable
+- include real operator synonyms in description
+- state boundary conditions clearly to reduce false positives
+
+### 6.3 Engineering layer
+
+- maintain a regression prompt set (positive/boundary/negative)
+- log trigger misses and periodically patch metadata
+- run trigger regression after each meaningful update
 
 ---
 
-## 7) Required review baseline before identity capability decisions
+## 7) Frequent failure patterns
 
-For identity capability/routing/governance changes, reviewers must check:
-
-1. `identity/protocol/IDENTITY_PROTOCOL.md`
-2. this reference file
-3. OpenAI Codex Skills official docs
-4. Agent Skills specification
-5. MCP specification
-
-Review evidence is mandatory per `protocol_review_contract`.
+- only patching body, not description => trigger issue remains
+- overloading SKILL body with references => noisy execution
+- missing negative regression tests => false trigger spikes
+- updating content but skipping runtime reinstallation/reload => stale behavior in target runtime
 
 ---
 
-## 8) Maintainer checklist
+## 8) Practical SOP (from trigger to report)
 
-- [ ] updater trigger condition is explicit
-- [ ] patch surface is explicit and minimal
-- [ ] structural + resource + regression + smoke validations are all run
-- [ ] positive/boundary/negative suites all exist and pass
-- [ ] original failing case replay evidence is recorded
-- [ ] distribution path (installer plane) is completed where required
-- [ ] baseline review evidence cites protocol sources
+1. detect trigger target
+2. declare selected skill(s) + execution order
+3. load minimal context (`SKILL.md` + required scripts)
+4. execute workflow
+5. validate (static + dynamic + trigger regression + smoke)
+6. report artifacts/paths/results/residual risk
+
+---
+
+## 9) Maintainer checklist
+
+- [ ] installer and creator boundaries remain clear
+- [ ] update follows trigger -> patch -> validate -> replay
+- [ ] post-update 4-layer validation evidence exists
+- [ ] trigger regression includes positive/boundary/negative suites
+- [ ] runtime distribution/reinstall step is completed where needed
+- [ ] review references are accessible from canonical entry and README
