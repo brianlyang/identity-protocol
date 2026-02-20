@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **identity update lifecycle contract hardening (skill-style)**:
+  - protocol upgraded to `v1.2.4 (draft)`
+  - added `docs/specs/identity-update-lifecycle-contract-v1.2.4.md`
+  - added `gates.identity_update_gate=required` for runtime-evolution tasks
+  - added `identity_update_lifecycle_contract` (trigger/patch/validation/replay)
+  - added validator: `scripts/validate_identity_update_lifecycle.py`
+  - e2e smoke test now includes lifecycle validation check
+  - `store-manager` runtime now includes `capability_gap -> identity-creator` route
+  - identity-creator skill now enforces update chain explicitly: trigger -> patch -> validate -> replay
+
 - **baseline-review hardening for identity upgrades**:
   - README now documents a mandatory protocol baseline review gate for identity capability upgrades
   - protocol upgraded to `v1.2.3 (draft)` with `protocol_review_contract` requirements

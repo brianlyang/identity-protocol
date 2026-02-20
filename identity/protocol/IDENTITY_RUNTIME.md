@@ -25,7 +25,8 @@ Project extension features:
 4. Validate identity pack exists and required files are present.
 5. Validate CURRENT_TASK minimum required blocks.
 6. Validate baseline-review evidence if `protocol_baseline_review_gate` is `required`.
-7. Allow execution.
+7. Validate identity update lifecycle contract if `identity_update_gate` is `required`.
+8. Allow execution.
 
 If validation fails, block high-impact actions and require repair.
 
@@ -47,6 +48,10 @@ Before high-impact actions (listing/relisting/repricing):
 Before identity-level capability upgrade conclusions:
 - protocol baseline review gate must pass
 - review evidence must include mandatory sources and decision trace
+
+Before identity runtime evolution/update conclusions:
+- identity update lifecycle gate must pass
+- update trigger/patch/validation/replay contracts must all pass
 
 ## Post-action requirements
 

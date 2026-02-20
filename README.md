@@ -29,6 +29,8 @@ python scripts/compile_identity_runtime.py
 python scripts/validate_identity_manifest.py
 python scripts/test_identity_discovery_contract.py
 python scripts/validate_identity_runtime_contract.py
+python scripts/validate_identity_upgrade_prereq.py --identity-id store-manager
+python scripts/validate_identity_update_lifecycle.py --identity-id store-manager
 python scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
 # optional: scaffold a new identity pack
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
@@ -53,6 +55,7 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
 - Runtime bottom guardrails (ORRL):
   - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
   - `docs/specs/identity-learning-loop-validation-v1.2.1.md`
+  - `docs/specs/identity-update-lifecycle-contract-v1.2.4.md`
 
 ## Protocol baseline review gate (MUST)
 
@@ -70,6 +73,23 @@ This requirement is enforced via runtime contract keys:
 Validation is executed by:
 - `scripts/validate_identity_runtime_contract.py`
 
+## Identity update lifecycle (MUST, skill-style)
+
+Identity must evolve with the same discipline as skill updates.
+
+Required chain:
+1. trigger
+2. patch surface
+3. validation
+4. replay on original failing case
+
+This is enforced via runtime keys:
+- `gates.identity_update_gate = "required"`
+- `identity_update_lifecycle_contract`
+
+Validation is executed by:
+- `scripts/validate_identity_update_lifecycle.py`
+
 ## Design principles
 
 1. Align with official Codex skills model and discovery behavior.
@@ -79,9 +99,10 @@ Validation is executed by:
 5. Require ORRL (Observe/Reason/Route/Ledger) gates for high-impact runs.
 6. Require learning-loop validation to prove reasoning and rulebook linkage.
 7. Require protocol baseline review evidence before identity-level upgrade conclusions.
+8. Require skill-style identity update lifecycle (trigger/patch/validate/replay).
 
 ## Status
 
-- Protocol version: `v1.2.3` (baseline-review-enforced draft)
+- Protocol version: `v1.2.4` (baseline + update-lifecycle enforced draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
-- Creator skill: `identity-creator` (manifest-aware scaffold + validators)
+- Creator skill: `identity-creator` (create + update validators)

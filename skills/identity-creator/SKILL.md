@@ -29,6 +29,7 @@ Create and maintain identity as a first-class control-plane protocol.
 3. Keep runtime state as single source of truth.
 4. Keep compatibility with official Codex config and skill standards.
 5. Enforce source-backed protocol baseline review before identity-upgrade conclusions.
+6. Enforce skill-style update lifecycle for existing identities: trigger -> patch -> validate -> replay.
 
 ## Required outputs
 
@@ -68,6 +69,9 @@ Use references:
 - For identity-upgrade scopes, require:
   - `gates.protocol_baseline_review_gate = required`
   - `protocol_review_contract` with mandatory sources + evidence fields
+- For identity-update scopes, require:
+  - `gates.identity_update_gate = required`
+  - `identity_update_lifecycle_contract` with trigger/patch/validation/replay contracts
 
 Use references:
 - `references/identity-protocol-v1.md`
@@ -87,14 +91,20 @@ Use references:
 
 ### 4) Update existing identities (mandatory)
 
-When modifying an existing identity (e.g. store-manager / audit-officer), treat it as an **update operation** just like `skill-creator` update flow:
+When modifying an existing identity (e.g. store-manager / audit-officer), treat it as an **update operation** just like `skill-creator` update flow.
 
-1. Run baseline review first (identity-protocol + skills + MCP references).
-2. Update `CURRENT_TASK.json` contracts/gates and affected docs.
-3. Run validation gates in order:
-   - `scripts/validate_identity_runtime_contract.py`
-   - `scripts/validate_identity_upgrade_prereq.py --identity-id <id>`
-4. Only after both pass, continue to merge/release decisions.
+Required chain (cannot skip):
+1. Trigger: identify mandatory update trigger
+2. Patch: update required identity surfaces
+3. Validate: run all required validators
+4. Replay: rerun the original failing sample
+
+Validation gates in order:
+- `scripts/validate_identity_runtime_contract.py`
+- `scripts/validate_identity_upgrade_prereq.py --identity-id <id>`
+- `scripts/validate_identity_update_lifecycle.py --identity-id <id>`
+
+Only after all pass, continue to merge/release decisions.
 
 ### 5) Validate runtime contracts
 
@@ -132,6 +142,7 @@ Use references:
 - Runtime contract is complete and parseable.
 - Protocol baseline review gate is present for identity-upgrade scopes.
 - Baseline review evidence cites identity-protocol + skill + mcp standards.
+- Identity update lifecycle contract is present and complete.
 - Compiled runtime brief is concise and current.
 - No conflict with existing skills/MCP config.
 
