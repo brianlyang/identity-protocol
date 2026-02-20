@@ -39,12 +39,13 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
 
 ## Fast review path (skill mechanism alignment)
 
-For fast, consistent review of the key skill mechanisms (trigger/create/update/validate + installer/creator split), read in this order:
+For fast, consistent review of the key skill mechanisms (trigger/create/update/validate + installer/creator split + mcp/tool collaboration), read in this order:
 
 1. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md` (canonical entry)
 2. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md` (full SOP)
-3. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
-4. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
+3. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md` (strategy/capability/execution collaboration)
+4. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
+5. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
 
 ## Governance and operations
 
@@ -70,6 +71,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 - Skill protocol baseline references for identity reviewers:
   - `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
   - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+  - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
 
 ## Protocol baseline review gate (MUST)
 
