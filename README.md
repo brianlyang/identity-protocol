@@ -74,6 +74,8 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
   - `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
   - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+- Branch protection last-mile checklist:
+  - `docs/governance/branch-protection-required-checks-v1.2.8.md`
 
 ## Protocol baseline review gate (MUST)
 
