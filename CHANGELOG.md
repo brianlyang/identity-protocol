@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **protocol canonical spec aligned to v1.2.5**:
+  - updated `identity/protocol/IDENTITY_PROTOCOL.md` from `v1.2.4` to `v1.2.5 (draft)`
+  - documented `trigger_regression_contract` as conditional runtime requirement
+  - documented skill+mcp+tool collaboration boundary as baseline review requirement
+  - synced conflict and alignment section with trigger-regression and collaboration checks
+
 - **skill + mcp + tool collaboration baseline (new)**:
   - added `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
   - defines three-layer collaboration model:
