@@ -4,10 +4,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import yaml
-
 
 REQ_TOP_LEVEL = [
     "objective",
@@ -32,7 +31,6 @@ REQ_GATES = [
     "routing_gate",
     "rulebook_gate",
 ]
-
 
 REQUIRED_PROTOCOL_SOURCES = [
     "brianlyang/identity-protocol::identity/protocol/IDENTITY_PROTOCOL.md",
@@ -62,31 +60,32 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def _resolve_current_task(catalog_path: Path, override: str) -> Path:
-    if override:
-        p = Path(override)
-        if p.exists():
-            return p
-        raise FileNotFoundError(f"override current task not found: {p}")
+def _source_signature(item: dict[str, Any]) -> str:
+    if item.get("repo") and item.get("path"):
+        return f"{item.get('repo')}::{item.get('path')}"
+    if item.get("url"):
+        return str(item.get("url"))
+    return ""
 
-    catalog = _load_yaml(catalog_path)
-    default_id = str(catalog.get("default_identity", "")).strip()
-    identities = catalog.get("identities") or []
-    active = next((x for x in identities if str(x.get("id", "")).strip() == default_id), None)
-    if not active:
-        raise FileNotFoundError(f"default identity not found in catalog: {default_id}")
 
-    pack_path = str(active.get("pack_path", "")).strip()
+def _resolve_task_path(identity: dict[str, Any]) -> Path:
+    identity_id = str(identity.get("id", "")).strip()
+    pack_path = str(identity.get("pack_path", "")).strip()
     if pack_path:
         p = Path(pack_path) / "CURRENT_TASK.json"
         if p.exists():
             return p
 
-    legacy = Path("identity") / default_id / "CURRENT_TASK.json"
+    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
     if legacy.exists():
         return legacy
 
-    raise FileNotFoundError("CURRENT_TASK.json not found from catalog default identity")
+    raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
+
+
+def _latest_evidence(pattern: str) -> Path | None:
+    files = sorted(Path(".").glob(pattern))
+    return files[-1] if files else None
 
 
 def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[str]]:
@@ -124,13 +123,12 @@ def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[
         logs.append("[FAIL] protocol_review_contract.evidence_report_path_pattern missing")
         return rc, logs
 
-    evidence_files = sorted(Path(".").glob(pattern))
-    if not evidence_files:
+    latest = _latest_evidence(pattern)
+    if not latest:
         rc = 1
         logs.append(f"[FAIL] no protocol review evidence file matched: {pattern}")
         return rc, logs
 
-    latest = evidence_files[-1]
     logs.append(f"[OK]   found protocol review evidence: {latest}")
     try:
         evidence = _load_json(latest)
@@ -146,23 +144,13 @@ def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[
 
     source_sig: set[str] = set()
     for s in evidence.get("sources_reviewed") or []:
-        if not isinstance(s, dict):
-            continue
-        if s.get("repo") and s.get("path"):
-            source_sig.add(f"{s.get('repo')}::{s.get('path')}")
-        if s.get("url"):
-            source_sig.add(str(s.get("url")))
+        if isinstance(s, dict):
+            sig = _source_signature(s)
+            if sig:
+                source_sig.add(sig)
 
-    expected_sig: list[str] = []
-    for s in sources:
-        if not isinstance(s, dict):
-            continue
-        if s.get("repo") and s.get("path"):
-            expected_sig.append(f"{s.get('repo')}::{s.get('path')}")
-        elif s.get("url"):
-            expected_sig.append(str(s.get("url")))
-
-    missing_sources = [sig for sig in expected_sig if sig not in source_sig]
+    expected_sig = [_source_signature(s) for s in sources if isinstance(s, dict)]
+    missing_sources = [sig for sig in expected_sig if sig and sig not in source_sig]
     if missing_sources:
         rc = 1
         logs.append(f"[FAIL] protocol review evidence missing mandatory source(s): {missing_sources}")
@@ -179,27 +167,13 @@ def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[
     return rc, logs
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate identity runtime ORRL contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
-    ap.add_argument("--current-task", default="", help="optional explicit CURRENT_TASK path")
-    args = ap.parse_args()
-
-    catalog_path = Path(args.catalog)
-    if not catalog_path.exists():
-        return _fail(f"missing catalog: {catalog_path}")
+def _validate_single_identity(identity_id: str, task_path: Path) -> int:
+    print(f"[INFO] validating CURRENT_TASK for identity={identity_id}: {task_path}")
 
     try:
-        path = _resolve_current_task(catalog_path, args.current_task)
+        data = _load_json(task_path)
     except Exception as e:
-        return _fail(str(e))
-
-    print(f"[INFO] validating CURRENT_TASK: {path}")
-
-    try:
-        data = _load_json(path)
-    except Exception as e:
-        return _fail(f"invalid json in {path}: {e}")
+        return _fail(f"invalid json in {task_path}: {e}")
 
     rc = 0
     for key in REQ_TOP_LEVEL:
@@ -301,9 +275,69 @@ def main() -> int:
                 print(f"[OK]   validated {ok_rows} rulebook rows against required_fields")
 
     if rc == 0:
-        print("Identity runtime contract validation PASSED")
+        print(f"Identity runtime contract validation PASSED for identity={identity_id}")
     else:
-        print("Identity runtime contract validation FAILED")
+        print(f"Identity runtime contract validation FAILED for identity={identity_id}")
+    return rc
+
+
+def _iter_target_identities(catalog: dict[str, Any], only_identity: str, all_identities: bool) -> Iterable[dict[str, Any]]:
+    identities = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+    if only_identity:
+        return [x for x in identities if str(x.get("id", "")).strip() == only_identity]
+
+    if all_identities:
+        return identities
+
+    active = [x for x in identities if str(x.get("status", "")).strip().lower() == "active"]
+    if active:
+        return active
+
+    default_id = str(catalog.get("default_identity", "")).strip()
+    return [x for x in identities if str(x.get("id", "")).strip() == default_id]
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Validate identity runtime ORRL contract")
+    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--current-task", default="", help="optional explicit CURRENT_TASK path")
+    ap.add_argument("--identity-id", default="", help="validate only this identity id")
+    ap.add_argument("--all-identities", action="store_true", help="validate all identities from catalog")
+    args = ap.parse_args()
+
+    catalog_path = Path(args.catalog)
+    if not catalog_path.exists():
+        return _fail(f"missing catalog: {catalog_path}")
+
+    if args.current_task:
+        path = Path(args.current_task)
+        if not path.exists():
+            return _fail(f"override current task not found: {path}")
+        rc = _validate_single_identity(args.identity_id or "(override)", path)
+        return rc
+
+    try:
+        catalog = _load_yaml(catalog_path)
+    except Exception as e:
+        return _fail(f"invalid catalog yaml: {e}")
+
+    targets = list(_iter_target_identities(catalog, args.identity_id, args.all_identities))
+    if not targets:
+        return _fail("no target identities selected for runtime validation")
+
+    rc = 0
+    for item in targets:
+        identity_id = str(item.get("id", "")).strip() or "(unknown)"
+        try:
+            task_path = _resolve_task_path(item)
+        except Exception as e:
+            print(f"[FAIL] identity={identity_id} {e}")
+            rc = 1
+            continue
+
+        print("\n" + "=" * 72)
+        rc = max(rc, _validate_single_identity(identity_id, task_path))
+
     return rc
 
 
