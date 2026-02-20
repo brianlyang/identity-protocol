@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **skill + mcp + tool collaboration baseline (new)**:
+  - added `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+  - defines three-layer collaboration model:
+    - skill (strategy)
+    - mcp (capability access)
+    - tool (execution)
+  - includes runtime call chain, auth boundary model, staged execution template, and error routing classes
+  - canonical skill reference now links this collaboration contract
+  - README fast-review path now includes collaboration contract
+  - runtime baseline review source list (`protocol_review_contract.must_review_sources`) now includes this collaboration contract
+
 - **trigger-regression hardening (skill-style)**:
   - protocol upgraded to `v1.2.5 (draft)`
   - added `docs/specs/identity-trigger-regression-contract-v1.2.5.md`
