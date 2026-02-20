@@ -2,15 +2,19 @@
 
 This is the **canonical review entry** for skill mechanism alignment in identity-protocol.
 
-It standardizes four things reviewers must check:
+It standardizes five things reviewers must check:
 
 1. trigger/discovery model
 2. installer vs creator responsibilities
 3. update lifecycle and distribution lifecycle
 4. post-update validation + continuous trigger stability
+5. skill + MCP + tool collaboration contract
 
 > Detailed long-form SOP is in:
 > `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+>
+> Skill/MCP/tool runtime collaboration baseline is in:
+> `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
 
 ---
 
@@ -102,11 +106,24 @@ Success condition:
 
 ---
 
-## G) Reviewer checklist
+## G) Collaboration model with MCP/tools
+
+- skill defines strategy and constraints
+- MCP provides capability endpoints
+- tools execute concrete actions
+- runtime completion requires evidence, not just "tool call succeeded"
+
+Reference contract:
+- `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+
+---
+
+## H) Reviewer checklist
 
 - [ ] installer/creator boundaries are not mixed
 - [ ] update chain follows trigger/patch/validate/replay
 - [ ] creator-plane changes and installer-plane distribution are both completed
 - [ ] 3-suite trigger regression evidence exists
 - [ ] post-update smoke run evidence exists
+- [ ] skill+mcp+tool collaboration constraints are explicitly documented
 - [ ] references are easy to locate from README and runtime review contracts
