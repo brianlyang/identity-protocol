@@ -12,8 +12,13 @@
   - added sample regression record: `identity/runtime/examples/store-manager-trigger-regression-sample.json`
 
 - **skill protocol baseline references for identity reviewers**:
-  - added `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
-  - README now links skill reference baseline and trigger-regression contract
+  - added canonical reference path: `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+  - added detailed versioned reference: `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+  - merged detailed mechanism for skill update handling:
+    - update = creator-plane content patch + installer-plane runtime distribution
+    - trigger/patch/validate/replay chain
+    - post-update 4-layer validation (structure/resource/trigger-regression/smoke)
+  - README and runtime baseline review sources now include canonical skill reference paths
 
 - **identity update lifecycle contract hardening (skill-style)**:
   - protocol upgraded to `v1.2.4 (draft)`
