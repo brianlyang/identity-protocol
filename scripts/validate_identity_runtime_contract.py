@@ -36,6 +36,9 @@ REQ_GATES = [
 
 REQUIRED_PROTOCOL_SOURCES = [
     "brianlyang/identity-protocol::identity/protocol/IDENTITY_PROTOCOL.md",
+    "brianlyang/identity-protocol::docs/references/skill-installer-skill-creator-skill-update-lifecycle.md",
+    "brianlyang/identity-protocol::docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md",
+    "brianlyang/identity-protocol::docs/references/skill-mcp-tool-collaboration-contract-v1.0.md",
     "brianlyang/identity-protocol::docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md",
     "https://developers.openai.com/codex/skills/",
     "https://agentskills.io/specification",
