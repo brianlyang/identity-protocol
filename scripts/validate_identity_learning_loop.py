@@ -6,9 +6,18 @@ import json
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"YAML root must be object: {path}")
+    return data
 
 
 def _fail(msg: str) -> int:
@@ -16,14 +25,64 @@ def _fail(msg: str) -> int:
     return 1
 
 
+def _resolve_current_task(catalog_path: Path, override: str) -> tuple[Path, str]:
+    if override:
+        p = Path(override)
+        if not p.exists():
+            raise FileNotFoundError(f"override current task not found: {p}")
+        return p, "(override)"
+
+    catalog = _load_yaml(catalog_path)
+    default_id = str(catalog.get("default_identity", "")).strip()
+    identities = catalog.get("identities") or []
+    active = next((x for x in identities if str(x.get("id", "")).strip() == default_id), None)
+    if not active:
+        raise FileNotFoundError(f"default identity not found in catalog: {default_id}")
+
+    pack_path = str(active.get("pack_path", "")).strip()
+    if pack_path:
+        p = Path(pack_path) / "CURRENT_TASK.json"
+        if p.exists():
+            return p, default_id
+
+    legacy = Path("identity") / default_id / "CURRENT_TASK.json"
+    if legacy.exists():
+        return legacy, default_id
+
+    raise FileNotFoundError("CURRENT_TASK.json not found from catalog default identity")
+
+
+def _resolve_run_report(identity_id: str, override: str) -> Path:
+    if override:
+        return Path(override)
+
+    preferred = Path(f"identity/runtime/examples/{identity_id}-learning-sample.json")
+    if preferred.exists():
+        return preferred
+
+    fallback = Path("identity/runtime/examples/store-manager-learning-sample.json")
+    return fallback
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity learning loop evidence (reasoning + rulebook linkage)")
-    ap.add_argument("--current-task", default="identity/store-manager/CURRENT_TASK.json")
-    ap.add_argument("--run-report", default="identity/runtime/examples/store-manager-learning-sample.json")
+    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--current-task", default="")
+    ap.add_argument("--run-report", default="")
     ap.add_argument("--rulebook", default="")
     args = ap.parse_args()
 
-    task_path = Path(args.current_task)
+    catalog_path = Path(args.catalog)
+    if not catalog_path.exists():
+        return _fail(f"missing catalog: {catalog_path}")
+
+    try:
+        task_path, identity_id = _resolve_current_task(catalog_path, args.current_task)
+    except Exception as e:
+        return _fail(str(e))
+
+    run_report_path = _resolve_run_report(identity_id, args.run_report)
+
     if not task_path.exists():
         return _fail(f"missing current task file: {task_path}")
     task = _load_json(task_path)
@@ -35,10 +94,12 @@ def main() -> int:
     if not lvc:
         return _fail("learning_verification_contract missing in CURRENT_TASK")
 
-    run_report_path = Path(args.run_report)
     if not run_report_path.exists():
         return _fail(f"missing run report: {run_report_path}")
     run = _load_json(run_report_path)
+
+    print(f"[INFO] identity={identity_id} current_task={task_path}")
+    print(f"[INFO] run_report={run_report_path}")
 
     rc = 0
 
