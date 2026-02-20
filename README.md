@@ -38,6 +38,7 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
 
 - Review checklist:
   - `docs/review/protocol-review-checklist.md`
+  - `docs/review/core-capability-verification-matrix.md`
 - Roundtable decision notes:
   - `docs/roundtable/RT-2026-02-18-identity-creator-design.md`
 - Research and source cross-validation:
@@ -48,6 +49,7 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
   - `docs/operations/identity-rollback-drill.md`
   - `docs/specs/identity-compatibility-matrix.md`
   - `docs/guides/identity-creator-operations.md`
+  - `docs/guides/consumer-quickstart-skill-like-integration.md`
 - Runtime bottom guardrails (ORRL):
   - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
   - `docs/specs/identity-learning-loop-validation-v1.2.1.md`
