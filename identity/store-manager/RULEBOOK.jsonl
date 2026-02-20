@@ -1,0 +1,2 @@
+{"rule_id":"store-manager-bootstrap-001","type":"negative","trigger":"submit_without_api_event_ui_consistency","action":"block_done_and_force_recheck","evidence_run_id":"bootstrap","scope":"global","confidence":0.99,"updated_at":"2026-02-20T00:00:00Z"}
+{"rule_id":"store-manager-bootstrap-002","type":"positive","trigger":"preflight_pass_and_triplet_consistent","action":"allow_submit_and_monitor","evidence_run_id":"bootstrap","scope":"global","confidence":0.85,"updated_at":"2026-02-20T00:00:00Z"}

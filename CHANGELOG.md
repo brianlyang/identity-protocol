@@ -14,9 +14,15 @@
 - added validator scripts:
   - `scripts/validate_identity_manifest.py`
   - `scripts/test_identity_discovery_contract.py`
+  - `scripts/validate_identity_runtime_contract.py`
+- upgraded store-manager runtime contract to ORRL hard gates:
+  - `identity/store-manager/CURRENT_TASK.json`
+  - `identity/store-manager/RULEBOOK.jsonl`
+- upgraded e2e smoke test to include runtime ORRL contract validation
+- added ORRL spec:
+  - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
 - added deterministic identity scaffolder:
   - `scripts/create_identity_pack.py`
-- upgraded e2e smoke test to include manifest + discovery checks
 - upgraded `identity-creator` scaffold to generate `agents/identity.yaml`
 - added benchmark report:
   - `docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md`

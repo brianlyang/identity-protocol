@@ -3,9 +3,9 @@
   "agent_identity": {
     "name": "StoreManager",
     "role": "WeChat Shop Operations and API Automation Manager",
-    "methodology_version": "v1.0",
-    "prompt_version": "v1.0",
-    "json_version": "v1.0",
+    "methodology_version": "v1.2",
+    "prompt_version": "v1.2",
+    "json_version": "v1.2",
     "identity_prompt_path": "identity/store-manager/IDENTITY_PROMPT.md",
     "canon_path": "identity/STORE_MANAGER_CANON.md"
   },
@@ -45,7 +45,67 @@
     "media_gate": "required",
     "category_compliance_gate": "required",
     "reject_memory_gate": "required",
-    "payload_evidence_gate": "required"
+    "payload_evidence_gate": "required",
+    "multimodal_consistency_gate": "required",
+    "reasoning_loop_gate": "required",
+    "routing_gate": "required",
+    "rulebook_gate": "required"
+  },
+  "evaluation_contract": {
+    "required_evidence_triplet": [
+      "api_evidence",
+      "event_evidence",
+      "ui_evidence"
+    ],
+    "consistency_required": true,
+    "consistency_fail_action": "block_done_and_trigger_recheck",
+    "run_report_path_pattern": "resource/reports/*run*.json"
+  },
+  "reasoning_loop_contract": {
+    "max_attempts_before_escalation": 3,
+    "mandatory_fields_per_attempt": [
+      "attempt",
+      "hypothesis",
+      "patch",
+      "expected_effect",
+      "result"
+    ],
+    "failure_requires_next_action": true
+  },
+  "routing_contract": {
+    "auto_route_enabled": true,
+    "fallback_switch_after_failures": 2,
+    "problem_type_routes": {
+      "visual_quality": [
+        "product-asset-bootstrap",
+        "product-visual-qa",
+        "weixinstore-ui-agent"
+      ],
+      "audit_reject_text": [
+        "weixinstore-sku-onboarding"
+      ],
+      "offline_compliance_blocker": [
+        "ops-notification-router"
+      ]
+    }
+  },
+  "rulebook_contract": {
+    "append_only": true,
+    "required_rule_types": [
+      "negative",
+      "positive"
+    ],
+    "required_fields": [
+      "rule_id",
+      "type",
+      "trigger",
+      "action",
+      "evidence_run_id",
+      "scope",
+      "confidence",
+      "updated_at"
+    ],
+    "rulebook_path": "identity/store-manager/RULEBOOK.jsonl"
   },
   "source_of_truth": {
     "local_docs_roots": [
@@ -89,7 +149,6 @@
   ],
   "version_control": {
     "sync_status": "synchronized",
-    "last_updated": "2026-02-18"
+    "last_updated": "2026-02-20"
   }
 }
-
