@@ -61,10 +61,24 @@ def _require_keys(block: dict[str, Any], keys: list[str], prefix: str) -> list[s
     return missing
 
 
+def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, Any], override: str) -> Path:
+    if override:
+        return Path(override)
+
+    pattern = str(replay_contract.get("evidence_path_pattern") or "")
+    if pattern:
+        matched = sorted(Path(".").glob(pattern))
+        if matched:
+            return matched[-1]
+
+    return Path(f"identity/runtime/examples/{identity_id}-update-replay-sample.json")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity update lifecycle contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--replay-evidence", default="")
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog)
@@ -136,6 +150,14 @@ def main() -> int:
         return 1
     print("[OK] patch_surface_contract.required_files contains all mandatory surfaces")
 
+    required_file_paths = patch.get("required_file_paths") or []
+    if required_file_paths:
+        missing_paths = [p for p in required_file_paths if not Path(str(p)).exists()]
+        if missing_paths:
+            print(f"[FAIL] patch_surface_contract.required_file_paths not found: {missing_paths}")
+            return 1
+        print("[OK] patch_surface_contract.required_file_paths all exist")
+
     required_checks = set(valid.get("required_checks") or [])
     expected_checks = {
         "scripts/validate_identity_runtime_contract.py",
@@ -153,6 +175,49 @@ def main() -> int:
         print("[FAIL] missing trigger_regression_contract")
         return 1
     print("[OK] trigger_regression_contract present")
+
+    # Replay evidence validation (execution-level)
+    replay_evidence_path = _resolve_replay_evidence_path(args.identity_id, replay, args.replay_evidence)
+    if not replay_evidence_path.exists():
+        print(f"[FAIL] replay evidence file not found: {replay_evidence_path}")
+        return 1
+
+    try:
+        replay_evidence = _load_json(replay_evidence_path)
+    except Exception as e:
+        print(f"[FAIL] replay evidence invalid json: {e}")
+        return 1
+
+    print(f"[OK] replay evidence loaded: {replay_evidence_path}")
+
+    required_replay_fields = set(replay.get("required_fields") or ["identity_id", "replay_status", "patched_files", "validation_checks_passed"])
+    missing_replay_fields = [f for f in required_replay_fields if f not in replay_evidence]
+    if missing_replay_fields:
+        print(f"[FAIL] replay evidence missing fields: {missing_replay_fields}")
+        return 1
+
+    if str(replay_evidence.get("identity_id") or "") != args.identity_id:
+        print(
+            f"[FAIL] replay evidence identity mismatch: expected={args.identity_id}, got={replay_evidence.get('identity_id')}"
+        )
+        return 1
+
+    replay_status = str(replay_evidence.get("replay_status") or "")
+    if replay_status != "PASS":
+        print(f"[FAIL] replay evidence replay_status must be PASS, got={replay_status}")
+        return 1
+
+    patched_files = set(replay_evidence.get("patched_files") or [])
+    if not expected_files.issubset(patched_files):
+        print(f"[FAIL] replay evidence patched_files missing mandatory surfaces: {sorted(expected_files - patched_files)}")
+        return 1
+
+    checks_passed = set(replay_evidence.get("validation_checks_passed") or [])
+    if not required_checks.issubset(checks_passed):
+        print(
+            f"[FAIL] replay evidence validation_checks_passed missing required checks: {sorted(required_checks - checks_passed)}"
+        )
+        return 1
 
     routes = ((task.get("routing_contract") or {}).get("problem_type_routes") or {})
     cap_gap = routes.get("capability_gap") or []
