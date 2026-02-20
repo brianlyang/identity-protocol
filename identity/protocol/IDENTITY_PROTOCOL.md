@@ -1,4 +1,4 @@
-# Identity Protocol v1.2.4 (draft)
+# Identity Protocol v1.2.5 (draft)
 
 ## Goal
 
@@ -66,7 +66,7 @@ Identity protocol must be verifiable against four capability contracts:
    - Requires append-only rulebook linkage to run evidence.
    - Requires both negative and positive rule accumulation over time.
 
-## Protocol baseline review contract (v1.2.3)
+## Protocol baseline review contract (v1.2.3+)
 
 To avoid identity-level drift and unsupported architectural conclusions, identity upgrades MUST include baseline protocol review evidence.
 
@@ -85,7 +85,7 @@ A valid review evidence record MUST include, at minimum:
 - findings
 - decision
 
-## Identity update lifecycle contract (new in v1.2.4)
+## Identity update lifecycle contract (v1.2.4+)
 
 To match skill update discipline (`trigger -> patch -> validate -> replay`), identity updates MUST define and pass an explicit lifecycle contract.
 
@@ -111,6 +111,39 @@ Mandatory validators:
 
 No replay pass -> no identity learning completion.
 
+## Identity trigger regression contract (new in v1.2.5)
+
+To mirror mature skill trigger stability practice, identity route/update changes MUST pass trigger regression.
+
+When routing, trigger conditions, or update gates are modified:
+
+- `trigger_regression_contract` MUST exist in CURRENT_TASK.
+- Required suites:
+  - `positive_cases`
+  - `boundary_cases`
+  - `negative_cases`
+- Each suite requires deterministic expected/observed route + trigger result.
+
+Mandatory validator:
+- `scripts/validate_identity_trigger_regression.py`
+
+No trigger-regression pass -> no identity update completion/merge.
+
+## Skill + MCP + Tool collaboration contract (new baseline in v1.2.5)
+
+Identity capability decisions MUST align with collaboration boundaries:
+
+- skill = strategy constraints (sequence/validation/fallback)
+- MCP = capability access surface (registered tools)
+- tool = concrete execution action
+
+Identity must never assume:
+- skill automatically grants external permissions
+- skill trigger implies MCP/tools are necessarily available
+
+Collaboration baseline reference:
+- `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+
 ## Dual-track governance model
 
 ### Track A: hard guardrails
@@ -122,6 +155,7 @@ Non-bypassable constraints:
 - escalation triggers
 - protocol baseline review gate for identity-upgrade decisions
 - identity update lifecycle gate for runtime evolution decisions
+- trigger regression gate for route/update changes
 
 ### Track B: adaptive growth
 
@@ -148,6 +182,7 @@ Minimum required blocks:
 Conditional required blocks:
 - `protocol_review_contract` (identity upgrade tasks)
 - `identity_update_lifecycle_contract` (runtime evolution / update tasks)
+- `trigger_regression_contract` (routing/trigger/update gate changes)
 
 ## Conflict resolution
 
@@ -165,6 +200,8 @@ To reduce protocol drift and avoid ad-hoc logic:
 - Discovery, validation, and release gates must be explicit and automated.
 - Identity conclusions for protocol upgrades must be source-cited and evidence-backed.
 - Identity updates must follow explicit trigger/patch/validate/replay lifecycle, mirroring skill update discipline.
+- Identity route/update behavior must pass positive/boundary/negative trigger regression.
+- Identity review must include skill+mcp+tool collaboration boundary checks.
 
 ## Email escalation policy
 
