@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate identity protocol artifacts."""
+"""Validate identity catalog against schema + protocol semantics (all identities)."""
 
 from __future__ import annotations
 
@@ -12,63 +12,124 @@ from jsonschema import validate as jsonschema_validate
 
 REQ_TASK_KEYS = {
     "objective", "state_machine", "gates", "source_of_truth",
-    "escalation_policy", "required_artifacts", "post_execution_mandatory"
+    "escalation_policy", "required_artifacts", "post_execution_mandatory",
 }
 
+REQ_PACK_FILES = [
+    "IDENTITY_PROMPT.md",
+    "CURRENT_TASK.json",
+    "TASK_HISTORY.md",
+    "META.yaml",
+]
 
-def load_yaml(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+
+def fail(msg: str) -> int:
+    print(f"[FAIL] {msg}")
+    return 1
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
         raise ValueError(f"YAML root must be object: {path}")
     return data
 
 
-def fail(msg: str) -> None:
-    raise SystemExit(f"[FAIL] {msg}")
+def _resolve_pack_path(root: Path, item: dict[str, Any]) -> Path | None:
+    pack_path = str(item.get("pack_path", "")).strip()
+    if pack_path:
+        p = root / pack_path
+        if p.exists():
+            return p
+
+    identity_id = str(item.get("id", "")).strip()
+    if identity_id:
+        legacy = root / "identity" / identity_id
+        if legacy.exists():
+            return legacy
+    return None
 
 
 def main() -> int:
-    catalog_path = Path("identity/catalog/identities.yaml")
-    schema_path = Path("identity/catalog/schema/identities.schema.json")
+    root = Path('.')
+    schema_path = root / 'identity/catalog/schema/identities.schema.json'
+    catalog_path = root / 'identity/catalog/identities.yaml'
 
-    if not catalog_path.exists():
-        fail(f"missing {catalog_path}")
     if not schema_path.exists():
-        fail(f"missing {schema_path}")
+        return fail(f"missing schema file: {schema_path}")
+    if not catalog_path.exists():
+        return fail(f"missing catalog file: {catalog_path}")
 
-    catalog = load_yaml(catalog_path)
-    schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    jsonschema_validate(catalog, schema)
+    schema = json.loads(schema_path.read_text(encoding='utf-8'))
+    catalog: dict[str, Any] = _load_yaml(catalog_path)
 
-    default_id = catalog.get("default_identity")
-    identities = catalog.get("identities") or []
-    active = next((x for x in identities if x.get("id") == default_id), None)
-    if not active:
-        fail(f"default_identity not found in identities: {default_id}")
+    try:
+        jsonschema_validate(catalog, schema)
+    except Exception as e:
+        return fail(f"schema validation failed: {e}")
 
-    pack_path = Path(active.get("pack_path", ""))
-    required_pack_files = ["IDENTITY_PROMPT.md", "CURRENT_TASK.json", "TASK_HISTORY.md"]
+    identities = catalog.get('identities')
+    if not isinstance(identities, list) or not identities:
+        return fail("identities must be a non-empty list")
 
-    if not (pack_path and pack_path.exists()):
-        legacy = Path("identity") / str(default_id)
-        if not legacy.exists():
-            fail(f"pack_path missing/invalid and legacy pack not found: {pack_path}")
-        pack_path = legacy
+    default_id = str(catalog.get('default_identity', '')).strip()
+    if not default_id:
+        return fail("default_identity must be non-empty")
 
-    for f in required_pack_files:
-        p = pack_path / f
-        if not p.exists():
-            fail(f"missing pack file: {p}")
+    ids: set[str] = set()
+    has_default = False
+    rc = 0
 
-    task = json.loads((pack_path / "CURRENT_TASK.json").read_text(encoding="utf-8"))
-    missing = [k for k in sorted(REQ_TASK_KEYS) if k not in task]
-    if missing:
-        fail(f"CURRENT_TASK missing keys: {missing}")
+    for i, item in enumerate(identities):
+        prefix = f"identities[{i}]"
+        if not isinstance(item, dict):
+            print(f"[FAIL] {prefix} must be an object")
+            rc = 1
+            continue
 
-    print("[OK] identity protocol validation passed")
-    return 0
+        identity_id = str(item.get('id', '')).strip()
+        if identity_id in ids:
+            print(f"[FAIL] duplicate identity id: {identity_id}")
+            rc = 1
+        ids.add(identity_id)
+        if identity_id == default_id:
+            has_default = True
+
+        pack_dir = _resolve_pack_path(root, item)
+        if not pack_dir:
+            print(f"[FAIL] {prefix} pack_path/legacy path not found")
+            rc = 1
+            continue
+
+        for fname in REQ_PACK_FILES:
+            fpath = pack_dir / fname
+            if not fpath.exists():
+                print(f"[FAIL] {prefix} missing pack file: {fpath}")
+                rc = 1
+
+        task_path = pack_dir / 'CURRENT_TASK.json'
+        if task_path.exists():
+            try:
+                task = json.loads(task_path.read_text(encoding='utf-8'))
+            except Exception as e:
+                print(f"[FAIL] {prefix} invalid CURRENT_TASK.json: {e}")
+                rc = 1
+                continue
+            missing = [k for k in sorted(REQ_TASK_KEYS) if k not in task]
+            if missing:
+                print(f"[FAIL] {prefix} CURRENT_TASK missing keys: {missing}")
+                rc = 1
+            else:
+                print(f"[OK]   {identity_id}: CURRENT_TASK minimum keys present")
+
+    if not has_default:
+        print(f"[FAIL] default_identity {default_id} is not present in identities")
+        rc = 1
+
+    if rc == 0:
+        print("[OK] identity protocol validation passed (all identities)")
+    return rc
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())
