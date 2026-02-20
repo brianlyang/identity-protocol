@@ -85,7 +85,18 @@ Use references:
 - Register identity in `identity/catalog/identities.yaml`.
 - Ensure title/description and capability bindings are explicit.
 
-### 4) Validate runtime contracts
+### 4) Update existing identities (mandatory)
+
+When modifying an existing identity (e.g. store-manager / audit-officer), treat it as an **update operation** just like `skill-creator` update flow:
+
+1. Run baseline review first (identity-protocol + skills + MCP references).
+2. Update `CURRENT_TASK.json` contracts/gates and affected docs.
+3. Run validation gates in order:
+   - `scripts/validate_identity_runtime_contract.py`
+   - `scripts/validate_identity_upgrade_prereq.py --identity-id <id>`
+4. Only after both pass, continue to merge/release decisions.
+
+### 5) Validate runtime contracts
 
 - Use `scripts/validate_identity_protocol.sh` to verify required files and runtime keys.
 - Use `scripts/validate_identity_manifest.py` to validate identity manifest semantics.
@@ -96,13 +107,13 @@ Use references:
   - protocol baseline review evidence completeness
   - mandatory source coverage
 
-### 5) Compile runtime brief and integrate config
+### 6) Compile runtime brief and integrate config
 
 - Build/update `identity/runtime/IDENTITY_COMPILED.md` from active identity.
 - Ensure `.codex/config.toml` points `model_instructions_file` to compiled brief.
 - Keep skills and MCP configured via native Codex keys.
 
-### 6) Record operational guidance
+### 7) Record operational guidance
 
 - Produce a runbook with:
   - operator steps

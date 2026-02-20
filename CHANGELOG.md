@@ -13,6 +13,11 @@
 - validator hardening:
   - `scripts/validate_identity_runtime_contract.py` now validates protocol baseline review evidence when gate is required
   - checks required evidence fields + mandatory source coverage (identity-protocol + skills + MCP references)
+- **identity update-operation enforcement (skill-creator style)**:
+  - new script: `scripts/validate_identity_upgrade_prereq.py`
+  - e2e smoke now includes identity update prerequisite check for store-manager
+  - identity-creator skill workflow now defines mandatory update flow for existing identities
+  - identity-creator scaffold scripts now generate protocol baseline review gate/contracts by default
 
 - protocol alignment hardening for skill/mcp-style determinism:
   - upgraded `identity/protocol/IDENTITY_PROTOCOL.md` to `v1.2.2 (draft)`
