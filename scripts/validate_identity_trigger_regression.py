@@ -59,7 +59,7 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
-def _check_case(case: dict[str, Any], suite: str, idx: int) -> list[str]:
+def _check_case(case: dict[str, Any], suite: str, idx: int) -> tuple[list[str], bool]:
     missing = [k for k in REQ_CASE_FIELDS if k not in case]
     errs: list[str] = []
     if missing:
@@ -70,7 +70,23 @@ def _check_case(case: dict[str, Any], suite: str, idx: int) -> list[str]:
         errs.append(f"{suite}[{idx}].expected_trigger must be bool")
     if not isinstance(case.get("observed_trigger"), bool):
         errs.append(f"{suite}[{idx}].observed_trigger must be bool")
-    return errs
+
+    semantically_pass = False
+    if not errs:
+        expected_route = str(case.get("expected_route"))
+        observed_route = str(case.get("observed_route"))
+        expected_trigger = bool(case.get("expected_trigger"))
+        observed_trigger = bool(case.get("observed_trigger"))
+        semantically_pass = expected_route == observed_route and expected_trigger == observed_trigger
+
+        declared = str(case.get("result"))
+        calculated = "PASS" if semantically_pass else "FAIL"
+        if declared != calculated:
+            errs.append(
+                f"{suite}[{idx}].result inconsistent with expected/observed: declared={declared}, calculated={calculated}"
+            )
+
+    return errs, semantically_pass
 
 
 def main() -> int:
@@ -135,6 +151,10 @@ def main() -> int:
         return 1
 
     rc = 0
+    total_cases = 0
+    pass_cases = 0
+    fail_cases = 0
+
     for suite in REQ_SUITES:
         items = report.get(suite)
         if not isinstance(items, list) or not items:
@@ -142,18 +162,40 @@ def main() -> int:
             rc = 1
             continue
         for idx, case in enumerate(items):
+            total_cases += 1
             if not isinstance(case, dict):
                 print(f"[FAIL] {suite}[{idx}] must be object")
+                fail_cases += 1
                 rc = 1
                 continue
-            errs = _check_case(case, suite, idx)
+            errs, semantically_pass = _check_case(case, suite, idx)
             for err in errs:
                 print(f"[FAIL] {err}")
                 rc = 1
+            if errs:
+                fail_cases += 1
+            else:
+                if semantically_pass:
+                    pass_cases += 1
+                else:
+                    fail_cases += 1
 
     summary = report.get("summary") or {}
-    if summary.get("overall_result") not in {"PASS", "FAIL"}:
-        print("[FAIL] report.summary.overall_result must be PASS|FAIL")
+    expected_overall = "PASS" if fail_cases == 0 else "FAIL"
+
+    if summary.get("total_cases") != total_cases:
+        print(f"[FAIL] report.summary.total_cases mismatch: expected={total_cases}, got={summary.get('total_cases')}")
+        rc = 1
+    if summary.get("pass_cases") != pass_cases:
+        print(f"[FAIL] report.summary.pass_cases mismatch: expected={pass_cases}, got={summary.get('pass_cases')}")
+        rc = 1
+    if summary.get("fail_cases") != fail_cases:
+        print(f"[FAIL] report.summary.fail_cases mismatch: expected={fail_cases}, got={summary.get('fail_cases')}")
+        rc = 1
+    if summary.get("overall_result") != expected_overall:
+        print(
+            f"[FAIL] report.summary.overall_result mismatch: expected={expected_overall}, got={summary.get('overall_result')}"
+        )
         rc = 1
 
     if rc:
