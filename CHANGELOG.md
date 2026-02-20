@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- **audit hardening (v1.2.6 draft)**:
+  - CI now enforces required gate chain for active identities in both workflows:
+    - `.github/workflows/protocol-ci.yml`
+    - `.github/workflows/identity-protocol-ci.yml`
+  - required validators now executed in pipeline:
+    - `validate_identity_runtime_contract.py`
+    - `validate_identity_upgrade_prereq.py`
+    - `validate_identity_update_lifecycle.py`
+    - `validate_identity_trigger_regression.py`
+    - `validate_identity_learning_loop.py`
+  - `validate_identity_trigger_regression.py` now enforces semantic checks:
+    - expected vs observed consistency
+    - declared result vs calculated result
+    - summary aggregation consistency
+  - `validate_identity_update_lifecycle.py` now validates executable evidence:
+    - required patch file paths existence
+    - replay evidence presence and required fields
+    - replay identity/status/patch surface/checks consistency
+  - `validate_identity_protocol.py` now aligns with runtime contract blocks and conditional gate dependencies
+  - `validate_identity_runtime_contract.py` now validates active identities by default (not default-only)
+  - `validate_identity_learning_loop.py` now supports `--identity-id`
+  - store-manager runtime portability and consistency updates:
+    - replaced absolute local docs roots with portable relative roots
+    - aligned `IDENTITY_PROMPT.md` version headers to v1.2
+    - added replay evidence contract fields in `CURRENT_TASK.json`
+    - added replay sample: `identity/runtime/examples/store-manager-update-replay-sample.json`
+  - `scripts/e2e_smoke_test.sh` now runs full gate chain across active identities and verifies compiled brief baseline references
+
 - **runtime compiled brief now includes baseline review references**:
   - updated `scripts/compile_identity_runtime.py` to include `protocol_review_contract.must_review_sources`
   - `identity/runtime/IDENTITY_COMPILED.md` now surfaces runtime baseline review references directly
