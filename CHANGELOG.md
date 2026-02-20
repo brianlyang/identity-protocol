@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **ci maintainability hardening (v1.2.8 draft)**:
+  - consolidated duplicate workflow logic into reusable workflow:
+    - `.github/workflows/_identity-required-gates.yml`
+  - both CI workflows now call shared gate chain:
+    - `.github/workflows/protocol-ci.yml`
+    - `.github/workflows/identity-protocol-ci.yml`
+  - added branch-protection last-mile checklist:
+    - `docs/governance/branch-protection-required-checks-v1.2.8.md`
+  - README governance section now links branch-protection checklist
+
 - **master/sub anti-drift handoff contract hardening (v1.2.7 draft)**:
   - added canonical handoff spec:
     - `identity/protocol/AGENT_HANDOFF_CONTRACT.md`
