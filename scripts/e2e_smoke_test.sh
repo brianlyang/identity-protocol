@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[1/6] validate protocol"
+echo "[1/7] validate protocol"
 python3 scripts/validate_identity_protocol.py
 
-echo "[2/6] compile runtime brief"
+echo "[2/7] compile runtime brief"
 python3 scripts/compile_identity_runtime.py
 
-echo "[3/6] validate manifest semantics"
+echo "[3/7] validate manifest semantics"
 python3 scripts/validate_identity_manifest.py
 
-echo "[4/6] test discovery contract"
+echo "[4/7] test discovery contract"
 python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
 
-echo "[5/6] validate runtime ORRL contract"
+echo "[5/7] validate runtime ORRL contract"
 python3 scripts/validate_identity_runtime_contract.py
 
-echo "[6/6] ensure compile is stable"
+echo "[6/7] validate learning-loop linkage (reasoning + rulebook)"
+python3 scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
+
+echo "[7/7] ensure compile is stable"
 python3 scripts/compile_identity_runtime.py >/dev/null
 
 echo "E2E smoke test PASSED"

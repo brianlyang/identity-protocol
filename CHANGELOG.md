@@ -9,16 +9,18 @@
   - `identity/protocol/IDENTITY_DISCOVERY.md`
 - extended catalog schema and manifest fields:
   - `interface`, `policy`, `dependencies`, `observability`
-- upgraded reference identity metadata in:
-  - `identity/catalog/identities.yaml`
 - added validator scripts:
   - `scripts/validate_identity_manifest.py`
   - `scripts/test_identity_discovery_contract.py`
   - `scripts/validate_identity_runtime_contract.py`
+  - `scripts/validate_identity_learning_loop.py`
 - upgraded store-manager runtime contract to ORRL hard gates:
   - `identity/store-manager/CURRENT_TASK.json`
   - `identity/store-manager/RULEBOOK.jsonl`
-- upgraded e2e smoke test to include runtime ORRL contract validation
+- added learning-loop verification contract for reasoning (#2) and rulebook linkage (#4)
+  - `identity/runtime/examples/store-manager-learning-sample.json`
+  - `docs/specs/identity-learning-loop-validation-v1.2.1.md`
+- upgraded e2e smoke test to include runtime ORRL + learning-loop validation
 - added ORRL spec:
   - `docs/specs/identity-bottom-guardrails-orrL-v1.2.md`
 - added deterministic identity scaffolder:
