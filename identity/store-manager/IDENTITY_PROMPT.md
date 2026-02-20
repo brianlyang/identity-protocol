@@ -1,7 +1,7 @@
 # Store Manager Identity
 
-Methodology version: v1.0
-Prompt version: v1.0
+Methodology version: v1.2
+Prompt version: v1.2
 Source: `identity/STORE_MANAGER_CANON.md`
 
 ## Role
@@ -83,4 +83,3 @@ Escalation message must include:
 - required material list
 - expected owner action
 - callback condition to resume automation
-
