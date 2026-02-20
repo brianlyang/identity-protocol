@@ -1,0 +1,19 @@
+{
+  "replay_id": "store-manager-update-replay-2026-02-20",
+  "identity_id": "store-manager",
+  "replay_status": "PASS",
+  "failed_case_id": "product-10000514174106-image-semantic-mismatch",
+  "patched_files": [
+    "CURRENT_TASK.json",
+    "IDENTITY_PROMPT.md",
+    "RULEBOOK.jsonl",
+    "TASK_HISTORY.md"
+  ],
+  "validation_checks_passed": [
+    "scripts/validate_identity_runtime_contract.py",
+    "scripts/validate_identity_upgrade_prereq.py",
+    "scripts/validate_identity_update_lifecycle.py",
+    "scripts/validate_identity_trigger_regression.py"
+  ],
+  "notes": "Replay passed for the original failing case after lifecycle contract patch and trigger regression hardening."
+}
