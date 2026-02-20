@@ -67,6 +67,11 @@
       {
         "type": "github_repo_file",
         "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
         "path": "docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md"
       },
       {
