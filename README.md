@@ -59,6 +59,7 @@ python scripts/create_identity_pack.py --id quality-supervisor --title "Quality 
   - `docs/specs/identity-update-lifecycle-contract-v1.2.4.md`
   - `docs/specs/identity-trigger-regression-contract-v1.2.5.md`
 - Skill protocol baseline references for identity reviewers:
+  - `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
   - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
 
 ## Protocol baseline review gate (MUST)
