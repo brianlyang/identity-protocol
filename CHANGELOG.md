@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **runtime compiled brief now includes baseline review references**:
+  - updated `scripts/compile_identity_runtime.py` to include `protocol_review_contract.must_review_sources`
+  - `identity/runtime/IDENTITY_COMPILED.md` now surfaces runtime baseline review references directly
+  - keeps runtime/operator view aligned with protocol/review requirements
+
 - **protocol canonical spec aligned to v1.2.5**:
   - updated `identity/protocol/IDENTITY_PROTOCOL.md` from `v1.2.4` to `v1.2.5 (draft)`
   - documented `trigger_regression_contract` as conditional runtime requirement
