@@ -37,6 +37,15 @@ python scripts/validate_identity_learning_loop.py --run-report identity/runtime/
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 ```
 
+## Fast review path (skill mechanism alignment)
+
+For fast, consistent review of the key skill mechanisms (trigger/create/update/validate + installer/creator split), read in this order:
+
+1. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md` (canonical entry)
+2. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md` (full SOP)
+3. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
+4. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
+
 ## Governance and operations
 
 - Review checklist:
