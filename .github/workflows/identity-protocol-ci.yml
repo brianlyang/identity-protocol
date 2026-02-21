@@ -52,18 +52,7 @@ jobs:
 
       - name: Validate required runtime gates across active identities
         run: |
-          IDS=$(python - <<'PY'
-import yaml
-from pathlib import Path
-c=yaml.safe_load(Path('identity/catalog/identities.yaml').read_text())
-ids=[x['id'] for x in c.get('identities',[]) if isinstance(x,dict) and str(x.get('status','')).lower()=='active']
-if not ids:
-    d=c.get('default_identity')
-    if d:
-        ids=[d]
-print(' '.join(ids))
-PY
-)
+          IDS=$(python -c "import yaml;from pathlib import Path;c=yaml.safe_load(Path('identity/catalog/identities.yaml').read_text());ids=[x['id'] for x in c.get('identities',[]) if isinstance(x,dict) and str(x.get('status','')).lower()=='active'];d=c.get('default_identity');print(' '.join(ids or ([d] if d else [])))")
           echo "active identities: $IDS"
           for ID in $IDS; do
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
@@ -71,8 +60,13 @@ PY
             python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
             python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
             python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
+            python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
             python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
             python3 scripts/export_route_quality_metrics.py --identity-id "$ID"
+            python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
+            python3 scripts/validate_identity_knowledge_contract.py --identity-id "$ID" --self-test
+            python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID" --self-test
+            python3 scripts/validate_identity_ci_enforcement.py --identity-id "$ID"
           done
 
       - name: Identity creator protocol checks

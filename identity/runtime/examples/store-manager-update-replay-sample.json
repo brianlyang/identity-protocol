@@ -16,7 +16,12 @@
     "scripts/validate_identity_trigger_regression.py",
     "scripts/validate_identity_collab_trigger.py",
     "scripts/validate_identity_learning_loop.py",
-    "scripts/validate_agent_handoff_contract.py"
+    "scripts/validate_agent_handoff_contract.py",
+    "scripts/validate_identity_orchestration_contract.py",
+    "scripts/validate_identity_knowledge_acquisition.py",
+    "scripts/validate_identity_experience_feedback.py",
+    "scripts/validate_identity_ci_enforcement.py",
+    "scripts/validate_identity_knowledge_contract.py"
   ],
   "notes": "Replay passed for original failing case after lifecycle + trigger + handoff + collaboration-trigger hardening."
 }

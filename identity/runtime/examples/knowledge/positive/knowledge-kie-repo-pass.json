@@ -1,0 +1,14 @@
+{
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260221_kie_research_pass_2",
+  "records": [
+    {
+      "claim": "WeChat update requires mmecimage host for head_imgs",
+      "source": "resource/docs/api/shop_api_updateproduct.md",
+      "source_level": "repo_contract",
+      "confidence": 0.9,
+      "expiry": "2026-05-21",
+      "applies_to": "wechat.product.update.head_imgs"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ Quick entrypoint for audit history and remediation closure records.
 ## Snapshots
 
 - `docs/governance/audit-snapshot-2026-02-21.md` — consolidated closure for PR #8/#9/#10/#11/#12 and residual-risk follow-up
+- `docs/governance/audit-snapshot-2026-02-21-control-loop-v1.4.0.md` — control-loop contract integration evidence (orchestration/knowledge/experience/ci-enforcement)
 
 ## Protocol hardening plans
 

@@ -1,0 +1,15 @@
+{
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260221_exp_neg_1",
+  "positive_updates": [],
+  "negative_updates": [
+    {
+      "case_id": "negative-invalid-replay",
+      "layer": "tool_data",
+      "pattern": "non_mmec_head_imgs",
+      "action": "block_and_convert",
+      "impact_score": 0.91,
+      "replay_status": "FAIL"
+    }
+  ]
+}

@@ -20,6 +20,10 @@ REQ_TOP_LEVEL = [
     "rulebook_contract",
     "blocker_taxonomy_contract",
     "collaboration_trigger_contract",
+    "capability_orchestration_contract",
+    "knowledge_acquisition_contract",
+    "experience_feedback_contract",
+    "ci_enforcement_contract",
 ]
 
 REQ_GATES = [
@@ -33,6 +37,10 @@ REQ_GATES = [
     "routing_gate",
     "rulebook_gate",
     "collaboration_trigger_gate",
+    "orchestration_gate",
+    "knowledge_acquisition_gate",
+    "experience_feedback_gate",
+    "ci_enforcement_gate",
 ]
 
 REQUIRED_PROTOCOL_SOURCES = [

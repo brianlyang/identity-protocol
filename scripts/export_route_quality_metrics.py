@@ -75,6 +75,10 @@ def main() -> int:
     misroute = 0
     fallback = 0
     blocked = 0
+    first_pass_success = 0
+    knowledge_reuse = 0
+    replay_success = 0
+    policy_drift_incidents = 0
 
     for p in files:
         rec = _load_json(p)
@@ -88,6 +92,8 @@ def main() -> int:
         result = str(rec.get("result") or "")
         if result == "BLOCKED":
             blocked += 1
+        if result == "PASS" and not used_fallback:
+            first_pass_success += 1
 
         if is_hit:
             route_hit += 1
@@ -95,6 +101,15 @@ def main() -> int:
             misroute += 1
         if used_fallback:
             fallback += 1
+
+        # Prefer explicit runtime fields; fallback to conservative heuristics.
+        if bool(rec.get("knowledge_reuse", False)) or bool((rec.get("rulebook_update") or {}).get("applied", False)):
+            knowledge_reuse += 1
+        if str(rec.get("replay_status") or "").upper() == "PASS":
+            replay_success += 1
+
+        if bool(rec.get("policy_drift", False)) or bool(rec.get("contract_violation", False)):
+            policy_drift_incidents += 1
 
     metrics = {
         "identity_id": args.identity_id,
@@ -105,9 +120,16 @@ def main() -> int:
         "misroute_count": misroute,
         "fallback_count": fallback,
         "blocked_count": blocked,
+        "first_pass_success_count": first_pass_success,
+        "knowledge_reuse_count": knowledge_reuse,
+        "replay_success_count": replay_success,
+        "policy_drift_incidents": policy_drift_incidents,
         "route_hit_rate": _pct(route_hit, total),
         "misroute_rate": _pct(misroute, total),
         "fallback_rate": _pct(fallback, total),
+        "first_pass_success_rate": _pct(first_pass_success, total),
+        "knowledge_reuse_rate": _pct(knowledge_reuse, total),
+        "replay_success_rate": _pct(replay_success, total),
     }
 
     out = Path(args.out) if args.out else Path(f"identity/runtime/metrics/{args.identity_id}-route-quality.json")
