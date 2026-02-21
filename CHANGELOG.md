@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **audit snapshot institutionalization (v1.2.11 draft)**:
+  - added fixed-action governance policy:
+    - `docs/governance/audit-snapshot-policy-v1.2.11.md`
+  - added reusable snapshot template:
+    - `docs/governance/templates/audit-snapshot-template.md`
+  - added snapshot index:
+    - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - added consolidated snapshot record:
+    - `docs/governance/audit-snapshot-2026-02-21.md`
+  - README governance section now includes snapshot policy and index links
+
 - **handoff dual-track + freshness + consistency hardening (v1.2.9 draft)**:
   - `agent_handoff_contract.handoff_log_path_pattern` switched from example path to production runtime path:
     - `identity/runtime/logs/handoff/*.json`
