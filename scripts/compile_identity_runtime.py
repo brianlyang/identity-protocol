@@ -111,6 +111,6 @@ def main() -> int:
     print(f"Wrote {output}")
     return 0
 
-
+"""main function"""
 if __name__ == "__main__":
     raise SystemExit(main())
