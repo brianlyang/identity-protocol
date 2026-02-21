@@ -5,7 +5,10 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-SNAPSHOT_RE = re.compile(r"^audit-snapshot-(\d{4}-\d{2}-\d{2})\.md$")
+# Accept both classic and strategy-suffixed snapshot names:
+# - audit-snapshot-YYYY-MM-DD.md
+# - audit-snapshot-YYYY-MM-DD-<suffix>.md
+SNAPSHOT_RE = re.compile(r"^audit-snapshot-(\d{4}-\d{2}-\d{2})(?:-(.+))?\.md$")
 
 
 def main() -> int:
@@ -23,7 +26,7 @@ def main() -> int:
             print(f"[FAIL] required governance file missing: {p}")
             return 1
 
-    snapshots: list[tuple[datetime, Path]] = []
+    snapshots: list[tuple[datetime, int, str, Path]] = []
     for child in root.iterdir():
         if not child.is_file():
             continue
@@ -35,13 +38,17 @@ def main() -> int:
         except ValueError:
             print(f"[FAIL] invalid snapshot date in filename: {child.name}")
             return 1
-        snapshots.append((dt, child))
+        # Prefer suffixed snapshots on the same date because they are often
+        # closure-focused extensions of the base daily snapshot.
+        suffix = m.group(2) or ""
+        has_suffix = 1 if suffix else 0
+        snapshots.append((dt, has_suffix, child.name, child))
 
     if not snapshots:
         print("[FAIL] no audit snapshot files found under docs/governance")
         return 1
 
-    latest = sorted(snapshots, key=lambda x: x[0])[-1][1]
+    latest = sorted(snapshots, key=lambda x: (x[0], x[1], x[2]))[-1][3]
     index_text = index_path.read_text(encoding="utf-8")
 
     if latest.name not in index_text:

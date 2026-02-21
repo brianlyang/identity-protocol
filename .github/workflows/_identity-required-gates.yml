@@ -50,7 +50,9 @@ jobs:
             python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_knowledge_contract.py --identity-id "$ID" --self-test
             python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID" --self-test
-            python3 scripts/validate_identity_capability_arbitration.py --identity-id "$ID" --self-test
+            python3 scripts/execute_identity_upgrade.py --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports
+            UPGRADE_REPORT=$(ls -1t /tmp/identity-upgrade-reports/identity-upgrade-exec-"$ID"-*.json | head -n 1)
+            python3 scripts/validate_identity_capability_arbitration.py --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"
             python3 scripts/validate_identity_ci_enforcement.py --identity-id "$ID"
           done
 
