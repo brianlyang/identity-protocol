@@ -90,3 +90,18 @@
 
 - Date trigger: next weekly governance review
 - Event trigger: any protocol/validator/CI gate contract change
+
+## 11) Control-loop v1.4.0 extension evidence
+
+Follow-up snapshot for contract-level integration evidence:
+
+- `docs/governance/audit-snapshot-2026-02-21-control-loop-v1.4.0.md`
+
+Evidence covers:
+- new contracts in `CURRENT_TASK.json`:
+  - `capability_orchestration_contract`
+  - `knowledge_acquisition_contract`
+  - `experience_feedback_contract`
+  - `ci_enforcement_contract`
+- required-gates CI chain updates
+- e2e smoke expansion and positive/negative self-test samples

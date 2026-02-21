@@ -1,0 +1,14 @@
+{
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260221_kie_research_fail_1",
+  "records": [
+    {
+      "claim": "invalid sample",
+      "source": "unknown",
+      "source_level": "rumor",
+      "confidence": 0.2,
+      "expiry": "2026-05-21",
+      "applies_to": "invalid"
+    }
+  ]
+}

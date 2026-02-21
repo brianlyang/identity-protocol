@@ -52,6 +52,7 @@ def main() -> int:
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
+    ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
     try:
@@ -126,6 +127,43 @@ def main() -> int:
 
     if rc:
         return 1
+
+    if args.self_test:
+        pos = sorted(Path("identity/runtime/examples/knowledge/positive").glob("*.json"))
+        neg = sorted(Path("identity/runtime/examples/knowledge/negative").glob("*.json"))
+        if len(pos) < 2 or len(neg) < 1:
+            print("[FAIL] knowledge self-test requires >=2 positive and >=1 negative samples")
+            return 1
+        # Positive samples
+        for p in pos:
+            r = _load_json(p)
+            recs = r.get("records") or []
+            if not recs:
+                print(f"[FAIL] positive sample missing records: {p}")
+                return 1
+            for i, rec in enumerate(recs):
+                miss = [k for k in REQ_EVIDENCE_FIELDS if k not in rec]
+                if miss:
+                    print(f"[FAIL] positive sample missing fields {miss}: {p}#{i}")
+                    return 1
+                if rec.get("source_level") not in allowed_levels:
+                    print(f"[FAIL] positive sample source_level invalid: {p}#{i}")
+                    return 1
+        # Negative samples should fail at least one condition
+        for p in neg:
+            r = _load_json(p)
+            recs = r.get("records") or []
+            has_invalid = False
+            for rec in recs:
+                miss = [k for k in REQ_EVIDENCE_FIELDS if k not in rec]
+                if miss or rec.get("source_level") not in allowed_levels:
+                    has_invalid = True
+                    break
+            if not has_invalid:
+                print(f"[FAIL] negative sample did not contain invalid condition: {p}")
+                return 1
+        print("[OK] knowledge self-test passed")
+
     print("Knowledge acquisition contract validation PASSED")
     return 0
 

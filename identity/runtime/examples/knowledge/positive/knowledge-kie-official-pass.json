@@ -1,0 +1,14 @@
+{
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260221_kie_research_pass_1",
+  "records": [
+    {
+      "claim": "KIE z-image create task requires callback url",
+      "source": "https://docs.kie.ai/",
+      "source_level": "official_spec",
+      "confidence": 0.95,
+      "expiry": "2026-05-21",
+      "applies_to": "kie.z-image.createTask"
+    }
+  ]
+}

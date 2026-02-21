@@ -36,7 +36,7 @@ python scripts/validate_identity_collab_trigger.py --identity-id store-manager -
 python scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
 python scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test
 python scripts/validate_identity_orchestration_contract.py --identity-id store-manager
-python scripts/validate_identity_knowledge_acquisition.py --identity-id store-manager
+python scripts/validate_identity_knowledge_contract.py --identity-id store-manager
 python scripts/validate_identity_experience_feedback.py --identity-id store-manager
 python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
 python scripts/export_route_quality_metrics.py --identity-id store-manager
@@ -186,7 +186,7 @@ Identity must run as a single closed loop:
 
 This is enforced by contract + validators:
 - `capability_orchestration_contract` -> `scripts/validate_identity_orchestration_contract.py`
-- `knowledge_acquisition_contract` -> `scripts/validate_identity_knowledge_acquisition.py`
+- `knowledge_acquisition_contract` -> `scripts/validate_identity_knowledge_contract.py`
 - `experience_feedback_contract` -> `scripts/validate_identity_experience_feedback.py`
 - `ci_enforcement_contract` -> `scripts/validate_identity_ci_enforcement.py`
 

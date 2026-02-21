@@ -32,7 +32,7 @@ Required gate flags in `CURRENT_TASK.gates`:
 ## Validator map
 
 - `scripts/validate_identity_orchestration_contract.py`
-- `scripts/validate_identity_knowledge_acquisition.py`
+- `scripts/validate_identity_knowledge_contract.py`
 - `scripts/validate_identity_experience_feedback.py`
 - `scripts/validate_identity_ci_enforcement.py`
 

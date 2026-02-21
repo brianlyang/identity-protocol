@@ -1,0 +1,15 @@
+{
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260221_exp_pos_2",
+  "positive_updates": [
+    {
+      "case_id": "positive-route-hit-2026-02-21",
+      "layer": "routing",
+      "pattern": "route_hit_wechat_listing_update",
+      "action": "increase_route_weight_for_wechat_listing_update",
+      "impact_score": 0.73,
+      "replay_status": "PASS"
+    }
+  ],
+  "negative_updates": []
+}

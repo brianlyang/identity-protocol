@@ -77,6 +77,7 @@ def main() -> int:
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
+    ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
     try:
@@ -148,6 +149,40 @@ def main() -> int:
 
     if rc:
         return 1
+
+    if args.self_test:
+        pos = sorted(Path("identity/runtime/examples/experience/positive").glob("*.json"))
+        neg = sorted(Path("identity/runtime/examples/experience/negative").glob("*.json"))
+        if len(pos) < 2 or len(neg) < 1:
+            print("[FAIL] experience self-test requires >=2 positive and >=1 negative samples")
+            return 1
+        # positives should pass required fields + replay PASS
+        for p in pos:
+            r = _load_json(p)
+            updates = (r.get("positive_updates") or []) + (r.get("negative_updates") or [])
+            if not updates:
+                print(f"[FAIL] positive sample missing updates: {p}")
+                return 1
+            for i, u in enumerate(updates):
+                miss = [k for k in req_fields if k not in u]
+                if miss:
+                    print(f"[FAIL] positive sample missing fields {miss}: {p}#{i}")
+                    return 1
+                if u.get("replay_status") != "PASS":
+                    print(f"[FAIL] positive sample replay_status must be PASS: {p}#{i}")
+                    return 1
+        # negatives should contain at least one non-PASS replay
+        for p in neg:
+            r = _load_json(p)
+            updates = (r.get("positive_updates") or []) + (r.get("negative_updates") or [])
+            if not updates:
+                print(f"[FAIL] negative sample missing updates: {p}")
+                return 1
+            if not any(u.get("replay_status") != "PASS" for u in updates if isinstance(u, dict)):
+                print(f"[FAIL] negative sample did not include replay_status!=PASS: {p}")
+                return 1
+        print("[OK] experience self-test passed")
+
     print("Experience feedback contract validation PASSED")
     return 0
 
