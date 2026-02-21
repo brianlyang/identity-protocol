@@ -41,6 +41,8 @@ python scripts/validate_identity_experience_feedback.py --identity-id store-mana
 python scripts/validate_identity_capability_arbitration.py --identity-id store-manager
 python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
 python scripts/export_route_quality_metrics.py --identity-id store-manager
+# optional: execute upgrade cycle from metrics/arbitration thresholds
+python scripts/execute_identity_upgrade.py --identity-id store-manager --mode review-required
 # optional: scaffold a new identity pack
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 ```
