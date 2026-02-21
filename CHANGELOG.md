@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+- **human-collab trigger protocol hardening (v1.3.0 draft)**:
+  - added runtime required gate:
+    - `gates.collaboration_trigger_gate=required`
+  - added runtime contracts:
+    - `blocker_taxonomy_contract`
+    - `collaboration_trigger_contract`
+  - standardized blocker taxonomy:
+    - `login_required`
+    - `captcha_required`
+    - `session_expired`
+    - `manual_verification_required`
+  - added validator:
+    - `scripts/validate_identity_collab_trigger.py`
+  - validator enforces:
+    - taxonomy coverage + classification fields
+    - immediate auto-notify policy (`notify_timing=immediate`)
+    - dedupe/state-change bypass
+    - chat receipt and evidence log freshness
+  - added collaboration evidence samples:
+    - production-like log: `identity/runtime/logs/collaboration/*.json`
+    - self-test samples: `identity/runtime/examples/collaboration-trigger/{positive,negative}/*.json`
+  - CI required-gates updated (all workflow chains):
+    - `.github/workflows/protocol-ci.yml`
+    - `.github/workflows/identity-protocol-ci.yml`
+    - `.github/workflows/_identity-required-gates.yml`
+  - protocol docs updated:
+    - `identity/protocol/IDENTITY_PROTOCOL.md` -> v1.3.0 draft
+    - `identity/protocol/IDENTITY_RUNTIME.md`
+    - `docs/specs/identity-collaboration-trigger-contract-v1.3.0.md`
+
 - **ci startup reliability hotfix (v1.2.14 draft)**:
   - fixed zero-job startup failures in branch-protection bootstrap runs
   - inlined `required-gates` jobs back into:

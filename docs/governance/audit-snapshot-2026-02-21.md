@@ -33,6 +33,7 @@
 | F-09 | Medium | branch-protection required checks not codified | Mitigated | checklist doc added in PR #10; requires manual UI confirmation |
 | F-10 | Medium | handoff checks were sample-leaning without production-log gate | Closed | dual-track production+sample validation in PR #11 |
 | F-11 | Medium | stale evidence risk under freshness policy | Closed (ops policy added) | strict weekly SLA + template tooling in PR #12 |
+| F-12 | High | human-collab blockers lacked protocol-level auto-notify required gate | Closed | blocker taxonomy + collaboration trigger contract + validator + CI gate in PR #13 |
 
 ## 4) Remediation mapping
 
@@ -43,6 +44,7 @@
 | F-08..F-09 | #10 | `d944a272f363e48d47935206de4de1448ec136c5` | reusable workflow + branch protection checklist |
 | F-10 | #11 | `bc369a3cf1d503854f4f0dac3e9de2a7690bab47` | production log path + freshness/consistency checks + route metrics export |
 | F-11 | #12 | `578c7c40035e75f41678d5deb30d6e1cd79015d9` | strict weekly handoff-log SLA + template generator |
+| F-12 | #13 | `TBD-after-merge` | blocker taxonomy + human-collab auto-notify contract + validator + required gate |
 
 ## 5) Residual risks
 

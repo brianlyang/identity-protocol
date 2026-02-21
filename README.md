@@ -32,6 +32,7 @@ python scripts/validate_identity_runtime_contract.py
 python scripts/validate_identity_upgrade_prereq.py --identity-id store-manager
 python scripts/validate_identity_update_lifecycle.py --identity-id store-manager
 python scripts/validate_identity_trigger_regression.py --identity-id store-manager
+python scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test
 python scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
 python scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test
 # optional: scaffold a new identity pack
@@ -70,6 +71,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
   - `docs/specs/identity-learning-loop-validation-v1.2.1.md`
   - `docs/specs/identity-update-lifecycle-contract-v1.2.4.md`
   - `docs/specs/identity-trigger-regression-contract-v1.2.5.md`
+  - `docs/specs/identity-collaboration-trigger-contract-v1.3.0.md`
 - Skill protocol baseline references for identity reviewers:
   - `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
   - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
@@ -140,6 +142,18 @@ This is enforced via runtime keys:
 Validation is executed by:
 - `scripts/validate_agent_handoff_contract.py`
 
+## Human-collab trigger contract (MUST)
+
+Human-required blockers (login/captcha/session/manual verification) must trigger auto-notify and receipt evidence.
+
+This is enforced via runtime keys:
+- `gates.collaboration_trigger_gate = "required"`
+- `blocker_taxonomy_contract`
+- `collaboration_trigger_contract`
+
+Validation is executed by:
+- `scripts/validate_identity_collab_trigger.py`
+
 ## Design principles
 
 1. Align with official Codex skills model and discovery behavior.
@@ -152,9 +166,10 @@ Validation is executed by:
 8. Require skill-style identity update lifecycle (trigger/patch/validate/replay).
 9. Require skill-style identity trigger regression (positive/boundary/negative).
 10. Require master/sub handoff payload validation and mutation-safety checks.
+11. Require human-collab blocker taxonomy + immediate auto-notify + receipt evidence.
 
 ## Status
 
-- Protocol version: `v1.2.9` (draft)
+- Protocol version: `v1.3.0` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

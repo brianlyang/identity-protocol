@@ -1,0 +1,28 @@
+{
+  "log_id": "collab-selftest-pass-1",
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260218_role_os_bootstrap",
+  "blocker_type": "session_expired",
+  "source": "browser-session-check",
+  "detected_at": "2026-02-21T10:00:00Z",
+  "requires_human_collab": true,
+  "notify_channel": "ops-notification-router",
+  "notified_at": "2026-02-21T10:00:45Z",
+  "notify_status": "sent",
+  "dedupe_key": "event:session_expired|id:test-1",
+  "state_change_bypass_dedupe": true,
+  "chat_receipt": {
+    "emitted": true,
+    "event_id": "event:session_expired",
+    "blocker_type": "session_expired",
+    "notified_at": "2026-02-21T10:00:45Z",
+    "channel": "ops-notification-router",
+    "dedupe_key": "event:session_expired|id:test-1",
+    "status": "sent"
+  },
+  "next_action": {
+    "owner": "human_operator",
+    "action": "refresh_session",
+    "input": "please relogin"
+  }
+}

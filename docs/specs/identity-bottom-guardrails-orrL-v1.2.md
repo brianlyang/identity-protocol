@@ -1,7 +1,7 @@
-# Identity Bottom Guardrails (ORRL) v1.2
+# Identity Bottom Guardrails (ORRLC) v1.3
 
-Status: Draft for v1.2.0
-Updated: 2026-02-20
+Status: Draft for v1.3.0
+Updated: 2026-02-21
 
 ## Why
 
@@ -30,6 +30,13 @@ A high-impact run is invalid unless all gates pass:
    - Append-only `RULEBOOK.jsonl` required.
    - Must include both negative and positive rule records over time.
 
+5. **Collaboration trigger** (`collaboration_trigger_gate`)
+   - Must classify blockers using required taxonomy:
+     - `login_required`, `captcha_required`, `session_expired`, `manual_verification_required`
+   - Must auto-notify via `ops-notification-router` immediately when blocker is human-required.
+   - Must enforce dedupe + state-change bypass.
+   - Must emit chat receipt with traceable dedupe key and notify status.
+
 ## Runtime contract location
 
 - `identity/store-manager/CURRENT_TASK.json`
@@ -38,6 +45,7 @@ A high-impact run is invalid unless all gates pass:
 ## Validator
 
 - `scripts/validate_identity_runtime_contract.py`
+- `scripts/validate_identity_collab_trigger.py`
 
 ## Smoke test integration
 

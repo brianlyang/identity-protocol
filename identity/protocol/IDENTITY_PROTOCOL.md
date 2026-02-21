@@ -1,4 +1,4 @@
-# Identity Protocol v1.2.7 (draft)
+# Identity Protocol v1.3.0 (draft)
 
 ## Goal
 
@@ -150,6 +150,31 @@ No handoff pass -> no merge.
 Contract reference:
 - `identity/protocol/AGENT_HANDOFF_CONTRACT.md`
 
+## Human-collaboration trigger contract (v1.3.0+)
+
+To avoid silent stalls when runtime is blocked by human-only interactions, identity runtime MUST carry explicit collaboration-trigger controls.
+
+When collaboration blockers are possible:
+
+- `gates.collaboration_trigger_gate` MUST be `required`.
+- `blocker_taxonomy_contract` MUST exist in CURRENT_TASK and include mandatory blocker types:
+  - `login_required`
+  - `captcha_required`
+  - `session_expired`
+  - `manual_verification_required`
+- `collaboration_trigger_contract` MUST exist in CURRENT_TASK and include:
+  - hard rule and trigger conditions
+  - immediate notify policy (`notify_policy` + `notify_timing=immediate`)
+  - `notify_channel` (default: `ops-notification-router`)
+  - dedupe controls (`dedupe_window_hours` + `state_change_bypass_dedupe`)
+  - `must_emit_receipt_in_chat=true`
+  - evidence log path + freshness window
+
+Mandatory validator:
+- `scripts/validate_identity_collab_trigger.py`
+
+No collaboration-trigger pass -> no merge/no release for affected identity update.
+
 ## Skill + MCP + Tool collaboration contract (new baseline in v1.2.5)
 
 Identity capability decisions MUST align with collaboration boundaries:
@@ -174,6 +199,7 @@ Non-bypassable constraints:
 - rejection memory constraints
 - media integrity constraints
 - escalation triggers
+- collaboration trigger gate for human-collab blockers
 - protocol baseline review gate for identity-upgrade decisions
 - identity update lifecycle gate for runtime evolution decisions
 - trigger regression gate for route/update changes
@@ -200,12 +226,15 @@ Minimum required blocks:
 - `reasoning_loop_contract`
 - `routing_contract`
 - `rulebook_contract`
+- `blocker_taxonomy_contract`
+- `collaboration_trigger_contract`
 
 Conditional required blocks:
 - `protocol_review_contract` (identity upgrade tasks)
 - `identity_update_lifecycle_contract` (runtime evolution / update tasks)
 - `trigger_regression_contract` (routing/trigger/update gate changes)
 - `agent_handoff_contract` (master/sub delegated execution)
+- `blocker_taxonomy_contract` + `collaboration_trigger_contract` (human-collab blockers)
 
 ## Conflict resolution
 
@@ -226,6 +255,7 @@ To reduce protocol drift and avoid ad-hoc logic:
 - Identity route/update behavior must pass positive/boundary/negative trigger regression.
 - Identity review must include skill+mcp+tool collaboration boundary checks.
 - Identity delegation must pass master/sub handoff payload and mutation-safety checks.
+- Identity human-collab blockers must pass taxonomy + immediate auto-notify + receipt constraints.
 
 ## Email escalation policy
 

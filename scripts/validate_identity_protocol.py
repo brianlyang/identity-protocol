@@ -23,6 +23,8 @@ REQ_TASK_KEYS = {
     "routing_contract",
     "rulebook_contract",
     "learning_verification_contract",
+    "blocker_taxonomy_contract",
+    "collaboration_trigger_contract",
 }
 
 REQ_PACK_FILES = [
@@ -140,6 +142,13 @@ def main() -> int:
             if gates.get("identity_update_gate") == "required" and "identity_update_lifecycle_contract" not in task:
                 print(f"[FAIL] {prefix} identity_update_gate=required but identity_update_lifecycle_contract missing")
                 rc = 1
+            if gates.get("collaboration_trigger_gate") == "required":
+                if "blocker_taxonomy_contract" not in task:
+                    print(f"[FAIL] {prefix} collaboration_trigger_gate=required but blocker_taxonomy_contract missing")
+                    rc = 1
+                if "collaboration_trigger_contract" not in task:
+                    print(f"[FAIL] {prefix} collaboration_trigger_gate=required but collaboration_trigger_contract missing")
+                    rc = 1
 
             if "identity_update_lifecycle_contract" in task and "trigger_regression_contract" not in task:
                 print(f"[FAIL] {prefix} identity_update_lifecycle_contract exists but trigger_regression_contract missing")

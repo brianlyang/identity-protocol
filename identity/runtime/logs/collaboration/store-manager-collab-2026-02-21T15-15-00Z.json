@@ -1,0 +1,28 @@
+{
+  "log_id": "collab-2026-02-21-001",
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260218_role_os_bootstrap",
+  "blocker_type": "login_required",
+  "source": "taobao-search-automation",
+  "detected_at": "2026-02-21T15:15:00Z",
+  "requires_human_collab": true,
+  "notify_channel": "ops-notification-router",
+  "notified_at": "2026-02-21T15:15:28Z",
+  "notify_status": "sent",
+  "dedupe_key": "event:market.login_required|product:10000514174106|cause:taobao_login_gate",
+  "state_change_bypass_dedupe": true,
+  "chat_receipt": {
+    "emitted": true,
+    "event_id": "event:market.login_required",
+    "blocker_type": "login_required",
+    "notified_at": "2026-02-21T15:15:28Z",
+    "channel": "ops-notification-router",
+    "dedupe_key": "event:market.login_required|product:10000514174106|cause:taobao_login_gate",
+    "status": "sent"
+  },
+  "next_action": {
+    "owner": "human_operator",
+    "action": "complete_login_and_confirm",
+    "input": "登录淘宝后在会话中回复已登录"
+  }
+}
