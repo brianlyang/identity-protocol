@@ -76,6 +76,9 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
 - Branch protection last-mile checklist:
   - `docs/governance/branch-protection-required-checks-v1.2.8.md`
+- Audit snapshots (fixed governance action):
+  - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - `docs/governance/audit-snapshot-policy-v1.2.11.md`
 
 ## Protocol baseline review gate (MUST)
 
@@ -149,6 +152,6 @@ Validation is executed by:
 
 ## Status
 
-- Protocol version: `v1.2.7` (draft)
+- Protocol version: `v1.2.9` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)
