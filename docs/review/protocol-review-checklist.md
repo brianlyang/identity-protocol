@@ -20,3 +20,14 @@
 - [ ] Known failure patterns are documented.
 - [ ] Backward compatibility impact assessed.
 - [ ] Migration note exists when behavior changes.
+
+## Upgrade cross-validation (mandatory for version changes)
+- [ ] Extension/archive evidence exists in `docs/references/` for this upgrade.
+- [ ] Four-core capability non-conflict mapping is documented (`accurate judgement/reasoning loop/auto-routing/rule learning`).
+- [ ] Baseline references reviewed and cited:
+  - [ ] `identity/protocol/IDENTITY_PROTOCOL.md`
+  - [ ] `identity/protocol/IDENTITY_RUNTIME.md`
+  - [ ] `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+  - [ ] `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+- [ ] Required validators are integrated into required-gates workflows.
+- [ ] Replay evidence exists for changed routing/update behavior.

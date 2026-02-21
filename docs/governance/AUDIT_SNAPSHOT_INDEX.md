@@ -8,6 +8,7 @@ Quick entrypoint for audit history and remediation closure records.
 
 - `docs/governance/audit-snapshot-policy-v1.2.11.md`
 - Template: `docs/governance/templates/audit-snapshot-template.md`
+- Upgrade cross-validation template: `docs/governance/templates/upgrade-cross-validation-template.md`
 
 ## Snapshots
 

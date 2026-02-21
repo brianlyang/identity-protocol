@@ -107,6 +107,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 - Audit snapshots (fixed governance action):
   - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - `docs/governance/audit-snapshot-policy-v1.2.11.md`
+  - `docs/governance/templates/upgrade-cross-validation-template.md`
 - Runtime test preflight (local sync gate):
   - `docs/operations/runtime-preflight-checklist-v1.2.13.md`
   - `scripts/preflight_identity_runtime_sync.sh`
