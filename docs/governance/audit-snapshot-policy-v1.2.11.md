@@ -20,6 +20,12 @@ A cycle is considered complete only when:
 2. status is updated per finding (closed / partially mitigated / open)
 3. residual risk and next actions are recorded
 
+In addition, for **every protocol version upgrade** (including minor/patch upgrades):
+
+4. one extension cross-validation archive is added/updated under `docs/references/`
+5. non-conflict mapping to `IDENTITY_PROTOCOL.md` four-core capabilities is documented
+6. review evidence explicitly cites both skill and MCP collaboration references
+
 ---
 
 ## Required content (minimum)
@@ -35,6 +41,11 @@ Each snapshot MUST include:
 7. operational SLA status (e.g., fresh handoff logs)
 8. route-quality metrics trend (hit/misroute/fallback)
 9. next audit window and trigger conditions
+10. extension non-conflict statement (core capability invariant preserved)
+11. cross-validation evidence links:
+   - skill protocol lifecycle reference
+   - skill/MCP/tool collaboration reference
+   - identity protocol/runtime baseline files
 
 ---
 
@@ -62,3 +73,9 @@ If snapshot is missing for a completed hardening cycle:
 - mark governance status as incomplete
 - block final closure announcement
 - require backfill snapshot before next release window
+
+If version upgrade is merged without cross-validation archive and non-conflict mapping:
+
+- mark release governance as drift-risk
+- require immediate follow-up PR to add missing evidence
+- treat missing cross-validation as blocker for next upgrade window
