@@ -59,3 +59,6 @@ After each high-impact action:
 - update CURRENT_TASK state
 - append TASK_HISTORY entry
 - persist evidence artifact paths
+
+
+
