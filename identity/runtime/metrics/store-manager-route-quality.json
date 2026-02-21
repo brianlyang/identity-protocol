@@ -7,7 +7,14 @@
   "misroute_count": 0,
   "fallback_count": 0,
   "blocked_count": 0,
+  "first_pass_success_count": 1,
+  "knowledge_reuse_count": 1,
+  "replay_success_count": 0,
+  "policy_drift_incidents": 0,
   "route_hit_rate": 100.0,
   "misroute_rate": 0.0,
-  "fallback_rate": 0.0
+  "fallback_rate": 0.0,
+  "first_pass_success_rate": 100.0,
+  "knowledge_reuse_rate": 100.0,
+  "replay_success_rate": 0.0
 }

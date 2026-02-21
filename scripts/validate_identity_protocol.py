@@ -25,6 +25,10 @@ REQ_TASK_KEYS = {
     "learning_verification_contract",
     "blocker_taxonomy_contract",
     "collaboration_trigger_contract",
+    "capability_orchestration_contract",
+    "knowledge_acquisition_contract",
+    "experience_feedback_contract",
+    "ci_enforcement_contract",
 }
 
 REQ_PACK_FILES = [
@@ -149,6 +153,18 @@ def main() -> int:
                 if "collaboration_trigger_contract" not in task:
                     print(f"[FAIL] {prefix} collaboration_trigger_gate=required but collaboration_trigger_contract missing")
                     rc = 1
+            if gates.get("orchestration_gate") == "required" and "capability_orchestration_contract" not in task:
+                print(f"[FAIL] {prefix} orchestration_gate=required but capability_orchestration_contract missing")
+                rc = 1
+            if gates.get("knowledge_acquisition_gate") == "required" and "knowledge_acquisition_contract" not in task:
+                print(f"[FAIL] {prefix} knowledge_acquisition_gate=required but knowledge_acquisition_contract missing")
+                rc = 1
+            if gates.get("experience_feedback_gate") == "required" and "experience_feedback_contract" not in task:
+                print(f"[FAIL] {prefix} experience_feedback_gate=required but experience_feedback_contract missing")
+                rc = 1
+            if gates.get("ci_enforcement_gate") == "required" and "ci_enforcement_contract" not in task:
+                print(f"[FAIL] {prefix} ci_enforcement_gate=required but ci_enforcement_contract missing")
+                rc = 1
 
             if "identity_update_lifecycle_contract" in task and "trigger_regression_contract" not in task:
                 print(f"[FAIL] {prefix} identity_update_lifecycle_contract exists but trigger_regression_contract missing")

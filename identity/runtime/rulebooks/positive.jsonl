@@ -1,0 +1,1 @@
+{"case_id":"positive-kie-mmec-upload-2026-02-21","layer":"mcp_tool","pattern":"binary_upload_then_update","action":"prefer_binary_upload_for_external_image_host","impact_score":0.87,"replay_status":"PASS"}

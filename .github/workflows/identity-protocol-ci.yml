@@ -71,8 +71,13 @@ PY
             python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
             python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
             python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
+            python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
             python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
             python3 scripts/export_route_quality_metrics.py --identity-id "$ID"
+            python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
+            python3 scripts/validate_identity_knowledge_acquisition.py --identity-id "$ID"
+            python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID"
+            python3 scripts/validate_identity_ci_enforcement.py --identity-id "$ID"
           done
 
       - name: Identity creator protocol checks

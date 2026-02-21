@@ -35,8 +35,31 @@ python scripts/validate_identity_trigger_regression.py --identity-id store-manag
 python scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test
 python scripts/validate_identity_learning_loop.py --run-report identity/runtime/examples/store-manager-learning-sample.json
 python scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test
+python scripts/validate_identity_orchestration_contract.py --identity-id store-manager
+python scripts/validate_identity_knowledge_acquisition.py --identity-id store-manager
+python scripts/validate_identity_experience_feedback.py --identity-id store-manager
+python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
+python scripts/export_route_quality_metrics.py --identity-id store-manager
 # optional: scaffold a new identity pack
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
+```
+
+## Mandatory git sync before runtime tests
+
+When updating from the protocol git repository, run this sequence before any live/CI-like validation:
+
+```bash
+# 1) verify local protocol repo is synced with origin/main
+bash scripts/preflight_identity_runtime_sync.sh /path/to/identity-protocol-local main
+
+# 2) if stale, fast-forward only
+git checkout main
+git pull --ff-only
+
+# 3) run required gates locally
+python scripts/validate_identity_protocol.py
+python scripts/validate_identity_runtime_contract.py --identity-id store-manager
+python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
 ```
 
 ## Fast review path (skill mechanism alignment)
@@ -72,6 +95,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
   - `docs/specs/identity-update-lifecycle-contract-v1.2.4.md`
   - `docs/specs/identity-trigger-regression-contract-v1.2.5.md`
   - `docs/specs/identity-collaboration-trigger-contract-v1.3.0.md`
+  - `docs/specs/identity-control-loop-v1.4.0.md`
 - Skill protocol baseline references for identity reviewers:
   - `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
   - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
@@ -153,6 +177,18 @@ This is enforced via runtime keys:
 
 Validation is executed by:
 - `scripts/validate_identity_collab_trigger.py`
+
+## Control-loop contracts (MUST)
+
+Identity must run as a single closed loop:
+
+`Observe -> Decide -> Orchestrate -> Validate -> Learn -> Update`
+
+This is enforced by contract + validators:
+- `capability_orchestration_contract` -> `scripts/validate_identity_orchestration_contract.py`
+- `knowledge_acquisition_contract` -> `scripts/validate_identity_knowledge_acquisition.py`
+- `experience_feedback_contract` -> `scripts/validate_identity_experience_feedback.py`
+- `ci_enforcement_contract` -> `scripts/validate_identity_ci_enforcement.py`
 
 ## Design principles
 

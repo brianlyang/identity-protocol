@@ -53,7 +53,11 @@
     "routing_gate": "required",
     "rulebook_gate": "required",
     "agent_handoff_gate": "required",
-    "collaboration_trigger_gate": "required"
+    "collaboration_trigger_gate": "required",
+    "orchestration_gate": "required",
+    "knowledge_acquisition_gate": "required",
+    "experience_feedback_gate": "required",
+    "ci_enforcement_gate": "required"
   },
   "protocol_review_contract": {
     "required_before": [
@@ -144,7 +148,11 @@
         "scripts/validate_identity_trigger_regression.py",
         "scripts/validate_identity_learning_loop.py",
         "scripts/validate_agent_handoff_contract.py",
-        "scripts/validate_identity_collab_trigger.py"
+        "scripts/validate_identity_collab_trigger.py",
+        "scripts/validate_identity_orchestration_contract.py",
+        "scripts/validate_identity_knowledge_acquisition.py",
+        "scripts/validate_identity_experience_feedback.py",
+        "scripts/validate_identity_ci_enforcement.py"
       ],
       "must_pass_all": true
     },
@@ -226,7 +234,11 @@
     "required_metrics": [
       "route_hit_rate",
       "misroute_rate",
-      "fallback_rate"
+      "fallback_rate",
+      "first_pass_success_rate",
+      "knowledge_reuse_rate",
+      "replay_success_rate",
+      "policy_drift_incidents"
     ],
     "validator": "scripts/export_route_quality_metrics.py"
   },
@@ -340,7 +352,7 @@
   "version_control": {
     "sync_status": "synchronized",
     "last_updated": "2026-02-21",
-    "protocol_revision": "v1.3-human-collab-trigger"
+    "protocol_revision": "v1.4-control-loop"
   },
   "blocker_taxonomy_contract": {
     "required": true,
@@ -387,5 +399,161 @@
     "notify_policy": "must_notify_when_human_required",
     "notify_timing": "immediate",
     "decision_basis": "role_requirement"
+  },
+  "capability_orchestration_contract": {
+    "required": true,
+    "task_type_routes": {
+      "wechat_listing_update": {
+        "pipeline": [
+          "observe_context",
+          "skill_route",
+          "mcp_preflight",
+          "execute_pipeline",
+          "verify_result",
+          "emit_evidence"
+        ],
+        "primary_skills": [
+          "weixinstore-sku-onboarding",
+          "product-visual-qa"
+        ],
+        "fallback_skills": [
+          "weixinstore-ui-agent",
+          "identity-creator"
+        ],
+        "required_mcp": [
+          "github",
+          "n8n-mcp"
+        ],
+        "max_tool_calls": 30,
+        "max_runtime_minutes": 20
+      },
+      "knowledge_api_probe": {
+        "pipeline": [
+          "observe_context",
+          "source_research",
+          "hypothesis_build",
+          "api_probe",
+          "verify_result",
+          "emit_evidence"
+        ],
+        "primary_skills": [
+          "identity-creator"
+        ],
+        "fallback_skills": [
+          "web-docs-to-markdown"
+        ],
+        "required_mcp": [
+          "n8n-mcp"
+        ],
+        "max_tool_calls": 20,
+        "max_runtime_minutes": 15
+      }
+    },
+    "preflight_requirements": [
+      "mcp_available",
+      "auth_ready",
+      "inputs_complete"
+    ],
+    "fail_classification": [
+      "route_wrong",
+      "skill_gap",
+      "mcp_unavailable",
+      "tool_auth",
+      "data_issue"
+    ],
+    "evidence_schema_fields": [
+      "task_id",
+      "route_selected",
+      "skills_used",
+      "mcp_tools_used",
+      "actions_taken",
+      "result",
+      "artifacts"
+    ]
+  },
+  "knowledge_acquisition_contract": {
+    "required": true,
+    "must_research_when": [
+      "new_api_domain",
+      "unknown_error_code",
+      "schema_changed"
+    ],
+    "source_priority": [
+      "official_spec",
+      "repo_contract",
+      "third_party"
+    ],
+    "evidence_fields": [
+      "claim",
+      "source",
+      "source_level",
+      "confidence",
+      "expiry",
+      "applies_to"
+    ],
+    "sample_report_path_pattern": "identity/runtime/examples/*knowledge-acquisition*.json",
+    "high_frequency_domains": {
+      "kie": {
+        "preferred_skills": [
+          "identity-creator"
+        ],
+        "preferred_sources": [
+          "official_spec",
+          "repo_contract"
+        ],
+        "required_validators": [
+          "scripts/validate_identity_knowledge_acquisition.py"
+        ]
+      }
+    }
+  },
+  "experience_feedback_contract": {
+    "required": true,
+    "positive_rulebook_path": "identity/runtime/rulebooks/positive.jsonl",
+    "negative_rulebook_path": "identity/runtime/rulebooks/negative.jsonl",
+    "required_fields": [
+      "case_id",
+      "layer",
+      "pattern",
+      "action",
+      "impact_score",
+      "replay_status"
+    ],
+    "cross_layer_feedback_targets": [
+      "routing_contract",
+      "capability_orchestration_contract",
+      "gates"
+    ],
+    "promote_requires_replay_pass": true,
+    "sample_report_path_pattern": "identity/runtime/examples/*experience-feedback*.json"
+  },
+  "ci_enforcement_contract": {
+    "required": true,
+    "required_workflows": [
+      "protocol-ci",
+      "identity-protocol-ci"
+    ],
+    "required_job": "required-gates",
+    "required_validators": [
+      "scripts/validate_identity_runtime_contract.py",
+      "scripts/validate_identity_upgrade_prereq.py",
+      "scripts/validate_identity_update_lifecycle.py",
+      "scripts/validate_identity_trigger_regression.py",
+      "scripts/validate_identity_learning_loop.py",
+      "scripts/validate_agent_handoff_contract.py",
+      "scripts/validate_identity_collab_trigger.py",
+      "scripts/validate_identity_orchestration_contract.py",
+      "scripts/validate_identity_knowledge_acquisition.py",
+      "scripts/validate_identity_experience_feedback.py",
+      "scripts/validate_identity_ci_enforcement.py"
+    ],
+    "required_checks": [
+      "protocol-ci / required-gates",
+      "identity-protocol-ci / required-gates"
+    ],
+    "freshness_gate": {
+      "handoff_logs_max_age_days": 7,
+      "route_metrics_max_age_days": 7
+    }
   }
 }

@@ -1,0 +1,1 @@
+{"case_id":"negative-non-mmec-headimg-2026-02-21","layer":"tool_data","pattern":"non_mmec_head_imgs","action":"block_and_convert_to_mmec_before_update","impact_score":0.92,"replay_status":"PASS"}
