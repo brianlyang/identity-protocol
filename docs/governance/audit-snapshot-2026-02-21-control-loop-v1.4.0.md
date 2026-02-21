@@ -56,3 +56,15 @@ Branch protection required checks remain a GitHub UI control; manual confirmatio
 
 - `protocol-ci / required-gates`
 - `identity-protocol-ci / required-gates`
+
+## Post-upgrade extension cross-validation archive
+
+To prevent misinterpretation of control-loop extensions as protocol replacement, we archived a dedicated non-conflict review reference:
+
+- `docs/references/identity-skill-mcp-tool-extension-cross-validation-v1.4.1.md`
+
+Archive conclusions:
+
+1. New control-loop contracts are implementation-layer extensions to the four core capability contracts (not redefinitions).
+2. Capability-gap handling (`skill_gap` / `mcp_gap` / `tool_gap` / `access_gap`) is formalized as a deterministic update path.
+3. Anti-divergence guardrails (mapping-required, validator-required, CI-required, replay-required, cross-protocol review-required) are retained.
