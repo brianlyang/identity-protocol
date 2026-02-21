@@ -86,6 +86,7 @@ def main() -> int:
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
+    ap.add_argument("--upgrade-report", default="", help="optional execute_identity_upgrade report path")
     ap.add_argument("--metrics-path", default="")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
@@ -194,18 +195,33 @@ def main() -> int:
                 or replay_fail >= float(thresholds.get("replay_failure_rate_percent", 999))
                 or first_pass_drop >= float(thresholds.get("first_pass_success_drop_percent", 999))
             )
-            if "upgrade_required" in report:
-                reported_trigger = bool(report.get("upgrade_required", False))
+            trigger_source = report
+            if args.upgrade_report:
+                up = Path(args.upgrade_report)
+                if not up.exists():
+                    print(f"[FAIL] upgrade report not found: {up}")
+                    rc = 1
+                    trigger_source = {}
+                else:
+                    try:
+                        trigger_source = _load_json(up)
+                    except Exception as e:
+                        print(f"[FAIL] upgrade report invalid json: {up} ({e})")
+                        rc = 1
+                        trigger_source = {}
+
+            if "upgrade_required" in trigger_source:
+                reported_trigger = bool(trigger_source.get("upgrade_required", False))
                 if should_trigger != reported_trigger:
                     print(
                         "[FAIL] metrics/threshold linkage mismatch: "
-                        f"should_trigger={should_trigger}, report.upgrade_required={reported_trigger}"
+                        f"should_trigger={should_trigger}, upgrade_required={reported_trigger}"
                     )
                     rc = 1
                 else:
                     print(
                         "[OK] metrics/threshold linkage aligned: "
-                        f"should_trigger={should_trigger}, report.upgrade_required={reported_trigger}"
+                        f"should_trigger={should_trigger}, upgrade_required={reported_trigger}"
                     )
             else:
                 print(
