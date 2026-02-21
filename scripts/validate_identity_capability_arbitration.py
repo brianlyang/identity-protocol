@@ -66,13 +66,13 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
-def _validate_record(rec: dict[str, Any], identity_id: str) -> list[str]:
+def _validate_record(rec: dict[str, Any], identity_id: str, *, strict_identity: bool) -> list[str]:
     issues: list[str] = []
     miss = [k for k in REQ_DECISION_FIELDS if k not in rec]
     if miss:
         issues.append(f"missing fields: {miss}")
         return issues
-    if str(rec.get("identity_id", "")).strip() != identity_id:
+    if strict_identity and str(rec.get("identity_id", "")).strip() != identity_id:
         issues.append("identity_id mismatch")
     if str(rec.get("conflict_pair", "")) not in REQ_CONFLICTS:
         issues.append(f"conflict_pair must be one of {REQ_CONFLICTS}")
@@ -86,6 +86,7 @@ def main() -> int:
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
+    ap.add_argument("--metrics-path", default="")
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
@@ -168,9 +169,49 @@ def main() -> int:
             print(f"[FAIL] records[{i}] must be object")
             rc = 1
             continue
-        for issue in _validate_record(rec, args.identity_id):
+        for issue in _validate_record(rec, args.identity_id, strict_identity=True):
             print(f"[FAIL] records[{i}] {issue}")
             rc = 1
+
+    # Optional threshold/metrics linkage validation (enabled when metrics artifact exists)
+    route_quality = task.get("route_quality_contract") or {}
+    metrics_path = Path(args.metrics_path) if args.metrics_path else Path(
+        route_quality.get("metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json")
+    )
+    if metrics_path.exists():
+        try:
+            metrics = _load_json(metrics_path)
+        except Exception as e:
+            print(f"[FAIL] metrics artifact invalid json: {metrics_path} ({e})")
+            rc = 1
+            metrics = {}
+        if metrics:
+            misroute = float(metrics.get("misroute_rate", 0))
+            replay_fail = max(0.0, 100.0 - float(metrics.get("replay_success_rate", 100.0)))
+            first_pass_drop = max(0.0, 100.0 - float(metrics.get("first_pass_success_rate", 100.0)))
+            should_trigger = (
+                misroute >= float(thresholds.get("misroute_rate_percent", 999))
+                or replay_fail >= float(thresholds.get("replay_failure_rate_percent", 999))
+                or first_pass_drop >= float(thresholds.get("first_pass_success_drop_percent", 999))
+            )
+            if "upgrade_required" in report:
+                reported_trigger = bool(report.get("upgrade_required", False))
+                if should_trigger != reported_trigger:
+                    print(
+                        "[FAIL] metrics/threshold linkage mismatch: "
+                        f"should_trigger={should_trigger}, report.upgrade_required={reported_trigger}"
+                    )
+                    rc = 1
+                else:
+                    print(
+                        "[OK] metrics/threshold linkage aligned: "
+                        f"should_trigger={should_trigger}, report.upgrade_required={reported_trigger}"
+                    )
+            else:
+                print(
+                    "[OK] metrics/threshold linkage check skipped: report has no 'upgrade_required' field "
+                    f"(computed should_trigger={should_trigger})"
+                )
 
     if args.self_test:
         pos = sorted(Path("identity/runtime/examples/arbitration/positive").glob("*.json"))
@@ -185,7 +226,7 @@ def main() -> int:
                 print(f"[FAIL] positive arbitration sample missing records: {p}")
                 return 1
             for i, rec in enumerate(recs):
-                issues = _validate_record(rec, args.identity_id)
+                issues = _validate_record(rec, args.identity_id, strict_identity=False)
                 if issues:
                     print(f"[FAIL] positive arbitration sample {p}#{i}: {issues}")
                     return 1
@@ -200,7 +241,7 @@ def main() -> int:
                 if not isinstance(rec, dict):
                     has_invalid = True
                     break
-                if _validate_record(rec, args.identity_id):
+                if _validate_record(rec, args.identity_id, strict_identity=False):
                     has_invalid = True
                     break
             if not has_invalid:
@@ -217,4 +258,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

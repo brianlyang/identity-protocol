@@ -44,7 +44,7 @@
 | F-08..F-09 | #10 | `d944a272f363e48d47935206de4de1448ec136c5` | reusable workflow + branch protection checklist |
 | F-10 | #11 | `bc369a3cf1d503854f4f0dac3e9de2a7690bab47` | production log path + freshness/consistency checks + route metrics export |
 | F-11 | #12 | `578c7c40035e75f41678d5deb30d6e1cd79015d9` | strict weekly handoff-log SLA + template generator |
-| F-12 | #13 | `TBD-after-merge` | blocker taxonomy + human-collab auto-notify contract + validator + required gate |
+| F-12 | #13 | `99518d84343622c2265dcf235073107cf089ada8` | blocker taxonomy + human-collab auto-notify contract + validator + required gate |
 
 ## 5) Residual risks
 
