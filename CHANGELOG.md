@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **runtime sync preflight gate (v1.2.13 draft)**:
+  - added local runtime sync checker:
+    - `scripts/preflight_identity_runtime_sync.sh`
+  - enforces local identity-protocol repo HEAD == `origin/main` before business runtime tests
+  - added runtime preflight operations checklist:
+    - `docs/operations/runtime-preflight-checklist-v1.2.13.md`
+  - README governance section now includes runtime preflight references
+
 - **audit snapshot CI gate (v1.2.12 draft)**:
   - added validator:
     - `scripts/validate_audit_snapshot_index.py`
