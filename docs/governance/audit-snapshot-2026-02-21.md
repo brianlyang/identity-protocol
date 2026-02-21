@@ -38,7 +38,7 @@
 
 | Finding(s) | PR | Merge Commit | Core outputs |
 |---|---|---|---|
-| F-01..F-06 | #8 | `5ff940f...` (main lineage prior hardening set) | CI gate chain + validator hardening baseline |
+| F-01..F-06 | #8 | `3ce6129c58ad50fc1e0e1a8dc6766d385c07e1e1` | CI gate chain + validator hardening baseline |
 | F-07 | #9 | `5ff940f19f683f7340fc713a737eed5a0c46f10b` | handoff contract + validator + samples + CI/e2e integration |
 | F-08..F-09 | #10 | `d944a272f363e48d47935206de4de1448ec136c5` | reusable workflow + branch protection checklist |
 | F-10 | #11 | `bc369a3cf1d503854f4f0dac3e9de2a7690bab47` | production log path + freshness/consistency checks + route metrics export |
