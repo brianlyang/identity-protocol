@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **ci startup reliability hotfix (v1.2.14 draft)**:
+  - fixed zero-job startup failures in branch-protection bootstrap runs
+  - inlined `required-gates` jobs back into:
+    - `.github/workflows/protocol-ci.yml`
+    - `.github/workflows/identity-protocol-ci.yml`
+  - keeps job context names stable for branch protection setup:
+    - `protocol-ci / required-gates`
+    - `identity-protocol-ci / required-gates`
+  - reusable workflow file remains as reference but no longer critical path
+
 - **runtime sync preflight gate (v1.2.13 draft)**:
   - added local runtime sync checker:
     - `scripts/preflight_identity_runtime_sync.sh`
