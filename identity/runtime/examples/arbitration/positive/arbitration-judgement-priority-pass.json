@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "arbitration_id": "arb-pos-001",
+      "task_id": "store_manager_20260218_role_os_bootstrap",
+      "identity_id": "store-manager",
+      "conflict_pair": "judgement_vs_routing",
+      "inputs": {
+        "risk_level": "high",
+        "evidence_conflict": true
+      },
+      "decision": "prefer_judgement",
+      "impact": "slower routing but safer decision",
+      "rationale": "safety first",
+      "decided_at": "2026-02-21T16:22:00Z"
+    }
+  ]
+}

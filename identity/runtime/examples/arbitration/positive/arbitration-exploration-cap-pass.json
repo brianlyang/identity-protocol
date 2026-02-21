@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "arbitration_id": "arb-pos-002",
+      "task_id": "store_manager_20260218_role_os_bootstrap",
+      "identity_id": "store-manager",
+      "conflict_pair": "routing_vs_learning",
+      "inputs": {
+        "exploration_enabled": true,
+        "current_exploration_ratio": 0.15
+      },
+      "decision": "cap_exploration_ratio",
+      "impact": "keeps exploration bounded and stable",
+      "rationale": "avoid excessive route volatility",
+      "decided_at": "2026-02-21T16:23:00Z"
+    }
+  ]
+}

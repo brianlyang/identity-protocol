@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "arbitration_id": "arb-neg-001",
+      "task_id": "store_manager_20260218_role_os_bootstrap",
+      "identity_id": "store-manager",
+      "conflict_pair": "unknown_conflict",
+      "decision": "unknown",
+      "rationale": "invalid sample"
+    }
+  ]
+}

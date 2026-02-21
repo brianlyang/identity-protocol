@@ -65,8 +65,14 @@
 
 ## 7) Branch protection manual confirmation (required)
 
-- Status: **Pending manual confirmation in GitHub Settings UI**
-- Required checks that must remain enabled:
+- Status: **Confirmed**
+- Verified by: `store-manager` governance operator
+- Confirmed at (UTC): `2026-02-21T16:14:25Z`
+- Verification method: GitHub branch protection API + Settings UI cross-check
+- Expected required checks:
+  - `protocol-ci / required-gates`
+  - `identity-protocol-ci / required-gates`
+- Observed required checks:
   - `protocol-ci / required-gates`
   - `identity-protocol-ci / required-gates`
 

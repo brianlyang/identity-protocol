@@ -165,6 +165,7 @@ def main() -> int:
         "scripts/validate_identity_update_lifecycle.py",
         "scripts/validate_identity_trigger_regression.py",
         "scripts/validate_identity_collab_trigger.py",
+        "scripts/validate_identity_capability_arbitration.py",
     }
     if not expected_checks.issubset(required_checks):
         print(f"[FAIL] validation_contract.required_checks missing expected checks: {sorted(expected_checks - required_checks)}")

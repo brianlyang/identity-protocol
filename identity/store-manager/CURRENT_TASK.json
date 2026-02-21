@@ -57,7 +57,8 @@
     "orchestration_gate": "required",
     "knowledge_acquisition_gate": "required",
     "experience_feedback_gate": "required",
-    "ci_enforcement_gate": "required"
+    "ci_enforcement_gate": "required",
+    "arbitration_gate": "required"
   },
   "protocol_review_contract": {
     "required_before": [
@@ -152,7 +153,8 @@
         "scripts/validate_identity_orchestration_contract.py",
         "scripts/validate_identity_knowledge_contract.py",
         "scripts/validate_identity_experience_feedback.py",
-        "scripts/validate_identity_ci_enforcement.py"
+        "scripts/validate_identity_ci_enforcement.py",
+        "scripts/validate_identity_capability_arbitration.py"
       ],
       "must_pass_all": true
     },
@@ -352,7 +354,7 @@
   "version_control": {
     "sync_status": "synchronized",
     "last_updated": "2026-02-21",
-    "protocol_revision": "v1.4-control-loop"
+    "protocol_revision": "v1.4.2-control-loop-arbitration"
   },
   "blocker_taxonomy_contract": {
     "required": true,
@@ -545,7 +547,8 @@
       "scripts/validate_identity_orchestration_contract.py",
       "scripts/validate_identity_knowledge_contract.py",
       "scripts/validate_identity_experience_feedback.py",
-      "scripts/validate_identity_ci_enforcement.py"
+      "scripts/validate_identity_ci_enforcement.py",
+      "scripts/validate_identity_capability_arbitration.py"
     ],
     "required_checks": [
       "protocol-ci / required-gates",
@@ -555,5 +558,60 @@
       "handoff_logs_max_age_days": 7,
       "route_metrics_max_age_days": 7
     }
+  },
+  "capability_arbitration_contract": {
+    "required": true,
+    "priority_order": [
+      "accurate_judgement",
+      "governance",
+      "latency",
+      "exploration"
+    ],
+    "conflict_rules": {
+      "judgement_vs_routing": {
+        "when": [
+          "high_risk_listing",
+          "evidence_conflict_detected"
+        ],
+        "decision": "prefer_judgement"
+      },
+      "reasoning_vs_latency": {
+        "when": [
+          "low_risk_and_time_bounded"
+        ],
+        "decision": "bounded_reasoning"
+      },
+      "routing_vs_learning": {
+        "when": [
+          "exploration_enabled"
+        ],
+        "decision": "cap_exploration_ratio",
+        "max_exploration_ratio": 0.2
+      },
+      "learning_vs_hotfix": {
+        "when": [
+          "incident_hotfix_required"
+        ],
+        "decision": "temporary_hotfix_then_rulebook_backfill"
+      }
+    },
+    "trigger_thresholds": {
+      "misroute_rate_percent": 10,
+      "replay_failure_rate_percent": 20,
+      "first_pass_success_drop_percent": 15
+    },
+    "decision_record_required_fields": [
+      "arbitration_id",
+      "task_id",
+      "identity_id",
+      "conflict_pair",
+      "inputs",
+      "decision",
+      "impact",
+      "rationale",
+      "decided_at"
+    ],
+    "sample_report_path_pattern": "identity/runtime/examples/*capability-arbitration*.json",
+    "fail_action": "block_merge_and_reenter_arbitration_update"
   }
 }

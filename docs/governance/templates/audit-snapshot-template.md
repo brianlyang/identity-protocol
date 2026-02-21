@@ -31,8 +31,13 @@
 
 ## 6) Branch protection status (manual)
 
+- Verified by:
 - Confirmed at (UTC):
-- Required checks configured:
+- Verification method (UI/API):
+- Expected required checks:
+  - protocol-ci / required-gates
+  - identity-protocol-ci / required-gates
+- Observed required checks:
   - protocol-ci / required-gates
   - identity-protocol-ci / required-gates
 - Up-to-date branch required: yes/no
