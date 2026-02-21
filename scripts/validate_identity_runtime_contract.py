@@ -18,6 +18,8 @@ REQ_TOP_LEVEL = [
     "reasoning_loop_contract",
     "routing_contract",
     "rulebook_contract",
+    "blocker_taxonomy_contract",
+    "collaboration_trigger_contract",
 ]
 
 REQ_GATES = [
@@ -30,6 +32,7 @@ REQ_GATES = [
     "reasoning_loop_gate",
     "routing_gate",
     "rulebook_gate",
+    "collaboration_trigger_gate",
 ]
 
 REQUIRED_PROTOCOL_SOURCES = [
@@ -273,6 +276,50 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
                     ok_rows += 1
             if ok_rows:
                 print(f"[OK]   validated {ok_rows} rulebook rows against required_fields")
+
+    taxonomy = data.get("blocker_taxonomy_contract") or {}
+    if not isinstance(taxonomy, dict) or not taxonomy:
+        print("[FAIL] blocker_taxonomy_contract must be non-empty object")
+        rc = 1
+    else:
+        required_blockers = set(taxonomy.get("required_blocker_types") or [])
+        expected_blockers = {"login_required", "captcha_required", "session_expired", "manual_verification_required"}
+        if not expected_blockers.issubset(required_blockers):
+            print(
+                f"[FAIL] blocker_taxonomy_contract.required_blocker_types missing: "
+                f"{sorted(expected_blockers - required_blockers)}"
+            )
+            rc = 1
+        else:
+            print("[OK]   blocker taxonomy includes required blocker classes")
+
+    collab = data.get("collaboration_trigger_contract") or {}
+    if not isinstance(collab, dict) or not collab:
+        print("[FAIL] collaboration_trigger_contract must be non-empty object")
+        rc = 1
+    else:
+        notify_policy = str(collab.get("notify_policy") or "").strip()
+        if not notify_policy:
+            print("[FAIL] collaboration_trigger_contract.notify_policy must be non-empty string")
+            rc = 1
+        else:
+            print(f"[OK]   collaboration_trigger_contract.notify_policy={notify_policy}")
+        notify_timing = str(collab.get("notify_timing") or "").strip().lower()
+        if notify_timing != "immediate":
+            print("[FAIL] collaboration_trigger_contract.notify_timing must be 'immediate'")
+            rc = 1
+        else:
+            print("[OK]   collaboration_trigger_contract.notify_timing=immediate")
+        if collab.get("state_change_bypass_dedupe") is not True:
+            print("[FAIL] collaboration_trigger_contract.state_change_bypass_dedupe must be true")
+            rc = 1
+        else:
+            print("[OK]   collaboration_trigger_contract.state_change_bypass_dedupe=true")
+        if collab.get("must_emit_receipt_in_chat") is not True:
+            print("[FAIL] collaboration_trigger_contract.must_emit_receipt_in_chat must be true")
+            rc = 1
+        else:
+            print("[OK]   collaboration_trigger_contract.must_emit_receipt_in_chat=true")
 
     if rc == 0:
         print(f"Identity runtime contract validation PASSED for identity={identity_id}")

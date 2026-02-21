@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[1/14] validate protocol"
+echo "[1/15] validate protocol"
 python3 scripts/validate_identity_protocol.py
 
-echo "[2/14] validate governance snapshot index"
+echo "[2/15] validate governance snapshot index"
 python3 scripts/validate_audit_snapshot_index.py
 
-echo "[3/14] compile runtime brief"
+echo "[3/15] compile runtime brief"
 python3 scripts/compile_identity_runtime.py
 
-echo "[4/14] validate manifest semantics"
+echo "[4/15] validate manifest semantics"
 python3 scripts/validate_identity_manifest.py
 
-echo "[5/14] test discovery contract"
+echo "[5/15] test discovery contract"
 python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
 
 IDS=$(python3 - <<'PY'
@@ -29,32 +29,35 @@ print(' '.join(ids))
 PY
 )
 
-echo "[6/14] active identities: $IDS"
+echo "[6/15] active identities: $IDS"
 
 for ID in $IDS; do
-  echo "[7/14][$ID] validate runtime ORRL contract"
+  echo "[7/15][$ID] validate runtime ORRLC contract"
   python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
 
-  echo "[8/14][$ID] validate update prereq baseline gate"
+  echo "[8/15][$ID] validate update prereq baseline gate"
   python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
 
-  echo "[9/14][$ID] validate update lifecycle contract"
+  echo "[9/15][$ID] validate update lifecycle contract"
   python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
 
-  echo "[10/14][$ID] validate trigger regression contract"
+  echo "[10/15][$ID] validate trigger regression contract"
   python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
 
-  echo "[11/14][$ID] validate learning-loop linkage"
+  echo "[11/15][$ID] validate collaboration trigger contract"
+  python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
+
+  echo "[12/15][$ID] validate learning-loop linkage"
   python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
 
-  echo "[12/14][$ID] validate master/sub handoff contract"
+  echo "[13/15][$ID] validate master/sub handoff contract"
   python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
 
-  echo "[13/14][$ID] export route quality metrics"
+  echo "[14/15][$ID] export route quality metrics"
   python3 scripts/export_route_quality_metrics.py --identity-id "$ID"
 done
 
-echo "[14/14] ensure compile output is stable and contains baseline refs"
+echo "[15/15] ensure compile output is stable and contains baseline refs"
 python3 scripts/compile_identity_runtime.py >/dev/null
 grep -q "Runtime baseline review references:" identity/runtime/IDENTITY_COMPILED.md
 

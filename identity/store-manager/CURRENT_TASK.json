@@ -3,9 +3,9 @@
   "agent_identity": {
     "name": "StoreManager",
     "role": "WeChat Shop Operations and API Automation Manager",
-    "methodology_version": "v1.2",
-    "prompt_version": "v1.2",
-    "json_version": "v1.2",
+    "methodology_version": "v1.3",
+    "prompt_version": "v1.3",
+    "json_version": "v1.3",
     "identity_prompt_path": "identity/store-manager/IDENTITY_PROMPT.md",
     "canon_path": "identity/STORE_MANAGER_CANON.md"
   },
@@ -52,7 +52,8 @@
     "reasoning_loop_gate": "required",
     "routing_gate": "required",
     "rulebook_gate": "required",
-    "agent_handoff_gate": "required"
+    "agent_handoff_gate": "required",
+    "collaboration_trigger_gate": "required"
   },
   "protocol_review_contract": {
     "required_before": [
@@ -142,7 +143,8 @@
         "scripts/validate_identity_update_lifecycle.py",
         "scripts/validate_identity_trigger_regression.py",
         "scripts/validate_identity_learning_loop.py",
-        "scripts/validate_agent_handoff_contract.py"
+        "scripts/validate_agent_handoff_contract.py",
+        "scripts/validate_identity_collab_trigger.py"
       ],
       "must_pass_all": true
     },
@@ -211,6 +213,9 @@
       ],
       "capability_gap": [
         "identity-creator"
+      ],
+      "human_collab_required": [
+        "ops-notification-router"
       ]
     }
   },
@@ -309,6 +314,13 @@
       "routine_status_update",
       "normal_progress_report",
       "non_blocking_warning"
+    ],
+    "email_for_human_collab_blockers": true,
+    "human_collab_blockers": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
     ]
   },
   "required_artifacts": [
@@ -327,6 +339,53 @@
   ],
   "version_control": {
     "sync_status": "synchronized",
-    "last_updated": "2026-02-20"
+    "last_updated": "2026-02-21",
+    "protocol_revision": "v1.3-human-collab-trigger"
+  },
+  "blocker_taxonomy_contract": {
+    "required": true,
+    "required_blocker_types": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
+    ],
+    "blocker_classification_required_fields": [
+      "blocker_type",
+      "source",
+      "detected_at",
+      "requires_human_collab",
+      "next_action"
+    ],
+    "fail_action": "block_merge_and_reenter_collaboration_update"
+  },
+  "collaboration_trigger_contract": {
+    "required": true,
+    "hard_rule": "If human collaboration blockers are detected, notify immediately and emit chat receipt",
+    "trigger_conditions": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
+    ],
+    "notify_channel": "ops-notification-router",
+    "dedupe_window_hours": 24,
+    "state_change_bypass_dedupe": true,
+    "must_emit_receipt_in_chat": true,
+    "receipt_required_fields": [
+      "event_id",
+      "blocker_type",
+      "notified_at",
+      "channel",
+      "dedupe_key",
+      "status"
+    ],
+    "evidence_log_path_pattern": "identity/runtime/logs/collaboration/*.json",
+    "minimum_evidence_logs_required": 1,
+    "max_log_age_days": 7,
+    "validator": "scripts/validate_identity_collab_trigger.py",
+    "notify_policy": "must_notify_when_human_required",
+    "notify_timing": "immediate",
+    "decision_basis": "role_requirement"
   }
 }

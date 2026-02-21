@@ -1,0 +1,28 @@
+{
+  "log_id": "collab-selftest-fail-1",
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260218_role_os_bootstrap",
+  "blocker_type": "login_required",
+  "source": "browser-session-check",
+  "detected_at": "2026-02-21T10:00:00Z",
+  "requires_human_collab": true,
+  "notify_channel": "ops-notification-router",
+  "notified_at": "2026-02-21T10:02:30Z",
+  "notify_status": "sent",
+  "dedupe_key": "event:login_required|id:test-2",
+  "state_change_bypass_dedupe": false,
+  "chat_receipt": {
+    "emitted": false,
+    "event_id": "event:login_required",
+    "blocker_type": "login_required",
+    "notified_at": "2026-02-21T10:02:30Z",
+    "channel": "ops-notification-router",
+    "dedupe_key": "event:login_required|id:test-2",
+    "status": "sent"
+  },
+  "next_action": {
+    "owner": "human_operator",
+    "action": "login",
+    "input": "login"
+  }
+}

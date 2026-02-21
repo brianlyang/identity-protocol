@@ -26,3 +26,21 @@
 - Added append-only rule ledger file: `identity/store-manager/RULEBOOK.jsonl`.
 - Added runtime validator: `scripts/validate_identity_runtime_contract.py`.
 - Integrated validator into one-shot smoke test: `scripts/e2e_smoke_test.sh`.
+
+## 2026-02-21
+
+- Upgraded identity runtime contract to v1.3 with human-collaboration auto-notify controls.
+- Added `blocker_taxonomy_contract` with mandatory blocker classes:
+  - `login_required`
+  - `captcha_required`
+  - `session_expired`
+  - `manual_verification_required`
+- Added `collaboration_trigger_contract` with:
+  - hard rule + trigger conditions
+  - immediate notify policy (`notify_timing=immediate`)
+  - dedupe window + state-change bypass
+  - receipt-in-chat requirement and evidence log pattern
+- Added new required gate:
+  - `gates.collaboration_trigger_gate=required`
+- Added lifecycle required validator:
+  - `scripts/validate_identity_collab_trigger.py`

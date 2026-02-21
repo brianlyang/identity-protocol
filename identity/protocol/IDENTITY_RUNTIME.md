@@ -26,7 +26,8 @@ Project extension features:
 5. Validate CURRENT_TASK minimum required blocks.
 6. Validate baseline-review evidence if `protocol_baseline_review_gate` is `required`.
 7. Validate identity update lifecycle contract if `identity_update_gate` is `required`.
-8. Allow execution.
+8. Validate collaboration trigger contract if `collaboration_trigger_gate` is `required`.
+9. Allow execution.
 
 If validation fails, block high-impact actions and require repair.
 
@@ -53,12 +54,15 @@ Before identity runtime evolution/update conclusions:
 - identity update lifecycle gate must pass
 - update trigger/patch/validation/replay contracts must all pass
 
+Before any flow that can hit login/captcha/session/manual verification blockers:
+- collaboration_trigger_gate must pass
+- blocker taxonomy must include required collaboration blocker classes
+- immediate notification + dedupe + receipt constraints must be active
+
 ## Post-action requirements
 
 After each high-impact action:
 - update CURRENT_TASK state
 - append TASK_HISTORY entry
 - persist evidence artifact paths
-
-
 
