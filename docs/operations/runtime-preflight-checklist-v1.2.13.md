@@ -51,3 +51,18 @@ No pass -> no business runtime execution.
 ## Operator note
 
 This checklist externalizes memory into executable gates. Do not rely on chat memory for critical preflight actions.
+
+---
+
+## Freshness operations discipline (weekly, mandatory)
+
+To keep freshness gates stable (`max_log_age_days=7` style constraints), operators MUST run a weekly maintenance rhythm:
+
+1. append at least one fresh handoff log into `identity/runtime/logs/handoff/`
+2. append/update at least one collaboration log into `identity/runtime/logs/collaboration/`
+3. run route-metrics export:
+   - `python3 scripts/export_route_quality_metrics.py --identity-id store-manager`
+4. execute:
+   - `python3 scripts/validate_identity_ci_enforcement.py --identity-id store-manager`
+
+If weekly freshness updates are skipped, CI failure is expected by design (policy guard, not implementation bug).
