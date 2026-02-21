@@ -29,6 +29,7 @@ REQ_TASK_KEYS = {
     "knowledge_acquisition_contract",
     "experience_feedback_contract",
     "ci_enforcement_contract",
+    "capability_arbitration_contract",
 }
 
 REQ_PACK_FILES = [
@@ -164,6 +165,9 @@ def main() -> int:
                 rc = 1
             if gates.get("ci_enforcement_gate") == "required" and "ci_enforcement_contract" not in task:
                 print(f"[FAIL] {prefix} ci_enforcement_gate=required but ci_enforcement_contract missing")
+                rc = 1
+            if gates.get("arbitration_gate") == "required" and "capability_arbitration_contract" not in task:
+                print(f"[FAIL] {prefix} arbitration_gate=required but capability_arbitration_contract missing")
                 rc = 1
 
             if "identity_update_lifecycle_contract" in task and "trigger_regression_contract" not in task:

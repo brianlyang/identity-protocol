@@ -19,6 +19,7 @@ Loop stages:
 - `knowledge_acquisition_contract`
 - `experience_feedback_contract`
 - `ci_enforcement_contract`
+- `capability_arbitration_contract` (v1.4.2 extension)
 
 ## Gate alignment
 
@@ -28,6 +29,7 @@ Required gate flags in `CURRENT_TASK.gates`:
 - `knowledge_acquisition_gate = required`
 - `experience_feedback_gate = required`
 - `ci_enforcement_gate = required`
+- `arbitration_gate = required`
 
 ## Validator map
 
@@ -35,6 +37,18 @@ Required gate flags in `CURRENT_TASK.gates`:
 - `scripts/validate_identity_knowledge_contract.py`
 - `scripts/validate_identity_experience_feedback.py`
 - `scripts/validate_identity_ci_enforcement.py`
+- `scripts/validate_identity_capability_arbitration.py`
+
+## Four-core conflict arbitration (v1.4.2 extension)
+
+Control-loop execution must resolve four-core capability tension explicitly:
+
+- judgement vs routing
+- reasoning depth vs latency budget
+- route exploration vs rule-learning convergence
+- hotfix speed vs rulebook integrity
+
+Arbitration decisions must emit structured records and pass replay-aware validation before merge.
 
 ## Metrics baseline
 

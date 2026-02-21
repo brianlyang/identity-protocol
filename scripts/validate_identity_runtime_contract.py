@@ -24,6 +24,7 @@ REQ_TOP_LEVEL = [
     "knowledge_acquisition_contract",
     "experience_feedback_contract",
     "ci_enforcement_contract",
+    "capability_arbitration_contract",
 ]
 
 REQ_GATES = [
@@ -41,6 +42,7 @@ REQ_GATES = [
     "knowledge_acquisition_gate",
     "experience_feedback_gate",
     "ci_enforcement_gate",
+    "arbitration_gate",
 ]
 
 REQUIRED_PROTOCOL_SOURCES = [

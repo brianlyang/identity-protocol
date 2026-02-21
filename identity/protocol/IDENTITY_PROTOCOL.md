@@ -1,4 +1,4 @@
-# Identity Protocol v1.4.1 (draft)
+# Identity Protocol v1.4.2 (draft)
 
 ## Goal
 
@@ -201,6 +201,25 @@ Mandatory validators:
 
 No control-loop contract pass -> no identity update completion/merge.
 
+## Capability arbitration contract (v1.4.2+)
+
+To keep four core capabilities aligned under runtime tension, identity MUST define conflict arbitration rather than implicit trade-offs.
+
+When routing/latency/learning priorities conflict:
+
+- `gates.arbitration_gate` MUST be `required`.
+- `capability_arbitration_contract` MUST exist in CURRENT_TASK and include:
+  - `priority_order`
+  - `conflict_rules` (judgement_vs_routing / reasoning_vs_latency / routing_vs_learning / learning_vs_hotfix)
+  - `trigger_thresholds`
+  - `decision_record_required_fields`
+  - `sample_report_path_pattern`
+
+Mandatory validator:
+- `scripts/validate_identity_capability_arbitration.py`
+
+No arbitration pass -> no merge for affected route/update changes.
+
 ## Skill + MCP + Tool collaboration contract (new baseline in v1.2.5)
 
 Identity capability decisions MUST align with collaboration boundaries:
@@ -234,6 +253,7 @@ Non-bypassable constraints:
 - knowledge acquisition gate for source-grounded decisions
 - experience feedback gate for rule learning closure
 - ci enforcement gate for required-check integrity
+- arbitration gate for four-core conflict resolution integrity
 
 ### Track B: adaptive growth
 
@@ -262,6 +282,7 @@ Minimum required blocks:
 - `knowledge_acquisition_contract`
 - `experience_feedback_contract`
 - `ci_enforcement_contract`
+- `capability_arbitration_contract`
 
 Conditional required blocks:
 - `protocol_review_contract` (identity upgrade tasks)
