@@ -1,4 +1,4 @@
-# Identity Protocol v1.3.0 (draft)
+# Identity Protocol v1.4.1 (draft)
 
 ## Goal
 
@@ -175,6 +175,32 @@ Mandatory validator:
 
 No collaboration-trigger pass -> no merge/no release for affected identity update.
 
+## Control-loop extension contracts (v1.4.0+)
+
+To keep identity as an auditable control-plane (not a prompt-only layer), runtime MUST enforce the closed-loop extension contracts:
+
+`Observe -> Decide -> Orchestrate -> Validate -> Learn -> Update`
+
+Required runtime contracts:
+
+- `capability_orchestration_contract`
+  - defines skill orchestration strategy, MCP/tool selection constraints, and routing budget/risk boundaries.
+- `knowledge_acquisition_contract`
+  - defines when retrieval is mandatory, source tiers, evidence format, and refresh policy.
+- `experience_feedback_contract`
+  - defines positive/negative experience feedback, rulebook impact, and replay promotion rules.
+- `ci_enforcement_contract`
+  - defines required validator/check inventory and CI gate alignment.
+
+Mandatory validators:
+
+- `scripts/validate_identity_orchestration_contract.py`
+- `scripts/validate_identity_knowledge_contract.py`
+- `scripts/validate_identity_experience_feedback.py`
+- `scripts/validate_identity_ci_enforcement.py`
+
+No control-loop contract pass -> no identity update completion/merge.
+
 ## Skill + MCP + Tool collaboration contract (new baseline in v1.2.5)
 
 Identity capability decisions MUST align with collaboration boundaries:
@@ -204,6 +230,10 @@ Non-bypassable constraints:
 - identity update lifecycle gate for runtime evolution decisions
 - trigger regression gate for route/update changes
 - agent handoff gate for delegated execution changes
+- orchestration gate for capability composition decisions
+- knowledge acquisition gate for source-grounded decisions
+- experience feedback gate for rule learning closure
+- ci enforcement gate for required-check integrity
 
 ### Track B: adaptive growth
 
@@ -228,6 +258,10 @@ Minimum required blocks:
 - `rulebook_contract`
 - `blocker_taxonomy_contract`
 - `collaboration_trigger_contract`
+- `capability_orchestration_contract`
+- `knowledge_acquisition_contract`
+- `experience_feedback_contract`
+- `ci_enforcement_contract`
 
 Conditional required blocks:
 - `protocol_review_contract` (identity upgrade tasks)

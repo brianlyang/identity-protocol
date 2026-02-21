@@ -81,6 +81,9 @@ def main() -> int:
     required_job = str(c.get("required_job"))
     validators = c.get("required_validators") or []
 
+    reusable_path = wf_dir / "_identity-required-gates.yml"
+    reusable_text = reusable_path.read_text(encoding="utf-8") if reusable_path.exists() else ""
+
     for wf in c.get("required_workflows") or []:
         wf_path = wf_dir / f"{wf}.yml"
         if not wf_path.exists():
@@ -91,10 +94,17 @@ def main() -> int:
         if f"{required_job}:" not in text:
             print(f"[FAIL] workflow {wf_path} missing job: {required_job}")
             rc = 1
+        uses_reusable = "uses: ./.github/workflows/_identity-required-gates.yml" in text
+        if uses_reusable and not reusable_text:
+            print(f"[FAIL] workflow {wf_path} references reusable required-gates workflow but {reusable_path} is missing")
+            rc = 1
         for v in validators:
-            if v not in text:
-                print(f"[FAIL] workflow {wf_path} missing validator call reference: {v}")
-                rc = 1
+            if v in text:
+                continue
+            if uses_reusable and v in reusable_text:
+                continue
+            print(f"[FAIL] workflow {wf_path} missing validator call reference: {v}")
+            rc = 1
 
     fg = c.get("freshness_gate") or {}
     if int(fg.get("handoff_logs_max_age_days", 0)) <= 0:
