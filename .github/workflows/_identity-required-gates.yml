@@ -36,18 +36,7 @@ jobs:
 
       - name: Validate required runtime gates across active identities
         run: |
-          IDS=$(python - <<'PY'
-import yaml
-from pathlib import Path
-c=yaml.safe_load(Path('identity/catalog/identities.yaml').read_text())
-ids=[x['id'] for x in c.get('identities',[]) if isinstance(x,dict) and str(x.get('status','')).lower()=='active']
-if not ids:
-    d=c.get('default_identity')
-    if d:
-        ids=[d]
-print(' '.join(ids))
-PY
-)
+          IDS=$(python -c "import yaml;from pathlib import Path;c=yaml.safe_load(Path('identity/catalog/identities.yaml').read_text());ids=[x['id'] for x in c.get('identities',[]) if isinstance(x,dict) and str(x.get('status','')).lower()=='active'];d=c.get('default_identity');print(' '.join(ids or ([d] if d else [])))")
           echo "active identities: $IDS"
           for ID in $IDS; do
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
