@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **audit snapshot CI gate (v1.2.12 draft)**:
+  - added validator:
+    - `scripts/validate_audit_snapshot_index.py`
+  - validator enforces:
+    - governance snapshot policy/template/index files exist
+    - latest dated snapshot file exists
+    - latest snapshot is referenced by `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - integrated into required gate chain:
+    - `.github/workflows/_identity-required-gates.yml`
+    - `scripts/e2e_smoke_test.sh`
+
 - **audit snapshot institutionalization (v1.2.11 draft)**:
   - added fixed-action governance policy:
     - `docs/governance/audit-snapshot-policy-v1.2.11.md`
