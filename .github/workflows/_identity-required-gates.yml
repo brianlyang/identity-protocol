@@ -23,6 +23,9 @@ jobs:
       - name: Validate protocol base
         run: python3 scripts/validate_identity_protocol.py
 
+      - name: Validate governance snapshot index
+        run: python3 scripts/validate_audit_snapshot_index.py
+
       - name: Compile runtime
         run: python3 scripts/compile_identity_runtime.py
 
