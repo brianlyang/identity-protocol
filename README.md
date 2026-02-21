@@ -71,9 +71,10 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 2. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md` (full SOP)
 3. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md` (strategy/capability/execution collaboration)
 4. `docs/references/identity-skill-mcp-tool-extension-cross-validation-v1.4.1.md` (non-conflict mapping + capability-gap extension path)
-5. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
-6. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
-7. `identity/protocol/AGENT_HANDOFF_CONTRACT.md` (master/sub anti-drift contract)
+5. `docs/references/identity-skill-mcp-cross-vendor-governance-guide-v1.0.md` (OpenAI/Anthropic/Gemini/MCP governance synthesis for protocol review)
+6. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
+7. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
+8. `identity/protocol/AGENT_HANDOFF_CONTRACT.md` (master/sub anti-drift contract)
 
 ## Governance and operations
 
@@ -103,6 +104,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
   - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
   - `docs/references/identity-skill-mcp-tool-extension-cross-validation-v1.4.1.md`
+  - `docs/references/identity-skill-mcp-cross-vendor-governance-guide-v1.0.md`
 - Branch protection last-mile checklist:
   - `docs/governance/branch-protection-required-checks-v1.2.8.md`
 - Audit snapshots (fixed governance action):
