@@ -324,7 +324,7 @@ MCP Specification:
 - Authorization behavior:
   - https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
 
-## 9) Review Checklist
+## 12) Review Checklist
 
 Use this checklist in protocol-impacting PRs:
 
@@ -336,7 +336,7 @@ Use this checklist in protocol-impacting PRs:
 - is replay evidence attached before rule promotion?
 - are required-gates updated for any new mandatory validator?
 
-## 10) Non-Goals and Anti-Patterns
+## 13) Non-Goals and Anti-Patterns
 
 Non-goals:
 
@@ -350,7 +350,7 @@ Anti-patterns:
 - "safe-auto modifies canonical protocol directly"
 - "pass CI once, skip replay forever"
 
-## 11) Implementation Fit to Current Repository
+## 14) Implementation Fit to Current Repository
 
 This guide is directly compatible with current assets:
 
@@ -365,7 +365,11 @@ This guide is directly compatible with current assets:
 
 No parallel architecture is required. This is a contract-hardening and gate-hardening extension.
 
-## 12) Source Links
+## 15) Source Links (implementation-oriented)
+
+This section complements Section 11 by listing implementation-oriented links
+(Codex runtime/config/security and protocol utility sections) used for
+hands-on operations and review execution details.
 
 OpenAI:
 
