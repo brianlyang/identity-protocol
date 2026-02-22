@@ -66,6 +66,7 @@ def main() -> int:
     p_update.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
     p_update.add_argument("--out-dir", default="identity/runtime/reports")
 
+
     args = ap.parse_args()
 
     if args.command == "init":

@@ -24,6 +24,7 @@ REQ_TOP_LEVEL = [
     "knowledge_acquisition_contract",
     "experience_feedback_contract",
     "install_safety_contract",
+    "install_provenance_contract",
     "ci_enforcement_contract",
     "capability_arbitration_contract",
     "self_upgrade_enforcement_contract",
@@ -44,6 +45,7 @@ REQ_GATES = [
     "knowledge_acquisition_gate",
     "experience_feedback_gate",
     "install_safety_gate",
+    "install_provenance_gate",
     "ci_enforcement_gate",
     "arbitration_gate",
 ]

@@ -25,143 +25,152 @@
     "scripts/validate_identity_capability_arbitration.py",
     "scripts/validate_identity_install_safety.py",
     "scripts/validate_identity_experience_feedback_governance.py",
-    "scripts/validate_identity_self_upgrade_enforcement.py"
+    "scripts/validate_identity_self_upgrade_enforcement.py",
+    "scripts/validate_identity_install_provenance.py"
   ],
   "notes": "Replay passed for original failing case after lifecycle + trigger + handoff + collaboration-trigger hardening.",
   "creator_invocation": {
     "tool": "identity-creator",
     "mode": "update",
-    "run_id": "store-manager-update-replay-2026-02-21",
+    "run_id": "store-manager-update-replay-sample",
     "evidence_path": "identity/runtime/examples/store-manager-update-replay-sample.json"
   },
   "check_results": [
     {
       "command": "python3 scripts/validate_identity_runtime_contract.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:02Z",
-      "ended_at": "2026-02-22T09:50:03Z",
+      "started_at": "2026-02-22T18:17:25Z",
+      "ended_at": "2026-02-22T18:17:26Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-01.log",
-      "sha256": "94296cc344f481240b06e75873d096ce56c69f3a11e9651248085ceedcc17268"
+      "sha256": "49b112aa5b14da2238d9199d9565a18c92ea23483ae90c7dda9b821c27eaa455"
     },
     {
       "command": "python3 scripts/validate_identity_upgrade_prereq.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:04Z",
-      "ended_at": "2026-02-22T09:50:05Z",
+      "started_at": "2026-02-22T18:17:27Z",
+      "ended_at": "2026-02-22T18:17:28Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-02.log",
-      "sha256": "e23d05d0e44c45592d38d383435a1d218cf256fe4b487360e8ba8614add82f3a"
+      "sha256": "b883cbafe8032295b3fd6a3f3c5035023d33530a04dd50f2354c475d63a78441"
     },
     {
       "command": "python3 scripts/validate_identity_update_lifecycle.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:06Z",
-      "ended_at": "2026-02-22T09:50:07Z",
+      "started_at": "2026-02-22T18:17:29Z",
+      "ended_at": "2026-02-22T18:17:30Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-03.log",
-      "sha256": "61e06651fee1ab5266d99792daa7c9097cd819f6aafbde964cd8740a2a9790d3"
+      "sha256": "015c7a6d62a3fc6b0a8bbe7746bab63f16a6626631eca813a51bf760652dcaba"
     },
     {
       "command": "python3 scripts/validate_identity_trigger_regression.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:08Z",
-      "ended_at": "2026-02-22T09:50:09Z",
+      "started_at": "2026-02-22T18:17:31Z",
+      "ended_at": "2026-02-22T18:17:32Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-04.log",
-      "sha256": "f857290afc20104bc4413a487ed1548e6508d9b0ee14ec79ab1a5a332ea852b2"
+      "sha256": "f3ce4e6606ab373daca036a9eb9635a9e2ce4661200c738d8e8ef5eeb66a8160"
     },
     {
       "command": "python3 scripts/validate_identity_learning_loop.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:10Z",
-      "ended_at": "2026-02-22T09:50:11Z",
+      "started_at": "2026-02-22T18:17:33Z",
+      "ended_at": "2026-02-22T18:17:34Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-05.log",
-      "sha256": "bbcfa3f1181a3c4f64019be12a786605bae69a6623577e5337219cf1adb9cba3"
+      "sha256": "a96e622eaebb040bb52c524312b63f6618e1fc435e2722b6eaea3ee7b6b6dd04"
     },
     {
       "command": "python3 scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test",
-      "started_at": "2026-02-22T09:50:12Z",
-      "ended_at": "2026-02-22T09:50:13Z",
+      "started_at": "2026-02-22T18:17:35Z",
+      "ended_at": "2026-02-22T18:17:36Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-06.log",
-      "sha256": "afdb453cf5335560e5606b6895b6b8bcc210f5c8893ed9fbced02d141ce15529"
+      "sha256": "574cc45d295114068fcb293711d3af0ea0adfed10bf7de95db40cac75500198b"
     },
     {
       "command": "python3 scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test",
-      "started_at": "2026-02-22T09:50:14Z",
-      "ended_at": "2026-02-22T09:50:15Z",
+      "started_at": "2026-02-22T18:17:37Z",
+      "ended_at": "2026-02-22T18:17:38Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-07.log",
-      "sha256": "cfcf3a84902ba06bc913789d85ee9601d96bccab44c89efb4c6eb2db3415239f"
+      "sha256": "d508ed4348ecf9ccb3e92d701bbfa7cdaa9dfb2700d163e19abef64b3fbfe134"
     },
     {
       "command": "python3 scripts/validate_identity_orchestration_contract.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:16Z",
-      "ended_at": "2026-02-22T09:50:17Z",
+      "started_at": "2026-02-22T18:17:39Z",
+      "ended_at": "2026-02-22T18:17:40Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-08.log",
-      "sha256": "dc2b716c684b7383679feb680004ec0c7ce9363ab4100ddcd5a4122542b81523"
+      "sha256": "fe593cca5f53d4e8c2bab8dce2db0c315dc4ab35e9e63be82b65ea6bbbb6e87a"
     },
     {
       "command": "python3 scripts/validate_identity_knowledge_contract.py --identity-id store-manager --self-test",
-      "started_at": "2026-02-22T09:50:18Z",
-      "ended_at": "2026-02-22T09:50:19Z",
+      "started_at": "2026-02-22T18:17:41Z",
+      "ended_at": "2026-02-22T18:17:42Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-09.log",
-      "sha256": "e14ae86ad3b92839646b64055942e120df0a40ae9a9908bc30dfa8d664d65fcf"
+      "sha256": "0948c8c115e57a902dcd24b5058d179aa811cc023e3479f13997ef19803f1500"
     },
     {
       "command": "python3 scripts/validate_identity_experience_feedback.py --identity-id store-manager --self-test",
-      "started_at": "2026-02-22T09:50:20Z",
-      "ended_at": "2026-02-22T09:50:21Z",
+      "started_at": "2026-02-22T18:17:43Z",
+      "ended_at": "2026-02-22T18:17:44Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-10.log",
-      "sha256": "e2e53b47d0f498d1eb9f9fac32acd6c8428d69d25cd924cd0834abc9eb51cefb"
+      "sha256": "9f5090453d5500812ca6f5ac739ac963a7f5f669f3524a7169944558d980da27"
     },
     {
       "command": "python3 scripts/validate_changelog_updated.py --base HEAD~1 --head HEAD",
-      "started_at": "2026-02-22T09:50:22Z",
-      "ended_at": "2026-02-22T09:50:23Z",
+      "started_at": "2026-02-22T18:17:45Z",
+      "ended_at": "2026-02-22T18:17:46Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-11.log",
-      "sha256": "5e31948b60b3fb45e4a9a549fd688ddfbbcfafea277b05b83adf18b547379be8"
+      "sha256": "4ab9af0b0f53d514e599cae28543b0e3e5c02c8d38a2cd6c0d6dc0bfc9494cea"
     },
     {
       "command": "python3 scripts/validate_identity_ci_enforcement.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:24Z",
-      "ended_at": "2026-02-22T09:50:25Z",
+      "started_at": "2026-02-22T18:17:47Z",
+      "ended_at": "2026-02-22T18:17:48Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-12.log",
-      "sha256": "04558adb734489d8a6d6daa4a22356c614ba82491c45b154036daefc80135250"
+      "sha256": "72d22ea4da9839edd8380b3dbf80091fe0e726c7dd662ee32d28c79ddf7a6e5d"
     },
     {
       "command": "python3 scripts/validate_identity_capability_arbitration.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:26Z",
-      "ended_at": "2026-02-22T09:50:27Z",
+      "started_at": "2026-02-22T18:17:49Z",
+      "ended_at": "2026-02-22T18:17:50Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-13.log",
-      "sha256": "f3c286a6b4f66490440a32ecbe4a6fc9cbe90225656cbf585ff6e40acd2ae1c8"
+      "sha256": "3a1775b767cb1306b431924280e43886056e55141b99a5ffcf3d190e44b917e4"
     },
     {
       "command": "python3 scripts/validate_identity_install_safety.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:28Z",
-      "ended_at": "2026-02-22T09:50:29Z",
+      "started_at": "2026-02-22T18:17:51Z",
+      "ended_at": "2026-02-22T18:17:52Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-14.log",
-      "sha256": "2ebb5e53eddfacf96118ccfa84844e5487252975a2d46a7983165cb81646fcd3"
+      "sha256": "242ee150d9bdb59abdead3245059c6fac268966b8293e9bc11a9e7fe1815d4d7"
     },
     {
       "command": "python3 scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:30Z",
-      "ended_at": "2026-02-22T09:50:31Z",
+      "started_at": "2026-02-22T18:17:53Z",
+      "ended_at": "2026-02-22T18:17:54Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-15.log",
-      "sha256": "1267317adec2c8688adb62ab50cb344b57804762cb14d4663e041f947ff0c8f6"
+      "sha256": "e36e3ca0c4a94033f077ccb98390142aea165d58a26bcbd797c29feb617775c5"
     },
     {
       "command": "python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id store-manager",
-      "started_at": "2026-02-22T09:50:32Z",
-      "ended_at": "2026-02-22T09:50:33Z",
+      "started_at": "2026-02-22T18:17:55Z",
+      "ended_at": "2026-02-22T18:17:56Z",
       "exit_code": 0,
       "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-16.log",
-      "sha256": "a1073cda0450b9d5a45d73a6a6661a17bfa83b2b550a1343c1bbfe1f162c81f7"
+      "sha256": "ee03f9074ca1416b0b9daf75720b3359c21373c675d3ccdf9208c7df5209c267"
+    },
+    {
+      "command": "python3 scripts/validate_identity_install_provenance.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:57Z",
+      "ended_at": "2026-02-22T18:17:58Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/store-manager-update-replay-check-17.log",
+      "sha256": "dcecb88d717c684afef913a4915f06a38b3b749e367b3a362b3f700cadcc853a"
     }
   ]
 }

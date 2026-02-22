@@ -28,6 +28,22 @@
   - added unified wrapper CLI:
     - `scripts/identity_creator.py` with `init|validate|compile|activate|update`
   - refreshed store-manager replay/protocol samples and upgrade execution evidence artifacts
+  - added installer-plane executable and provenance enforcement:
+    - `scripts/identity_installer.py` (`plan|dry-run|install|verify|rollback`)
+    - `skills/identity-installer/SKILL.md`
+    - runtime contract: `install_provenance_contract` + gate `install_provenance_gate`
+    - validator: `scripts/validate_identity_install_provenance.py`
+  - install safety semantics aligned with contract:
+    - `compatible_upgrade` now defaults to `abort_and_explain` in installer execution
+    - `validate_identity_install_safety.py` enforces `on_conflict=abort_and_explain` behavior
+  - creator/installer boundary tightened:
+    - removed `install` dispatch path from `scripts/identity_creator.py`
+    - installer actions must use `scripts/identity_installer.py`
+  - install provenance validator now enforces full operation chain evidence:
+    - requires recent `plan -> dry-run -> install -> verify` reports per identity
+  - CI required-gates now validates install provenance and enforces CI-bound upgrade execution report checks:
+    - `generated_by=ci`, `github_run_id`, `github_sha`
+    - report path passed from live CI execution (not repository static evidence)
 
 - **self-upgrade non-bypass enforcement hardening (post-v1.4.3)**:
   - added required runtime contract block:

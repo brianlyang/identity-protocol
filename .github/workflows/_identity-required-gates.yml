@@ -82,10 +82,12 @@ jobs:
             python3 scripts/validate_identity_knowledge_contract.py --identity-id "$ID" --self-test
             python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID" --self-test
             python3 scripts/validate_identity_install_safety.py --identity-id "$ID"
+            python3 scripts/validate_identity_install_provenance.py --identity-id "$ID"
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
-            python3 scripts/execute_identity_upgrade.py --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports
+            PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports
             UPGRADE_REPORT=$(ls -1t /tmp/identity-upgrade-reports/identity-upgrade-exec-"$ID"-*.json | head -n 1)
+            python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --execution-report "$UPGRADE_REPORT" --require-ci-binding --expect-github-run-id "${{ github.run_id }}" --expect-github-sha "${{ github.sha }}"
             python3 scripts/validate_identity_capability_arbitration.py --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"
             python3 scripts/validate_identity_ci_enforcement.py --identity-id "$ID"
           done

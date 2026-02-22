@@ -1,7 +1,7 @@
 $ python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id store-manager
 [exit_code] 0
-[started_at] 2026-02-22T18:17:55Z
-[ended_at] 2026-02-22T18:17:56Z
+[started_at] 2026-02-22T18:18:11Z
+[ended_at] 2026-02-22T18:18:12Z
 
 [stdout]
 PASS

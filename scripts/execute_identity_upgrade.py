@@ -5,6 +5,7 @@ import argparse
 import fnmatch
 import hashlib
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -86,6 +87,43 @@ def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int) -> dict[str, Any]
         "log_path": str(log_path),
         "sha256": log_sha256,
     }
+
+
+def _resolve_git_range() -> tuple[str, str]:
+    def _git(cmd: list[str]) -> str:
+        p = subprocess.run(["git", *cmd], capture_output=True, text=True)
+        return (p.stdout or "").strip() if p.returncode == 0 else ""
+
+    base = os.environ.get("PR_BASE_SHA") or os.environ.get("GITHUB_BASE_SHA") or os.environ.get("PUSH_BEFORE_SHA") or os.environ.get("GITHUB_EVENT_BEFORE") or ""
+    head = os.environ.get("PR_HEAD_SHA") or os.environ.get("GITHUB_SHA") or ""
+    if not head:
+        head = _git(["rev-parse", "HEAD"])
+    if not base:
+        base = _git(["rev-parse", "HEAD~1"])
+    return base or "HEAD~1", head or "HEAD"
+
+
+def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
+    if not check.startswith("scripts/"):
+        return ["python3", check]
+    cmd = ["python3", check]
+    if check.endswith("validate_changelog_updated.py"):
+        base, head = _resolve_git_range()
+        return ["python3", check, "--base", base, "--head", head]
+    if check.endswith("validate_identity_manifest.py") or check.endswith("compile_identity_runtime.py"):
+        return cmd
+    # most validators are identity scoped
+    if "--identity-id" not in check:
+        cmd += ["--identity-id", identity_id]
+    if check.endswith("validate_identity_collab_trigger.py"):
+        cmd += ["--self-test"]
+    if check.endswith("validate_agent_handoff_contract.py"):
+        cmd += ["--self-test"]
+    if check.endswith("validate_identity_knowledge_contract.py"):
+        cmd += ["--self-test"]
+    if check.endswith("validate_identity_experience_feedback.py"):
+        cmd += ["--self-test"]
+    return cmd
 
 
 def _needs_upgrade(metrics: dict[str, Any], thresholds: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -272,12 +310,19 @@ def main() -> int:
         actions_taken.append("task_history_appended")
 
     # Run required validators + replay-equivalent gate checks
-    check_cmds = [
-        ["python3", "scripts/validate_identity_upgrade_prereq.py", "--identity-id", args.identity_id],
-        ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", args.identity_id],
-        ["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", args.identity_id],
-        ["python3", "scripts/validate_identity_capability_arbitration.py", "--identity-id", args.identity_id],
-    ]
+    required_checks = (
+        task.get("identity_update_lifecycle_contract", {})
+        .get("validation_contract", {})
+        .get("required_checks", [])
+    )
+    if not isinstance(required_checks, list) or not required_checks:
+        required_checks = [
+            "scripts/validate_identity_upgrade_prereq.py",
+            "scripts/validate_identity_runtime_contract.py",
+            "scripts/validate_identity_update_lifecycle.py",
+            "scripts/validate_identity_capability_arbitration.py",
+        ]
+    check_cmds = [_build_validator_cmd(chk, args.identity_id) for chk in required_checks]
     log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
 
@@ -293,6 +338,11 @@ def main() -> int:
             "run_id": run_id,
         },
         "mode": args.mode,
+        "execution_context": {
+            "generated_by": "ci" if os.environ.get("CI") else "local",
+            "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "github_sha": os.environ.get("GITHUB_SHA", ""),
+        },
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
         "actions_taken": actions_taken,
