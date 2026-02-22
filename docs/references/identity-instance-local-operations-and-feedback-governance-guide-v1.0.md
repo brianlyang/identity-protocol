@@ -258,6 +258,72 @@ P2 (optimization):
 1. add route registry linkage checks for every high-impact decision
 2. add synthetic arbitration stress tests for threshold boundary conditions
 
+## 9) Repository Cross-Validation Snapshot (as of 2026-02-22)
+
+This section cross-checks recommendation status against the current repository
+state to avoid “document says yes, runtime says no” drift.
+
+### 9.1 Already implemented in runtime + CI
+
+- control-loop contracts and validators:
+  - `capability_orchestration_contract`
+  - `knowledge_acquisition_contract`
+  - `experience_feedback_contract`
+  - `ci_enforcement_contract`
+- capability arbitration validator + required gate integration
+- upgrade execution entrypoint with explicit modes:
+  - `review-required`
+  - `safe-auto` (restricted, non-default)
+
+### 9.2 Not yet implemented as standalone contracts (gap)
+
+- `install_safety_contract` (explicit local-instance preserve policy)
+- `instance_feedback_contract` (instance-coupled structured feedback with
+  freshness/redaction schema as standalone gate object)
+
+### 9.3 Operational implication
+
+The control-loop base is strong, but local-instance-first safety and
+instance-coupled feedback still depend on conventions spread across existing
+contracts. Converting these into standalone required contracts is necessary for
+strict long-term governance.
+
+## 10) Contract-to-Validator-to-Gate Mapping (proposed)
+
+| Contract | Validator | Required gate hook | Evidence artifact |
+| --- | --- | --- | --- |
+| `install_safety_contract` | `scripts/validate_identity_install_safety.py` | `.github/workflows/_identity-required-gates.yml` | `identity/runtime/reports/install-*.json` |
+| `instance_feedback_contract` | `scripts/validate_identity_instance_feedback.py` | `.github/workflows/_identity-required-gates.yml` | `identity/runtime/logs/feedback/*.json` |
+| `instance_feedback_contract` freshness | `scripts/validate_identity_feedback_freshness.py` | `.github/workflows/_identity-required-gates.yml` | latest feedback timestamp + age proof |
+| promotion criteria linkage | `scripts/validate_identity_feedback_promotion.py` | `.github/workflows/_identity-required-gates.yml` | replay evidence + rulebook delta |
+
+## 11) Source Traceability (Roundtable Inputs)
+
+OpenAI:
+- Function calling and tool-choice controls:
+  - https://platform.openai.com/docs/guides/function-calling
+  - https://platform.openai.com/docs/guides/tools/tool-choice
+- MCP integration references:
+  - https://platform.openai.com/docs/mcp/
+
+Anthropic:
+- Tool use patterns:
+  - https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use
+- MCP connector guidance:
+  - https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector
+
+Gemini:
+- Function calling:
+  - https://ai.google.dev/gemini-api/docs/function-calling
+- API reference root:
+  - https://ai.google.dev/api
+
+MCP Specification:
+- Tools and security guidance:
+  - https://modelcontextprotocol.io/specification/2025-11-25/server/tools
+- Authorization behavior:
+  - https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization
+
 ## 9) Review Checklist
 
 Use this checklist in protocol-impacting PRs:
@@ -321,4 +387,3 @@ MCP specification:
 - https://modelcontextprotocol.io/specification/2025-11-25/server/utilities/logging
 - https://modelcontextprotocol.io/specification/2025-11-25/server/tools
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/utilities/tasks
-
