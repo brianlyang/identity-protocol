@@ -1,8 +1,8 @@
 {
-  "report_id": "identity-install-store-manager-install-1771785280-717",
+  "report_id": "identity-install-store-manager-dry-run-1771785280-633",
   "identity_id": "store-manager",
   "generated_at": "2026-02-22T18:34:40Z",
-  "operation": "install",
+  "operation": "dry-run",
   "conflict_type": "same_signature",
   "action": "no_op_with_report",
   "source_pack": "identity/store-manager",
@@ -12,11 +12,11 @@
   "preserved_paths": [
     "identity/store-manager"
   ],
-  "dry_run": false,
+  "dry_run": true,
   "changed_files": [],
   "installer_invocation": {
     "tool": "identity-installer",
     "entrypoint": "scripts/identity_installer.py",
-    "command": "identity-installer install --identity-id store-manager"
+    "command": "identity-installer dry-run --identity-id store-manager"
   }
 }

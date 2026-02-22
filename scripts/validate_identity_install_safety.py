@@ -154,9 +154,16 @@ def main() -> int:
         if not report.get("backup_ref") or not report.get("rollback_ref"):
             print("[FAIL] destructive_replace requires backup_ref and rollback_ref")
             rc = 1
+        if action != "guarded_apply":
+            print("[FAIL] destructive_replace requires action=guarded_apply with backup/rollback")
+            rc = 1
     elif conflict_type == "compatible_upgrade":
-        if action not in {"guarded_apply", "no_op_with_report"}:
-            print("[FAIL] compatible_upgrade must use guarded_apply or no_op_with_report")
+        if action != "abort_and_explain":
+            print("[FAIL] compatible_upgrade must use action=abort_and_explain per install_safety_contract")
+            rc = 1
+    elif conflict_type == "fresh_install":
+        if action != "guarded_apply":
+            print("[FAIL] fresh_install must use action=guarded_apply")
             rc = 1
     else:
         print(f"[FAIL] conflict_type not supported: {conflict_type}")

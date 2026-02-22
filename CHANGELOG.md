@@ -2,6 +2,63 @@
 
 ## Unreleased
 
+- **self-upgrade execution authenticity hardening (v1.4.4 draft)**:
+  - strengthened update lifecycle replay contract to require:
+    - `creator_invocation`
+    - `check_results[] = {command, started_at, ended_at, exit_code, log_path, sha256}`
+  - `scripts/validate_identity_update_lifecycle.py` now verifies:
+    - creator invocation semantics (`identity-creator`, `mode=update`)
+    - command coverage against `validation_contract.required_checks`
+    - log existence + sha256 integrity for each replay check result
+  - `scripts/execute_identity_upgrade.py` now emits:
+    - `creator_invocation`
+    - `check_results` with per-check execution logs and hashes
+    - structured log files under `identity/runtime/logs/upgrade/<identity-id>/`
+  - `scripts/validate_identity_self_upgrade_enforcement.py` now enforces:
+    - report-level `creator_invocation`
+    - report-level `check_results` integrity (`log_path` + `sha256`)
+  - evidence resolution hardened to reduce cross-identity leakage:
+    - `scripts/validate_identity_runtime_contract.py`
+    - `scripts/validate_identity_upgrade_prereq.py`
+    - both now prefer identity-scoped evidence filenames when available
+  - create scaffold hardening:
+    - `scripts/create_identity_pack.py` adds `--profile` (`full-contract` default)
+    - full-contract scaffold clones runtime baseline contract shape and writes identity-scoped samples
+    - new `--activate` switch keeps register default non-disruptive (`inactive` unless explicitly activated)
+  - added unified wrapper CLI:
+    - `scripts/identity_creator.py` with `init|validate|compile|activate|update`
+  - refreshed store-manager replay/protocol samples and upgrade execution evidence artifacts
+  - added installer-plane executable and provenance enforcement:
+    - `scripts/identity_installer.py` (`plan|dry-run|install|verify|rollback`)
+    - `skills/identity-installer/SKILL.md`
+    - runtime contract: `install_provenance_contract` + gate `install_provenance_gate`
+    - validator: `scripts/validate_identity_install_provenance.py`
+  - install safety semantics aligned with contract:
+    - `compatible_upgrade` now defaults to `abort_and_explain` in installer execution
+    - `validate_identity_install_safety.py` enforces `on_conflict=abort_and_explain` behavior
+  - creator/installer boundary tightened:
+    - removed `install` dispatch path from `scripts/identity_creator.py`
+    - installer actions must use `scripts/identity_installer.py`
+  - install provenance validator now enforces full operation chain evidence:
+    - requires recent `plan -> dry-run -> install -> verify` reports per identity
+  - CI required-gates now validates install provenance and enforces CI-bound upgrade execution report checks:
+    - `generated_by=ci`, `github_run_id`, `github_sha`
+    - report path passed from live CI execution (not repository static evidence)
+
+- **self-upgrade non-bypass enforcement hardening (post-v1.4.3)**:
+  - added required runtime contract block:
+    - `self_upgrade_enforcement_contract` in `identity/store-manager/CURRENT_TASK.json`
+  - added/strengthened validator:
+    - `scripts/validate_identity_self_upgrade_enforcement.py`
+    - now verifies identity-core edits require matching upgrade execution report + patch-plan pair
+    - validates report schema and required validator command coverage
+  - required validator set now explicitly includes:
+    - `scripts/validate_identity_self_upgrade_enforcement.py`
+  - CI and e2e required chains now enforce self-upgrade evidence gate before upgrade execution step
+  - protocol/runtime validators now treat self-upgrade enforcement contract as core key:
+    - `scripts/validate_identity_protocol.py`
+    - `scripts/validate_identity_runtime_contract.py`
+
 - **release closure + changelog governance hardening (v1.4.3 draft)**:
   - added local executable upgrade cycle runner:
     - `scripts/execute_identity_upgrade.py`

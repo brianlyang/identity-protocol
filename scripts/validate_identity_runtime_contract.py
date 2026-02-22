@@ -24,8 +24,10 @@ REQ_TOP_LEVEL = [
     "knowledge_acquisition_contract",
     "experience_feedback_contract",
     "install_safety_contract",
+    "install_provenance_contract",
     "ci_enforcement_contract",
     "capability_arbitration_contract",
+    "self_upgrade_enforcement_contract",
 ]
 
 REQ_GATES = [
@@ -43,6 +45,7 @@ REQ_GATES = [
     "knowledge_acquisition_gate",
     "experience_feedback_gate",
     "install_safety_gate",
+    "install_provenance_gate",
     "ci_enforcement_gate",
     "arbitration_gate",
 ]
@@ -98,12 +101,17 @@ def _resolve_task_path(identity: dict[str, Any]) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _latest_evidence(pattern: str) -> Path | None:
+def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
     files = sorted(Path(".").glob(pattern))
-    return files[-1] if files else None
+    if not files:
+        return None
+    scoped = [p for p in files if identity_id in p.name]
+    if scoped:
+        return scoped[-1]
+    return files[-1]
 
 
-def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[str]]:
+def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -> tuple[int, list[str]]:
     rc = 0
     logs: list[str] = []
 
@@ -138,7 +146,7 @@ def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[
         logs.append("[FAIL] protocol_review_contract.evidence_report_path_pattern missing")
         return rc, logs
 
-    latest = _latest_evidence(pattern)
+    latest = _latest_evidence(pattern, identity_id)
     if not latest:
         rc = 1
         logs.append(f"[FAIL] no protocol review evidence file matched: {pattern}")
@@ -156,6 +164,11 @@ def _validate_protocol_review_contract(data: dict[str, Any]) -> tuple[int, list[
         logs.append(f"[FAIL] protocol review evidence missing fields: {missing_fields}")
     else:
         logs.append("[OK]   protocol review evidence required fields present")
+
+    reviewer = str(evidence.get("reviewer_identity", "")).strip()
+    if reviewer and reviewer != identity_id:
+        rc = 1
+        logs.append(f"[FAIL] protocol review evidence reviewer_identity mismatch: expected={identity_id}, got={reviewer}")
 
     source_sig: set[str] = set()
     for s in evidence.get("sources_reviewed") or []:
@@ -224,7 +237,7 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
     else:
         print("[OK]   evaluation_contract.consistency_required=true")
 
-    prc_rc, prc_logs = _validate_protocol_review_contract(data)
+    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id)
     for ln in prc_logs:
         print(ln)
     rc = max(rc, prc_rc)

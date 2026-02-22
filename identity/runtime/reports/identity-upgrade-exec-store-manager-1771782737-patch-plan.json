@@ -1,0 +1,22 @@
+{
+  "run_id": "identity-upgrade-exec-store-manager-1771782737",
+  "identity_id": "store-manager",
+  "generated_at": "2026-02-22T17:52:17Z",
+  "mode": "review-required",
+  "upgrade_required": true,
+  "trigger_reasons": [
+    "replay_failure_rate 100.0 >= threshold 20"
+  ],
+  "patch_surface": [
+    "identity/store-manager/CURRENT_TASK.json",
+    "identity/store-manager/IDENTITY_PROMPT.md",
+    "identity/store-manager/RULEBOOK.jsonl",
+    "identity/store-manager/TASK_HISTORY.md"
+  ],
+  "planned_actions": [
+    "append arbitration decision record",
+    "append rulebook learning row",
+    "append TASK_HISTORY upgrade note",
+    "run required validators and replay checks"
+  ]
+}

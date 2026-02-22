@@ -1,10 +1,10 @@
 {
-  "report_id": "identity-install-store-manager-install-1771785280-717",
+  "report_id": "identity-install-store-manager-verify-1771785304-996",
   "identity_id": "store-manager",
-  "generated_at": "2026-02-22T18:34:40Z",
-  "operation": "install",
+  "generated_at": "2026-02-22T18:35:04Z",
+  "operation": "verify",
   "conflict_type": "same_signature",
-  "action": "no_op_with_report",
+  "action": "verified",
   "source_pack": "identity/store-manager",
   "target_pack": "identity/store-manager",
   "source_signature": "75cf043ac9d359286348df12556e5a94749918733b6680fd49992cb1a8c270e3",
@@ -17,6 +17,7 @@
   "installer_invocation": {
     "tool": "identity-installer",
     "entrypoint": "scripts/identity_installer.py",
-    "command": "identity-installer install --identity-id store-manager"
-  }
+    "command": "identity-installer verify --identity-id store-manager"
+  },
+  "verified_report_id": "identity-install-store-manager-verify-1771785280-799"
 }

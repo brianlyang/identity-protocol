@@ -1,0 +1,407 @@
+{
+  "run_id": "identity-upgrade-exec-store-manager-1771784243",
+  "identity_id": "store-manager",
+  "creator_invocation": {
+    "tool": "identity-creator",
+    "mode": "update",
+    "entrypoint": "scripts/execute_identity_upgrade.py",
+    "base_contract": "identity_update_lifecycle_contract",
+    "run_id": "identity-upgrade-exec-store-manager-1771784243"
+  },
+  "mode": "review-required",
+  "execution_context": {
+    "generated_by": "local",
+    "github_run_id": "",
+    "github_sha": ""
+  },
+  "upgrade_required": true,
+  "trigger_reasons": [
+    "replay_failure_rate 100.0 >= threshold 20"
+  ],
+  "actions_taken": [
+    "patch_plan_written:identity/runtime/reports/identity-upgrade-exec-store-manager-1771784243-patch-plan.json"
+  ],
+  "checks": [
+    {
+      "command": "python3 scripts/validate_identity_runtime_contract.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_runtime_contract.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:26Z",
+      "ended_at": "2026-02-22T18:17:27Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-01.log",
+      "sha256": "a53bb706f382089af3915618898e6a6079ce265609b05cf61e894bdd5db92f70"
+    },
+    {
+      "command": "python3 scripts/validate_identity_upgrade_prereq.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_upgrade_prereq.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:29Z",
+      "ended_at": "2026-02-22T18:17:30Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-02.log",
+      "sha256": "448358bd62589b8ec98661f6e32b0b2369f4be4dd538371d5f7d3698d412315d"
+    },
+    {
+      "command": "python3 scripts/validate_identity_update_lifecycle.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_update_lifecycle.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:32Z",
+      "ended_at": "2026-02-22T18:17:33Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-03.log",
+      "sha256": "4734f72c65f6b450ce8ce9c50fe43377d16911dcc7e47ca1c0ed0223d13dab29"
+    },
+    {
+      "command": "python3 scripts/validate_identity_trigger_regression.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_trigger_regression.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:35Z",
+      "ended_at": "2026-02-22T18:17:36Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-04.log",
+      "sha256": "71a2f8b1b17b322dcd2a29897d8d2975d7acb5a28c84ec18c29262b6365b2bd2"
+    },
+    {
+      "command": "python3 scripts/validate_identity_learning_loop.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_learning_loop.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:38Z",
+      "ended_at": "2026-02-22T18:17:39Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-05.log",
+      "sha256": "07b375d9a32e26ed0be94ad9f0ceead7155dd7e7402450bb6282934b302ecef6"
+    },
+    {
+      "command": "python3 scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test",
+      "cmd": "python3 scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:41Z",
+      "ended_at": "2026-02-22T18:17:42Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-06.log",
+      "sha256": "f25917b8bd47b90c20c7abff2c0aca97d7afd2d083d46325fc98dffd46c7fed5"
+    },
+    {
+      "command": "python3 scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test",
+      "cmd": "python3 scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:44Z",
+      "ended_at": "2026-02-22T18:17:45Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-07.log",
+      "sha256": "9c9e5fcc2ee97b8f5ea005ddbb02ab5ea9c2990208d9d1de7ff2988d7245ed51"
+    },
+    {
+      "command": "python3 scripts/validate_identity_orchestration_contract.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_orchestration_contract.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:47Z",
+      "ended_at": "2026-02-22T18:17:48Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-08.log",
+      "sha256": "f8c98a6b8707be4ee46baa743c067e2062887768e1c55ad8dfe7cbfd380f67fc"
+    },
+    {
+      "command": "python3 scripts/validate_identity_knowledge_contract.py --identity-id store-manager --self-test",
+      "cmd": "python3 scripts/validate_identity_knowledge_contract.py --identity-id store-manager --self-test",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:50Z",
+      "ended_at": "2026-02-22T18:17:51Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-09.log",
+      "sha256": "832cc83dc7bb98a32b1d8c6fb028d7da5e097d74cf69517ac90ec5cdb281bfd0"
+    },
+    {
+      "command": "python3 scripts/validate_identity_experience_feedback.py --identity-id store-manager --self-test",
+      "cmd": "python3 scripts/validate_identity_experience_feedback.py --identity-id store-manager --self-test",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:53Z",
+      "ended_at": "2026-02-22T18:17:54Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-10.log",
+      "sha256": "977c5ecabc1c4fcd0794d071711c840d59780b2bff59cda129cde7ee64af686d"
+    },
+    {
+      "command": "python3 scripts/validate_changelog_updated.py --base HEAD~1 --head HEAD",
+      "cmd": "python3 scripts/validate_changelog_updated.py --base HEAD~1 --head HEAD",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:56Z",
+      "ended_at": "2026-02-22T18:17:57Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-11.log",
+      "sha256": "8302ff951ebeb478a18b3d903446d870b875361b555a3cf1a79848ed8ca77629"
+    },
+    {
+      "command": "python3 scripts/validate_identity_ci_enforcement.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_ci_enforcement.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:17:59Z",
+      "ended_at": "2026-02-22T18:18:00Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-12.log",
+      "sha256": "1c412ceb090318e19ee981f7f56bb7130f679363a980dd2d015367db2a0a7f0b"
+    },
+    {
+      "command": "python3 scripts/validate_identity_capability_arbitration.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_capability_arbitration.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:18:02Z",
+      "ended_at": "2026-02-22T18:18:03Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-13.log",
+      "sha256": "8c215cbd4249679ffc0c980dd6dd29d39f6b241c5c821f12e2b8dd0e021f1763"
+    },
+    {
+      "command": "python3 scripts/validate_identity_install_safety.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_install_safety.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:18:05Z",
+      "ended_at": "2026-02-22T18:18:06Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-14.log",
+      "sha256": "e8ed8e374d690404326bb88bf7dc6e91ac51f54551182042001cf8f456de8f39"
+    },
+    {
+      "command": "python3 scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:18:08Z",
+      "ended_at": "2026-02-22T18:18:09Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-15.log",
+      "sha256": "2d2cfcedf667d54d907a75e2cfaf043ba16efaa2e431ab79bd465135362f723f"
+    },
+    {
+      "command": "python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:18:11Z",
+      "ended_at": "2026-02-22T18:18:12Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-16.log",
+      "sha256": "71dcb29728bbecb55240c143f005f33163a809a89ddb5ee563bbeb2b982a1d2c"
+    },
+    {
+      "command": "python3 scripts/validate_identity_install_provenance.py --identity-id store-manager",
+      "cmd": "python3 scripts/validate_identity_install_provenance.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "PASS",
+      "stderr": "",
+      "started_at": "2026-02-22T18:18:14Z",
+      "ended_at": "2026-02-22T18:18:15Z",
+      "duration_ms": 1000,
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-17.log",
+      "sha256": "2d5a96820c40a926b845bebe1184c5f023da60253b355696e1a425766cbac516"
+    }
+  ],
+  "check_results": [
+    {
+      "command": "python3 scripts/validate_identity_runtime_contract.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:26Z",
+      "ended_at": "2026-02-22T18:17:27Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-01.log",
+      "sha256": "a53bb706f382089af3915618898e6a6079ce265609b05cf61e894bdd5db92f70"
+    },
+    {
+      "command": "python3 scripts/validate_identity_upgrade_prereq.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:29Z",
+      "ended_at": "2026-02-22T18:17:30Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-02.log",
+      "sha256": "448358bd62589b8ec98661f6e32b0b2369f4be4dd538371d5f7d3698d412315d"
+    },
+    {
+      "command": "python3 scripts/validate_identity_update_lifecycle.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:32Z",
+      "ended_at": "2026-02-22T18:17:33Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-03.log",
+      "sha256": "4734f72c65f6b450ce8ce9c50fe43377d16911dcc7e47ca1c0ed0223d13dab29"
+    },
+    {
+      "command": "python3 scripts/validate_identity_trigger_regression.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:35Z",
+      "ended_at": "2026-02-22T18:17:36Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-04.log",
+      "sha256": "71a2f8b1b17b322dcd2a29897d8d2975d7acb5a28c84ec18c29262b6365b2bd2"
+    },
+    {
+      "command": "python3 scripts/validate_identity_learning_loop.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:38Z",
+      "ended_at": "2026-02-22T18:17:39Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-05.log",
+      "sha256": "07b375d9a32e26ed0be94ad9f0ceead7155dd7e7402450bb6282934b302ecef6"
+    },
+    {
+      "command": "python3 scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test",
+      "started_at": "2026-02-22T18:17:41Z",
+      "ended_at": "2026-02-22T18:17:42Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-06.log",
+      "sha256": "f25917b8bd47b90c20c7abff2c0aca97d7afd2d083d46325fc98dffd46c7fed5"
+    },
+    {
+      "command": "python3 scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test",
+      "started_at": "2026-02-22T18:17:44Z",
+      "ended_at": "2026-02-22T18:17:45Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-07.log",
+      "sha256": "9c9e5fcc2ee97b8f5ea005ddbb02ab5ea9c2990208d9d1de7ff2988d7245ed51"
+    },
+    {
+      "command": "python3 scripts/validate_identity_orchestration_contract.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:47Z",
+      "ended_at": "2026-02-22T18:17:48Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-08.log",
+      "sha256": "f8c98a6b8707be4ee46baa743c067e2062887768e1c55ad8dfe7cbfd380f67fc"
+    },
+    {
+      "command": "python3 scripts/validate_identity_knowledge_contract.py --identity-id store-manager --self-test",
+      "started_at": "2026-02-22T18:17:50Z",
+      "ended_at": "2026-02-22T18:17:51Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-09.log",
+      "sha256": "832cc83dc7bb98a32b1d8c6fb028d7da5e097d74cf69517ac90ec5cdb281bfd0"
+    },
+    {
+      "command": "python3 scripts/validate_identity_experience_feedback.py --identity-id store-manager --self-test",
+      "started_at": "2026-02-22T18:17:53Z",
+      "ended_at": "2026-02-22T18:17:54Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-10.log",
+      "sha256": "977c5ecabc1c4fcd0794d071711c840d59780b2bff59cda129cde7ee64af686d"
+    },
+    {
+      "command": "python3 scripts/validate_changelog_updated.py --base HEAD~1 --head HEAD",
+      "started_at": "2026-02-22T18:17:56Z",
+      "ended_at": "2026-02-22T18:17:57Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-11.log",
+      "sha256": "8302ff951ebeb478a18b3d903446d870b875361b555a3cf1a79848ed8ca77629"
+    },
+    {
+      "command": "python3 scripts/validate_identity_ci_enforcement.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:17:59Z",
+      "ended_at": "2026-02-22T18:18:00Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-12.log",
+      "sha256": "1c412ceb090318e19ee981f7f56bb7130f679363a980dd2d015367db2a0a7f0b"
+    },
+    {
+      "command": "python3 scripts/validate_identity_capability_arbitration.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:18:02Z",
+      "ended_at": "2026-02-22T18:18:03Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-13.log",
+      "sha256": "8c215cbd4249679ffc0c980dd6dd29d39f6b241c5c821f12e2b8dd0e021f1763"
+    },
+    {
+      "command": "python3 scripts/validate_identity_install_safety.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:18:05Z",
+      "ended_at": "2026-02-22T18:18:06Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-14.log",
+      "sha256": "e8ed8e374d690404326bb88bf7dc6e91ac51f54551182042001cf8f456de8f39"
+    },
+    {
+      "command": "python3 scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:18:08Z",
+      "ended_at": "2026-02-22T18:18:09Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-15.log",
+      "sha256": "2d2cfcedf667d54d907a75e2cfaf043ba16efaa2e431ab79bd465135362f723f"
+    },
+    {
+      "command": "python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:18:11Z",
+      "ended_at": "2026-02-22T18:18:12Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-16.log",
+      "sha256": "71dcb29728bbecb55240c143f005f33163a809a89ddb5ee563bbeb2b982a1d2c"
+    },
+    {
+      "command": "python3 scripts/validate_identity_install_provenance.py --identity-id store-manager",
+      "started_at": "2026-02-22T18:18:14Z",
+      "ended_at": "2026-02-22T18:18:15Z",
+      "exit_code": 0,
+      "log_path": "identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771784243-check-17.log",
+      "sha256": "2d5a96820c40a926b845bebe1184c5f023da60253b355696e1a425766cbac516"
+    }
+  ],
+  "artifacts": [
+    "identity/runtime/reports/identity-upgrade-exec-store-manager-1771784243-patch-plan.json",
+    "identity/runtime/metrics/store-manager-route-quality.json"
+  ],
+  "all_ok": true
+}

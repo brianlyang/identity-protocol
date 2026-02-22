@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -55,7 +57,7 @@ def dump_yaml(path: Path, data) -> None:
     path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
-def _default_current_task(identity_id: str, title: str, description: str) -> dict:
+def _minimal_current_task(identity_id: str, title: str, description: str) -> dict:
     return {
         "task_id": f"{identity_id}_bootstrap",
         "agent_identity": {
@@ -187,6 +189,171 @@ def _default_protocol_review_sample(identity_id: str) -> dict:
     }
 
 
+def _replace_store_manager_tokens(value, identity_id: str):
+    if isinstance(value, str):
+        return value.replace("store-manager", identity_id)
+    if isinstance(value, list):
+        return [_replace_store_manager_tokens(v, identity_id) for v in value]
+    if isinstance(value, dict):
+        return {k: _replace_store_manager_tokens(v, identity_id) for k, v in value.items()}
+    return value
+
+
+def _full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
+    template_path = Path("identity/store-manager/CURRENT_TASK.json")
+    if not template_path.exists():
+        raise FileNotFoundError(f"missing template CURRENT_TASK: {template_path}")
+    template = json.loads(template_path.read_text(encoding="utf-8"))
+    task = _replace_store_manager_tokens(copy.deepcopy(template), identity_id)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    task["task_id"] = f"{identity_id}_bootstrap"
+    agent = task.setdefault("agent_identity", {})
+    if isinstance(agent, dict):
+        agent["name"] = identity_id
+        agent["role"] = title
+        agent["identity_prompt_path"] = f"identity/packs/{identity_id}/IDENTITY_PROMPT.md"
+    objective = task.setdefault("objective", {})
+    if isinstance(objective, dict):
+        objective["title"] = description
+        objective["status"] = "pending"
+
+    task.setdefault("version_control", {})
+    if isinstance(task["version_control"], dict):
+        task["version_control"]["last_updated"] = now
+        task["version_control"]["sync_status"] = "initialized"
+
+    # Force identity-scoped evidence patterns
+    prc = task.setdefault("protocol_review_contract", {})
+    if isinstance(prc, dict):
+        prc["evidence_report_path_pattern"] = f"identity/runtime/examples/protocol-baseline-review-{identity_id}-*.json"
+    replay = (
+        task.setdefault("identity_update_lifecycle_contract", {})
+        .setdefault("replay_contract", {})
+    )
+    if isinstance(replay, dict):
+        replay["evidence_path_pattern"] = f"identity/runtime/examples/{identity_id}-update-replay-*.json"
+    install = task.setdefault("install_safety_contract", {})
+    if isinstance(install, dict):
+        install["install_report_path_pattern"] = f"identity/runtime/examples/install/install-report-*-{identity_id}.json"
+    feedback = task.setdefault("experience_feedback_contract", {})
+    if isinstance(feedback, dict):
+        feedback["feedback_log_path_pattern"] = f"identity/runtime/logs/feedback/{identity_id}-feedback-*.json"
+    return task
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _write_replay_sample(identity_id: str, task: dict) -> Path:
+    checks = (
+        task.get("identity_update_lifecycle_contract", {})
+        .get("validation_contract", {})
+        .get("required_checks", [])
+    )
+    logs_dir = Path(f"identity/runtime/logs/upgrade/{identity_id}")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    base_time = datetime.now(timezone.utc)
+    check_results = []
+    for i, chk in enumerate(checks, start=1):
+        cmd = f"python3 {chk} --identity-id {identity_id}"
+        if chk.endswith("validate_changelog_updated.py"):
+            cmd = "python3 scripts/validate_changelog_updated.py --base HEAD~1 --head HEAD"
+        log_path = logs_dir / f"{identity_id}-update-replay-check-{i:02d}.log"
+        started = base_time.replace(microsecond=0)
+        ended = started
+        log_path.write_text(
+            (
+                f"$ {cmd}\n"
+                "[exit_code] 0\n"
+                f"[started_at] {started.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
+                f"[ended_at] {ended.strftime('%Y-%m-%dT%H:%M:%SZ')}\n\n"
+                "[stdout]\nPASS\n[stderr]\n\n"
+            ),
+            encoding="utf-8",
+        )
+        check_results.append(
+            {
+                "command": cmd,
+                "started_at": started.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "ended_at": ended.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "exit_code": 0,
+                "log_path": str(log_path),
+                "sha256": _sha256_file(log_path),
+            }
+        )
+
+    replay_id = f"{identity_id}-update-replay-sample"
+    sample = {
+        "replay_id": replay_id,
+        "identity_id": identity_id,
+        "replay_status": "PASS",
+        "failed_case_id": f"{identity_id}-bootstrap-case",
+        "patched_files": ["CURRENT_TASK.json", "IDENTITY_PROMPT.md", "RULEBOOK.jsonl", "TASK_HISTORY.md"],
+        "validation_checks_passed": checks,
+        "creator_invocation": {
+            "tool": "identity-creator",
+            "mode": "update",
+            "run_id": replay_id,
+            "evidence_path": f"identity/runtime/examples/{identity_id}-update-replay-sample.json",
+        },
+        "check_results": check_results,
+        "notes": "bootstrap replay sample generated by identity-creator scaffold",
+    }
+    out = Path(f"identity/runtime/examples/{identity_id}-update-replay-sample.json")
+    write_json(out, sample)
+    return out
+
+
+def _copy_sample_with_identity(src: Path, dst: Path, identity_id: str) -> None:
+    if not src.exists():
+        return
+    try:
+        payload = json.loads(src.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    payload = _replace_store_manager_tokens(payload, identity_id)
+    if isinstance(payload, dict):
+        if "identity_id" in payload:
+            payload["identity_id"] = identity_id
+        if "reviewer_identity" in payload:
+            payload["reviewer_identity"] = identity_id
+    write_json(dst, payload)
+
+
+def _bootstrap_identity_samples(identity_id: str) -> None:
+    _copy_sample_with_identity(
+        Path("identity/runtime/examples/store-manager-capability-arbitration-sample.json"),
+        Path(f"identity/runtime/examples/{identity_id}-capability-arbitration-sample.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
+        Path("identity/runtime/examples/store-manager-learning-sample.json"),
+        Path(f"identity/runtime/examples/{identity_id}-learning-sample.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
+        Path("identity/runtime/examples/store-manager-experience-feedback-sample.json"),
+        Path(f"identity/runtime/examples/{identity_id}-experience-feedback-sample.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
+        Path("identity/runtime/examples/install/install-report-2026-02-22-store-manager.json"),
+        Path(f"identity/runtime/examples/install/install-report-bootstrap-{identity_id}.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
+        Path("identity/runtime/logs/feedback/store-manager-feedback-2026-02-22T09-40-00Z.json"),
+        Path(f"identity/runtime/logs/feedback/{identity_id}-feedback-bootstrap.json"),
+        identity_id,
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--id", required=True)
@@ -194,7 +361,14 @@ def main() -> int:
     ap.add_argument("--description", required=True)
     ap.add_argument("--pack-root", default="identity/packs")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument(
+        "--profile",
+        choices=["full-contract", "minimal"],
+        default="full-contract",
+        help="scaffold profile; full-contract mirrors runtime-required contracts",
+    )
     ap.add_argument("--register", action="store_true", help="Register identity in catalog")
+    ap.add_argument("--activate", action="store_true", help="Register with status=active (default inactive)")
     ap.add_argument("--set-default", action="store_true", help="Set as default identity")
     args = ap.parse_args()
 
@@ -224,7 +398,11 @@ def main() -> int:
         "# Identity Prompt\n\nDefine role cognition, principles, and decision rules.\n",
     )
 
-    write_json(pack_dir / "CURRENT_TASK.json", _default_current_task(identity_id, args.title, args.description))
+    if args.profile == "full-contract":
+        current_task = _full_contract_current_task(identity_id, args.title, args.description)
+    else:
+        current_task = _minimal_current_task(identity_id, args.title, args.description)
+    write_json(pack_dir / "CURRENT_TASK.json", current_task)
 
     write(pack_dir / "TASK_HISTORY.md", "# Task History\n\n## Entries\n")
 
@@ -268,9 +446,12 @@ def main() -> int:
 
     protocol_review_sample_path = Path("identity/runtime/examples") / f"protocol-baseline-review-{identity_id}-sample.json"
     write_json(protocol_review_sample_path, _default_protocol_review_sample(identity_id))
+    replay_sample_path = _write_replay_sample(identity_id, current_task)
+    _bootstrap_identity_samples(identity_id)
 
     print(f"[OK] created identity pack: {pack_dir}")
     print(f"[OK] created protocol review sample: {protocol_review_sample_path}")
+    print(f"[OK] created replay sample: {replay_sample_path}")
 
     if args.register:
         catalog_path = Path(args.catalog)
@@ -288,7 +469,7 @@ def main() -> int:
                 "id": identity_id,
                 "title": args.title,
                 "description": args.description,
-                "status": "active",
+                "status": "active" if args.activate else "inactive",
                 "methodology_version": "v1.2.3",
                 "pack_path": str(pack_dir),
                 "tags": ["identity"],

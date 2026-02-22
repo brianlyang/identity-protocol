@@ -1,0 +1,47 @@
+{
+  "run_id": "identity-upgrade-exec-store-manager-1771780430",
+  "identity_id": "store-manager",
+  "mode": "review-required",
+  "upgrade_required": true,
+  "trigger_reasons": [
+    "replay_failure_rate 100.0 >= threshold 20"
+  ],
+  "actions_taken": [
+    "patch_plan_written:identity/runtime/reports/identity-upgrade-exec-store-manager-1771780430-patch-plan.json"
+  ],
+  "checks": [
+    {
+      "cmd": "python3 scripts/validate_identity_upgrade_prereq.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "[INFO] validating identity update prereq for: store-manager\n[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json\n[OK] gates.protocol_baseline_review_gate=required\n[OK] protocol_review_contract.required_before contains upgrade + architecture scope\n[INFO] using evidence: identity/runtime/examples/protocol-baseline-review-sample.json\n[OK] evidence required fields present\n[OK] evidence covers all mandatory sources\nIdentity update prerequisite validation PASSED\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "python3 scripts/validate_identity_runtime_contract.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "\n========================================================================\n[INFO] validating CURRENT_TASK for identity=store-manager: identity/store-manager/CURRENT_TASK.json\n[OK]   top-level key present: objective\n[OK]   top-level key present: state_machine\n[OK]   top-level key present: gates\n[OK]   top-level key present: source_of_truth\n[OK]   top-level key present: escalation_policy\n[OK]   top-level key present: evaluation_contract\n[OK]   top-level key present: reasoning_loop_contract\n[OK]   top-level key present: routing_contract\n[OK]   top-level key present: rulebook_contract\n[OK]   top-level key present: blocker_taxonomy_contract\n[OK]   top-level key present: collaboration_trigger_contract\n[OK]   top-level key present: capability_orchestration_contract\n[OK]   top-level key present: knowledge_acquisition_contract\n[OK]   top-level key present: experience_feedback_contract\n[OK]   top-level key present: install_safety_contract\n[OK]   top-level key present: ci_enforcement_contract\n[OK]   top-level key present: capability_arbitration_contract\n[OK]   top-level key present: self_upgrade_enforcement_contract\n[OK]   gates.document_gate=required\n[OK]   gates.media_gate=required\n[OK]   gates.category_compliance_gate=required\n[OK]   gates.reject_memory_gate=required\n[OK]   gates.payload_evidence_gate=required\n[OK]   gates.multimodal_consistency_gate=required\n[OK]   gates.reasoning_loop_gate=required\n[OK]   gates.routing_gate=required\n[OK]   gates.rulebook_gate=required\n[OK]   gates.collaboration_trigger_gate=required\n[OK]   gates.orchestration_gate=required\n[OK]   gates.knowledge_acquisition_gate=required\n[OK]   gates.experience_feedback_gate=required\n[OK]   gates.install_safety_gate=required\n[OK]   gates.ci_enforcement_gate=required\n[OK]   gates.arbitration_gate=required\n[OK]   evaluation_contract.required_evidence_triplet contains api/event/ui\n[OK]   evaluation_contract.consistency_required=true\n[OK]   gates.protocol_baseline_review_gate=required\n[OK]   protocol_review_contract.must_review_sources is non-empty\n[OK]   protocol_review_contract.required_evidence_fields is non-empty\n[OK]   found protocol review evidence: identity/runtime/examples/protocol-baseline-review-sample.json\n[OK]   protocol review evidence required fields present\n[OK]   protocol review evidence covers mandatory sources\n[OK]   protocol review evidence covers skill/mcp/protocol baseline set\n[OK]   reasoning_loop_contract mandatory attempt fields complete\n[OK]   routing_contract.auto_route_enabled=true\n[OK]   routing_contract.problem_type_routes is non-empty\n[OK]   rulebook exists: identity/store-manager/RULEBOOK.jsonl\n[OK]   rulebook_contract.append_only=true\n[OK]   validated 4 rulebook rows against required_fields\n[OK]   blocker taxonomy includes required blocker classes\n[OK]   collaboration_trigger_contract.notify_policy=must_notify_when_human_required\n[OK]   collaboration_trigger_contract.notify_timing=immediate\n[OK]   collaboration_trigger_contract.state_change_bypass_dedupe=true\n[OK]   collaboration_trigger_contract.must_emit_receipt_in_chat=true\n[OK]   install_safety_contract.preserve_existing_default=true\n[OK]   install_safety_contract.on_conflict=abort_and_explain\nIdentity runtime contract validation PASSED for identity=store-manager\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "python3 scripts/validate_identity_update_lifecycle.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "[INFO] validate update lifecycle for identity: store-manager\n[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json\n[OK] gates.identity_update_gate=required\n[OK] identity_update_lifecycle_contract.trigger_contract present\n[OK] identity_update_lifecycle_contract.patch_surface_contract present\n[OK] identity_update_lifecycle_contract.validation_contract present\n[OK] identity_update_lifecycle_contract.replay_contract present\n[OK] patch_surface_contract.required_files contains all mandatory surfaces\n[OK] patch_surface_contract.required_file_paths all exist\n[OK] validation_contract.required_checks contains mandatory validators\n[OK] trigger_regression_contract present\n[OK] replay evidence loaded: identity/runtime/examples/store-manager-update-replay-sample.json\n[OK] capability_gap route includes identity-creator\nIdentity update lifecycle contract validation PASSED\n",
+      "stderr": ""
+    },
+    {
+      "cmd": "python3 scripts/validate_identity_capability_arbitration.py --identity-id store-manager",
+      "code": 0,
+      "ok": true,
+      "stdout": "[INFO] validate capability arbitration for identity: store-manager\n[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json\n[OK] metrics/threshold linkage check skipped: report has no 'upgrade_required' field (computed should_trigger=True)\nCapability arbitration contract validation PASSED\n",
+      "stderr": ""
+    }
+  ],
+  "artifacts": [
+    "identity/runtime/reports/identity-upgrade-exec-store-manager-1771780430-patch-plan.json",
+    "identity/runtime/metrics/store-manager-route-quality.json"
+  ],
+  "all_ok": true
+}

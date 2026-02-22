@@ -48,6 +48,14 @@ def _source_signature(item: dict[str, Any]) -> str:
     return ""
 
 
+def _resolve_evidence_files(pattern: str, identity_id: str) -> list[Path]:
+    files = sorted(Path(".").glob(pattern))
+    if not files:
+        return []
+    scoped = [p for p in files if identity_id in p.name]
+    return scoped or files
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Validate protocol baseline review prerequisites for identity update operations"
@@ -102,7 +110,7 @@ def main() -> int:
     if args.evidence:
         evidence_files = [Path(args.evidence)]
     else:
-        evidence_files = sorted(Path(".").glob(pattern))
+        evidence_files = _resolve_evidence_files(pattern, args.identity_id)
 
     if not evidence_files:
         print(f"[FAIL] no protocol review evidence matched: {pattern}")

@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import hashlib
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from time import time
 from typing import Any
 
 import yaml
@@ -44,15 +47,83 @@ def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"identity pack not found: {identity_id}")
 
 
-def _run(cmd: list[str]) -> dict[str, Any]:
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int) -> dict[str, Any]:
+    start = datetime.now(timezone.utc)
+    t0 = time()
     p = subprocess.run(cmd, capture_output=True, text=True)
+    end = datetime.now(timezone.utc)
+    elapsed_ms = int((time() - t0) * 1000)
+    log_path = log_dir / f"{run_id}-check-{idx:02d}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_content = (
+        f"$ {' '.join(cmd)}\n"
+        f"[exit_code] {p.returncode}\n"
+        f"[started_at] {start.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
+        f"[ended_at] {end.strftime('%Y-%m-%dT%H:%M:%SZ')}\n\n"
+        f"[stdout]\n{p.stdout}\n"
+        f"[stderr]\n{p.stderr}\n"
+    )
+    log_path.write_text(log_content, encoding="utf-8")
+    log_sha256 = _sha256_file(log_path)
     return {
+        "command": " ".join(cmd),
         "cmd": " ".join(cmd),
         "code": p.returncode,
         "ok": p.returncode == 0,
         "stdout": p.stdout[-4000:],
         "stderr": p.stderr[-4000:],
+        "started_at": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "ended_at": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "duration_ms": elapsed_ms,
+        "exit_code": p.returncode,
+        "log_path": str(log_path),
+        "sha256": log_sha256,
     }
+
+
+def _resolve_git_range() -> tuple[str, str]:
+    def _git(cmd: list[str]) -> str:
+        p = subprocess.run(["git", *cmd], capture_output=True, text=True)
+        return (p.stdout or "").strip() if p.returncode == 0 else ""
+
+    base = os.environ.get("PR_BASE_SHA") or os.environ.get("GITHUB_BASE_SHA") or os.environ.get("PUSH_BEFORE_SHA") or os.environ.get("GITHUB_EVENT_BEFORE") or ""
+    head = os.environ.get("PR_HEAD_SHA") or os.environ.get("GITHUB_SHA") or ""
+    if not head:
+        head = _git(["rev-parse", "HEAD"])
+    if not base:
+        base = _git(["rev-parse", "HEAD~1"])
+    return base or "HEAD~1", head or "HEAD"
+
+
+def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
+    if not check.startswith("scripts/"):
+        return ["python3", check]
+    cmd = ["python3", check]
+    if check.endswith("validate_changelog_updated.py"):
+        base, head = _resolve_git_range()
+        return ["python3", check, "--base", base, "--head", head]
+    if check.endswith("validate_identity_manifest.py") or check.endswith("compile_identity_runtime.py"):
+        return cmd
+    # most validators are identity scoped
+    if "--identity-id" not in check:
+        cmd += ["--identity-id", identity_id]
+    if check.endswith("validate_identity_collab_trigger.py"):
+        cmd += ["--self-test"]
+    if check.endswith("validate_agent_handoff_contract.py"):
+        cmd += ["--self-test"]
+    if check.endswith("validate_identity_knowledge_contract.py"):
+        cmd += ["--self-test"]
+    if check.endswith("validate_identity_experience_feedback.py"):
+        cmd += ["--self-test"]
+    return cmd
 
 
 def _needs_upgrade(metrics: dict[str, Any], thresholds: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -239,22 +310,44 @@ def main() -> int:
         actions_taken.append("task_history_appended")
 
     # Run required validators + replay-equivalent gate checks
-    checks = [
-        _run(["python3", "scripts/validate_identity_upgrade_prereq.py", "--identity-id", args.identity_id]),
-        _run(["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", args.identity_id]),
-        _run(["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", args.identity_id]),
-        _run(["python3", "scripts/validate_identity_capability_arbitration.py", "--identity-id", args.identity_id]),
-    ]
+    required_checks = (
+        task.get("identity_update_lifecycle_contract", {})
+        .get("validation_contract", {})
+        .get("required_checks", [])
+    )
+    if not isinstance(required_checks, list) or not required_checks:
+        required_checks = [
+            "scripts/validate_identity_upgrade_prereq.py",
+            "scripts/validate_identity_runtime_contract.py",
+            "scripts/validate_identity_update_lifecycle.py",
+            "scripts/validate_identity_capability_arbitration.py",
+        ]
+    check_cmds = [_build_validator_cmd(chk, args.identity_id) for chk in required_checks]
+    log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
+    checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
 
     all_ok = all(c["ok"] for c in checks)
     report = {
         "run_id": run_id,
         "identity_id": args.identity_id,
+        "creator_invocation": {
+            "tool": "identity-creator",
+            "mode": "update",
+            "entrypoint": "scripts/execute_identity_upgrade.py",
+            "base_contract": "identity_update_lifecycle_contract",
+            "run_id": run_id,
+        },
         "mode": args.mode,
+        "execution_context": {
+            "generated_by": "ci" if os.environ.get("CI") else "local",
+            "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "github_sha": os.environ.get("GITHUB_SHA", ""),
+        },
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
         "actions_taken": actions_taken,
         "checks": checks,
+        "check_results": checks,
         "artifacts": artifacts,
         "all_ok": all_ok,
     }

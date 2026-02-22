@@ -1,0 +1,9 @@
+$ python3 scripts/validate_changelog_updated.py --base HEAD~1 --head HEAD
+[exit_code] 0
+[started_at] 2026-02-22T18:17:45Z
+[ended_at] 2026-02-22T18:17:46Z
+
+[stdout]
+PASS
+[stderr]
+

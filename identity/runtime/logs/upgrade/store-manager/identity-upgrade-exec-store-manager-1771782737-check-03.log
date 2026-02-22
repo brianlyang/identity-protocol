@@ -1,0 +1,23 @@
+$ python3 scripts/validate_identity_update_lifecycle.py --identity-id store-manager
+[exit_code] 0
+[started_at] 2026-02-22T17:52:17Z
+[ended_at] 2026-02-22T17:52:17Z
+
+[stdout]
+[INFO] validate update lifecycle for identity: store-manager
+[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json
+[OK] gates.identity_update_gate=required
+[OK] identity_update_lifecycle_contract.trigger_contract present
+[OK] identity_update_lifecycle_contract.patch_surface_contract present
+[OK] identity_update_lifecycle_contract.validation_contract present
+[OK] identity_update_lifecycle_contract.replay_contract present
+[OK] patch_surface_contract.required_files contains all mandatory surfaces
+[OK] patch_surface_contract.required_file_paths all exist
+[OK] validation_contract.required_checks contains mandatory validators
+[OK] trigger_regression_contract present
+[OK] replay evidence loaded: identity/runtime/examples/store-manager-update-replay-sample.json
+[OK] capability_gap route includes identity-creator
+Identity update lifecycle contract validation PASSED
+
+[stderr]
+
