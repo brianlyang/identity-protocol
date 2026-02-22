@@ -130,11 +130,14 @@ def main() -> int:
         )
         return 1
 
-    report_candidates = [f for f in evidence_changed if not f.endswith("-patch-plan.json")]
-    if not report_candidates:
-        print("[FAIL] self-upgrade evidence exists but no execution report JSON found.")
-        print("       expected file pattern: identity-upgrade-exec-<identity-id>-<ts>.json")
-        return 1
+    if args.execution_report:
+        report_candidates = [args.execution_report]
+    else:
+        report_candidates = [f for f in evidence_changed if not f.endswith("-patch-plan.json")]
+        if not report_candidates:
+            print("[FAIL] self-upgrade evidence exists but no execution report JSON found.")
+            print("       expected file pattern: identity-upgrade-exec-<identity-id>-<ts>.json")
+            return 1
 
     task = _load_json(_resolve_current_task(Path(args.catalog), args.identity_id))
     required_checks = (
@@ -151,8 +154,6 @@ def main() -> int:
             "scripts/validate_identity_capability_arbitration.py",
         ]
 
-    if args.execution_report:
-        report_candidates = [args.execution_report]
     valid_reports = 0
     for rel in report_candidates:
         path = Path(rel)

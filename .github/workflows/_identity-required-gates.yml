@@ -47,6 +47,9 @@ jobs:
           fi
           python3 scripts/validate_changelog_updated.py --base "${BASE_SHA}" --head "${HEAD_SHA}"
 
+      - name: Validate release metadata synchronization
+        run: python3 scripts/validate_release_metadata_sync.py
+
       - name: Compile runtime
         run: python3 scripts/compile_identity_runtime.py
 

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **release hardening follow-up (v1.4.4 draft)**:
+  - added required validator `scripts/validate_release_metadata_sync.py` to prevent recurring
+    `README/IDENTITY_PROTOCOL/VERSIONING/requirements-dev` version drift
+  - wired metadata sync validator into:
+    - `.github/workflows/_identity-required-gates.yml`
+    - `scripts/e2e_smoke_test.sh`
+    - `identity_update_lifecycle_contract.validation_contract.required_checks`
+  - refreshed replay evidence sample/log chain (`store-manager-update-replay-check-01..18`)
+    so lifecycle required-check coverage remains deterministic after gate expansion
+  - fixed `scripts/validate_identity_self_upgrade_enforcement.py` to correctly validate
+    `--execution-report` in CI live-run mode even when no report file changed in git diff
+
 - **release metadata synchronization follow-up (v1.4.4 draft)**:
   - `VERSIONING.md` release-metadata synchronization section updated to `v1.4.4+`
   - `requirements-dev.txt` baseline header synchronized to `v1.4.4 draft`

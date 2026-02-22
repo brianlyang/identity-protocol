@@ -179,6 +179,7 @@ def main() -> int:
         "scripts/validate_identity_collab_trigger.py",
         "scripts/validate_identity_install_safety.py",
         "scripts/validate_identity_install_provenance.py",
+        "scripts/validate_release_metadata_sync.py",
         "scripts/validate_identity_experience_feedback_governance.py",
         "scripts/validate_identity_capability_arbitration.py",
         "scripts/validate_identity_self_upgrade_enforcement.py",
