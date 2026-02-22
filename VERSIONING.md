@@ -36,7 +36,7 @@ Any breaking change to required contract must bump MAJOR (`v2.0.0`).
 - changelog gate passed in CI (`validate_changelog_updated.py`)
 - release tag created
 
-## Release metadata synchronization (v1.4.3+)
+## Release metadata synchronization (v1.4.4+)
 
 To avoid “code merged but release metadata stale”, every protocol-impacting
 change must keep the following files aligned:
@@ -47,3 +47,8 @@ change must keep the following files aligned:
 
 If dependency set is unchanged, keep `requirements-dev.txt` intact but treat it
 as explicitly reviewed during release closure.
+
+### Enforcement note
+
+Release closure is considered incomplete when any of the three synchronization
+files is stale, even if feature code is already merged.

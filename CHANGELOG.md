@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **release metadata synchronization follow-up (v1.4.4 draft)**:
+  - `VERSIONING.md` release-metadata synchronization section updated to `v1.4.4+`
+  - `requirements-dev.txt` baseline header synchronized to `v1.4.4 draft`
+  - added explicit enforcement note to avoid recurrent stale metadata drift
+
 - **self-upgrade execution authenticity hardening (v1.4.4 draft)**:
   - strengthened update lifecycle replay contract to require:
     - `creator_invocation`
