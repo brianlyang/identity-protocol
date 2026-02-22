@@ -117,6 +117,40 @@ Gap that remains governance-critical:
 
 ## 4) Operating Model (Three Planes)
 
+### 4.0 Architecture Diagram (for fast review)
+
+```mermaid
+flowchart TB
+  subgraph P["Protocol Plane (base repository)"]
+    P1["IDENTITY_PROTOCOL / contracts"]
+    P2["validators + required-gates CI"]
+    P3["release governance (snapshot/changelog)"]
+  end
+
+  subgraph I["Instance Plane (local instance)"]
+    I1["installer/creator operations"]
+    I2["runtime state + rulebooks + history"]
+    I3["self-driven trigger + replay evidence"]
+  end
+
+  subgraph D["Distribution Plane"]
+    D1["tag/release promotion"]
+    D2["consumer upgrade choreography"]
+    D3["backup/rollback path"]
+  end
+
+  P1 --> P2
+  P2 --> D1
+  D1 --> D2
+  D2 --> I1
+  I1 --> I2
+  I2 --> I3
+  I3 --> P3
+
+  I2 -. "feedback aggregate (sanitized)" .-> P3
+  P3 -. "next protocol backlog" .-> P1
+```
+
 ### 4.1 Instance Plane (local)
 
 Owns:
@@ -230,6 +264,23 @@ Restricted automation:
 - `safe-auto` only for limited surfaces (e.g., rulebook/task history/evidence logs), not for protocol law surfaces.
 
 ## 7) Identity Feedback Collection Contract (Local Instance Coupled)
+
+### 7.0 Dual-Loop Feedback Diagram
+
+```mermaid
+flowchart LR
+  A["Local Run\n(task/tool/replay)"] --> B["Structured Feedback Record\n(instance_feedback_contract)"]
+  B --> C["Instance Self-Review\nthreshold + arbitration"]
+  C --> D["Self-Driven Upgrade\n(review-required / safe-auto)"]
+  D --> E["Validator Chain + Replay"]
+  E --> F["Local Rulebook/History Update"]
+
+  B --> G["Cross-Instance Aggregate\n(weekly metrics/export)"]
+  G --> H["Base Repo Governance Review\nsnapshot + gap analysis"]
+  H --> I["Protocol Backlog + Contract Update"]
+  I --> J["Release/Tag Distribution"]
+  J --> A
+```
 
 ### 7.1 Goal
 
