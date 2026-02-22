@@ -32,6 +32,48 @@ In short:
 
 Do not invert this boundary.
 
+## 2.1 Two Critical Confirmations (normative)
+
+The following two points are normative and must be treated as release-level
+constraints:
+
+1. Base-repository upgrades must not directly delete or reset existing local
+   identity instances by default.
+2. Local instances must emit structured identity-protocol feedback that serves
+   both:
+   - local self-driven upgrade loops
+   - base-repository iteration and version planning
+
+These are not optional optimization ideas. They are baseline compatibility and
+governance requirements for continuous upgrades.
+
+## 2.2 Interpretation of Confirmation #1 (non-destructive upgrades)
+
+`identity-protocol` continuous evolution must preserve consumer-local instance
+continuity:
+
+- base-repo upgrades update protocol law surfaces (contracts/validators/CI/docs)
+- local instance state and business customizations remain intact by default
+- destructive replacement is opt-in only, with backup + rollback references
+
+Operationally, this corresponds to:
+
+- default `preserve_existing = true`
+- explicit `replace_existing = true` only under guarded migration flow
+
+## 2.3 Interpretation of Confirmation #2 (feedback dual-loop value)
+
+Instance feedback collection is a dual-loop mechanism:
+
+1. Instance loop:
+   - run evidence supports self-check and self-driven upgrade decisions
+2. Base loop:
+   - aggregated cross-instance feedback supports protocol backlog and release
+     prioritization
+
+Without this dual-loop, upgrades become either blind local optimization or
+blind global policy change.
+
 ## 3) Why This Position Is Correct
 
 ### 3.1 Cross-vendor alignment
