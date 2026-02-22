@@ -368,26 +368,27 @@ state to avoid “document says yes, runtime says no” drift.
   - `review-required`
   - `safe-auto` (restricted, non-default)
 
-### 9.2 Not yet implemented as standalone contracts (gap)
+### 9.2 Standalone contract status and deferred split (gap)
 
-- `install_safety_contract` (explicit local-instance preserve policy)
+- `install_safety_contract` is already implemented and required in runtime + CI
+  required-gates (local-instance preserve policy is now contract-enforced).
 - standalone `instance_feedback_contract` naming split is intentionally deferred;
   v1.1 keeps a single-source approach on `experience_feedback_contract` to
   avoid naming drift.
 
 ### 9.3 Operational implication
 
-The control-loop base is strong, but local-instance-first safety and
-instance-coupled feedback still depend on conventions spread across existing
-contracts. Converting these into standalone required contracts is necessary for
-strict long-term governance.
+The control-loop base is strong and local-instance-first safety is already
+contracted. Remaining governance work is primarily about whether/when to split
+feedback into a standalone `instance_feedback_contract` versus continuing the
+single-source `experience_feedback_contract` strategy.
 
 ## 10) Contract-to-Validator-to-Gate Mapping (proposed)
 
 | Contract | Validator | Required gate hook | Evidence artifact |
 | --- | --- | --- | --- |
-| `install_safety_contract` | `scripts/validate_identity_install_safety.py` | `.github/workflows/_identity-required-gates.yml` | `identity/runtime/reports/install-*.json` |
-| `instance_feedback_contract` | `scripts/validate_identity_instance_feedback.py` | `.github/workflows/_identity-required-gates.yml` | `identity/runtime/logs/feedback/*.json` |
+| `install_safety_contract` | `scripts/validate_identity_install_safety.py` | `.github/workflows/_identity-required-gates.yml` | `identity/runtime/examples/install/*.json` (contract default); `identity/runtime/reports/install-*.json` (optional runtime export path) |
+| `experience_feedback_contract` | `scripts/validate_identity_experience_feedback_governance.py` | `.github/workflows/_identity-required-gates.yml` | `identity/runtime/logs/feedback/*.json` |
 | `instance_feedback_contract` freshness | `scripts/validate_identity_feedback_freshness.py` | `.github/workflows/_identity-required-gates.yml` | latest feedback timestamp + age proof |
 | promotion criteria linkage | `scripts/validate_identity_feedback_promotion.py` | `.github/workflows/_identity-required-gates.yml` | replay evidence + rulebook delta |
 
