@@ -571,7 +571,8 @@
       "scripts/validate_identity_ci_enforcement.py",
       "scripts/validate_identity_capability_arbitration.py",
       "scripts/validate_identity_install_safety.py",
-      "scripts/validate_identity_experience_feedback_governance.py"
+      "scripts/validate_identity_experience_feedback_governance.py",
+      "scripts/validate_identity_self_upgrade_enforcement.py"
     ],
     "required_checks": [
       "protocol-ci / required-gates",
@@ -667,5 +668,23 @@
     "install_report_required": true,
     "dry_run_required": true,
     "install_report_path_pattern": "identity/runtime/examples/install/*.json"
+  },
+  "self_upgrade_enforcement_contract": {
+    "required": true,
+    "core_paths": [
+      "identity/store-manager/CURRENT_TASK.json",
+      "identity/store-manager/IDENTITY_PROMPT.md",
+      "identity/store-manager/RULEBOOK.jsonl"
+    ],
+    "required_toolkit_steps": [
+      "scripts/execute_identity_upgrade.py --identity-id store-manager --mode review-required",
+      "scripts/validate_identity_upgrade_prereq.py --identity-id store-manager",
+      "scripts/validate_identity_runtime_contract.py --identity-id store-manager",
+      "scripts/validate_identity_update_lifecycle.py --identity-id store-manager",
+      "scripts/validate_identity_capability_arbitration.py --identity-id store-manager"
+    ],
+    "evidence_path_pattern": "identity/runtime/reports/identity-upgrade-exec-store-manager-*.json",
+    "matching_patch_plan_required": true,
+    "enforcement_validator": "scripts/validate_identity_self_upgrade_enforcement.py"
   }
 }

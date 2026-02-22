@@ -26,6 +26,7 @@ REQ_TOP_LEVEL = [
     "install_safety_contract",
     "ci_enforcement_contract",
     "capability_arbitration_contract",
+    "self_upgrade_enforcement_contract",
 ]
 
 REQ_GATES = [

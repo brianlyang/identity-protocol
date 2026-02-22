@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **self-upgrade non-bypass enforcement hardening (post-v1.4.3)**:
+  - added required runtime contract block:
+    - `self_upgrade_enforcement_contract` in `identity/store-manager/CURRENT_TASK.json`
+  - added/strengthened validator:
+    - `scripts/validate_identity_self_upgrade_enforcement.py`
+    - now verifies identity-core edits require matching upgrade execution report + patch-plan pair
+    - validates report schema and required validator command coverage
+  - required validator set now explicitly includes:
+    - `scripts/validate_identity_self_upgrade_enforcement.py`
+  - CI and e2e required chains now enforce self-upgrade evidence gate before upgrade execution step
+  - protocol/runtime validators now treat self-upgrade enforcement contract as core key:
+    - `scripts/validate_identity_protocol.py`
+    - `scripts/validate_identity_runtime_contract.py`
+
 - **release closure + changelog governance hardening (v1.4.3 draft)**:
   - added local executable upgrade cycle runner:
     - `scripts/execute_identity_upgrade.py`
