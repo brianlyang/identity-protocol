@@ -114,7 +114,7 @@
       "findings",
       "decision"
     ],
-    "evidence_report_path_pattern": "identity/runtime/examples/protocol-baseline-review-*.json",
+    "evidence_report_path_pattern": "identity/runtime/examples/protocol-baseline-review-store-manager-*.json",
     "max_review_age_days": 7
   },
   "identity_update_lifecycle_contract": {
@@ -158,7 +158,8 @@
         "scripts/validate_identity_ci_enforcement.py",
         "scripts/validate_identity_capability_arbitration.py",
         "scripts/validate_identity_install_safety.py",
-        "scripts/validate_identity_experience_feedback_governance.py"
+        "scripts/validate_identity_experience_feedback_governance.py",
+        "scripts/validate_identity_self_upgrade_enforcement.py"
       ],
       "must_pass_all": true
     },
@@ -166,12 +167,14 @@
       "replay_required": true,
       "replay_same_case_required": true,
       "replay_fail_action": "reenter_identity_update_loop",
-      "evidence_path_pattern": "identity/runtime/examples/*update-replay*.json",
+      "evidence_path_pattern": "identity/runtime/examples/store-manager-update-replay-*.json",
       "required_fields": [
         "identity_id",
         "replay_status",
         "patched_files",
-        "validation_checks_passed"
+        "validation_checks_passed",
+        "creator_invocation",
+        "check_results"
       ]
     }
   },

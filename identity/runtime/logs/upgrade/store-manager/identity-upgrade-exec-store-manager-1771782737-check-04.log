@@ -1,0 +1,13 @@
+$ python3 scripts/validate_identity_capability_arbitration.py --identity-id store-manager
+[exit_code] 0
+[started_at] 2026-02-22T17:52:17Z
+[ended_at] 2026-02-22T17:52:17Z
+
+[stdout]
+[INFO] validate capability arbitration for identity: store-manager
+[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json
+[OK] metrics/threshold linkage check skipped: report has no 'upgrade_required' field (computed should_trigger=True)
+Capability arbitration contract validation PASSED
+
+[stderr]
+

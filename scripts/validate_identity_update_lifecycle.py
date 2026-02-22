@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -68,10 +69,21 @@ def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, A
     pattern = str(replay_contract.get("evidence_path_pattern") or "")
     if pattern:
         matched = sorted(Path(".").glob(pattern))
+        identity_scoped = [p for p in matched if identity_id in p.name]
+        if identity_scoped:
+            matched = identity_scoped
         if matched:
             return matched[-1]
 
     return Path(f"identity/runtime/examples/{identity_id}-update-replay-sample.json")
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def main() -> int:
@@ -168,6 +180,7 @@ def main() -> int:
         "scripts/validate_identity_install_safety.py",
         "scripts/validate_identity_experience_feedback_governance.py",
         "scripts/validate_identity_capability_arbitration.py",
+        "scripts/validate_identity_self_upgrade_enforcement.py",
     }
     if not expected_checks.issubset(required_checks):
         print(f"[FAIL] validation_contract.required_checks missing expected checks: {sorted(expected_checks - required_checks)}")
@@ -194,7 +207,17 @@ def main() -> int:
 
     print(f"[OK] replay evidence loaded: {replay_evidence_path}")
 
-    required_replay_fields = set(replay.get("required_fields") or ["identity_id", "replay_status", "patched_files", "validation_checks_passed"])
+    required_replay_fields = set(
+        replay.get("required_fields")
+        or [
+            "identity_id",
+            "replay_status",
+            "patched_files",
+            "validation_checks_passed",
+            "creator_invocation",
+            "check_results",
+        ]
+    )
     missing_replay_fields = [f for f in required_replay_fields if f not in replay_evidence]
     if missing_replay_fields:
         print(f"[FAIL] replay evidence missing fields: {missing_replay_fields}")
@@ -220,6 +243,55 @@ def main() -> int:
     if not required_checks.issubset(checks_passed):
         print(
             f"[FAIL] replay evidence validation_checks_passed missing required checks: {sorted(required_checks - checks_passed)}"
+        )
+        return 1
+
+    creator = replay_evidence.get("creator_invocation")
+    if not isinstance(creator, dict):
+        print("[FAIL] replay evidence creator_invocation must be object")
+        return 1
+    if str(creator.get("tool", "")).strip() != "identity-creator":
+        print("[FAIL] replay evidence creator_invocation.tool must be identity-creator")
+        return 1
+    if str(creator.get("mode", "")).strip() != "update":
+        print("[FAIL] replay evidence creator_invocation.mode must be update")
+        return 1
+
+    check_results = replay_evidence.get("check_results")
+    if not isinstance(check_results, list) or not check_results:
+        print("[FAIL] replay evidence check_results must be non-empty list")
+        return 1
+    check_required = {"command", "started_at", "ended_at", "exit_code", "log_path", "sha256"}
+    for i, cr in enumerate(check_results):
+        if not isinstance(cr, dict):
+            print(f"[FAIL] replay evidence check_results[{i}] must be object")
+            return 1
+        miss = [k for k in check_required if k not in cr]
+        if miss:
+            print(f"[FAIL] replay evidence check_results[{i}] missing fields: {miss}")
+            return 1
+        lp = Path(str(cr.get("log_path", "")).strip())
+        if not lp.exists():
+            print(f"[FAIL] replay evidence check_results[{i}].log_path not found: {lp}")
+            return 1
+        declared = str(cr.get("sha256", "")).strip()
+        actual = _sha256_file(lp)
+        if declared != actual:
+            print(
+                f"[FAIL] replay evidence check_results[{i}] sha256 mismatch: "
+                f"declared={declared} actual={actual}"
+            )
+            return 1
+        command = str(cr.get("command", "")).strip()
+        if not command:
+            print(f"[FAIL] replay evidence check_results[{i}].command must be non-empty")
+            return 1
+    check_cmds = [str(x.get("command", "")).strip() for x in check_results if isinstance(x, dict)]
+    missing_cmd_checks = [chk for chk in required_checks if not any(chk in cmd for cmd in check_cmds)]
+    if missing_cmd_checks:
+        print(
+            "[FAIL] replay evidence check_results missing required check command coverage: "
+            f"{missing_cmd_checks}"
         )
         return 1
 

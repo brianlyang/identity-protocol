@@ -1,0 +1,9 @@
+$ python3 scripts/validate_identity_knowledge_contract.py --identity-id store-manager --self-test
+[exit_code] 0
+[started_at] 2026-02-22T09:50:18Z
+[ended_at] 2026-02-22T09:50:19Z
+
+[stdout]
+PASS
+[stderr]
+

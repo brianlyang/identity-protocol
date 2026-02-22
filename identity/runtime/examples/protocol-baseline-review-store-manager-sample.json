@@ -1,0 +1,54 @@
+{
+  "review_id": "protocol-baseline-review-store-manager-2026-02-22",
+  "reviewed_at": "2026-02-20T00:00:00Z",
+  "reviewer_identity": "store-manager",
+  "purpose": "identity capability upgrade must be grounded in protocol baselines and external standards before conclusions",
+  "sources_reviewed": [
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "identity/protocol/IDENTITY_PROTOCOL.md"
+    },
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "docs/references/skill-installer-skill-creator-skill-update-lifecycle.md"
+    },
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md"
+    },
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "docs/references/skill-mcp-tool-collaboration-contract-v1.0.md"
+    },
+    {
+      "type": "github_repo_file",
+      "repo": "brianlyang/identity-protocol",
+      "path": "docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md"
+    },
+    {
+      "type": "official_doc",
+      "url": "https://developers.openai.com/codex/skills/"
+    },
+    {
+      "type": "official_doc",
+      "url": "https://agentskills.io/specification"
+    },
+    {
+      "type": "official_doc",
+      "url": "https://modelcontextprotocol.io/specification/latest"
+    }
+  ],
+  "findings": [
+    "Identity conclusions require source-cited protocol review evidence.",
+    "Completion must be blocked if baseline review gate fails for identity-upgrade tasks.",
+    "Skill/MCP/Tool collaboration boundary must be reviewed before route-level capability decisions."
+  ],
+  "decision": {
+    "result": "approved",
+    "notes": "Sample artifact for validator and CI smoke checks"
+  }
+}

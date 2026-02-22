@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -21,6 +22,14 @@ def _changed_files(base: str, head: str) -> list[str]:
 
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def main() -> int:
@@ -117,18 +126,65 @@ def main() -> int:
         if mode not in {"review-required", "safe-auto"}:
             print(f"[FAIL] invalid mode in {rel}: {mode!r}")
             continue
+        run_id = str(report.get("run_id", "")).strip()
+        if not run_id:
+            print(f"[FAIL] report.run_id missing in {rel}")
+            continue
         checks = report.get("checks")
         if not isinstance(checks, list) or not checks:
             print(f"[FAIL] report.checks must be non-empty list in {rel}")
             continue
+        creator = report.get("creator_invocation")
+        if not isinstance(creator, dict):
+            print(f"[FAIL] report.creator_invocation must be object in {rel}")
+            continue
+        if str(creator.get("tool", "")).strip() != "identity-creator":
+            print(f"[FAIL] report.creator_invocation.tool must be identity-creator in {rel}")
+            continue
+        if str(creator.get("mode", "")).strip() != "update":
+            print(f"[FAIL] report.creator_invocation.mode must be update in {rel}")
+            continue
+        if str(creator.get("run_id", "")).strip() != run_id:
+            print(f"[FAIL] report.creator_invocation.run_id must match report.run_id in {rel}")
+            continue
+
+        check_results = report.get("check_results")
+        if not isinstance(check_results, list) or not check_results:
+            print(f"[FAIL] report.check_results must be non-empty list in {rel}")
+            continue
+        check_required = {"command", "started_at", "ended_at", "exit_code", "log_path", "sha256"}
+        invalid_check = False
+        for i, cr in enumerate(check_results):
+            if not isinstance(cr, dict):
+                print(f"[FAIL] report.check_results[{i}] must be object in {rel}")
+                invalid_check = True
+                break
+            miss = [k for k in check_required if k not in cr]
+            if miss:
+                print(f"[FAIL] report.check_results[{i}] missing fields in {rel}: {miss}")
+                invalid_check = True
+                break
+            lp = Path(str(cr.get("log_path", "")).strip())
+            if not lp.exists():
+                print(f"[FAIL] report.check_results[{i}].log_path not found in {rel}: {lp}")
+                invalid_check = True
+                break
+            declared = str(cr.get("sha256", "")).strip()
+            actual = _sha256_file(lp)
+            if declared != actual:
+                print(
+                    f"[FAIL] report.check_results[{i}] sha256 mismatch in {rel}: "
+                    f"declared={declared} actual={actual}"
+                )
+                invalid_check = True
+                break
+        if invalid_check:
+            continue
+
         cmds = [str(x.get("cmd", "")) for x in checks if isinstance(x, dict)]
         missing_tokens = [tok for tok in required_check_tokens if not any(tok in c for c in cmds)]
         if missing_tokens:
             print(f"[FAIL] evidence report missing required checks in {rel}: {missing_tokens}")
-            continue
-        run_id = str(report.get("run_id", "")).strip()
-        if not run_id:
-            print(f"[FAIL] report.run_id missing in {rel}")
             continue
         patch_plan_name = f"{run_id}-patch-plan.json"
         if f"identity/runtime/reports/{patch_plan_name}" not in evidence_changed:

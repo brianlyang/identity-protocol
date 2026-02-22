@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- **self-upgrade execution authenticity hardening (v1.4.4 draft)**:
+  - strengthened update lifecycle replay contract to require:
+    - `creator_invocation`
+    - `check_results[] = {command, started_at, ended_at, exit_code, log_path, sha256}`
+  - `scripts/validate_identity_update_lifecycle.py` now verifies:
+    - creator invocation semantics (`identity-creator`, `mode=update`)
+    - command coverage against `validation_contract.required_checks`
+    - log existence + sha256 integrity for each replay check result
+  - `scripts/execute_identity_upgrade.py` now emits:
+    - `creator_invocation`
+    - `check_results` with per-check execution logs and hashes
+    - structured log files under `identity/runtime/logs/upgrade/<identity-id>/`
+  - `scripts/validate_identity_self_upgrade_enforcement.py` now enforces:
+    - report-level `creator_invocation`
+    - report-level `check_results` integrity (`log_path` + `sha256`)
+  - evidence resolution hardened to reduce cross-identity leakage:
+    - `scripts/validate_identity_runtime_contract.py`
+    - `scripts/validate_identity_upgrade_prereq.py`
+    - both now prefer identity-scoped evidence filenames when available
+  - create scaffold hardening:
+    - `scripts/create_identity_pack.py` adds `--profile` (`full-contract` default)
+    - full-contract scaffold clones runtime baseline contract shape and writes identity-scoped samples
+    - new `--activate` switch keeps register default non-disruptive (`inactive` unless explicitly activated)
+  - added unified wrapper CLI:
+    - `scripts/identity_creator.py` with `init|validate|compile|activate|update`
+  - refreshed store-manager replay/protocol samples and upgrade execution evidence artifacts
+
 - **self-upgrade non-bypass enforcement hardening (post-v1.4.3)**:
   - added required runtime contract block:
     - `self_upgrade_enforcement_contract` in `identity/store-manager/CURRENT_TASK.json`
