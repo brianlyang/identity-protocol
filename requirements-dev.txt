@@ -1,2 +1,5 @@
+# Dev dependency baseline (release metadata synchronized in v1.4.3 draft)
+# Keep minimal; add new packages only when validators/scripts introduce
+# non-stdlib imports and update CHANGELOG.md accordingly.
 PyYAML>=6.0.1
 jsonschema>=4.20.0

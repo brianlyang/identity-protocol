@@ -2,6 +2,61 @@
 
 ## Unreleased
 
+- **release closure + changelog governance hardening (v1.4.3 draft)**:
+  - added local executable upgrade cycle runner:
+    - `scripts/execute_identity_upgrade.py`
+    - supports `review-required` / `safe-auto` modes
+    - emits structured upgrade execution report under `identity/runtime/reports/`
+  - capability arbitration validator now supports explicit upgrade linkage verification:
+    - `scripts/validate_identity_capability_arbitration.py --upgrade-report <path>`
+  - required gates now force metrics/threshold linkage evidence path:
+    - `.github/workflows/_identity-required-gates.yml`
+  - governance snapshot validator now accepts suffixed snapshot filenames:
+    - `docs/governance/audit-snapshot-YYYY-MM-DD-*.md`
+    - via `scripts/validate_audit_snapshot_index.py`
+  - added release closure snapshot and index linkage for v1.4.2 closure:
+    - `docs/governance/audit-snapshot-2026-02-21-release-closure-v1.4.2.md`
+    - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - added cross-vendor governance reference baseline:
+    - `docs/references/identity-skill-mcp-cross-vendor-governance-guide-v1.0.md`
+  - protocol raised to capability arbitration baseline:
+    - `identity/protocol/IDENTITY_PROTOCOL.md` -> `v1.4.2 (draft)`
+  - added changelog enforcement validator:
+    - `scripts/validate_changelog_updated.py`
+    - validates commit range and blocks significant protocol/runtime changes without `CHANGELOG.md` update
+  - release metadata policy aligned:
+    - `VERSIONING.md` now requires dependency-baseline review and changelog gate pass
+    - `requirements-dev.txt` annotated as reviewed minimal baseline (no dependency delta in this batch)
+  - required-gates and e2e now execute changelog validator in the default chain:
+    - `.github/workflows/_identity-required-gates.yml`
+    - `scripts/e2e_smoke_test.sh`
+  - install safety contract and validator hardening (local-instance-first):
+    - added runtime contract block: `install_safety_contract`
+    - added validator: `scripts/validate_identity_install_safety.py`
+    - added conflict semantics:
+      - `idempotent_reinstall_allowed=true`
+      - `same_signature_action=no_op_with_report`
+      - destructive replace requires backup + rollback reference
+  - experience feedback governance hardening (experience-contract single-source in v1.1):
+    - enhanced `experience_feedback_contract` with data-governance fields:
+      - `redaction_policy_required`
+      - `retention_days`
+      - `sensitive_fields_denylist`
+      - `export_scope`
+      - `feedback_log_path_pattern`
+      - `promotion_requires_replay_pass`
+    - added validator: `scripts/validate_identity_experience_feedback_governance.py`
+    - added sample local feedback/install evidence:
+      - `identity/runtime/logs/feedback/*.json`
+      - `identity/runtime/examples/install/*.json`
+  - safe-auto path-level enforcement:
+    - `capability_arbitration_contract.safe_auto_patch_surface` now defines allowlist/denylist
+    - `scripts/execute_identity_upgrade.py` blocks out-of-policy paths in `safe-auto` mode
+  - required validator set versioning clarity:
+    - `ci_enforcement_contract.required_validator_set_label = v1.1-required`
+    - `candidate_validators_v1_2` declared as non-blocking next-phase candidates
+  - protocol/README aligned to `v1.4.3 (draft)` and quickstart includes new validators
+
 - **human-collab trigger protocol hardening (v1.3.0 draft)**:
   - added runtime required gate:
     - `gates.collaboration_trigger_gate=required`

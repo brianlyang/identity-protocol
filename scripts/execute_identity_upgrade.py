@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import subprocess
 from datetime import datetime, timezone
@@ -77,6 +78,16 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _path_allowed(path: str, allowlist: list[str], denylist: list[str]) -> tuple[bool, str]:
+    for pat in denylist:
+        if fnmatch.fnmatch(path, pat):
+            return False, f"denied by pattern: {pat}"
+    for pat in allowlist:
+        if fnmatch.fnmatch(path, pat):
+            return True, f"allowed by pattern: {pat}"
+    return False, "not matched by allowlist"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Execute identity upgrade cycle using metrics + arbitration thresholds (safe-auto/review-required)."
@@ -108,6 +119,22 @@ def main() -> int:
 
     upgrade_required, reasons = _needs_upgrade(metrics, thresholds)
 
+    safe_auto = ((arb.get("safe_auto_patch_surface") or {}) if isinstance(arb, dict) else {}) or {}
+    touched_paths = [
+        str(pack / "RULEBOOK.jsonl"),
+        str(pack / "TASK_HISTORY.md"),
+        f"identity/runtime/logs/arbitration/{args.identity_id}-{run_id}.json",
+    ]
+    if args.mode == "safe-auto":
+        patch_surface = touched_paths
+    else:
+        patch_surface = [
+            str(current_task_path),
+            str(pack / "IDENTITY_PROMPT.md"),
+            str(pack / "RULEBOOK.jsonl"),
+            str(pack / "TASK_HISTORY.md"),
+        ]
+
     # Always produce patch plan (even if no trigger) for audit clarity
     patch_plan = {
         "run_id": run_id,
@@ -116,12 +143,7 @@ def main() -> int:
         "mode": args.mode,
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
-        "patch_surface": [
-            str(current_task_path),
-            str(pack / "IDENTITY_PROMPT.md"),
-            str(pack / "RULEBOOK.jsonl"),
-            str(pack / "TASK_HISTORY.md"),
-        ],
+        "patch_surface": patch_surface,
         "planned_actions": [
             "append arbitration decision record",
             "append rulebook learning row",
@@ -139,6 +161,35 @@ def main() -> int:
     artifacts = [str(plan_path), str(metrics_path)]
 
     if upgrade_required and args.mode == "safe-auto":
+        if safe_auto.get("enforce_path_policy") is True:
+            allowlist = [str(x) for x in (safe_auto.get("allowlist") or [])]
+            denylist = [str(x) for x in (safe_auto.get("denylist") or [])]
+            violations: list[dict[str, str]] = []
+            for pth in touched_paths:
+                ok, reason = _path_allowed(pth, allowlist, denylist)
+                if not ok:
+                    violations.append({"path": pth, "reason": reason})
+            if violations:
+                report = {
+                    "run_id": run_id,
+                    "identity_id": args.identity_id,
+                    "mode": args.mode,
+                    "upgrade_required": upgrade_required,
+                    "trigger_reasons": reasons,
+                    "actions_taken": actions_taken,
+                    "checks": [],
+                    "artifacts": artifacts,
+                    "all_ok": False,
+                    "path_policy_violations": violations,
+                }
+                report_path = out_dir / f"{run_id}.json"
+                _write_json(report_path, report)
+                print(f"report={report_path}")
+                print("upgrade_required=True")
+                print("all_ok=False")
+                print("next_action=blocked_by_safe_auto_path_policy")
+                return 3
+
         # 1) append arbitration decision record
         decision = {
             "arbitration_id": f"{run_id}-arb",
@@ -225,4 +276,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

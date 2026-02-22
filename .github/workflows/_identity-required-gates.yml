@@ -9,6 +9,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -25,6 +27,25 @@ jobs:
 
       - name: Validate governance snapshot index
         run: python3 scripts/validate_audit_snapshot_index.py
+
+      - name: Validate changelog update for significant changes
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [ -n "${PR_BASE_SHA}" ] && [ -n "${PR_HEAD_SHA}" ]; then
+            BASE_SHA="${PR_BASE_SHA}"
+            HEAD_SHA="${PR_HEAD_SHA}"
+          elif [ -n "${PUSH_BEFORE_SHA}" ] && [ "${PUSH_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="${PUSH_BEFORE_SHA}"
+            HEAD_SHA="${CURRENT_SHA}"
+          else
+            BASE_SHA="$(git rev-parse HEAD~1)"
+            HEAD_SHA="$(git rev-parse HEAD)"
+          fi
+          python3 scripts/validate_changelog_updated.py --base "${BASE_SHA}" --head "${HEAD_SHA}"
 
       - name: Compile runtime
         run: python3 scripts/compile_identity_runtime.py
@@ -50,6 +71,8 @@ jobs:
             python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_knowledge_contract.py --identity-id "$ID" --self-test
             python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID" --self-test
+            python3 scripts/validate_identity_install_safety.py --identity-id "$ID"
+            python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/execute_identity_upgrade.py --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports
             UPGRADE_REPORT=$(ls -1t /tmp/identity-upgrade-reports/identity-upgrade-exec-"$ID"-*.json | head -n 1)
             python3 scripts/validate_identity_capability_arbitration.py --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"

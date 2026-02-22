@@ -38,6 +38,8 @@ python scripts/validate_agent_handoff_contract.py --identity-id store-manager --
 python scripts/validate_identity_orchestration_contract.py --identity-id store-manager
 python scripts/validate_identity_knowledge_contract.py --identity-id store-manager
 python scripts/validate_identity_experience_feedback.py --identity-id store-manager
+python scripts/validate_identity_install_safety.py --identity-id store-manager
+python scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager
 python scripts/validate_identity_capability_arbitration.py --identity-id store-manager
 python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
 python scripts/export_route_quality_metrics.py --identity-id store-manager
@@ -216,6 +218,6 @@ This is enforced by contract + validators:
 
 ## Status
 
-- Protocol version: `v1.4.2` (draft)
+- Protocol version: `v1.4.3` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

@@ -12,7 +12,9 @@ REQ_KEYS = [
     "required",
     "required_workflows",
     "required_job",
+    "required_validator_set_label",
     "required_validators",
+    "candidate_validators_v1_2",
     "required_checks",
     "freshness_gate",
 ]
@@ -80,6 +82,13 @@ def main() -> int:
     wf_dir = Path('.github/workflows')
     required_job = str(c.get("required_job"))
     validators = c.get("required_validators") or []
+    candidate = c.get("candidate_validators_v1_2") or []
+    if not isinstance(candidate, list):
+        print("[FAIL] candidate_validators_v1_2 must be list")
+        rc = 1
+    if not str(c.get("required_validator_set_label", "")).strip():
+        print("[FAIL] required_validator_set_label must be non-empty")
+        rc = 1
 
     reusable_path = wf_dir / "_identity-required-gates.yml"
     reusable_text = reusable_path.read_text(encoding="utf-8") if reusable_path.exists() else ""
@@ -120,6 +129,11 @@ def main() -> int:
         rc = 1
     if not any("identity-protocol-ci / required-gates" == x for x in checks):
         print("[FAIL] required_checks must include identity-protocol-ci / required-gates")
+        rc = 1
+
+    overlap = sorted(set(validators).intersection(set(candidate)))
+    if overlap:
+        print(f"[FAIL] required_validators overlaps candidate_validators_v1_2: {overlap}")
         rc = 1
 
     if rc:

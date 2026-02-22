@@ -1,4 +1,4 @@
-# Identity Protocol v1.4.2 (draft)
+# Identity Protocol v1.4.3 (draft)
 
 ## Goal
 
@@ -189,6 +189,8 @@ Required runtime contracts:
   - defines when retrieval is mandatory, source tiers, evidence format, and refresh policy.
 - `experience_feedback_contract`
   - defines positive/negative experience feedback, rulebook impact, and replay promotion rules.
+- `install_safety_contract`
+  - defines non-destructive local-instance install defaults, idempotent reinstall behavior, and backup/rollback requirements for replace operations.
 - `ci_enforcement_contract`
   - defines required validator/check inventory and CI gate alignment.
 
@@ -197,6 +199,8 @@ Mandatory validators:
 - `scripts/validate_identity_orchestration_contract.py`
 - `scripts/validate_identity_knowledge_contract.py`
 - `scripts/validate_identity_experience_feedback.py`
+- `scripts/validate_identity_install_safety.py`
+- `scripts/validate_identity_experience_feedback_governance.py`
 - `scripts/validate_identity_ci_enforcement.py`
 
 No control-loop contract pass -> no identity update completion/merge.
@@ -254,6 +258,7 @@ Non-bypassable constraints:
 - experience feedback gate for rule learning closure
 - ci enforcement gate for required-check integrity
 - arbitration gate for four-core conflict resolution integrity
+- install safety gate for local-instance preservation integrity
 
 ### Track B: adaptive growth
 
@@ -281,6 +286,7 @@ Minimum required blocks:
 - `capability_orchestration_contract`
 - `knowledge_acquisition_contract`
 - `experience_feedback_contract`
+- `install_safety_contract`
 - `ci_enforcement_contract`
 - `capability_arbitration_contract`
 

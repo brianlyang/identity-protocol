@@ -115,8 +115,11 @@ def main() -> int:
         print(f"[FAIL] cross_layer_feedback_targets missing: {sorted(need-targets)}")
         rc = 1
 
-    if c.get("promote_requires_replay_pass") is not True:
-        print("[FAIL] promote_requires_replay_pass must be true")
+    replay_gate = c.get("promote_requires_replay_pass")
+    if replay_gate is None:
+        replay_gate = c.get("promotion_requires_replay_pass")
+    if replay_gate is not True:
+        print("[FAIL] replay-pass promotion gate must be true (promote_requires_replay_pass or promotion_requires_replay_pass)")
         rc = 1
 
     report_path = Path(args.report) if args.report else Path("identity/runtime/examples") / f"{args.identity_id}-experience-feedback-sample.json"

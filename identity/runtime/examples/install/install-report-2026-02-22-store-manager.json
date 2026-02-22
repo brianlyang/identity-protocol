@@ -1,0 +1,14 @@
+{
+  "report_id": "install-2026-02-22-store-manager-001",
+  "identity_id": "store-manager",
+  "generated_at": "2026-02-22T09:30:00Z",
+  "operation": "reinstall",
+  "conflict_type": "same_signature",
+  "action": "no_op_with_report",
+  "preserved_paths": [
+    "identity/store-manager/CURRENT_TASK.json",
+    "identity/store-manager/IDENTITY_PROMPT.md"
+  ],
+  "backup_ref": null,
+  "rollback_ref": null
+}

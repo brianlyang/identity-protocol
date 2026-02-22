@@ -16,6 +16,7 @@ REQ_KEYS = [
     "decision_record_required_fields",
     "sample_report_path_pattern",
     "fail_action",
+    "safe_auto_patch_surface",
 ]
 
 REQ_PRIORITY = ["accurate_judgement", "governance", "latency", "exploration"]
@@ -150,6 +151,39 @@ def main() -> int:
     if any(x not in decision_fields for x in REQ_DECISION_FIELDS):
         print(f"[FAIL] decision_record_required_fields missing required fields: {REQ_DECISION_FIELDS}")
         rc = 1
+
+    safe_surface = c.get("safe_auto_patch_surface") or {}
+    if not isinstance(safe_surface, dict) or not safe_surface:
+        print("[FAIL] safe_auto_patch_surface must be non-empty object")
+        rc = 1
+    else:
+        if safe_surface.get("enforce_path_policy") is not True:
+            print("[FAIL] safe_auto_patch_surface.enforce_path_policy must be true")
+            rc = 1
+        allow = safe_surface.get("allowlist") or []
+        deny = safe_surface.get("denylist") or []
+        if not isinstance(allow, list) or not allow:
+            print("[FAIL] safe_auto_patch_surface.allowlist must be non-empty list")
+            rc = 1
+        if not isinstance(deny, list) or not deny:
+            print("[FAIL] safe_auto_patch_surface.denylist must be non-empty list")
+            rc = 1
+        required_allow = {
+            "identity/runtime/rulebooks/*",
+            "identity/store-manager/TASK_HISTORY.md",
+            "identity/runtime/logs/*",
+        }
+        required_deny = {
+            "identity/protocol/*",
+            ".github/workflows/*",
+            "scripts/validate_*",
+        }
+        if not required_allow.issubset(set(allow)):
+            print(f"[FAIL] safe_auto_patch_surface.allowlist missing required entries: {sorted(required_allow - set(allow))}")
+            rc = 1
+        if not required_deny.issubset(set(deny)):
+            print(f"[FAIL] safe_auto_patch_surface.denylist missing required entries: {sorted(required_deny - set(deny))}")
+            rc = 1
 
     report_path = Path(args.report) if args.report else Path("identity/runtime/examples") / f"{args.identity_id}-capability-arbitration-sample.json"
     if not report_path.exists():

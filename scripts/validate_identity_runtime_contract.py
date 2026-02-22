@@ -23,6 +23,7 @@ REQ_TOP_LEVEL = [
     "capability_orchestration_contract",
     "knowledge_acquisition_contract",
     "experience_feedback_contract",
+    "install_safety_contract",
     "ci_enforcement_contract",
     "capability_arbitration_contract",
 ]
@@ -41,6 +42,7 @@ REQ_GATES = [
     "orchestration_gate",
     "knowledge_acquisition_gate",
     "experience_feedback_gate",
+    "install_safety_gate",
     "ci_enforcement_gate",
     "arbitration_gate",
 ]
@@ -330,6 +332,22 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             rc = 1
         else:
             print("[OK]   collaboration_trigger_contract.must_emit_receipt_in_chat=true")
+
+    install = data.get("install_safety_contract") or {}
+    if not isinstance(install, dict) or not install:
+        print("[FAIL] install_safety_contract must be non-empty object")
+        rc = 1
+    else:
+        if install.get("preserve_existing_default") is not True:
+            print("[FAIL] install_safety_contract.preserve_existing_default must be true")
+            rc = 1
+        else:
+            print("[OK]   install_safety_contract.preserve_existing_default=true")
+        if str(install.get("on_conflict", "")).strip() != "abort_and_explain":
+            print("[FAIL] install_safety_contract.on_conflict must be 'abort_and_explain'")
+            rc = 1
+        else:
+            print("[OK]   install_safety_contract.on_conflict=abort_and_explain")
 
     if rc == 0:
         print(f"Identity runtime contract validation PASSED for identity={identity_id}")

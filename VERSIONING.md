@@ -30,6 +30,20 @@ Any breaking change to required contract must bump MAJOR (`v2.0.0`).
 - protocol docs updated
 - registry/schema compatibility reviewed
 - creator scripts validated
+- dependency baseline reviewed (`requirements-dev.txt`)
 - migration note included if behavior changes
 - changelog updated
+- changelog gate passed in CI (`validate_changelog_updated.py`)
 - release tag created
+
+## Release metadata synchronization (v1.4.3+)
+
+To avoid “code merged but release metadata stale”, every protocol-impacting
+change must keep the following files aligned:
+
+1. `CHANGELOG.md` (what changed)
+2. `VERSIONING.md` (how release policy applies)
+3. `requirements-dev.txt` (whether dependency baseline changed)
+
+If dependency set is unchanged, keep `requirements-dev.txt` intact but treat it
+as explicitly reviewed during release closure.

@@ -58,7 +58,8 @@
     "knowledge_acquisition_gate": "required",
     "experience_feedback_gate": "required",
     "ci_enforcement_gate": "required",
-    "arbitration_gate": "required"
+    "arbitration_gate": "required",
+    "install_safety_gate": "required"
   },
   "protocol_review_contract": {
     "required_before": [
@@ -153,8 +154,11 @@
         "scripts/validate_identity_orchestration_contract.py",
         "scripts/validate_identity_knowledge_contract.py",
         "scripts/validate_identity_experience_feedback.py",
+        "scripts/validate_changelog_updated.py",
         "scripts/validate_identity_ci_enforcement.py",
-        "scripts/validate_identity_capability_arbitration.py"
+        "scripts/validate_identity_capability_arbitration.py",
+        "scripts/validate_identity_install_safety.py",
+        "scripts/validate_identity_experience_feedback_governance.py"
       ],
       "must_pass_all": true
     },
@@ -527,7 +531,23 @@
       "gates"
     ],
     "promote_requires_replay_pass": true,
-    "sample_report_path_pattern": "identity/runtime/examples/*experience-feedback*.json"
+    "sample_report_path_pattern": "identity/runtime/examples/*experience-feedback*.json",
+    "redaction_policy_required": true,
+    "retention_days": 30,
+    "sensitive_fields_denylist": [
+      "access_token",
+      "authorization",
+      "cookie",
+      "set-cookie",
+      "api_key",
+      "email",
+      "phone"
+    ],
+    "export_scope": "aggregated-only",
+    "max_log_age_days": 7,
+    "minimum_logs_required": 1,
+    "feedback_log_path_pattern": "identity/runtime/logs/feedback/*.json",
+    "promotion_requires_replay_pass": true
   },
   "ci_enforcement_contract": {
     "required": true,
@@ -547,8 +567,11 @@
       "scripts/validate_identity_orchestration_contract.py",
       "scripts/validate_identity_knowledge_contract.py",
       "scripts/validate_identity_experience_feedback.py",
+      "scripts/validate_changelog_updated.py",
       "scripts/validate_identity_ci_enforcement.py",
-      "scripts/validate_identity_capability_arbitration.py"
+      "scripts/validate_identity_capability_arbitration.py",
+      "scripts/validate_identity_install_safety.py",
+      "scripts/validate_identity_experience_feedback_governance.py"
     ],
     "required_checks": [
       "protocol-ci / required-gates",
@@ -557,7 +580,12 @@
     "freshness_gate": {
       "handoff_logs_max_age_days": 7,
       "route_metrics_max_age_days": 7
-    }
+    },
+    "required_validator_set_label": "v1.1-required",
+    "candidate_validators_v1_2": [
+      "scripts/validate_identity_feedback_freshness.py",
+      "scripts/validate_identity_feedback_promotion.py"
+    ]
   },
   "capability_arbitration_contract": {
     "required": true,
@@ -612,6 +640,32 @@
       "decided_at"
     ],
     "sample_report_path_pattern": "identity/runtime/examples/*capability-arbitration*.json",
-    "fail_action": "block_merge_and_reenter_arbitration_update"
+    "fail_action": "block_merge_and_reenter_arbitration_update",
+    "safe_auto_patch_surface": {
+      "enforce_path_policy": true,
+      "allowlist": [
+        "identity/runtime/rulebooks/*",
+        "identity/store-manager/TASK_HISTORY.md",
+        "identity/runtime/logs/*",
+        "identity/store-manager/RULEBOOK.jsonl"
+      ],
+      "denylist": [
+        "identity/protocol/*",
+        ".github/workflows/*",
+        "scripts/validate_*"
+      ]
+    }
+  },
+  "install_safety_contract": {
+    "required": true,
+    "preserve_existing_default": true,
+    "on_conflict": "abort_and_explain",
+    "idempotent_reinstall_allowed": true,
+    "same_signature_action": "no_op_with_report",
+    "allow_replace_only_with_backup": true,
+    "rollback_reference_required": true,
+    "install_report_required": true,
+    "dry_run_required": true,
+    "install_report_path_pattern": "identity/runtime/examples/install/*.json"
   }
 }

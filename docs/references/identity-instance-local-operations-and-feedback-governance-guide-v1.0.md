@@ -332,7 +332,7 @@ P0 (required):
    - `preserve_existing_default`
    - `explicit_replace_requires_backup`
    - `rollback_reference_required`
-2. add `instance_feedback_contract` with strict schema + freshness + redaction policy
+2. in v1.1, enhance existing `experience_feedback_contract` (single-source) with strict local-instance feedback schema + freshness + redaction policy
 3. add validators:
    - `scripts/validate_identity_install_safety.py`
    - `scripts/validate_identity_instance_feedback.py`
@@ -371,8 +371,9 @@ state to avoid “document says yes, runtime says no” drift.
 ### 9.2 Not yet implemented as standalone contracts (gap)
 
 - `install_safety_contract` (explicit local-instance preserve policy)
-- `instance_feedback_contract` (instance-coupled structured feedback with
-  freshness/redaction schema as standalone gate object)
+- standalone `instance_feedback_contract` naming split is intentionally deferred;
+  v1.1 keeps a single-source approach on `experience_feedback_contract` to
+  avoid naming drift.
 
 ### 9.3 Operational implication
 

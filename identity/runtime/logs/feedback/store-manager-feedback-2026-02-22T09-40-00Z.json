@@ -1,0 +1,25 @@
+{
+  "feedback_id": "fb-20260222-001",
+  "identity_id": "store-manager",
+  "task_id": "store_manager_20260222_feedback_sample",
+  "run_id": "run-20260222-001",
+  "timestamp": "2026-02-22T09:40:00Z",
+  "context_signature": {
+    "route_key": "weixinstore_product_update",
+    "risk_class": "medium",
+    "toolset_signature": ["github", "n8n", "browser"]
+  },
+  "outcome": "success",
+  "failure_type": "other",
+  "decision_trace_ref": "identity/runtime/examples/store-manager-capability-arbitration-sample.json",
+  "artifacts": [
+    "identity/runtime/examples/experience/positive/experience-positive-route-pass.json"
+  ],
+  "rulebook_delta": {
+    "positive_added": 1,
+    "negative_added": 0
+  },
+  "replay_status": "PASS",
+  "redacted": true,
+  "notes": "sample feedback log for governance validator"
+}

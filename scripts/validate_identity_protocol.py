@@ -28,6 +28,7 @@ REQ_TASK_KEYS = {
     "capability_orchestration_contract",
     "knowledge_acquisition_contract",
     "experience_feedback_contract",
+    "install_safety_contract",
     "ci_enforcement_contract",
     "capability_arbitration_contract",
 }
@@ -162,6 +163,9 @@ def main() -> int:
                 rc = 1
             if gates.get("experience_feedback_gate") == "required" and "experience_feedback_contract" not in task:
                 print(f"[FAIL] {prefix} experience_feedback_gate=required but experience_feedback_contract missing")
+                rc = 1
+            if gates.get("install_safety_gate") == "required" and "install_safety_contract" not in task:
+                print(f"[FAIL] {prefix} install_safety_gate=required but install_safety_contract missing")
                 rc = 1
             if gates.get("ci_enforcement_gate") == "required" and "ci_enforcement_contract" not in task:
                 print(f"[FAIL] {prefix} ci_enforcement_gate=required but ci_enforcement_contract missing")
