@@ -1,4 +1,4 @@
-# Identity Protocol v1.4.6 (draft)
+# Identity Protocol v1.4.10 (draft)
 
 ## Goal
 

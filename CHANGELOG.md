@@ -56,6 +56,11 @@
   - self-upgrade enforcement long-range audit compatibility:
     - `validate_identity_self_upgrade_enforcement.py` now supports legacy report check sets
       (version-aware fallback) to avoid false failures in cross-version ranges
+  - release metadata baseline bumped to `v1.4.10` across:
+    - `README.md`
+    - `identity/protocol/IDENTITY_PROTOCOL.md`
+    - `VERSIONING.md`
+    - `requirements-dev.txt`
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`

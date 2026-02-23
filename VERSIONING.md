@@ -36,7 +36,7 @@ Any breaking change to required contract must bump MAJOR (`v2.0.0`).
 - changelog gate passed in CI (`validate_changelog_updated.py`)
 - release tag created
 
-## Release metadata synchronization (v1.4.6+)
+## Release metadata synchronization (v1.4.10+)
 
 To avoid “code merged but release metadata stale”, every protocol-impacting
 change must keep the following files aligned:
