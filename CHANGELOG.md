@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **v1.4.6 planning hardening (draft)**:
+  - added release freeze boundary validator:
+    - `scripts/validate_release_freeze_boundary.py`
+    - blocks release-range changes that introduce local instance packs under `identity/packs/*`
+    - validates catalog `pack_path` does not drift into `identity/packs/*` scope
+  - added release readiness bundle entrypoint:
+    - `scripts/release_readiness_check.py`
+    - deterministic pre-release validator sequence for local/CI parity
+  - wired freeze boundary validation into required chains:
+    - `.github/workflows/_identity-required-gates.yml`
+    - `scripts/e2e_smoke_test.sh`
+  - added governance design baseline for v1.4.6:
+    - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md`
+    - codifies scope boundary: base repo governance hardening only; no local-instance pack ingestion
+  - added release closure template:
+    - `docs/governance/templates/release-closure-template-v1.4.6.md`
+  - README governance taxonomy clarified:
+    - `docs/governance/` = enforceable internal policy
+    - `docs/references/` = external reference and cross-vendor background
+
 - **post-release evidence closure (v1.4.5 draft)**:
   - appended self-upgrade execution evidence bundle for `store-manager`:
     - `identity/runtime/reports/identity-upgrade-exec-store-manager-1771788615.json`

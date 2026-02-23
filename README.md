@@ -39,12 +39,16 @@ python scripts/validate_identity_orchestration_contract.py --identity-id store-m
 python scripts/validate_identity_knowledge_contract.py --identity-id store-manager
 python scripts/validate_identity_experience_feedback.py --identity-id store-manager
 python scripts/validate_identity_install_safety.py --identity-id store-manager
+python scripts/validate_identity_install_provenance.py --identity-id store-manager
 python scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager
 python scripts/validate_identity_capability_arbitration.py --identity-id store-manager
 python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
+python scripts/validate_release_freeze_boundary.py
 python scripts/export_route_quality_metrics.py --identity-id store-manager
 # optional: execute upgrade cycle from metrics/arbitration thresholds
 python scripts/execute_identity_upgrade.py --identity-id store-manager --mode review-required
+# optional: run release-readiness bundle
+python scripts/release_readiness_check.py --identity-id store-manager
 # optional: scaffold a new identity pack
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 ```
@@ -83,6 +87,13 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 
 ## Governance and operations
 
+### Documentation taxonomy (MUST)
+
+- `docs/governance/`: enforceable internal policy, CI/release gates, and audit closure criteria.
+- `docs/references/`: external references, cross-vendor mappings, and background material.
+
+If a document defines required behavior for CI/release/audit decisions, it belongs in `docs/governance/`.
+
 - Review checklist:
   - `docs/review/protocol-review-checklist.md`
   - `docs/review/core-capability-verification-matrix.md`
@@ -116,6 +127,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 - Audit snapshots (fixed governance action):
   - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - `docs/governance/audit-snapshot-policy-v1.2.11.md`
+  - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md`
   - `docs/governance/templates/upgrade-cross-validation-template.md`
 - Runtime test preflight (local sync gate):
   - `docs/operations/runtime-preflight-checklist-v1.2.13.md`
