@@ -117,7 +117,13 @@ for ID in $IDS; do
   echo "[29/30][$ID] validate CI enforcement contract"
   python3 scripts/validate_identity_ci_enforcement.py --identity-id "$ID"
 
-  echo "[30/30][$ID] export route quality metrics"
+  echo "[30/32][$ID] validate protocol root evidence"
+  python3 scripts/validate_identity_protocol_root_evidence.py --identity-id "$ID" --report "$UPGRADE_REPORT"
+
+  echo "[31/32][$ID] validate mode promotion arbitration"
+  python3 scripts/validate_identity_mode_promotion_arbitration.py --identity-id "$ID" --base "$BASE_SHA" --head "$HEAD_SHA" --report "$UPGRADE_REPORT"
+
+  echo "[32/32][$ID] export route quality metrics"
   python3 scripts/export_route_quality_metrics.py --identity-id "$ID"
 done
 

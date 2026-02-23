@@ -96,6 +96,30 @@ def main() -> int:
     seq.append(
         [
             "python3",
+            "scripts/validate_identity_protocol_root_evidence.py",
+            "--identity-id",
+            identity_id,
+            "--report",
+            execution_report,
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_mode_promotion_arbitration.py",
+            "--identity-id",
+            identity_id,
+            "--base",
+            base,
+            "--head",
+            head,
+            "--report",
+            execution_report,
+        ]
+    )
+    seq.append(
+        [
+            "python3",
             "scripts/validate_identity_experience_writeback.py",
             "--identity-id",
             identity_id,

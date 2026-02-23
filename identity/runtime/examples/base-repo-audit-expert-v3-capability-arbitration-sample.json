@@ -1,0 +1,21 @@
+{
+  "report_id": "base-repo-audit-expert-v3-cap-arb-sample",
+  "identity_id": "base-repo-audit-expert-v3",
+  "generated_at": "2026-02-23T14:52:38Z",
+  "records": [
+    {
+      "arbitration_id": "base-repo-audit-expert-v3-arb-001",
+      "task_id": "base-repo-audit-expert-v3_bootstrap",
+      "identity_id": "base-repo-audit-expert-v3",
+      "conflict_pair": "judgement_vs_routing",
+      "inputs": {
+        "judgement_confidence": 0.92,
+        "route_confidence": 0.81
+      },
+      "decision": "prioritize_accurate_judgement",
+      "impact": "low",
+      "rationale": "sample arbitration decision",
+      "decided_at": "2026-02-23T14:52:38Z"
+    }
+  ]
+}

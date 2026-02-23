@@ -58,6 +58,42 @@ This behavior is implemented in `scripts/resolve_identity_context.py::default_id
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
 and migration tooling.
 
+### Protocol root control (dual-mode governance)
+
+For deterministic replay and auditable upgrades, runtime reports now carry protocol-root evidence:
+
+- `protocol_mode` (`mode_a_shared` / `mode_b_standalone`)
+- `protocol_root`
+- `protocol_commit_sha`
+- `protocol_ref`
+- `identity_home`
+- `catalog_path`
+- `generated_at`
+
+Field semantics (authoritative):
+
+- `IDENTITY_HOME` (env): runtime identity storage root (local instance source of truth).
+  - Holds runtime packs and local catalog.
+  - Recommended: `${CODEX_HOME}/identity`.
+- `IDENTITY_PROTOCOL_HOME` (env): protocol repository root to execute creator/installer/update toolchain.
+  - Used to pin which protocol code version generated evidence.
+- `catalog_path` (report field): exact catalog file used in this run (repo catalog or local catalog).
+  - This is execution evidence, not a config replacement.
+  - Lets auditors prove which catalog drove resolution at runtime.
+- `protocol_root` (report field): absolute protocol repo/worktree root that executed this run.
+  - Combined with `protocol_commit_sha` and `protocol_ref` for replayability and cross-root arbitration.
+
+Recommended shared mode (Mode A):
+
+```bash
+export IDENTITY_PROTOCOL_HOME="/abs/path/to/identity-protocol"
+python "$IDENTITY_PROTOCOL_HOME/scripts/identity_creator.py" update \
+  --identity-id store-manager \
+  --protocol-mode mode_a_shared
+```
+
+Standalone mode (Mode B) must include promotion arbitration evidence before high-impact changes are promoted.
+
 ## Quickstart
 
 ```bash

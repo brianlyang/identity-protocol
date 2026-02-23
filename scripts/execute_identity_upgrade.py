@@ -14,6 +14,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import collect_protocol_evidence, default_identity_home
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -179,6 +181,8 @@ def main() -> int:
     ap.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
     ap.add_argument("--metrics-path", default="", help="optional route metrics artifact path override")
     ap.add_argument("--out-dir", default="identity/runtime/reports")
+    ap.add_argument("--protocol-root", default="")
+    ap.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -233,6 +237,17 @@ def main() -> int:
             "run required validators and replay checks",
         ],
     }
+    protocol = collect_protocol_evidence(args.protocol_root, args.protocol_mode)
+    patch_plan.update(
+        {
+            "protocol_mode": protocol["protocol_mode"],
+            "protocol_root": protocol["protocol_root"],
+            "protocol_commit_sha": protocol["protocol_commit_sha"],
+            "protocol_ref": protocol["protocol_ref"],
+            "identity_home": str(default_identity_home()),
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+        }
+    )
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -414,6 +429,7 @@ def main() -> int:
     report = {
         "run_id": run_id,
         "identity_id": args.identity_id,
+        "generated_at": now,
         "creator_invocation": {
             "tool": "identity-creator",
             "mode": "update",
@@ -439,6 +455,16 @@ def main() -> int:
         "writeback_rule_id": str(experience_writeback.get("rule_entry_id", "")),
         "all_ok": all_ok,
     }
+    report.update(
+        {
+            "protocol_mode": protocol["protocol_mode"],
+            "protocol_root": protocol["protocol_root"],
+            "protocol_commit_sha": protocol["protocol_commit_sha"],
+            "protocol_ref": protocol["protocol_ref"],
+            "identity_home": str(default_identity_home()),
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+        }
+    )
     report_path = out_dir / f"{run_id}.json"
     _write_json(report_path, report)
 
