@@ -15,13 +15,13 @@ def _expand(path: str) -> Path:
 
 
 def default_identity_home() -> Path:
-    raw = os.environ.get("IDENTITY_HOME", "~/.identity-protocol")
+    raw = os.environ.get("IDENTITY_HOME", "~/.identity")
     p = _expand(raw)
     try:
         p.mkdir(parents=True, exist_ok=True)
         return p
     except Exception:
-        fallback = (Path.cwd() / ".identity-protocol").resolve()
+        fallback = (Path.cwd() / ".identity").resolve()
         fallback.mkdir(parents=True, exist_ok=True)
         return fallback
 
@@ -33,7 +33,13 @@ def default_local_catalog_path(identity_home: Path | None = None) -> Path:
 
 def default_local_instances_root(identity_home: Path | None = None) -> Path:
     home = identity_home or default_identity_home()
-    return home / "instances"
+    canonical = home / "identities"
+    legacy = home / "instances"
+    if canonical.exists():
+        return canonical
+    if legacy.exists():
+        return legacy
+    return canonical
 
 
 def load_yaml_or_empty(path: Path) -> dict[str, Any]:

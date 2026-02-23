@@ -36,6 +36,12 @@
     - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - canonicalized `IDENTITY_HOME` resolution order in README + governance record:
     env override -> `~/.identity-protocol` default -> `./.identity-protocol` fallback
+  - renamed canonical local runtime home path from `.identity-protocol` to `.identity`
+    to decouple runtime instance storage naming from base repo naming:
+    `IDENTITY_HOME` env override -> `~/.identity` default -> `./.identity` fallback
+  - aligned runtime directory naming with skills-style plural convention:
+    canonical runtime pack root is now `${IDENTITY_HOME}/identities`
+    (legacy `${IDENTITY_HOME}/instances` remains auto-compatible)
   - release gate closure follow-up fixes:
     - synchronized release metadata markers to `v1.4.6` across
       `README.md` / `IDENTITY_PROTOCOL.md` / `VERSIONING.md` / `requirements-dev.txt`

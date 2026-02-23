@@ -10,7 +10,7 @@ Updated: **2026-02-23**
 From v1.4.6+, runtime identities are designed to be **local-only** by default:
 
 - local catalog: `${IDENTITY_HOME}/catalog.local.yaml`
-- local instances: `${IDENTITY_HOME}/instances/<identity-id>`
+- local identities: `${IDENTITY_HOME}/identities/<identity-id>` (legacy `${IDENTITY_HOME}/instances/<identity-id>` remains readable)
 
 This prevents the severe failure mode where pulling/re-cloning the base repo overwrites runtime instances.
 
@@ -41,7 +41,7 @@ git pull --ff-only
 2. Set local runtime home (recommended explicit):
 
 ```bash
-export IDENTITY_HOME="${IDENTITY_HOME:-$HOME/.identity-protocol}"
+export IDENTITY_HOME="${IDENTITY_HOME:-$HOME/.identity}"
 ```
 
 3. Optional backup (strongly recommended):
@@ -147,4 +147,3 @@ python3 scripts/create_identity_pack.py ... --repo-fixture --pack-root identity/
 
 Because migration is not only storage relocation; it must prove update loop continuity:
 `update(report) -> RULEBOOK/TASK_HISTORY writeback -> validator pass`.
-

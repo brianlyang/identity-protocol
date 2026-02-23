@@ -56,10 +56,10 @@ If a runtime identity resolves to repo path, validation fails.
 - Local defaults:
   - `IDENTITY_HOME` resolution order:
     1. use explicit env `IDENTITY_HOME` if set
-    2. else use `~/.identity-protocol`
-    3. if home path create fails, fallback to `./.identity-protocol`
+    2. else use `~/.identity`
+    3. if home path create fails, fallback to `./.identity`
   - local catalog: `${IDENTITY_HOME}/catalog.local.yaml`
-  - local instances: `${IDENTITY_HOME}/instances`
+  - local identities: `${IDENTITY_HOME}/identities` (legacy `${IDENTITY_HOME}/instances` allowed for compatibility)
 - Behavior:
   - merged catalog view (local overrides repo)
   - resolved identity includes source layer + effective pack path
@@ -68,7 +68,7 @@ If a runtime identity resolves to repo path, validation fails.
 
 - Script: `scripts/create_identity_pack.py`
 - Default target:
-  - `--pack-root ${IDENTITY_HOME}/instances`
+  - `--pack-root ${IDENTITY_HOME}/identities`
   - `--catalog ${IDENTITY_HOME}/catalog.local.yaml`
 - Repo-path write is blocked unless `--repo-fixture` is explicitly set.
 
