@@ -10,6 +10,14 @@ from pathlib import Path
 
 import yaml
 
+from resolve_identity_context import (
+    default_identity_home,
+    default_local_catalog_path,
+    default_local_instances_root,
+    ensure_local_catalog,
+    resolve_identity,
+)
+
 
 def _run(cmd: list[str]) -> int:
     print("$", " ".join(cmd))
@@ -66,23 +74,36 @@ def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status
             "notes": note,
         },
     }
-    out = Path("identity/runtime/examples") / f"identity-role-binding-{identity_id}-{int(ts.timestamp())}.json"
+    pattern = str(contract.get("binding_evidence_path_pattern", "")).strip()
+    if pattern:
+        candidate = pattern.replace("<identity-id>", identity_id)
+        candidate = candidate.replace("*", str(int(ts.timestamp())))
+        out = Path(candidate)
+    else:
+        out = Path("identity/runtime/examples") / f"identity-role-binding-{identity_id}-{int(ts.timestamp())}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return out
 
 
-def _activate_identity(catalog: Path, identity_id: str) -> int:
-    rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--identity-id", identity_id])
+def _activate_identity(repo_catalog: Path, local_catalog: Path, identity_id: str) -> int:
+    ensure_local_catalog(repo_catalog, local_catalog)
+    try:
+        _ = resolve_identity(identity_id, repo_catalog, local_catalog)
+    except Exception as e:
+        print(f"[FAIL] {e}")
+        return 1
+
+    rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
     if rc != 0:
         print("[FAIL] role-binding validation failed; activation blocked")
         return rc
 
-    if not catalog.exists():
-        print(f"[FAIL] catalog not found: {catalog}")
+    if not local_catalog.exists():
+        print(f"[FAIL] local catalog not found: {local_catalog}")
         return 1
-    original_catalog_text = catalog.read_text(encoding="utf-8")
-    data = _load_yaml(catalog)
+    original_catalog_text = local_catalog.read_text(encoding="utf-8")
+    data = _load_yaml(local_catalog)
     identities = data.get("identities") or []
     target = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
     if not target:
@@ -127,8 +148,8 @@ def _activate_identity(catalog: Path, identity_id: str) -> int:
                 continue
             item["status"] = "active" if iid == identity_id else "inactive"
 
-        _dump_yaml(catalog, data)
-        rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--identity-id", identity_id])
+        _dump_yaml(local_catalog, data)
+        rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
         if rc != 0:
             raise RuntimeError("post-activation role-binding validation failed")
 
@@ -143,13 +164,15 @@ def _activate_identity(catalog: Path, identity_id: str) -> int:
             "demoted_identities": previously_active,
             "single_active_enforced": True,
             "binding_evidence_paths": [str(p) for p in created_evidence],
+            "catalog_layer": "local",
+            "catalog_path": str(local_catalog),
         }
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"[OK] activated identity in catalog (single-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
     except Exception as e:
-        catalog.write_text(original_catalog_text, encoding="utf-8")
+        local_catalog.write_text(original_catalog_text, encoding="utf-8")
         for p in created_evidence:
             if p.exists():
                 p.unlink()
@@ -158,6 +181,9 @@ def _activate_identity(catalog: Path, identity_id: str) -> int:
 
 
 def main() -> int:
+    identity_home = default_identity_home()
+    repo_catalog_default = "identity/catalog/identities.yaml"
+    local_catalog_default = str(default_local_catalog_path(identity_home))
     ap = argparse.ArgumentParser(
         description="Unified identity-creator CLI wrapper (init/register/validate/compile/activate/update)"
     )
@@ -171,23 +197,30 @@ def main() -> int:
     p_init.add_argument("--register", action="store_true")
     p_init.add_argument("--activate", action="store_true")
     p_init.add_argument("--set-default", action="store_true")
-    p_init.add_argument("--catalog", default="identity/catalog/identities.yaml")
-    p_init.add_argument("--pack-root", default="identity/packs")
+    p_init.add_argument("--catalog", default=local_catalog_default)
+    p_init.add_argument("--repo-catalog", default=repo_catalog_default)
+    p_init.add_argument("--pack-root", default=str(default_local_instances_root(identity_home)))
+    p_init.add_argument("--repo-fixture", action="store_true")
 
     p_validate = sub.add_parser("validate", help="Run identity required validators for an identity")
     p_validate.add_argument("--identity-id", required=True)
+    p_validate.add_argument("--repo-catalog", default=repo_catalog_default)
+    p_validate.add_argument("--catalog", default=local_catalog_default)
 
     p_compile = sub.add_parser("compile", help="Compile runtime brief")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
 
     p_activate = sub.add_parser("activate", help="Set identity status=active in catalog")
     p_activate.add_argument("--identity-id", required=True)
-    p_activate.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    p_activate.add_argument("--repo-catalog", default=repo_catalog_default)
+    p_activate.add_argument("--catalog", default=local_catalog_default)
 
     p_update = sub.add_parser("update", help="Run identity upgrade executor")
     p_update.add_argument("--identity-id", required=True)
     p_update.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
     p_update.add_argument("--out-dir", default="identity/runtime/reports")
+    p_update.add_argument("--repo-catalog", default=repo_catalog_default)
+    p_update.add_argument("--catalog", default=local_catalog_default)
 
 
     args = ap.parse_args()
@@ -209,6 +242,8 @@ def main() -> int:
             "--pack-root",
             args.pack_root,
         ]
+        if args.repo_fixture:
+            cmd.append("--repo-fixture")
         if args.register:
             cmd.append("--register")
         if args.activate:
@@ -218,15 +253,21 @@ def main() -> int:
         return _run(cmd)
 
     if args.command == "validate":
+        ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        try:
+            _ = resolve_identity(args.identity_id, Path(args.repo_catalog), Path(args.catalog))
+        except Exception as e:
+            print(f"[FAIL] {e}")
+            return 1
         checks = [
-            ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_role_binding.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_upgrade_prereq.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_install_safety.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_capability_arbitration.py", "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_ci_enforcement.py", "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_install_safety.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_capability_arbitration.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
         ]
         for cmd in checks:
             rc = _run(cmd)
@@ -243,13 +284,21 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
-        return _activate_identity(Path(args.catalog), args.identity_id)
+        return _activate_identity(Path(args.repo_catalog), Path(args.catalog), args.identity_id)
 
     if args.command == "update":
+        ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        try:
+            _ = resolve_identity(args.identity_id, Path(args.repo_catalog), Path(args.catalog))
+        except Exception as e:
+            print(f"[FAIL] {e}")
+            return 1
         return _run(
             [
                 "python3",
                 "scripts/execute_identity_upgrade.py",
+                "--catalog",
+                args.catalog,
                 "--identity-id",
                 args.identity_id,
                 "--mode",

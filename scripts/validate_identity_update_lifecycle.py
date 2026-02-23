@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import json
 from pathlib import Path
@@ -68,7 +69,10 @@ def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, A
 
     pattern = str(replay_contract.get("evidence_path_pattern") or "")
     if pattern:
-        matched = sorted(Path(".").glob(pattern))
+        if Path(pattern).is_absolute():
+            matched = sorted(Path(p) for p in glob.glob(pattern))
+        else:
+            matched = sorted(Path(".").glob(pattern))
         identity_scoped = [p for p in matched if identity_id in p.name]
         if identity_scoped:
             matched = identity_scoped

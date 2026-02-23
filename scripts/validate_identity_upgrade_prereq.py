@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -49,7 +50,10 @@ def _source_signature(item: dict[str, Any]) -> str:
 
 
 def _resolve_evidence_files(pattern: str, identity_id: str) -> list[Path]:
-    files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
+    if Path(pattern).is_absolute():
+        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
+    else:
+        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
     if not files:
         return []
     scoped = [p for p in files if identity_id in p.name]

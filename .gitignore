@@ -1,0 +1,10 @@
+# Local runtime instance storage (outside repo by default)
+.identity-protocol/
+
+# Optional workspace-mapped local catalogs/instances
+identity/catalog.local.yaml
+identity/local-instances/
+
+# Python caches
+__pycache__/
+*.pyc

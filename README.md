@@ -16,15 +16,39 @@ Identity defines:
 - `identity/catalog/` — identity metadata registry and schema
 - `identity/protocol/` — protocol and runtime integration specs
 - `identity/runtime/` — compiled runtime brief
+- `${IDENTITY_HOME}/` — local runtime identity assets (instances + catalog), isolated from base repo sync
 - `skills/identity-creator/` — creator skill to scaffold/validate identity packs
 - `scripts/` — deterministic compile/validate tooling
 - `docs/` — ADR, roundtable, research, review, migration playbooks
+
+## Critical fix in v1.4.6: local-instance persistence boundary
+
+This is the severe bug closed in v1.4.6 hardening:
+
+- Runtime identities used to be created under repo paths (`identity/packs/...`), so pull/re-clone could overwrite or lose live instances.
+- Now runtime instances default to **local-only** storage under `IDENTITY_HOME`, while repo identities (e.g. `store-manager`) are explicitly **fixture/demo**.
+
+Enforcement:
+
+- `create_identity_pack.py` defaults to local paths, blocks repo target unless `--repo-fixture`
+- `identity_installer.py` defaults to local paths, blocks repo target unless `--allow-repo-target`
+- `identity_creator.py` resolves runtime context from local catalog first (local > repo)
+- `validate_identity_local_persistence.py` hard-fails invalid runtime placement
+
+Governance record:
+- `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
 
 ## Quickstart
 
 ```bash
 pip install -r requirements-dev.txt
+export IDENTITY_HOME="${IDENTITY_HOME:-$HOME/.identity-protocol}"
+
+# optional: migrate legacy runtime identities from repo paths to local paths
+python scripts/migrate_repo_instances_to_local.py --apply
+
 python scripts/validate_identity_protocol.py
+python scripts/validate_identity_local_persistence.py
 python scripts/compile_identity_runtime.py
 python scripts/validate_identity_manifest.py
 python scripts/test_identity_discovery_contract.py
@@ -50,8 +74,10 @@ python scripts/export_route_quality_metrics.py --identity-id store-manager
 python scripts/execute_identity_upgrade.py --identity-id store-manager --mode review-required
 # optional: run release-readiness bundle
 python scripts/release_readiness_check.py --identity-id store-manager
-# optional: scaffold a new identity pack
+# optional: scaffold a new local runtime identity
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
+# optional: explicit fixture creation under repo (demo only)
+python scripts/create_identity_pack.py --id demo-fixture --title "Demo Fixture" --description "Fixture identity" --repo-fixture --pack-root identity/packs --catalog identity/catalog/identities.yaml --register
 ```
 
 ## Mandatory git sync before runtime tests
@@ -132,6 +158,7 @@ If a document defines required behavior for CI/release/audit decisions, it belon
   - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - `docs/governance/audit-snapshot-policy-v1.2.11.md`
   - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md`
+  - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
   - `docs/governance/templates/upgrade-cross-validation-template.md`
 - Runtime test preflight (local sync gate):
   - `docs/operations/runtime-preflight-checklist-v1.2.13.md`
@@ -234,6 +261,6 @@ This is enforced by contract + validators:
 
 ## Status
 
-- Protocol version: `v1.4.4` (draft)
+- Protocol version: `v1.4.6` (draft)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

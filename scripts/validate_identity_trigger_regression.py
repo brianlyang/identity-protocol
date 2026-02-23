@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -139,7 +140,18 @@ def main() -> int:
         print("[FAIL] trigger_regression_contract.result_enum must be [PASS, FAIL]")
         return 1
 
-    report_path = Path(args.report) if args.report else Path("identity/runtime/examples") / f"{args.identity_id}-trigger-regression-sample.json"
+    if args.report:
+        report_path = Path(args.report)
+    else:
+        pattern = str(c.get("sample_report_path_pattern", "")).replace("<identity-id>", args.identity_id)
+        if pattern:
+            if Path(pattern).is_absolute():
+                matched = sorted(Path(p) for p in glob.glob(pattern))
+            else:
+                matched = sorted(Path(".").glob(pattern))
+            report_path = matched[-1] if matched else Path("identity/runtime/examples") / f"{args.identity_id}-trigger-regression-sample.json"
+        else:
+            report_path = Path("identity/runtime/examples") / f"{args.identity_id}-trigger-regression-sample.json"
     if not report_path.exists():
         print(f"[FAIL] missing trigger regression report: {report_path}")
         return 1

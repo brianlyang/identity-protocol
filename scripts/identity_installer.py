@@ -11,6 +11,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -70,6 +72,16 @@ def _resolve_target_pack(args: argparse.Namespace) -> Path:
     return Path(args.target_root) / args.identity_id
 
 
+def _enforce_target_boundary(args: argparse.Namespace) -> None:
+    target_root = Path(args.target_root).expanduser().resolve()
+    repo_root = Path.cwd().resolve()
+    if not args.allow_repo_target and str(target_root).startswith(str(repo_root)):
+        raise PermissionError(
+            "repo target blocked by local-instance persistence boundary. "
+            "Use --allow-repo-target only for explicit fixture/demo operations."
+        )
+
+
 def _classify_conflict(src_sig: str, dst_sig: str, has_dst: bool, destructive_replace: bool) -> tuple[str, str]:
     if not has_dst:
         return "fresh_install", "guarded_apply"
@@ -96,6 +108,16 @@ def _sync_pack(src: Path, dst: Path) -> list[str]:
 
 
 def _register_identity(catalog_path: Path, identity_id: str, title: str, description: str, pack_path: str, activate: bool) -> None:
+    if not catalog_path.exists():
+        _dump_yaml(
+            catalog_path,
+            {
+                "version": "1.0",
+                "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                "default_identity": "",
+                "identities": [],
+            },
+        )
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
     existing = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
@@ -153,6 +175,7 @@ def _build_report(args: argparse.Namespace, *, operation: str, conflict_type: st
 
 
 def cmd_plan(args: argparse.Namespace) -> int:
+    _enforce_target_boundary(args)
     src = _resolve_source_pack(args)
     dst = _resolve_target_pack(args)
     src_sig = _dir_signature(src)
@@ -176,6 +199,7 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
+    _enforce_target_boundary(args)
     src = _resolve_source_pack(args)
     dst = _resolve_target_pack(args)
     src_sig = _dir_signature(src)
@@ -272,6 +296,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def cmd_rollback(args: argparse.Namespace) -> int:
+    _enforce_target_boundary(args)
     if not args.rollback_ref:
         print("[FAIL] --rollback-ref is required")
         return 1
@@ -292,16 +317,18 @@ def cmd_rollback(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    identity_home = default_identity_home()
     ap = argparse.ArgumentParser(description="Identity installer CLI (installer-plane)")
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--identity-id", required=True)
     common.add_argument("--source-pack", default="")
-    common.add_argument("--target-root", default="identity/packs")
+    common.add_argument("--target-root", default=str(default_local_instances_root(identity_home)))
     common.add_argument("--pack-root", default="identity/packs")
-    common.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    common.add_argument("--catalog", default=str(default_local_catalog_path(identity_home)))
     common.add_argument("--report-dir", default="identity/runtime/reports/install")
     common.add_argument("--backup-dir", default="identity/runtime/backups/install")
     common.add_argument("--destructive-replace", action="store_true")
+    common.add_argument("--allow-repo-target", action="store_true")
     common.add_argument("--register", action="store_true")
     common.add_argument("--activate", action="store_true")
     common.add_argument("--title", default="")

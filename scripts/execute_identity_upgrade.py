@@ -103,7 +103,7 @@ def _resolve_git_range() -> tuple[str, str]:
     return base or "HEAD~1", head or "HEAD"
 
 
-def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
+def _build_validator_cmd(check: str, identity_id: str, catalog_path: str) -> list[str]:
     if not check.startswith("scripts/"):
         return ["python3", check]
     cmd = ["python3", check]
@@ -118,6 +118,8 @@ def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
     # most validators are identity scoped
     if "--identity-id" not in check:
         cmd += ["--identity-id", identity_id]
+    if check.startswith("scripts/validate_") and "--catalog" not in check:
+        cmd += ["--catalog", catalog_path]
     if check.endswith("validate_identity_collab_trigger.py"):
         cmd += ["--self-test"]
     if check.endswith("validate_agent_handoff_contract.py"):
@@ -160,6 +162,12 @@ def _path_allowed(path: str, allowlist: list[str], denylist: list[str]) -> tuple
         if fnmatch.fnmatch(path, pat):
             return True, f"allowed by pattern: {pat}"
     return False, "not matched by allowlist"
+
+
+def _append_task_history(history_path: Path, line: str) -> None:
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    with history_path.open("a", encoding="utf-8") as f:
+        f.write(f"\n- {line}\n")
 
 
 def main() -> int:
@@ -233,6 +241,17 @@ def main() -> int:
 
     actions_taken: list[str] = [f"patch_plan_written:{plan_path}"]
     artifacts = [str(plan_path), str(metrics_path)]
+    experience_writeback: dict[str, Any] = {
+        "required": bool(upgrade_required),
+        "status": "SKIPPED",
+        "mode": args.mode,
+        "rulebook_path": str(pack / "RULEBOOK.jsonl"),
+        "task_history_path": str(pack / "TASK_HISTORY.md"),
+        "rule_entry_id": "",
+        "history_contains_run_id": False,
+        "notes": "",
+    }
+    writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md")]
 
     if upgrade_required and args.mode == "safe-auto":
         if safe_auto.get("enforce_path_policy") is True:
@@ -308,9 +327,19 @@ def main() -> int:
 
         # 3) append TASK_HISTORY note
         history_path = pack / "TASK_HISTORY.md"
-        with history_path.open("a", encoding="utf-8") as f:
-            f.write(f"\n- {now} | auto-upgrade trigger | run_id={run_id} | reasons={'; '.join(reasons)}\n")
+        _append_task_history(
+            history_path,
+            f"{now} | auto-upgrade trigger | run_id={run_id} | mode=safe-auto | reasons={'; '.join(reasons)}",
+        )
         actions_taken.append("task_history_appended")
+        experience_writeback.update(
+            {
+                "status": "WRITTEN",
+                "rule_entry_id": f"{run_id}-auto-upgrade",
+                "history_contains_run_id": True,
+                "notes": "safe-auto writeback appended before validator execution",
+            }
+        )
 
     # Run required validators + replay-equivalent gate checks
     required_checks = (
@@ -325,11 +354,63 @@ def main() -> int:
             "scripts/validate_identity_update_lifecycle.py",
             "scripts/validate_identity_capability_arbitration.py",
         ]
-    check_cmds = [_build_validator_cmd(chk, args.identity_id) for chk in required_checks]
+    check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
     log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
 
     all_ok = all(c["ok"] for c in checks)
+    if upgrade_required and args.mode == "review-required" and all_ok:
+        rulebook_path = pack / "RULEBOOK.jsonl"
+        history_path = pack / "TASK_HISTORY.md"
+        rule_id = f"{run_id}-review-required-upgrade"
+        _append_jsonl(
+            rulebook_path,
+            {
+                "rule_id": rule_id,
+                "type": "positive",
+                "trigger": "review_required_upgrade_validated",
+                "action": "preserve_trigger_patch_validate_replay_chain",
+                "evidence_run_id": run_id,
+                "scope": "identity_update_cycle",
+                "confidence": 0.9,
+                "updated_at": now,
+            },
+        )
+        _append_task_history(
+            history_path,
+            (
+                f"{now} | review-required upgrade validated | run_id={run_id} | mode=review-required "
+                f"| checks_passed={len(checks)} | reasons={'; '.join(reasons) if reasons else 'none'}"
+            ),
+        )
+        actions_taken.append("rulebook_row_appended_review_required")
+        actions_taken.append("task_history_appended_review_required")
+        artifacts.append(str(rulebook_path))
+        artifacts.append(str(history_path))
+        experience_writeback.update(
+            {
+                "status": "WRITTEN",
+                "rule_entry_id": rule_id,
+                "history_contains_run_id": True,
+                "notes": "review-required success writeback appended after validator execution",
+            }
+        )
+    elif upgrade_required:
+        experience_writeback.update(
+            {
+                "status": "MISSING",
+                "notes": "upgrade was required but writeback not appended (run failed or policy blocked)",
+            }
+        )
+    else:
+        experience_writeback.update(
+            {
+                "required": False,
+                "status": "NOT_REQUIRED",
+                "notes": "thresholds not triggered; no upgrade writeback required",
+            }
+        )
+
     report = {
         "run_id": run_id,
         "identity_id": args.identity_id,
@@ -352,6 +433,10 @@ def main() -> int:
         "checks": checks,
         "check_results": checks,
         "artifacts": artifacts,
+        "experience_writeback": experience_writeback,
+        "writeback_paths": writeback_paths,
+        "writeback_status": str(experience_writeback.get("status", "")),
+        "writeback_rule_id": str(experience_writeback.get("rule_entry_id", "")),
         "all_ok": all_ok,
     }
     report_path = out_dir / f"{run_id}.json"

@@ -8,6 +8,8 @@ identities:
     status: "inactive"
     owner: "store-ops"
     methodology_version: "v1.0"
+    profile: "fixture"
+    runtime_mode: "demo_only"
     pack_path: "identity/store-manager"
     tags:
       - "operations"
