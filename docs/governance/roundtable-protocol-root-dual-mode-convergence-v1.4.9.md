@@ -14,6 +14,33 @@ Real runtime operations exposed a repeatable failure mode:
 
 This violates local-instance-first goals from `docs/references/identity-instance-local-operations-and-feedback-governance-guide-v1.0.md`.
 
+### 1.1 Is this situation real? (cross-check conclusion)
+
+Yes. This is a real and reproducible condition in current baseline, not a hypothetical risk.
+
+Repository cross-check facts:
+
+1. Current runtime home default is `~/.identity` and does not provide protocol-root pinning by default.
+   - `scripts/resolve_identity_context.py`
+   - `README.md` section "IDENTITY_HOME resolution order (canonical)"
+2. Installer/creator currently resolve execution from current workspace scripts, and there is no documented mandatory `IDENTITY_PROTOCOL_HOME` runtime contract.
+   - `scripts/identity_installer.py`
+   - `scripts/identity_creator.py`
+3. Existing preflight focuses on git sync status (`preflight_identity_runtime_sync.sh`) but does not solve multi-agent path divergence by itself.
+   - `scripts/preflight_identity_runtime_sync.sh`
+   - `docs/operations/runtime-preflight-checklist-v1.2.13.md`
+
+Operational symptom pattern already observed in real runs:
+
+- identity instance data can be healthy in one local runtime home
+- but different operators/agents execute from different protocol checkouts (or stale checkouts)
+- resulting validation/upgrade behavior differs, creating replay and audit instability
+
+Decision statement:
+
+- This proposal is justified by concrete repository behavior and runtime evidence pattern.
+- It should be treated as release-quality governance hardening, not optional convenience.
+
 ## 2. Roundtable synthesis
 
 This roundtable is an engineering synthesis aligned to repository baselines and cross-vendor governance references, not a literal transcript of external vendor participants.
@@ -49,6 +76,7 @@ Contract:
 
 - `IDENTITY_PROTOCOL_HOME=/absolute/path/to/identity-protocol`
 - execution commands may run from any workspace, but tool scripts are loaded from `IDENTITY_PROTOCOL_HOME`
+- recommended as default for team/CI to minimize drift
 
 ### Mode B: Standalone local checkout
 
@@ -59,6 +87,20 @@ Contract:
 
 - pass `--protocol-root /absolute/path/to/protocol-checkout`
 - no requirement to mutate current shell workspace repository
+- required to emit explicit run evidence (protocol root + git commit/tag)
+
+### 3.1 Selection policy (must)
+
+To avoid "config chaos" replacing "repo chaos", selection policy is mandatory:
+
+1. Team default:
+   - use Mode A (shared synchronized base)
+2. Allowed exceptions:
+   - use Mode B only for isolated experiments, rollback drills, or offline recovery
+3. Evidence requirement:
+   - every run report must include protocol-root and version evidence
+4. Promotion rule:
+   - artifacts generated under Mode B cannot be promoted unless replayed or cross-validated against Mode A
 
 ## 4. Skill-protocol convergence mapping
 
@@ -127,6 +169,12 @@ Treat missing protocol-root evidence as release blocker for identity runtime cha
   - if run report cannot prove `protocol_root`, block promotion
 - rationale:
   - without exact tooling root, replay and root-cause audit are non-deterministic
+
+Additional go/no-go gate:
+
+1. If run evidence does not contain protocol-root + git commit/tag, block.
+2. If promotion report mixes multiple protocol roots without explicit arbitration note, block.
+3. If Mode B output has no Mode A replay evidence for high-impact changes, block.
 
 ## 8. Practical examples (absolute paths)
 
