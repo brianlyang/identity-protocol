@@ -1,6 +1,0 @@
-id: base-repo-architect
-title: Base Repo Architect
-description: Govern identity-protocol control plane, release gates, and anti-regression
-  architecture across identities.
-status: inactive
-methodology_version: v1.4.6
