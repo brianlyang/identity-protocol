@@ -38,9 +38,9 @@
     `IDENTITY_HOME` env override -> `${CODEX_HOME}/identity` -> `~/.codex/identity` default
     -> `./.codex/identity` fallback when home path creation fails
     (legacy `~/.identity` remains auto-compatible for existing local instances)
-  - aligned runtime directory naming with skills-style plural convention:
-    canonical runtime pack root is now `${IDENTITY_HOME}/identities`
-    (legacy `${IDENTITY_HOME}/instances` remains auto-compatible)
+  - aligned runtime directory naming with skills-style root convention:
+    canonical runtime pack root is now `${IDENTITY_HOME}`
+    (legacy `${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, and `${IDENTITY_HOME}/instances` remain auto-compatible)
   - release gate closure follow-up fixes:
     - synchronized release metadata markers to `v1.4.6` across
       `README.md` / `IDENTITY_PROTOCOL.md` / `VERSIONING.md` / `requirements-dev.txt`

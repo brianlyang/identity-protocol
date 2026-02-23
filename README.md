@@ -16,7 +16,7 @@ Identity defines:
 - `identity/catalog/` — identity metadata registry and schema
 - `identity/protocol/` — protocol and runtime integration specs
 - `identity/runtime/` — compiled runtime brief
-- `${IDENTITY_HOME}/` — local runtime identity assets (identities + catalog), isolated from base repo sync
+- `${IDENTITY_HOME}/` — local runtime identity assets (packs + catalog), isolated from base repo sync
 - `skills/identity-creator/` — creator skill to scaffold/validate identity packs
 - `scripts/` — deterministic compile/validate tooling
 - `docs/` — ADR, roundtable, research, review, migration playbooks
@@ -34,7 +34,8 @@ Enforcement:
 - `identity_installer.py` defaults to local paths, blocks repo target unless `--allow-repo-target`
 - `identity_creator.py` resolves runtime context from local catalog first (local > repo)
 - `validate_identity_local_persistence.py` hard-fails invalid runtime placement
-- Canonical runtime pack root is `${IDENTITY_HOME}/identities` (legacy `${IDENTITY_HOME}/instances` is auto-compatible)
+- Canonical runtime pack root is `${IDENTITY_HOME}` (skills-style root convention)
+  (legacy `${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, and `${IDENTITY_HOME}/instances` are auto-compatible)
 
 Governance record:
 - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`

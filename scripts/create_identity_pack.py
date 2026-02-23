@@ -605,7 +605,7 @@ def main() -> int:
         if str(pack_root).startswith(str(repo_root)):
             print("[FAIL] runtime identity must not be created under repository path.")
             print(f"       pack_root={pack_root}")
-            print("       use default IDENTITY_HOME instances root or pass --repo-fixture explicitly for demo fixtures.")
+            print("       use default IDENTITY_HOME root or pass --repo-fixture explicitly for demo fixtures.")
             return 1
         if str(catalog_path).startswith(str(repo_root)):
             print("[FAIL] runtime identity catalog must be local (outside repo).")

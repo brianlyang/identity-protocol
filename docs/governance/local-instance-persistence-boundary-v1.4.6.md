@@ -60,7 +60,8 @@ If a runtime identity resolves to repo path, validation fails.
     3. else use default `~/.codex/identity`
     4. if home path create fails, fallback to `./.codex/identity`
   - local catalog: `${IDENTITY_HOME}/catalog.local.yaml`
-  - local identities: `${IDENTITY_HOME}/identities` (legacy `${IDENTITY_HOME}/instances` allowed for compatibility)
+  - local identity root: `${IDENTITY_HOME}` (skills-style root convention)
+    (legacy `${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, and `${IDENTITY_HOME}/instances` allowed for compatibility)
 - Behavior:
   - merged catalog view (local overrides repo)
   - resolved identity includes source layer + effective pack path
@@ -69,7 +70,7 @@ If a runtime identity resolves to repo path, validation fails.
 
 - Script: `scripts/create_identity_pack.py`
 - Default target:
-  - `--pack-root ${IDENTITY_HOME}/identities`
+  - `--pack-root ${IDENTITY_HOME}`
   - `--catalog ${IDENTITY_HOME}/catalog.local.yaml`
 - Repo-path write is blocked unless `--repo-fixture` is explicitly set.
 

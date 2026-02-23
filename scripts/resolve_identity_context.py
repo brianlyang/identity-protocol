@@ -46,10 +46,16 @@ def default_local_catalog_path(identity_home: Path | None = None) -> Path:
 
 def default_local_instances_root(identity_home: Path | None = None) -> Path:
     home = identity_home or default_identity_home()
-    canonical = home / "identities"
+    canonical = home
+    singular_legacy = home / "identity"
+    plural_legacy = home / "identities"
     legacy = home / "instances"
     if canonical.exists():
         return canonical
+    if singular_legacy.exists():
+        return singular_legacy
+    if plural_legacy.exists():
+        return plural_legacy
     if legacy.exists():
         return legacy
     return canonical

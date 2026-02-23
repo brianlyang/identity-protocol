@@ -10,7 +10,8 @@ Updated: **2026-02-23**
 From v1.4.6+, runtime identities are designed to be **local-only** by default:
 
 - local catalog: `${IDENTITY_HOME}/catalog.local.yaml`
-- local identities: `${IDENTITY_HOME}/identities/<identity-id>` (legacy `${IDENTITY_HOME}/instances/<identity-id>` remains readable)
+- local identity instances: `${IDENTITY_HOME}/<identity-id>` (skills-style root convention)
+  (legacy `${IDENTITY_HOME}/identity/<identity-id>`, `${IDENTITY_HOME}/identities/<identity-id>`, and `${IDENTITY_HOME}/instances/<identity-id>` remain readable)
 
 This prevents the severe failure mode where pulling/re-cloning the base repo overwrites runtime instances.
 
