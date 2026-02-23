@@ -27,6 +27,9 @@
       preventing silent skip of all identity validators
     - `scripts/release_readiness_check.py` now auto-generates an upgrade execution report
       (when not provided) and always enforces `validate_identity_experience_writeback.py`
+  - governance/readme hard record for severe persistence incident:
+    - added `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
+    - README now documents demo/runtime split and local-instance-first operating model
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`
