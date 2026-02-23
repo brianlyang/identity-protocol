@@ -71,44 +71,44 @@ jobs:
           echo "HEAD_SHA=${HEAD_SHA}" >> "$GITHUB_ENV"
 
           IDS=$(BASE_SHA="${BASE_SHA}" HEAD_SHA="${HEAD_SHA}" python3 - <<'PY'
-import os
-import re
-import subprocess
-from pathlib import Path
-import yaml
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+          import yaml
 
-catalog = yaml.safe_load(Path("identity/catalog/identities.yaml").read_text()) or {}
-rows = [x for x in catalog.get("identities", []) if isinstance(x, dict)]
-all_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("id", "")).strip()]
-active_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("status", "")).strip().lower() == "active" and str(x.get("id", "")).strip()]
-default_id = str(catalog.get("default_identity") or "").strip()
+          catalog = yaml.safe_load(Path("identity/catalog/identities.yaml").read_text()) or {}
+          rows = [x for x in catalog.get("identities", []) if isinstance(x, dict)]
+          all_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("id", "")).strip()]
+          active_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("status", "")).strip().lower() == "active" and str(x.get("id", "")).strip()]
+          default_id = str(catalog.get("default_identity") or "").strip()
 
-base = os.environ.get("BASE_SHA", "").strip()
-head = os.environ.get("HEAD_SHA", "").strip()
-p = subprocess.run(["git", "diff", "--name-only", f"{base}..{head}"], capture_output=True, text=True)
-changed = [ln.strip() for ln in p.stdout.splitlines() if ln.strip()]
+          base = os.environ.get("BASE_SHA", "").strip()
+          head = os.environ.get("HEAD_SHA", "").strip()
+          p = subprocess.run(["git", "diff", "--name-only", f"{base}..{head}"], capture_output=True, text=True)
+          changed = [ln.strip() for ln in p.stdout.splitlines() if ln.strip()]
 
-changed_ids = []
-for f in changed:
-    m = re.match(r"^identity/packs/([^/]+)/", f)
-    if m:
-        changed_ids.append(m.group(1))
-        continue
-    m = re.match(r"^identity/([^/]+)/", f)
-    if m and m.group(1) not in {"runtime", "catalog", "protocol", "packs"}:
-        changed_ids.append(m.group(1))
-        continue
-    if f == "identity/catalog/identities.yaml":
-        changed_ids.extend(all_ids)
+          changed_ids = []
+          for f in changed:
+              m = re.match(r"^identity/packs/([^/]+)/", f)
+              if m:
+                  changed_ids.append(m.group(1))
+                  continue
+              m = re.match(r"^identity/([^/]+)/", f)
+              if m and m.group(1) not in {"runtime", "catalog", "protocol", "packs"}:
+                  changed_ids.append(m.group(1))
+                  continue
+              if f == "identity/catalog/identities.yaml":
+                  changed_ids.extend(all_ids)
 
-ordered = []
-for x in active_ids + ([default_id] if default_id else []) + changed_ids + all_ids:
-    if x and x in all_ids and x not in ordered:
-        ordered.append(x)
+          ordered = []
+          for x in active_ids + ([default_id] if default_id else []) + changed_ids + all_ids:
+              if x and x in all_ids and x not in ordered:
+                  ordered.append(x)
 
-print(" ".join(ordered))
-PY
-)
+          print(" ".join(ordered))
+          PY
+          )
           if [ -z "${IDS}" ]; then
             echo "[FAIL] no identities resolved for required-gates"
             exit 1
