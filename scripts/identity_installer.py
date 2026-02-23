@@ -11,7 +11,12 @@ from typing import Any
 
 import yaml
 
-from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
+from resolve_identity_context import (
+    collect_protocol_evidence,
+    default_identity_home,
+    default_local_catalog_path,
+    default_local_instances_root,
+)
 
 
 def _now_iso() -> str:
@@ -170,6 +175,7 @@ def _register_identity(catalog_path: Path, identity_id: str, title: str, descrip
 def _build_report(args: argparse.Namespace, *, operation: str, conflict_type: str, action: str, source_pack: Path, target_pack: Path, preserved: list[str], backup_ref: str = "", rollback_ref: str = "", dry_run: bool = False, changed_files: list[str] | None = None) -> tuple[dict[str, Any], Path]:
     ts = datetime.now(timezone.utc)
     report_id = f"identity-install-{args.identity_id}-{operation}-{int(ts.timestamp())}-{int(ts.microsecond/1000):03d}"
+    protocol = collect_protocol_evidence(args.protocol_root, args.protocol_mode)
     report = {
         "report_id": report_id,
         "identity_id": args.identity_id,
@@ -189,6 +195,12 @@ def _build_report(args: argparse.Namespace, *, operation: str, conflict_type: st
             "entrypoint": "scripts/identity_installer.py",
             "command": " ".join(["identity-installer", operation, "--identity-id", args.identity_id]),
         },
+        "protocol_mode": protocol["protocol_mode"],
+        "protocol_root": protocol["protocol_root"],
+        "protocol_commit_sha": protocol["protocol_commit_sha"],
+        "protocol_ref": protocol["protocol_ref"],
+        "identity_home": str(default_identity_home()),
+        "catalog_path": str(Path(args.catalog).expanduser().resolve()),
     }
     if backup_ref:
         report["backup_ref"] = backup_ref
@@ -357,6 +369,8 @@ def main() -> int:
     common.add_argument("--activate", action="store_true")
     common.add_argument("--title", default="")
     common.add_argument("--description", default="")
+    common.add_argument("--protocol-root", default="")
+    common.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
 
     sub = ap.add_subparsers(dest="command", required=True)
     sub.add_parser("plan", parents=[common])

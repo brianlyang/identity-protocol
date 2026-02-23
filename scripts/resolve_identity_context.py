@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -54,6 +55,51 @@ def default_local_instances_root(identity_home: Path | None = None) -> Path:
     if legacy.exists():
         return legacy
     return canonical
+
+
+def default_protocol_home() -> Path:
+    explicit = os.environ.get("IDENTITY_PROTOCOL_HOME", "").strip()
+    if explicit:
+        p = _expand(explicit)
+    else:
+        p = Path.cwd().resolve()
+    return p
+
+
+def resolve_protocol_root(protocol_root: str | None = None) -> Path:
+    if protocol_root:
+        p = _expand(protocol_root)
+    else:
+        p = default_protocol_home()
+    return p
+
+
+def _git(path: Path, args: list[str]) -> str:
+    try:
+        p = subprocess.run(
+            ["git", *args],
+            cwd=str(path),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if p.returncode != 0:
+            return ""
+        return (p.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def collect_protocol_evidence(protocol_root: str | None = None, protocol_mode: str = "mode_a_shared") -> dict[str, str]:
+    root = resolve_protocol_root(protocol_root)
+    commit = _git(root, ["rev-parse", "HEAD"])
+    ref = _git(root, ["describe", "--tags", "--always", "--dirty"])
+    return {
+        "protocol_mode": str(protocol_mode or "").strip() or "mode_a_shared",
+        "protocol_root": str(root),
+        "protocol_commit_sha": commit,
+        "protocol_ref": ref,
+    }
 
 
 def load_yaml_or_empty(path: Path) -> dict[str, Any]:

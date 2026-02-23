@@ -61,6 +61,15 @@
     - `identity/protocol/IDENTITY_PROTOCOL.md`
     - `VERSIONING.md`
     - `requirements-dev.txt`
+  - protocol-root dual-mode governance implementation (P0):
+    - creator/installer/update reports now emit:
+      `protocol_mode`, `protocol_root`, `protocol_commit_sha`, `protocol_ref`,
+      `identity_home`, `catalog_path`, `generated_at`
+    - added `scripts/validate_identity_protocol_root_evidence.py`
+    - added `scripts/validate_identity_mode_promotion_arbitration.py`
+    - wired new validators into:
+      - `scripts/release_readiness_check.py`
+      - `scripts/e2e_smoke_test.sh`
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`

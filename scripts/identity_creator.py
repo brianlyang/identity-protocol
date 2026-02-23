@@ -11,6 +11,7 @@ from pathlib import Path
 import yaml
 
 from resolve_identity_context import (
+    collect_protocol_evidence,
     default_identity_home,
     default_local_catalog_path,
     default_local_instances_root,
@@ -86,7 +87,13 @@ def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status
     return out
 
 
-def _activate_identity(repo_catalog: Path, local_catalog: Path, identity_id: str) -> int:
+def _activate_identity(
+    repo_catalog: Path,
+    local_catalog: Path,
+    identity_id: str,
+    protocol_root: str = "",
+    protocol_mode: str = "mode_a_shared",
+) -> int:
     ensure_local_catalog(repo_catalog, local_catalog)
     try:
         _ = resolve_identity(identity_id, repo_catalog, local_catalog)
@@ -167,6 +174,16 @@ def _activate_identity(repo_catalog: Path, local_catalog: Path, identity_id: str
             "catalog_layer": "local",
             "catalog_path": str(local_catalog),
         }
+        protocol = collect_protocol_evidence(protocol_root, protocol_mode)
+        switch_payload.update(
+            {
+                "protocol_mode": protocol["protocol_mode"],
+                "protocol_root": protocol["protocol_root"],
+                "protocol_commit_sha": protocol["protocol_commit_sha"],
+                "protocol_ref": protocol["protocol_ref"],
+                "identity_home": str(default_identity_home()),
+            }
+        )
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"[OK] activated identity in catalog (single-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
@@ -214,6 +231,8 @@ def main() -> int:
     p_activate.add_argument("--identity-id", required=True)
     p_activate.add_argument("--repo-catalog", default=repo_catalog_default)
     p_activate.add_argument("--catalog", default=local_catalog_default)
+    p_activate.add_argument("--protocol-root", default="")
+    p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
 
     p_update = sub.add_parser("update", help="Run identity upgrade executor")
     p_update.add_argument("--identity-id", required=True)
@@ -221,6 +240,8 @@ def main() -> int:
     p_update.add_argument("--out-dir", default="identity/runtime/reports")
     p_update.add_argument("--repo-catalog", default=repo_catalog_default)
     p_update.add_argument("--catalog", default=local_catalog_default)
+    p_update.add_argument("--protocol-root", default="")
+    p_update.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
 
 
     args = ap.parse_args()
@@ -284,7 +305,13 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
-        return _activate_identity(Path(args.repo_catalog), Path(args.catalog), args.identity_id)
+        return _activate_identity(
+            Path(args.repo_catalog),
+            Path(args.catalog),
+            args.identity_id,
+            args.protocol_root,
+            args.protocol_mode,
+        )
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
@@ -303,9 +330,13 @@ def main() -> int:
                 args.identity_id,
                 "--mode",
                 args.mode,
-                "--out-dir",
-                args.out_dir,
-            ]
+            "--out-dir",
+            args.out_dir,
+            "--protocol-root",
+            args.protocol_root,
+            "--protocol-mode",
+            args.protocol_mode,
+        ]
         )
 
     print(f"[FAIL] unknown command: {args.command}")
