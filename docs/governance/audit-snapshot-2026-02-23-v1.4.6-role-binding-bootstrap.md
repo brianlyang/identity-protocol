@@ -63,12 +63,32 @@ Inference mapping:
 
 ## Residual risks
 
-1. Workflow file update to explicitly add `validate_identity_role_binding.py` step is constrained by token `workflow` scope.
-2. Required-gates still validates active identities by default; inactive-but-modified identity coverage remains future enhancement.
+1. Cloud required checks may still queue/pending due GitHub infrastructure timing; release conclusion must be based on check-runs (not legacy status API alone).
+2. Additional identities introduced in later releases must include fresh role-binding evidence (current validator now enforces freshness window).
+
+## Follow-up hardening (2026-02-23, post-audit replay)
+
+1. Role-binding authenticity strengthened:
+   - `scripts/validate_identity_role_binding.py` now requires:
+     - `runtime_bootstrap_live_revalidate=true` (live bootstrap recheck)
+     - bounded evidence freshness (`evidence_max_age_days`)
+     - `BOUND_ACTIVE` before active/default promotion
+2. CI identity coverage hardened:
+   - `.github/workflows/_identity-required-gates.yml` now resolves target identities from:
+     - active/default identities,
+     - identities touched in PR diff,
+     - fallback all catalog identities (prevents silent skip in identity-neutral baseline).
+3. Scaffolding/register sequencing hardened:
+   - `scripts/create_identity_pack.py` now rolls back catalog mutation if bootstrap validation fails.
+4. Identity contract tightened:
+   - `identity/store-manager/CURRENT_TASK.json` role-binding contract now includes:
+     - `runtime_bootstrap_live_revalidate`
+     - `evidence_max_age_days`
+     - `active_binding_status_required`
 
 ## Decision
 
-- Current decision: **Conditional Go**
+- Current decision: **Conditional Go** (local controls hardened; final go/no-go still depends on cloud required checks)
 - Full Go condition:
-  1. workflow-scope update applied for explicit role-binding step in reusable required-gates,
-  2. cloud required checks green on release candidate commit.
+  1. `protocol-ci / required-gates` green on release-candidate head,
+  2. `identity-protocol-ci / required-gates` green on release-candidate head.

@@ -516,11 +516,14 @@ def main() -> int:
     print(f"[OK] created role-binding samples: {role_binding_sample_path}, {negative_role_binding_sample_path}")
     print(f"[OK] created replay sample: {replay_sample_path}")
 
+    catalog_original_text: str | None = None
+    catalog_path = Path(args.catalog)
+    catalog_mutated = False
     if args.register:
-        catalog_path = Path(args.catalog)
         if not catalog_path.exists():
             print(f"[FAIL] catalog file not found: {catalog_path}")
             return 1
+        catalog_original_text = catalog_path.read_text(encoding="utf-8")
         catalog = load_yaml(catalog_path) or {}
         identities = catalog.get("identities", [])
         if any((x or {}).get("id") == identity_id for x in identities):
@@ -542,6 +545,7 @@ def main() -> int:
         if args.set_default:
             catalog["default_identity"] = identity_id
         dump_yaml(catalog_path, catalog)
+        catalog_mutated = True
         print(f"[OK] registered identity in catalog: {catalog_path}")
 
     if not args.skip_bootstrap_check:
@@ -561,6 +565,9 @@ def main() -> int:
             print("$", " ".join(cmd))
             rc = subprocess.call(cmd)
             if rc != 0:
+                if catalog_mutated and catalog_original_text is not None:
+                    catalog_path.write_text(catalog_original_text, encoding="utf-8")
+                    print("[ROLLBACK] restored catalog after bootstrap failure")
                 print("[FAIL] bootstrap validation failed")
                 return rc
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +55,26 @@ def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str) -> P
     return scoped[-1] if scoped else files[-1]
 
 
+def _parse_utc(ts: str) -> datetime | None:
+    value = str(ts or "").strip()
+    if not value:
+        return None
+    try:
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _run(cmd: list[str]) -> tuple[int, str, str]:
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    return p.returncode, p.stdout.strip(), p.stderr.strip()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity role-binding contract and activation switch guards")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -95,8 +117,11 @@ def main() -> int:
         "role_type",
         "catalog_registration_required",
         "runtime_bootstrap_pass_required",
+        "runtime_bootstrap_live_revalidate",
         "activation_policy",
         "switch_guard_required",
+        "evidence_max_age_days",
+        "active_binding_status_required",
         "binding_evidence_path_pattern",
         "enforcement_validator",
     ]
@@ -109,6 +134,9 @@ def main() -> int:
         return 1
     if str(contract.get("enforcement_validator", "")).strip() != "scripts/validate_identity_role_binding.py":
         print("[FAIL] identity_role_binding_contract.enforcement_validator mismatch")
+        return 1
+    if int(contract.get("evidence_max_age_days", 0)) <= 0:
+        print("[FAIL] identity_role_binding_contract.evidence_max_age_days must be > 0")
         return 1
 
     if bool(contract.get("catalog_registration_required", False)):
@@ -128,6 +156,7 @@ def main() -> int:
     print(f"[OK] role-binding evidence: {evidence}")
     req_evidence_fields = [
         "binding_id",
+        "generated_at",
         "identity_id",
         "role_type",
         "binding_status",
@@ -144,8 +173,20 @@ def main() -> int:
     if str(data.get("role_type", "")).strip() != str(contract.get("role_type", "")).strip():
         print("[FAIL] role-binding evidence role_type mismatch with contract")
         return 1
-    if str(data.get("binding_status", "")).strip() not in {"BOUND_READY", "BOUND_ACTIVE"}:
+    binding_status = str(data.get("binding_status", "")).strip()
+    if binding_status not in {"BOUND_READY", "BOUND_ACTIVE"}:
         print("[FAIL] role-binding evidence binding_status must be BOUND_READY or BOUND_ACTIVE")
+        return 1
+    generated = _parse_utc(str(data.get("generated_at", "")).strip())
+    if not generated:
+        print("[FAIL] role-binding evidence generated_at must be valid ISO-8601 timestamp")
+        return 1
+    age_days = (datetime.now(timezone.utc) - generated).total_seconds() / 86400.0
+    if age_days > float(contract.get("evidence_max_age_days", 7)):
+        print(
+            "[FAIL] role-binding evidence is stale: "
+            f"age_days={age_days:.2f} > max_age_days={contract.get('evidence_max_age_days')}"
+        )
         return 1
 
     if bool(contract.get("runtime_bootstrap_pass_required", False)):
@@ -160,6 +201,18 @@ def main() -> int:
         if validator != "scripts/validate_identity_runtime_contract.py":
             print("[FAIL] runtime_bootstrap.validator must be scripts/validate_identity_runtime_contract.py")
             return 1
+        if bool(contract.get("runtime_bootstrap_live_revalidate", False)):
+            rc, out, err = _run(
+                ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", identity_id]
+            )
+            if rc != 0:
+                print("[FAIL] runtime bootstrap live revalidation failed")
+                if out:
+                    print(out)
+                if err:
+                    print(err)
+                return 1
+            print("[OK] runtime bootstrap live revalidation passed")
         print("[OK] runtime bootstrap pass evidence validated")
 
     if bool(contract.get("switch_guard_required", False)):
@@ -176,8 +229,12 @@ def main() -> int:
         catalog = _load_yaml(catalog_path)
         default_identity = str(catalog.get("default_identity", "")).strip()
         promotion_target = identity_status == "active" or default_identity == identity_id
-        if promotion_target and str(data.get("binding_status", "")).strip() not in {"BOUND_READY", "BOUND_ACTIVE"}:
-            print("[FAIL] active/default identity must have BOUND_READY/BOUND_ACTIVE status")
+        required_active_status = str(contract.get("active_binding_status_required", "")).strip() or "BOUND_ACTIVE"
+        if promotion_target and binding_status != required_active_status:
+            print(
+                "[FAIL] active/default identity must have binding status "
+                f"{required_active_status}, got={binding_status}"
+            )
             return 1
         print("[OK] switch guard validated")
 

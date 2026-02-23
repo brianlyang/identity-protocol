@@ -374,8 +374,11 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             "role_type",
             "catalog_registration_required",
             "runtime_bootstrap_pass_required",
+            "runtime_bootstrap_live_revalidate",
             "activation_policy",
             "switch_guard_required",
+            "evidence_max_age_days",
+            "active_binding_status_required",
             "binding_evidence_path_pattern",
             "enforcement_validator",
         }
@@ -387,6 +390,12 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             print("[OK]   identity_role_binding_contract required fields present")
         if role_binding.get("required") is not True:
             print("[FAIL] identity_role_binding_contract.required must be true")
+            rc = 1
+        if int(role_binding.get("evidence_max_age_days", 0)) <= 0:
+            print("[FAIL] identity_role_binding_contract.evidence_max_age_days must be > 0")
+            rc = 1
+        if str(role_binding.get("active_binding_status_required", "")).strip() != "BOUND_ACTIVE":
+            print("[FAIL] identity_role_binding_contract.active_binding_status_required must be BOUND_ACTIVE")
             rc = 1
         pattern = str(role_binding.get("binding_evidence_path_pattern", "")).strip()
         if not pattern:

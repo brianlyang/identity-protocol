@@ -567,6 +567,7 @@
     "required_job": "required-gates",
     "required_validators": [
       "scripts/validate_identity_runtime_contract.py",
+      "scripts/validate_identity_role_binding.py",
       "scripts/validate_identity_upgrade_prereq.py",
       "scripts/validate_identity_update_lifecycle.py",
       "scripts/validate_identity_trigger_regression.py",
@@ -734,6 +735,9 @@
     "activation_policy": "inactive_by_default",
     "switch_guard_required": true,
     "binding_evidence_path_pattern": "identity/runtime/examples/identity-role-binding-<identity-id>-*.json",
-    "enforcement_validator": "scripts/validate_identity_role_binding.py"
+    "enforcement_validator": "scripts/validate_identity_role_binding.py",
+    "runtime_bootstrap_live_revalidate": true,
+    "evidence_max_age_days": 7,
+    "active_binding_status_required": "BOUND_ACTIVE"
   }
 }
