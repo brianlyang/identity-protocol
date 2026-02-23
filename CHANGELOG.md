@@ -34,6 +34,12 @@
     - added migration playbook: `docs/guides/runtime-instance-migration-guide-v1.4.7.md`
     - added release closure snapshot: `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
     - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - release gate closure follow-up fixes:
+    - synchronized release metadata markers to `v1.4.6` across
+      `README.md` / `IDENTITY_PROTOCOL.md` / `VERSIONING.md` / `requirements-dev.txt`
+      to unblock `validate_release_metadata_sync.py`
+    - repaired `.github/workflows/_identity-required-gates.yml` resolver block
+      and added explicit empty-target fail-fast + explicit compile target resolution
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`
