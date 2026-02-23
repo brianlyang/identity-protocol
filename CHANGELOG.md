@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **base-repo architect identity bootstrap (v1.4.6 draft)**:
+  - added new identity pack: `identity/packs/base-repo-architect/`
+    - `IDENTITY_PROMPT.md`
+    - `CURRENT_TASK.json`
+    - `TASK_HISTORY.md`
+    - `RULEBOOK.jsonl`
+    - `META.yaml`
+  - registered `base-repo-architect` in `identity/catalog/identities.yaml` (inactive by default)
+  - added architect baseline evidence/examples:
+    - `identity/runtime/examples/protocol-baseline-review-base-repo-architect-sample.json`
+    - `identity/runtime/examples/base-repo-architect-*-sample.json`
+    - `identity/runtime/examples/install/install-report-bootstrap-base-repo-architect.json`
+    - `identity/runtime/logs/feedback/base-repo-architect-feedback-bootstrap.json`
+  - added first release incident evidence:
+    - `identity/runtime/reports/release-incidents/incident-2026-02-23-check-context-pending-loop.json`
+  - generalized `scripts/validate_identity_capability_arbitration.py` safe-auto allowlist validation:
+    - now derives required `TASK_HISTORY.md` path from resolved identity pack path (no hardcoded `store-manager` path)
+
 - **post-release evidence closure (v1.4.5 draft)**:
   - appended self-upgrade execution evidence bundle for `store-manager`:
     - `identity/runtime/reports/identity-upgrade-exec-store-manager-1771788615.json`

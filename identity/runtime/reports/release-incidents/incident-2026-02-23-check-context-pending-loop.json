@@ -1,0 +1,31 @@
+{
+  "incident_id": "INC-20260223-CHECK-CONTEXT-PENDING-LOOP",
+  "opened_at": "2026-02-23T03:00:00Z",
+  "symptom": "Release flow repeatedly appears pending/blocked despite local pass.",
+  "root_cause": [
+    "Branch protection required check contexts did not match emitted GitHub Actions check-run context names.",
+    "Legacy commit status endpoint stayed pending(total_count=0) while real check-runs already had outcomes.",
+    "Follow-up commits occasionally failed real gates (self-upgrade evidence/changelog), creating mixed signals."
+  ],
+  "fix_commits": [
+    "956622120e53691b5c3798c235f12cea68865345",
+    "0f5b97d",
+    "1727940"
+  ],
+  "validators_added": [
+    "scripts/validate_release_metadata_sync.py"
+  ],
+  "workflow_runs": [
+    {
+      "run_id": 22291175694,
+      "result": "failure",
+      "notes": "changelog gate missing update"
+    },
+    {
+      "commit": "1727940",
+      "check_context": "required-gates / validate-identity",
+      "result": "success"
+    }
+  ],
+  "closure_decision": "closed_with_preventive_contracts"
+}

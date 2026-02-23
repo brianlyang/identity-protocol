@@ -1,0 +1,771 @@
+{
+  "task_id": "base_repo_architect_20260223_control_plane_bootstrap",
+  "agent_identity": {
+    "name": "base-repo-architect",
+    "role": "Base Repo Architect",
+    "methodology_version": "v1.4.6",
+    "prompt_version": "v1.4.6",
+    "json_version": "v1.4.6",
+    "identity_prompt_path": "identity/packs/base-repo-architect/IDENTITY_PROMPT.md",
+    "canon_path": "identity/protocol/IDENTITY_PROTOCOL.md"
+  },
+  "objective": {
+    "title": "Stabilize base-repo release control plane, eliminate recurring pending-check loops, and enforce evidence-first identity evolution.",
+    "priority": "HIGH",
+    "status": "in_progress"
+  },
+  "state_machine": {
+    "current_state": "preflight",
+    "allowed_states": [
+      "intake",
+      "doc_crosscheck",
+      "preflight",
+      "submit",
+      "monitor",
+      "reject_analysis",
+      "repair",
+      "resubmit",
+      "done",
+      "blocked_offline"
+    ],
+    "transition_rules": [
+      "intake -> doc_crosscheck",
+      "doc_crosscheck -> preflight",
+      "preflight -> submit",
+      "submit -> monitor",
+      "monitor -> done",
+      "monitor -> reject_analysis",
+      "reject_analysis -> repair",
+      "repair -> preflight",
+      "reject_analysis -> blocked_offline"
+    ]
+  },
+  "gates": {
+    "document_gate": "required",
+    "media_gate": "required",
+    "category_compliance_gate": "required",
+    "reject_memory_gate": "required",
+    "protocol_baseline_review_gate": "required",
+    "identity_update_gate": "required",
+    "payload_evidence_gate": "required",
+    "multimodal_consistency_gate": "required",
+    "reasoning_loop_gate": "required",
+    "routing_gate": "required",
+    "rulebook_gate": "required",
+    "agent_handoff_gate": "required",
+    "collaboration_trigger_gate": "required",
+    "orchestration_gate": "required",
+    "knowledge_acquisition_gate": "required",
+    "experience_feedback_gate": "required",
+    "ci_enforcement_gate": "required",
+    "arbitration_gate": "required",
+    "install_safety_gate": "required",
+    "install_provenance_gate": "required"
+  },
+  "protocol_review_contract": {
+    "required_before": [
+      "identity_capability_upgrade",
+      "identity_architecture_decision"
+    ],
+    "must_review_sources": [
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "identity/protocol/IDENTITY_PROTOCOL.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-installer-skill-creator-skill-update-lifecycle.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-mcp-tool-collaboration-contract-v1.0.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://developers.openai.com/codex/skills/"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://agentskills.io/specification"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://modelcontextprotocol.io/specification/latest"
+      }
+    ],
+    "required_evidence_fields": [
+      "review_id",
+      "reviewed_at",
+      "reviewer_identity",
+      "purpose",
+      "sources_reviewed",
+      "findings",
+      "decision"
+    ],
+    "evidence_report_path_pattern": "identity/runtime/examples/protocol-baseline-review-base-repo-architect-*.json",
+    "max_review_age_days": 7
+  },
+  "identity_update_lifecycle_contract": {
+    "trigger_contract": {
+      "mandatory_conditions": [
+        "operational_failure",
+        "repeat_failure",
+        "route_exhausted",
+        "new_domain_gap"
+      ],
+      "max_attempts_before_update": 2
+    },
+    "patch_surface_contract": {
+      "required_files": [
+        "CURRENT_TASK.json",
+        "IDENTITY_PROMPT.md",
+        "RULEBOOK.jsonl",
+        "TASK_HISTORY.md"
+      ],
+      "required_file_paths": [
+        "identity/packs/base-repo-architect/CURRENT_TASK.json",
+        "identity/packs/base-repo-architect/IDENTITY_PROMPT.md",
+        "identity/packs/base-repo-architect/RULEBOOK.jsonl",
+        "identity/packs/base-repo-architect/TASK_HISTORY.md"
+      ],
+      "required_rulebook_update": true
+    },
+    "validation_contract": {
+      "required_checks": [
+        "scripts/validate_identity_runtime_contract.py",
+        "scripts/validate_identity_upgrade_prereq.py",
+        "scripts/validate_identity_update_lifecycle.py",
+        "scripts/validate_identity_trigger_regression.py",
+        "scripts/validate_identity_learning_loop.py",
+        "scripts/validate_agent_handoff_contract.py",
+        "scripts/validate_identity_collab_trigger.py",
+        "scripts/validate_identity_orchestration_contract.py",
+        "scripts/validate_identity_knowledge_contract.py",
+        "scripts/validate_identity_experience_feedback.py",
+        "scripts/validate_changelog_updated.py",
+        "scripts/validate_release_metadata_sync.py",
+        "scripts/validate_identity_ci_enforcement.py",
+        "scripts/validate_identity_capability_arbitration.py",
+        "scripts/validate_identity_install_safety.py",
+        "scripts/validate_identity_experience_feedback_governance.py",
+        "scripts/validate_identity_self_upgrade_enforcement.py",
+        "scripts/validate_identity_install_provenance.py"
+      ],
+      "must_pass_all": true
+    },
+    "replay_contract": {
+      "replay_required": true,
+      "replay_same_case_required": true,
+      "replay_fail_action": "reenter_identity_update_loop",
+      "evidence_path_pattern": "identity/runtime/examples/base-repo-architect-update-replay-*.json",
+      "required_fields": [
+        "identity_id",
+        "replay_status",
+        "patched_files",
+        "validation_checks_passed",
+        "creator_invocation",
+        "check_results"
+      ]
+    }
+  },
+  "trigger_regression_contract": {
+    "required": true,
+    "required_suites": [
+      "positive_cases",
+      "boundary_cases",
+      "negative_cases"
+    ],
+    "result_enum": [
+      "PASS",
+      "FAIL"
+    ],
+    "sample_report_path_pattern": "identity/runtime/examples/*trigger-regression*.json",
+    "fail_action": "block_merge_and_reenter_identity_update"
+  },
+  "evaluation_contract": {
+    "required_evidence_triplet": [
+      "api_evidence",
+      "event_evidence",
+      "ui_evidence"
+    ],
+    "consistency_required": true,
+    "consistency_fail_action": "block_done_and_trigger_recheck",
+    "run_report_path_pattern": "resource/reports/*run*.json"
+  },
+  "reasoning_loop_contract": {
+    "max_attempts_before_escalation": 3,
+    "mandatory_fields_per_attempt": [
+      "attempt",
+      "hypothesis",
+      "patch",
+      "expected_effect",
+      "result"
+    ],
+    "failure_requires_next_action": true
+  },
+  "routing_contract": {
+    "auto_route_enabled": true,
+    "fallback_switch_after_failures": 2,
+    "problem_type_routes": {
+      "visual_quality": [
+        "product-asset-bootstrap",
+        "product-visual-qa",
+        "weixinstore-ui-agent"
+      ],
+      "audit_reject_text": [
+        "weixinstore-sku-onboarding"
+      ],
+      "offline_compliance_blocker": [
+        "ops-notification-router"
+      ],
+      "capability_gap": [
+        "identity-creator",
+        "identity-installer"
+      ],
+      "human_collab_required": [
+        "ops-notification-router"
+      ],
+      "real_case_regression": [
+        "store-manager-live-runner"
+      ],
+      "check_context_pending_loop": [
+        "identity-creator"
+      ]
+    }
+  },
+  "route_quality_contract": {
+    "required": true,
+    "source_pattern": "identity/runtime/logs/handoff/*.json",
+    "metrics_output_path": "identity/runtime/metrics/base-repo-architect-route-quality.json",
+    "required_metrics": [
+      "route_hit_rate",
+      "misroute_rate",
+      "fallback_rate",
+      "first_pass_success_rate",
+      "knowledge_reuse_rate",
+      "replay_success_rate",
+      "policy_drift_incidents"
+    ],
+    "validator": "scripts/export_route_quality_metrics.py"
+  },
+  "rulebook_contract": {
+    "append_only": true,
+    "required_rule_types": [
+      "negative",
+      "positive"
+    ],
+    "required_fields": [
+      "rule_id",
+      "type",
+      "trigger",
+      "action",
+      "evidence_run_id",
+      "scope",
+      "confidence",
+      "updated_at"
+    ],
+    "rulebook_path": "identity/packs/base-repo-architect/RULEBOOK.jsonl"
+  },
+  "learning_verification_contract": {
+    "run_id_required": true,
+    "reasoning_trace_required": true,
+    "reasoning_trace_path_pattern": "resource/reports/*reasoning*.json",
+    "rulebook_update_required": true,
+    "rulebook_link_field": "evidence_run_id"
+  },
+  "agent_handoff_contract": {
+    "required": true,
+    "required_fields": [
+      "handoff_id",
+      "task_id",
+      "from_agent",
+      "to_agent",
+      "input_scope",
+      "actions_taken",
+      "artifacts",
+      "result",
+      "next_action",
+      "rulebook_update"
+    ],
+    "forbidden_mutations": [
+      "gates",
+      "protocol_review_contract",
+      "identity_update_lifecycle_contract",
+      "trigger_regression_contract"
+    ],
+    "handoff_log_path_pattern": "identity/runtime/logs/handoff/*.json",
+    "minimum_logs_required": 1,
+    "require_generated_at": true,
+    "max_log_age_days": 7,
+    "enforce_task_id_match": true,
+    "require_identity_id_match": true,
+    "sample_log_path_pattern": "identity/runtime/examples/handoff",
+    "result_enum": [
+      "PASS",
+      "FAIL",
+      "BLOCKED"
+    ],
+    "self_test_required": true,
+    "validator": "scripts/validate_agent_handoff_contract.py"
+  },
+  "source_of_truth": {
+    "local_docs_roots": [
+      "../webbrowser/restored/wechat-shop-docs-tree",
+      "../webbrowser/restored/wechat-shop-docs"
+    ],
+    "local_project_evidence_roots": [
+      "resource/ops-screens",
+      "resource/reject-archive",
+      "resource/push-events",
+      "resource/preflight"
+    ]
+  },
+  "escalation_policy": {
+    "email_for_offline_only": true,
+    "offline_blockers": [
+      "qualification_application_required",
+      "category_permission_application_required",
+      "legal_certificate_collection_required",
+      "account_permission_change_required"
+    ],
+    "do_not_email_for": [
+      "routine_status_update",
+      "normal_progress_report",
+      "non_blocking_warning"
+    ],
+    "email_for_human_collab_blockers": true,
+    "human_collab_blockers": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
+    ]
+  },
+  "required_artifacts": [
+    "resource/payloads/*.json",
+    "resource/preflight/*.json",
+    "resource/preflight/*.md",
+    "resource/reject-archive/*.json",
+    "resource/reject-archive/*.md",
+    "resource/reports/*.md"
+  ],
+  "post_execution_mandatory": [
+    "append task outcome into identity/packs/base-repo-architect/TASK_HISTORY.md",
+    "update objective.status",
+    "update state_machine.current_state",
+    "record next blocking dependency if any"
+  ],
+  "version_control": {
+    "sync_status": "initialized",
+    "last_updated": "2026-02-23",
+    "protocol_revision": "v1.4.2-control-loop-arbitration"
+  },
+  "blocker_taxonomy_contract": {
+    "required": true,
+    "required_blocker_types": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
+    ],
+    "blocker_classification_required_fields": [
+      "blocker_type",
+      "source",
+      "detected_at",
+      "requires_human_collab",
+      "next_action"
+    ],
+    "fail_action": "block_merge_and_reenter_collaboration_update"
+  },
+  "collaboration_trigger_contract": {
+    "required": true,
+    "hard_rule": "If human collaboration blockers are detected, notify immediately and emit chat receipt",
+    "trigger_conditions": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
+    ],
+    "notify_channel": "ops-notification-router",
+    "dedupe_window_hours": 24,
+    "state_change_bypass_dedupe": true,
+    "must_emit_receipt_in_chat": true,
+    "receipt_required_fields": [
+      "event_id",
+      "blocker_type",
+      "notified_at",
+      "channel",
+      "dedupe_key",
+      "status"
+    ],
+    "evidence_log_path_pattern": "identity/runtime/logs/collaboration/*.json",
+    "minimum_evidence_logs_required": 1,
+    "max_log_age_days": 7,
+    "validator": "scripts/validate_identity_collab_trigger.py",
+    "notify_policy": "must_notify_when_human_required",
+    "notify_timing": "immediate",
+    "decision_basis": "role_requirement"
+  },
+  "capability_orchestration_contract": {
+    "required": true,
+    "task_type_routes": {
+      "wechat_listing_update": {
+        "pipeline": [
+          "observe_context",
+          "skill_route",
+          "mcp_preflight",
+          "execute_pipeline",
+          "verify_result",
+          "emit_evidence"
+        ],
+        "primary_skills": [
+          "weixinstore-sku-onboarding",
+          "product-visual-qa"
+        ],
+        "fallback_skills": [
+          "weixinstore-ui-agent",
+          "identity-creator"
+        ],
+        "required_mcp": [
+          "github",
+          "n8n-mcp"
+        ],
+        "max_tool_calls": 30,
+        "max_runtime_minutes": 20
+      },
+      "knowledge_api_probe": {
+        "pipeline": [
+          "observe_context",
+          "source_research",
+          "hypothesis_build",
+          "api_probe",
+          "verify_result",
+          "emit_evidence"
+        ],
+        "primary_skills": [
+          "identity-creator"
+        ],
+        "fallback_skills": [
+          "web-docs-to-markdown"
+        ],
+        "required_mcp": [
+          "n8n-mcp"
+        ],
+        "max_tool_calls": 20,
+        "max_runtime_minutes": 15
+      }
+    },
+    "preflight_requirements": [
+      "mcp_available",
+      "auth_ready",
+      "inputs_complete"
+    ],
+    "fail_classification": [
+      "route_wrong",
+      "skill_gap",
+      "mcp_unavailable",
+      "tool_auth",
+      "data_issue"
+    ],
+    "evidence_schema_fields": [
+      "task_id",
+      "route_selected",
+      "skills_used",
+      "mcp_tools_used",
+      "actions_taken",
+      "result",
+      "artifacts"
+    ]
+  },
+  "knowledge_acquisition_contract": {
+    "required": true,
+    "must_research_when": [
+      "new_api_domain",
+      "unknown_error_code",
+      "schema_changed"
+    ],
+    "source_priority": [
+      "official_spec",
+      "repo_contract",
+      "third_party"
+    ],
+    "evidence_fields": [
+      "claim",
+      "source",
+      "source_level",
+      "confidence",
+      "expiry",
+      "applies_to"
+    ],
+    "sample_report_path_pattern": "identity/runtime/examples/*knowledge-acquisition*.json",
+    "high_frequency_domains": {
+      "kie": {
+        "preferred_skills": [
+          "identity-creator"
+        ],
+        "preferred_sources": [
+          "official_spec",
+          "repo_contract"
+        ],
+        "required_validators": [
+          "scripts/validate_identity_knowledge_contract.py"
+        ]
+      }
+    }
+  },
+  "experience_feedback_contract": {
+    "required": true,
+    "positive_rulebook_path": "identity/runtime/rulebooks/positive.jsonl",
+    "negative_rulebook_path": "identity/runtime/rulebooks/negative.jsonl",
+    "required_fields": [
+      "case_id",
+      "layer",
+      "pattern",
+      "action",
+      "impact_score",
+      "replay_status"
+    ],
+    "cross_layer_feedback_targets": [
+      "routing_contract",
+      "capability_orchestration_contract",
+      "gates"
+    ],
+    "promote_requires_replay_pass": true,
+    "sample_report_path_pattern": "identity/runtime/examples/*experience-feedback*.json",
+    "redaction_policy_required": true,
+    "retention_days": 30,
+    "sensitive_fields_denylist": [
+      "access_token",
+      "authorization",
+      "cookie",
+      "set-cookie",
+      "api_key",
+      "email",
+      "phone"
+    ],
+    "export_scope": "aggregated-only",
+    "max_log_age_days": 7,
+    "minimum_logs_required": 1,
+    "feedback_log_path_pattern": "identity/runtime/logs/feedback/base-repo-architect-feedback-*.json",
+    "promotion_requires_replay_pass": true
+  },
+  "ci_enforcement_contract": {
+    "required": true,
+    "required_workflows": [
+      "protocol-ci",
+      "identity-protocol-ci"
+    ],
+    "required_job": "required-gates",
+    "required_validators": [
+      "scripts/validate_identity_runtime_contract.py",
+      "scripts/validate_identity_upgrade_prereq.py",
+      "scripts/validate_identity_update_lifecycle.py",
+      "scripts/validate_identity_trigger_regression.py",
+      "scripts/validate_identity_learning_loop.py",
+      "scripts/validate_agent_handoff_contract.py",
+      "scripts/validate_identity_collab_trigger.py",
+      "scripts/validate_identity_orchestration_contract.py",
+      "scripts/validate_identity_knowledge_contract.py",
+      "scripts/validate_identity_experience_feedback.py",
+      "scripts/validate_changelog_updated.py",
+      "scripts/validate_release_metadata_sync.py",
+      "scripts/validate_identity_ci_enforcement.py",
+      "scripts/validate_identity_capability_arbitration.py",
+      "scripts/validate_identity_install_safety.py",
+      "scripts/validate_identity_experience_feedback_governance.py",
+      "scripts/validate_identity_self_upgrade_enforcement.py",
+      "scripts/validate_identity_install_provenance.py"
+    ],
+    "required_checks": [
+      "protocol-ci / required-gates",
+      "identity-protocol-ci / required-gates"
+    ],
+    "freshness_gate": {
+      "handoff_logs_max_age_days": 7,
+      "route_metrics_max_age_days": 7
+    },
+    "required_validator_set_label": "v1.1-required",
+    "candidate_validators_v1_2": [
+      "scripts/validate_identity_feedback_freshness.py",
+      "scripts/validate_identity_feedback_promotion.py"
+    ]
+  },
+  "capability_arbitration_contract": {
+    "required": true,
+    "priority_order": [
+      "accurate_judgement",
+      "governance",
+      "latency",
+      "exploration"
+    ],
+    "conflict_rules": {
+      "judgement_vs_routing": {
+        "when": [
+          "high_risk_listing",
+          "evidence_conflict_detected"
+        ],
+        "decision": "prefer_judgement"
+      },
+      "reasoning_vs_latency": {
+        "when": [
+          "low_risk_and_time_bounded"
+        ],
+        "decision": "bounded_reasoning"
+      },
+      "routing_vs_learning": {
+        "when": [
+          "exploration_enabled"
+        ],
+        "decision": "cap_exploration_ratio",
+        "max_exploration_ratio": 0.2
+      },
+      "learning_vs_hotfix": {
+        "when": [
+          "incident_hotfix_required"
+        ],
+        "decision": "temporary_hotfix_then_rulebook_backfill"
+      }
+    },
+    "trigger_thresholds": {
+      "misroute_rate_percent": 10,
+      "replay_failure_rate_percent": 20,
+      "first_pass_success_drop_percent": 15
+    },
+    "decision_record_required_fields": [
+      "arbitration_id",
+      "task_id",
+      "identity_id",
+      "conflict_pair",
+      "inputs",
+      "decision",
+      "impact",
+      "rationale",
+      "decided_at"
+    ],
+    "sample_report_path_pattern": "identity/runtime/examples/*capability-arbitration*.json",
+    "fail_action": "block_merge_and_reenter_arbitration_update",
+    "safe_auto_patch_surface": {
+      "enforce_path_policy": true,
+      "allowlist": [
+        "identity/runtime/rulebooks/*",
+        "identity/packs/base-repo-architect/TASK_HISTORY.md",
+        "identity/runtime/logs/*",
+        "identity/packs/base-repo-architect/RULEBOOK.jsonl"
+      ],
+      "denylist": [
+        "identity/protocol/*",
+        ".github/workflows/*",
+        "scripts/validate_*"
+      ]
+    }
+  },
+  "install_safety_contract": {
+    "required": true,
+    "preserve_existing_default": true,
+    "on_conflict": "abort_and_explain",
+    "idempotent_reinstall_allowed": true,
+    "same_signature_action": "no_op_with_report",
+    "allow_replace_only_with_backup": true,
+    "rollback_reference_required": true,
+    "install_report_required": true,
+    "dry_run_required": true,
+    "install_report_path_pattern": "identity/runtime/examples/install/install-report-*-base-repo-architect.json"
+  },
+  "self_upgrade_enforcement_contract": {
+    "required": true,
+    "core_paths": [
+      "identity/packs/base-repo-architect/CURRENT_TASK.json",
+      "identity/packs/base-repo-architect/IDENTITY_PROMPT.md",
+      "identity/packs/base-repo-architect/RULEBOOK.jsonl"
+    ],
+    "required_toolkit_steps": [
+      "scripts/execute_identity_upgrade.py --identity-id base-repo-architect --mode review-required",
+      "scripts/validate_identity_upgrade_prereq.py --identity-id base-repo-architect",
+      "scripts/validate_identity_runtime_contract.py --identity-id base-repo-architect",
+      "scripts/validate_identity_update_lifecycle.py --identity-id base-repo-architect",
+      "scripts/validate_identity_capability_arbitration.py --identity-id base-repo-architect"
+    ],
+    "evidence_path_pattern": "identity/runtime/reports/identity-upgrade-exec-base-repo-architect-*.json",
+    "matching_patch_plan_required": true,
+    "enforcement_validator": "scripts/validate_identity_self_upgrade_enforcement.py"
+  },
+  "install_provenance_contract": {
+    "required": true,
+    "installer_tool_required": "identity-installer",
+    "operations_required": [
+      "plan",
+      "dry-run",
+      "install",
+      "verify"
+    ],
+    "report_path_pattern": "identity/runtime/reports/install/identity-install-base-repo-architect-*.json",
+    "required_report_fields": [
+      "report_id",
+      "identity_id",
+      "generated_at",
+      "operation",
+      "conflict_type",
+      "action",
+      "preserved_paths",
+      "installer_invocation"
+    ],
+    "required_invocation_fields": [
+      "tool",
+      "entrypoint",
+      "command"
+    ],
+    "enforcement_validator": "scripts/validate_identity_install_provenance.py",
+    "non_destructive_default": true
+  },
+  "check_context_alignment_contract": {
+    "required": true,
+    "branch": "main",
+    "required_check_source": "branch_protection",
+    "actual_check_source": "github_check_runs",
+    "must_match_exactly": true,
+    "mismatch_action": "block_release_and_patch_branch_protection",
+    "validator": "scripts/validate_required_check_context_alignment.py"
+  },
+  "release_incident_contract": {
+    "required": true,
+    "incident_log_path_pattern": "identity/runtime/reports/release-incidents/incident-*.json",
+    "required_fields": [
+      "incident_id",
+      "opened_at",
+      "symptom",
+      "root_cause",
+      "fix_commits",
+      "validators_added",
+      "workflow_runs",
+      "closure_decision"
+    ],
+    "recurrence_requires_new_validator": true,
+    "closure_requires_changelog_entry": true
+  },
+  "release_readiness_contract": {
+    "required": true,
+    "required_evidence": [
+      "green_required_check_runs",
+      "changelog_updated",
+      "tag_points_to_green_commit",
+      "audit_snapshot_updated"
+    ],
+    "required_check_contexts": [
+      "required-gates / validate-identity"
+    ],
+    "fail_action": "block_release"
+  }
+}

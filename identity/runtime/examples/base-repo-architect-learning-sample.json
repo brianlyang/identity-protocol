@@ -1,0 +1,20 @@
+{
+  "run_id": "bootstrap",
+  "problem_type": "audit_reject_text",
+  "goal": "clear rejection and reach stable online state",
+  "reasoning_attempts": [
+    {
+      "attempt": 1,
+      "hypothesis": "reject comes from unsupported collectible-value attribute",
+      "patch": {
+        "product.attrs": {
+          "是否具有拍卖/收藏价值": "不具有"
+        }
+      },
+      "expected_effect": "remove policy conflict and allow audit pass",
+      "result": "pass"
+    }
+  ],
+  "final_status": "pass",
+  "notes": "sample artifact for protocol e2e validation"
+}

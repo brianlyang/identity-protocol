@@ -168,9 +168,10 @@ def main() -> int:
         if not isinstance(deny, list) or not deny:
             print("[FAIL] safe_auto_patch_surface.denylist must be non-empty list")
             rc = 1
+        task_history_path = str((task_path.parent / "TASK_HISTORY.md").as_posix())
         required_allow = {
             "identity/runtime/rulebooks/*",
-            "identity/store-manager/TASK_HISTORY.md",
+            task_history_path,
             "identity/runtime/logs/*",
         }
         required_deny = {
