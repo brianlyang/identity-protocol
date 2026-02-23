@@ -26,6 +26,11 @@ def main() -> int:
     ap.add_argument("--identity-id", default="store-manager")
     ap.add_argument("--base", default="")
     ap.add_argument("--head", default="")
+    ap.add_argument(
+        "--execution-report",
+        default="",
+        help="optional identity upgrade execution report path; when provided, enforce experience writeback linkage",
+    )
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
@@ -55,6 +60,17 @@ def main() -> int:
         ],
         ["python3", "scripts/validate_identity_ci_enforcement.py", "--identity-id", identity_id],
     ]
+    if args.execution_report.strip():
+        seq.append(
+            [
+                "python3",
+                "scripts/validate_identity_experience_writeback.py",
+                "--identity-id",
+                identity_id,
+                "--execution-report",
+                args.execution_report.strip(),
+            ]
+        )
 
     for cmd in seq:
         rc = _run(cmd)

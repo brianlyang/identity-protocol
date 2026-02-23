@@ -55,6 +55,15 @@
   - role-binding evidence resolution hardening:
     - role-binding/protocol-prereq/runtime evidence selectors now prefer newest file by mtime
       instead of lexical filename ordering (prevents stale `*-sample.json` overshadowing live evidence)
+  - creator update experience-writeback closure hardening:
+    - `scripts/execute_identity_upgrade.py` now writes review-required success feedback back into
+      `RULEBOOK.jsonl` + `TASK_HISTORY.md` with `evidence_run_id=run_id`
+    - added validator `scripts/validate_identity_experience_writeback.py`
+      to enforce run-report ↔ rulebook/task-history linkage
+    - `scripts/e2e_smoke_test.sh` now validates experience writeback right after
+      `identity_creator.py update --mode review-required`
+    - `scripts/release_readiness_check.py` now supports optional
+      `--execution-report` to include writeback validation in pre-release verification
   - new-identity bootstrap completeness hardening:
     - `create_identity_pack.py` now also seeds:
       - trigger-regression sample
