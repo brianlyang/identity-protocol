@@ -48,11 +48,11 @@ def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str) -> P
         p = Path(explicit)
         return p if p.exists() else None
     pattern = pattern.replace("<identity-id>", identity_id)
-    files = sorted(Path(".").glob(pattern))
+    files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
     if not files:
         return None
     scoped = [p for p in files if identity_id in p.name]
-    return scoped[-1] if scoped else files[-1]
+    return (sorted(scoped, key=lambda p: p.stat().st_mtime)[-1] if scoped else files[-1])
 
 
 def _parse_utc(ts: str) -> datetime | None:

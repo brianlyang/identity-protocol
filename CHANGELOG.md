@@ -46,6 +46,22 @@
     - `scripts/release_readiness_check.py` now includes
       `scripts/validate_identity_self_upgrade_enforcement.py --base <sha> --head <sha>`
     - aligns readiness decision with e2e self-upgrade enforcement semantics
+  - switch stability hardening (single-active transaction):
+    - `scripts/identity_creator.py activate` now enforces single-active semantics
+      (`target active + all others inactive`) with rollback on failure
+    - activation writes role-binding promotion evidence (`BOUND_ACTIVE` for target,
+      `BOUND_READY` for demoted identities) and switch report under
+      `identity/runtime/reports/activation/`
+  - role-binding evidence resolution hardening:
+    - role-binding/protocol-prereq/runtime evidence selectors now prefer newest file by mtime
+      instead of lexical filename ordering (prevents stale `*-sample.json` overshadowing live evidence)
+  - new-identity bootstrap completeness hardening:
+    - `create_identity_pack.py` now also seeds:
+      - trigger-regression sample
+      - route-quality metrics baseline
+      - collaboration/handoff bootstrap logs
+      - install provenance operation chain reports (`plan -> dry-run -> install -> verify`)
+    - capability arbitration validator now checks dynamic identity-specific TASK_HISTORY allowlist path
   - added release freeze boundary validator:
     - `scripts/validate_release_freeze_boundary.py`
     - blocks release-range changes that introduce local instance packs under `identity/packs/*`

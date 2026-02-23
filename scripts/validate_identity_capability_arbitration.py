@@ -168,9 +168,14 @@ def main() -> int:
         if not isinstance(deny, list) or not deny:
             print("[FAIL] safe_auto_patch_surface.denylist must be non-empty list")
             rc = 1
+        dynamic_history_path = f"identity/{args.identity_id}/TASK_HISTORY.md"
+        rb_contract = task.get("rulebook_contract") or {}
+        rb_path = str(rb_contract.get("rulebook_path", "")).strip()
+        if rb_path.startswith("identity/packs/"):
+            dynamic_history_path = rb_path.replace("RULEBOOK.jsonl", "TASK_HISTORY.md")
         required_allow = {
             "identity/runtime/rulebooks/*",
-            "identity/store-manager/TASK_HISTORY.md",
+            dynamic_history_path,
             "identity/runtime/logs/*",
         }
         required_deny = {

@@ -85,6 +85,13 @@ Inference mapping:
      - `runtime_bootstrap_live_revalidate`
      - `evidence_max_age_days`
      - `active_binding_status_required`
+5. Switch-state machine closure + bootstrap completeness:
+   - `scripts/identity_creator.py activate` now enforces single-active transactional switching
+     with rollback and explicit role-binding status transition evidence.
+   - `scripts/create_identity_pack.py` now seeds update-minimum evidence set for new identities
+     (trigger regression sample, route metrics baseline, install provenance chain, collaboration/handoff bootstrap logs).
+   - `scripts/validate_identity_capability_arbitration.py` now validates dynamic identity-specific
+     TASK_HISTORY allowlist path (no store-manager hardcode leakage).
 
 ## Decision
 

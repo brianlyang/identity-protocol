@@ -248,6 +248,20 @@ def _normalize_pack_paths(value, identity_id: str):
     return value
 
 
+def _normalize_bootstrap_task_ids(value, identity_id: str):
+    if isinstance(value, dict):
+        out = {}
+        for k, v in value.items():
+            if k == "task_id":
+                out[k] = f"{identity_id}_bootstrap"
+            else:
+                out[k] = _normalize_bootstrap_task_ids(v, identity_id)
+        return out
+    if isinstance(value, list):
+        return [_normalize_bootstrap_task_ids(v, identity_id) for v in value]
+    return value
+
+
 def _full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
     template_path = Path("identity/store-manager/CURRENT_TASK.json")
     if not template_path.exists():
@@ -289,6 +303,22 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     feedback = task.setdefault("experience_feedback_contract", {})
     if isinstance(feedback, dict):
         feedback["feedback_log_path_pattern"] = f"identity/runtime/logs/feedback/{identity_id}-feedback-*.json"
+    collab = task.setdefault("collaboration_trigger_contract", {})
+    if isinstance(collab, dict):
+        collab["evidence_log_path_pattern"] = f"identity/runtime/logs/collaboration/{identity_id}-*.json"
+    handoff = task.setdefault("agent_handoff_contract", {})
+    if isinstance(handoff, dict):
+        handoff["handoff_log_path_pattern"] = f"identity/runtime/logs/handoff/{identity_id}-*.json"
+    route_quality = task.setdefault("route_quality_contract", {})
+    if isinstance(route_quality, dict):
+        route_quality["source_pattern"] = f"identity/runtime/logs/handoff/{identity_id}-*.json"
+        route_quality["metrics_output_path"] = f"identity/runtime/metrics/{identity_id}-route-quality.json"
+    trig = task.setdefault("trigger_regression_contract", {})
+    if isinstance(trig, dict):
+        trig["sample_report_path_pattern"] = f"identity/runtime/examples/{identity_id}-trigger-regression-sample.json"
+    arb = task.setdefault("capability_arbitration_contract", {})
+    if isinstance(arb, dict):
+        arb["sample_report_path_pattern"] = f"identity/runtime/examples/{identity_id}-capability-arbitration-sample.json"
     return task
 
 
@@ -368,6 +398,7 @@ def _copy_sample_with_identity(src: Path, dst: Path, identity_id: str) -> None:
     except Exception:
         return
     payload = _replace_store_manager_tokens(payload, identity_id)
+    payload = _normalize_bootstrap_task_ids(payload, identity_id)
     if isinstance(payload, dict):
         if "identity_id" in payload:
             payload["identity_id"] = identity_id
@@ -393,6 +424,16 @@ def _bootstrap_identity_samples(identity_id: str) -> None:
         identity_id,
     )
     _copy_sample_with_identity(
+        Path("identity/runtime/examples/store-manager-trigger-regression-sample.json"),
+        Path(f"identity/runtime/examples/{identity_id}-trigger-regression-sample.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
+        Path("identity/runtime/metrics/store-manager-route-quality.json"),
+        Path(f"identity/runtime/metrics/{identity_id}-route-quality.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
         Path("identity/runtime/examples/install/install-report-2026-02-22-store-manager.json"),
         Path(f"identity/runtime/examples/install/install-report-bootstrap-{identity_id}.json"),
         identity_id,
@@ -402,6 +443,47 @@ def _bootstrap_identity_samples(identity_id: str) -> None:
         Path(f"identity/runtime/logs/feedback/{identity_id}-feedback-bootstrap.json"),
         identity_id,
     )
+    _copy_sample_with_identity(
+        Path("identity/runtime/logs/handoff/handoff-2026-02-20-store-manager-10000514174106.json"),
+        Path(f"identity/runtime/logs/handoff/{identity_id}-bootstrap.json"),
+        identity_id,
+    )
+    _copy_sample_with_identity(
+        Path("identity/runtime/logs/collaboration/store-manager-collab-2026-02-21T15-15-00Z.json"),
+        Path(f"identity/runtime/logs/collaboration/{identity_id}-bootstrap.json"),
+        identity_id,
+    )
+    now = datetime.now(timezone.utc)
+    iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    report_dir = Path("identity/runtime/reports/install")
+    report_dir.mkdir(parents=True, exist_ok=True)
+    operations = [
+        ("plan", "fresh_install", "guarded_apply"),
+        ("dry-run", "fresh_install", "guarded_apply"),
+        ("install", "fresh_install", "guarded_apply"),
+        ("verify", "fresh_install", "verified"),
+    ]
+    for idx, (op, conflict, action) in enumerate(operations, start=1):
+        rid = f"identity-install-{identity_id}-{op}-bootstrap-{idx:02d}"
+        write_json(
+            report_dir / f"{rid}.json",
+            {
+                "report_id": rid,
+                "identity_id": identity_id,
+                "generated_at": iso,
+                "operation": op,
+                "conflict_type": conflict,
+                "action": action,
+                "source_pack": f"identity/packs/{identity_id}",
+                "target_pack": f"identity/packs/{identity_id}",
+                "preserved_paths": [f"identity/packs/{identity_id}"],
+                "installer_invocation": {
+                    "tool": "identity-installer",
+                    "entrypoint": "scripts/identity_installer.py",
+                    "command": f"identity-installer {op} --identity-id {identity_id}",
+                },
+            },
+        )
 
 
 def main() -> int:

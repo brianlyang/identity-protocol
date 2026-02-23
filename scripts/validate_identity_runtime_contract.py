@@ -104,12 +104,12 @@ def _resolve_task_path(identity: dict[str, Any]) -> Path:
 
 
 def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
-    files = sorted(Path(".").glob(pattern))
+    files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
     if not files:
         return None
     scoped = [p for p in files if identity_id in p.name]
     if scoped:
-        return scoped[-1]
+        return sorted(scoped, key=lambda p: p.stat().st_mtime)[-1]
     return files[-1]
 
 

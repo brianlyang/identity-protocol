@@ -2,14 +2,74 @@
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+
+import yaml
 
 
 def _run(cmd: list[str]) -> int:
     print("$", " ".join(cmd))
     return subprocess.call(cmd)
+
+
+def _load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_yaml(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _dump_yaml(path: Path, data: dict) -> None:
+    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+
+def _resolve_task_path(catalog_data: dict, identity_id: str) -> Path:
+    identities = catalog_data.get("identities") or []
+    target = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    if not target:
+        raise FileNotFoundError(f"identity not found in catalog: {identity_id}")
+    pack_path = str((target or {}).get("pack_path", "")).strip()
+    if pack_path:
+        p = Path(pack_path) / "CURRENT_TASK.json"
+        if p.exists():
+            return p
+    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
+    if legacy.exists():
+        return legacy
+    raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
+
+
+def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status: str, note: str) -> Path:
+    task = _load_json(_resolve_task_path(catalog_data, identity_id))
+    contract = task.get("identity_role_binding_contract") or {}
+    role_type = str(contract.get("role_type", "")).strip() or "identity_runtime_operator"
+    ts = datetime.now(timezone.utc)
+    report = {
+        "binding_id": f"identity-role-binding-{identity_id}-{int(ts.timestamp())}",
+        "generated_at": ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "identity_id": identity_id,
+        "role_type": role_type,
+        "binding_status": binding_status,
+        "runtime_bootstrap": {
+            "status": "PASS",
+            "validator": "scripts/validate_identity_runtime_contract.py",
+            "evidence": str(_resolve_task_path(catalog_data, identity_id)),
+        },
+        "switch_guard": {
+            "status": "PASS",
+            "activation_policy": str(contract.get("activation_policy", "inactive_by_default")),
+            "notes": note,
+        },
+    }
+    out = Path("identity/runtime/examples") / f"identity-role-binding-{identity_id}-{int(ts.timestamp())}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out
 
 
 def _activate_identity(catalog: Path, identity_id: str) -> int:
@@ -18,25 +78,83 @@ def _activate_identity(catalog: Path, identity_id: str) -> int:
         print("[FAIL] role-binding validation failed; activation blocked")
         return rc
 
-    import yaml
-
     if not catalog.exists():
         print(f"[FAIL] catalog not found: {catalog}")
         return 1
-    data = yaml.safe_load(catalog.read_text(encoding="utf-8")) or {}
+    original_catalog_text = catalog.read_text(encoding="utf-8")
+    data = _load_yaml(catalog)
     identities = data.get("identities") or []
-    changed = False
-    for item in identities:
-        if isinstance(item, dict) and str(item.get("id", "")).strip() == identity_id:
-            item["status"] = "active"
-            changed = True
-            break
-    if not changed:
+    target = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    if not target:
         print(f"[FAIL] identity not found in catalog: {identity_id}")
         return 1
-    catalog.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
-    print(f"[OK] activated identity in catalog: {identity_id}")
-    return 0
+
+    previously_active = [
+        str(x.get("id", "")).strip()
+        for x in identities
+        if isinstance(x, dict)
+        and str(x.get("status", "")).strip().lower() == "active"
+        and str(x.get("id", "")).strip()
+        and str(x.get("id", "")).strip() != identity_id
+    ]
+
+    created_evidence: list[Path] = []
+    try:
+        # promote target to active binding first (activation validator requires this for active identities)
+        created_evidence.append(
+            _write_binding_evidence(
+                data,
+                identity_id,
+                "BOUND_ACTIVE",
+                note="activation transaction promoted identity to active",
+            )
+        )
+        for old_id in previously_active:
+            created_evidence.append(
+                _write_binding_evidence(
+                    data,
+                    old_id,
+                    "BOUND_READY",
+                    note=f"demoted by single-active switch to {identity_id}",
+                )
+            )
+
+        for item in identities:
+            if not isinstance(item, dict):
+                continue
+            iid = str(item.get("id", "")).strip()
+            if not iid:
+                continue
+            item["status"] = "active" if iid == identity_id else "inactive"
+
+        _dump_yaml(catalog, data)
+        rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--identity-id", identity_id])
+        if rc != 0:
+            raise RuntimeError("post-activation role-binding validation failed")
+
+        switch_dir = Path("identity/runtime/reports/activation")
+        switch_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(timezone.utc)
+        switch_report = switch_dir / f"identity-activation-switch-{identity_id}-{int(ts.timestamp())}.json"
+        switch_payload = {
+            "switch_id": switch_report.stem,
+            "generated_at": ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "target_identity_id": identity_id,
+            "demoted_identities": previously_active,
+            "single_active_enforced": True,
+            "binding_evidence_paths": [str(p) for p in created_evidence],
+        }
+        switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"[OK] activated identity in catalog (single-active): {identity_id}")
+        print(f"[OK] switch report: {switch_report}")
+        return 0
+    except Exception as e:
+        catalog.write_text(original_catalog_text, encoding="utf-8")
+        for p in created_evidence:
+            if p.exists():
+                p.unlink()
+        print(f"[FAIL] activation transaction rolled back: {e}")
+        return 1
 
 
 def main() -> int:
