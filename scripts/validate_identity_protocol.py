@@ -93,9 +93,8 @@ def main() -> int:
     if not isinstance(identities, list) or not identities:
         return fail("identities must be a non-empty list")
 
-    default_id = str(catalog.get('default_identity', '')).strip()
-    if not default_id:
-        return fail("default_identity must be non-empty")
+    default_raw = catalog.get('default_identity', '')
+    default_id = str(default_raw).strip() if default_raw is not None else ""
 
     ids: set[str] = set()
     has_default = False
@@ -187,9 +186,11 @@ def main() -> int:
                 print(f"[FAIL] {prefix} identity_update_lifecycle_contract exists but trigger_regression_contract missing")
                 rc = 1
 
-    if not has_default:
+    if default_id and not has_default:
         print(f"[FAIL] default_identity {default_id} is not present in identities")
         rc = 1
+    elif not default_id:
+        print("[OK]   identity-neutral baseline: default_identity is empty (explicit activation required)")
 
     if rc == 0:
         print("[OK] identity protocol validation passed (all identities)")

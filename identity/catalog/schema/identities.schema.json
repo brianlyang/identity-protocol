@@ -7,7 +7,10 @@
   "properties": {
     "version": { "type": "string", "minLength": 1 },
     "updated_at": { "type": "string", "minLength": 1 },
-    "default_identity": { "type": "string", "minLength": 1 },
+    "default_identity": {
+      "type": ["string", "null"],
+      "description": "May be empty/null for identity-neutral baseline; activation must be explicit."
+    },
     "identities": {
       "type": "array",
       "minItems": 1,

@@ -18,15 +18,8 @@ BASE_SHA_GLOBAL="$(git rev-parse HEAD~1)"
 HEAD_SHA_GLOBAL="$(git rev-parse HEAD)"
 python3 scripts/validate_release_freeze_boundary.py --base "${BASE_SHA_GLOBAL}" --head "${HEAD_SHA_GLOBAL}"
 
-echo "[6/28] compile runtime brief"
-python3 scripts/compile_identity_runtime.py
-
-echo "[7/28] validate manifest semantics"
-python3 scripts/validate_identity_manifest.py
-
-echo "[8/28] test discovery contract"
-python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
-
+IDS=${IDENTITY_IDS:-}
+if [ -z "$IDS" ]; then
 IDS=$(python3 - <<'PY'
 import yaml
 from pathlib import Path
@@ -39,8 +32,25 @@ if not ids:
 print(' '.join(ids))
 PY
 )
+fi
 
 echo "[9/28] active identities: $IDS"
+
+if [ -z "$IDS" ]; then
+  echo "[FAIL] no active/default identities resolved. set IDENTITY_IDS explicitly (e.g. IDENTITY_IDS=store-manager)."
+  exit 1
+fi
+
+PRIMARY_ID="$(printf '%s\n' "$IDS" | awk '{print $1}')"
+
+echo "[6/28] compile runtime brief"
+python3 scripts/compile_identity_runtime.py --identity-id "$PRIMARY_ID"
+
+echo "[7/28] validate manifest semantics"
+python3 scripts/validate_identity_manifest.py
+
+echo "[8/28] test discovery contract"
+python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
 
 for ID in $IDS; do
   echo "[10/28][$ID] validate runtime ORRLC contract"
@@ -106,7 +116,7 @@ for ID in $IDS; do
 done
 
 echo "[post] ensure compile output is stable and contains baseline refs"
-python3 scripts/compile_identity_runtime.py >/dev/null
+python3 scripts/compile_identity_runtime.py --identity-id "$PRIMARY_ID" >/dev/null
 grep -q "Runtime baseline review references:" identity/runtime/IDENTITY_COMPILED.md
 
 echo "E2E smoke test PASSED"

@@ -20,6 +20,15 @@
   - added deep cross-validation execution mapping into v1.4.6 governance/snapshot docs:
     - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md` (Git + Official Web + Context7)
     - `docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md`
+  - added PR-prep mandatory item for `identity-neutral baseline` migration:
+    - base repo must not depend on business default identity (e.g., store-manager)
+    - release closure template now includes identity-neutral evidence section
+  - implemented identity-neutral baseline controls:
+    - `identity/catalog/identities.yaml` now uses empty `default_identity`
+    - `store-manager` switched to `inactive` fixture status by default
+    - schema now allows empty/null `default_identity`
+    - `scripts/validate_identity_protocol.py` accepts explicit no-default mode
+    - `scripts/e2e_smoke_test.sh` now requires explicit `IDENTITY_IDS` when no active/default identity exists
   - added release freeze boundary validator:
     - `scripts/validate_release_freeze_boundary.py`
     - blocks release-range changes that introduce local instance packs under `identity/packs/*`

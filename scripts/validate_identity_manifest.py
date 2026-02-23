@@ -36,6 +36,7 @@ def main() -> int:
     if not isinstance(identities, list) or not identities:
         return fail("identities must be a non-empty list")
 
+    default_id = str(catalog.get('default_identity') or '').strip()
     ids: set[str] = set()
     has_default = False
     rc = 0
@@ -59,7 +60,7 @@ def main() -> int:
                 print(f"[FAIL] duplicate identity id: {identity_id}")
                 rc = 1
             ids.add(identity_id)
-            if identity_id == catalog['default_identity']:
+            if default_id and identity_id == default_id:
                 has_default = True
 
         pack_path = str(item.get('pack_path', '')).strip()
@@ -90,9 +91,11 @@ def main() -> int:
                     print(f"[FAIL] {prefix}.dependencies.tools must be list")
                     rc = 1
 
-    if not has_default:
-        print(f"[FAIL] default_identity {catalog['default_identity']} is not present in identities")
+    if default_id and not has_default:
+        print(f"[FAIL] default_identity {default_id} is not present in identities")
         rc = 1
+    elif not default_id:
+        print("[OK] identity-neutral baseline: default_identity is empty")
 
     if rc == 0:
         print("[OK] identity manifest semantic validation passed")

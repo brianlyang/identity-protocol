@@ -33,19 +33,35 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--catalog", default="identity/catalog/identities.yaml")
     p.add_argument("--output", default="identity/runtime/IDENTITY_COMPILED.md")
+    p.add_argument("--identity-id", default="", help="explicit identity id for identity-neutral baseline")
     args = p.parse_args()
 
     catalog_path = Path(args.catalog)
     catalog = load_yaml(catalog_path)
 
-    default_id = catalog.get("default_identity")
+    default_id = str(catalog.get("default_identity") or "").strip()
+    explicit_id = str(args.identity_id or "").strip()
     identities = catalog.get("identities") or []
-    if not default_id or not isinstance(identities, list):
-        raise SystemExit("Invalid catalog: default_identity/identities missing")
+    if not isinstance(identities, list):
+        raise SystemExit("Invalid catalog: identities missing")
 
-    active = next((x for x in identities if x.get("id") == default_id), None)
-    if not active:
-        raise SystemExit(f"default_identity not found in identities: {default_id}")
+    active = None
+    if explicit_id:
+        active = next((x for x in identities if isinstance(x, dict) and x.get("id") == explicit_id), None)
+        if not active:
+            raise SystemExit(f"identity_id not found in identities: {explicit_id}")
+    elif default_id:
+        active = next((x for x in identities if isinstance(x, dict) and x.get("id") == default_id), None)
+        if not active:
+            raise SystemExit(f"default_identity not found in identities: {default_id}")
+    else:
+        active_rows = [x for x in identities if isinstance(x, dict) and str(x.get("status", "")).lower() == "active"]
+        if len(active_rows) == 1:
+            active = active_rows[0]
+        elif len(active_rows) > 1:
+            raise SystemExit("multiple active identities found; pass --identity-id explicitly")
+        else:
+            raise SystemExit("identity-neutral baseline with no active/default identity; pass --identity-id explicitly")
 
     pack_path = Path(active.get("pack_path", ""))
     current_task_path = pack_path / "CURRENT_TASK.json"

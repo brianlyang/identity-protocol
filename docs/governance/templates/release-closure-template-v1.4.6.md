@@ -36,6 +36,14 @@
 - forbidden paths scanned:
 - result:
 
+## 5.1) Identity-neutral baseline evidence (NEW)
+
+- `default_identity` policy at release commit:
+- active identities at release commit:
+- fixture identities explicitly inactive-by-default:
+- no implicit fallback to business identity in CI/e2e/readiness:
+- role-binding required before activation/default switch:
+
 ## 6) Residual risks
 
 | Risk | Impact | Mitigation | Owner |
@@ -47,4 +55,3 @@
 - Decision: `Conditional Go` / `Full Go`
 - Rationale:
 - Reviewer(s):
-

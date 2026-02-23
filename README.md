@@ -70,6 +70,8 @@ git pull --ff-only
 python scripts/validate_identity_protocol.py
 python scripts/validate_identity_runtime_contract.py --identity-id store-manager
 python scripts/validate_identity_ci_enforcement.py --identity-id store-manager
+# 4) when running e2e in identity-neutral baseline, pass explicit target IDs
+IDENTITY_IDS=store-manager bash scripts/e2e_smoke_test.sh
 ```
 
 ## Fast review path (skill mechanism alignment)
