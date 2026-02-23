@@ -22,6 +22,11 @@
     - `scripts/release_readiness_check.py`
     - `scripts/e2e_smoke_test.sh`
     - `.github/workflows/_identity-required-gates.yml` (compile identity explicit + target resolver with diff coverage)
+  - release-plane gate hardening follow-up:
+    - `_identity-required-gates.yml` now fail-fast when identity target set resolves empty,
+      preventing silent skip of all identity validators
+    - `scripts/release_readiness_check.py` now auto-generates an upgrade execution report
+      (when not provided) and always enforces `validate_identity_experience_writeback.py`
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`
