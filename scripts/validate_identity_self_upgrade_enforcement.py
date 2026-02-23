@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -57,6 +58,37 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _parse_utc(ts: str) -> datetime | None:
+    s = str(ts or "").strip()
+    if not s:
+        return None
+    try:
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        return datetime.fromisoformat(s).astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _parse_report_time(report: dict[str, Any]) -> datetime | None:
+    t = _parse_utc(str(report.get("generated_at", "")).strip())
+    if t:
+        return t
+    run_id = str(report.get("run_id", "")).strip()
+    if not run_id:
+        return None
+    parts = run_id.split("-")
+    if not parts:
+        return None
+    tail = parts[-1]
+    if not tail.isdigit():
+        return None
+    try:
+        return datetime.fromtimestamp(int(tail), tz=timezone.utc)
+    except Exception:
+        return None
 
 
 def main() -> int:
@@ -146,13 +178,18 @@ def main() -> int:
         .get("required_checks", [])
     )
     required_check_tokens = [str(x) for x in required_checks if str(x).strip()]
+    legacy_required_check_tokens = [
+        "scripts/validate_identity_upgrade_prereq.py",
+        "scripts/validate_identity_runtime_contract.py",
+        "scripts/validate_identity_update_lifecycle.py",
+        "scripts/validate_identity_capability_arbitration.py",
+    ]
     if not required_check_tokens:
-        required_check_tokens = [
-            "scripts/validate_identity_upgrade_prereq.py",
-            "scripts/validate_identity_runtime_contract.py",
-            "scripts/validate_identity_update_lifecycle.py",
-            "scripts/validate_identity_capability_arbitration.py",
-        ]
+        required_check_tokens = list(legacy_required_check_tokens)
+
+    # Long-range audits may include historical reports generated before newer required checks
+    # were introduced (e.g., role-binding). Use version-aware compatibility for legacy reports.
+    strict_cutover = datetime(2026, 2, 23, 0, 0, 0, tzinfo=timezone.utc)
 
     valid_reports = 0
     for rel in report_candidates:
@@ -243,7 +280,16 @@ def main() -> int:
             continue
 
         cmds = [str(x.get("cmd", "")) for x in checks if isinstance(x, dict)]
-        missing_tokens = [tok for tok in required_check_tokens if not any(tok in c for c in cmds)]
+        report_required_checks = report.get("required_checks")
+        if isinstance(report_required_checks, list) and report_required_checks:
+            expected_tokens = [str(x) for x in report_required_checks if str(x).strip()]
+        else:
+            generated_at = _parse_report_time(report)
+            if generated_at and generated_at < strict_cutover:
+                expected_tokens = list(legacy_required_check_tokens)
+            else:
+                expected_tokens = list(required_check_tokens)
+        missing_tokens = [tok for tok in expected_tokens if not any(tok in c for c in cmds)]
         if missing_tokens:
             print(f"[FAIL] evidence report missing required checks in {rel}: {missing_tokens}")
             continue

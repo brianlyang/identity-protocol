@@ -50,7 +50,9 @@ All creator/installer/runtime context resolution follows the same order:
 4. If creating that directory fails, fallback to current workspace local path: `./.codex/identity`.
 
 Compatibility note:
-- if legacy `~/.identity` already exists on a machine, runtime keeps using it to avoid breaking existing local instances; migration to `$CODEX_HOME/identity` can be done by policy rollout.
+- legacy runtime locations remain readable only inside `IDENTITY_HOME`
+  (`${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, `${IDENTITY_HOME}/instances`).
+- there is no implicit fallback to `~/.identity`; migrate old instances explicitly to `$CODEX_HOME/identity`.
 
 This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,

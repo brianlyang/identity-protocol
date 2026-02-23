@@ -37,7 +37,7 @@
   - canonicalized skills-style runtime home resolution in README + governance record:
     `IDENTITY_HOME` env override -> `${CODEX_HOME}/identity` -> `~/.codex/identity` default
     -> `./.codex/identity` fallback when home path creation fails
-    (legacy `~/.identity` remains auto-compatible for existing local instances)
+    (removed implicit `~/.identity` auto-branch; legacy migration is explicit)
   - aligned runtime directory naming with skills-style root convention:
     canonical runtime pack root is now `${IDENTITY_HOME}`
     (legacy `${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, and `${IDENTITY_HOME}/instances` remain auto-compatible)
@@ -50,6 +50,12 @@
   - fixed `create_identity_pack.py` absolute path rewrite bug for local runtime roots:
     - prevents duplicated absolute prefixes during scaffold bootstrap
     - ensures generated CURRENT_TASK paths remain valid under `$CODEX_HOME/identity`
+  - installer default source alignment hardening:
+    - `identity_installer.py` now resolves source pack from local catalog `pack_path` first
+    - default `--pack-root` now follows local runtime root instead of repo `identity/packs`
+  - self-upgrade enforcement long-range audit compatibility:
+    - `validate_identity_self_upgrade_enforcement.py` now supports legacy report check sets
+      (version-aware fallback) to avoid false failures in cross-version ranges
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`

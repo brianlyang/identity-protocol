@@ -23,12 +23,7 @@ def default_identity_home() -> Path:
         if codex_home:
             raw = str(Path(codex_home).expanduser() / "identity")
         else:
-            # Backward-compatibility: if prior local home exists, keep using it.
-            legacy = Path("~/.identity").expanduser()
-            if legacy.exists():
-                raw = str(legacy)
-            else:
-                raw = "~/.codex/identity"
+            raw = "~/.codex/identity"
     p = _expand(raw)
     try:
         p.mkdir(parents=True, exist_ok=True)

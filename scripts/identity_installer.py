@@ -62,9 +62,33 @@ def _resolve_source_pack(args: argparse.Namespace) -> Path:
         if not src.exists():
             raise FileNotFoundError(f"source pack not found: {src}")
         return src
+    catalog_path = Path(args.catalog)
+    if catalog_path.exists():
+        try:
+            catalog = _load_yaml(catalog_path)
+            identities = catalog.get("identities") or []
+            target = next(
+                (
+                    x
+                    for x in identities
+                    if isinstance(x, dict) and str(x.get("id", "")).strip() == args.identity_id
+                ),
+                None,
+            )
+            if target:
+                pack_path = str((target or {}).get("pack_path", "")).strip()
+                if pack_path:
+                    pack = Path(pack_path).expanduser()
+                    if pack.exists():
+                        return pack
+        except Exception:
+            pass
     src = Path(args.pack_root) / args.identity_id
     if not src.exists():
-        raise FileNotFoundError(f"default source pack not found: {src} (pass --source-pack)")
+        raise FileNotFoundError(
+            f"default source pack not found: {src} "
+            f"(pass --source-pack or ensure identity is registered in {catalog_path})"
+        )
     return src
 
 
@@ -323,7 +347,7 @@ def main() -> int:
     common.add_argument("--identity-id", required=True)
     common.add_argument("--source-pack", default="")
     common.add_argument("--target-root", default=str(default_local_instances_root(identity_home)))
-    common.add_argument("--pack-root", default="identity/packs")
+    common.add_argument("--pack-root", default=str(default_local_instances_root(identity_home)))
     common.add_argument("--catalog", default=str(default_local_catalog_path(identity_home)))
     common.add_argument("--report-dir", default="identity/runtime/reports/install")
     common.add_argument("--backup-dir", default="identity/runtime/backups/install")
