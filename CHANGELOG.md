@@ -34,6 +34,8 @@
     - added migration playbook: `docs/guides/runtime-instance-migration-guide-v1.4.7.md`
     - added release closure snapshot: `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
     - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - canonicalized `IDENTITY_HOME` resolution order in README + governance record:
+    env override -> `~/.identity-protocol` default -> `./.identity-protocol` fallback
   - release gate closure follow-up fixes:
     - synchronized release metadata markers to `v1.4.6` across
       `README.md` / `IDENTITY_PROTOCOL.md` / `VERSIONING.md` / `requirements-dev.txt`

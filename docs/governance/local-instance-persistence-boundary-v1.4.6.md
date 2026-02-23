@@ -54,7 +54,10 @@ If a runtime identity resolves to repo path, validation fails.
 
 - Script: `scripts/resolve_identity_context.py`
 - Local defaults:
-  - `IDENTITY_HOME` (fallback to `./.identity-protocol` if home path is not writable)
+  - `IDENTITY_HOME` resolution order:
+    1. use explicit env `IDENTITY_HOME` if set
+    2. else use `~/.identity-protocol`
+    3. if home path create fails, fallback to `./.identity-protocol`
   - local catalog: `${IDENTITY_HOME}/catalog.local.yaml`
   - local instances: `${IDENTITY_HOME}/instances`
 - Behavior:
@@ -155,4 +158,3 @@ python3 scripts/validate_identity_experience_writeback.py \
 
 If workflow file updates are blocked by token scope, code-plane hardening can be merged first,
 but Full-Go release statement requires workflow-side required-check proof to be green.
-

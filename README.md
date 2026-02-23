@@ -38,6 +38,18 @@ Enforcement:
 Governance record:
 - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
 
+### IDENTITY_HOME resolution order (canonical)
+
+All creator/installer/runtime context resolution follows the same order:
+
+1. If environment variable `IDENTITY_HOME` is set, use it.
+2. Otherwise use default: `~/.identity-protocol` (for this machine: `/Users/yangxi/.identity-protocol`).
+3. If creating that directory fails, fallback to current workspace local path: `./.identity-protocol`.
+
+This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`
+and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
+and migration tooling.
+
 ## Quickstart
 
 ```bash
