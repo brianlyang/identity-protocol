@@ -1,0 +1,19 @@
+$ python3 scripts/validate_identity_collab_trigger.py --identity-id store-manager --self-test
+[exit_code] 0
+[started_at] 2026-02-22T19:30:16Z
+[ended_at] 2026-02-22T19:30:16Z
+
+[stdout]
+[OK] gates.collaboration_trigger_gate=required
+[OK] blocker taxonomy covers required classes
+[OK] blocker taxonomy required classification fields complete
+[OK] collaboration notify policy=must_notify_when_human_required, timing=immediate
+[OK] identity/runtime/logs/collaboration/store-manager-collab-2026-02-21T15-15-00Z.json collaboration log passed
+[OK] identity/runtime/examples/collaboration-trigger/positive/collab-login-required-pass.json collaboration log passed
+[FAIL] identity/runtime/examples/collaboration-trigger/negative/collab-delay-fail.json state_change_bypass_dedupe must be true
+[FAIL] identity/runtime/examples/collaboration-trigger/negative/collab-delay-fail.json chat_receipt.emitted must be true
+[OK] collaboration trigger self-test passed
+validate_identity_collab_trigger PASSED
+
+[stderr]
+

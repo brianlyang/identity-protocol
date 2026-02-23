@@ -1,0 +1,15 @@
+$ python3 scripts/validate_identity_experience_feedback_governance.py --identity-id store-manager
+[exit_code] 0
+[started_at] 2026-02-22T19:30:17Z
+[ended_at] 2026-02-22T19:30:17Z
+
+[stdout]
+[INFO] validate experience feedback governance for identity: store-manager
+[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json
+[OK] latest feedback log freshness: 0d <= 7
+[OK] feedback sample report checked: identity/runtime/examples/store-manager-experience-feedback-sample.json
+[OK] feedback logs validated: 1 file(s), latest=identity/runtime/logs/feedback/store-manager-feedback-2026-02-22T09-40-00Z.json
+Experience feedback governance validation PASSED
+
+[stderr]
+

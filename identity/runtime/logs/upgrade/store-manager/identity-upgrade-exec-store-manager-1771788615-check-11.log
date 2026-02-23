@@ -1,0 +1,14 @@
+$ python3 scripts/validate_changelog_updated.py --base 26114448d2bc0a499b173e2f29f80e8b2c370a03 --head 956622120e53691b5c3798c235f12cea68865345
+[exit_code] 0
+[started_at] 2026-02-22T19:30:16Z
+[ended_at] 2026-02-22T19:30:16Z
+
+[stdout]
+[INFO] range: 26114448d2bc0a499b173e2f29f80e8b2c370a03..956622120e53691b5c3798c235f12cea68865345
+[INFO] changed files: 26
+[INFO] significant changed files: 26
+[OK] significant changes detected and CHANGELOG.md updated
+validate_changelog_updated PASSED
+
+[stderr]
+

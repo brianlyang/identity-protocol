@@ -1,0 +1,13 @@
+$ python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id store-manager
+[exit_code] 1
+[started_at] 2026-02-22T19:30:17Z
+[ended_at] 2026-02-22T19:30:17Z
+
+[stdout]
+[FAIL] identity-core files changed without self-upgrade evidence report change.
+       touched core files:
+       - identity/store-manager/CURRENT_TASK.json
+       require at least one changed file under identity/runtime/reports/identity-upgrade-exec-store-manager-*.json
+
+[stderr]
+

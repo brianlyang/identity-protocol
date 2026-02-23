@@ -1,0 +1,11 @@
+$ python3 scripts/validate_release_metadata_sync.py --identity-id store-manager
+[exit_code] 0
+[started_at] 2026-02-22T19:30:16Z
+[ended_at] 2026-02-22T19:30:16Z
+
+[stdout]
+[OK] release metadata synchronized to v1.4.4
+validate_release_metadata_sync PASSED
+
+[stderr]
+

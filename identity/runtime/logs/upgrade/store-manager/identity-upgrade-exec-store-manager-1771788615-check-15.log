@@ -1,0 +1,14 @@
+$ python3 scripts/validate_identity_install_safety.py --identity-id store-manager
+[exit_code] 0
+[started_at] 2026-02-22T19:30:17Z
+[ended_at] 2026-02-22T19:30:17Z
+
+[stdout]
+[INFO] validate install safety for identity: store-manager
+[INFO] CURRENT_TASK: identity/store-manager/CURRENT_TASK.json
+[OK] gates.install_safety_gate=required
+[OK] install report validated: identity/runtime/examples/install/install-report-2026-02-22-store-manager.json
+Install safety contract validation PASSED
+
+[stderr]
+

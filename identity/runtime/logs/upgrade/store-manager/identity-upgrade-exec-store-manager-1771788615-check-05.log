@@ -1,0 +1,16 @@
+$ python3 scripts/validate_identity_learning_loop.py --identity-id store-manager
+[exit_code] 0
+[started_at] 2026-02-22T19:30:16Z
+[ended_at] 2026-02-22T19:30:16Z
+
+[stdout]
+[INFO] identity=store-manager current_task=identity/store-manager/CURRENT_TASK.json
+[INFO] run_report=identity/runtime/examples/store-manager-learning-sample.json
+[OK]   run_id=bootstrap
+[OK]   reasoning_attempts count=1
+[OK]   attempt[1] fields complete
+[OK]   linked rulebook records found: 2
+Identity learning-loop validation PASSED
+
+[stderr]
+

@@ -1,0 +1,19 @@
+$ python3 scripts/validate_agent_handoff_contract.py --identity-id store-manager --self-test
+[exit_code] 0
+[started_at] 2026-02-22T19:30:16Z
+[ended_at] 2026-02-22T19:30:16Z
+
+[stdout]
+[OK] gates.agent_handoff_gate=required
+[OK] identity/runtime/logs/handoff/handoff-2026-02-20-store-manager-10000514174106.json handoff contract passed
+[OK] identity/runtime/examples/handoff/positive/handoff-master-to-replay-blocked.json handoff contract passed
+[OK] identity/runtime/examples/handoff/positive/handoff-master-to-visual-qa-pass.json handoff contract passed
+[OK] identity/runtime/examples/handoff/positive/handoff-visual-qa-to-master-fail.json handoff contract passed
+[FAIL] identity/runtime/examples/handoff/negative/handoff-forbidden-mutation.json attempted forbidden mutations: ['gates']
+[FAIL] identity/runtime/examples/handoff/negative/handoff-missing-artifact-file.json artifacts[0].path not found: identity/runtime/examples/handoff/artifacts/not-exists.md
+[FAIL] identity/runtime/examples/handoff/negative/handoff-missing-required-field.json missing required fields: ['result']
+[OK] handoff self-test passed
+validate_agent_handoff_contract PASSED
+
+[stderr]
+
