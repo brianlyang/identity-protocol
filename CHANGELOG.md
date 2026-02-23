@@ -30,6 +30,10 @@
   - governance/readme hard record for severe persistence incident:
     - added `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
     - README now documents demo/runtime split and local-instance-first operating model
+  - final release closure documentation for maintainers:
+    - added migration playbook: `docs/guides/runtime-instance-migration-guide-v1.4.7.md`
+    - added release closure snapshot: `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
+    - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`

@@ -17,6 +17,7 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-2026-02-21-release-closure-v1.4.2.md` — release closure for PR #25/#26 and autonomous-upgrade gap mitigation progress
 - `docs/governance/audit-snapshot-2026-02-22-release-closure-v1.4.4.md` — release closure for PR #29 installer-plane separation + authenticity hardening + install provenance chain enforcement
 - `docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md` — role-binding contract bootstrap, activation switch guard, release-boundary hardening
+- `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md` — severe local-instance persistence bug closure + writeback enforcement release snapshot (with workflow residual risk note)
 
 ## Protocol hardening plans
 

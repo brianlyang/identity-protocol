@@ -159,7 +159,10 @@ If a document defines required behavior for CI/release/audit decisions, it belon
   - `docs/governance/audit-snapshot-policy-v1.2.11.md`
   - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md`
   - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
+  - `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
   - `docs/governance/templates/upgrade-cross-validation-template.md`
+- Runtime identity migration guide:
+  - `docs/guides/runtime-instance-migration-guide-v1.4.7.md`
 - Runtime test preflight (local sync gate):
   - `docs/operations/runtime-preflight-checklist-v1.2.13.md`
   - `scripts/preflight_identity_runtime_sync.sh`
