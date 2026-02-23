@@ -45,9 +45,12 @@ Governance record:
 All creator/installer/runtime context resolution follows the same order:
 
 1. If environment variable `IDENTITY_HOME` is set, use it.
-2. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/identity`.
-3. Otherwise default to `~/.codex/identity`.
-4. If creating that directory fails, fallback to current workspace local path: `./.codex/identity`.
+2. Otherwise, if shared config file exists, use it:
+   - `${CODEX_HOME:-~/.codex}/identity/config/runtime-paths.env`
+   - key: `IDENTITY_HOME=...`
+3. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/identity`.
+4. Otherwise default to `~/.codex/identity`.
+5. If creating that directory fails, fallback to current workspace local path: `./.codex/identity`.
 
 Compatibility note:
 - legacy runtime locations remain readable only inside `IDENTITY_HOME`
@@ -57,6 +60,26 @@ Compatibility note:
 This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
 and migration tooling.
+
+### Shared base-repo path config (recommended for team testing)
+
+To avoid per-shell drift, configure shared defaults once:
+
+```bash
+python3 scripts/configure_identity_runtime_paths.py \
+  --identity-home /Users/yangxi/.codex/identity \
+  --protocol-home /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+```
+
+This writes:
+- `/Users/yangxi/.codex/identity/config/runtime-paths.env`
+  - `IDENTITY_HOME=...`
+  - `IDENTITY_PROTOCOL_HOME=...`
+
+`IDENTITY_PROTOCOL_HOME` resolution order:
+1. environment variable `IDENTITY_PROTOCOL_HOME`
+2. shared config file key `IDENTITY_PROTOCOL_HOME`
+3. current working directory
 
 ### Protocol root control (dual-mode governance)
 

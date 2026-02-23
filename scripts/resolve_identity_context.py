@@ -11,14 +11,42 @@ from typing import Any
 import yaml
 
 
+def _default_runtime_config_path() -> Path:
+    codex_home = os.environ.get("CODEX_HOME", "").strip()
+    if codex_home:
+        return (Path(codex_home).expanduser() / "identity" / "config" / "runtime-paths.env").resolve()
+    return (Path.home() / ".codex" / "identity" / "config" / "runtime-paths.env").resolve()
+
+
+def _load_runtime_env_defaults(config_path: Path | None = None) -> dict[str, str]:
+    path = config_path or _default_runtime_config_path()
+    if not path.exists():
+        return {}
+    out: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        k = key.strip()
+        v = val.strip().strip('"').strip("'")
+        if k:
+            out[k] = v
+    return out
+
+
 def _expand(path: str) -> Path:
     return Path(path).expanduser().resolve()
 
 
 def default_identity_home() -> Path:
     explicit_identity_home = os.environ.get("IDENTITY_HOME", "").strip()
+    runtime_defaults = _load_runtime_env_defaults()
+    configured_identity_home = runtime_defaults.get("IDENTITY_HOME", "").strip()
     if explicit_identity_home:
         raw = explicit_identity_home
+    elif configured_identity_home:
+        raw = configured_identity_home
     else:
         codex_home = os.environ.get("CODEX_HOME", "").strip()
         if codex_home:
@@ -59,8 +87,12 @@ def default_local_instances_root(identity_home: Path | None = None) -> Path:
 
 def default_protocol_home() -> Path:
     explicit = os.environ.get("IDENTITY_PROTOCOL_HOME", "").strip()
+    runtime_defaults = _load_runtime_env_defaults()
+    configured = runtime_defaults.get("IDENTITY_PROTOCOL_HOME", "").strip()
     if explicit:
         p = _expand(explicit)
+    elif configured:
+        p = _expand(configured)
     else:
         p = Path.cwd().resolve()
     return p
