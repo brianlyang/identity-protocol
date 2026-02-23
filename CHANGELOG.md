@@ -34,11 +34,9 @@
       - live runtime bootstrap revalidation
       - binding evidence freshness window (`evidence_max_age_days`)
       - `BOUND_ACTIVE` requirement before active/default promotion
-    - `.github/workflows/_identity-required-gates.yml` now resolves target identities by:
-      - active/default identities
-      - identities touched in PR diff
-      - fallback to all catalog identities (prevent silent bypass when baseline is identity-neutral)
-    - required-gates compile step now uses explicit `--identity-id` from resolved CI target set
+    - CI required-gates target resolver patch prepared:
+      - active/default identities + PR-diff identities + fallback-all strategy
+      - publish is currently blocked by workflow-scope permission on the active OAuth token
   - create scaffold registration flow safety hardening:
     - `scripts/create_identity_pack.py` now rolls back catalog mutation when bootstrap validation fails
   - added release freeze boundary validator:

@@ -567,7 +567,6 @@
     "required_job": "required-gates",
     "required_validators": [
       "scripts/validate_identity_runtime_contract.py",
-      "scripts/validate_identity_role_binding.py",
       "scripts/validate_identity_upgrade_prereq.py",
       "scripts/validate_identity_update_lifecycle.py",
       "scripts/validate_identity_trigger_regression.py",

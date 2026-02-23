@@ -73,8 +73,8 @@ Inference mapping:
      - `runtime_bootstrap_live_revalidate=true` (live bootstrap recheck)
      - bounded evidence freshness (`evidence_max_age_days`)
      - `BOUND_ACTIVE` before active/default promotion
-2. CI identity coverage hardened:
-   - `.github/workflows/_identity-required-gates.yml` now resolves target identities from:
+2. CI identity coverage patch prepared (pending workflow-scope publish):
+   - `_identity-required-gates.yml` candidate patch resolves target identities from:
      - active/default identities,
      - identities touched in PR diff,
      - fallback all catalog identities (prevents silent skip in identity-neutral baseline).
@@ -88,7 +88,7 @@ Inference mapping:
 
 ## Decision
 
-- Current decision: **Conditional Go** (local controls hardened; final go/no-go still depends on cloud required checks)
+- Current decision: **Conditional Go** (local controls hardened; final go/no-go still depends on cloud required checks + workflow-scope publish)
 - Full Go condition:
   1. `protocol-ci / required-gates` green on release-candidate head,
   2. `identity-protocol-ci / required-gates` green on release-candidate head.

@@ -110,6 +110,9 @@ def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
     if check.endswith("validate_changelog_updated.py"):
         base, head = _resolve_git_range()
         return ["python3", check, "--base", base, "--head", head]
+    if check.endswith("validate_identity_self_upgrade_enforcement.py"):
+        base, head = _resolve_git_range()
+        return ["python3", check, "--identity-id", identity_id, "--base", base, "--head", head]
     if check.endswith("validate_identity_manifest.py") or check.endswith("compile_identity_runtime.py"):
         return cmd
     # most validators are identity scoped
