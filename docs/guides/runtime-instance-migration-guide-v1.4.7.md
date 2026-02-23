@@ -41,7 +41,8 @@ git pull --ff-only
 2. Set local runtime home (recommended explicit):
 
 ```bash
-export IDENTITY_HOME="${IDENTITY_HOME:-$HOME/.identity}"
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export IDENTITY_HOME="${IDENTITY_HOME:-$CODEX_HOME/identity}"
 ```
 
 3. Optional backup (strongly recommended):

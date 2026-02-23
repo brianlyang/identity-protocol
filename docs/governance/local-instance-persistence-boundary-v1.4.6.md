@@ -56,8 +56,9 @@ If a runtime identity resolves to repo path, validation fails.
 - Local defaults:
   - `IDENTITY_HOME` resolution order:
     1. use explicit env `IDENTITY_HOME` if set
-    2. else use `~/.identity`
-    3. if home path create fails, fallback to `./.identity`
+    2. else if `CODEX_HOME` is set, use `${CODEX_HOME}/identity`
+    3. else use default `~/.codex/identity`
+    4. if home path create fails, fallback to `./.codex/identity`
   - local catalog: `${IDENTITY_HOME}/catalog.local.yaml`
   - local identities: `${IDENTITY_HOME}/identities` (legacy `${IDENTITY_HOME}/instances` allowed for compatibility)
 - Behavior:

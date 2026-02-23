@@ -44,8 +44,12 @@ Governance record:
 All creator/installer/runtime context resolution follows the same order:
 
 1. If environment variable `IDENTITY_HOME` is set, use it.
-2. Otherwise use default: `~/.identity` (for this machine: `/Users/yangxi/.identity`).
-3. If creating that directory fails, fallback to current workspace local path: `./.identity`.
+2. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/identity`.
+3. Otherwise default to `~/.codex/identity`.
+4. If creating that directory fails, fallback to current workspace local path: `./.codex/identity`.
+
+Compatibility note:
+- if legacy `~/.identity` already exists on a machine, runtime keeps using it to avoid breaking existing local instances; migration to `$CODEX_HOME/identity` can be done by policy rollout.
 
 This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
@@ -55,7 +59,8 @@ and migration tooling.
 
 ```bash
 pip install -r requirements-dev.txt
-export IDENTITY_HOME="${IDENTITY_HOME:-$HOME/.identity}"
+export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+export IDENTITY_HOME="${IDENTITY_HOME:-$CODEX_HOME/identity}"
 
 # optional: migrate legacy runtime identities from repo paths to local paths
 python scripts/migrate_repo_instances_to_local.py --apply

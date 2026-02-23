@@ -34,11 +34,10 @@
     - added migration playbook: `docs/guides/runtime-instance-migration-guide-v1.4.7.md`
     - added release closure snapshot: `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
     - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
-  - canonicalized `IDENTITY_HOME` resolution order in README + governance record:
-    env override -> `~/.identity-protocol` default -> `./.identity-protocol` fallback
-  - renamed canonical local runtime home path from `.identity-protocol` to `.identity`
-    to decouple runtime instance storage naming from base repo naming:
-    `IDENTITY_HOME` env override -> `~/.identity` default -> `./.identity` fallback
+  - canonicalized skills-style runtime home resolution in README + governance record:
+    `IDENTITY_HOME` env override -> `${CODEX_HOME}/identity` -> `~/.codex/identity` default
+    -> `./.codex/identity` fallback when home path creation fails
+    (legacy `~/.identity` remains auto-compatible for existing local instances)
   - aligned runtime directory naming with skills-style plural convention:
     canonical runtime pack root is now `${IDENTITY_HOME}/identities`
     (legacy `${IDENTITY_HOME}/instances` remains auto-compatible)

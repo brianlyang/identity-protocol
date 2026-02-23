@@ -15,13 +15,26 @@ def _expand(path: str) -> Path:
 
 
 def default_identity_home() -> Path:
-    raw = os.environ.get("IDENTITY_HOME", "~/.identity")
+    explicit_identity_home = os.environ.get("IDENTITY_HOME", "").strip()
+    if explicit_identity_home:
+        raw = explicit_identity_home
+    else:
+        codex_home = os.environ.get("CODEX_HOME", "").strip()
+        if codex_home:
+            raw = str(Path(codex_home).expanduser() / "identity")
+        else:
+            # Backward-compatibility: if prior local home exists, keep using it.
+            legacy = Path("~/.identity").expanduser()
+            if legacy.exists():
+                raw = str(legacy)
+            else:
+                raw = "~/.codex/identity"
     p = _expand(raw)
     try:
         p.mkdir(parents=True, exist_ok=True)
         return p
     except Exception:
-        fallback = (Path.cwd() / ".identity").resolve()
+        fallback = (Path.cwd() / ".codex" / "identity").resolve()
         fallback.mkdir(parents=True, exist_ok=True)
         return fallback
 
