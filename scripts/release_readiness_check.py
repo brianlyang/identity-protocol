@@ -43,6 +43,16 @@ def main() -> int:
         ["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_install_safety.py", "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_install_provenance.py", "--identity-id", identity_id],
+        [
+            "python3",
+            "scripts/validate_identity_self_upgrade_enforcement.py",
+            "--identity-id",
+            identity_id,
+            "--base",
+            base,
+            "--head",
+            head,
+        ],
         ["python3", "scripts/validate_identity_ci_enforcement.py", "--identity-id", identity_id],
     ]
 

@@ -236,12 +236,25 @@ def _replace_store_manager_tokens(value, identity_id: str):
     return value
 
 
+def _normalize_pack_paths(value, identity_id: str):
+    legacy_prefix = f"identity/{identity_id}/"
+    pack_prefix = f"identity/packs/{identity_id}/"
+    if isinstance(value, str):
+        return value.replace(legacy_prefix, pack_prefix)
+    if isinstance(value, list):
+        return [_normalize_pack_paths(v, identity_id) for v in value]
+    if isinstance(value, dict):
+        return {k: _normalize_pack_paths(v, identity_id) for k, v in value.items()}
+    return value
+
+
 def _full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
     template_path = Path("identity/store-manager/CURRENT_TASK.json")
     if not template_path.exists():
         raise FileNotFoundError(f"missing template CURRENT_TASK: {template_path}")
     template = json.loads(template_path.read_text(encoding="utf-8"))
     task = _replace_store_manager_tokens(copy.deepcopy(template), identity_id)
+    task = _normalize_pack_paths(task, identity_id)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     task["task_id"] = f"{identity_id}_bootstrap"

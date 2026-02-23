@@ -39,6 +39,13 @@
       - publish is currently blocked by workflow-scope permission on the active OAuth token
   - create scaffold registration flow safety hardening:
     - `scripts/create_identity_pack.py` now rolls back catalog mutation when bootstrap validation fails
+  - create scaffold full-contract path normalization:
+    - `scripts/create_identity_pack.py` now rewrites legacy `identity/<id>/...` references to `identity/packs/<id>/...`
+    - fixes bootstrap/runtime failures for newly created identities caused by stale `rulebook_path` and patch-surface file paths
+  - release-readiness parity hardening:
+    - `scripts/release_readiness_check.py` now includes
+      `scripts/validate_identity_self_upgrade_enforcement.py --base <sha> --head <sha>`
+    - aligns readiness decision with e2e self-upgrade enforcement semantics
   - added release freeze boundary validator:
     - `scripts/validate_release_freeze_boundary.py`
     - blocks release-range changes that introduce local instance packs under `identity/packs/*`
