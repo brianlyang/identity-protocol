@@ -1,0 +1,14 @@
+{
+  "binding_id": "identity-role-binding-store-manager-negative-sample",
+  "generated_at": "2026-02-23T06:27:17Z",
+  "identity_id": "store-manager",
+  "role_type": "store_manager_runtime_operator",
+  "binding_status": "UNBOUND",
+  "runtime_bootstrap": {
+    "status": "FAIL",
+    "validator": "scripts/validate_identity_runtime_contract.py"
+  },
+  "switch_guard": {
+    "status": "FAIL"
+  }
+}

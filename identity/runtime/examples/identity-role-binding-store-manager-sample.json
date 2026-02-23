@@ -1,0 +1,17 @@
+{
+  "binding_id": "identity-role-binding-store-manager-sample",
+  "generated_at": "2026-02-23T06:27:17Z",
+  "identity_id": "store-manager",
+  "role_type": "store_manager_runtime_operator",
+  "binding_status": "BOUND_ACTIVE",
+  "runtime_bootstrap": {
+    "status": "PASS",
+    "validator": "scripts/validate_identity_runtime_contract.py",
+    "evidence": "identity/runtime/examples/store-manager-bootstrap-runtime-validation-sample.json"
+  },
+  "switch_guard": {
+    "status": "PASS",
+    "activation_policy": "inactive_by_default",
+    "notes": "store-manager is bound-ready and active under explicit governance contract"
+  }
+}

@@ -60,7 +60,8 @@
     "ci_enforcement_gate": "required",
     "arbitration_gate": "required",
     "install_safety_gate": "required",
-    "install_provenance_gate": "required"
+    "install_provenance_gate": "required",
+    "role_binding_gate": "required"
   },
   "protocol_review_contract": {
     "required_before": [
@@ -157,6 +158,7 @@
         "scripts/validate_identity_experience_feedback.py",
         "scripts/validate_changelog_updated.py",
         "scripts/validate_release_metadata_sync.py",
+        "scripts/validate_identity_role_binding.py",
         "scripts/validate_identity_ci_enforcement.py",
         "scripts/validate_identity_capability_arbitration.py",
         "scripts/validate_identity_install_safety.py",
@@ -723,5 +725,15 @@
     ],
     "enforcement_validator": "scripts/validate_identity_install_provenance.py",
     "non_destructive_default": true
+  },
+  "identity_role_binding_contract": {
+    "required": true,
+    "role_type": "store_manager_runtime_operator",
+    "catalog_registration_required": true,
+    "runtime_bootstrap_pass_required": true,
+    "activation_policy": "inactive_by_default",
+    "switch_guard_required": true,
+    "binding_evidence_path_pattern": "identity/runtime/examples/identity-role-binding-<identity-id>-*.json",
+    "enforcement_validator": "scripts/validate_identity_role_binding.py"
   }
 }

@@ -16,6 +16,7 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-2026-02-21-control-loop-v1.4.0.md` — control-loop contract integration evidence (orchestration/knowledge/experience/ci-enforcement)
 - `docs/governance/audit-snapshot-2026-02-21-release-closure-v1.4.2.md` — release closure for PR #25/#26 and autonomous-upgrade gap mitigation progress
 - `docs/governance/audit-snapshot-2026-02-22-release-closure-v1.4.4.md` — release closure for PR #29 installer-plane separation + authenticity hardening + install provenance chain enforcement
+- `docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md` — role-binding contract bootstrap, activation switch guard, release-boundary hardening
 
 ## Protocol hardening plans
 

@@ -3,6 +3,20 @@
 ## Unreleased
 
 - **v1.4.6 planning hardening (draft)**:
+  - added role-binding governance contract and validator:
+    - `scripts/validate_identity_role_binding.py`
+    - `identity_role_binding_contract` + `gates.role_binding_gate=required`
+    - activation/switch guard requires binding-ready evidence
+  - runtime validator now enforces role-binding contract/evidence:
+    - `scripts/validate_identity_runtime_contract.py`
+  - identity creator now enforces role-binding on activation:
+    - `scripts/identity_creator.py activate` blocks when role-binding validation fails
+  - create scaffold now emits role-binding evidence samples and bootstrap checks:
+    - `identity/runtime/examples/identity-role-binding-<identity-id>-sample.json`
+    - `identity/runtime/examples/role-binding/identity-role-binding-<identity-id>-negative-sample.json`
+    - `scripts/create_identity_pack.py --skip-bootstrap-check` available for local debug only
+  - added role-binding spec:
+    - `docs/specs/identity-role-binding-contract-v1.4.6.md`
   - added release freeze boundary validator:
     - `scripts/validate_release_freeze_boundary.py`
     - blocks release-range changes that introduce local instance packs under `identity/packs/*`

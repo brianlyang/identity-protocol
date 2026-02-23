@@ -13,6 +13,11 @@ def _run(cmd: list[str]) -> int:
 
 
 def _activate_identity(catalog: Path, identity_id: str) -> int:
+    rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--identity-id", identity_id])
+    if rc != 0:
+        print("[FAIL] role-binding validation failed; activation blocked")
+        return rc
+
     import yaml
 
     if not catalog.exists():
@@ -97,6 +102,7 @@ def main() -> int:
     if args.command == "validate":
         checks = [
             ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_role_binding.py", "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_upgrade_prereq.py", "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_install_safety.py", "--identity-id", args.identity_id],

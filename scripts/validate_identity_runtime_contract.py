@@ -25,6 +25,7 @@ REQ_TOP_LEVEL = [
     "experience_feedback_contract",
     "install_safety_contract",
     "install_provenance_contract",
+    "identity_role_binding_contract",
     "ci_enforcement_contract",
     "capability_arbitration_contract",
     "self_upgrade_enforcement_contract",
@@ -46,6 +47,7 @@ REQ_GATES = [
     "experience_feedback_gate",
     "install_safety_gate",
     "install_provenance_gate",
+    "role_binding_gate",
     "ci_enforcement_gate",
     "arbitration_gate",
 ]
@@ -361,6 +363,57 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             rc = 1
         else:
             print("[OK]   install_safety_contract.on_conflict=abort_and_explain")
+
+    role_binding = data.get("identity_role_binding_contract") or {}
+    if not isinstance(role_binding, dict) or not role_binding:
+        print("[FAIL] identity_role_binding_contract must be non-empty object")
+        rc = 1
+    else:
+        required_rb_fields = {
+            "required",
+            "role_type",
+            "catalog_registration_required",
+            "runtime_bootstrap_pass_required",
+            "activation_policy",
+            "switch_guard_required",
+            "binding_evidence_path_pattern",
+            "enforcement_validator",
+        }
+        missing_rb = sorted(required_rb_fields - set(role_binding.keys()))
+        if missing_rb:
+            print(f"[FAIL] identity_role_binding_contract missing fields: {missing_rb}")
+            rc = 1
+        else:
+            print("[OK]   identity_role_binding_contract required fields present")
+        if role_binding.get("required") is not True:
+            print("[FAIL] identity_role_binding_contract.required must be true")
+            rc = 1
+        pattern = str(role_binding.get("binding_evidence_path_pattern", "")).strip()
+        if not pattern:
+            print("[FAIL] identity_role_binding_contract.binding_evidence_path_pattern missing")
+            rc = 1
+        else:
+            latest = _latest_evidence(pattern.replace("<identity-id>", identity_id), identity_id)
+            if not latest:
+                print(f"[FAIL] role binding evidence not found by pattern: {pattern}")
+                rc = 1
+            else:
+                print(f"[OK]   role binding evidence found: {latest}")
+                try:
+                    ev = _load_json(latest)
+                except Exception as e:
+                    print(f"[FAIL] role binding evidence invalid json: {e}")
+                    rc = 1
+                else:
+                    if str(ev.get("identity_id", "")).strip() != identity_id:
+                        print("[FAIL] role binding evidence identity_id mismatch")
+                        rc = 1
+                    if str(ev.get("role_type", "")).strip() != str(role_binding.get("role_type", "")).strip():
+                        print("[FAIL] role binding evidence role_type mismatch")
+                        rc = 1
+                    if str(ev.get("binding_status", "")).strip() not in {"BOUND_READY", "BOUND_ACTIVE"}:
+                        print("[FAIL] role binding evidence binding_status must be BOUND_READY or BOUND_ACTIVE")
+                        rc = 1
 
     if rc == 0:
         print(f"Identity runtime contract validation PASSED for identity={identity_id}")

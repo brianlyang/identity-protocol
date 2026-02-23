@@ -29,6 +29,7 @@ python scripts/compile_identity_runtime.py
 python scripts/validate_identity_manifest.py
 python scripts/test_identity_discovery_contract.py
 python scripts/validate_identity_runtime_contract.py
+python scripts/validate_identity_role_binding.py --identity-id store-manager
 python scripts/validate_identity_upgrade_prereq.py --identity-id store-manager
 python scripts/validate_identity_update_lifecycle.py --identity-id store-manager
 python scripts/validate_identity_trigger_regression.py --identity-id store-manager
@@ -84,6 +85,7 @@ For fast, consistent review of the key skill mechanisms (trigger/create/update/v
 7. `docs/specs/identity-update-lifecycle-contract-v1.2.4.md` (identity mirror of update chain)
 8. `docs/specs/identity-trigger-regression-contract-v1.2.5.md` (positive/boundary/negative suites)
 9. `identity/protocol/AGENT_HANDOFF_CONTRACT.md` (master/sub anti-drift contract)
+10. `docs/specs/identity-role-binding-contract-v1.4.6.md` (identity activation/switch guardrails)
 
 ## Governance and operations
 

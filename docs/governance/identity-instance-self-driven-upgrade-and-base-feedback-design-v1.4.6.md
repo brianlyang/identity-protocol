@@ -62,6 +62,7 @@ Real Run Evidence -> Gap Extraction -> Contract/Validator Patch -> Required Gate
 1. 自驱升级报告必须绑定 CI 运行上下文（run_id/sha）
 2. replay 检查必须验证日志文件存在与 sha256 一致
 3. 无真实执行证据不得通过 identity-core 变更门禁
+4. 新增 role-binding 强校验：identity 创建后必须提供绑定证据，未绑定不得切 active/default
 
 ### 4.2 发布稳定性增强（P0/P1）
 
@@ -99,4 +100,3 @@ Real Run Evidence -> Gap Extraction -> Contract/Validator Patch -> Required Gate
 2. 真实性校验通过（self-upgrade + lifecycle + provenance）
 3. release freeze boundary 通过（无实例 pack 混入）
 4. release closure 快照完成并归档到 governance index
-

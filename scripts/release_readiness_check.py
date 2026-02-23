@@ -39,6 +39,7 @@ def main() -> int:
         ["python3", "scripts/validate_release_metadata_sync.py"],
         ["python3", "scripts/validate_release_freeze_boundary.py", "--base", base, "--head", head],
         ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_role_binding.py", "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_install_safety.py", "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_install_provenance.py", "--identity-id", identity_id],
