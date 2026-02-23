@@ -31,6 +31,8 @@
           "status": { "type": "string", "enum": ["active", "inactive", "deprecated"] },
           "owner": { "type": "string" },
           "methodology_version": { "type": "string" },
+          "profile": { "type": "string", "enum": ["fixture", "runtime"] },
+          "runtime_mode": { "type": "string", "enum": ["demo_only", "local_only"] },
           "pack_path": { "type": "string" },
           "tags": {
             "type": "array",

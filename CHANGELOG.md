@@ -3,6 +3,25 @@
 ## Unreleased
 
 - **v1.4.6 planning hardening (draft)**:
+  - local-instance persistence boundary enforcement:
+    - added `scripts/resolve_identity_context.py` (repo+local catalog merge, local override)
+    - added `scripts/validate_identity_local_persistence.py`
+    - added `scripts/migrate_repo_instances_to_local.py`
+    - `create_identity_pack.py` default output moved to `${IDENTITY_HOME}/instances`
+      + `${IDENTITY_HOME}/catalog.local.yaml`, plus `--repo-fixture` escape hatch
+    - `identity_installer.py` default target/catalog moved to local paths and blocks repo target
+      unless `--allow-repo-target` is explicitly provided
+    - `identity_creator.py` init/validate/activate/update now defaults to local catalog context
+      and activation only mutates local catalog layer
+  - fixture/runtime split codified in catalog schema:
+    - `identity/catalog/identities.yaml` now marks `store-manager` as
+      `profile=fixture` + `runtime_mode=demo_only`
+    - `identity/catalog/schema/identities.schema.json` adds enums for
+      `profile` and `runtime_mode`
+  - local persistence + writeback gates wired to automation:
+    - `scripts/release_readiness_check.py`
+    - `scripts/e2e_smoke_test.sh`
+    - `.github/workflows/_identity-required-gates.yml` (compile identity explicit + target resolver with diff coverage)
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`

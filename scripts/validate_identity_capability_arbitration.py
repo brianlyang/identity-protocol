@@ -171,13 +171,11 @@ def main() -> int:
         dynamic_history_path = f"identity/{args.identity_id}/TASK_HISTORY.md"
         rb_contract = task.get("rulebook_contract") or {}
         rb_path = str(rb_contract.get("rulebook_path", "")).strip()
-        if rb_path.startswith("identity/packs/"):
+        if rb_path.endswith("RULEBOOK.jsonl"):
             dynamic_history_path = rb_path.replace("RULEBOOK.jsonl", "TASK_HISTORY.md")
-        required_allow = {
-            "identity/runtime/rulebooks/*",
-            dynamic_history_path,
-            "identity/runtime/logs/*",
-        }
+        has_rulebook_glob = any(str(x).endswith("rulebooks/*") for x in allow)
+        has_logs_glob = any(str(x).endswith("logs/*") for x in allow)
+        required_allow = {dynamic_history_path}
         required_deny = {
             "identity/protocol/*",
             ".github/workflows/*",
@@ -185,6 +183,12 @@ def main() -> int:
         }
         if not required_allow.issubset(set(allow)):
             print(f"[FAIL] safe_auto_patch_surface.allowlist missing required entries: {sorted(required_allow - set(allow))}")
+            rc = 1
+        if not has_rulebook_glob:
+            print("[FAIL] safe_auto_patch_surface.allowlist missing rulebooks/* entry")
+            rc = 1
+        if not has_logs_glob:
+            print("[FAIL] safe_auto_patch_surface.allowlist missing logs/* entry")
             rc = 1
         if not required_deny.issubset(set(deny)):
             print(f"[FAIL] safe_auto_patch_surface.denylist missing required entries: {sorted(required_deny - set(deny))}")

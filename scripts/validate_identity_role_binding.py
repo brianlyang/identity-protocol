@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import subprocess
 from datetime import datetime, timezone
@@ -48,7 +49,10 @@ def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str) -> P
         p = Path(explicit)
         return p if p.exists() else None
     pattern = pattern.replace("<identity-id>", identity_id)
-    files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
+    if Path(pattern).is_absolute():
+        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
+    else:
+        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
     if not files:
         return None
     scoped = [p for p in files if identity_id in p.name]
@@ -203,7 +207,14 @@ def main() -> int:
             return 1
         if bool(contract.get("runtime_bootstrap_live_revalidate", False)):
             rc, out, err = _run(
-                ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", identity_id]
+                [
+                    "python3",
+                    "scripts/validate_identity_runtime_contract.py",
+                    "--catalog",
+                    str(catalog_path),
+                    "--identity-id",
+                    identity_id,
+                ]
             )
             if rc != 0:
                 print("[FAIL] runtime bootstrap live revalidation failed")

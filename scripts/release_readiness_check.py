@@ -39,6 +39,7 @@ def main() -> int:
 
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
+        ["python3", "scripts/validate_identity_local_persistence.py"],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
         ["python3", "scripts/validate_changelog_updated.py", "--base", base, "--head", head],
         ["python3", "scripts/validate_release_metadata_sync.py"],

@@ -103,7 +103,7 @@ def _resolve_git_range() -> tuple[str, str]:
     return base or "HEAD~1", head or "HEAD"
 
 
-def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
+def _build_validator_cmd(check: str, identity_id: str, catalog_path: str) -> list[str]:
     if not check.startswith("scripts/"):
         return ["python3", check]
     cmd = ["python3", check]
@@ -118,6 +118,8 @@ def _build_validator_cmd(check: str, identity_id: str) -> list[str]:
     # most validators are identity scoped
     if "--identity-id" not in check:
         cmd += ["--identity-id", identity_id]
+    if check.startswith("scripts/validate_") and "--catalog" not in check:
+        cmd += ["--catalog", catalog_path]
     if check.endswith("validate_identity_collab_trigger.py"):
         cmd += ["--self-test"]
     if check.endswith("validate_agent_handoff_contract.py"):
@@ -249,6 +251,7 @@ def main() -> int:
         "history_contains_run_id": False,
         "notes": "",
     }
+    writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md")]
 
     if upgrade_required and args.mode == "safe-auto":
         if safe_auto.get("enforce_path_policy") is True:
@@ -351,7 +354,7 @@ def main() -> int:
             "scripts/validate_identity_update_lifecycle.py",
             "scripts/validate_identity_capability_arbitration.py",
         ]
-    check_cmds = [_build_validator_cmd(chk, args.identity_id) for chk in required_checks]
+    check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
     log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
 
@@ -431,6 +434,9 @@ def main() -> int:
         "check_results": checks,
         "artifacts": artifacts,
         "experience_writeback": experience_writeback,
+        "writeback_paths": writeback_paths,
+        "writeback_status": str(experience_writeback.get("status", "")),
+        "writeback_rule_id": str(experience_writeback.get("rule_entry_id", "")),
         "all_ok": all_ok,
     }
     report_path = out_dir / f"{run_id}.json"

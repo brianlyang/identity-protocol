@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any, Iterable
@@ -104,7 +105,10 @@ def _resolve_task_path(identity: dict[str, Any]) -> Path:
 
 
 def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
-    files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
+    if Path(pattern).is_absolute():
+        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
+    else:
+        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
     if not files:
         return None
     scoped = [p for p in files if identity_id in p.name]

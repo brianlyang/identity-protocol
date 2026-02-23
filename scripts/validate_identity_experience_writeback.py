@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from resolve_identity_context import default_local_catalog_path, merged_catalog
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -20,8 +22,8 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:
-    catalog = _load_yaml(catalog_path)
+def _resolve_pack(identity_id: str, repo_catalog_path: Path, local_catalog_path: Path) -> Path:
+    catalog = merged_catalog(repo_catalog_path, local_catalog_path)
     identities = catalog.get("identities") or []
     target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
     if not target:
@@ -75,14 +77,20 @@ def _load_rulebook_rows(path: Path) -> list[dict[str, Any]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate experience writeback after identity upgrade execution.")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="", help="legacy alias; when set, used as repo catalog path")
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--local-catalog", default=str(default_local_catalog_path()))
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--execution-report", default="")
+    ap.add_argument("--report", default="", help="alias of --execution-report")
     args = ap.parse_args()
 
     try:
-        pack = _resolve_pack(Path(args.catalog), args.identity_id)
-        report_path = _resolve_report(args.identity_id, args.execution_report)
+        repo_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else Path(args.repo_catalog).expanduser().resolve()
+        local_catalog = Path(args.local_catalog).expanduser().resolve()
+        pack = _resolve_pack(args.identity_id, repo_catalog, local_catalog)
+        override = args.execution_report or args.report
+        report_path = _resolve_report(args.identity_id, override)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
@@ -135,6 +143,21 @@ def main() -> int:
     status = str(wb.get("status", "")).strip()
     if status != "WRITTEN":
         print(f"[FAIL] experience_writeback.status must be WRITTEN, got={status!r}")
+        return 1
+    writeback_paths = report.get("writeback_paths")
+    if not isinstance(writeback_paths, list) or len(writeback_paths) < 2:
+        print("[FAIL] report.writeback_paths must include RULEBOOK and TASK_HISTORY paths")
+        return 1
+    for wp in writeback_paths:
+        p = Path(str(wp)).expanduser()
+        if not p.exists():
+            print(f"[FAIL] report.writeback_paths item not found: {p}")
+            return 1
+    if str(report.get("writeback_status", "")).strip() != "WRITTEN":
+        print(f"[FAIL] report.writeback_status must be WRITTEN, got={report.get('writeback_status')!r}")
+        return 1
+    if not str(report.get("writeback_rule_id", "")).strip():
+        print("[FAIL] report.writeback_rule_id must be non-empty")
         return 1
 
     print("[OK] experience writeback validation passed")
