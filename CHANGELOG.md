@@ -47,6 +47,9 @@
       to unblock `validate_release_metadata_sync.py`
     - repaired `.github/workflows/_identity-required-gates.yml` resolver block
       and added explicit empty-target fail-fast + explicit compile target resolution
+  - fixed `create_identity_pack.py` absolute path rewrite bug for local runtime roots:
+    - prevents duplicated absolute prefixes during scaffold bootstrap
+    - ensures generated CURRENT_TASK paths remain valid under `$CODEX_HOME/identity`
   - added role-binding governance contract and validator:
     - `scripts/validate_identity_role_binding.py`
     - `identity_role_binding_contract` + `gates.role_binding_gate=required`

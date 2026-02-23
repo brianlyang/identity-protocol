@@ -253,13 +253,25 @@ def _normalize_pack_paths(value, identity_id: str):
 def _rewrite_identity_pack_root(value, identity_id: str, pack_dir: Path):
     legacy_prefix = f"identity/{identity_id}/"
     canonical_prefix = f"identity/packs/{identity_id}/"
+    abs_legacy_token = f"/identity/{identity_id}/"
+    abs_canonical_token = f"/identity/packs/{identity_id}/"
     real_prefix = f"{pack_dir.as_posix().rstrip('/')}/"
     if isinstance(value, str):
-        out = value.replace(canonical_prefix, real_prefix)
-        out = out.replace(legacy_prefix, real_prefix)
+        if value.startswith(canonical_prefix):
+            return f"{real_prefix}{value[len(canonical_prefix):]}"
+        if value.startswith(legacy_prefix):
+            return f"{real_prefix}{value[len(legacy_prefix):]}"
+        if abs_canonical_token in value:
+            tail = value.split(abs_canonical_token, 1)[1]
+            return f"{real_prefix}{tail}"
+        if abs_legacy_token in value:
+            tail = value.split(abs_legacy_token, 1)[1]
+            return f"{real_prefix}{tail}"
         if value == f"identity/packs/{identity_id}" or value == f"identity/{identity_id}":
             return pack_dir.as_posix()
-        return out
+        if value.endswith(f"/identity/packs/{identity_id}") or value.endswith(f"/identity/{identity_id}"):
+            return pack_dir.as_posix()
+        return value
     if isinstance(value, list):
         return [_rewrite_identity_pack_root(v, identity_id, pack_dir) for v in value]
     if isinstance(value, dict):
