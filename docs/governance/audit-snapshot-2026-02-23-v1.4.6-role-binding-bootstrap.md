@@ -49,6 +49,18 @@
 - `python3 scripts/release_readiness_check.py --identity-id store-manager --base HEAD~1 --head HEAD` ✅
 - `bash scripts/e2e_smoke_test.sh` ✅
 
+## Cross-validation references (official + Context7)
+
+- OpenAI Codex multi-agent approvals/sandbox: `https://developers.openai.com/codex/multi-agent/#approvals-and-sandbox-controls`
+- Anthropic MCP connector: `https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector`
+- Gemini function calling: `https://ai.google.dev/gemini-api/docs/function-calling`
+- MCP specification latest: `https://modelcontextprotocol.io/specification/latest`
+- Context7 library id used: `/websites/modelcontextprotocol_io_specification_2025-11-25`
+
+Inference mapping:
+1. Platform docs expose tool/role transport and execution hooks, but do not replace business-side readiness binding.
+2. Therefore base repo must keep `role-binding` as a first-class contract + gate in its own control plane.
+
 ## Residual risks
 
 1. Workflow file update to explicitly add `validate_identity_role_binding.py` step is constrained by token `workflow` scope.
@@ -60,4 +72,3 @@
 - Full Go condition:
   1. workflow-scope update applied for explicit role-binding step in reusable required-gates,
   2. cloud required checks green on release candidate commit.
-

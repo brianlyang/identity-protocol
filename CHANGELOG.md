@@ -17,6 +17,9 @@
     - `scripts/create_identity_pack.py --skip-bootstrap-check` available for local debug only
   - added role-binding spec:
     - `docs/specs/identity-role-binding-contract-v1.4.6.md`
+  - added deep cross-validation execution mapping into v1.4.6 governance/snapshot docs:
+    - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md` (Git + Official Web + Context7)
+    - `docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md`
   - added release freeze boundary validator:
     - `scripts/validate_release_freeze_boundary.py`
     - blocks release-range changes that introduce local instance packs under `identity/packs/*`
