@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **post-release evidence closure (v1.4.5 draft)**:
+  - appended self-upgrade execution evidence bundle for `store-manager`:
+    - `identity/runtime/reports/identity-upgrade-exec-store-manager-1771788615.json`
+    - `identity/runtime/reports/identity-upgrade-exec-store-manager-1771788615-patch-plan.json`
+    - `identity/runtime/logs/upgrade/store-manager/identity-upgrade-exec-store-manager-1771788615-check-01..18.log`
+  - purpose: close `identity-core -> evidence` traceability for the v1.4.5 gate-hardening commit
+
 - **release hardening follow-up (v1.4.4 draft)**:
   - added required validator `scripts/validate_release_metadata_sync.py` to prevent recurring
     `README/IDENTITY_PROTOCOL/VERSIONING/requirements-dev` version drift
