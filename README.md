@@ -2,6 +2,42 @@
 
 Protocol-grade identity control plane for autonomous coding agents.
 
+## Core goal & value (why this system exists)
+
+The core objective is to make agent execution **deterministic, auditable, and release-safe**.
+
+This system is intentionally designed to solve three recurring failure modes:
+
+1. **“Can run” but not “can prove”**  
+   We require machine-checkable evidence (reports + validators), not chat-memory success claims.
+2. **Path/scope drift across project/global roots**  
+   Runtime mode selection, explicit catalog binding, and scope checks prevent silent cross-instance contamination.
+3. **Identity becoming a static shell**  
+   `IDENTITY_PROMPT.md` is treated as a runtime contract object (activation, validation, hash evidence, lifecycle updates), not just a passive file.
+
+### Practical outcomes
+
+- Better release safety: required gates block promotion when critical contracts fail.
+- Lower audit cost: every key decision can be traced to report fields and validator outputs.
+- Continuous identity evolution: prompt/rulebook/task-history can evolve with explicit evidence and replayability.
+
+### Boundary model: Identity vs Agent vs Skill vs MCP vs Tool
+
+To avoid capability overlap and policy conflicts, use this layered model:
+
+1. **Identity Prompt (governance layer, highest priority)**  
+   Defines role, guardrails, decision policy (Full Go / Conditional Go / Not Go), and escalation rules.
+2. **Agent (orchestration layer)**  
+   Plans and executes tasks under identity governance constraints.
+3. **Skill (method layer)**  
+   Provides reusable task workflows; cannot override identity safety/governance boundaries.
+4. **MCP (integration transport layer)**  
+   Connects external systems/capabilities.
+5. **Tool (action layer)**  
+   Performs concrete operations (file edit, command run, API call). Tool success never equals governance success by itself.
+
+Enforcement principle: **Identity governance > Skill procedure > MCP/Tool execution**.
+
 ## Current release posture (v1.4.x baseline)
 
 - **Code-plane**: upgraded with local-runtime boundary + identity-scoped anti-pollution gates.
