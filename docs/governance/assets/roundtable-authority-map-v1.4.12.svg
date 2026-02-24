@@ -1,0 +1,55 @@
+<svg width="1180" height="540" viewBox="0 0 1180 540" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .t{font:700 24px Inter,Arial,sans-serif;fill:#0f172a}
+      .h{font:700 15px Inter,Arial,sans-serif;fill:#0f172a}
+      .p{font:500 13px Inter,Arial,sans-serif;fill:#1e293b}
+    </style>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="1180" height="540" fill="#f8fafc"/>
+  <text x="20" y="40" class="t">Roundtable Authority and Decision Escalation Map (v1.4.12)</text>
+
+  <rect x="30" y="90" width="220" height="90" rx="10" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="45" y="120" class="h">OpenAI Expert</text>
+  <text x="45" y="142" class="p">orchestration + handoff</text>
+
+  <rect x="30" y="200" width="220" height="90" rx="10" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="45" y="230" class="h">Anthropic Expert</text>
+  <text x="45" y="252" class="p">subagent/session boundary</text>
+
+  <rect x="30" y="310" width="220" height="90" rx="10" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="45" y="340" class="h">Gemini Expert</text>
+  <text x="45" y="362" class="p">workflow/schema determinism</text>
+
+  <rect x="30" y="420" width="220" height="90" rx="10" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="45" y="450" class="h">MCP Expert</text>
+  <text x="45" y="472" class="p">capability contract</text>
+
+  <rect x="360" y="190" width="280" height="170" rx="12" fill="#ecfeff" stroke="#0891b2"/>
+  <text x="380" y="225" class="h">Base-repo Architect</text>
+  <text x="380" y="250" class="p">collects proposals, drafts policy</text>
+  <text x="380" y="272" class="p">maps to validators & CI gates</text>
+  <text x="380" y="294" class="p">records arbitration notes</text>
+  <text x="380" y="316" class="p">owns decision freeze</text>
+
+  <rect x="760" y="190" width="360" height="170" rx="12" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="780" y="225" class="h">Audit Expert Authority</text>
+  <text x="780" y="250" class="p">accept/reject enforceability claims</text>
+  <text x="780" y="272" class="p">checks no-soft-pass language</text>
+  <text x="780" y="294" class="p">issues Conditional Go / Full Go status</text>
+  <text x="780" y="316" class="p">blocks release on unresolved P0</text>
+
+  <line x1="250" y1="135" x2="360" y2="220" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="250" y1="245" x2="360" y2="245" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="250" y1="355" x2="360" y2="275" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="250" y1="465" x2="360" y2="305" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="640" y1="275" x2="760" y2="275" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="360" y="390" width="760" height="110" rx="10" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="380" y="420" class="h">Escalation Rule</text>
+  <text x="380" y="444" class="p">If expert consensus is split: create arbitration item with owner/date/evidence scope; unresolved arbitration keeps status at Conditional Go.</text>
+  <text x="380" y="468" class="p">Only audit-accepted enforceable policy can move into implementation backlog.</text>
+</svg>

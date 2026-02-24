@@ -501,3 +501,15 @@ Governance inference:
 1. This document does not claim all scripts already implement every contract above.
 2. This document does not replace local persistence governance from v1.4.6.
 3. This document does not mandate one vendor framework; it defines protocol-agnostic governance constraints.
+
+
+## 15. Discussion-first collaboration protocol (not testing)
+
+To avoid execution-vs-discussion confusion, this governance stream is discussion-first:
+
+1. First converge policy with experts using:
+   - `docs/governance/roundtable-multi-vendor-discussion-playbook-v1.4.12.md`
+2. Then convert decisions to implementation backlog.
+3. Testing is only phase-2 after policy lock.
+
+This section is normative for this round: discussion alignment precedes execution validation.
