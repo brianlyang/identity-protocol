@@ -99,6 +99,11 @@ def _default_identity_prompt(identity_id: str, title: str, description: str) -> 
 - **Conditional Go**: local checks pass but cloud required-gates evidence is incomplete.
 - **Not Go**: any P0 gate fails or runtime writeback is not WRITTEN.
 
+## Capability Ownership
+- Maintain and evolve base-repository runtime governance scripts and gates.
+- Keep lifecycle operations (install/create/validate/update/release) deterministic and auditable.
+- Ensure capability contracts are reflected in both runtime behavior and validation evidence.
+
 ## Lifecycle Contract (Load / Create / Update)
 - **Load**: resolve identity from explicit catalog and scope; fail if binding is ambiguous.
 - **Create**: initialize CURRENT_TASK, IDENTITY_PROMPT, RULEBOOK, TASK_HISTORY with baseline governance tokens.
@@ -161,6 +166,7 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
                 "Scope",
                 "Operating Principles",
                 "Decision Policy",
+                "Capability Ownership",
                 "Escalation Policy",
             ],
             "forbid_template_markers": ["TODO", "TBD", "placeholder", "<to-be-filled>"],
@@ -439,7 +445,7 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
         prompt_activation.setdefault("min_prompt_bytes", 200)
         prompt_activation.setdefault(
             "required_sections",
-            ["Role / Mission", "Scope", "Operating Principles", "Decision Policy", "Escalation Policy"],
+            ["Role / Mission", "Scope", "Operating Principles", "Decision Policy", "Capability Ownership", "Escalation Policy"],
         )
         prompt_activation.setdefault("forbid_template_markers", ["TODO", "TBD", "placeholder", "<to-be-filled>"])
         prompt_activation.setdefault(

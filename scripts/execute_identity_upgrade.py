@@ -174,6 +174,62 @@ def _infer_prompt_source_layer(pack: Path, protocol_root: Path) -> str:
     return "global"
 
 
+def _refresh_identity_prompt_if_needed(prompt_path: Path, *, identity_id: str, now: str, run_id: str) -> dict[str, Any]:
+    required_sections = [
+        "## Role / Mission",
+        "## Scope",
+        "## Operating Principles",
+        "## Decision Policy",
+        "## Escalation Policy",
+    ]
+    default_body = (
+        f"# Identity Prompt — {identity_id}\n\n"
+        "## Role / Mission\n"
+        "- Operate as runtime identity owner for this scope.\n"
+        "- Keep decisions evidence-backed and gate-driven.\n\n"
+        "## Scope\n"
+        "- In-scope: validated execution, runtime governance, release-safe upgrades.\n"
+        "- Out-of-scope: ad-hoc policy bypass and undocumented fallback behavior.\n\n"
+        "## Operating Principles\n"
+        "1. Evidence-first.\n"
+        "2. No soft pass on failed gates.\n"
+        "3. Runtime/protocol boundary must remain hard.\n\n"
+        "## Decision Policy\n"
+        "- Full Go only when required gates are green.\n"
+        "- Conditional Go when cloud release evidence is incomplete.\n"
+        "- Not Go when any P0 gate fails.\n\n"
+        "## Capability Ownership\n"
+        "- Maintain base-repo governance scripts and required gates.\n"
+        "- Keep identity lifecycle operations auditable and reproducible.\n\n"
+        "## Escalation Policy\n"
+        "- On permission-blocked writeback, emit explicit deferred status and next action.\n"
+    )
+    original = ""
+    if prompt_path.exists():
+        original = prompt_path.read_text(encoding="utf-8", errors="ignore")
+    refreshed = original
+    if len(original.strip()) < 200:
+        refreshed = default_body
+    else:
+        missing = [s for s in required_sections if s.lower() not in original.lower()]
+        if missing:
+            additions = "\n\n## Prompt Lifecycle Refresh\n"
+            additions += f"- run_id: {run_id}\n- refreshed_at: {now}\n"
+            additions += "\n".join(f"- added_section_hint: {m}" for m in missing)
+            refreshed = original.rstrip() + additions + "\n"
+    before_hash = hashlib.sha256(original.encode("utf-8")).hexdigest() if original else ""
+    after_hash = hashlib.sha256(refreshed.encode("utf-8")).hexdigest()
+    changed = refreshed != original
+    if changed:
+        prompt_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text(refreshed, encoding="utf-8")
+    return {
+        "changed": changed,
+        "hash_before": before_hash,
+        "hash_after": after_hash,
+    }
+
+
 def _needs_upgrade(metrics: dict[str, Any], thresholds: dict[str, Any]) -> tuple[bool, list[str]]:
     reasons: list[str] = []
     misroute = float(metrics.get("misroute_rate", 0))
@@ -386,6 +442,7 @@ def main() -> int:
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
             "resolved_scope": str(args.resolved_scope or ""),
             "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+            "identity_prompt_refresh_applied": False,
             **prompt_state,
         }
         report_path = out_dir / f"{run_id}.json"
@@ -464,6 +521,7 @@ def main() -> int:
         "notes": "",
     }
     writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md")]
+    writeback_paths.append(str(effective_pack / "IDENTITY_PROMPT.md"))
     precheck = {
         "rulebook_path": str(pack / "RULEBOOK.jsonl"),
         "task_history_path": str(pack / "TASK_HISTORY.md"),
@@ -471,7 +529,7 @@ def main() -> int:
         "all_writable": True,
     }
     if upgrade_required:
-        for target in [pack / "RULEBOOK.jsonl", pack / "TASK_HISTORY.md"]:
+        for target in [effective_pack / "RULEBOOK.jsonl", effective_pack / "TASK_HISTORY.md", effective_pack / "IDENTITY_PROMPT.md"]:
             ok, reason = _writable_precheck(target)
             precheck["results"].append({"path": str(target), "ok": ok, "reason": reason})
             if not ok:
@@ -491,6 +549,35 @@ def main() -> int:
                 }
             )
             actions_taken.append("permission_precheck_blocked_writeback")
+
+    prompt_refresh = {"changed": False, "hash_before": prompt_state.get("identity_prompt_hash_before", ""), "hash_after": prompt_state.get("identity_prompt_hash_after", "")}
+    if upgrade_required and precheck.get("all_writable", True):
+        try:
+            prompt_refresh = _refresh_identity_prompt_if_needed(
+                effective_pack / "IDENTITY_PROMPT.md",
+                identity_id=args.identity_id,
+                now=now,
+                run_id=run_id,
+            )
+            prompt_state["identity_prompt_hash_before"] = str(prompt_refresh.get("hash_before", ""))
+            prompt_state["identity_prompt_hash_after"] = str(prompt_refresh.get("hash_after", ""))
+            prompt_state["identity_prompt_sha256"] = str(prompt_refresh.get("hash_after", ""))
+            if prompt_refresh.get("changed"):
+                prompt_state["identity_prompt_status"] = "ACTIVATED"
+                actions_taken.append("identity_prompt_refreshed")
+                artifacts.append(str(effective_pack / "IDENTITY_PROMPT.md"))
+        except PermissionError:
+            permission_state = "ESCALATION_DENIED"
+            permission_error_code = "IP-PERM-002"
+            escalation_required = True
+            precheck["all_writable"] = False
+            experience_writeback.update(
+                {
+                    "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "notes": "permission denied while refreshing IDENTITY_PROMPT.md",
+                }
+            )
+            actions_taken.append("identity_prompt_refresh_blocked")
 
     if upgrade_required and args.mode == "safe-auto" and precheck.get("all_writable", True):
         if safe_auto.get("enforce_path_policy") is True:
@@ -513,6 +600,7 @@ def main() -> int:
                     "artifacts": artifacts,
                     "all_ok": False,
                     "path_policy_violations": violations,
+                    "identity_prompt_refresh_applied": bool(prompt_refresh.get("changed", False)),
                     **prompt_state,
                 }
                 report_path = out_dir / f"{run_id}.json"
@@ -737,6 +825,7 @@ def main() -> int:
         "metrics_path": str(metrics_path),
         "next_action": next_action,
         "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
+        "identity_prompt_refresh_applied": bool(prompt_refresh.get("changed", False)),
         **prompt_state,
     }
     report.update(
