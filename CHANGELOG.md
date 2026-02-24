@@ -19,6 +19,12 @@
     - `create_identity_pack.py` now scaffolds a governance-complete default `IDENTITY_PROMPT.md`
       plus `identity_prompt_activation_contract` baseline
     - compile runtime brief now records prompt activation fingerprint (`path` + `sha256` + preview)
+  - project-mode scope alignment hotfix:
+    - `scripts/use_project_identity_runtime.sh` now exports `IDENTITY_SCOPE=USER`
+      to match resolver/runtime `local_only` semantics and avoid REPO/USER mismatch failures
+  - learning-loop identity isolation hardening:
+    - `scripts/validate_identity_learning_loop.py` removed store-manager fallback
+      and now fails fast when identity-scoped learning report is missing
 
 - **v1.4.x runtime anti-pollution hardening (draft)**:
   - scope-resolution hardening (skills-style discovery + strict arbitration):

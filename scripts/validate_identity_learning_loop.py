@@ -60,8 +60,10 @@ def _resolve_run_report(identity_id: str, override: str) -> Path:
     if preferred.exists():
         return preferred
 
-    fallback = Path("identity/runtime/examples/store-manager-learning-sample.json")
-    return fallback
+    raise FileNotFoundError(
+        "identity-scoped learning report not found: "
+        f"{preferred}. provide --run-report explicitly (cross-identity fallback disabled)."
+    )
 
 
 def main() -> int:
@@ -82,7 +84,10 @@ def main() -> int:
     except Exception as e:
         return _fail(str(e))
 
-    run_report_path = _resolve_run_report(identity_id, args.run_report)
+    try:
+        run_report_path = _resolve_run_report(identity_id, args.run_report)
+    except Exception as e:
+        return _fail(str(e))
 
     if not task_path.exists():
         return _fail(f"missing current task file: {task_path}")

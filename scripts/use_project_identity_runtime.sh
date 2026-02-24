@@ -54,7 +54,7 @@ fi
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME
 export IDENTITY_CATALOG
-export IDENTITY_SCOPE="REPO"
+export IDENTITY_SCOPE="USER"
 
 echo "[OK] project identity runtime loaded"
 echo "     PROJECT_ROOT=${PROJECT_ROOT}"
