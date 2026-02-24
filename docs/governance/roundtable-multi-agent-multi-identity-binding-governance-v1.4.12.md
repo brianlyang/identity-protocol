@@ -430,25 +430,33 @@ Before all acceptance criteria + cloud required-gates pass:
 
 1. OpenAI Codex Multi-agents (concepts):  
    https://developers.openai.com/codex/concepts/multi-agents/
-2. OpenAI Codex + Agents SDK guide:  
+2. OpenAI Codex Multi-agents (runtime behavior, approvals/sandbox inheritance):  
+   https://developers.openai.com/codex/multi-agent/
+3. OpenAI Codex + Agents SDK guide:  
    https://developers.openai.com/codex/guides/agents-sdk/
-3. Anthropic Claude Code Subagents:  
+4. Anthropic Claude Code Subagents:  
    https://code.claude.com/docs/en/sub-agents
-4. Anthropic Claude Code Agent Teams:  
+5. Anthropic Claude Code Agent Teams:  
    https://code.claude.com/docs/en/agent-teams
-5. Anthropic Claude Code Settings:  
+6. Anthropic Claude Code Settings:  
    https://code.claude.com/docs/en/settings
-6. Google Gemini Structured Outputs:  
+7. Anthropic MCP connector (Messages API):  
+   https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector
+8. Google Gemini Structured Outputs:  
    https://ai.google.dev/gemini-api/docs/structured-output
-7. Google ADK Workflow Agents:  
+9. Google Gemini Function Calling:  
+   https://ai.google.dev/gemini-api/docs/function-calling
+10. Google ADK Workflow Agents:  
    https://google.github.io/adk-docs/agents/workflow-agents/
-8. Google ADK ParallelAgent:  
+11. Google ADK ParallelAgent:  
    https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/
-9. Google Vertex AI Agent Engine develop overview:  
-   https://docs.cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/overview
-10. Google Vertex AI A2A guide:  
-   https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/a2a
-11. MCP spec (tools/resources/prompts):  
+12. Google Vertex AI Agent Engine develop overview:  
+   https://docs.cloud.google.com/agent-builder/agent-engine/overview
+13. Google Vertex AI A2A guide:  
+   https://docs.cloud.google.com/agent-builder/agent-engine/a2a
+14. MCP specification latest (normative baseline):  
+   https://modelcontextprotocol.io/specification/latest
+15. MCP spec (tools/resources/prompts):  
    https://modelcontextprotocol.io/specification/draft/server/tools  
    https://modelcontextprotocol.io/specification/draft/server/resources  
    https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
@@ -458,6 +466,30 @@ Before all acceptance criteria + cloud required-gates pass:
 1. LangGraph: `/langchain-ai/langgraph`
 2. AutoGen: `/microsoft/autogen`
 3. MCP Specification: `/modelcontextprotocol/specification`
+4. Google ADK docs: `/websites/google_github_io_adk-docs`
+
+---
+
+### 13.1 Live web cross-check log (2026-02-24)
+
+This roundtable baseline was cross-verified against live official pages on **2026-02-24** (not only cached/internal notes):
+
+1. **OpenAI Codex multi-agent concepts** page confirms orchestration patterns and a comparison table that includes `parallel`/`delegate` support dimensions.  
+   - Source: https://developers.openai.com/codex/concepts/multi-agents/
+2. **Anthropic Claude Code sub-agents** page confirms sub-agents run in separate context windows with their own context and tools.  
+   - Source: https://code.claude.com/docs/en/sub-agents
+3. **Anthropic agent teams** page confirms team operation uses independent sessions coordinated by a lead and task list.  
+   - Source: https://code.claude.com/docs/en/agent-teams
+4. **Google ADK workflow + parallel agents** pages confirm deterministic orchestration and branch-style parallel execution semantics.  
+   - Source: https://google.github.io/adk-docs/agents/workflow-agents/  
+   - Source: https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/
+5. **Vertex Agent Engine** links were normalized to the current `docs.cloud.google.com/agent-builder/agent-engine/*` pages to avoid stale redirect paths in review artifacts.  
+   - Source: https://docs.cloud.google.com/agent-builder/agent-engine/overview  
+   - Source: https://docs.cloud.google.com/agent-builder/agent-engine/a2a
+6. **MCP prompt/resource/tool pages** remain valid and align with capability-contract framing used in this governance proposal.  
+   - Source: https://modelcontextprotocol.io/specification/draft/server/tools  
+   - Source: https://modelcontextprotocol.io/specification/draft/server/resources  
+   - Source: https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
 
 ---
 
@@ -488,22 +520,112 @@ Governance inference:
 3. Gemini structured output requires schema-constrained JSON for predictable agentic exchanges.
    - Source: https://ai.google.dev/gemini-api/docs/structured-output
 4. Vertex AI Agent Engine recommends A2A for multi-agent interoperability across frameworks.
-   - Source: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/overview
-   - Source: https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/a2a
+   - Source: https://docs.cloud.google.com/agent-builder/agent-engine/overview
+   - Source: https://docs.cloud.google.com/agent-builder/agent-engine/a2a
 
 Governance inference:
 
 - Multi-agent identity governance must assume branch/session isolation by default.
 - Promotion across agents/workspaces should rely on structured evidence fields, not implicit state.
 
-## 14. Non-goals (explicit)
+## 15. Office-ops scenario cross-validation addendum (2026-02-24)
+
+This addendum links official web findings to the real `office-ops-expert` workload pattern observed in this cycle.
+
+### 15.1 Why office workloads are a stress test
+
+1. Office artifacts (`.xlsx`, `.docx`, attachments) are write-heavy and conflict-prone.
+2. Real tasks include image compression policy, embed-vs-link decisions, row/column readability tuning, and iterative updates.
+3. If multiple agents share one global active state, write ownership can drift even when consistency validators still pass.
+
+### 15.2 Cross-vendor implications mapped to office runtime
+
+1. OpenAI Codex guidance differentiates lower-risk parallelization from higher-risk write-heavy concurrency.
+   - Source: https://developers.openai.com/codex/concepts/multi-agents/
+2. OpenAI Agents SDK guidance emphasizes explicit handoff traceability.
+   - Source: https://developers.openai.com/codex/guides/agents-sdk/
+3. Anthropic subagent/team docs reinforce separate contexts/sessions and role boundaries.
+   - Sources:
+     - https://code.claude.com/docs/en/sub-agents
+     - https://code.claude.com/docs/en/agent-teams
+4. Gemini ADK parallel docs reinforce independent branches without implicit shared state.
+   - Source: https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/
+5. MCP spec reinforces explicit capability contracts (`tools/resources/prompts`) suitable for auditable binding evidence.
+   - Sources:
+     - https://modelcontextprotocol.io/specification/draft/server/tools
+     - https://modelcontextprotocol.io/specification/draft/server/resources
+     - https://modelcontextprotocol.io/specification/2025-06-18/server/prompts
+
+Inference note:
+
+- The rules below are governance inferences for this repository, derived from official docs and office runtime behavior.
+
+### 15.3 Additional governance rules (proposal-ready)
+
+1. Single-writer artifact lock:
+   - Each mutable office artifact must have one writer identity per execution window.
+   - Evidence fields required:
+     - `artifact_path`
+     - `writer_identity_id`
+     - `agent_session_id`
+     - `lock_acquired_at`
+2. Promotion arbitration hard gate:
+   - If one artifact has writes from multiple identities in one window and no arbitration note, promotion must fail.
+3. Session-scoped binding requirement:
+   - Parallel mode must resolve binding at session tuple level, not only global catalog active.
+4. Structured decision evidence:
+   - Office decisions (embed mode, compression threshold, layout sizing) must be emitted as schema-validated JSON for replay.
+
+### 15.4 Release posture impact
+
+1. Single-agent serialized office workflows: current baseline can remain `Go` under existing gates.
+2. True parallel multi-agent office writes: keep release posture at `Conditional Go` until session-scoped binding + artifact lock validators are enforced in required gates.
+
+### 15.5 Minimal protocol profile (MVP, preferred)
+
+To avoid over-design and reduce rollout risk, office governance SHOULD adopt this minimal profile first:
+
+1. Single-writer default:
+   - For the same mutable artifact, only one identity can write at any point in time.
+   - Other agents are read-only for that artifact.
+2. Explicit identity binding per run:
+   - Every run must carry `identity_id`, `agent_session_id`, and `artifact_path`.
+   - Do not rely on implicit/global active inference as execution authority.
+3. Fixed write evidence schema:
+   - Each write operation emits one JSON evidence record with:
+     - `writer_identity_id`
+     - `agent_session_id`
+     - `artifact_path`
+     - `input_hash`
+     - `output_hash`
+     - `changed_at`
+4. Hard fail gate:
+   - Missing evidence fields, multi-writer collision, or identity mismatch => fail directly.
+   - No soft-pass for write-path governance failures.
+5. Serialized-first execution policy:
+   - Office write tasks run in serialized queue by default.
+   - Parallel mode is allowed for read/search/analysis only.
+
+MVP rationale:
+
+- This profile solves the current highest-frequency risk (simultaneous writes) with minimum implementation cost.
+- Advanced parallel-write arbitration can be added after MVP is stable in production replay.
+
+### 15.6 MVP acceptance checks (implementation-neutral)
+
+1. For one artifact, two identities attempting write in one window must result in exactly one accepted writer and one blocked run.
+2. A write run without complete evidence schema must fail.
+3. A read-only parallel run must not change artifact hash.
+4. Promotion to shared baseline must reject any run marked `multi_writer_detected=true`.
+
+## 16. Non-goals (explicit)
 
 1. This document does not claim all scripts already implement every contract above.
 2. This document does not replace local persistence governance from v1.4.6.
 3. This document does not mandate one vendor framework; it defines protocol-agnostic governance constraints.
 
 
-## 15. Discussion-first collaboration protocol (not testing)
+## 17. Discussion-first collaboration protocol (not testing)
 
 To avoid execution-vs-discussion confusion, this governance stream is discussion-first:
 
@@ -513,3 +635,57 @@ To avoid execution-vs-discussion confusion, this governance stream is discussion
 3. Testing is only phase-2 after policy lock.
 
 This section is normative for this round: discussion alignment precedes execution validation.
+
+## 18. 2026-02-24 Official + Context7 Evidence Matrix (direct facts -> governance inference)
+
+### 18.1 Direct facts (official docs)
+
+1. OpenAI Codex multi-agent docs explicitly describe:
+   - parallel sub-agent spawning and consolidated results
+   - sub-agents inheriting sandbox policy with non-interactive approvals
+   - read-heavy tasks as safer parallel baseline and write-heavy tasks as higher-conflict
+   - Source:
+     - https://developers.openai.com/codex/concepts/multi-agents/
+     - https://developers.openai.com/codex/multi-agent/
+2. Anthropic MCP connector docs explicitly describe:
+   - API-side MCP server/toolset connection
+   - per-tool enable/disable config and validation constraints
+   - current MCP connector scope centered on tool calls in this feature
+   - Source:
+     - https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector
+3. Gemini function calling docs explicitly describe:
+   - schema-defined function declarations
+   - parallel/compositional function-calling modes
+   - model-to-tool boundary via typed arguments
+   - Source:
+     - https://ai.google.dev/gemini-api/docs/function-calling
+4. MCP latest spec explicitly defines:
+   - JSON-RPC + capability negotiation
+   - explicit capabilities (`tools/resources/prompts`)
+   - user consent and tool safety requirements
+   - Source:
+     - https://modelcontextprotocol.io/specification/latest
+
+### 18.2 Context7 corroboration
+
+1. `/modelcontextprotocol/specification`: capability declaration and list/change notification patterns.
+2. `/websites/google_github_io_adk-docs`: `ParallelAgent` and sequential composition patterns.
+3. `/langchain-ai/langgraph`: thread/checkpoint isolation patterns.
+4. `/microsoft/autogen`: multi-agent orchestration and explicit routing/tool delegation patterns.
+
+### 18.3 Governance inference (repo-specific, not vendor quotes)
+
+1. Inference: runtime identity binding must be explicit per delegated run (`identity tuple`) because vendor stacks separate orchestration and execution contexts.
+2. Inference: parallel write paths require stricter gates than read-heavy paths; therefore identity-scoped isolation and single-writer constraints remain mandatory.
+3. Inference: promotion cannot rely on ambient shell/workspace state; protocol-root + commit evidence is required for replay-grade determinism.
+
+## 19. Non-conflict statement (v1.4.5 ~ v1.4.11 and v1.4.12 governance)
+
+1. This v1.4.12 roundtable layer is additive governance, not a rollback of v1.4.5~v1.4.11 enforcement.
+2. Existing mandatory chains remain valid:
+   - local persistence boundary
+   - role-binding
+   - anti-contamination
+   - state consistency
+   - writeback enforcement
+3. New proposals in this document only tighten multi-agent binding and promotion arbitration semantics for parallel operation.

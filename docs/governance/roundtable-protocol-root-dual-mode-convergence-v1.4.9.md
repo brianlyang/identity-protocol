@@ -400,3 +400,42 @@ To convert this memo into enforceable behavior:
 1. Doc PR can merge first as governance baseline.
 2. Implementation PR reaches Full Go only when P0 script + validator + CI wiring are merged.
 3. Release note must explicitly state whether `--protocol-root` is fully enforced or still proposal-only.
+
+## 12. 2026-02-24 cross-validation overlay (official web + Context7)
+
+This section supplements the original v1.4.9 memo with live cross-validation done on 2026-02-24.
+
+### 12.1 Official web confirmations
+
+1. OpenAI Codex multi-agent docs confirm orchestration and delegated thread behavior, including sandbox/approval inheritance implications for sub-agents.
+   - https://developers.openai.com/codex/multi-agent/
+   - https://developers.openai.com/codex/concepts/multi-agents/
+2. Anthropic MCP connector docs confirm explicit server/toolset wiring and per-tool policy controls.
+   - https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector
+3. Gemini function-calling docs confirm schema-first tool invocation and parallel/compositional calling modes.
+   - https://ai.google.dev/gemini-api/docs/function-calling
+4. MCP latest spec confirms capability negotiation and explicit `tools/resources/prompts` surface contracts.
+   - https://modelcontextprotocol.io/specification/latest
+
+### 12.2 Context7 corroboration used in this round
+
+1. `/modelcontextprotocol/specification`
+2. `/websites/google_github_io_adk-docs`
+3. `/langchain-ai/langgraph`
+4. `/microsoft/autogen`
+
+### 12.3 Governance implication for dual-mode convergence
+
+1. Mode A / Mode B promotion must include protocol-root + commit evidence.
+2. Cross-agent promotion without arbitration evidence remains blocked.
+3. identity-creator/identity-installer main chain must stay deterministic under explicit protocol root resolution.
+
+## 13. Non-conflict statement with v1.4.5 ~ v1.4.11 hardening
+
+1. Dual-mode convergence is compatible with:
+   - local-instance persistence boundary,
+   - role-binding,
+   - state consistency,
+   - writeback governance.
+2. This memo does not weaken any prior release gate; it only tightens root-determinism and promotion auditability.
+3. If any script behavior diverges from this memo, script + validator enforcement remains source of truth until next governance sync PR updates both.

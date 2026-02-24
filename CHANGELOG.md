@@ -57,6 +57,19 @@ This formal release locks the critical upgrade window from `v1.4.5` to `v1.4.11`
       now normalize legacy `identity/runtime/local/<id>/...` evidence patterns to local pack paths
       and add controlled compatibility lookup for `identity/runtime/examples/*`
 
+- **roundtable audit P0 closure follow-up (v1.4.12 draft)**:
+  - removed demo fallback from learning-loop validation:
+    - `scripts/validate_identity_learning_loop.py` no longer falls back to
+      `store-manager-learning-sample.json` when identity-specific sample is missing
+  - added missing gates to release/readiness/e2e/workflow chains:
+    - `scripts/validate_identity_instance_isolation.py`
+    - `scripts/validate_identity_state_consistency.py`
+  - wired in:
+    - `scripts/identity_creator.py validate`
+    - `scripts/release_readiness_check.py`
+    - `scripts/e2e_smoke_test.sh`
+    - `.github/workflows/_identity-required-gates.yml`
+
 - **v1.4.12 governance cross-validation documentation hardening**:
   - deepened official-web + Context7 evidence mapping in:
     - `docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md`

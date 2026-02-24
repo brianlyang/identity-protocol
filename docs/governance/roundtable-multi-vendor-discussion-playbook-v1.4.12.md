@@ -181,6 +181,50 @@ These SVG assets are mandatory visual companions for discussion to reduce semant
 6. Gemini structured output: https://ai.google.dev/gemini-api/docs/structured-output
 7. Google ADK workflow agents: https://google.github.io/adk-docs/agents/workflow-agents/
 8. Google ADK parallel agents: https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/
-9. Vertex Agent Engine overview: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/overview
-10. Vertex A2A: https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/a2a
+9. Vertex Agent Engine overview: https://docs.cloud.google.com/agent-builder/agent-engine/overview
+10. Vertex A2A: https://docs.cloud.google.com/agent-builder/agent-engine/a2a
 11. MCP specification: https://modelcontextprotocol.io/specification/draft/server/tools
+
+---
+
+## 12. Live verification note (2026-02-24)
+
+To reduce review drift, official links in section 11 were re-checked against live vendor docs on **2026-02-24**.
+
+Cross-check outcomes:
+
+1. OpenAI Codex multi-agent and Agents SDK pages are reachable and still match discussion scope.
+2. Anthropic sub-agent / agent-team / settings pages are reachable under `code.claude.com/docs/en/*`.
+3. ADK workflow/parallel pages are reachable and consistent with branch-style orchestration language.
+4. Vertex references were normalized to `docs.cloud.google.com/agent-builder/agent-engine/*` canonical routes.
+5. MCP tools/resources/prompts specification pages are reachable and usable as governance reference anchors.
+
+---
+
+## 13. Cross-validation execution matrix (official + Context7)
+
+Use this matrix during roundtable to avoid "discussion-only" conclusions.
+
+| Theme | Official source check | Context7 corroboration | Required governance output |
+|---|---|---|---|
+| OpenAI multi-agent orchestration | `codex/concepts/multi-agents` + `codex/multi-agent` | N/A | binding tuple + approval/sandbox inheritance policy |
+| Anthropic MCP tool boundary | `docs.anthropic.com/.../mcp-connector` | `/modelcontextprotocol/specification` | tool-level enable/deny and identity-scoped execution policy |
+| Gemini function/tool determinism | `ai.google.dev/.../function-calling` | `/websites/google_github_io_adk-docs` | schema-first evidence fields and typed promotion payloads |
+| MCP capability declaration | `modelcontextprotocol.io/specification/latest` | `/modelcontextprotocol/specification` | capability-to-validator mapping and fail-fast behavior |
+| Multi-agent state isolation patterns | vendor orchestration docs above | `/langchain-ai/langgraph`, `/microsoft/autogen` | per-session identity scope, no global fallback rules |
+
+Notes:
+
+1. Official pages provide direct facts.
+2. Context7 provides implementation-level corroboration.
+3. Any policy decision without this two-layer evidence should be marked `NO-GO`.
+
+---
+
+## 14. Compatibility note with prior upgrade window (v1.4.5 -> v1.4.11)
+
+This playbook is compatible with the existing upgrade baseline and does not replace core gates from v1.4.5~v1.4.11.
+
+1. It extends decision quality for v1.4.12 multi-agent governance.
+2. It does not relax local persistence / role-binding / writeback / anti-contamination requirements.
+3. If a discussion outcome conflicts with existing hard gates, existing hard gates win until an explicit migration PR updates validators and CI.

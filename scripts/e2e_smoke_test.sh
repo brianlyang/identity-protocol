@@ -62,6 +62,12 @@ for ID in $IDS; do
   echo "[12/30][$ID] validate role-binding contract"
   python3 scripts/validate_identity_role_binding.py --identity-id "$ID"
 
+  echo "[12.1/30][$ID] validate identity instance isolation"
+  python3 scripts/validate_identity_instance_isolation.py --identity-id "$ID"
+
+  echo "[12.2/30][$ID] validate identity state consistency"
+  python3 scripts/validate_identity_state_consistency.py
+
   echo "[13/30][$ID] validate update prereq baseline gate"
   python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
 

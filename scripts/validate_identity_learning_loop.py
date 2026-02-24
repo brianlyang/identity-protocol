@@ -60,8 +60,7 @@ def _resolve_run_report(identity_id: str, override: str) -> Path:
     if preferred.exists():
         return preferred
 
-    fallback = Path("identity/runtime/examples/store-manager-learning-sample.json")
-    return fallback
+    return preferred
 
 
 def main() -> int:
