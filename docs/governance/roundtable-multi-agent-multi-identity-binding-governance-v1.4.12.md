@@ -351,6 +351,39 @@ flowchart TD
 
 ---
 
+
+## 8.4 Mermaid: agent-team orchestration with identity-bound sessions
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Lead as Lead Agent (Control)
+  participant A as Agent A (office-ops-expert)
+  participant B as Agent B (base-repo-audit-expert-v3)
+  participant Gate as Required Gates
+
+  Lead->>A: run(validate/update) with tuple
+(identity_home A, catalog A, protocol_root)
+  Lead->>B: run(validate/update) with tuple
+(identity_home B, catalog B, protocol_root)
+  A-->>Lead: report + writeback evidence
+  B-->>Lead: report + writeback evidence
+  Lead->>Gate: submit tuple + isolation + consistency evidence
+  Gate-->>Lead: PASS/FAIL decision
+  Note over Lead,Gate: Missing tuple or cross-identity hit => hard FAIL
+```
+
+## 8.5 SVG artifacts (review-ready, richer visuals)
+
+- Topology SVG: `docs/governance/assets/multi-agent-multi-identity-topology-v1.4.12.svg`
+- Promotion flow SVG: `docs/governance/assets/multi-agent-promotion-flow-v1.4.12.svg`
+
+Review requirement:
+
+1. SVG files MUST be kept in repository (not external link-only).
+2. Diagram updates and governance-rule updates must be in same PR when policy changes.
+3. Auditors may reference SVG + Mermaid together; conflicts should block approval.
+
 ## 9. P0 implementation tasks (can convert to PR checklist)
 
 1. Report schema hardening (creator/installer/update): enforce binding tuple fields.
@@ -400,16 +433,22 @@ Before all acceptance criteria + cloud required-gates pass:
 2. OpenAI Codex + Agents SDK guide:  
    https://developers.openai.com/codex/guides/agents-sdk/
 3. Anthropic Claude Code Subagents:  
-   https://docs.anthropic.com/en/docs/claude-code/sub-agents
-4. Anthropic Claude Code Settings (subagent/config layering):  
-   https://docs.anthropic.com/en/docs/claude-code/settings
-5. Google Gemini Structured Outputs:  
+   https://code.claude.com/docs/en/sub-agents
+4. Anthropic Claude Code Agent Teams:  
+   https://code.claude.com/docs/en/agent-teams
+5. Anthropic Claude Code Settings:  
+   https://code.claude.com/docs/en/settings
+6. Google Gemini Structured Outputs:  
    https://ai.google.dev/gemini-api/docs/structured-output
-6. Google ADK Multi-agent systems:  
-   https://google.github.io/adk-docs/agents/multi-agents/
-7. Google Vertex AI Agent Engine develop overview:  
-   https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/overview
-8. MCP spec (tools/resources/prompts):  
+7. Google ADK Workflow Agents:  
+   https://google.github.io/adk-docs/agents/workflow-agents/
+8. Google ADK ParallelAgent:  
+   https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/
+9. Google Vertex AI Agent Engine develop overview:  
+   https://docs.cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/overview
+10. Google Vertex AI A2A guide:  
+   https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/a2a
+11. MCP spec (tools/resources/prompts):  
    https://modelcontextprotocol.io/specification/draft/server/tools  
    https://modelcontextprotocol.io/specification/draft/server/resources  
    https://modelcontextprotocol.io/specification/2025-06-18/server/prompts

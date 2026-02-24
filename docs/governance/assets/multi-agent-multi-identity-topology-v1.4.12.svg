@@ -1,0 +1,85 @@
+<svg width="1200" height="680" viewBox="0 0 1200 680" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font: 700 24px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 14px Inter, Arial, sans-serif; fill: #334155; }
+      .cardTitle { font: 700 16px Inter, Arial, sans-serif; fill: #0f172a; }
+      .body { font: 500 13px Inter, Arial, sans-serif; fill: #1e293b; }
+      .small { font: 500 12px Inter, Arial, sans-serif; fill: #334155; }
+      .bad { font: 700 14px Inter, Arial, sans-serif; fill: #b91c1c; }
+      .good { font: 700 14px Inter, Arial, sans-serif; fill: #065f46; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569" />
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#dc2626" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="680" fill="#f8fafc" />
+  <text x="24" y="38" class="title">v1.4.12 Multi-Agent × Multi-Identity Governance Topology</text>
+  <text x="24" y="62" class="subtitle">Target: isolate runtime identity state per agent context, keep protocol evidence deterministic and auditable</text>
+
+  <!-- Control plane -->
+  <rect x="24" y="92" width="1152" height="120" rx="12" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="44" y="122" class="cardTitle">Control Plane (shared policy)</text>
+  <text x="44" y="146" class="body">protocol_root + validators + required gates + release policy</text>
+  <text x="44" y="170" class="small">Mandatory tuple: protocol_root / protocol_commit_sha / protocol_ref / generated_at</text>
+  <text x="44" y="194" class="small">Any missing field => Hard Fail (no soft pass)</text>
+
+  <!-- left good mode -->
+  <rect x="24" y="236" width="560" height="300" rx="12" fill="#ecfeff" stroke="#0891b2" stroke-width="1.5"/>
+  <text x="44" y="266" class="cardTitle">Mode B (Parallel, Allowed)</text>
+  <text x="44" y="290" class="good">Each agent uses isolated IDENTITY_HOME + catalog_path</text>
+
+  <rect x="44" y="308" width="250" height="200" rx="10" fill="#ffffff" stroke="#0ea5e9"/>
+  <text x="58" y="334" class="cardTitle">Agent A</text>
+  <text x="58" y="356" class="body">identity_id: office-ops-expert</text>
+  <text x="58" y="378" class="small">IDENTITY_HOME: /home/A/.codex/identity</text>
+  <text x="58" y="398" class="small">catalog_path: /home/A/.codex/identity/catalog.local.yaml</text>
+  <text x="58" y="418" class="small">agent_session_id: A-20260224-01</text>
+  <text x="58" y="438" class="small">writeback: RULEBOOK + TASK_HISTORY</text>
+
+  <rect x="318" y="308" width="250" height="200" rx="10" fill="#ffffff" stroke="#0ea5e9"/>
+  <text x="332" y="334" class="cardTitle">Agent B</text>
+  <text x="332" y="356" class="body">identity_id: base-repo-audit-expert-v3</text>
+  <text x="332" y="378" class="small">IDENTITY_HOME: /home/B/.codex/identity</text>
+  <text x="332" y="398" class="small">catalog_path: /home/B/.codex/identity/catalog.local.yaml</text>
+  <text x="332" y="418" class="small">agent_session_id: B-20260224-02</text>
+  <text x="332" y="438" class="small">state consistency: catalog == META</text>
+
+  <!-- right bad mode -->
+  <rect x="616" y="236" width="560" height="300" rx="12" fill="#fff1f2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="636" y="266" class="cardTitle">Prohibited mode (Contamination Risk)</text>
+  <text x="636" y="290" class="bad">Shared catalog + independent activation assumptions</text>
+
+  <rect x="636" y="308" width="240" height="200" rx="10" fill="#ffffff" stroke="#ef4444"/>
+  <text x="650" y="334" class="cardTitle">Agent X</text>
+  <text x="650" y="356" class="body">identity_id: office-ops-expert</text>
+  <text x="650" y="378" class="small">writes active state</text>
+
+  <rect x="906" y="308" width="240" height="200" rx="10" fill="#ffffff" stroke="#ef4444"/>
+  <text x="920" y="334" class="cardTitle">Agent Y</text>
+  <text x="920" y="356" class="body">identity_id: base-repo-audit-expert-v3</text>
+  <text x="920" y="378" class="small">overwrites active state</text>
+
+  <rect x="720" y="420" width="320" height="70" rx="10" fill="#fee2e2" stroke="#dc2626"/>
+  <text x="736" y="447" class="bad">Failure outcomes</text>
+  <text x="736" y="470" class="small">• double-active or stale META</text>
+  <text x="736" y="488" class="small">• store-manager fallback contamination</text>
+
+  <!-- arrows -->
+  <line x1="220" y1="212" x2="220" y2="308" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="450" y1="212" x2="450" y2="308" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="760" y1="212" x2="760" y2="308" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <line x1="1020" y1="212" x2="1020" y2="308" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+  <line x1="876" y1="390" x2="906" y2="390" stroke="#dc2626" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+  <rect x="24" y="558" width="1152" height="96" rx="12" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="44" y="586" class="cardTitle">Gate consequences</text>
+  <text x="44" y="610" class="small">1) Cross-identity evidence/sample hit => fail</text>
+  <text x="410" y="610" class="small">2) catalog/META mismatch => fail</text>
+  <text x="750" y="610" class="small">3) missing writeback on required update => fail</text>
+  <text x="44" y="632" class="small">Release policy: until cloud required-gates are green with these checks, status remains Conditional Go.</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title{font:700 24px Inter,Arial,sans-serif;fill:#0f172a}
+      .label{font:700 15px Inter,Arial,sans-serif;fill:#0f172a}
+      .txt{font:500 13px Inter,Arial,sans-serif;fill:#1e293b}
+      .warn{font:700 13px Inter,Arial,sans-serif;fill:#b45309}
+      .fail{font:700 13px Inter,Arial,sans-serif;fill:#b91c1c}
+    </style>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="520" fill="#ffffff"/>
+  <text x="24" y="40" class="title">Mode B → Mode A Promotion Arbitration Flow (v1.4.12)</text>
+
+  <rect x="24" y="90" width="240" height="120" rx="10" fill="#ecfeff" stroke="#0891b2"/>
+  <text x="40" y="120" class="label">Step 1: Isolated run (Mode B)</text>
+  <text x="40" y="145" class="txt">Agent executes with isolated</text>
+  <text x="40" y="164" class="txt">IDENTITY_HOME + catalog_path</text>
+  <text x="40" y="183" class="txt">Produces execution report</text>
+
+  <rect x="318" y="90" width="260" height="120" rx="10" fill="#eef2ff" stroke="#6366f1"/>
+  <text x="334" y="120" class="label">Step 2: Evidence tuple check</text>
+  <text x="334" y="145" class="txt">protocol_root absolute?</text>
+  <text x="334" y="164" class="txt">protocol_commit_sha valid (40)?</text>
+  <text x="334" y="183" class="txt">identity_home/catalog present?</text>
+
+  <rect x="632" y="90" width="250" height="120" rx="10" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="648" y="120" class="label">Step 3: Arbitration required?</text>
+  <text x="648" y="145" class="txt">If protocol roots differ,</text>
+  <text x="648" y="164" class="txt">arbitration_note_id is mandatory</text>
+  <text x="648" y="183" class="warn">Missing note => Block</text>
+
+  <rect x="936" y="90" width="240" height="120" rx="10" fill="#ecfdf5" stroke="#10b981"/>
+  <text x="952" y="120" class="label">Step 4: Mode A replay</text>
+  <text x="952" y="145" class="txt">Replay same case on shared</text>
+  <text x="952" y="164" class="txt">team protocol root</text>
+  <text x="952" y="183" class="txt">All required checks PASS</text>
+
+  <line x1="264" y1="150" x2="318" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="578" y1="150" x2="632" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="882" y1="150" x2="936" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <rect x="24" y="280" width="1152" height="200" rx="12" fill="#f8fafc" stroke="#94a3b8"/>
+  <text x="44" y="314" class="label">Block conditions (hard fail)</text>
+  <text x="44" y="340" class="fail">• Cross-identity evidence hit (including store-manager fixture leakage)</text>
+  <text x="44" y="364" class="fail">• catalog active state and META.status mismatch</text>
+  <text x="44" y="388" class="fail">• upgrade_required=true and all_ok=true but missing RULEBOOK/TASK_HISTORY writeback</text>
+  <text x="44" y="412" class="fail">• high-impact mutation without Mode A replay PASS</text>
+
+  <text x="44" y="448" class="label">Release gate decision</text>
+  <text x="220" y="448" class="txt">Only after all checks pass on cloud required-gates -> Full Go; otherwise Conditional Go.</text>
+</svg>
