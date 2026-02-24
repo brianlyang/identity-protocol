@@ -172,6 +172,63 @@ def _append_task_history(history_path: Path, line: str) -> None:
         f.write(f"\n- {line}\n")
 
 
+def _append_writeback_or_defer(
+    *,
+    rulebook_path: Path,
+    history_path: Path,
+    rulebook_row: dict[str, Any],
+    history_line: str,
+    out_dir: Path,
+    run_id: str,
+    identity_id: str,
+    mode: str,
+) -> dict[str, Any]:
+    completed: list[str] = []
+    try:
+        _append_jsonl(rulebook_path, rulebook_row)
+        completed.append("rulebook")
+        _append_task_history(history_path, history_line)
+        completed.append("task_history")
+        return {
+            "status": "WRITTEN",
+            "history_contains_run_id": True,
+            "deferred_report_path": "",
+            "notes": "writeback appended successfully",
+            "completed_steps": completed,
+            "error": "",
+        }
+    except (PermissionError, OSError) as exc:
+        deferred = {
+            "run_id": run_id,
+            "identity_id": identity_id,
+            "mode": mode,
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "reason": "permission_or_filesystem_blocked",
+            "error": str(exc),
+            "completed_steps": completed,
+            "intended_writeback": {
+                "rulebook_path": str(rulebook_path),
+                "rulebook_row": rulebook_row,
+                "task_history_path": str(history_path),
+                "task_history_line": history_line,
+            },
+            "operator_action": (
+                "rerun with writable runtime root or elevated permission, then "
+                "re-append RULEBOOK/TASK_HISTORY and re-run validate_identity_experience_writeback.py"
+            ),
+        }
+        deferred_path = out_dir / f"{run_id}-writeback-deferred.json"
+        _write_json(deferred_path, deferred)
+        return {
+            "status": "DEFERRED_PERMISSION_BLOCKED",
+            "history_contains_run_id": "task_history" in completed,
+            "deferred_report_path": str(deferred_path),
+            "notes": "writeback deferred due to filesystem permission/sandbox constraint",
+            "completed_steps": completed,
+            "error": str(exc),
+        }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Execute identity upgrade cycle using metrics + arbitration thresholds (safe-auto/review-required)."
@@ -183,6 +240,11 @@ def main() -> int:
     ap.add_argument("--out-dir", default="identity/runtime/reports")
     ap.add_argument("--protocol-root", default="")
     ap.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
+    ap.add_argument(
+        "--allow-deferred-writeback",
+        action="store_true",
+        help="allow process to return success when writeback is deferred by permission/sandbox constraints",
+    )
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -323,11 +385,13 @@ def main() -> int:
         actions_taken.append("arbitration_record_written")
         artifacts.append(str(decision_path))
 
-        # 2) append rulebook learning row
+        # 2/3) append writeback rows (or defer with explicit evidence when blocked)
         rulebook_path = pack / "RULEBOOK.jsonl"
-        _append_jsonl(
-            rulebook_path,
-            {
+        history_path = pack / "TASK_HISTORY.md"
+        wb = _append_writeback_or_defer(
+            rulebook_path=rulebook_path,
+            history_path=history_path,
+            rulebook_row={
                 "rule_id": f"{run_id}-auto-upgrade",
                 "type": "negative",
                 "trigger": "arbitration_threshold_hit",
@@ -337,22 +401,28 @@ def main() -> int:
                 "confidence": 0.75,
                 "updated_at": now,
             },
+            history_line=f"{now} | auto-upgrade trigger | run_id={run_id} | mode=safe-auto | reasons={'; '.join(reasons)}",
+            out_dir=out_dir,
+            run_id=run_id,
+            identity_id=args.identity_id,
+            mode=args.mode,
         )
-        actions_taken.append("rulebook_row_appended")
-
-        # 3) append TASK_HISTORY note
-        history_path = pack / "TASK_HISTORY.md"
-        _append_task_history(
-            history_path,
-            f"{now} | auto-upgrade trigger | run_id={run_id} | mode=safe-auto | reasons={'; '.join(reasons)}",
-        )
-        actions_taken.append("task_history_appended")
+        if wb["status"] == "WRITTEN":
+            actions_taken.append("rulebook_row_appended")
+            actions_taken.append("task_history_appended")
+        else:
+            actions_taken.append("writeback_deferred_permission_blocked")
+            deferred_path = str(wb.get("deferred_report_path", ""))
+            if deferred_path:
+                artifacts.append(deferred_path)
         experience_writeback.update(
             {
-                "status": "WRITTEN",
+                "status": wb["status"],
                 "rule_entry_id": f"{run_id}-auto-upgrade",
-                "history_contains_run_id": True,
-                "notes": "safe-auto writeback appended before validator execution",
+                "history_contains_run_id": bool(wb.get("history_contains_run_id")),
+                "notes": str(wb.get("notes", "")),
+                "deferred_report_path": str(wb.get("deferred_report_path", "")),
+                "error": str(wb.get("error", "")),
             }
         )
 
@@ -378,9 +448,10 @@ def main() -> int:
         rulebook_path = pack / "RULEBOOK.jsonl"
         history_path = pack / "TASK_HISTORY.md"
         rule_id = f"{run_id}-review-required-upgrade"
-        _append_jsonl(
-            rulebook_path,
-            {
+        wb = _append_writeback_or_defer(
+            rulebook_path=rulebook_path,
+            history_path=history_path,
+            rulebook_row={
                 "rule_id": rule_id,
                 "type": "positive",
                 "trigger": "review_required_upgrade_validated",
@@ -390,24 +461,33 @@ def main() -> int:
                 "confidence": 0.9,
                 "updated_at": now,
             },
-        )
-        _append_task_history(
-            history_path,
-            (
+            history_line=(
                 f"{now} | review-required upgrade validated | run_id={run_id} | mode=review-required "
                 f"| checks_passed={len(checks)} | reasons={'; '.join(reasons) if reasons else 'none'}"
             ),
+            out_dir=out_dir,
+            run_id=run_id,
+            identity_id=args.identity_id,
+            mode=args.mode,
         )
-        actions_taken.append("rulebook_row_appended_review_required")
-        actions_taken.append("task_history_appended_review_required")
-        artifacts.append(str(rulebook_path))
-        artifacts.append(str(history_path))
+        if wb["status"] == "WRITTEN":
+            actions_taken.append("rulebook_row_appended_review_required")
+            actions_taken.append("task_history_appended_review_required")
+            artifacts.append(str(rulebook_path))
+            artifacts.append(str(history_path))
+        else:
+            actions_taken.append("writeback_deferred_permission_blocked_review_required")
+            deferred_path = str(wb.get("deferred_report_path", ""))
+            if deferred_path:
+                artifacts.append(deferred_path)
         experience_writeback.update(
             {
-                "status": "WRITTEN",
+                "status": wb["status"],
                 "rule_entry_id": rule_id,
-                "history_contains_run_id": True,
-                "notes": "review-required success writeback appended after validator execution",
+                "history_contains_run_id": bool(wb.get("history_contains_run_id")),
+                "notes": str(wb.get("notes", "")),
+                "deferred_report_path": str(wb.get("deferred_report_path", "")),
+                "error": str(wb.get("error", "")),
             }
         )
     elif upgrade_required:
@@ -425,6 +505,31 @@ def main() -> int:
                 "notes": "thresholds not triggered; no upgrade writeback required",
             }
         )
+
+    if upgrade_required and str(experience_writeback.get("status", "")) != "WRITTEN":
+        writeback_status = str(experience_writeback.get("status", ""))
+        checks.append(
+            {
+                "command": "identity_writeback_enforcement",
+                "cmd": "identity_writeback_enforcement",
+                "code": 1,
+                "ok": False,
+                "stdout": "",
+                "stderr": (
+                    f"writeback enforcement failed: status={writeback_status}; "
+                    "runtime writeback not fully committed"
+                ),
+                "started_at": now,
+                "ended_at": now,
+                "duration_ms": 0,
+                "exit_code": 1,
+                "log_path": "",
+                "sha256": "",
+            }
+        )
+        all_ok = False if not args.allow_deferred_writeback else all_ok
+        if args.allow_deferred_writeback:
+            actions_taken.append("writeback_deferred_allowed_by_flag")
 
     report = {
         "run_id": run_id,

@@ -117,6 +117,27 @@ python "$IDENTITY_PROTOCOL_HOME/scripts/identity_creator.py" update \
 
 Standalone mode (Mode B) must include promotion arbitration evidence before high-impact changes are promoted.
 
+### Writeback behavior under sandbox/permission constraints (v1.4.12 draft)
+
+When `identity_creator.py update` / `execute_identity_upgrade.py` cannot append runtime files
+(`RULEBOOK.jsonl` / `TASK_HISTORY.md`) due to filesystem permission or sandbox restrictions:
+
+1. execution emits deferred evidence:
+   - `*-writeback-deferred.json`
+2. report field `writeback_status` is set to:
+   - `DEFERRED_PERMISSION_BLOCKED`
+3. default behavior hard-fails upgrade-required runs to prevent silent learning drift.
+
+Controlled recovery path:
+
+```bash
+python scripts/apply_deferred_identity_writeback.py \
+  --report <path-to-writeback-deferred.json>
+python scripts/validate_identity_experience_writeback.py \
+  --identity-id <id> \
+  --execution-report <upgrade-report.json>
+```
+
 
 ## v1.4.11 release highlights (v1.4.5 -> v1.4.11)
 
@@ -262,6 +283,9 @@ If a document defines required behavior for CI/release/audit decisions, it belon
   - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md`
   - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
   - `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
+  - `docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md`
+  - `docs/governance/roundtable-multi-vendor-discussion-playbook-v1.4.12.md`
+  - `docs/governance/roundtable-protocol-root-dual-mode-convergence-v1.4.9.md`
   - `docs/governance/templates/upgrade-cross-validation-template.md`
 - Runtime identity migration guide:
   - `docs/guides/runtime-instance-migration-guide-v1.4.7.md`

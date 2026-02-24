@@ -22,6 +22,24 @@ This formal release locks the critical upgrade window from `v1.4.5` to `v1.4.11`
 
 ## Unreleased
 
+- **writeback resilience hardening (v1.4.12 draft)**:
+  - `scripts/execute_identity_upgrade.py` now handles runtime writeback permission/sandbox failures explicitly:
+    - emits `*-writeback-deferred.json` evidence when RULEBOOK/TASK_HISTORY append is blocked
+    - records `writeback_status=DEFERRED_PERMISSION_BLOCKED` instead of silent drift
+    - enforces writeback hard-fail by default for upgrade-required runs
+    - supports explicit override `--allow-deferred-writeback` for controlled local unblock flows
+  - added deferred apply helper:
+    - `scripts/apply_deferred_identity_writeback.py`
+    - replays deferred RULEBOOK/TASK_HISTORY append safely once writable runtime root is available
+
+- **v1.4.12 governance cross-validation documentation hardening**:
+  - deepened official-web + Context7 evidence mapping in:
+    - `docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md`
+    - `docs/governance/roundtable-multi-vendor-discussion-playbook-v1.4.12.md`
+    - `docs/governance/roundtable-protocol-root-dual-mode-convergence-v1.4.9.md`
+  - added explicit non-conflict statement against v1.4.5~v1.4.11 hard gates
+  - synchronized README governance index entries for v1.4.12 roundtable docs
+
 - **v1.4.6 planning hardening (draft)**:
   - local-instance persistence boundary enforcement:
     - added `scripts/resolve_identity_context.py` (repo+local catalog merge, local override)
