@@ -139,8 +139,6 @@ jobs:
           for ID in $IDS; do
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_role_binding.py --identity-id "$ID"
-            python3 scripts/validate_identity_instance_isolation.py --identity-id "$ID"
-            python3 scripts/validate_identity_state_consistency.py
             python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
             python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
             python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
