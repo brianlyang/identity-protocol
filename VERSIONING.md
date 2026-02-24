@@ -52,3 +52,19 @@ as explicitly reviewed during release closure.
 
 Release closure is considered incomplete when any of the three synchronization
 files is stale, even if feature code is already merged.
+
+## Current formal release baseline
+
+- Latest formal release: `v1.4.11` (published 2026-02-24).
+- Release communication must reference formal release tag, not draft-only metadata markers.
+
+### Mandatory release visibility files (v1.4.11+)
+
+The following files are treated as public release entrypoints and must be updated together for major protocol upgrade windows:
+
+1. `README.md`
+2. `CHANGELOG.md`
+3. `VERSIONING.md`
+4. `requirements-dev.txt`
+
+A release is considered documentation-incomplete when any of the four files is stale versus release tag baseline.

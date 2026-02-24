@@ -1,4 +1,5 @@
-# Dev dependency baseline (release metadata synchronized in v1.4.10 draft)
+# Dev dependency baseline (release metadata synchronized in v1.4.11 formal release)
+# Last reviewed for release closure: v1.4.11 (2026-02-24)
 # Keep minimal; add new packages only when validators/scripts introduce
 # non-stdlib imports and update CHANGELOG.md accordingly.
 PyYAML>=6.0.1

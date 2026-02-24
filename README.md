@@ -117,6 +117,28 @@ python "$IDENTITY_PROTOCOL_HOME/scripts/identity_creator.py" update \
 
 Standalone mode (Mode B) must include promotion arbitration evidence before high-impact changes are promoted.
 
+
+## v1.4.11 release highlights (v1.4.5 -> v1.4.11)
+
+This section is the fast audit entry for the critical upgrade window from `v1.4.5` to `v1.4.11`.
+
+1. **Local runtime persistence boundary**
+   - runtime identity assets moved to local runtime home (`IDENTITY_HOME`) by default
+   - repo fixture/demo identities separated from runtime identities
+2. **Identity-scoped anti-contamination hardening**
+   - validators reject cross-identity evidence/sample hits
+   - explicit protection against demo fixture (`store-manager`) pollution of runtime identities
+3. **Activation and state consistency hardening**
+   - single-active transactional activation behavior
+   - catalog + META strong consistency checks integrated into gates
+4. **Upgrade writeback evidence hardening**
+   - review-required upgrade flow requires RULEBOOK + TASK_HISTORY writeback evidence
+   - writeback validator wired to readiness/e2e/required-gates chain
+5. **Protocol-root evidence baseline**
+   - run reports include protocol root and version tuple fields for replay and arbitration
+
+Authoritative release: `v1.4.11 (Formal Release)`
+
 ## Quickstart
 
 ```bash
@@ -344,6 +366,6 @@ This is enforced by contract + validators:
 
 ## Status
 
-- Protocol version: `v1.4.10` (draft)
+- Protocol version: `v1.4.11` (formal release)
 - Discovery contract: `identity/protocol/IDENTITY_DISCOVERY.md`
 - Creator skill: `identity-creator` (create + update validators)

@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.4.11 (Formal Release) — 2026-02-24
+
+This formal release locks the critical upgrade window from `v1.4.5` to `v1.4.11` and marks the auditable baseline before v1.4.12 multi-vendor governance expansion.
+
+### Critical upgrade summary (v1.4.5 -> v1.4.11)
+
+1. Local-instance persistence boundary enforcement (runtime local-first, fixture/runtime split).
+2. Role-binding + activation gate hardening (binding validity required for promotion/switch).
+3. Identity-scoped anti-contamination hardening (cross-identity evidence/sample fallback blocked).
+4. Transactional single-active switching + state consistency enforcement (catalog/META).
+5. Mandatory writeback evidence for review-required upgrades (RULEBOOK/TASK_HISTORY linkage).
+6. Protocol-root evidence fields and promotion arbitration baseline introduced for replay determinism.
+7. Release/readiness/e2e/required-gates alignment hardened to reduce semantic drift.
+
+### Release metadata
+
+- Tag: `v1.4.11`
+- Commit: `ab263339c4f5ac5e6beb9d8411484c7f865ac5c3`
+- GitHub Release: `v1.4.11 (Formal Release)`
+
 ## Unreleased
 
 - **v1.4.6 planning hardening (draft)**:
