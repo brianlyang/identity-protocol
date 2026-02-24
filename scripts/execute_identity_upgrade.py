@@ -172,6 +172,31 @@ def _append_task_history(history_path: Path, line: str) -> None:
         f.write(f"\n- {line}\n")
 
 
+def _resolve_local_runtime_path(raw: str, *, identity_id: str, pack: Path, identity_home: Path) -> Path:
+    val = (raw or "").strip()
+    if not val:
+        return Path("")
+    p = Path(val).expanduser()
+    if p.is_absolute():
+        return p
+    token = "{identity_id}"
+    if token in val:
+        val = val.replace(token, identity_id)
+    pref_local = f"identity/runtime/local/{identity_id}/"
+    if val.startswith(pref_local):
+        return (pack / val[len(pref_local) :]).resolve()
+    pref_identity = f"identity/{identity_id}/"
+    if val.startswith(pref_identity):
+        return (pack / val[len(pref_identity) :]).resolve()
+    if val.startswith("identity/runtime/local/"):
+        rel = val[len("identity/runtime/local/") :].split("/", 1)
+        if rel and rel[0] == identity_id and len(rel) > 1:
+            return (pack / rel[1]).resolve()
+        # fallback: map under identity_home for non-pack-scoped local runtime artifacts
+        return (identity_home / val[len("identity/runtime/local/") :]).resolve()
+    return p.resolve()
+
+
 def _append_writeback_or_defer(
     *,
     rulebook_path: Path,
@@ -249,6 +274,11 @@ def main() -> int:
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    identity_home = default_identity_home()
+
+    if args.allow_deferred_writeback and os.environ.get("CI"):
+        print("[FAIL] --allow-deferred-writeback is forbidden in CI/release environments")
+        return 2
 
     pack = _resolve_pack(Path(args.catalog), args.identity_id)
     current_task_path = pack / "CURRENT_TASK.json"
@@ -256,10 +286,18 @@ def main() -> int:
 
     arb = task.get("capability_arbitration_contract") or {}
     thresholds = (arb.get("trigger_thresholds") or {}) if isinstance(arb, dict) else {}
-    metrics_path = Path(args.metrics_path) if args.metrics_path else Path(
-        (task.get("route_quality_contract") or {}).get(
-            "metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json"
-        )
+    raw_metrics_path = (
+        str(args.metrics_path).strip()
+        if str(args.metrics_path).strip()
+        else str((task.get("route_quality_contract") or {}).get("metrics_output_path", "")).strip()
+    )
+    if not raw_metrics_path:
+        raw_metrics_path = f"{pack}/metrics/{args.identity_id}-route-quality.json"
+    metrics_path = _resolve_local_runtime_path(
+        raw_metrics_path,
+        identity_id=args.identity_id,
+        pack=pack,
+        identity_home=identity_home,
     )
     if not metrics_path.exists():
         raise FileNotFoundError(f"metrics artifact not found: {metrics_path}")
@@ -306,7 +344,7 @@ def main() -> int:
             "protocol_root": protocol["protocol_root"],
             "protocol_commit_sha": protocol["protocol_commit_sha"],
             "protocol_ref": protocol["protocol_ref"],
-            "identity_home": str(default_identity_home()),
+            "identity_home": str(identity_home),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
         }
     )
@@ -566,7 +604,7 @@ def main() -> int:
             "protocol_root": protocol["protocol_root"],
             "protocol_commit_sha": protocol["protocol_commit_sha"],
             "protocol_ref": protocol["protocol_ref"],
-            "identity_home": str(default_identity_home()),
+            "identity_home": str(identity_home),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
         }
     )

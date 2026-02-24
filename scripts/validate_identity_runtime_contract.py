@@ -104,20 +104,56 @@ def _resolve_task_path(identity: dict[str, Any]) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
-    if Path(pattern).is_absolute():
-        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
-    else:
-        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
+def _normalize_legacy_local_pattern(pattern: str, identity_id: str, pack_root: Path) -> str:
+    p = pattern.replace("<identity-id>", identity_id).replace("{identity_id}", identity_id).strip()
+    if not p:
+        return p
+    if Path(p).is_absolute():
+        return p
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if p.startswith(local_prefix):
+        return str((pack_root / p[len(local_prefix) :]).resolve())
+    identity_prefix = f"identity/{identity_id}/"
+    if p.startswith(identity_prefix):
+        return str((pack_root / p[len(identity_prefix) :]).resolve())
+    if p.startswith("identity/runtime/local/"):
+        parts = p[len("identity/runtime/local/") :].split("/", 1)
+        if len(parts) == 2 and parts[0] == identity_id:
+            return str((pack_root / parts[1]).resolve())
+    return p
+
+
+def _latest_evidence(pattern: str, identity_id: str, pack_root: Path) -> Path | None:
+    candidates = []
+    raw = pattern.replace("<identity-id>", identity_id).replace("{identity_id}", identity_id).strip()
+    norm = _normalize_legacy_local_pattern(pattern, identity_id, pack_root)
+    for c in [raw, norm]:
+        if c and c not in candidates:
+            candidates.append(c)
+    for c in list(candidates):
+        if "/examples/" in c:
+            tail = c.split("/examples/", 1)[1]
+            alt = f"identity/runtime/examples/{tail}"
+            if alt not in candidates:
+                candidates.append(alt)
+    files: list[Path] = []
+    for c in candidates:
+        if Path(c).is_absolute():
+            files.extend(Path(p) for p in glob.glob(c))
+        else:
+            files.extend(Path(".").glob(c))
     if not files:
         return None
-    scoped = [p for p in files if identity_id in p.name]
+    dedup = sorted({f.resolve() for f in files if f.exists()}, key=lambda p: p.stat().st_mtime)
+    if not dedup:
+        return None
+    scoped = [p for p in dedup if identity_id in p.name]
     if scoped:
         return sorted(scoped, key=lambda p: p.stat().st_mtime)[-1]
-    return files[-1]
+    return dedup[-1]
 
 
-def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -> tuple[int, list[str]]:
+def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str, pack_root: Path) -> tuple[int, list[str]]:
     rc = 0
     logs: list[str] = []
 
@@ -152,7 +188,7 @@ def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -
         logs.append("[FAIL] protocol_review_contract.evidence_report_path_pattern missing")
         return rc, logs
 
-    latest = _latest_evidence(pattern, identity_id)
+    latest = _latest_evidence(pattern, identity_id, pack_root)
     if not latest:
         rc = 1
         logs.append(f"[FAIL] no protocol review evidence file matched: {pattern}")
@@ -243,7 +279,8 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
     else:
         print("[OK]   evaluation_contract.consistency_required=true")
 
-    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id)
+    pack_root = task_path.parent
+    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id, pack_root)
     for ln in prc_logs:
         print(ln)
     rc = max(rc, prc_rc)
@@ -406,7 +443,7 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             print("[FAIL] identity_role_binding_contract.binding_evidence_path_pattern missing")
             rc = 1
         else:
-            latest = _latest_evidence(pattern.replace("<identity-id>", identity_id), identity_id)
+            latest = _latest_evidence(pattern.replace("<identity-id>", identity_id), identity_id, pack_root)
             if not latest:
                 print(f"[FAIL] role binding evidence not found by pattern: {pattern}")
                 rc = 1

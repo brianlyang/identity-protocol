@@ -22,15 +22,40 @@ This formal release locks the critical upgrade window from `v1.4.5` to `v1.4.11`
 
 ## Unreleased
 
+- **full-repo deep audit roundtable (v1.4.12 draft)**:
+  - added:
+    - `docs/governance/roundtable-full-repo-scan-sandbox-and-path-convergence-audit-v1.4.12.md`
+  - includes:
+    - code + official web + Context7 cross-validation matrix
+    - severity-ordered findings with file/line evidence
+    - P0/P1 remediation plan for sandbox/writeback/path-convergence closure
+    - release posture criteria (Conditional Go -> Full Go gates)
+
+- **sandbox blocking remediation requirements (v1.4.12 draft)**:
+  - added dedicated P0 governance requirements:
+    - `docs/governance/sandbox-blocking-writeback-remediation-requirements-v1.4.12.md`
+  - defines:
+    - two-root runtime/source contract for sandboxed execution
+    - deferred writeback integrity and path-scope hardening requirements
+    - release-plane rule: required upgrade accepts only `writeback_status=WRITTEN`
+    - CI gating requirements to prevent permissive bypass in release path
+
 - **writeback resilience hardening (v1.4.12 draft)**:
   - `scripts/execute_identity_upgrade.py` now handles runtime writeback permission/sandbox failures explicitly:
     - emits `*-writeback-deferred.json` evidence when RULEBOOK/TASK_HISTORY append is blocked
     - records `writeback_status=DEFERRED_PERMISSION_BLOCKED` instead of silent drift
     - enforces writeback hard-fail by default for upgrade-required runs
     - supports explicit override `--allow-deferred-writeback` for controlled local unblock flows
+    - forbids `--allow-deferred-writeback` in CI/release environments
+    - normalizes legacy local metrics paths (`identity/runtime/local/<id>/...`) to identity-local runtime pack paths
   - added deferred apply helper:
     - `scripts/apply_deferred_identity_writeback.py`
     - replays deferred RULEBOOK/TASK_HISTORY append safely once writable runtime root is available
+    - enforces identity-scoped destination checks via `--identity-id` + `--catalog` (path whitelist)
+  - validator path resolution hardening:
+    - `validate_identity_runtime_contract.py` and `validate_identity_role_binding.py`
+      now normalize legacy `identity/runtime/local/<id>/...` evidence patterns to local pack paths
+      and add controlled compatibility lookup for `identity/runtime/examples/*`
 
 - **v1.4.12 governance cross-validation documentation hardening**:
   - deepened official-web + Context7 evidence mapping in:

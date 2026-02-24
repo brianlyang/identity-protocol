@@ -44,19 +44,56 @@ def _resolve_task_path(identity: dict[str, Any], identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str) -> Path | None:
+def _normalize_legacy_local_pattern(pattern: str, identity_id: str, pack_root: Path) -> str:
+    p = pattern.replace("<identity-id>", identity_id).replace("{identity_id}", identity_id).strip()
+    if not p:
+        return p
+    if Path(p).is_absolute():
+        return p
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if p.startswith(local_prefix):
+        return str((pack_root / p[len(local_prefix) :]).resolve())
+    identity_prefix = f"identity/{identity_id}/"
+    if p.startswith(identity_prefix):
+        return str((pack_root / p[len(identity_prefix) :]).resolve())
+    if p.startswith("identity/runtime/local/"):
+        parts = p[len("identity/runtime/local/") :].split("/", 1)
+        if len(parts) == 2 and parts[0] == identity_id:
+            return str((pack_root / parts[1]).resolve())
+    return p
+
+
+def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str, pack_root: Path) -> Path | None:
     if explicit:
         p = Path(explicit)
         return p if p.exists() else None
-    pattern = pattern.replace("<identity-id>", identity_id)
-    if Path(pattern).is_absolute():
-        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
-    else:
-        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
+    raw = pattern.replace("<identity-id>", identity_id).replace("{identity_id}", identity_id)
+    norm = _normalize_legacy_local_pattern(pattern, identity_id, pack_root)
+    files: list[Path] = []
+    candidates: list[str] = []
+    for candidate in [raw, norm]:
+        if not candidate:
+            continue
+        if candidate not in candidates:
+            candidates.append(candidate)
+    for c in list(candidates):
+        if "/examples/" in c:
+            tail = c.split("/examples/", 1)[1]
+            alt = f"identity/runtime/examples/{tail}"
+            if alt not in candidates:
+                candidates.append(alt)
+    for candidate in candidates:
+        if Path(candidate).is_absolute():
+            files.extend(Path(p) for p in glob.glob(candidate))
+        else:
+            files.extend(Path(".").glob(candidate))
     if not files:
         return None
-    scoped = [p for p in files if identity_id in p.name]
-    return (sorted(scoped, key=lambda p: p.stat().st_mtime)[-1] if scoped else files[-1])
+    dedup = sorted({f.resolve() for f in files if f.exists()}, key=lambda p: p.stat().st_mtime)
+    if not dedup:
+        return None
+    scoped = [p for p in dedup if identity_id in p.name]
+    return (sorted(scoped, key=lambda p: p.stat().st_mtime)[-1] if scoped else dedup[-1])
 
 
 def _parse_utc(ts: str) -> datetime | None:
@@ -151,6 +188,7 @@ def main() -> int:
         str(contract.get("binding_evidence_path_pattern", "")),
         identity_id,
         args.evidence,
+        task_path.parent,
     )
     if not evidence:
         print("[FAIL] role-binding evidence not found")
