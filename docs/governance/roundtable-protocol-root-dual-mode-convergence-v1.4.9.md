@@ -5,6 +5,8 @@ Type: Governance design memo (PR-ready, doc-only proposal)
 Status: Proposal (this commit does not implement script/runtime behavior changes)  
 Scope: identity instance runtime path decoupling, skill-style convergence
 
+> Follow-up governance extension: `docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md` (multi-agent × multi-identity binding, isolation, arbitration).
+
 ## 1. Background
 
 Real runtime operations exposed a repeatable failure mode:
