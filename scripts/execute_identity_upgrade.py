@@ -285,6 +285,10 @@ def main() -> int:
         identity_id=args.identity_id,
     )
     runtime_output_root = _resolve_runtime_output_root(effective_pack, args.identity_id, protocol_root)
+    out_dir = Path(args.out_dir)
+    if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
+        out_dir = runtime_output_root / "reports"
+    out_dir.mkdir(parents=True, exist_ok=True)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)
 
@@ -303,7 +307,47 @@ def main() -> int:
     else:
         metrics_path = contract_metrics_path
     if not metrics_path.exists():
-        raise FileNotFoundError(f"metrics artifact not found: {metrics_path}")
+        report = {
+            "run_id": run_id,
+            "identity_id": args.identity_id,
+            "generated_at": now,
+            "mode": args.mode,
+            "upgrade_required": False,
+            "trigger_reasons": [f"metrics_artifact_missing:{metrics_path}"],
+            "actions_taken": [],
+            "checks": [],
+            "check_results": [],
+            "artifacts": [],
+            "experience_writeback": {},
+            "writeback_paths": [],
+            "writeback_status": "NOT_EXECUTED",
+            "writeback_rule_id": "",
+            "all_ok": False,
+            "permission_state": "PRECHECK",
+            "permission_error_code": "IP-UPG-001",
+            "escalation_required": False,
+            "escalation_recommendation": "generate metrics artifact then rerun update",
+            "writeback_precheck": {"ok": False, "reason": "metrics_missing"},
+            "runtime_output_root": str(runtime_output_root),
+            "metrics_path": str(metrics_path),
+            "next_action": "generate_metrics_and_rerun",
+            "failure_reason": f"metrics artifact not found: {metrics_path}",
+            "protocol_mode": protocol["protocol_mode"],
+            "protocol_root": protocol["protocol_root"],
+            "protocol_commit_sha": protocol["protocol_commit_sha"],
+            "protocol_ref": protocol["protocol_ref"],
+            "identity_home": str(default_identity_home()),
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "resolved_scope": str(args.resolved_scope or ""),
+            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+        }
+        report_path = out_dir / f"{run_id}.json"
+        _write_json(report_path, report)
+        print(f"report={report_path}")
+        print("upgrade_required=False")
+        print("all_ok=False")
+        print("next_action=generate_metrics_and_rerun")
+        return 2
     metrics = _load_json(metrics_path)
 
     upgrade_required, reasons = _needs_upgrade(metrics, thresholds)
@@ -353,10 +397,6 @@ def main() -> int:
         }
     )
 
-    out_dir = Path(args.out_dir)
-    if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
-        out_dir = runtime_output_root / "reports"
-    out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{run_id}-patch-plan.json"
     _write_json(plan_path, patch_plan)
 
@@ -601,6 +641,14 @@ def main() -> int:
             }
         )
 
+    next_action = ""
+    if args.mode == "review-required" and upgrade_required:
+        next_action = "review_required_create_pr_from_patch_plan"
+    elif args.mode == "safe-auto" and upgrade_required:
+        next_action = "safe_auto_applied_and_validated"
+    else:
+        next_action = "no_upgrade_triggered"
+
     report = {
         "run_id": run_id,
         "identity_id": args.identity_id,
@@ -636,6 +684,8 @@ def main() -> int:
         "writeback_precheck": precheck,
         "runtime_output_root": str(runtime_output_root),
         "metrics_path": str(metrics_path),
+        "next_action": next_action,
+        "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
     }
     report.update(
         {
@@ -655,12 +705,7 @@ def main() -> int:
     print(f"report={report_path}")
     print(f"upgrade_required={upgrade_required}")
     print(f"all_ok={all_ok}")
-    if args.mode == "review-required" and upgrade_required:
-        print("next_action=review_required: apply patch plan via PR")
-    elif args.mode == "safe-auto" and upgrade_required:
-        print("next_action=safe_auto_applied_and_validated")
-    else:
-        print("next_action=no_upgrade_triggered")
+    print(f"next_action={next_action}")
 
     return 0 if all_ok else 2
 

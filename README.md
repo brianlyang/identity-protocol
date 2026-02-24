@@ -247,6 +247,10 @@ source ./scripts/identity_runtime_select.sh project
 # optional: migrate legacy runtime identities from repo paths to local paths
 python scripts/migrate_repo_instances_to_local.py --apply
 
+# NOTE (v1.4.12+ hardening):
+# release-bound scripts no longer allow implicit catalog fallback.
+# You must pass --catalog or export IDENTITY_CATALOG from selected runtime mode.
+
 python scripts/validate_identity_protocol.py
 python scripts/validate_identity_local_persistence.py
 python scripts/compile_identity_runtime.py

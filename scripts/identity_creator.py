@@ -618,7 +618,11 @@ def _enforce_scope_pack_alignment(
     if not resolved_pack_path:
         print(f"[FAIL] resolved_pack_path missing for identity={identity_id}")
         return 1
-    actual = (resolved_scope or "").strip().upper() or _classify_scope_from_pack_path(resolved_pack_path)
+    resolved_scope_norm = (resolved_scope or "").strip().upper()
+    if resolved_scope_norm in {"", "UNKNOWN"}:
+        actual = _classify_scope_from_pack_path(resolved_pack_path)
+    else:
+        actual = resolved_scope_norm
     if actual != scope:
         print(
             "[FAIL] scope/pack_path mismatch: "

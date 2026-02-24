@@ -90,6 +90,9 @@ for ID in $IDS; do
   echo "[12/30][$ID] validate role-binding contract"
   python3 scripts/validate_identity_role_binding.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
+  echo "[12.5/30][$ID] validate identity prompt quality"
+  python3 scripts/validate_identity_prompt_quality.py --catalog "$CATALOG_PATH" --identity-id "$ID" --scope USER
+
   echo "[13/30][$ID] validate update prereq baseline gate"
   python3 scripts/validate_identity_upgrade_prereq.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 

@@ -293,6 +293,10 @@ def resolve_identity(
             scope: ScopeName = "SYSTEM"
         else:
             scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)
+            # P0: avoid UNKNOWN scope entering runtime upgrade chain.
+            # For local-catalog identities, UNKNOWN is coerced to USER semantics.
+            if source_layer == "local" and scope == "UNKNOWN":
+                scope = "USER"
 
         candidates.append(
             {
