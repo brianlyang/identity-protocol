@@ -9,6 +9,16 @@
     handoff self-test and changelog gates in the latest commit window
   - `.gitignore` now keeps the deterministic handoff self-test fixture files versioned
     while continuing to ignore volatile runtime-local outputs
+  - prompt lifecycle governance strengthened (load/create/update):
+    - runtime mode scripts now export `IDENTITY_SCOPE` (`REPO` for project mode, `USER` for global mode)
+    - `identity_creator validate/update` now gate on `validate_identity_prompt_quality.py`
+    - upgrade execution report now emits prompt activation evidence:
+      `identity_prompt_path`, `identity_prompt_sha256`, `identity_prompt_activated_at`,
+      `identity_prompt_source_layer`, `identity_prompt_status`
+    - added `scripts/validate_identity_prompt_activation.py` and wired into readiness/e2e/required-gates
+    - `create_identity_pack.py` now scaffolds a governance-complete default `IDENTITY_PROMPT.md`
+      plus `identity_prompt_activation_contract` baseline
+    - compile runtime brief now records prompt activation fingerprint (`path` + `sha256` + preview)
 
 - **v1.4.x runtime anti-pollution hardening (draft)**:
   - scope-resolution hardening (skills-style discovery + strict arbitration):

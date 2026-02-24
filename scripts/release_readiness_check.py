@@ -59,6 +59,7 @@ def main() -> int:
     if not Path(catalog).expanduser().exists():
         print(f"[FAIL] catalog path does not exist: {catalog}")
         return 2
+    scope = os.environ.get("IDENTITY_SCOPE", "USER").strip() or "USER"
 
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
@@ -95,7 +96,7 @@ def main() -> int:
         ["python3", "scripts/validate_identity_instance_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_role_binding.py", "--catalog", catalog, "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_prompt_quality.py", "--catalog", catalog, "--identity-id", identity_id, "--scope", "USER"],
+        ["python3", "scripts/validate_identity_prompt_quality.py", "--catalog", catalog, "--identity-id", identity_id, "--scope", scope],
         ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_install_safety.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_install_provenance.py", "--catalog", catalog, "--identity-id", identity_id],
@@ -125,6 +126,8 @@ def main() -> int:
             "review-required",
             "--catalog",
             catalog,
+            "--scope",
+            scope,
         ]
         rc = _run(gen_cmd)
         if rc != 0:
@@ -206,6 +209,16 @@ def main() -> int:
         [
             "python3",
             "scripts/validate_identity_binding_tuple.py",
+            "--identity-id",
+            identity_id,
+            "--report",
+            execution_report,
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_prompt_activation.py",
             "--identity-id",
             identity_id,
             "--report",

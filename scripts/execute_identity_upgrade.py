@@ -130,7 +130,48 @@ def _build_validator_cmd(check: str, identity_id: str, catalog_path: str) -> lis
         cmd += ["--self-test"]
     if check.endswith("validate_identity_experience_feedback.py"):
         cmd += ["--self-test"]
+    if check.endswith("validate_identity_prompt_quality.py"):
+        cmd += ["--scope", os.environ.get("IDENTITY_SCOPE", "USER")]
     return cmd
+
+
+def _collect_identity_prompt_state(pack: Path, *, activated_at: str, source_layer: str) -> dict[str, str]:
+    prompt_path = pack / "IDENTITY_PROMPT.md"
+    state = {
+        "identity_prompt_path": str(prompt_path),
+        "identity_prompt_status": "MISSING",
+        "identity_prompt_source_layer": source_layer,
+        "identity_prompt_activated_at": activated_at,
+        "identity_prompt_sha256": "",
+        "identity_prompt_hash_before": "",
+        "identity_prompt_hash_after": "",
+    }
+    if not prompt_path.exists():
+        return state
+    try:
+        content = prompt_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        state["identity_prompt_status"] = "READ_ERROR"
+        return state
+    digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    state["identity_prompt_sha256"] = digest
+    state["identity_prompt_hash_before"] = digest
+    state["identity_prompt_hash_after"] = digest
+    if len(content.strip()) < 200:
+        state["identity_prompt_status"] = "PLACEHOLDER_OR_TOO_SHORT"
+    else:
+        state["identity_prompt_status"] = "PRESENT"
+    return state
+
+
+def _infer_prompt_source_layer(pack: Path, protocol_root: Path) -> str:
+    try:
+        project_root = protocol_root.resolve().parent
+        if _is_within(pack.resolve(), project_root):
+            return "project"
+    except Exception:
+        pass
+    return "global"
 
 
 def _needs_upgrade(metrics: dict[str, Any], thresholds: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -284,6 +325,11 @@ def main() -> int:
         allow_protocol_root_pack=bool(args.allow_protocol_root_pack),
         identity_id=args.identity_id,
     )
+    prompt_state = _collect_identity_prompt_state(
+        effective_pack,
+        activated_at=now,
+        source_layer=_infer_prompt_source_layer(effective_pack, protocol_root),
+    )
     runtime_output_root = _resolve_runtime_output_root(effective_pack, args.identity_id, protocol_root)
     out_dir = Path(args.out_dir)
     if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
@@ -340,6 +386,7 @@ def main() -> int:
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
             "resolved_scope": str(args.resolved_scope or ""),
             "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+            **prompt_state,
         }
         report_path = out_dir / f"{run_id}.json"
         _write_json(report_path, report)
@@ -466,6 +513,7 @@ def main() -> int:
                     "artifacts": artifacts,
                     "all_ok": False,
                     "path_policy_violations": violations,
+                    **prompt_state,
                 }
                 report_path = out_dir / f"{run_id}.json"
                 _write_json(report_path, report)
@@ -569,6 +617,9 @@ def main() -> int:
             "scripts/validate_identity_update_lifecycle.py",
             "scripts/validate_identity_capability_arbitration.py",
         ]
+    prompt_gate = "scripts/validate_identity_prompt_quality.py"
+    if prompt_gate not in required_checks:
+        required_checks = [*required_checks, prompt_gate]
     check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
     log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
@@ -686,6 +737,7 @@ def main() -> int:
         "metrics_path": str(metrics_path),
         "next_action": next_action,
         "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
+        **prompt_state,
     }
     report.update(
         {

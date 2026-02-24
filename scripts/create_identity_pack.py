@@ -75,6 +75,42 @@ def dump_yaml(path: Path, data) -> None:
     path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
+def _default_identity_prompt(identity_id: str, title: str, description: str) -> str:
+    return f"""# Identity Prompt — {identity_id}
+
+## Role / Mission
+- Identity: **{identity_id}**
+- Role: **{title}**
+- Mission: {description}
+- Primary objective: make auditable, gate-driven decisions and avoid protocol/runtime boundary violations.
+
+## Scope
+- In scope: analyze requirements, execute approved changes, run validators, and report evidence-backed conclusions.
+- Out of scope: ad-hoc policy bypass, undocumented runtime writes, and silent fallback to another identity scope.
+
+## Operating Principles
+1. Evidence-first: every major claim must be backed by executable checks or artifacts.
+2. Gate discipline: no “success” without required gate pass (scope, health, cleanliness, permission-state).
+3. Runtime isolation: runtime outputs belong to identity runtime roots, not protocol source trees.
+4. Deterministic routing: always resolve identity context (catalog + pack + scope) before lifecycle operations.
+
+## Decision Policy
+- **Full Go**: all required gates pass and release evidence is complete.
+- **Conditional Go**: local checks pass but cloud required-gates evidence is incomplete.
+- **Not Go**: any P0 gate fails or runtime writeback is not WRITTEN.
+
+## Lifecycle Contract (Load / Create / Update)
+- **Load**: resolve identity from explicit catalog and scope; fail if binding is ambiguous.
+- **Create**: initialize CURRENT_TASK, IDENTITY_PROMPT, RULEBOOK, TASK_HISTORY with baseline governance tokens.
+- **Update**: run prompt quality gate + lifecycle validators; record writeback and permission-state in upgrade report.
+- Identity prompt changes must stay synchronized with runtime source-of-truth pack path.
+
+## Escalation Policy
+- If writeback is blocked: emit explicit status (`DEFERRED_PERMISSION_BLOCKED`), provide next_action, and stop release promotion.
+- If scope/path mismatch is detected: require adopt/lock or mode re-selection before retry.
+"""
+
+
 def _minimal_current_task(identity_id: str, title: str, description: str) -> dict:
     return {
         "task_id": f"{identity_id}_bootstrap",
@@ -115,6 +151,26 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
             "reasoning_loop_gate": "required",
             "routing_gate": "required",
             "rulebook_gate": "required",
+            "identity_prompt_activation_gate": "required",
+        },
+        "identity_prompt_activation_contract": {
+            "activation_required": True,
+            "min_prompt_bytes": 200,
+            "required_sections": [
+                "Role / Mission",
+                "Scope",
+                "Operating Principles",
+                "Decision Policy",
+                "Escalation Policy",
+            ],
+            "forbid_template_markers": ["TODO", "TBD", "placeholder", "<to-be-filled>"],
+            "evidence_required_fields": [
+                "identity_prompt_path",
+                "identity_prompt_sha256",
+                "identity_prompt_activated_at",
+                "identity_prompt_source_layer",
+                "identity_prompt_status",
+            ],
         },
         "protocol_review_contract": {
             "required_before": ["identity_capability_upgrade", "identity_architecture_decision"],
@@ -328,6 +384,9 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     if isinstance(objective, dict):
         objective["title"] = description
         objective["status"] = "pending"
+    gates = task.setdefault("gates", {})
+    if isinstance(gates, dict):
+        gates["identity_prompt_activation_gate"] = "required"
 
     task.setdefault("version_control", {})
     if isinstance(task["version_control"], dict):
@@ -366,6 +425,33 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     arb = task.setdefault("capability_arbitration_contract", {})
     if isinstance(arb, dict):
         arb["sample_report_path_pattern"] = f"identity/runtime/examples/{identity_id}-capability-arbitration-sample.json"
+    validation_contract = (
+        task.setdefault("identity_update_lifecycle_contract", {})
+        .setdefault("validation_contract", {})
+    )
+    if isinstance(validation_contract, dict):
+        checks = validation_contract.setdefault("required_checks", [])
+        if isinstance(checks, list) and "scripts/validate_identity_prompt_quality.py" not in checks:
+            checks.append("scripts/validate_identity_prompt_quality.py")
+    prompt_activation = task.setdefault("identity_prompt_activation_contract", {})
+    if isinstance(prompt_activation, dict):
+        prompt_activation["activation_required"] = True
+        prompt_activation.setdefault("min_prompt_bytes", 200)
+        prompt_activation.setdefault(
+            "required_sections",
+            ["Role / Mission", "Scope", "Operating Principles", "Decision Policy", "Escalation Policy"],
+        )
+        prompt_activation.setdefault("forbid_template_markers", ["TODO", "TBD", "placeholder", "<to-be-filled>"])
+        prompt_activation.setdefault(
+            "evidence_required_fields",
+            [
+                "identity_prompt_path",
+                "identity_prompt_sha256",
+                "identity_prompt_activated_at",
+                "identity_prompt_source_layer",
+                "identity_prompt_status",
+            ],
+        )
     rbc = task.setdefault("identity_role_binding_contract", {})
     if isinstance(rbc, dict):
         rbc["role_type"] = f"{identity_id.replace('-', '_')}_runtime_operator"
@@ -650,7 +736,7 @@ def main() -> int:
 
     write(
         pack_dir / "IDENTITY_PROMPT.md",
-        "# Identity Prompt\n\nDefine role cognition, principles, and decision rules.\n",
+        _default_identity_prompt(identity_id, args.title, args.description),
     )
 
     runtime_root = Path("identity/runtime") if args.repo_fixture else (pack_dir / "runtime")

@@ -778,6 +778,7 @@ def main() -> int:
             ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", args.catalog],
             ["python3", "scripts/validate_identity_instance_isolation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_prompt_quality.py", "--catalog", args.catalog, "--identity-id", args.identity_id, "--scope", args.scope or os.environ.get("IDENTITY_SCOPE", "USER")],
             ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
@@ -850,6 +851,21 @@ def main() -> int:
         )
         if rc != 0:
             print("[FAIL] instance isolation validation failed; update blocked")
+            return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_identity_prompt_quality.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--scope",
+                args.scope,
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] identity prompt quality validation failed; update blocked")
             return rc
         cmd = [
             "python3",

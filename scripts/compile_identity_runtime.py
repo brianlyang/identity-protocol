@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -75,6 +76,14 @@ def main() -> int:
     current_task = json.loads(current_task_path.read_text(encoding="utf-8"))
     objective = (current_task.get("objective") or {}).get("title", "")
     state = (current_task.get("state_machine") or {}).get("current_state", "unknown")
+    prompt_path = pack_path / "IDENTITY_PROMPT.md"
+    prompt_loaded = prompt_path.exists()
+    prompt_digest = ""
+    prompt_preview = ""
+    if prompt_loaded:
+        prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore").strip()
+        prompt_digest = hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+        prompt_preview = " ".join(prompt_text.split())[:180]
 
     hard_guardrails = (((active.get("governance") or {}).get("hard_guardrails") or [])
         if isinstance(active.get("governance"), dict)
@@ -105,6 +114,12 @@ def main() -> int:
         "",
         "Current state:",
         f"- {state}",
+        "",
+        "Identity prompt activation:",
+        f"- prompt_path: {prompt_path.as_posix()}",
+        f"- prompt_loaded: {'yes' if prompt_loaded else 'no'}",
+        f"- prompt_sha256: {prompt_digest or '(missing)'}",
+        f"- prompt_preview: {prompt_preview or '(missing)'}",
     ]
 
     if review_sources:

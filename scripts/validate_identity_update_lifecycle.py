@@ -193,6 +193,12 @@ def main() -> int:
         print(f"[FAIL] validation_contract.required_checks missing expected checks: {sorted(expected_checks - required_checks)}")
         return 1
     print("[OK] validation_contract.required_checks contains mandatory validators")
+    prompt_activation_contract = task.get("identity_prompt_activation_contract") or {}
+    if isinstance(prompt_activation_contract, dict) and prompt_activation_contract.get("activation_required") is True:
+        if "scripts/validate_identity_prompt_quality.py" not in required_checks:
+            print("[FAIL] prompt activation required but validation_contract.required_checks missing scripts/validate_identity_prompt_quality.py")
+            return 1
+        print("[OK] prompt activation required and prompt quality validator is present")
 
     trigger_regression = task.get("trigger_regression_contract") or {}
     if not isinstance(trigger_regression, dict) or not trigger_regression:

@@ -54,9 +54,11 @@ fi
 export IDENTITY_HOME
 export IDENTITY_PROTOCOL_HOME
 export IDENTITY_CATALOG
+export IDENTITY_SCOPE="USER"
 
 echo "[OK] global identity runtime loaded"
 echo "     IDENTITY_HOME=${IDENTITY_HOME}"
 echo "     IDENTITY_PROTOCOL_HOME=${IDENTITY_PROTOCOL_HOME}"
 echo "     IDENTITY_CATALOG=${IDENTITY_CATALOG}"
+echo "     IDENTITY_SCOPE=${IDENTITY_SCOPE}"
 echo "     [note] in restricted sandbox sessions, global mode may require escalation for writeback."

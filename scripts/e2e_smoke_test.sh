@@ -2,6 +2,7 @@
 set -euo pipefail
 
 CATALOG_PATH=${IDENTITY_CATALOG:-}
+IDENTITY_SCOPE_VALUE=${IDENTITY_SCOPE:-USER}
 if [ -z "$CATALOG_PATH" ]; then
   echo "[FAIL] IDENTITY_CATALOG is required (implicit catalog fallback is disabled)."
   echo "       select runtime mode first:"
@@ -91,7 +92,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_role_binding.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[12.5/30][$ID] validate identity prompt quality"
-  python3 scripts/validate_identity_prompt_quality.py --catalog "$CATALOG_PATH" --identity-id "$ID" --scope USER
+  python3 scripts/validate_identity_prompt_quality.py --catalog "$CATALOG_PATH" --identity-id "$ID" --scope "$IDENTITY_SCOPE_VALUE"
 
   echo "[13/30][$ID] validate update prereq baseline gate"
   python3 scripts/validate_identity_upgrade_prereq.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -135,7 +136,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_self_upgrade_enforcement.py --catalog "$CATALOG_PATH" --identity-id "$ID" --base "$BASE_SHA" --head "$HEAD_SHA"
 
   echo "[26/30][$ID] execute identity upgrade cycle via identity-creator (review-required)"
-  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required
+  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --scope "$IDENTITY_SCOPE_VALUE"
   UPGRADE_REPORT=$(python3 - "$ID" "${IDENTITY_HOME:-}" <<'PY'
 import glob,os,sys
 identity_id=sys.argv[1]
@@ -167,6 +168,9 @@ PY
 
   echo "[27.6/30][$ID] validate identity binding tuple contract"
   python3 scripts/validate_identity_binding_tuple.py --identity-id "$ID" --report "$UPGRADE_REPORT"
+
+  echo "[27.7/30][$ID] validate identity prompt activation contract"
+  python3 scripts/validate_identity_prompt_activation.py --identity-id "$ID" --report "$UPGRADE_REPORT"
 
   echo "[28/30][$ID] validate capability arbitration contract (self-test + upgrade linkage)"
   python3 scripts/validate_identity_capability_arbitration.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"
