@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **v1.4.12 self-upgrade closure follow-up (draft)**:
+  - added handoff contract self-test fixtures for `base-repo-architect`
+    under `identity/runtime/local/base-repo-architect/examples/handoff/{positive,negative}`
+  - aligned self-drive verification evidence so `identity_creator update` can evaluate
+    handoff self-test and changelog gates in the latest commit window
+
 - **v1.4.x runtime anti-pollution hardening (draft)**:
   - scope-resolution hardening (skills-style discovery + strict arbitration):
     - `scripts/resolve_identity_context.py` adds `resolved_scope`/`resolved_pack_path`
