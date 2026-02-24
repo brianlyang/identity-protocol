@@ -327,7 +327,7 @@ def main() -> int:
             "permission_error_code": "IP-UPG-001",
             "escalation_required": False,
             "escalation_recommendation": "generate metrics artifact then rerun update",
-            "writeback_precheck": {"ok": False, "reason": "metrics_missing"},
+            "writeback_precheck": {"all_writable": False, "reason": "metrics_missing"},
             "runtime_output_root": str(runtime_output_root),
             "metrics_path": str(metrics_path),
             "next_action": "generate_metrics_and_rerun",

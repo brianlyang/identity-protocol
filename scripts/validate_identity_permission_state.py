@@ -17,7 +17,16 @@ ALLOWED_STATES = {
     "WRITEBACK_FAILED",
     "DONE",
 }
-ALLOWED_CODES = {"", "IP-PERM-001", "IP-PERM-002", "IP-PERM-003", "IP-PATH-001", "IP-CI-001", "IP-REC-001"}
+ALLOWED_CODES = {
+    "",
+    "IP-PERM-001",
+    "IP-PERM-002",
+    "IP-PERM-003",
+    "IP-PATH-001",
+    "IP-CI-001",
+    "IP-REC-001",
+    "IP-UPG-001",
+}
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
