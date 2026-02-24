@@ -2,6 +2,12 @@
 
 Protocol-grade identity control plane for autonomous coding agents.
 
+## Current release posture (v1.4.x baseline)
+
+- **Code-plane**: upgraded with local-runtime boundary + identity-scoped anti-pollution gates.
+- **Release-plane**: **Conditional Go** until cloud `required-gates` is green with the latest workflow changes.
+- Do **not** externally claim `Full Go` before all required cloud checks are green.
+
 This repository standardizes identity as a first-class layer parallel to:
 - **skills** (capability packaging)
 - **MCP** (tool transport/execution)
@@ -61,18 +67,97 @@ This behavior is implemented in `scripts/resolve_identity_context.py::default_id
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
 and migration tooling.
 
+### Identity scope resolution (governance uplift)
+
+To align with skills-style discovery while preserving runtime safety, identity execution now carries an explicit scope interpretation:
+
+1. CLI explicit (`--catalog`, `--target-root`, `--scope`)
+2. environment/runtime config (`IDENTITY_HOME`, `runtime-paths.env`)
+3. repo scope (`<repo>/.agents/identity`) when present
+4. user scope (`${CODEX_HOME:-~/.codex}/identity`)
+5. fallback scope (`./.codex/identity`, recovery-only)
+
+If one `identity_id` resolves to multiple pack paths across layers, tooling now fails by default until explicit arbitration (`--scope`) is provided. This prevents silent cross-scope contamination.
+
+Operational governance commands:
+
+```bash
+# detect duplicate instances across repo/user roots
+python3 scripts/identity_installer.py scan --identity-id <id>
+
+# adopt one canonical source and lock runtime catalog binding
+python3 scripts/identity_installer.py adopt --identity-id <id> --source-pack <path> --scope USER
+python3 scripts/identity_installer.py lock --identity-id <id> --scope USER
+```
+
+Mandatory scope validators:
+- `scripts/validate_identity_scope_resolution.py`
+- `scripts/validate_identity_scope_isolation.py`
+- `scripts/validate_identity_scope_persistence.py`
+
+Runtime self-healing entrypoint:
+
+```bash
+# dry-run (scan only)
+python3 scripts/identity_creator.py heal --identity-id <id> --catalog <local-catalog>
+
+# apply canonicalization + repair + validate
+python3 scripts/identity_creator.py heal --identity-id <id> --catalog <local-catalog> --scope USER --apply
+```
+
+Heal executes: `scan -> adopt -> lock -> repair-paths -> validate`, and emits a JSON report under `/tmp/identity-heal-reports/` by default.
+If validate fails due to missing protocol/role-binding baseline evidence, heal auto-triggers
+`scripts/repair_identity_baseline_evidence.py` and re-validates once.
+
+Health diagnostics (error collection + remediation suggestions):
+
+```bash
+python3 scripts/collect_identity_health_report.py \
+  --identity-id <id> \
+  --catalog <catalog> \
+  --out-dir /tmp/identity-health-reports \
+  --enforce-pass
+
+python3 scripts/validate_identity_health_contract.py \
+  --identity-id <id> \
+  --report-dir /tmp/identity-health-reports \
+  --require-pass
+```
+
+These health commands are wired into release-readiness, e2e, and required-gates to keep CI contract-controlled.
+
+Permission-state contract:
+
+```bash
+python3 scripts/validate_identity_permission_state.py \
+  --identity-id <id> \
+  --report <identity-upgrade-exec-report.json> \
+  --require-written
+```
+
+In CI/release contexts, deferred writeback due to permission blocking is explicitly rejected.
+
+Protocol/runtime hard boundary (P0):
+
+- Runtime execution is blocked when `pack_path` is inside the protocol repository root.
+- Exception is explicit fixture/debug mode only:
+  - `identity_creator.py update --allow-protocol-root-pack`
+  - `execute_identity_upgrade.py --allow-protocol-root-pack`
+- Runtime output root resolution no longer falls back to `<protocol_root>/.codex/...`.
+  Default external fallback is `/tmp/identity-runtime/<identity-id>`.
+
 ### Shared base-repo path config (recommended for team testing)
 
 To avoid per-shell drift, configure shared defaults once:
 
 ```bash
 python3 scripts/configure_identity_runtime_paths.py \
-  --identity-home /Users/yangxi/.codex/identity \
-  --protocol-home /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+  --identity-home "${IDENTITY_HOME:-${CODEX_HOME:-$HOME/.codex}/identity}" \
+  --protocol-home "${IDENTITY_PROTOCOL_HOME:-$(pwd)}"
 ```
 
 This writes:
-- `/Users/yangxi/.codex/identity/config/runtime-paths.env`
+- `${CODEX_HOME:-$HOME/.codex}/identity/config/runtime-paths.env`
   - `IDENTITY_HOME=...`
   - `IDENTITY_PROTOCOL_HOME=...`
 
@@ -80,6 +165,12 @@ This writes:
 1. environment variable `IDENTITY_PROTOCOL_HOME`
 2. shared config file key `IDENTITY_PROTOCOL_HOME`
 3. current working directory
+
+Implementation note:
+- `scripts/configure_identity_runtime_paths.py` defaults are now machine-portable:
+  - `IDENTITY_HOME` default derives from `${CODEX_HOME:-~/.codex}/identity`
+  - `IDENTITY_PROTOCOL_HOME` default derives from current repo root/cwd
+  - no user-specific absolute path is hardcoded
 
 ### Protocol root control (dual-mode governance)
 
@@ -117,12 +208,41 @@ python "$IDENTITY_PROTOCOL_HOME/scripts/identity_creator.py" update \
 
 Standalone mode (Mode B) must include promotion arbitration evidence before high-impact changes are promoted.
 
+## Runtime hard boundary (must follow)
+
+For runtime operations (validate/activate/update/install/writeback), always use local context:
+
+- `IDENTITY_HOME` runtime root
+- local catalog `${IDENTITY_HOME}/catalog.local.yaml`
+- identity-scoped runtime evidence paths
+
+### Forbidden operations
+
+- Do **not** use repo `identity/catalog/identities.yaml` as runtime status source.
+- Do **not** use repo `identity/packs/*` as runtime live instance packs.
+- Do **not** allow global sample fallback from another identity (including `store-manager`).
+- Do **not** accept cross-identity evidence/log/sample matches.
+- Do **not** use `META.status` as activation scheduling source; activation source-of-truth is catalog (`catalog.local.yaml`).
+
+### State consistency gate
+
+- Active status source-of-truth: catalog (`catalog.local.yaml` for runtime).
+- Strategy selected in v1.4.x hardening: **dual-write + strong consistency**.
+  - catalog drives activation/scheduling decisions.
+  - `META.status` is a required mirrored field for audit/readability.
+  - activation transaction must keep catalog + META synchronized.
+- Validator: `scripts/validate_identity_state_consistency.py`
+
 ## Quickstart
 
 ```bash
 pip install -r requirements-dev.txt
-export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-export IDENTITY_HOME="${IDENTITY_HOME:-$CODEX_HOME/identity}"
+
+# Step 0 (required): select identity runtime mode before any update/install
+# Recommended (project-local, sandbox-friendly):
+source ./scripts/identity_runtime_select.sh project
+# Alternative (global runtime, may require escalation in restricted sandbox):
+# source ./scripts/identity_runtime_select.sh global
 
 # optional: migrate legacy runtime identities from repo paths to local paths
 python scripts/migrate_repo_instances_to_local.py --apply
@@ -158,6 +278,18 @@ python scripts/release_readiness_check.py --identity-id store-manager
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 # optional: explicit fixture creation under repo (demo only)
 python scripts/create_identity_pack.py --id demo-fixture --title "Demo Fixture" --description "Fixture identity" --repo-fixture --pack-root identity/packs --catalog identity/catalog/identities.yaml --register
+```
+
+## Minimum acceptance commands (release gate)
+
+Before any release claim, run and keep output artifacts:
+
+```bash
+python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog "${IDENTITY_HOME}/catalog.local.yaml"
+python3 scripts/validate_identity_local_persistence.py --runtime-mode
+python3 scripts/release_readiness_check.py --identity-id office-ops-expert --base HEAD~1 --head HEAD
+IDENTITY_IDS=office-ops-expert bash scripts/e2e_smoke_test.sh
+python3 scripts/validate_identity_instance_isolation.py --catalog "${IDENTITY_HOME}/catalog.local.yaml" --identity-id office-ops-expert
 ```
 
 ## Mandatory git sync before runtime tests
@@ -239,7 +371,39 @@ If a document defines required behavior for CI/release/audit decisions, it belon
   - `docs/governance/audit-snapshot-policy-v1.2.11.md`
   - `docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md`
   - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
+  - `docs/governance/audit-snapshot-2026-02-24-self-heal-and-permission-state-v1.4.12.md`
+  - `docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md`
+  - `docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md`
+  - `docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md`
+
+### Release documentation closure set (MUST, same PR batch)
+
+For any release posture update (Conditional Go/Full Go), the following files must be synchronized in one review batch:
+
+1. `README.md`
+2. `CHANGELOG.md`
+3. `VERSIONING.md`
+4. `requirements-dev.txt`
+5. `identity/protocol/IDENTITY_PROTOCOL.md`
+6. `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+7. latest `docs/governance/audit-snapshot-*.md` record
+
+### Release evidence repository boundary (MUST)
+
+The release/audit source-of-truth repository is:
+
+`/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local`
+
+Before running release commands, verify working directory and branch:
+
+```bash
+cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+pwd
+git rev-parse --abbrev-ref HEAD
+```
   - `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
+  - `docs/governance/audit-prep-v1.4.12-scope-runtime-closure.md`
+  - `docs/governance/audit-snapshot-2026-02-24-self-heal-and-permission-state-v1.4.12.md`
   - `docs/governance/templates/upgrade-cross-validation-template.md`
 - Runtime identity migration guide:
   - `docs/guides/runtime-instance-migration-guide-v1.4.7.md`

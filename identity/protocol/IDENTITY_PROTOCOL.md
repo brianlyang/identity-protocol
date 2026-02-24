@@ -26,6 +26,52 @@ For each identity id `<id>`:
 
 Compatibility note: legacy packs can stay in `identity/<id>/` if catalog `pack_path` points there.
 
+## Runtime source-of-truth boundary (v1.4.x hardening)
+
+Identity runtime must distinguish demo fixtures from local runtime instances:
+
+- **fixture/demo identity**: repository-local references for examples and protocol fixtures.
+- **runtime identity**: local instance under `IDENTITY_HOME`, resolved from local catalog.
+
+Runtime decisions (validate/activate/update/install/writeback) must use local runtime context.
+Repository fixture files must not be treated as live runtime state.
+
+### Scope resolution contract (v1.4.12 uplift)
+
+Identity resolution must be deterministic and auditable across layered scopes:
+
+1. CLI explicit parameters (`--catalog`, `--target-root`, `--scope`)
+2. Environment/config (`IDENTITY_HOME`, `runtime-paths.env`)
+3. Repo scope (`<repo>/.agents/identity`)
+4. User scope (`${CODEX_HOME:-~/.codex}/identity`)
+5. Fallback scope (`./.codex/identity`, recovery only)
+
+If one `identity_id` resolves to multiple pack paths across scopes, tooling MUST fail unless explicit arbitration (`--scope`) is provided.
+
+Mandatory validator:
+- `scripts/validate_identity_scope_resolution.py`
+- `scripts/validate_identity_scope_isolation.py`
+- `scripts/validate_identity_scope_persistence.py`
+
+Operational remediation entrypoint:
+- `python3 scripts/identity_creator.py heal --identity-id <id> --catalog <catalog> [--apply]`
+
+Health diagnostics contract (CI-gated):
+- `python3 scripts/collect_identity_health_report.py --identity-id <id> --catalog <catalog> --out-dir <dir> --enforce-pass`
+- `python3 scripts/validate_identity_health_contract.py --identity-id <id> --report-dir <dir> --require-pass`
+
+Protocol requirement:
+- Health report must include failed-check recommendations.
+- Required-gates/release/e2e MUST run health collection + contract validation.
+
+Permission-state contract (CI-gated):
+- `scripts/validate_identity_permission_state.py`
+- upgrade report MUST include:
+  - `permission_state`
+  - `permission_error_code`
+  - `writeback_precheck`
+- CI/release requires `writeback_status=WRITTEN`; deferred permission status is not release-pass eligible.
+
 ## Registry contract
 
 `identity/catalog/identities.yaml` must include:
@@ -45,6 +91,29 @@ Optional metadata blocks per identity:
 - `observability` (event_topics, required_artifacts)
 
 See discovery draft: `identity/protocol/IDENTITY_DISCOVERY.md`.
+
+### Identity-scoped evidence rule (mandatory)
+
+For runtime identities, evidence/sample/log path patterns must be identity-scoped:
+
+- path fields must include target `identity_id`
+- cross-identity hits (including `store-manager` for non-store identities) are invalid
+- global fallback to unrelated identity samples is forbidden
+
+Mandatory validator:
+- `scripts/validate_identity_instance_isolation.py`
+
+### State-source strategy (mandatory, v1.4.x)
+
+To avoid catalog/META drift, protocol adopts **dual-write + strong consistency**:
+
+- single decision source: catalog status (`catalog.local.yaml` for runtime identities)
+- mirrored audit field: `META.status` is required and must equal catalog status
+- activation/switch operation must update both layers transactionally
+- any mismatch or multi-active state is a protocol violation
+
+Mandatory validator:
+- `scripts/validate_identity_state_consistency.py`
 
 ## Four core capability contracts
 
@@ -258,6 +327,11 @@ Non-bypassable constraints:
 - experience feedback gate for rule learning closure
 - ci enforcement gate for required-check integrity
 - arbitration gate for four-core conflict resolution integrity
+
+## Release-plane declaration rule
+
+- `Conditional Go`: allowed when local acceptance chain passes but cloud required-gates is not yet green on release head.
+- `Full Go`: allowed only when both local acceptance and cloud required-gates pass on same release head.
 - install safety gate for local-instance preservation integrity
 
 ### Track B: adaptive growth

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -16,6 +17,7 @@ from resolve_identity_context import (
     default_local_catalog_path,
     default_local_instances_root,
     ensure_local_catalog,
+    resolve_protocol_root,
     resolve_identity,
 )
 
@@ -23,6 +25,16 @@ from resolve_identity_context import (
 def _run(cmd: list[str]) -> int:
     print("$", " ".join(cmd))
     return subprocess.call(cmd)
+
+
+def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
+    print("$", " ".join(cmd))
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    if p.stdout.strip():
+        print(p.stdout.strip())
+    if p.stderr.strip():
+        print(p.stderr.strip())
+    return p.returncode, p.stdout or "", p.stderr or ""
 
 
 def _load_json(path: Path) -> dict:
@@ -53,8 +65,70 @@ def _resolve_task_path(catalog_data: dict, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _resolve_pack_path(catalog_data: dict, identity_id: str) -> Path:
+    identities = catalog_data.get("identities") or []
+    target = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    if not target:
+        raise FileNotFoundError(f"identity not found in catalog: {identity_id}")
+    pack_path = str((target or {}).get("pack_path", "")).strip()
+    if not pack_path:
+        raise FileNotFoundError(f"pack_path missing for identity: {identity_id}")
+    return Path(pack_path).expanduser().resolve()
+
+
+def _resolve_evidence_output_path(pattern: str, identity_id: str, ts: datetime, pack_path: Path) -> Path:
+    candidate = pattern.replace("<identity-id>", identity_id).replace("*", str(int(ts.timestamp())))
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if candidate.startswith(local_prefix):
+        return (pack_path / "runtime" / candidate[len(local_prefix) :]).resolve()
+    if candidate.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / candidate[len("identity/runtime/") :]).resolve()
+    return Path(candidate).expanduser().resolve()
+
+
+def _sync_meta_statuses(catalog_data: dict) -> dict[Path, str | None]:
+    """
+    Mirror catalog identity status into each pack META.yaml.
+    Returns backups for rollback: {meta_path: original_text_or_none}
+    """
+    backups: dict[Path, str | None] = {}
+    identities = [x for x in (catalog_data.get("identities") or []) if isinstance(x, dict)]
+    for row in identities:
+        identity_id = str(row.get("id", "")).strip()
+        if not identity_id:
+            continue
+        pack_path = str(row.get("pack_path", "")).strip()
+        if not pack_path:
+            continue
+        meta_path = Path(pack_path) / "META.yaml"
+        if not meta_path.exists():
+            continue
+        status = str(row.get("status", "")).strip().lower()
+        if status not in {"active", "inactive"}:
+            continue
+        original = meta_path.read_text(encoding="utf-8")
+        backups[meta_path] = original
+        meta = _load_yaml(meta_path)
+        meta["status"] = status
+        _dump_yaml(meta_path, meta)
+    return backups
+
+
+def _restore_meta_backups(backups: dict[Path, str | None]) -> None:
+    for path, original in backups.items():
+        try:
+            if original is None:
+                if path.exists():
+                    path.unlink()
+            else:
+                path.write_text(original, encoding="utf-8")
+        except Exception:
+            pass
+
+
 def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status: str, note: str) -> Path:
     task = _load_json(_resolve_task_path(catalog_data, identity_id))
+    pack_path = _resolve_pack_path(catalog_data, identity_id)
     contract = task.get("identity_role_binding_contract") or {}
     role_type = str(contract.get("role_type", "")).strip() or "identity_runtime_operator"
     ts = datetime.now(timezone.utc)
@@ -77,11 +151,9 @@ def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status
     }
     pattern = str(contract.get("binding_evidence_path_pattern", "")).strip()
     if pattern:
-        candidate = pattern.replace("<identity-id>", identity_id)
-        candidate = candidate.replace("*", str(int(ts.timestamp())))
-        out = Path(candidate)
+        out = _resolve_evidence_output_path(pattern, identity_id, ts, pack_path)
     else:
-        out = Path("identity/runtime/examples") / f"identity-role-binding-{identity_id}-{int(ts.timestamp())}.json"
+        out = (pack_path / "runtime" / "examples" / f"identity-role-binding-{identity_id}-{int(ts.timestamp())}.json").resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return out
@@ -91,12 +163,13 @@ def _activate_identity(
     repo_catalog: Path,
     local_catalog: Path,
     identity_id: str,
+    scope: str = "",
     protocol_root: str = "",
     protocol_mode: str = "mode_a_shared",
 ) -> int:
     ensure_local_catalog(repo_catalog, local_catalog)
     try:
-        _ = resolve_identity(identity_id, repo_catalog, local_catalog)
+        resolved = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
@@ -127,6 +200,7 @@ def _activate_identity(
     ]
 
     created_evidence: list[Path] = []
+    meta_backups: dict[Path, str | None] = {}
     try:
         # promote target to active binding first (activation validator requires this for active identities)
         created_evidence.append(
@@ -155,12 +229,16 @@ def _activate_identity(
                 continue
             item["status"] = "active" if iid == identity_id else "inactive"
 
+        meta_backups = _sync_meta_statuses(data)
         _dump_yaml(local_catalog, data)
         rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
         if rc != 0:
             raise RuntimeError("post-activation role-binding validation failed")
+        rc = _run(["python3", "scripts/validate_identity_state_consistency.py", "--catalog", str(local_catalog)])
+        if rc != 0:
+            raise RuntimeError("post-activation state consistency validation failed")
 
-        switch_dir = Path("identity/runtime/reports/activation")
+        switch_dir = Path("/tmp/identity-activation-reports")
         switch_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc)
         switch_report = switch_dir / f"identity-activation-switch-{identity_id}-{int(ts.timestamp())}.json"
@@ -173,6 +251,8 @@ def _activate_identity(
             "binding_evidence_paths": [str(p) for p in created_evidence],
             "catalog_layer": "local",
             "catalog_path": str(local_catalog),
+            "resolved_scope": str(resolved.get("resolved_scope", "")),
+            "resolved_pack_path": str(resolved.get("resolved_pack_path", "")),
         }
         protocol = collect_protocol_evidence(protocol_root, protocol_mode)
         switch_payload.update(
@@ -185,15 +265,394 @@ def _activate_identity(
             }
         )
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        sync = subprocess.run(
+            [
+                "python3",
+                "scripts/sync_session_identity.py",
+                "--catalog",
+                str(local_catalog),
+                "--identity-id",
+                identity_id,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if sync.returncode != 0:
+            print("[WARN] session identity sync failed after activation")
+            if sync.stdout.strip():
+                print(sync.stdout.strip())
+            if sync.stderr.strip():
+                print(sync.stderr.strip())
+        elif sync.stdout.strip():
+            print(sync.stdout.strip())
         print(f"[OK] activated identity in catalog (single-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
     except Exception as e:
         local_catalog.write_text(original_catalog_text, encoding="utf-8")
+        _restore_meta_backups(meta_backups)
         for p in created_evidence:
             if p.exists():
                 p.unlink()
         print(f"[FAIL] activation transaction rolled back: {e}")
+        return 1
+
+
+def _heal_identity(
+    repo_catalog: Path,
+    local_catalog: Path,
+    identity_id: str,
+    scope: str,
+    source_pack: str,
+    canonical_root: str,
+    apply_fix: bool,
+    destructive_replace: bool,
+    out_dir: str,
+) -> int:
+    ensure_local_catalog(repo_catalog, local_catalog)
+    report_time = datetime.now(timezone.utc)
+    report_id = f"identity-heal-{identity_id}-{int(report_time.timestamp())}"
+    report: dict = {
+        "report_id": report_id,
+        "generated_at": report_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "identity_id": identity_id,
+        "scope": scope,
+        "catalog": str(local_catalog),
+        "repo_catalog": str(repo_catalog),
+        "apply_fix": apply_fix,
+        "steps": [],
+    }
+
+    def _step(name: str, cmd: list[str]) -> int:
+        rc, out, err = _run_capture(cmd)
+        report["steps"].append(
+            {
+                "name": name,
+                "command": cmd,
+                "rc": rc,
+                "stdout": out,
+                "stderr": err,
+            }
+        )
+        return rc
+
+    base_opts = ["--identity-id", identity_id, "--catalog", str(local_catalog), "--repo-catalog", str(repo_catalog)]
+    if scope:
+        base_opts += ["--scope", scope]
+    if canonical_root:
+        base_opts += ["--canonical-root", canonical_root]
+
+    rc = _step("scan", ["python3", "scripts/identity_installer.py", "scan", *base_opts])
+    if rc != 0:
+        report["result"] = "FAIL_SCAN"
+        _write_heal_report(report, out_dir)
+        return rc
+
+    if not apply_fix:
+        report["result"] = "DRY_RUN_ONLY"
+        report["note"] = "rerun with --apply to execute adopt/lock/repair-paths/validate"
+        _write_heal_report(report, out_dir)
+        print("[OK] heal dry-run completed (scan only).")
+        return 0
+
+    try:
+        resolved = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
+        chosen_pack = source_pack.strip() or str(resolved.get("resolved_pack_path", "")).strip()
+    except Exception:
+        chosen_pack = source_pack.strip()
+    if not chosen_pack:
+        report["result"] = "FAIL_SOURCE_PACK_REQUIRED"
+        report["note"] = "unable to auto-resolve source pack; pass --source-pack explicitly"
+        _write_heal_report(report, out_dir)
+        print("[FAIL] heal apply requires --source-pack when auto-resolution is ambiguous.")
+        return 2
+
+    adopt_cmd = ["python3", "scripts/identity_installer.py", "adopt", *base_opts, "--source-pack", chosen_pack]
+    canonical_target = Path(canonical_root).expanduser().resolve() / identity_id if canonical_root else None
+    source_path = Path(chosen_pack).expanduser().resolve()
+    if canonical_target is None:
+        try:
+            current_ctx = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
+            resolved_pack = str(current_ctx.get("resolved_pack_path", "")).strip()
+            if resolved_pack:
+                canonical_target = Path(resolved_pack).expanduser().resolve()
+        except Exception:
+            canonical_target = None
+    if canonical_target and canonical_target.exists() and canonical_target == source_path:
+        report["steps"].append(
+            {
+                "name": "adopt",
+                "command": adopt_cmd,
+                "rc": 0,
+                "stdout": "[SKIP] canonical target already matches source pack",
+                "stderr": "",
+            }
+        )
+        rc = 0
+    else:
+        if destructive_replace:
+            adopt_cmd.append("--destructive-replace")
+        rc = _step("adopt", adopt_cmd)
+    if rc != 0:
+        report["result"] = "FAIL_ADOPT"
+        _write_heal_report(report, out_dir)
+        return rc
+
+    rc = _step("lock", ["python3", "scripts/identity_installer.py", "lock", *base_opts])
+    if rc != 0:
+        report["result"] = "FAIL_LOCK"
+        _write_heal_report(report, out_dir)
+        return rc
+
+    rc = _step("repair_paths", ["python3", "scripts/identity_installer.py", "repair-paths", *base_opts])
+    if rc != 0:
+        report["result"] = "FAIL_REPAIR_PATHS"
+        _write_heal_report(report, out_dir)
+        return rc
+
+    # Normalize duplicate runtime directories to prevent scope validator hard-fail.
+    try:
+        resolved_after = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
+        canonical_pack = str(resolved_after.get("resolved_pack_path") or resolved_after.get("pack_path") or "").strip()
+        if canonical_pack:
+            moved, skipped = _cleanup_duplicate_instance_dirs(identity_id, canonical_pack)
+            report["steps"].append(
+                {
+                    "name": "cleanup_duplicate_instance_dirs",
+                    "command": ["internal", "_cleanup_duplicate_instance_dirs"],
+                    "rc": 0 if not skipped else 1,
+                    "stdout": json.dumps({"moved": moved, "skipped": skipped}, ensure_ascii=False),
+                    "stderr": "",
+                }
+            )
+    except Exception as e:
+        report["steps"].append(
+            {
+                "name": "cleanup_duplicate_instance_dirs",
+                "command": ["internal", "_cleanup_duplicate_instance_dirs"],
+                "rc": 1,
+                "stdout": "",
+                "stderr": str(e),
+            }
+        )
+
+    validate_cmd = [
+        "python3",
+        "scripts/identity_creator.py",
+        "validate",
+        "--identity-id",
+        identity_id,
+        "--repo-catalog",
+        str(repo_catalog),
+        "--catalog",
+        str(local_catalog),
+    ]
+    if scope:
+        validate_cmd += ["--scope", scope]
+    rc = _step("validate", validate_cmd)
+    if rc != 0:
+        last = report["steps"][-1]
+        merged = f"{last.get('stdout','')}\n{last.get('stderr','')}"
+        needs_protocol = "no protocol review evidence file matched" in merged
+        needs_binding = "role-binding evidence not found" in merged
+        needs_replay = "replay evidence file not found" in merged
+        if needs_protocol or needs_binding:
+            repair_cmd = [
+                "python3",
+                "scripts/repair_identity_baseline_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                str(local_catalog),
+                "--apply",
+            ]
+            if needs_protocol and not needs_binding:
+                repair_cmd.append("--repair-protocol")
+            if needs_binding and not needs_protocol:
+                repair_cmd.append("--repair-role-binding")
+            rc_repair = _step("auto_repair_baseline_evidence", repair_cmd)
+            if rc_repair == 0:
+                rc = _step("revalidate_after_auto_repair", validate_cmd)
+        if rc != 0 and needs_replay:
+            replay_cmd = [
+                "python3",
+                "scripts/repair_identity_replay_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                str(local_catalog),
+                "--apply",
+            ]
+            rc_replay = _step("auto_repair_replay_evidence", replay_cmd)
+            if rc_replay == 0:
+                rc = _step("revalidate_after_replay_repair", validate_cmd)
+        if rc != 0 and "install report not found by pattern" in (report["steps"][-1].get("stdout", "") + report["steps"][-1].get("stderr", "")):
+            install_cmd = [
+                "python3",
+                "scripts/repair_identity_install_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                str(local_catalog),
+                "--apply",
+            ]
+            rc_install = _step("auto_repair_install_evidence", install_cmd)
+            if rc_install == 0:
+                rc = _step("revalidate_after_install_repair", validate_cmd)
+        if rc != 0 and "feedback logs count" in (report["steps"][-1].get("stdout", "") + report["steps"][-1].get("stderr", "")):
+            fb_cmd = [
+                "python3",
+                "scripts/repair_identity_feedback_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                str(local_catalog),
+                "--apply",
+            ]
+            rc_fb = _step("auto_repair_feedback_evidence", fb_cmd)
+            if rc_fb == 0:
+                rc = _step("revalidate_after_feedback_repair", validate_cmd)
+        if rc != 0 and "missing capability arbitration sample report" in (report["steps"][-1].get("stdout", "") + report["steps"][-1].get("stderr", "")):
+            arb_cmd = [
+                "python3",
+                "scripts/repair_identity_arbitration_evidence.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                str(local_catalog),
+                "--apply",
+            ]
+            rc_arb = _step("auto_repair_arbitration_evidence", arb_cmd)
+            if rc_arb == 0:
+                rc = _step("revalidate_after_arbitration_repair", validate_cmd)
+
+    report["result"] = "PASS" if rc == 0 else "FAIL_VALIDATE"
+    _write_heal_report(report, out_dir)
+    return rc
+
+
+def _write_heal_report(report: dict, out_dir: str) -> None:
+    p = Path(out_dir).expanduser().resolve()
+    p.mkdir(parents=True, exist_ok=True)
+    out = p / f"{report['report_id']}.json"
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"[INFO] heal report: {out}")
+
+
+def _cleanup_duplicate_instance_dirs(identity_id: str, canonical_pack_path: str) -> tuple[list[str], list[str]]:
+    """
+    Quarantine duplicate runtime instance directories under ~/.codex/identity.
+    Returns (moved_paths, skipped_paths).
+    """
+    moved: list[str] = []
+    skipped: list[str] = []
+    canonical = Path(canonical_pack_path).expanduser().resolve()
+    home = (Path.home() / ".codex" / "identity").resolve()
+    candidates = [
+        home / identity_id,
+        home / "instances" / identity_id,
+        home / "identity" / identity_id,
+        home / "identities" / identity_id,
+        home / "instances-canonical" / identity_id,
+    ]
+    seen: set[str] = set()
+    existing: list[Path] = []
+    for c in candidates:
+        try:
+            p = c.expanduser().resolve()
+        except Exception:
+            p = c.expanduser()
+        key = str(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        if p.exists() and p.is_dir():
+            existing.append(p)
+
+    if len(existing) <= 1:
+        return moved, skipped
+
+    quarantine_root = home / "_quarantine" / identity_id
+    quarantine_root.mkdir(parents=True, exist_ok=True)
+    ts = int(datetime.now(timezone.utc).timestamp())
+    for p in existing:
+        if p == canonical:
+            continue
+        try:
+            dest = quarantine_root / f"{p.name}-{ts}"
+            p.rename(dest)
+            moved.append(str(dest))
+        except Exception:
+            skipped.append(str(p))
+    return moved, skipped
+
+
+def _classify_scope_from_pack_path(pack_path: str) -> str:
+    p = Path(pack_path).expanduser()
+    if not p.is_absolute():
+        return "SYSTEM" if str(p).startswith("identity/") else "REPO"
+    rp = str(p.resolve())
+    home = str(Path.home().resolve())
+    cwd = str(Path.cwd().resolve())
+    if rp.startswith("/etc/"):
+        return "ADMIN"
+    if rp == cwd or rp.startswith(cwd + "/"):
+        return "REPO"
+    if rp == home or rp.startswith(home + "/"):
+        return "USER"
+    return "USER"
+
+
+def _enforce_scope_pack_alignment(
+    identity_id: str,
+    required_scope: str,
+    resolved_pack_path: str,
+    resolved_scope: str = "",
+) -> int:
+    scope = (required_scope or "").strip().upper()
+    if not scope:
+        return 0
+    if scope not in {"REPO", "USER", "ADMIN", "SYSTEM"}:
+        print(f"[FAIL] invalid --scope value: {required_scope}")
+        return 1
+    if not resolved_pack_path:
+        print(f"[FAIL] resolved_pack_path missing for identity={identity_id}")
+        return 1
+    actual = (resolved_scope or "").strip().upper() or _classify_scope_from_pack_path(resolved_pack_path)
+    if actual != scope:
+        print(
+            "[FAIL] scope/pack_path mismatch: "
+            f"identity={identity_id} required_scope={scope} actual_scope={actual} pack_path={resolved_pack_path}"
+        )
+        print("[HINT] run identity_installer adopt + lock for this identity before update.")
+        return 1
+    print(f"[OK] scope/pack_path aligned: identity={identity_id} scope={scope} pack_path={resolved_pack_path}")
+    return 0
+
+
+def _enforce_protocol_root_separation(
+    identity_id: str,
+    resolved_pack_path: str,
+    protocol_root: str,
+    allow_protocol_root_pack: bool,
+) -> int:
+    if allow_protocol_root_pack:
+        print("[WARN] allow-protocol-root-pack is enabled; protocol-root separation bypassed")
+        return 0
+    try:
+        pack = Path(resolved_pack_path).expanduser().resolve()
+        root = resolve_protocol_root(protocol_root).resolve()
+        pack.relative_to(root)
+        print(
+            "[FAIL] resolved pack_path is inside protocol root (runtime/protocol boundary violation): "
+            f"identity={identity_id} pack_path={pack} protocol_root={root}"
+        )
+        print("[HINT] migrate identity pack with identity_installer adopt + lock before update.")
+        return 1
+    except ValueError:
+        return 0
+    except Exception as exc:
+        print(f"[FAIL] protocol-root separation check failed: {exc}")
         return 1
 
 
@@ -223,6 +682,7 @@ def main() -> int:
     p_validate.add_argument("--identity-id", required=True)
     p_validate.add_argument("--repo-catalog", default=repo_catalog_default)
     p_validate.add_argument("--catalog", default=local_catalog_default)
+    p_validate.add_argument("--scope", default="")
 
     p_compile = sub.add_parser("compile", help="Compile runtime brief")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
@@ -231,17 +691,39 @@ def main() -> int:
     p_activate.add_argument("--identity-id", required=True)
     p_activate.add_argument("--repo-catalog", default=repo_catalog_default)
     p_activate.add_argument("--catalog", default=local_catalog_default)
+    p_activate.add_argument("--scope", default="")
     p_activate.add_argument("--protocol-root", default="")
     p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
 
     p_update = sub.add_parser("update", help="Run identity upgrade executor")
     p_update.add_argument("--identity-id", required=True)
     p_update.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
-    p_update.add_argument("--out-dir", default="identity/runtime/reports")
+    p_update.add_argument(
+        "--out-dir",
+        default="identity/runtime/reports",
+        help="upgrade report output directory; default is remapped to runtime_output_root/reports",
+    )
     p_update.add_argument("--repo-catalog", default=repo_catalog_default)
     p_update.add_argument("--catalog", default=local_catalog_default)
+    p_update.add_argument("--scope", default=os.environ.get("IDENTITY_SCOPE", "USER"))
     p_update.add_argument("--protocol-root", default="")
     p_update.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
+    p_update.add_argument(
+        "--allow-protocol-root-pack",
+        action="store_true",
+        help="allow update on identities whose pack_path is inside protocol root (fixture/debug only)",
+    )
+
+    p_heal = sub.add_parser("heal", help="Run runtime identity self-healing flow (scan/adopt/lock/repair/validate)")
+    p_heal.add_argument("--identity-id", required=True)
+    p_heal.add_argument("--repo-catalog", default=repo_catalog_default)
+    p_heal.add_argument("--catalog", default=local_catalog_default)
+    p_heal.add_argument("--scope", default="USER")
+    p_heal.add_argument("--source-pack", default="")
+    p_heal.add_argument("--canonical-root", default="")
+    p_heal.add_argument("--apply", action="store_true", help="execute fixes; otherwise scan-only dry run")
+    p_heal.add_argument("--destructive-replace", action="store_true")
+    p_heal.add_argument("--out-dir", default="/tmp/identity-heal-reports")
 
 
     args = ap.parse_args()
@@ -276,11 +758,21 @@ def main() -> int:
     if args.command == "validate":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
         try:
-            _ = resolve_identity(args.identity_id, Path(args.repo_catalog), Path(args.catalog))
+            _ = resolve_identity(
+                args.identity_id,
+                Path(args.repo_catalog),
+                Path(args.catalog),
+                preferred_scope=args.scope,
+            )
         except Exception as e:
             print(f"[FAIL] {e}")
             return 1
         checks = [
+            ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
+            ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
+            ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
+            ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", args.catalog],
+            ["python3", "scripts/validate_identity_instance_isolation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
@@ -309,6 +801,7 @@ def main() -> int:
             Path(args.repo_catalog),
             Path(args.catalog),
             args.identity_id,
+            args.scope,
             args.protocol_root,
             args.protocol_mode,
         )
@@ -316,27 +809,79 @@ def main() -> int:
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
         try:
-            _ = resolve_identity(args.identity_id, Path(args.repo_catalog), Path(args.catalog))
+            resolved = resolve_identity(
+                args.identity_id,
+                Path(args.repo_catalog),
+                Path(args.catalog),
+                preferred_scope=args.scope,
+            )
         except Exception as e:
             print(f"[FAIL] {e}")
             return 1
-        return _run(
+        rc_scope = _enforce_scope_pack_alignment(
+            args.identity_id,
+            args.scope,
+            str(resolved.get("resolved_pack_path", "")).strip(),
+            str(resolved.get("resolved_scope", "")).strip(),
+        )
+        if rc_scope != 0:
+            return rc_scope
+        rc_boundary = _enforce_protocol_root_separation(
+            args.identity_id,
+            str(resolved.get("resolved_pack_path", "")).strip(),
+            args.protocol_root,
+            bool(args.allow_protocol_root_pack),
+        )
+        if rc_boundary != 0:
+            return rc_boundary
+        rc = _run(
             [
                 "python3",
-                "scripts/execute_identity_upgrade.py",
+                "scripts/validate_identity_instance_isolation.py",
                 "--catalog",
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
-                "--mode",
-                args.mode,
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] instance isolation validation failed; update blocked")
+            return rc
+        cmd = [
+            "python3",
+            "scripts/execute_identity_upgrade.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--mode",
+            args.mode,
             "--out-dir",
             args.out_dir,
             "--protocol-root",
             args.protocol_root,
             "--protocol-mode",
             args.protocol_mode,
+            "--resolved-scope",
+            str(resolved.get("resolved_scope", "")),
+            "--resolved-pack-path",
+            str(resolved.get("resolved_pack_path", "")),
         ]
+        if args.allow_protocol_root_pack:
+            cmd.append("--allow-protocol-root-pack")
+        return _run(cmd)
+
+    if args.command == "heal":
+        return _heal_identity(
+            Path(args.repo_catalog),
+            Path(args.catalog),
+            args.identity_id,
+            args.scope,
+            args.source_pack,
+            args.canonical_root,
+            args.apply,
+            args.destructive_replace,
+            args.out_dir,
         )
 
     print(f"[FAIL] unknown command: {args.command}")

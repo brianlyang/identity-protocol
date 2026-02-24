@@ -230,7 +230,11 @@ def _default_role_binding_sample(identity_id: str, role_type: str, runtime_root:
 
 def _replace_store_manager_tokens(value, identity_id: str):
     if isinstance(value, str):
-        return value.replace("store-manager", identity_id)
+        identity_token = identity_id.replace("-", "_")
+        out = value.replace("store-manager", identity_id)
+        out = out.replace("store_manager", identity_token)
+        out = out.replace("StoreManager", "".join(part.capitalize() for part in identity_token.split("_")))
+        return out
     if isinstance(value, list):
         return [_replace_store_manager_tokens(v, identity_id) for v in value]
     if isinstance(value, dict):
@@ -362,6 +366,9 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     arb = task.setdefault("capability_arbitration_contract", {})
     if isinstance(arb, dict):
         arb["sample_report_path_pattern"] = f"identity/runtime/examples/{identity_id}-capability-arbitration-sample.json"
+    rbc = task.setdefault("identity_role_binding_contract", {})
+    if isinstance(rbc, dict):
+        rbc["role_type"] = f"{identity_id.replace('-', '_')}_runtime_operator"
     return task
 
 
@@ -646,7 +653,7 @@ def main() -> int:
         "# Identity Prompt\n\nDefine role cognition, principles, and decision rules.\n",
     )
 
-    runtime_root = Path("identity/runtime") if args.repo_fixture else (Path("identity/runtime/local") / identity_id)
+    runtime_root = Path("identity/runtime") if args.repo_fixture else (pack_dir / "runtime")
 
     if args.profile == "full-contract":
         current_task = _full_contract_current_task(identity_id, args.title, args.description)

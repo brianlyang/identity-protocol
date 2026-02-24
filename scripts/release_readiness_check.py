@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import glob
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -33,27 +35,69 @@ def main() -> int:
     )
     ap.add_argument(
         "--upgrade-report-dir",
-        default="/tmp/identity-upgrade-reports",
-        help="directory used when auto-generating execution report for writeback validation",
+        default="",
+        help="optional explicit directory to search for auto-generated execution report",
+    )
+    ap.add_argument(
+        "--catalog",
+        default="",
+        help="catalog path override. required unless IDENTITY_CATALOG is set.",
     )
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
     head = args.head.strip() or _git_rev("HEAD")
     identity_id = args.identity_id.strip()
+    explicit_catalog = args.catalog.strip()
+    env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
+    catalog = explicit_catalog or env_catalog
+    if not catalog:
+        print("[FAIL] catalog is required (implicit fallback disabled).")
+        print("       pass --catalog <path> or set IDENTITY_CATALOG after mode selection.")
+        print("       recommended: source ./scripts/identity_runtime_select.sh project")
+        return 2
+    if not Path(catalog).expanduser().exists():
+        print(f"[FAIL] catalog path does not exist: {catalog}")
+        return 2
 
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
         ["python3", "scripts/validate_identity_local_persistence.py"],
+        ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
+        [
+            "python3",
+            "scripts/collect_identity_health_report.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--out-dir",
+            "/tmp/identity-health-reports",
+            "--enforce-pass",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_health_contract.py",
+            "--identity-id",
+            identity_id,
+            "--report-dir",
+            "/tmp/identity-health-reports",
+            "--require-pass",
+        ],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
         ["python3", "scripts/validate_changelog_updated.py", "--base", base, "--head", head],
         ["python3", "scripts/validate_release_metadata_sync.py"],
         ["python3", "scripts/validate_release_freeze_boundary.py", "--base", base, "--head", head],
-        ["python3", "scripts/validate_identity_runtime_contract.py", "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_role_binding.py", "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_update_lifecycle.py", "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_install_safety.py", "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_install_provenance.py", "--identity-id", identity_id],
+        ["python3", "scripts/validate_release_workspace_cleanliness.py"],
+        ["python3", "scripts/validate_identity_instance_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_role_binding.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_install_safety.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_install_provenance.py", "--catalog", catalog, "--identity-id", identity_id],
         [
             "python3",
             "scripts/validate_identity_self_upgrade_enforcement.py",
@@ -63,8 +107,10 @@ def main() -> int:
             base,
             "--head",
             head,
+            "--catalog",
+            catalog,
         ],
-        ["python3", "scripts/validate_identity_ci_enforcement.py", "--identity-id", identity_id],
+        ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", catalog, "--identity-id", identity_id],
     ]
     execution_report = args.execution_report.strip()
     if not execution_report:
@@ -76,18 +122,33 @@ def main() -> int:
             identity_id,
             "--mode",
             "review-required",
-            "--out-dir",
-            args.upgrade_report_dir,
+            "--catalog",
+            catalog,
         ]
         rc = _run(gen_cmd)
         if rc != 0:
             return rc
-        report_dir = Path(args.upgrade_report_dir)
-        candidates = sorted(report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)
+        roots: list[Path] = []
+        if args.upgrade_report_dir.strip():
+            roots.append(Path(args.upgrade_report_dir.strip()).expanduser().resolve())
+        roots.append(Path("/tmp/identity-upgrade-reports"))
+        roots.append(Path("/tmp/identity-runtime"))
+        if os.environ.get("IDENTITY_HOME", "").strip():
+            roots.append(Path(os.environ["IDENTITY_HOME"]).expanduser().resolve())
+        candidates: list[Path] = []
+        for root in roots:
+            if not root.exists():
+                continue
+            for p in glob.glob(str(root / "**" / f"identity-upgrade-exec-{identity_id}-*.json"), recursive=True):
+                pp = Path(p)
+                if pp.name.endswith("-patch-plan.json"):
+                    continue
+                candidates.append(pp)
+        candidates = sorted(candidates, key=lambda p: p.stat().st_mtime)
         if not candidates:
             print(
                 "[FAIL] writeback validation requires execution report, but auto-generation produced none: "
-                f"{report_dir}/identity-upgrade-exec-{identity_id}-*.json"
+                f"searched_roots={','.join(str(r) for r in roots)} pattern=identity-upgrade-exec-{identity_id}-*.json"
             )
             return 2
         execution_report = str(candidates[-1])
@@ -124,6 +185,29 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--execution-report",
+            execution_report,
+            "--catalog",
+            catalog,
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_permission_state.py",
+            "--identity-id",
+            identity_id,
+            "--report",
+            execution_report,
+            "--require-written",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_binding_tuple.py",
+            "--identity-id",
+            identity_id,
+            "--report",
             execution_report,
         ]
     )

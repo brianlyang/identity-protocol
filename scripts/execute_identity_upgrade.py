@@ -172,6 +172,84 @@ def _append_task_history(history_path: Path, line: str) -> None:
         f.write(f"\n- {line}\n")
 
 
+def _writable_precheck(path: Path) -> tuple[bool, str]:
+    parent = path.parent
+    if not parent.exists():
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except Exception as exc:
+            return False, f"parent_mkdir_failed:{exc}"
+    if path.exists() and not os.access(path, os.W_OK):
+        return False, "path_not_writable"
+    if not os.access(parent, os.W_OK):
+        return False, "parent_not_writable"
+    return True, "ok"
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _resolve_runtime_output_root(effective_pack: Path, identity_id: str, protocol_root: Path) -> Path:
+    env = os.environ.get("IDENTITY_RUNTIME_OUTPUT_ROOT", "").strip()
+    candidates: list[Path] = []
+    if env:
+        candidates.append(Path(env).expanduser().resolve())
+    candidates.append(effective_pack / "runtime")
+
+    skipped: list[str] = []
+    for c in candidates:
+        if _is_within(c, protocol_root):
+            skipped.append(f"{c} (inside protocol_root={protocol_root})")
+            continue
+        # P0 hard constraint: runtime output root must align to resolved pack domain.
+        # Allow only "<resolved_pack_path>/runtime" (or a subpath under it).
+        allowed_root = (effective_pack / "runtime").resolve()
+        if not _is_within(c, allowed_root):
+            skipped.append(
+                f"{c} (runtime_output_root not aligned with resolved_pack_path runtime={allowed_root})"
+            )
+            continue
+        try:
+            c.mkdir(parents=True, exist_ok=True)
+            return c
+        except Exception:
+            continue
+    hint = (
+        "set IDENTITY_RUNTIME_OUTPUT_ROOT to a writable non-protocol path, "
+        "or migrate identity pack via identity_installer adopt+lock."
+    )
+    raise PermissionError(
+        "IP-PATH-001 unable to resolve runtime output root outside protocol root; "
+        f"identity={identity_id}; resolved_pack_path={effective_pack}; skipped={skipped}; hint={hint}"
+    )
+
+
+def _enforce_protocol_runtime_separation(
+    pack: Path,
+    resolved_pack_path: str,
+    protocol_root: Path,
+    *,
+    allow_protocol_root_pack: bool,
+    identity_id: str,
+) -> Path:
+    effective_pack = Path(resolved_pack_path).expanduser().resolve() if str(resolved_pack_path).strip() else pack.resolve()
+    if _is_within(effective_pack, protocol_root):
+        if allow_protocol_root_pack:
+            return effective_pack
+        raise PermissionError(
+            "IP-PATH-001 pack_path is inside protocol_root; "
+            f"identity={identity_id} pack_path={effective_pack} protocol_root={protocol_root}. "
+            "Run identity_installer adopt+lock to move runtime identity outside protocol repo "
+            "or pass --allow-protocol-root-pack for fixture/debug only."
+        )
+    return effective_pack
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Execute identity upgrade cycle using metrics + arbitration thresholds (safe-auto/review-required)."
@@ -180,25 +258,50 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
     ap.add_argument("--metrics-path", default="", help="optional route metrics artifact path override")
-    ap.add_argument("--out-dir", default="identity/runtime/reports")
+    ap.add_argument("--out-dir", default="/tmp/identity-upgrade-reports")
     ap.add_argument("--protocol-root", default="")
     ap.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
+    ap.add_argument("--resolved-scope", default="")
+    ap.add_argument("--resolved-pack-path", default="")
+    ap.add_argument(
+        "--allow-protocol-root-pack",
+        action="store_true",
+        help="allow executing upgrade for identities whose pack_path is inside protocol root (fixture/debug only)",
+    )
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
 
+    protocol = collect_protocol_evidence(args.protocol_root, args.protocol_mode)
+    protocol_root = Path(protocol["protocol_root"]).expanduser().resolve()
+
     pack = _resolve_pack(Path(args.catalog), args.identity_id)
+    effective_pack = _enforce_protocol_runtime_separation(
+        pack,
+        str(args.resolved_pack_path or ""),
+        protocol_root,
+        allow_protocol_root_pack=bool(args.allow_protocol_root_pack),
+        identity_id=args.identity_id,
+    )
+    runtime_output_root = _resolve_runtime_output_root(effective_pack, args.identity_id, protocol_root)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)
 
     arb = task.get("capability_arbitration_contract") or {}
     thresholds = (arb.get("trigger_thresholds") or {}) if isinstance(arb, dict) else {}
-    metrics_path = Path(args.metrics_path) if args.metrics_path else Path(
+    contract_metrics_path = Path(
         (task.get("route_quality_contract") or {}).get(
             "metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json"
         )
     )
+    default_metrics_path = runtime_output_root / "metrics" / f"{args.identity_id}-route-quality.json"
+    if args.metrics_path:
+        metrics_path = Path(args.metrics_path)
+    elif default_metrics_path.exists():
+        metrics_path = default_metrics_path
+    else:
+        metrics_path = contract_metrics_path
     if not metrics_path.exists():
         raise FileNotFoundError(f"metrics artifact not found: {metrics_path}")
     metrics = _load_json(metrics_path)
@@ -209,7 +312,7 @@ def main() -> int:
     touched_paths = [
         str(pack / "RULEBOOK.jsonl"),
         str(pack / "TASK_HISTORY.md"),
-        f"identity/runtime/logs/arbitration/{args.identity_id}-{run_id}.json",
+        str(runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json"),
     ]
     if args.mode == "safe-auto":
         patch_surface = touched_paths
@@ -237,7 +340,6 @@ def main() -> int:
             "run required validators and replay checks",
         ],
     }
-    protocol = collect_protocol_evidence(args.protocol_root, args.protocol_mode)
     patch_plan.update(
         {
             "protocol_mode": protocol["protocol_mode"],
@@ -246,16 +348,24 @@ def main() -> int:
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "resolved_scope": str(args.resolved_scope or ""),
+            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
         }
     )
 
     out_dir = Path(args.out_dir)
+    if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
+        out_dir = runtime_output_root / "reports"
     out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{run_id}-patch-plan.json"
     _write_json(plan_path, patch_plan)
 
     actions_taken: list[str] = [f"patch_plan_written:{plan_path}"]
     artifacts = [str(plan_path), str(metrics_path)]
+    permission_state = "PRECHECK"
+    permission_error_code = ""
+    escalation_required = False
+    escalation_recommendation = ""
     experience_writeback: dict[str, Any] = {
         "required": bool(upgrade_required),
         "status": "SKIPPED",
@@ -267,8 +377,35 @@ def main() -> int:
         "notes": "",
     }
     writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md")]
+    precheck = {
+        "rulebook_path": str(pack / "RULEBOOK.jsonl"),
+        "task_history_path": str(pack / "TASK_HISTORY.md"),
+        "results": [],
+        "all_writable": True,
+    }
+    if upgrade_required:
+        for target in [pack / "RULEBOOK.jsonl", pack / "TASK_HISTORY.md"]:
+            ok, reason = _writable_precheck(target)
+            precheck["results"].append({"path": str(target), "ok": ok, "reason": reason})
+            if not ok:
+                precheck["all_writable"] = False
+        if not precheck["all_writable"]:
+            permission_state = "NEEDS_ESCALATION"
+            permission_error_code = "IP-PERM-001"
+            escalation_required = True
+            escalation_recommendation = (
+                "Switch to repo-local runtime root or run with approved elevated permission; "
+                "then rerun identity_creator update."
+            )
+            experience_writeback.update(
+                {
+                    "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "notes": "write targets are not writable in current execution context",
+                }
+            )
+            actions_taken.append("permission_precheck_blocked_writeback")
 
-    if upgrade_required and args.mode == "safe-auto":
+    if upgrade_required and args.mode == "safe-auto" and precheck.get("all_writable", True):
         if safe_auto.get("enforce_path_policy") is True:
             allowlist = [str(x) for x in (safe_auto.get("allowlist") or [])]
             denylist = [str(x) for x in (safe_auto.get("denylist") or [])]
@@ -317,7 +454,7 @@ def main() -> int:
             "rationale": "; ".join(reasons) if reasons else "threshold trigger",
             "decided_at": now,
         }
-        decision_path = Path(f"identity/runtime/logs/arbitration/{args.identity_id}-{run_id}.json")
+        decision_path = runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json"
         decision_path.parent.mkdir(parents=True, exist_ok=True)
         _write_json(decision_path, {"records": [decision]})
         actions_taken.append("arbitration_record_written")
@@ -325,36 +462,59 @@ def main() -> int:
 
         # 2) append rulebook learning row
         rulebook_path = pack / "RULEBOOK.jsonl"
-        _append_jsonl(
-            rulebook_path,
-            {
-                "rule_id": f"{run_id}-auto-upgrade",
-                "type": "negative",
-                "trigger": "arbitration_threshold_hit",
-                "action": "execute_identity_upgrade_safe_auto",
-                "evidence_run_id": run_id,
-                "scope": "identity_update_cycle",
-                "confidence": 0.75,
-                "updated_at": now,
-            },
-        )
-        actions_taken.append("rulebook_row_appended")
+        try:
+            _append_jsonl(
+                rulebook_path,
+                {
+                    "rule_id": f"{run_id}-auto-upgrade",
+                    "type": "negative",
+                    "trigger": "arbitration_threshold_hit",
+                    "action": "execute_identity_upgrade_safe_auto",
+                    "evidence_run_id": run_id,
+                    "scope": "identity_update_cycle",
+                    "confidence": 0.75,
+                    "updated_at": now,
+                },
+            )
+            actions_taken.append("rulebook_row_appended")
+        except PermissionError:
+            permission_state = "ESCALATION_DENIED"
+            permission_error_code = "IP-PERM-002"
+            escalation_required = True
+            experience_writeback.update(
+                {
+                    "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "notes": "permission denied while appending RULEBOOK during safe-auto",
+                }
+            )
 
         # 3) append TASK_HISTORY note
         history_path = pack / "TASK_HISTORY.md"
-        _append_task_history(
-            history_path,
-            f"{now} | auto-upgrade trigger | run_id={run_id} | mode=safe-auto | reasons={'; '.join(reasons)}",
-        )
-        actions_taken.append("task_history_appended")
-        experience_writeback.update(
-            {
-                "status": "WRITTEN",
-                "rule_entry_id": f"{run_id}-auto-upgrade",
-                "history_contains_run_id": True,
-                "notes": "safe-auto writeback appended before validator execution",
-            }
-        )
+        try:
+            _append_task_history(
+                history_path,
+                f"{now} | auto-upgrade trigger | run_id={run_id} | mode=safe-auto | reasons={'; '.join(reasons)}",
+            )
+            actions_taken.append("task_history_appended")
+            if experience_writeback.get("status") != "DEFERRED_PERMISSION_BLOCKED":
+                experience_writeback.update(
+                    {
+                        "status": "WRITTEN",
+                        "rule_entry_id": f"{run_id}-auto-upgrade",
+                        "history_contains_run_id": True,
+                        "notes": "safe-auto writeback appended before validator execution",
+                    }
+                )
+        except PermissionError:
+            permission_state = "ESCALATION_DENIED"
+            permission_error_code = "IP-PERM-002"
+            escalation_required = True
+            experience_writeback.update(
+                {
+                    "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "notes": "permission denied while appending TASK_HISTORY during safe-auto",
+                }
+            )
 
     # Run required validators + replay-equivalent gate checks
     required_checks = (
@@ -370,46 +530,61 @@ def main() -> int:
             "scripts/validate_identity_capability_arbitration.py",
         ]
     check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
-    log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
+    log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
 
     all_ok = all(c["ok"] for c in checks)
-    if upgrade_required and args.mode == "review-required" and all_ok:
+    if upgrade_required and args.mode == "review-required" and all_ok and precheck.get("all_writable", True):
         rulebook_path = pack / "RULEBOOK.jsonl"
         history_path = pack / "TASK_HISTORY.md"
         rule_id = f"{run_id}-review-required-upgrade"
-        _append_jsonl(
-            rulebook_path,
-            {
-                "rule_id": rule_id,
-                "type": "positive",
-                "trigger": "review_required_upgrade_validated",
-                "action": "preserve_trigger_patch_validate_replay_chain",
-                "evidence_run_id": run_id,
-                "scope": "identity_update_cycle",
-                "confidence": 0.9,
-                "updated_at": now,
-            },
-        )
-        _append_task_history(
-            history_path,
-            (
-                f"{now} | review-required upgrade validated | run_id={run_id} | mode=review-required "
-                f"| checks_passed={len(checks)} | reasons={'; '.join(reasons) if reasons else 'none'}"
-            ),
-        )
-        actions_taken.append("rulebook_row_appended_review_required")
-        actions_taken.append("task_history_appended_review_required")
-        artifacts.append(str(rulebook_path))
-        artifacts.append(str(history_path))
-        experience_writeback.update(
-            {
-                "status": "WRITTEN",
-                "rule_entry_id": rule_id,
-                "history_contains_run_id": True,
-                "notes": "review-required success writeback appended after validator execution",
-            }
-        )
+        try:
+            _append_jsonl(
+                rulebook_path,
+                {
+                    "rule_id": rule_id,
+                    "type": "positive",
+                    "trigger": "review_required_upgrade_validated",
+                    "action": "preserve_trigger_patch_validate_replay_chain",
+                    "evidence_run_id": run_id,
+                    "scope": "identity_update_cycle",
+                    "confidence": 0.9,
+                    "updated_at": now,
+                },
+            )
+            _append_task_history(
+                history_path,
+                (
+                    f"{now} | review-required upgrade validated | run_id={run_id} | mode=review-required "
+                    f"| checks_passed={len(checks)} | reasons={'; '.join(reasons) if reasons else 'none'}"
+                ),
+            )
+            actions_taken.append("rulebook_row_appended_review_required")
+            actions_taken.append("task_history_appended_review_required")
+            artifacts.append(str(rulebook_path))
+            artifacts.append(str(history_path))
+            experience_writeback.update(
+                {
+                    "status": "WRITTEN",
+                    "rule_entry_id": rule_id,
+                    "history_contains_run_id": True,
+                    "notes": "review-required success writeback appended after validator execution",
+                }
+            )
+        except PermissionError:
+            permission_state = "ESCALATION_DENIED"
+            permission_error_code = "IP-PERM-002"
+            escalation_required = True
+            experience_writeback.update(
+                {
+                    "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "notes": "permission denied during review-required writeback",
+                }
+            )
+            all_ok = False
+    elif upgrade_required and args.mode == "review-required" and all_ok and not precheck.get("all_writable", True):
+        all_ok = False
+        actions_taken.append("writeback_skipped_due_to_permission_precheck")
     elif upgrade_required:
         experience_writeback.update(
             {
@@ -454,6 +629,13 @@ def main() -> int:
         "writeback_status": str(experience_writeback.get("status", "")),
         "writeback_rule_id": str(experience_writeback.get("rule_entry_id", "")),
         "all_ok": all_ok,
+        "permission_state": permission_state if not (all_ok and experience_writeback.get("status") == "WRITTEN") else "WRITEBACK_WRITTEN",
+        "permission_error_code": permission_error_code,
+        "escalation_required": escalation_required,
+        "escalation_recommendation": escalation_recommendation,
+        "writeback_precheck": precheck,
+        "runtime_output_root": str(runtime_output_root),
+        "metrics_path": str(metrics_path),
     }
     report.update(
         {
@@ -463,6 +645,8 @@ def main() -> int:
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "resolved_scope": str(args.resolved_scope or ""),
+            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
         }
     )
     report_path = out_dir / f"{run_id}.json"
@@ -482,4 +666,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except PermissionError as exc:
+        print(f"[FAIL] {exc}")
+        raise SystemExit(1)

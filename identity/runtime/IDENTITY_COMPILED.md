@@ -1,16 +1,14 @@
 # Identity Runtime Brief
 
-Active identity: store-manager
+Active identity: base-repo-audit-expert-v3
 
 This file is generated/maintained by identity runtime tooling.
 
 Hard guardrails:
-- reject-memory-gate-required
-- orientation-no-flip-no-mirror
-- no-duplicate-spu-without-differentiation
+- (none)
 
 Current objective:
-- Run stable listing and reject-recovery with event-first feedback
+- Protocol governance audit specialist
 
 Current state:
 - doc_crosscheck
@@ -26,5 +24,5 @@ Runtime baseline review references:
 - https://modelcontextprotocol.io/specification/latest
 
 See source:
-- identity/catalog/identities.yaml
-- identity/store-manager/CURRENT_TASK.json
+- /Users/yangxi/.codex/identity/catalog.local.yaml
+- /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/CURRENT_TASK.json

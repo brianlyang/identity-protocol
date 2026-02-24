@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -132,7 +133,14 @@ def main() -> int:
         "replay_success_rate": _pct(replay_success, total),
     }
 
-    out = Path(args.out) if args.out else Path(f"identity/runtime/metrics/{args.identity_id}-route-quality.json")
+    if args.out:
+        out = Path(args.out)
+    else:
+        root = os.environ.get("IDENTITY_RUNTIME_OUTPUT_ROOT", "").strip()
+        if root:
+            out = Path(root).expanduser().resolve() / "metrics" / f"{args.identity_id}-route-quality.json"
+        else:
+            out = Path.cwd().resolve() / ".codex" / "identity" / "runtime" / args.identity_id / "metrics" / f"{args.identity_id}-route-quality.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

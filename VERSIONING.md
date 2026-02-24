@@ -52,3 +52,13 @@ as explicitly reviewed during release closure.
 
 Release closure is considered incomplete when any of the three synchronization
 files is stale, even if feature code is already merged.
+
+## Full-Go declaration rule (mandatory)
+
+For v1.4.x and later:
+
+- If cloud `required-gates` has no latest green run-id for the release head,
+  status must remain **Conditional Go**.
+- `Full Go` is allowed only when:
+  1) local acceptance chain passes, and
+  2) cloud `required-gates` passes on the same release head.

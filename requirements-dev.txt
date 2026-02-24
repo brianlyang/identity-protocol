@@ -1,4 +1,5 @@
 # Dev dependency baseline (release metadata synchronized in v1.4.10 draft)
+# Release metadata reviewed for v1.4.x anti-pollution hardening (Conditional Go until cloud required-gates is green).
 # Keep minimal; add new packages only when validators/scripts introduce
 # non-stdlib imports and update CHANGELOG.md accordingly.
 PyYAML>=6.0.1

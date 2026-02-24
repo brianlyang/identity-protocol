@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import glob
 import json
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,6 +33,23 @@ def _resolve_identity(catalog_path: Path, identity_id: str) -> dict[str, Any]:
     return target
 
 
+def _all_identity_tokens(catalog_path: Path) -> list[str]:
+    catalog = _load_yaml(catalog_path)
+    rows = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+    out: list[str] = []
+    for r in rows:
+        iid = str(r.get("id", "")).strip()
+        if not iid:
+            continue
+        out.append(iid.replace("-", "_"))
+    return out
+
+
+def _has_token(text: str, token: str) -> bool:
+    # token match must align on underscore boundaries, not substring noise.
+    return re.search(rf"(^|_){re.escape(token)}(_|$)", text) is not None
+
+
 def _resolve_task_path(identity: dict[str, Any], identity_id: str) -> Path:
     pack_path = str((identity or {}).get("pack_path", "")).strip()
     if pack_path:
@@ -44,11 +62,29 @@ def _resolve_task_path(identity: dict[str, Any], identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str) -> Path | None:
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack_path = str((identity or {}).get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    return Path(pack_path).expanduser().resolve()
+
+
+def _resolve_runtime_pattern(pattern: str, pack_root: Path | None, identity_id: str) -> str:
+    if not pattern:
+        return pattern
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if pattern.startswith(local_prefix) and pack_root is not None:
+        return str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    if pattern.startswith("identity/runtime/") and pack_root is not None:
+        return str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    return pattern
+
+
+def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str, pack_root: Path | None) -> Path | None:
     if explicit:
         p = Path(explicit)
         return p if p.exists() else None
-    pattern = pattern.replace("<identity-id>", identity_id)
+    pattern = _resolve_runtime_pattern(pattern, pack_root, identity_id).replace("<identity-id>", identity_id)
     if Path(pattern).is_absolute():
         files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
     else:
@@ -142,6 +178,19 @@ def main() -> int:
     if int(contract.get("evidence_max_age_days", 0)) <= 0:
         print("[FAIL] identity_role_binding_contract.evidence_max_age_days must be > 0")
         return 1
+    role_type = str(contract.get("role_type", "")).strip()
+    if not role_type.endswith("_runtime_operator"):
+        print("[FAIL] identity_role_binding_contract.role_type must end with _runtime_operator")
+        return 1
+    self_token = identity_id.replace("-", "_")
+    all_tokens = _all_identity_tokens(catalog_path)
+    foreign_hits = [t for t in all_tokens if t != self_token and _has_token(role_type, t)]
+    if foreign_hits:
+        print(
+            "[FAIL] identity_role_binding_contract.role_type contains foreign identity token(s): "
+            f"identity={identity_id}, role_type={role_type}, foreign_tokens={foreign_hits}"
+        )
+        return 1
 
     if bool(contract.get("catalog_registration_required", False)):
         # resolve_identity already proved registration exists
@@ -151,6 +200,7 @@ def main() -> int:
         str(contract.get("binding_evidence_path_pattern", "")),
         identity_id,
         args.evidence,
+        _resolve_pack_root(identity),
     )
     if not evidence:
         print("[FAIL] role-binding evidence not found")
@@ -174,7 +224,7 @@ def main() -> int:
     if str(data.get("identity_id", "")).strip() != identity_id:
         print("[FAIL] role-binding evidence identity_id mismatch")
         return 1
-    if str(data.get("role_type", "")).strip() != str(contract.get("role_type", "")).strip():
+    if str(data.get("role_type", "")).strip() != role_type:
         print("[FAIL] role-binding evidence role_type mismatch with contract")
         return 1
     binding_status = str(data.get("binding_status", "")).strip()

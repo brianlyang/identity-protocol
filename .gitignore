@@ -1,9 +1,31 @@
 # Local runtime instance storage (outside repo by default)
 .identity-protocol/
+.codex/
 
 # Optional workspace-mapped local catalogs/instances
 identity/catalog.local.yaml
 identity/local-instances/
+identity/runtime/local/
+identity/runtime/tmp/
+identity/runtime/reports/**
+identity/runtime/reports/activation/
+identity/runtime/reports/install-chain/
+identity/runtime/metrics/**
+identity/runtime/rulebooks/**
+identity/runtime/logs/**
+identity/runtime/logs/upgrade/*/identity-upgrade-exec-*.log
+identity/runtime/logs/collaboration/*-*.json
+identity/runtime/logs/feedback/*-*.json
+identity/runtime/logs/handoff/*-*.json
+identity/runtime/examples/install/install-report-*-*.json
+identity/runtime/examples/identity-role-binding-*-*.json
+identity/runtime/examples/protocol-baseline-review-*-*.json
+identity/runtime/examples/*-capability-arbitration-*.json
+identity/runtime/examples/*-experience-feedback-*.json
+identity/runtime/examples/*-knowledge-acquisition-*.json
+identity/runtime/examples/*-learning-*.json
+identity/runtime/examples/*-trigger-regression-*.json
+identity/runtime/examples/*-update-replay-*.json
 
 # Python caches
 __pycache__/

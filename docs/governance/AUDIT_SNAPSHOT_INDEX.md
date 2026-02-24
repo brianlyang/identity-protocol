@@ -18,6 +18,12 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-2026-02-22-release-closure-v1.4.4.md` — release closure for PR #29 installer-plane separation + authenticity hardening + install provenance chain enforcement
 - `docs/governance/audit-snapshot-2026-02-23-v1.4.6-role-binding-bootstrap.md` — role-binding contract bootstrap, activation switch guard, release-boundary hardening
 - `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md` — severe local-instance persistence bug closure + writeback enforcement release snapshot (with workflow residual risk note)
+- `docs/governance/audit-snapshot-2026-02-24-self-heal-and-permission-state-v1.4.12.md` — self-heal orchestration + health diagnostics + permission-state CI contract closure
+- `docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md` — documentation-first release closure set, source-of-truth repo boundary, and audit handoff requirements
+- `docs/governance/audit-snapshot-2026-02-24-identity-path-governance-final-closure-v1.4.12.md` — multi-round audit consolidation for identity path governance, skills-parity operator model, and final architect action checklist
+- `docs/governance/audit-unified-result-package-v1.4.12.md` — consolidated audit package: final posture, remaining blockers, root-cause summary, and final remediation/acceptance checklist
+- `docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md` — root-cause analysis and hardening actions for runtime artifact pollution / dirty-worktree drift
+- `docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md` — protocol/runtime hard-boundary closure (no repo runtime fallback), fixture override semantics, and cleanliness verification evidence
 
 ## Protocol hardening plans
 

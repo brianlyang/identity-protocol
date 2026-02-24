@@ -6,9 +6,11 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
+
+ScopeName = Literal["EXPLICIT", "REPO", "USER", "ADMIN", "SYSTEM", "FALLBACK", "UNKNOWN"]
 
 
 def _default_runtime_config_path() -> Path:
@@ -39,26 +41,96 @@ def _expand(path: str) -> Path:
     return Path(path).expanduser().resolve()
 
 
+def _git(path: Path, args: list[str]) -> str:
+    try:
+        p = subprocess.run(
+            ["git", *args],
+            cwd=str(path),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if p.returncode != 0:
+            return ""
+        return (p.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def _detect_repo_root(start: Path | None = None) -> Path:
+    base = (start or Path.cwd()).resolve()
+    out = _git(base, ["rev-parse", "--show-toplevel"])
+    if out:
+        return Path(out).expanduser().resolve()
+    for parent in [base, *base.parents]:
+        if (parent / ".git").exists():
+            return parent.resolve()
+    return base
+
+
+def _default_user_identity_home() -> Path:
+    codex_home = os.environ.get("CODEX_HOME", "").strip()
+    if codex_home:
+        return (Path(codex_home).expanduser() / "identity").resolve()
+    return (Path.home() / ".codex" / "identity").resolve()
+
+
+def _default_repo_identity_home(start: Path | None = None) -> Path:
+    return (_detect_repo_root(start) / ".agents" / "identity").resolve()
+
+
+def _classify_scope_from_pack_path(
+    pack_path: Path,
+    *,
+    repo_root: Path,
+    user_root: Path,
+    admin_root: Path,
+) -> ScopeName:
+    p = pack_path.expanduser().resolve()
+    repo_scope_root = (repo_root / ".agents" / "identity").resolve()
+    try:
+        p.relative_to(repo_scope_root)
+        return "REPO"
+    except Exception:
+        pass
+    try:
+        p.relative_to(user_root)
+        return "USER"
+    except Exception:
+        pass
+    try:
+        p.relative_to(admin_root)
+        return "ADMIN"
+    except Exception:
+        pass
+    if str(p).startswith(str((repo_root / "identity").resolve())):
+        return "SYSTEM"
+    return "UNKNOWN"
+
+
 def default_identity_home() -> Path:
     explicit_identity_home = os.environ.get("IDENTITY_HOME", "").strip()
     runtime_defaults = _load_runtime_env_defaults()
     configured_identity_home = runtime_defaults.get("IDENTITY_HOME", "").strip()
+
     if explicit_identity_home:
         raw = explicit_identity_home
     elif configured_identity_home:
         raw = configured_identity_home
     else:
-        codex_home = os.environ.get("CODEX_HOME", "").strip()
-        if codex_home:
-            raw = str(Path(codex_home).expanduser() / "identity")
+        repo_home = _default_repo_identity_home()
+        if repo_home.exists():
+            raw = str(repo_home)
         else:
-            raw = "~/.codex/identity"
+            raw = str(_default_user_identity_home())
+
     p = _expand(raw)
     try:
         p.mkdir(parents=True, exist_ok=True)
         return p
     except Exception:
-        fallback = (Path.cwd() / ".codex" / "identity").resolve()
+        # Never fallback into protocol repo working tree; keep runtime data outside repo by default.
+        fallback = (Path("/tmp") / "codex-identity-runtime" / os.environ.get("USER", "unknown")).resolve()
         fallback.mkdir(parents=True, exist_ok=True)
         return fallback
 
@@ -70,10 +142,10 @@ def default_local_catalog_path(identity_home: Path | None = None) -> Path:
 
 def default_local_instances_root(identity_home: Path | None = None) -> Path:
     home = identity_home or default_identity_home()
-    canonical = home
+    canonical = home / "instances"
     singular_legacy = home / "identity"
     plural_legacy = home / "identities"
-    legacy = home / "instances"
+    legacy = home
     if canonical.exists():
         return canonical
     if singular_legacy.exists():
@@ -104,22 +176,6 @@ def resolve_protocol_root(protocol_root: str | None = None) -> Path:
     else:
         p = default_protocol_home()
     return p
-
-
-def _git(path: Path, args: list[str]) -> str:
-    try:
-        p = subprocess.run(
-            ["git", *args],
-            cwd=str(path),
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if p.returncode != 0:
-            return ""
-        return (p.stdout or "").strip()
-    except Exception:
-        return ""
 
 
 def collect_protocol_evidence(protocol_root: str | None = None, protocol_mode: str = "mode_a_shared") -> dict[str, str]:
@@ -202,25 +258,94 @@ def resolve_identity(
     identity_id: str,
     repo_catalog_path: Path,
     local_catalog_path: Path,
+    *,
+    preferred_scope: str = "",
+    allow_conflict: bool = False,
 ) -> dict[str, Any]:
-    merged = merged_catalog(repo_catalog_path, local_catalog_path)
-    identity = next(
-        (x for x in merged.get("identities", []) if str((x or {}).get("id", "")).strip() == identity_id),
-        None,
-    )
-    if not identity:
+    repo_catalog = load_yaml_or_empty(repo_catalog_path)
+    local_catalog = load_yaml_or_empty(local_catalog_path)
+    repo_rows = [x for x in (repo_catalog.get("identities") or []) if isinstance(x, dict)]
+    local_rows = [x for x in (local_catalog.get("identities") or []) if isinstance(x, dict)]
+
+    repo_identity = next((x for x in repo_rows if str(x.get("id", "")).strip() == identity_id), None)
+    local_identity = next((x for x in local_rows if str(x.get("id", "")).strip() == identity_id), None)
+    if not repo_identity and not local_identity:
         raise FileNotFoundError(f"identity not found in merged context: {identity_id}")
-    source_layer = str(identity.get("_source_layer", "")).strip() or "repo"
-    pack_path = str(identity.get("pack_path", "")).strip()
+
+    repo_root = _detect_repo_root(repo_catalog_path.parent)
+    user_root = _default_user_identity_home()
+    admin_root = Path("/etc/codex/identity").resolve()
+
+    candidates: list[dict[str, Any]] = []
+    for source_layer, row, catalog_path in (
+        ("local", local_identity, local_catalog_path),
+        ("repo", repo_identity, repo_catalog_path),
+    ):
+        if not row:
+            continue
+        pack_raw = str((row or {}).get("pack_path", "")).strip()
+        if not pack_raw:
+            continue
+        pack = Path(pack_raw).expanduser().resolve()
+        profile = str((row or {}).get("profile", "")).strip().lower()
+        runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+        if source_layer == "repo" and (profile == "fixture" or runtime_mode == "demo_only"):
+            scope: ScopeName = "SYSTEM"
+        else:
+            scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)
+
+        candidates.append(
+            {
+                "source_layer": source_layer,
+                "catalog_path": str(catalog_path),
+                "pack_path": str(pack),
+                "status": str((row or {}).get("status", "")).strip(),
+                "profile": str((row or {}).get("profile", "")).strip(),
+                "runtime_mode": str((row or {}).get("runtime_mode", "")).strip(),
+                "scope": scope,
+            }
+        )
+
+    if not candidates:
+        raise FileNotFoundError(f"identity found but pack_path missing: {identity_id}")
+
+    canonical_paths = sorted({c["pack_path"] for c in candidates})
+    conflict_detected = len(canonical_paths) > 1
+
+    requested_scope = preferred_scope.strip().upper()
+    chosen: dict[str, Any] | None = None
+    if requested_scope:
+        chosen = next((c for c in candidates if str(c.get("scope", "")).upper() == requested_scope), None)
+        if not chosen:
+            raise RuntimeError(
+                f"scope mismatch for identity={identity_id}: requested={requested_scope}, "
+                f"available={[c.get('scope') for c in candidates]}"
+            )
+    elif not conflict_detected:
+        chosen = candidates[0]
+    else:
+        chosen = next((c for c in candidates if c.get("source_layer") == "local"), candidates[0])
+        if not allow_conflict:
+            raise RuntimeError(
+                f"identity conflict detected for {identity_id}: multiple pack paths resolved={canonical_paths}. "
+                "Pass --scope to arbitrate explicitly."
+            )
+
+    assert chosen is not None
+    source_layer = str(chosen.get("source_layer", "")).strip() or "repo"
     return {
         "identity_id": identity_id,
         "source_layer": source_layer,
-        "catalog_path": str(local_catalog_path if source_layer == "local" else repo_catalog_path),
-        "pack_path": pack_path,
-        "status": str(identity.get("status", "")).strip(),
-        "profile": str(identity.get("profile", "")).strip() or ("fixture" if source_layer == "repo" else "runtime"),
-        "runtime_mode": str(identity.get("runtime_mode", "")).strip()
+        "catalog_path": str(chosen.get("catalog_path", "")),
+        "pack_path": str(chosen.get("pack_path", "")),
+        "status": str(chosen.get("status", "")).strip(),
+        "profile": str(chosen.get("profile", "")).strip() or ("fixture" if source_layer == "repo" else "runtime"),
+        "runtime_mode": str(chosen.get("runtime_mode", "")).strip()
         or ("demo_only" if source_layer == "repo" else "local_only"),
+        "resolved_scope": str(chosen.get("scope", "UNKNOWN")),
+        "resolved_pack_path": str(chosen.get("pack_path", "")),
+        "conflict_detected": conflict_detected,
+        "candidate_matches": candidates,
     }
 
 
@@ -229,7 +354,13 @@ def _cmd_resolve(args: argparse.Namespace) -> int:
     local_catalog = _expand(args.local_catalog)
     if args.ensure_local_catalog:
         ensure_local_catalog(repo_catalog, local_catalog)
-    ctx = resolve_identity(args.identity_id, repo_catalog, local_catalog)
+    ctx = resolve_identity(
+        args.identity_id,
+        repo_catalog,
+        local_catalog,
+        preferred_scope=args.scope,
+        allow_conflict=args.allow_conflict,
+    )
     print(json.dumps(ctx, ensure_ascii=False, indent=2))
     return 0
 
@@ -255,6 +386,8 @@ def main() -> int:
     c1.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     c1.add_argument("--local-catalog", default=str(default_local_catalog))
     c1.add_argument("--ensure-local-catalog", action="store_true")
+    c1.add_argument("--scope", default="", help="optional explicit scope arbitration: REPO/USER/ADMIN/SYSTEM")
+    c1.add_argument("--allow-conflict", action="store_true", help="allow conflict and pick preferred runtime layer")
     c1.set_defaults(func=_cmd_resolve)
 
     c2 = sub.add_parser("merge", help="Dump merged catalog (local overrides repo).")

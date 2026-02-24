@@ -2,6 +2,89 @@
 
 ## Unreleased
 
+- **v1.4.x runtime anti-pollution hardening (draft)**:
+  - scope-resolution hardening (skills-style discovery + strict arbitration):
+    - `scripts/resolve_identity_context.py` adds `resolved_scope`/`resolved_pack_path`
+      and conflict hard-fail when one identity resolves to multiple pack paths unless explicit `--scope` is provided
+    - added `scripts/validate_identity_scope_resolution.py`
+    - wired scope-resolution validator into `identity_creator validate`, `release_readiness_check.py`, `e2e_smoke_test.sh`
+    - `execute_identity_upgrade.py` execution/plan reports now include
+      `resolved_scope` + `resolved_pack_path`
+    - added scope governance validators:
+      - `scripts/validate_identity_scope_isolation.py`
+      - `scripts/validate_identity_scope_persistence.py`
+  - installer governance lifecycle for duplicate runtime instances:
+    - `identity_installer.py scan` (discover candidate duplicates)
+    - `identity_installer.py adopt` (promote canonical instance to runtime catalog)
+    - `identity_installer.py lock` (enforce canonical binding + instance_uid)
+    - `identity_installer.py repair-paths` (rewrite legacy absolute CURRENT_TASK paths to canonical pack root)
+  - portability + workspace hygiene hardening:
+    - `scripts/configure_identity_runtime_paths.py` removed machine-specific defaults;
+      now derives defaults from `${CODEX_HOME:-~/.codex}/identity` and cwd/protocol root
+    - `.gitignore` now ignores runtime-generated evidence/log churn patterns to reduce working-tree pollution
+  - runtime self-healing flow added:
+    - `identity_creator.py heal` wraps `scan -> adopt -> lock -> repair-paths -> validate`
+    - emits auditable heal report under `identity/runtime/reports/heal/`
+    - added `scripts/repair_identity_baseline_evidence.py`
+      and heal auto-repair pass for protocol/role-binding missing evidence scenarios
+  - health diagnostics + CI control:
+    - added `scripts/collect_identity_health_report.py` (collect failures + remediation suggestions)
+    - added `scripts/validate_identity_health_contract.py` (enforce report schema + optional PASS requirement)
+    - wired health collection/validation into release-readiness, e2e smoke test, and required-gates workflow
+  - permission-state governance (sandbox/approval aligned):
+    - `execute_identity_upgrade.py` now emits `permission_state`, `permission_error_code`, and `writeback_precheck`
+    - added `scripts/validate_identity_permission_state.py`
+    - release/e2e/workflow now enforce permission-state contract and reject deferred writeback in CI/release mode
+  - added strict identity-scoped path validator:
+    - `scripts/validate_identity_instance_isolation.py`
+    - blocks cross-identity path markers (including `store-manager`) in runtime/local identities
+  - removed store-manager global fallback behavior from learning/feedback/arbitration validators:
+    - `scripts/validate_identity_learning_loop.py`
+    - `scripts/validate_identity_experience_feedback_governance.py`
+    - `scripts/validate_identity_experience_feedback.py`
+    - `scripts/validate_identity_capability_arbitration.py`
+  - wired isolation + persistence gates into release/e2e/required-gates:
+    - `scripts/release_readiness_check.py` (catalog-aware local runtime validation)
+    - `scripts/e2e_smoke_test.sh` (catalog-aware default for local runtime identities)
+    - `.github/workflows/_identity-required-gates.yml`
+  - state-source consistency hardening:
+    - added `scripts/validate_identity_state_consistency.py`
+    - strategy locked: **dual-write + strong consistency**
+      - catalog is single decision source-of-truth for active status
+      - `META.status` remains required mirrored state (must match catalog)
+    - `identity_creator.py activate` now transactionally syncs `META.yaml` status from catalog and validates post-switch consistency
+  - release posture:
+    - **Conditional Go** (cloud workflow update still blocked by token `workflow` scope; no new run-id yet)
+  - governance/audit documentation closure:
+    - added `docs/governance/audit-snapshot-2026-02-24-self-heal-and-permission-state-v1.4.12.md`
+    - added `docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md`
+    - added `docs/governance/audit-snapshot-2026-02-24-identity-path-governance-final-closure-v1.4.12.md`
+    - added `docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md`
+    - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md` and README governance index links
+    - formalized release documentation closure set + release source-of-truth repository boundary
+  - runtime artifact isolation hardening:
+    - added `scripts/validate_release_workspace_cleanliness.py` and wired into readiness/e2e/required-gates
+    - moved health/install/upgrade default report outputs away from repository runtime paths
+    - installer repository install-report mirror changed to explicit opt-in (`--emit-repo-fixture-evidence`)
+  - protocol/runtime hard boundary closure (skills-style isolation):
+    - `scripts/execute_identity_upgrade.py` now blocks protocol-root pack execution by default (`IP-PATH-001`)
+      and removes repo `.codex` runtime fallback from runtime output root resolution
+    - `scripts/identity_creator.py update` now enforces protocol-root separation before upgrade
+      (explicit fixture/debug override: `--allow-protocol-root-pack`)
+    - `scripts/resolve_identity_context.py` fallback identity home moved from repo `.codex` to `/tmp/codex-identity-runtime/<user>`
+  - workspace cleanliness coverage refinement:
+    - `.gitignore` now includes runtime drift patterns for `*-learning-*` and `*-update-replay-*` evidence files
+      and ignores repo-local `.codex/` runtime scratch directory
+  - role-binding evidence path normalization:
+    - `identity_creator.py` now rewrites legacy `identity/runtime/**` and `identity/runtime/local/<id>/**`
+      evidence patterns to identity-scoped `<pack_path>/runtime/**` outputs
+    - `validate_identity_role_binding.py` now resolves the same legacy patterns against pack runtime roots
+    - `repair_identity_baseline_evidence.py` now repairs role-binding evidence into identity-scoped runtime roots
+  - P0 closure snapshot:
+    - P0-1..P0-6 closed on local verification (identity-scoped contamination hard-fail active)
+  - P1 deferred snapshot:
+    - P1-7..P1-13 remain tracked for next hardening batch (path-semantics/documentation/install fallback/self-test isolation follow-ups)
+
 - **v1.4.6 planning hardening (draft)**:
   - local-instance persistence boundary enforcement:
     - added `scripts/resolve_identity_context.py` (repo+local catalog merge, local override)
