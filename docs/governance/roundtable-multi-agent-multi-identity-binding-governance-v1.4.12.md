@@ -422,6 +422,41 @@ Before all acceptance criteria + cloud required-gates pass:
 
 ---
 
+## 14. Anthropic + Gemini official deep-scan notes (2026-02-24)
+
+This subsection records direct official-source findings used for this governance baseline.
+
+### 14.1 Anthropic official findings
+
+1. Claude Code subagents run in **separate context windows** and support scoped tools/permissions.
+   - Source: https://code.claude.com/docs/en/sub-agents
+2. Claude Code agent teams are **separate sessions**, with lead + teammates, shared task list, mailbox, and direct teammate messaging.
+   - Source: https://code.claude.com/docs/en/agent-teams
+3. Claude Code settings support **user/project/local scopes** and project/user subagent locations.
+   - Source: https://code.claude.com/docs/en/settings
+
+Governance inference:
+
+- Parallel collaboration requires explicit session boundaries.
+- Team mode and subagent mode are distinct and should not share ambiguous runtime identity state.
+
+### 14.2 Gemini / Google official findings
+
+1. ADK workflow agents are deterministic orchestrators (`SequentialAgent`, `ParallelAgent`, `LoopAgent`).
+   - Source: https://google.github.io/adk-docs/agents/workflow-agents/
+2. `ParallelAgent` executes sub-agents in independent branches with no automatic shared state.
+   - Source: https://google.github.io/adk-docs/agents/workflow-agents/parallel-agents/
+3. Gemini structured output requires schema-constrained JSON for predictable agentic exchanges.
+   - Source: https://ai.google.dev/gemini-api/docs/structured-output
+4. Vertex AI Agent Engine recommends A2A for multi-agent interoperability across frameworks.
+   - Source: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/overview
+   - Source: https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/develop/a2a
+
+Governance inference:
+
+- Multi-agent identity governance must assume branch/session isolation by default.
+- Promotion across agents/workspaces should rely on structured evidence fields, not implicit state.
+
 ## 14. Non-goals (explicit)
 
 1. This document does not claim all scripts already implement every contract above.
