@@ -7,6 +7,8 @@
     under `identity/runtime/local/base-repo-architect/examples/handoff/{positive,negative}`
   - aligned self-drive verification evidence so `identity_creator update` can evaluate
     handoff self-test and changelog gates in the latest commit window
+  - `.gitignore` now keeps the deterministic handoff self-test fixture files versioned
+    while continuing to ignore volatile runtime-local outputs
 
 - **v1.4.x runtime anti-pollution hardening (draft)**:
   - scope-resolution hardening (skills-style discovery + strict arbitration):

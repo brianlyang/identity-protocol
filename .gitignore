@@ -27,6 +27,22 @@ identity/runtime/examples/*-learning-*.json
 identity/runtime/examples/*-trigger-regression-*.json
 identity/runtime/examples/*-update-replay-*.json
 
+# keep deterministic handoff self-test fixtures versioned
+!identity/runtime/local/
+identity/runtime/local/*
+!identity/runtime/local/base-repo-architect/
+identity/runtime/local/base-repo-architect/*
+!identity/runtime/local/base-repo-architect/examples/
+identity/runtime/local/base-repo-architect/examples/*
+!identity/runtime/local/base-repo-architect/examples/handoff/
+identity/runtime/local/base-repo-architect/examples/handoff/*
+!identity/runtime/local/base-repo-architect/examples/handoff/positive/
+!identity/runtime/local/base-repo-architect/examples/handoff/negative/
+identity/runtime/local/base-repo-architect/examples/handoff/positive/*
+identity/runtime/local/base-repo-architect/examples/handoff/negative/*
+!identity/runtime/local/base-repo-architect/examples/handoff/positive/handoff-positive-sample.json
+!identity/runtime/local/base-repo-architect/examples/handoff/negative/handoff-negative-sample.json
+
 # Python caches
 __pycache__/
 *.pyc
