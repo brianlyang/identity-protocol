@@ -54,6 +54,34 @@ Enforcement principle: **Identity governance > Skill procedure > MCP/Tool execut
    - cloud required-gates and release evidence decide Full Go.
    - release checks must not block day-to-day instance self-drive iteration.
 
+### Unified three-plane status output (standard report template)
+
+Use one command to emit a normalized governance snapshot (instance/repo/release planes):
+
+```bash
+source ./scripts/identity_runtime_select.sh project
+python3 scripts/report_three_plane_status.py \
+  --identity-id base-repo-audit-expert-v3 \
+  --with-docs-contract
+```
+
+Required top-level output keys (for audit handoff):
+
+- `target_branch`
+- `release_head_sha`
+- `required_gates_run_id`
+- `run_url`
+- `workflow_file_sha`
+- `required_checks_set`
+- `instance_plane_status`
+- `repo_plane_status`
+- `release_plane_status`
+- `overall_release_decision` (`Full Go` only when all three planes are `CLOSED`)
+
+Release-plane cloud closure remains optional for day-to-day self-drive:
+- no cloud run evidence -> `release_plane_status=NOT_STARTED`
+- provide required-gates evidence -> script evaluates cloud closure conditions and returns `CLOSED/BLOCKED`
+
 This repository standardizes identity as a first-class layer parallel to:
 - **skills** (capability packaging)
 - **MCP** (tool transport/execution)
