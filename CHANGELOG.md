@@ -8,6 +8,10 @@
     - standardized output contract now includes
       `instance_plane_status` / `repo_plane_status` / `release_plane_status`
       plus release evidence fields and `overall_release_decision`
+  - added full-repo identity governance scanner:
+    - `scripts/full_identity_protocol_scan.py`
+    - scans project/global catalogs with shared validator matrix and
+      emits severity summary (`P0`/`P1`/`OK`) for cross-instance readiness
   - hardened instance-plane fail-operational closure and legacy debt repair:
     - added `scripts/repair_rulebook_schema_backfill.py` for idempotent historical
       `RULEBOOK.jsonl` schema backfill (focus: missing `scope`)

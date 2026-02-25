@@ -82,6 +82,14 @@ Release-plane cloud closure remains optional for day-to-day self-drive:
 - no cloud run evidence -> `release_plane_status=NOT_STARTED`
 - provide required-gates evidence -> script evaluates cloud closure conditions and returns `CLOSED/BLOCKED`
 
+For cross-instance operational hygiene, run full scan periodically:
+
+```bash
+python3 scripts/full_identity_protocol_scan.py --with-docs-contract
+```
+
+This produces an all-identity summary across project/global catalogs and marks findings by severity (`P0`/`P1`/`OK`).
+
 This repository standardizes identity as a first-class layer parallel to:
 - **skills** (capability packaging)
 - **MCP** (tool transport/execution)
