@@ -26,6 +26,7 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md` — protocol/runtime hard-boundary closure (no repo runtime fallback), fixture override semantics, and cleanliness verification evidence
 - `docs/governance/audit-snapshot-2026-02-25-readme-core-goal-alignment-v1.4.13.md` — root README core objective alignment (deterministic/auditable/release-safe), boundary model clarification (identity/agent/skill/MCP/tool), and prompt-lifecycle governance semantics
 - `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md` — token-consumption governance upgrade requirements with cross-vendor validation (tiered gates, incremental execution, summary/full report split, cache strategy, and skill-parity operator model)
+- `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md` — three-plane audit checklist (instance fail-operational / release fail-closed) and cloud-closure evidence contract
 
 ## Protocol hardening plans
 

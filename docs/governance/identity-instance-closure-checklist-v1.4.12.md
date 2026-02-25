@@ -45,6 +45,11 @@ Reference policy:
 
 No implicit mode selection is allowed for release-bound runs.
 
+Prompt lifecycle note:
+
+- `IDENTITY_PROMPT.md` is loaded at command execution time (`validate` / `update` / `readiness` / `e2e`).
+- Current contract is command-time reload, not daemon-level hot-reload.
+
 ---
 
 ## 2) Required final state (must all be true)

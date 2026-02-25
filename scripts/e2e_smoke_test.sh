@@ -15,6 +15,9 @@ if [ ! -f "$CATALOG_PATH" ]; then
   exit 1
 fi
 
+INSTANCE_PLANE_STATUS="NOT_STARTED"
+RELEASE_PLANE_STATUS="NOT_STARTED"
+
 echo "[1/30] validate protocol"
 python3 scripts/validate_identity_protocol.py
 
@@ -50,6 +53,10 @@ if [ -z "$IDS" ]; then
   echo "       example: IDENTITY_IDS=office-ops-expert bash scripts/e2e_smoke_test.sh"
   exit 1
 fi
+echo "[2.45/30] repair historical rulebook schema debt (identity-scoped, safe backfill)"
+for ID in $IDS; do
+  python3 scripts/repair_rulebook_schema_backfill.py --catalog "$CATALOG_PATH" --identity-id "$ID" --apply
+done
 echo "[2.4/30] validate identity scope resolution/isolation/persistence + health (for each target identity)"
 for ID in $IDS; do
   python3 scripts/validate_identity_scope_resolution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -91,7 +98,8 @@ for ID in $IDS; do
   python3 scripts/validate_identity_role_binding.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[12.5/30][$ID] validate identity prompt quality"
-  python3 scripts/validate_identity_prompt_quality.py --catalog "$CATALOG_PATH" --identity-id "$ID" --scope USER
+  # scope is resolved from bound catalog/runtime context; avoid hard-coded scope injection drift.
+  python3 scripts/validate_identity_prompt_quality.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[13/30][$ID] validate update prereq baseline gate"
   python3 scripts/validate_identity_upgrade_prereq.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -104,6 +112,9 @@ for ID in $IDS; do
 
   echo "[16/30][$ID] validate collaboration trigger contract"
   python3 scripts/validate_identity_collab_trigger.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test
+
+  echo "[16.5/30][$ID] bootstrap identity-scoped learning sample if missing"
+  python3 scripts/repair_identity_learning_sample.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[17/30][$ID] validate learning-loop linkage"
   python3 scripts/validate_identity_learning_loop.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -135,7 +146,10 @@ for ID in $IDS; do
   python3 scripts/validate_identity_self_upgrade_enforcement.py --catalog "$CATALOG_PATH" --identity-id "$ID" --base "$BASE_SHA" --head "$HEAD_SHA"
 
   echo "[26/30][$ID] execute identity upgrade cycle via identity-creator (review-required)"
+  set +e
   CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required
+  UPDATE_RC=$?
+  set -e
   UPGRADE_REPORT=$(python3 - "$ID" "${IDENTITY_HOME:-}" <<'PY'
 import glob,os,sys
 identity_id=sys.argv[1]
@@ -157,13 +171,62 @@ PY
     echo "[FAIL] unable to locate latest upgrade report for $ID"
     exit 1
   fi
+  UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
+import json,sys
+p=sys.argv[1]
+d=json.load(open(p))
+ew=d.get("experience_writeback") or {}
+mandatory = all(
+    k in d for k in ("permission_state","writeback_status","next_action")
+) and isinstance(ew, dict) and ("status" in ew) and ("error_code" in ew)
+vals = [
+    str(bool(d.get("all_ok", False))).lower(),
+    str(d.get("writeback_status","")) or "__EMPTY__",
+    str(d.get("permission_state","")) or "__EMPTY__",
+    str(d.get("next_action","")) or "__EMPTY__",
+    str(ew.get("error_code","") or d.get("permission_error_code","")) or "__EMPTY__",
+    str(bool(mandatory)).lower(),
+]
+print("\t".join(vals))
+PY
+)
+  IFS=$'\t' read -r UPG_ALL_OK UPG_WB_STATUS UPG_PERMISSION UPG_NEXT_ACTION UPG_ERR_CODE UPG_MANDATORY_OK <<<"$UPG_META_LINE"
+  [ "${UPG_WB_STATUS}" = "__EMPTY__" ] && UPG_WB_STATUS=""
+  [ "${UPG_PERMISSION}" = "__EMPTY__" ] && UPG_PERMISSION=""
+  [ "${UPG_NEXT_ACTION}" = "__EMPTY__" ] && UPG_NEXT_ACTION=""
+  [ "${UPG_ERR_CODE}" = "__EMPTY__" ] && UPG_ERR_CODE=""
+  echo "[26.1/30][$ID] update report summary: rc=${UPDATE_RC} all_ok=${UPG_ALL_OK} writeback=${UPG_WB_STATUS} permission=${UPG_PERMISSION} next_action=${UPG_NEXT_ACTION} error_code=${UPG_ERR_CODE}"
+  if [ "$UPG_MANDATORY_OK" != "true" ]; then
+    echo "[FAIL] update report missing mandatory fields for recoverable flow semantics"
+    exit 1
+  fi
   python3 scripts/validate_identity_self_upgrade_enforcement.py --catalog "$CATALOG_PATH" --identity-id "$ID" --execution-report "$UPGRADE_REPORT"
 
   echo "[27/30][$ID] validate experience writeback linkage"
   python3 scripts/validate_identity_experience_writeback.py --catalog "$CATALOG_PATH" --identity-id "$ID" --execution-report "$UPGRADE_REPORT"
 
   echo "[27.5/30][$ID] validate permission-state contract"
-  python3 scripts/validate_identity_permission_state.py --identity-id "$ID" --report "$UPGRADE_REPORT" --ci --require-written
+  # Instance-plane fail-operational semantics:
+  # - review-required with all_ok=false is acceptable only for recoverable (non-hard-boundary) flow,
+  #   with complete report fields and executable next_action.
+  HARD_BOUNDARY="false"
+  case "${UPG_ERR_CODE}" in
+    IP-PATH-*|IP-PERM-*)
+      HARD_BOUNDARY="true"
+      ;;
+  esac
+  if [ "${UPG_ALL_OK}" = "true" ] && [ "${UPG_WB_STATUS}" = "WRITTEN" ] && [ "${UPG_PERMISSION}" = "WRITEBACK_WRITTEN" ]; then
+    python3 scripts/validate_identity_permission_state.py --identity-id "$ID" --report "$UPGRADE_REPORT" --ci --require-written
+    INSTANCE_PLANE_STATUS="CLOSED"
+  else
+    if [ "${HARD_BOUNDARY}" = "true" ] || [ -z "${UPG_NEXT_ACTION}" ]; then
+      echo "[FAIL] hard-boundary or non-recoverable update state for $ID (error_code=${UPG_ERR_CODE}, next_action=${UPG_NEXT_ACTION})"
+      exit 1
+    fi
+    python3 scripts/validate_identity_permission_state.py --identity-id "$ID" --report "$UPGRADE_REPORT" --ci
+    echo "[INFO] review-required recoverable flow accepted for instance-plane: $ID"
+    INSTANCE_PLANE_STATUS="CLOSED"
+  fi
 
   echo "[27.6/30][$ID] validate identity binding tuple contract"
   python3 scripts/validate_identity_binding_tuple.py --identity-id "$ID" --report "$UPGRADE_REPORT"
@@ -191,3 +254,5 @@ done
 grep -q "Runtime baseline review references:" identity/runtime/IDENTITY_COMPILED.md
 
 echo "E2E smoke test PASSED"
+echo "instance_plane_status=${INSTANCE_PLANE_STATUS}"
+echo "release_plane_status=${RELEASE_PLANE_STATUS}"

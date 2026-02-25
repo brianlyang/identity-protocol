@@ -14,6 +14,7 @@ This system is intentionally designed to solve three recurring failure modes:
    Runtime mode selection, explicit catalog binding, and scope checks prevent silent cross-instance contamination.
 3. **Identity becoming a static shell**  
    `IDENTITY_PROMPT.md` is treated as a runtime contract object (activation, validation, hash evidence, lifecycle updates), not just a passive file.
+   Current loading model is **command-time reload** (per validate/update/e2e/readiness invocation), not daemon hot-reload.
 
 ### Practical outcomes
 
@@ -43,6 +44,15 @@ Enforcement principle: **Identity governance > Skill procedure > MCP/Tool execut
 - **Code-plane**: upgraded with local-runtime boundary + identity-scoped anti-pollution gates.
 - **Release-plane**: **Conditional Go** until cloud `required-gates` is green with the latest workflow changes.
 - Do **not** externally claim `Full Go` before all required cloud checks are green.
+
+### Plane blocking policy (must not mix)
+
+1. **Instance-plane = fail-operational**
+   - local identity runtime must keep recoverable progress (`auto-repair` / `deferred` / `next_action`).
+   - only hard-stop for true safety boundaries (cross-identity contamination, path boundary, permission boundary).
+2. **Release-plane = fail-closed**
+   - cloud required-gates and release evidence decide Full Go.
+   - release checks must not block day-to-day instance self-drive iteration.
 
 This repository standardizes identity as a first-class layer parallel to:
 - **skills** (capability packaging)

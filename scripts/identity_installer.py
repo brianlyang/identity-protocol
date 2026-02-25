@@ -214,6 +214,37 @@ def _register_identity(catalog_path: Path, identity_id: str, title: str, descrip
     _dump_yaml(catalog_path, catalog)
 
 
+def _single_active_precheck(catalog_path: Path, target_identity_id: str, auto_converge: bool = False) -> int:
+    if not catalog_path.exists():
+        print(f"[FAIL] catalog not found: {catalog_path}")
+        return 1
+    data = _load_yaml(catalog_path)
+    identities = [x for x in (data.get("identities") or []) if isinstance(x, dict)]
+    actives = [str(x.get("id", "")).strip() for x in identities if str(x.get("status", "")).strip().lower() == "active"]
+    actives = [x for x in actives if x]
+    if len(actives) <= 1:
+        return 0
+    if not auto_converge:
+        print(
+            "[FAIL] catalog has multiple active identities: "
+            f"{actives}. Use --auto-converge-active to normalize before install/update."
+        )
+        return 2
+    changed = False
+    for row in identities:
+        iid = str(row.get("id", "")).strip()
+        if not iid:
+            continue
+        desired = "active" if iid == target_identity_id else "inactive"
+        if str(row.get("status", "")).strip().lower() != desired:
+            row["status"] = desired
+            changed = True
+    if changed:
+        _dump_yaml(catalog_path, data)
+    print(f"[OK] converged single-active state: target={target_identity_id} previous_active={actives}")
+    return 0
+
+
 def _all_scan_candidates(args: argparse.Namespace) -> list[Path]:
     identity_home = default_identity_home()
     repo = _repo_root()
@@ -509,6 +540,13 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
+    rc = _single_active_precheck(
+        Path(args.catalog).expanduser().resolve(),
+        args.identity_id,
+        auto_converge=bool(getattr(args, "auto_converge_active", False)),
+    )
+    if rc != 0:
+        return rc
     _enforce_target_boundary(args)
     src = _resolve_source_pack(args)
     dst = _resolve_target_pack(args)
@@ -649,6 +687,7 @@ def main() -> int:
     common.add_argument("--activate", action="store_true")
     common.add_argument("--title", default="")
     common.add_argument("--description", default="")
+    common.add_argument("--auto-converge-active", action="store_true")
     common.add_argument("--protocol-root", default="")
     common.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     common.add_argument(

@@ -126,6 +126,40 @@ def _restore_meta_backups(backups: dict[Path, str | None]) -> None:
             pass
 
 
+def _single_active_precheck(catalog_path: Path, target_identity_id: str, auto_converge: bool = False) -> int:
+    if not catalog_path.exists():
+        print(f"[FAIL] catalog not found: {catalog_path}")
+        return 1
+    data = _load_yaml(catalog_path)
+    identities = [x for x in (data.get("identities") or []) if isinstance(x, dict)]
+    actives = [str(x.get("id", "")).strip() for x in identities if str(x.get("status", "")).strip().lower() == "active"]
+    actives = [x for x in actives if x]
+    if len(actives) <= 1:
+        return 0
+    if not auto_converge:
+        print(
+            "[FAIL] catalog has multiple active identities: "
+            f"{actives}. Use --auto-converge-active to normalize or run activate transaction explicitly."
+        )
+        return 2
+    changed = False
+    for row in identities:
+        iid = str(row.get("id", "")).strip()
+        if not iid:
+            continue
+        desired = "active" if iid == target_identity_id else "inactive"
+        if str(row.get("status", "")).strip().lower() != desired:
+            row["status"] = desired
+            changed = True
+    if changed:
+        _dump_yaml(catalog_path, data)
+    print(
+        "[OK] converged single-active catalog state: "
+        f"target={target_identity_id} previous_active={actives} catalog={catalog_path}"
+    )
+    return 0
+
+
 def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status: str, note: str) -> Path:
     task = _load_json(_resolve_task_path(catalog_data, identity_id))
     pack_path = _resolve_pack_path(catalog_data, identity_id)
@@ -453,6 +487,23 @@ def _heal_identity(
     if rc != 0:
         last = report["steps"][-1]
         merged = f"{last.get('stdout','')}\n{last.get('stderr','')}"
+        needs_rulebook_scope_backfill = "rulebook line" in merged and "missing fields: ['scope']" in merged
+        if needs_rulebook_scope_backfill:
+            rb_cmd = [
+                "python3",
+                "scripts/repair_rulebook_schema_backfill.py",
+                "--identity-id",
+                identity_id,
+                "--catalog",
+                str(local_catalog),
+                "--apply",
+            ]
+            rc_rb = _step("auto_repair_rulebook_schema_backfill", rb_cmd)
+            if rc_rb == 0:
+                rc = _step("revalidate_after_rulebook_backfill", validate_cmd)
+                last = report["steps"][-1]
+                merged = f"{last.get('stdout','')}\n{last.get('stderr','')}"
+
         needs_protocol = "no protocol review evidence file matched" in merged
         needs_binding = "role-binding evidence not found" in merged
         needs_replay = "replay evidence file not found" in merged
@@ -698,6 +749,7 @@ def main() -> int:
     p_activate.add_argument("--scope", default="")
     p_activate.add_argument("--protocol-root", default="")
     p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
+    p_activate.add_argument("--auto-converge-active", action="store_true")
 
     p_update = sub.add_parser("update", help="Run identity upgrade executor")
     p_update.add_argument("--identity-id", required=True)
@@ -717,6 +769,7 @@ def main() -> int:
         action="store_true",
         help="allow update on identities whose pack_path is inside protocol root (fixture/debug only)",
     )
+    p_update.add_argument("--auto-converge-active", action="store_true")
 
     p_heal = sub.add_parser("heal", help="Run runtime identity self-healing flow (scan/adopt/lock/repair/validate)")
     p_heal.add_argument("--identity-id", required=True)
@@ -801,6 +854,9 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
+        rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
+        if rc != 0:
+            return rc
         return _activate_identity(
             Path(args.repo_catalog),
             Path(args.catalog),
@@ -812,6 +868,9 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
+        if rc != 0:
+            return rc
         try:
             resolved = resolve_identity(
                 args.identity_id,

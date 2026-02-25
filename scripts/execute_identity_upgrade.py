@@ -229,6 +229,67 @@ def _resolve_runtime_output_root(effective_pack: Path, identity_id: str, protoco
     )
 
 
+def _base_report(
+    *,
+    run_id: str,
+    identity_id: str,
+    now: str,
+    mode: str,
+    protocol: dict[str, str],
+    catalog_path: str,
+    resolved_scope: str,
+    resolved_pack_path: str,
+    runtime_output_root: str,
+    metrics_path: str,
+) -> dict[str, Any]:
+    """
+    Build a report skeleton with mandatory closure fields always present.
+    This keeps failed/blocked/safe-auto reports machine-auditable.
+    """
+    return {
+        "run_id": run_id,
+        "identity_id": identity_id,
+        "generated_at": now,
+        "mode": mode,
+        "actions_taken": [],
+        "checks": [],
+        "check_results": [],
+        "artifacts": [],
+        "experience_writeback": {
+            "required": False,
+            "status": "MISSING",
+            "error_code": "",
+            "mode": mode,
+            "rulebook_path": "",
+            "task_history_path": "",
+            "rule_entry_id": "",
+            "history_contains_run_id": False,
+            "notes": "",
+        },
+        "writeback_paths": [],
+        "writeback_status": "MISSING",
+        "writeback_rule_id": "",
+        "all_ok": False,
+        "permission_state": "PRECHECK",
+        "permission_error_code": "",
+        "escalation_required": False,
+        "escalation_recommendation": "",
+        "writeback_precheck": {"all_writable": False, "reason": "unknown"},
+        "runtime_output_root": runtime_output_root,
+        "metrics_path": metrics_path,
+        "next_action": "",
+        "failure_reason": "",
+        "protocol_mode": protocol["protocol_mode"],
+        "protocol_root": protocol["protocol_root"],
+        "protocol_commit_sha": protocol["protocol_commit_sha"],
+        "protocol_ref": protocol["protocol_ref"],
+        "identity_home": str(default_identity_home()),
+        "catalog_path": str(Path(catalog_path).expanduser().resolve()),
+        "resolved_scope": str(resolved_scope or ""),
+        "resolved_pack_path": str(resolved_pack_path or ""),
+    }
+
+
 def _enforce_protocol_runtime_separation(
     pack: Path,
     resolved_pack_path: str,
@@ -307,40 +368,39 @@ def main() -> int:
     else:
         metrics_path = contract_metrics_path
     if not metrics_path.exists():
-        report = {
-            "run_id": run_id,
-            "identity_id": args.identity_id,
-            "generated_at": now,
-            "mode": args.mode,
-            "upgrade_required": False,
-            "trigger_reasons": [f"metrics_artifact_missing:{metrics_path}"],
-            "actions_taken": [],
-            "checks": [],
-            "check_results": [],
-            "artifacts": [],
-            "experience_writeback": {},
-            "writeback_paths": [],
-            "writeback_status": "NOT_EXECUTED",
-            "writeback_rule_id": "",
-            "all_ok": False,
-            "permission_state": "PRECHECK",
-            "permission_error_code": "IP-UPG-001",
-            "escalation_required": False,
-            "escalation_recommendation": "generate metrics artifact then rerun update",
-            "writeback_precheck": {"all_writable": False, "reason": "metrics_missing"},
-            "runtime_output_root": str(runtime_output_root),
-            "metrics_path": str(metrics_path),
-            "next_action": "generate_metrics_and_rerun",
-            "failure_reason": f"metrics artifact not found: {metrics_path}",
-            "protocol_mode": protocol["protocol_mode"],
-            "protocol_root": protocol["protocol_root"],
-            "protocol_commit_sha": protocol["protocol_commit_sha"],
-            "protocol_ref": protocol["protocol_ref"],
-            "identity_home": str(default_identity_home()),
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-            "resolved_scope": str(args.resolved_scope or ""),
-            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
-        }
+        report = _base_report(
+            run_id=run_id,
+            identity_id=args.identity_id,
+            now=now,
+            mode=args.mode,
+            protocol=protocol,
+            catalog_path=args.catalog,
+            resolved_scope=str(args.resolved_scope or ""),
+            resolved_pack_path=str(args.resolved_pack_path or str(pack)),
+            runtime_output_root=str(runtime_output_root),
+            metrics_path=str(metrics_path),
+        )
+        report.update(
+            {
+                "upgrade_required": False,
+                "trigger_reasons": [f"metrics_artifact_missing:{metrics_path}"],
+                "permission_state": "PRECHECK",
+                "permission_error_code": "IP-UPG-001",
+                "escalation_recommendation": "generate metrics artifact then rerun update",
+                "writeback_precheck": {"all_writable": False, "reason": "metrics_missing"},
+                "next_action": "generate_metrics_and_rerun",
+                "failure_reason": f"metrics artifact not found: {metrics_path}",
+            }
+        )
+        report["experience_writeback"].update(
+            {
+                "required": False,
+                "status": "NOT_REQUIRED",
+                "error_code": "IP-UPG-001",
+                "notes": "metrics artifact missing; no writeback attempted",
+            }
+        )
+        report["writeback_status"] = str(report["experience_writeback"]["status"])
         report_path = out_dir / f"{run_id}.json"
         _write_json(report_path, report)
         print(f"report={report_path}")
@@ -409,6 +469,7 @@ def main() -> int:
     experience_writeback: dict[str, Any] = {
         "required": bool(upgrade_required),
         "status": "SKIPPED",
+        "error_code": "",
         "mode": args.mode,
         "rulebook_path": str(pack / "RULEBOOK.jsonl"),
         "task_history_path": str(pack / "TASK_HISTORY.md"),
@@ -440,6 +501,7 @@ def main() -> int:
             experience_writeback.update(
                 {
                     "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "error_code": "IP-PERM-001",
                     "notes": "write targets are not writable in current execution context",
                 }
             )
@@ -456,17 +518,44 @@ def main() -> int:
                     violations.append({"path": pth, "reason": reason})
             if violations:
                 report = {
-                    "run_id": run_id,
-                    "identity_id": args.identity_id,
-                    "mode": args.mode,
+                    **_base_report(
+                        run_id=run_id,
+                        identity_id=args.identity_id,
+                        now=now,
+                        mode=args.mode,
+                        protocol=protocol,
+                        catalog_path=args.catalog,
+                        resolved_scope=str(args.resolved_scope or ""),
+                        resolved_pack_path=str(args.resolved_pack_path or str(pack)),
+                        runtime_output_root=str(runtime_output_root),
+                        metrics_path=str(metrics_path),
+                    ),
                     "upgrade_required": upgrade_required,
                     "trigger_reasons": reasons,
                     "actions_taken": actions_taken,
                     "checks": [],
+                    "check_results": [],
                     "artifacts": artifacts,
                     "all_ok": False,
                     "path_policy_violations": violations,
+                    "permission_state": "BLOCKED",
+                    "permission_error_code": "IP-UPG-001",
+                    "writeback_precheck": precheck,
+                    "next_action": "blocked_by_safe_auto_path_policy",
+                    "failure_reason": "safe_auto_path_policy_violation",
                 }
+                report["experience_writeback"].update(
+                    {
+                        "required": True,
+                        "status": "DEFERRED_POLICY_BLOCKED",
+                        "error_code": "IP-SAFEAUTO-001",
+                        "mode": args.mode,
+                        "rulebook_path": str(pack / "RULEBOOK.jsonl"),
+                        "task_history_path": str(pack / "TASK_HISTORY.md"),
+                        "notes": "safe-auto blocked before writeback by path policy",
+                    }
+                )
+                report["writeback_status"] = str(report["experience_writeback"]["status"])
                 report_path = out_dir / f"{run_id}.json"
                 _write_json(report_path, report)
                 print(f"report={report_path}")
@@ -524,6 +613,7 @@ def main() -> int:
             experience_writeback.update(
                 {
                     "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "error_code": "IP-PERM-002",
                     "notes": "permission denied while appending RULEBOOK during safe-auto",
                 }
             )
@@ -552,6 +642,7 @@ def main() -> int:
             experience_writeback.update(
                 {
                     "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "error_code": "IP-PERM-002",
                     "notes": "permission denied while appending TASK_HISTORY during safe-auto",
                 }
             )
@@ -606,6 +697,7 @@ def main() -> int:
             experience_writeback.update(
                 {
                     "status": "WRITTEN",
+                    "error_code": "",
                     "rule_entry_id": rule_id,
                     "history_contains_run_id": True,
                     "notes": "review-required success writeback appended after validator execution",
@@ -618,6 +710,7 @@ def main() -> int:
             experience_writeback.update(
                 {
                     "status": "DEFERRED_PERMISSION_BLOCKED",
+                    "error_code": "IP-PERM-002",
                     "notes": "permission denied during review-required writeback",
                 }
             )
@@ -629,6 +722,7 @@ def main() -> int:
         experience_writeback.update(
             {
                 "status": "MISSING",
+                "error_code": "IP-UPG-002",
                 "notes": "upgrade was required but writeback not appended (run failed or policy blocked)",
             }
         )
@@ -637,6 +731,7 @@ def main() -> int:
             {
                 "required": False,
                 "status": "NOT_REQUIRED",
+                "error_code": "",
                 "notes": "thresholds not triggered; no upgrade writeback required",
             }
         )
