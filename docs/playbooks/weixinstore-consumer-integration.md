@@ -23,7 +23,8 @@ Do not overwrite consumer-specific rules blindly when syncing protocol updates.
 
 Because `.codex/config.toml` paths are resolved relative to `.codex/` directory:
 
-- `model_instructions_file = "../identity/runtime/IDENTITY_COMPILED.md"`
+- `model_instructions_file = "../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md"`
+  (recommended stable path when protocol repo is a subdirectory)
 - `[[skills.config]].path = "../skills/<skill>/SKILL.md"`
 
 Run after every update:

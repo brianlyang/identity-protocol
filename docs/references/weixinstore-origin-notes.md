@@ -32,7 +32,8 @@ Identity protocol was introduced as a control plane parallel to skills and MCP.
 A critical outage occurred because project `.codex/config.toml` relative paths were interpreted from `.codex/`, not repository root.
 
 Correct pattern:
-- `model_instructions_file = "../identity/runtime/IDENTITY_COMPILED.md"`
+- `model_instructions_file = "../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md"`
+  (avoid relying on `../identity/runtime/IDENTITY_COMPILED.md` bridge path, which may be absent in fresh workspaces)
 - `[[skills.config]].path = "../skills/.../SKILL.md"`
 
 Prevention:

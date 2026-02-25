@@ -47,6 +47,9 @@
       `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md`
     - updated `README.md`, `docs/governance/AUDIT_SNAPSHOT_INDEX.md`,
       `docs/governance/identity-instance-closure-checklist-v1.4.12.md`
+    - updated consumer integration references to prefer stable model instructions path
+      `../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md`
+      instead of relying on optional `../identity/runtime/IDENTITY_COMPILED.md` bridge files
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`
