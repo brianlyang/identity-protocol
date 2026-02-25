@@ -149,7 +149,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         [
             "python3",
             "scripts/validate_identity_experience_writeback.py",
-            "--catalog",
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--local-catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,

@@ -210,7 +210,7 @@ PY
   python3 scripts/validate_identity_self_upgrade_enforcement.py --catalog "$CATALOG_PATH" --identity-id "$ID" --execution-report "$UPGRADE_REPORT"
 
   echo "[27/30][$ID] validate experience writeback linkage"
-  python3 scripts/validate_identity_experience_writeback.py --catalog "$CATALOG_PATH" --identity-id "$ID" --execution-report "$UPGRADE_REPORT"
+  python3 scripts/validate_identity_experience_writeback.py --repo-catalog identity/catalog/identities.yaml --local-catalog "$CATALOG_PATH" --identity-id "$ID" --execution-report "$UPGRADE_REPORT"
 
   echo "[27.5/30][$ID] validate permission-state contract"
   # Instance-plane fail-operational semantics:

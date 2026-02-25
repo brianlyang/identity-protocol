@@ -42,6 +42,9 @@
         - `scripts/release_readiness_check.py`
         - `scripts/report_three_plane_status.py`
         - `scripts/full_identity_protocol_scan.py`
+      - normalized writeback validator invocation to use explicit
+        `--repo-catalog + --local-catalog` binding in e2e/readiness/three-plane
+        (prevents implicit global-catalog drift during instance-plane evaluation)
     - `e2e_smoke_test.sh` now emits dual-plane terminal states
       (`instance_plane_status`, `release_plane_status`)
   - repo-plane contract tooling improvements:

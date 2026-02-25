@@ -194,12 +194,14 @@ def main() -> int:
         [
             "python3",
             "scripts/validate_identity_experience_writeback.py",
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--local-catalog",
+            catalog,
             "--identity-id",
             identity_id,
             "--execution-report",
             execution_report,
-            "--catalog",
-            catalog,
         ]
     )
     seq.append(
