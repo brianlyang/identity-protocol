@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- **v1.4.13 layered-governance closure hardening (draft)**:
+  - added unified three-plane governance reporter:
+    - `scripts/report_three_plane_status.py`
+    - standardized output contract now includes
+      `instance_plane_status` / `repo_plane_status` / `release_plane_status`
+      plus release evidence fields and `overall_release_decision`
+  - hardened instance-plane fail-operational closure and legacy debt repair:
+    - added `scripts/repair_rulebook_schema_backfill.py` for idempotent historical
+      `RULEBOOK.jsonl` schema backfill (focus: missing `scope`)
+    - enhanced `scripts/repair_identity_learning_sample.py` to backfill existing
+      run-linked rulebook rows instead of only appending new rows
+    - wired rulebook schema backfill into `scripts/e2e_smoke_test.sh` preflight (step 2.45/30)
+      and `identity_creator.py heal` auto-repair flow
+  - update/e2e/reporting governance consistency uplift:
+    - `execute_identity_upgrade.py` now guarantees structured failure/report fields
+      for recoverable vs hard-boundary interpretation
+    - `e2e_smoke_test.sh` now emits dual-plane terminal states
+      (`instance_plane_status`, `release_plane_status`)
+  - repo-plane contract tooling improvements:
+    - added `scripts/docs_command_contract_check.py` (dynamic index-driven coverage)
+      and kept it decoupled from instance main chain
+    - added `scripts/validate_release_plane_cloud_closure.py` for release-only cloud closure checks
+  - identity session/runtime lifecycle quality:
+    - added `scripts/sync_session_identity.py` to remove activation-chain missing-script warning
+    - added single-active precheck/auto-converge option in activation/update paths
+  - governance documentation updates:
+    - added
+      `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md`
+    - added
+      `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md`
+    - updated `README.md`, `docs/governance/AUDIT_SNAPSHOT_INDEX.md`,
+      `docs/governance/identity-instance-closure-checklist-v1.4.12.md`
+
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`
     under `identity/runtime/local/base-repo-architect/examples/handoff/{positive,negative}`
