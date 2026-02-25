@@ -165,6 +165,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     )
     validators["prompt_activation"] = {"rc": rc_prompt, "ok": rc_prompt == 0, "out": out_prompt, "err": err_prompt}
 
+    rc_prompt_lc, out_prompt_lc, err_prompt_lc = _run(
+        [
+            "python3",
+            "scripts/validate_identity_prompt_lifecycle.py",
+            "--identity-id",
+            args.identity_id,
+            "--report",
+            str(report_path),
+        ]
+    )
+    validators["prompt_lifecycle"] = {
+        "rc": rc_prompt_lc,
+        "ok": rc_prompt_lc == 0,
+        "out": out_prompt_lc,
+        "err": err_prompt_lc,
+    }
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,

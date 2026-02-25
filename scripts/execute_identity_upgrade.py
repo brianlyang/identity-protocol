@@ -92,6 +92,47 @@ def _resolve_prompt_contract(
     return contract
 
 
+def _apply_prompt_contract_update(
+    *,
+    prompt_path: Path,
+    run_id: str,
+    mode: str,
+    trigger_reasons: list[str],
+) -> tuple[bool, str, str, str]:
+    """
+    Apply deterministic runtime-contract metadata block to IDENTITY_PROMPT.md.
+    Returns: (applied, note, hash_before, hash_after)
+    """
+    if not prompt_path.exists():
+        raise FileNotFoundError(f"identity prompt missing: {prompt_path}")
+    text = prompt_path.read_text(encoding="utf-8")
+    hash_before = _sha256_file(prompt_path)
+    begin = "<!-- IDENTITY_PROMPT_RUNTIME_CONTRACT:BEGIN -->"
+    end = "<!-- IDENTITY_PROMPT_RUNTIME_CONTRACT:END -->"
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    body = (
+        f"{begin}\n"
+        f"last_upgrade_run_id: {run_id}\n"
+        f"last_upgrade_mode: {mode}\n"
+        f"last_upgrade_at: {now}\n"
+        f"last_trigger_reasons: {'; '.join(trigger_reasons) if trigger_reasons else 'none'}\n"
+        f"{end}"
+    )
+    if begin in text and end in text:
+        s = text.index(begin)
+        e = text.index(end) + len(end)
+        new_text = text[:s].rstrip() + "\n\n" + body + "\n"
+    else:
+        suffix = "\n" if text.endswith("\n") else "\n\n"
+        new_text = text + suffix + body + "\n"
+    if new_text != text:
+        prompt_path.write_text(new_text, encoding="utf-8")
+        hash_after = _sha256_file(prompt_path)
+        return True, "runtime_contract_block_updated", hash_before, hash_after
+    hash_after = _sha256_file(prompt_path)
+    return False, "runtime_contract_block_unchanged", hash_before, hash_after
+
+
 def _sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -331,6 +372,11 @@ def _base_report(
         "catalog_path": str(Path(catalog_path).expanduser().resolve()),
         "resolved_scope": str(resolved_scope or ""),
         "resolved_pack_path": str(resolved_pack_path or ""),
+        "prompt_change_required": False,
+        "prompt_change_applied": False,
+        "identity_prompt_hash_before": str(prompt_contract.get("identity_prompt_sha256", "")),
+        "identity_prompt_hash_after": str(prompt_contract.get("identity_prompt_sha256", "")),
+        "identity_prompt_change_note": "",
         **prompt_contract,
     }
 
@@ -399,6 +445,7 @@ def main() -> int:
         resolved_scope=str(args.resolved_scope or ""),
         resolved_pack_path=str(args.resolved_pack_path or str(effective_pack)),
     )
+    prompt_path = Path(str(prompt_contract.get("identity_prompt_path", ""))).expanduser().resolve()
     out_dir = Path(args.out_dir)
     if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
         out_dir = runtime_output_root / "reports"
@@ -470,6 +517,7 @@ def main() -> int:
     touched_paths = [
         str(pack / "RULEBOOK.jsonl"),
         str(pack / "TASK_HISTORY.md"),
+        str(prompt_path),
         str(runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json"),
     ]
     if args.mode == "safe-auto":
@@ -531,7 +579,7 @@ def main() -> int:
         "history_contains_run_id": False,
         "notes": "",
     }
-    writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md")]
+    writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md"), str(prompt_path)]
     precheck = {
         "rulebook_path": str(pack / "RULEBOOK.jsonl"),
         "task_history_path": str(pack / "TASK_HISTORY.md"),
@@ -539,7 +587,7 @@ def main() -> int:
         "all_writable": True,
     }
     if upgrade_required:
-        for target in [pack / "RULEBOOK.jsonl", pack / "TASK_HISTORY.md"]:
+        for target in [pack / "RULEBOOK.jsonl", pack / "TASK_HISTORY.md", prompt_path]:
             ok, reason = _writable_precheck(target)
             precheck["results"].append({"path": str(target), "ok": ok, "reason": reason})
             if not ok:
@@ -560,6 +608,12 @@ def main() -> int:
                 }
             )
             actions_taken.append("permission_precheck_blocked_writeback")
+
+    prompt_change_required = bool(upgrade_required)
+    prompt_change_applied = False
+    prompt_change_note = ""
+    prompt_hash_before = str(prompt_contract.get("identity_prompt_sha256", ""))
+    prompt_hash_after = str(prompt_contract.get("identity_prompt_sha256", ""))
 
     if upgrade_required and args.mode == "safe-auto" and precheck.get("all_writable", True):
         if safe_auto.get("enforce_path_policy") is True:
@@ -791,6 +845,36 @@ def main() -> int:
             }
         )
 
+    if prompt_change_required and precheck.get("all_writable", True):
+        if all_ok:
+            try:
+                applied, note, h_before, h_after = _apply_prompt_contract_update(
+                    prompt_path=prompt_path,
+                    run_id=run_id,
+                    mode=args.mode,
+                    trigger_reasons=reasons,
+                )
+                prompt_change_applied = True
+                prompt_change_note = note
+                prompt_hash_before = h_before
+                prompt_hash_after = h_after
+                actions_taken.append("identity_prompt_contract_updated")
+                artifacts.append(str(prompt_path))
+            except PermissionError:
+                permission_state = "ESCALATION_DENIED"
+                permission_error_code = "IP-PERM-002"
+                escalation_required = True
+                prompt_change_note = "prompt_update_permission_denied"
+                all_ok = False
+            except Exception as exc:
+                prompt_change_note = f"prompt_update_failed:{exc}"
+                all_ok = False
+        else:
+            prompt_change_note = "prompt_change_deferred_due_to_failed_validators"
+    elif prompt_change_required:
+        prompt_change_note = "prompt_change_deferred_due_to_permission_precheck"
+        all_ok = False
+
     next_action = ""
     if args.mode == "review-required" and upgrade_required:
         next_action = "review_required_create_pr_from_patch_plan"
@@ -798,7 +882,17 @@ def main() -> int:
         next_action = "safe_auto_applied_and_validated"
     else:
         next_action = "no_upgrade_triggered"
+    if prompt_change_required and not prompt_change_applied:
+        if not next_action.startswith("review_required"):
+            next_action = "prompt_contract_update_required"
 
+    prompt_contract_final = _resolve_prompt_contract(
+        identity_id=args.identity_id,
+        catalog_path=Path(args.catalog),
+        repo_catalog_path=Path(args.repo_catalog),
+        resolved_scope=str(args.resolved_scope or ""),
+        resolved_pack_path=str(args.resolved_pack_path or str(effective_pack)),
+    )
     report = {
         "run_id": run_id,
         "identity_id": args.identity_id,
@@ -847,7 +941,12 @@ def main() -> int:
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
         "resolved_scope": str(args.resolved_scope or ""),
         "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
-        **prompt_contract,
+        "prompt_change_required": prompt_change_required,
+        "prompt_change_applied": prompt_change_applied,
+        "identity_prompt_hash_before": prompt_hash_before,
+        "identity_prompt_hash_after": prompt_hash_after,
+        "identity_prompt_change_note": prompt_change_note,
+        **prompt_contract_final,
     }
     )
     report_path = out_dir / f"{run_id}.json"

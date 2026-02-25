@@ -67,7 +67,10 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         not checks.get(name, {}).get("ok", False)
         for name in ("scope_resolution", "scope_isolation", "scope_persistence", "runtime_contract")
     )
-    prompt_fail = not checks.get("prompt_quality", {}).get("ok", False)
+    prompt_fail = any(
+        name in checks and not checks.get(name, {}).get("ok", False)
+        for name in ("prompt_quality", "prompt_activation", "prompt_lifecycle")
+    )
     if active and profile == "runtime" and (core_fail or prompt_fail):
         return "P0"
     if core_fail or prompt_fail:
@@ -145,6 +148,7 @@ def main() -> int:
                 item["conflict_detected"] = data.get("conflict_detected")
                 resolved_scope = str(data.get("resolved_scope", "")).upper() or "USER"
 
+            is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -195,6 +199,26 @@ def main() -> int:
                     iid,
                 ],
             }
+            if is_active_runtime:
+                runtime_report_dir = str((Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"))
+                checks["prompt_activation"] = [
+                    "python3",
+                    "scripts/validate_identity_prompt_activation.py",
+                    "--identity-id",
+                    iid,
+                    "--catalog",
+                    str(catalog),
+                    "--report-dir",
+                    runtime_report_dir,
+                ]
+                checks["prompt_lifecycle"] = [
+                    "python3",
+                    "scripts/validate_identity_prompt_lifecycle.py",
+                    "--identity-id",
+                    iid,
+                    "--report-dir",
+                    runtime_report_dir,
+                ]
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 item["checks"][name] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
@@ -244,4 +268,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

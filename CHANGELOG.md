@@ -12,6 +12,11 @@
     - `execute_identity_upgrade.py` now writes prompt activation evidence fields into execution reports
     - added `scripts/validate_identity_prompt_activation.py`
     - wired prompt activation validator into e2e (`27.7/30`), release readiness, and three-plane status reporter
+    - `execute_identity_upgrade.py` now applies deterministic prompt runtime-contract block updates
+      during upgrade runs and records `hash_before/hash_after` lifecycle fields
+    - added `scripts/validate_identity_prompt_lifecycle.py`
+    - wired prompt lifecycle validator into e2e (`27.8/30`), release readiness, three-plane status,
+      and active-runtime checks in full protocol scan
   - added full-repo identity governance scanner:
     - `scripts/full_identity_protocol_scan.py`
     - scans project/global catalogs with shared validator matrix and
