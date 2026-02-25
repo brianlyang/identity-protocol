@@ -117,8 +117,8 @@ def main() -> int:
     lines += [
         "",
         "See source:",
-        f"- {catalog_path.as_posix()}",
-        f"- {current_task_path.as_posix()}",
+        "- ${IDENTITY_CATALOG}",
+        f"- ${{IDENTITY_HOME}}/{active.get('id', 'unknown')}/CURRENT_TASK.json  # resolved via catalog pack_path",
     ]
 
     output = Path(args.output)

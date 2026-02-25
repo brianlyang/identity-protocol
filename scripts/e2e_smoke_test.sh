@@ -24,6 +24,9 @@ python3 scripts/validate_identity_protocol.py
 echo "[2/30] validate local-instance persistence boundary"
 python3 scripts/validate_identity_local_persistence.py
 
+echo "[2.2/30] validate identity creation boundary regression"
+python3 scripts/validate_identity_creation_boundary.py
+
 echo "[2.5/30] validate identity state consistency (catalog vs META)"
 python3 scripts/validate_identity_state_consistency.py --catalog "$CATALOG_PATH"
 
@@ -107,8 +110,10 @@ for ID in $IDS; do
 done
 
 echo "[7/30] compile runtime brief (for each target identity)"
+COMPILED_TMP_DIR="/tmp/identity-compiled-runtime"
+mkdir -p "$COMPILED_TMP_DIR"
 for ID in $IDS; do
-  python3 scripts/compile_identity_runtime.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+  python3 scripts/compile_identity_runtime.py --catalog "$CATALOG_PATH" --identity-id "$ID" --output "${COMPILED_TMP_DIR}/${ID}.md"
 done
 
 echo "[8/30] validate manifest semantics"
@@ -193,11 +198,29 @@ for ID in $IDS; do
   CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required
   UPDATE_RC=$?
   set -e
-  UPGRADE_REPORT=$(python3 - "$ID" "${IDENTITY_HOME:-}" <<'PY'
+  UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" <<'PY'
 import glob,os,sys
+from pathlib import Path
+import yaml
+
 identity_id=sys.argv[1]
-identity_home=sys.argv[2].strip()
-roots=["/tmp/identity-upgrade-reports","/tmp/identity-runtime"]
+catalog_path=Path(sys.argv[2]).expanduser().resolve()
+identity_home=sys.argv[3].strip()
+
+roots=[]
+if catalog_path.exists():
+    try:
+        doc=yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+        rows=[x for x in (doc.get("identities") or []) if isinstance(x, dict)]
+        row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), None)
+        if row:
+            pack=Path(str((row or {}).get("pack_path","")).strip()).expanduser().resolve()
+            if pack.exists():
+                roots.append(str(pack / "runtime" / "reports"))
+                roots.append(str(pack / "runtime"))
+    except Exception:
+        pass
+roots.extend(["/tmp/identity-upgrade-reports","/tmp/identity-runtime"])
 if identity_home:
     roots.append(identity_home)
 cands=[]
@@ -309,9 +332,9 @@ done
 
 echo "[post] ensure compile output is stable and contains baseline refs"
 for ID in $IDS; do
-  python3 scripts/compile_identity_runtime.py --catalog "$CATALOG_PATH" --identity-id "$ID" >/dev/null
+  python3 scripts/compile_identity_runtime.py --catalog "$CATALOG_PATH" --identity-id "$ID" --output "${COMPILED_TMP_DIR}/${ID}.md" >/dev/null
+  grep -q "Runtime baseline review references:" "${COMPILED_TMP_DIR}/${ID}.md"
 done
-grep -q "Runtime baseline review references:" identity/runtime/IDENTITY_COMPILED.md
 
 echo "E2E smoke test PASSED"
 echo "instance_plane_status=${INSTANCE_PLANE_STATUS}"

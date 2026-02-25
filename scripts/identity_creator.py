@@ -732,6 +732,9 @@ def main() -> int:
     p_init.add_argument("--repo-catalog", default=repo_catalog_default)
     p_init.add_argument("--pack-root", default=str(default_local_instances_root(identity_home)))
     p_init.add_argument("--repo-fixture", action="store_true")
+    p_init.add_argument("--repo-fixture-confirm", default="")
+    p_init.add_argument("--repo-fixture-purpose", default="")
+    p_init.add_argument("--skip-sample-bootstrap", action="store_true")
 
     p_validate = sub.add_parser("validate", help="Run identity required validators for an identity")
     p_validate.add_argument("--identity-id", required=True)
@@ -804,6 +807,12 @@ def main() -> int:
         ]
         if args.repo_fixture:
             cmd.append("--repo-fixture")
+            if args.repo_fixture_confirm.strip():
+                cmd.extend(["--repo-fixture-confirm", args.repo_fixture_confirm.strip()])
+            if args.repo_fixture_purpose.strip():
+                cmd.extend(["--repo-fixture-purpose", args.repo_fixture_purpose.strip()])
+        if args.skip_sample_bootstrap:
+            cmd.append("--skip-sample-bootstrap")
         if args.register:
             cmd.append("--register")
         if args.activate:

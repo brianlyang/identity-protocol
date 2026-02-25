@@ -32,11 +32,18 @@ def _load_json(path: str) -> dict[str, Any]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def _latest_report(identity_id: str, identity_home: str = "") -> Path | None:
-    roots = [
-        Path("/tmp/identity-upgrade-reports"),
-        Path("/tmp/identity-runtime"),
-    ]
+def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: str = "") -> Path | None:
+    roots: list[Path] = []
+    if preferred_pack.strip():
+        pack = Path(preferred_pack).expanduser().resolve()
+        roots.append(pack / "runtime" / "reports")
+        roots.append(pack / "runtime")
+    roots.extend(
+        [
+            Path("/tmp/identity-upgrade-reports"),
+            Path("/tmp/identity-runtime"),
+        ]
+    )
     if identity_home.strip():
         roots.append(Path(identity_home).expanduser().resolve())
     candidates: list[Path] = []
@@ -296,8 +303,11 @@ def main() -> int:
     if not args.release_head_sha:
         args.release_head_sha = _git_head_sha()
 
+    preferred_pack = str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")
     report_path = Path(args.execution_report).expanduser().resolve() if args.execution_report else _latest_report(
-        args.identity_id, os.environ.get("IDENTITY_HOME", "")
+        args.identity_id,
+        os.environ.get("IDENTITY_HOME", ""),
+        preferred_pack,
     )
     instance_status, instance_detail = _instance_plane_status(args, report_path)
     repo_status, repo_detail = _repo_plane_status(args, resolved)

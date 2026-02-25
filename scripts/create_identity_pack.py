@@ -56,6 +56,8 @@ MANDATORY_PROTOCOL_SOURCES = [
     },
 ]
 
+REPO_FIXTURE_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_FIXTURE_WRITE"
+
 
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -73,6 +75,22 @@ def load_yaml(path: Path):
 
 def dump_yaml(path: Path, data) -> None:
     path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _repo_root() -> Path:
+    cur = Path.cwd().resolve()
+    for p in [cur, *cur.parents]:
+        if (p / ".git").exists():
+            return p
+    return cur
 
 
 def _minimal_current_task(identity_id: str, title: str, description: str) -> dict:
@@ -443,6 +461,11 @@ def _write_replay_sample(identity_id: str, task: dict, runtime_root: Path) -> Pa
 def _copy_sample_with_identity(src: Path, dst: Path, identity_id: str) -> None:
     if not src.exists():
         return
+    if src.resolve() == dst.resolve():
+        raise ValueError(
+            "bootstrap sample source and destination overlap; "
+            "choose a different pack root/identity id to avoid mutating repository fixtures."
+        )
     try:
         payload = json.loads(src.read_text(encoding="utf-8"))
     except Exception:
@@ -460,6 +483,11 @@ def _copy_sample_with_identity(src: Path, dst: Path, identity_id: str) -> None:
 def _copy_jsonl_with_identity(src: Path, dst: Path, identity_id: str) -> None:
     if not src.exists():
         return
+    if src.resolve() == dst.resolve():
+        raise ValueError(
+            "bootstrap rulebook source and destination overlap; "
+            "choose a different pack root/identity id to avoid mutating repository fixtures."
+        )
     lines_out: list[str] = []
     for line in src.read_text(encoding="utf-8").splitlines():
         ln = line.strip()
@@ -606,9 +634,24 @@ def main() -> int:
         help="Explicitly allow creating fixture identity under repo paths (default runtime identities are local-only).",
     )
     ap.add_argument(
+        "--repo-fixture-confirm",
+        default="",
+        help=f'Exact confirmation token required with --repo-fixture: "{REPO_FIXTURE_CONFIRM_TOKEN}"',
+    )
+    ap.add_argument(
+        "--repo-fixture-purpose",
+        default="",
+        help="Required short purpose string when using --repo-fixture (for audit intent).",
+    )
+    ap.add_argument(
         "--skip-bootstrap-check",
         action="store_true",
         help="Skip post-create bootstrap validators (local debugging only; CI should not use)",
+    )
+    ap.add_argument(
+        "--skip-sample-bootstrap",
+        action="store_true",
+        help="Skip runtime sample bootstrap copy (boundary tests / advanced workflows only).",
     )
     args = ap.parse_args()
 
@@ -617,16 +660,43 @@ def main() -> int:
         print("[FAIL] --id cannot be empty")
         return 1
 
-    repo_root = Path.cwd().resolve()
+    repo_root = _repo_root()
     pack_root = Path(args.pack_root).expanduser().resolve()
     catalog_path = Path(args.catalog).expanduser().resolve()
-    if not args.repo_fixture:
-        if str(pack_root).startswith(str(repo_root)):
+    identity_profile = "fixture" if args.repo_fixture else "runtime"
+    identity_runtime_mode = "demo_only" if args.repo_fixture else "local_only"
+
+    if args.repo_fixture:
+        if args.repo_fixture_confirm.strip() != REPO_FIXTURE_CONFIRM_TOKEN:
+            print("[FAIL] --repo-fixture requires explicit confirmation token.")
+            print(f'       pass --repo-fixture-confirm "{REPO_FIXTURE_CONFIRM_TOKEN}"')
+            return 1
+        if not args.repo_fixture_purpose.strip():
+            print("[FAIL] --repo-fixture requires --repo-fixture-purpose for audit intent.")
+            return 1
+        if not _is_within(pack_root, repo_root):
+            print("[FAIL] --repo-fixture requires repository pack root.")
+            print(f"       pack_root={pack_root}")
+            print(f"       repo_root={repo_root}")
+            return 1
+        if not _is_within(catalog_path, repo_root):
+            print("[FAIL] --repo-fixture requires repository catalog path.")
+            print(f"       catalog={catalog_path}")
+            print(f"       repo_root={repo_root}")
+            return 1
+    else:
+        if args.repo_fixture_confirm.strip():
+            print("[FAIL] --repo-fixture-confirm is only valid with --repo-fixture.")
+            return 1
+        if args.repo_fixture_purpose.strip():
+            print("[FAIL] --repo-fixture-purpose is only valid with --repo-fixture.")
+            return 1
+        if _is_within(pack_root, repo_root):
             print("[FAIL] runtime identity must not be created under repository path.")
             print(f"       pack_root={pack_root}")
             print("       use default IDENTITY_HOME root or pass --repo-fixture explicitly for demo fixtures.")
             return 1
-        if str(catalog_path).startswith(str(repo_root)):
+        if _is_within(catalog_path, repo_root):
             print("[FAIL] runtime identity catalog must be local (outside repo).")
             print(f"       catalog={catalog_path}")
             print("       pass --repo-fixture only when you intentionally update repo fixture catalog.")
@@ -643,8 +713,10 @@ def main() -> int:
             f'id: "{identity_id}"\n'
             f'title: "{args.title}"\n'
             f'description: "{args.description}"\n'
-            'status: "active"\n'
+            f'status: "{"active" if (not args.register or args.activate) else "inactive"}"\n'
             'methodology_version: "v1.2.3"\n'
+            f'profile: "{identity_profile}"\n'
+            f'runtime_mode: "{identity_runtime_mode}"\n'
         ),
     )
 
@@ -653,15 +725,21 @@ def main() -> int:
         "# Identity Prompt\n\nDefine role cognition, principles, and decision rules.\n",
     )
 
-    runtime_root = Path("identity/runtime") if args.repo_fixture else (pack_dir / "runtime")
+    runtime_root = pack_dir / "runtime"
+    seed_runtime_root = (repo_root / "identity" / "runtime").resolve()
+    if runtime_root.resolve() == seed_runtime_root:
+        print("[FAIL] runtime root overlaps repository seed runtime templates.")
+        print(f"       runtime_root={runtime_root}")
+        print(f"       seed_runtime_root={seed_runtime_root}")
+        print("       choose a different --id/--pack-root (or use local default runtime root).")
+        return 1
 
     if args.profile == "full-contract":
         current_task = _full_contract_current_task(identity_id, args.title, args.description)
     else:
         current_task = _minimal_current_task(identity_id, args.title, args.description)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
-    if not args.repo_fixture:
-        current_task = _rewrite_runtime_root(current_task, runtime_root)
+    current_task = _rewrite_runtime_root(current_task, runtime_root)
     write_json(pack_dir / "CURRENT_TASK.json", current_task)
 
     write(pack_dir / "TASK_HISTORY.md", "# Task History\n\n## Entries\n")
@@ -727,7 +805,8 @@ def main() -> int:
         },
     )
     replay_sample_path = _write_replay_sample(identity_id, current_task, runtime_root)
-    _bootstrap_identity_samples(identity_id, runtime_root)
+    if not args.skip_sample_bootstrap:
+        _bootstrap_identity_samples(identity_id, runtime_root)
 
     print(f"[OK] created identity pack: {pack_dir}")
     print(f"[OK] created protocol review sample: {protocol_review_sample_path}")
@@ -765,6 +844,8 @@ def main() -> int:
                 "description": args.description,
                 "status": "active" if args.activate else "inactive",
                 "methodology_version": "v1.2.3",
+                "profile": identity_profile,
+                "runtime_mode": identity_runtime_mode,
                 "pack_path": str(pack_dir),
                 "tags": ["identity"],
             }

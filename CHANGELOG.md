@@ -85,6 +85,22 @@
     - updated consumer integration references to prefer stable model instructions path
       `../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md`
       instead of relying on optional `../identity/runtime/IDENTITY_COMPILED.md` bridge files
+  - creation/installer exception-path hardening + anti-pollution cleanup:
+    - `scripts/create_identity_pack.py` now anchors repo boundary to detected `.git` root
+      (no cwd-dependent drift), and keeps fixture/demo runtime artifacts under
+      `<pack>/runtime` instead of mutating shared `identity/runtime` templates
+    - `scripts/create_identity_pack.py` adds overlap guards that fail when bootstrap
+      source==destination, preventing in-place fixture corruption
+    - added optional `--skip-sample-bootstrap` (advanced/boundary testing only)
+      to run boundary regression without runtime fixture mutation side effects
+    - `scripts/identity_installer.py` aligns repo-target exception model with
+      create flow: `--allow-repo-target` now requires explicit confirm token +
+      purpose; registration now writes `profile` + `runtime_mode` consistently
+    - added `scripts/validate_identity_creation_boundary.py` (4-case regression:
+      missing confirm fail, repo runtime fail, local runtime pass, fixture pass)
+      and wired it into `scripts/e2e_smoke_test.sh` + `scripts/release_readiness_check.py`
+    - e2e compile step now writes to `/tmp/identity-compiled-runtime/*.md` to avoid
+      tracked workspace churn from runtime brief generation
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

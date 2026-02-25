@@ -123,8 +123,8 @@ This is the severe bug closed in v1.4.6 hardening:
 
 Enforcement:
 
-- `create_identity_pack.py` defaults to local paths, blocks repo target unless `--repo-fixture`
-- `identity_installer.py` defaults to local paths, blocks repo target unless `--allow-repo-target`
+- `create_identity_pack.py` defaults to local paths; repo fixture mode requires `--repo-fixture` + confirm token + purpose
+- `identity_installer.py` defaults to local paths; repo target mode requires `--allow-repo-target` + confirm token + purpose
 - `identity_creator.py` resolves runtime context from local catalog first (local > repo)
 - `validate_identity_local_persistence.py` hard-fails invalid runtime placement
 - Canonical runtime pack root is `${IDENTITY_HOME}` (skills-style root convention)
@@ -367,8 +367,8 @@ python scripts/execute_identity_upgrade.py --identity-id store-manager --mode re
 python scripts/release_readiness_check.py --identity-id store-manager
 # optional: scaffold a new local runtime identity
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
-# optional: explicit fixture creation under repo (demo only)
-python scripts/create_identity_pack.py --id demo-fixture --title "Demo Fixture" --description "Fixture identity" --repo-fixture --pack-root identity/packs --catalog identity/catalog/identities.yaml --register
+# optional: explicit fixture creation under repo (demo only; requires double confirmation)
+python scripts/create_identity_pack.py --id demo-fixture --title "Demo Fixture" --description "Fixture identity" --repo-fixture --repo-fixture-confirm "I_UNDERSTAND_REPO_FIXTURE_WRITE" --repo-fixture-purpose "demo fixture for protocol validation only" --pack-root identity/packs --catalog identity/catalog/identities.yaml --register
 ```
 
 ## Minimum acceptance commands (release gate)

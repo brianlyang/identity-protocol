@@ -7,6 +7,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 
 def _run(cmd: list[str]) -> int:
@@ -21,6 +24,32 @@ def _run(cmd: list[str]) -> int:
 def _git_rev(expr: str) -> str:
     p = subprocess.run(["git", "rev-parse", expr], check=True, capture_output=True, text=True)
     return p.stdout.strip()
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"yaml root must be object: {path}")
+    return data
+
+
+def _resolve_pack_path(catalog_path: str, identity_id: str) -> Path | None:
+    p = Path(catalog_path).expanduser().resolve()
+    if not p.exists():
+        return None
+    try:
+        doc = _load_yaml(p)
+    except Exception:
+        return None
+    rows = [x for x in (doc.get("identities") or []) if isinstance(x, dict)]
+    row = next((x for x in rows if str(x.get("id", "")).strip() == identity_id), None)
+    if not row:
+        return None
+    pack_raw = str((row or {}).get("pack_path", "")).strip()
+    if not pack_raw:
+        return None
+    pack = Path(pack_raw).expanduser().resolve()
+    return pack if pack.exists() else None
 
 
 def main() -> int:
@@ -63,6 +92,7 @@ def main() -> int:
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
         ["python3", "scripts/validate_identity_local_persistence.py"],
+        ["python3", "scripts/validate_identity_creation_boundary.py"],
         ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", catalog, "--identity-id", identity_id],
@@ -143,6 +173,10 @@ def main() -> int:
         roots: list[Path] = []
         if args.upgrade_report_dir.strip():
             roots.append(Path(args.upgrade_report_dir.strip()).expanduser().resolve())
+        pack_path = _resolve_pack_path(catalog, identity_id)
+        if pack_path is not None:
+            roots.append((pack_path / "runtime" / "reports").resolve())
+            roots.append((pack_path / "runtime").resolve())
         roots.append(Path("/tmp/identity-upgrade-reports"))
         roots.append(Path("/tmp/identity-runtime"))
         if os.environ.get("IDENTITY_HOME", "").strip():

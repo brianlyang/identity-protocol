@@ -72,13 +72,17 @@ If a runtime identity resolves to repo path, validation fails.
 - Default target:
   - `--pack-root ${IDENTITY_HOME}`
   - `--catalog ${IDENTITY_HOME}/catalog.local.yaml`
-- Repo-path write is blocked unless `--repo-fixture` is explicitly set.
+- Repo-path write is blocked unless `--repo-fixture` is explicitly set with:
+  - `--repo-fixture-confirm "I_UNDERSTAND_REPO_FIXTURE_WRITE"`
+  - `--repo-fixture-purpose "<audit-intent>"`
 
 ## 3.3 Installer boundary
 
 - Script: `scripts/identity_installer.py`
 - Default target/catalog are local.
-- Repo target writes are blocked unless `--allow-repo-target` is explicitly set.
+- Repo target writes are blocked unless `--allow-repo-target` is explicitly set with:
+  - `--allow-repo-target-confirm "I_UNDERSTAND_REPO_TARGET_WRITE"`
+  - `--allow-repo-target-purpose "<audit-intent>"`
 
 ## 3.4 Runtime persistence validator
 

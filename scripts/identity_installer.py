@@ -21,6 +21,8 @@ from resolve_identity_context import (
     resolve_identity,
 )
 
+REPO_TARGET_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_TARGET_WRITE"
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -122,6 +124,14 @@ def _resolve_target_pack(args: argparse.Namespace) -> Path:
     return Path(args.target_root) / args.identity_id
 
 
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def _repo_root() -> Path:
     cur = Path.cwd().resolve()
     for p in [cur, *cur.parents]:
@@ -145,8 +155,20 @@ def _canonical_target_for_scope(args: argparse.Namespace) -> Path:
 
 def _enforce_target_boundary(args: argparse.Namespace) -> None:
     target_root = Path(args.target_root).expanduser().resolve()
-    repo_root = Path.cwd().resolve()
-    if not args.allow_repo_target and str(target_root).startswith(str(repo_root)):
+    repo_root = _repo_root()
+    in_repo = _is_within(target_root, repo_root)
+    if args.allow_repo_target and str(args.allow_repo_target_confirm).strip() != REPO_TARGET_CONFIRM_TOKEN:
+        raise PermissionError(
+            "--allow-repo-target requires explicit confirmation token. "
+            f'Pass --allow-repo-target-confirm "{REPO_TARGET_CONFIRM_TOKEN}".'
+        )
+    if args.allow_repo_target and not str(args.allow_repo_target_purpose).strip():
+        raise PermissionError("--allow-repo-target requires --allow-repo-target-purpose for audit intent.")
+    if not args.allow_repo_target and (
+        str(args.allow_repo_target_confirm).strip() or str(args.allow_repo_target_purpose).strip()
+    ):
+        raise PermissionError("--allow-repo-target-confirm/--allow-repo-target-purpose require --allow-repo-target.")
+    if not args.allow_repo_target and in_repo:
         raise PermissionError(
             "repo target blocked by local-instance persistence boundary. "
             "Use --allow-repo-target only for explicit fixture/demo operations."
@@ -178,7 +200,17 @@ def _sync_pack(src: Path, dst: Path) -> list[str]:
     return copied
 
 
-def _register_identity(catalog_path: Path, identity_id: str, title: str, description: str, pack_path: str, activate: bool) -> None:
+def _register_identity(
+    catalog_path: Path,
+    identity_id: str,
+    title: str,
+    description: str,
+    pack_path: str,
+    activate: bool,
+    *,
+    profile: str,
+    runtime_mode: str,
+) -> None:
     if not catalog_path.exists():
         _dump_yaml(
             catalog_path,
@@ -196,6 +228,8 @@ def _register_identity(catalog_path: Path, identity_id: str, title: str, descrip
         existing["pack_path"] = pack_path
         existing["title"] = title or existing.get("title", identity_id)
         existing["description"] = description or existing.get("description", "")
+        existing["profile"] = profile
+        existing["runtime_mode"] = runtime_mode
         if activate:
             existing["status"] = "active"
     else:
@@ -206,6 +240,8 @@ def _register_identity(catalog_path: Path, identity_id: str, title: str, descrip
                 "description": description or "",
                 "status": "active" if activate else "inactive",
                 "methodology_version": "v1.2.3",
+                "profile": profile,
+                "runtime_mode": runtime_mode,
                 "pack_path": pack_path,
                 "tags": ["identity"],
             }
@@ -567,6 +603,8 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         changed = _sync_pack(src, dst)
 
     if args.register and not dry_run:
+        identity_profile = "fixture" if bool(args.allow_repo_target) else "runtime"
+        identity_runtime_mode = "demo_only" if bool(args.allow_repo_target) else "local_only"
         _register_identity(
             Path(args.catalog),
             args.identity_id,
@@ -574,6 +612,8 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             args.description,
             (Path(args.target_root) / args.identity_id).as_posix(),
             args.activate,
+            profile=identity_profile,
+            runtime_mode=identity_runtime_mode,
         )
 
     op = "dry-run" if dry_run else "install"
@@ -683,6 +723,8 @@ def main() -> int:
     common.add_argument("--backup-dir", default="/tmp/identity-install-backups")
     common.add_argument("--destructive-replace", action="store_true")
     common.add_argument("--allow-repo-target", action="store_true")
+    common.add_argument("--allow-repo-target-confirm", default="")
+    common.add_argument("--allow-repo-target-purpose", default="")
     common.add_argument("--register", action="store_true")
     common.add_argument("--activate", action="store_true")
     common.add_argument("--title", default="")
@@ -732,4 +774,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except PermissionError as exc:
+        print(f"[FAIL] {exc}")
+        raise SystemExit(1)
