@@ -1,0 +1,15 @@
+id: no-default-repo-runtime-fallback
+language: python
+severity: error
+message: >-
+  Default repo runtime fallback is forbidden. Use IDENTITY_RUNTIME_OUTPUT_ROOT or
+  <resolved_pack_path>/runtime; repo fallback must stay behind explicit
+  --allow-repo-runtime-fallback gate.
+rule:
+  pattern: |
+    if $ROOT:
+      $$$A
+    else:
+      out = Path.cwd().resolve() / ".codex" / "identity" / "runtime" / $ID / "metrics" / $FILE
+files:
+  - scripts/export_route_quality_metrics.py

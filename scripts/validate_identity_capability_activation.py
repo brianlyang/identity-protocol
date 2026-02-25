@@ -146,6 +146,31 @@ def _check_gh_cli() -> bool:
     return subprocess.call(["bash", "-lc", "command -v gh >/dev/null 2>&1"]) == 0
 
 
+def _check_gh_auth_status() -> tuple[bool, str]:
+    """
+    Returns:
+      (auth_ready, detail_reason)
+    """
+    if not _check_gh_cli():
+        return False, "gh_cli_missing"
+    cmds = [
+        ["gh", "auth", "status", "-h", "github.com"],
+        ["gh", "auth", "status"],
+    ]
+    for cmd in cmds:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        msg = ((proc.stderr or "") + "\n" + (proc.stdout or "")).strip().lower()
+        if "failed to log in" in msg:
+            return False, "gh_auth_invalid"
+        if "invalid" in msg:
+            return False, "gh_auth_invalid"
+        if "not logged into any hosts" in msg or "run: gh auth login" in msg:
+            return False, "gh_auth_missing"
+        if proc.returncode == 0:
+            return True, "gh_auth_ready"
+    return False, "gh_auth_not_ready"
+
+
 def _derive_activation_mode(catalog: Path) -> str:
     p = str(catalog)
     if "/.agents/identity/" in p:
@@ -177,21 +202,29 @@ def _build_runtime_payload(
             missing_skills.append(skill)
 
     mcp_servers = _load_mcp_servers(cwd)
+    gh_cli_present = _check_gh_cli()
+    gh_auth_ready, gh_auth_reason = _check_gh_auth_status()
     mcp_rows: list[dict[str, Any]] = []
     mcp_tools_used: list[str] = []
     missing_mcp: list[str] = []
+    missing_mcp_auth: list[str] = []
     for name in contract["required_mcp"]:
         ok = False
         reason = ""
         source = ""
-        if name in mcp_servers:
+        if name == "github":
+            source = mcp_servers.get(name, "gh_cli" if gh_cli_present else "")
+            if gh_auth_ready:
+                ok = True
+                reason = "github_auth_ready"
+            else:
+                ok = False
+                reason = f"github_auth_not_ready:{gh_auth_reason}"
+                missing_mcp_auth.append(name)
+        elif name in mcp_servers:
             ok = True
             source = mcp_servers[name]
             reason = "configured_in_codex_config"
-        elif name == "github" and _check_gh_cli():
-            ok = True
-            source = "gh_cli"
-            reason = "github_cli_available"
         else:
             reason = "not_configured"
         row = {"mcp": name, "available": ok, "source": source, "reason": reason}
@@ -212,6 +245,10 @@ def _build_runtime_payload(
         status = "BLOCKED"
         error_code = "IP-CAP-002"
         notes.append(f"missing_mcp={missing_mcp}")
+    if missing_mcp_auth:
+        status = "BLOCKED"
+        error_code = "IP-CAP-003"
+        notes.append(f"mcp_auth_not_ready={missing_mcp_auth}")
     if not contract["required"]:
         status = "NOT_REQUIRED"
         error_code = ""
@@ -232,6 +269,9 @@ def _build_runtime_payload(
         "preflight_requirements_checked": contract["preflight_requirements"],
         "required_skills": contract["required_skills"],
         "required_mcp": contract["required_mcp"],
+        "github_cli_present": gh_cli_present,
+        "github_auth_ready": gh_auth_ready,
+        "github_auth_status_detail": gh_auth_reason,
         "skills_checked": skill_rows,
         "active_skills": active_skills,
         "mcp_servers_checked": mcp_rows,

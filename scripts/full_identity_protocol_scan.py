@@ -104,6 +104,17 @@ def main() -> int:
     ap.add_argument("--global-catalog", default="")
     ap.add_argument("--include-repo-catalog", action="store_true")
     ap.add_argument("--with-docs-contract", action="store_true")
+    ap.add_argument(
+        "--scan-mode",
+        choices=["full", "target"],
+        default="full",
+        help="full=scan all discovered identities across selected catalogs; target=scan only explicit target identities",
+    )
+    ap.add_argument(
+        "--identity-ids",
+        default=os.environ.get("IDENTITY_IDS", ""),
+        help="target identities for --scan-mode target (space/comma separated)",
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -121,9 +132,18 @@ def main() -> int:
         catalog_list.append(("repo", repo_catalog))
     catalog_list.extend([("project", project_catalog), ("global", global_catalog)])
 
+    target_ids = [x.strip() for x in args.identity_ids.replace(",", " ").split() if x.strip()]
+    target_set = set(target_ids)
+    if args.scan_mode == "target" and not target_set:
+        print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
+        return 2
+    matched_targets: set[str] = set()
+
     payload: dict[str, Any] = {
         "repo_root": str(repo_root),
         "repo_catalog": str(repo_catalog),
+        "scan_mode": args.scan_mode,
+        "target_identities": sorted(target_set),
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
     }
@@ -135,6 +155,9 @@ def main() -> int:
             iid = str(row.get("id", "")).strip()
             if not iid:
                 continue
+            if args.scan_mode == "target" and iid not in target_set:
+                continue
+            matched_targets.add(iid)
             item: dict[str, Any] = {
                 "identity_id": iid,
                 "status": row.get("status"),
@@ -299,6 +322,19 @@ def main() -> int:
             layer_out["identities"].append(item)
 
         payload["catalogs"].append(layer_out)
+
+    if args.scan_mode == "target":
+        missing = sorted(target_set - matched_targets)
+        payload["missing_target_identities"] = missing
+        if missing:
+            if args.out:
+                out = Path(args.out).expanduser().resolve()
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                print(f"[OK] wrote: {out}")
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            print(f"[FAIL] target identities not found in selected catalogs: {missing}")
+            return 2
 
     if args.out:
         out = Path(args.out).expanduser().resolve()

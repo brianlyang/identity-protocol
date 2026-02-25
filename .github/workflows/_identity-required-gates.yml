@@ -22,6 +22,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Lint workflows (actionlint)
+        uses: rhysd/actionlint@v1
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install ast-grep
+        run: npm install -g @ast-grep/cli
+
+      - name: Path governance rules (ast-grep)
+        run: sg scan -r .github/ast-grep/no-default-repo-runtime-fallback.yml .
+
       - name: Validate protocol base
         run: python3 scripts/validate_identity_protocol.py
 
@@ -145,7 +159,7 @@ jobs:
             python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
             python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
             python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
-            python3 scripts/export_route_quality_metrics.py --identity-id "$ID"
+            IDENTITY_RUNTIME_OUTPUT_ROOT=/tmp/identity-runtime python3 scripts/export_route_quality_metrics.py --catalog identity/catalog/identities.yaml --identity-id "$ID"
             python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_knowledge_contract.py --identity-id "$ID" --self-test
             python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID" --self-test

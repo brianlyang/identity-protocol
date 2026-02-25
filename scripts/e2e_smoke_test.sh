@@ -53,6 +53,46 @@ if [ -z "$IDS" ]; then
   echo "       example: IDENTITY_IDS=office-ops-expert bash scripts/e2e_smoke_test.sh"
   exit 1
 fi
+if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
+  echo "[10.2/30] preflight writeability probe for global runtime targets"
+  if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'
+import os
+import sys
+from pathlib import Path
+import yaml
+
+catalog = Path(sys.argv[1]).expanduser().resolve()
+ids = [x.strip() for x in sys.argv[2].split() if x.strip()]
+doc = yaml.safe_load(catalog.read_text(encoding="utf-8")) or {}
+rows = [x for x in (doc.get("identities") or []) if isinstance(x, dict)]
+lookup = {str(x.get("id", "")).strip(): x for x in rows}
+errs = []
+for iid in ids:
+    row = lookup.get(iid)
+    if not row:
+        errs.append(f"{iid}:missing_in_catalog")
+        continue
+    pack = Path(str(row.get("pack_path", "")).strip()).expanduser().resolve()
+    probe = pack / "runtime" / ".e2e-write-probe"
+    try:
+        probe.mkdir(parents=True, exist_ok=False)
+        probe.rmdir()
+    except Exception as exc:
+        errs.append(f"{iid}:{exc}")
+if errs:
+    print("[FAIL] global runtime writeability preflight failed:")
+    for e in errs:
+        print(f"  - {e}")
+    sys.exit(1)
+print("[OK] global runtime writeability preflight passed")
+PY
+  then
+    echo "[FAIL] global catalog preflight blocked in current execution context."
+    echo "       recommendation: switch to project mode before e2e:"
+    echo "       source ./scripts/identity_runtime_select.sh project"
+    exit 1
+  fi
+fi
 echo "[2.45/30] repair historical rulebook schema debt (identity-scoped, safe backfill)"
 for ID in $IDS; do
   python3 scripts/repair_rulebook_schema_backfill.py --catalog "$CATALOG_PATH" --identity-id "$ID" --apply

@@ -24,7 +24,15 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
-def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _resolve_pack_and_task(catalog_path: Path, identity_id: str) -> tuple[Path, Path]:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
     target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
@@ -33,13 +41,14 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        pack = Path(pack_path).expanduser().resolve()
+        p = pack / "CURRENT_TASK.json"
         if p.exists():
-            return p
+            return pack, p
 
     legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
     if legacy.exists():
-        return legacy
+        return legacy.parent, legacy
 
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
@@ -55,9 +64,14 @@ def main() -> int:
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--out", default="")
+    ap.add_argument(
+        "--allow-repo-runtime-fallback",
+        action="store_true",
+        help="explicitly allow fallback output under <repo>/.codex/identity/runtime for fixture/debug only",
+    )
     args = ap.parse_args()
 
-    task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
+    pack_path, task_path = _resolve_pack_and_task(Path(args.catalog).expanduser().resolve(), args.identity_id)
     task = _load_json(task_path)
 
     contract = task.get("agent_handoff_contract") or {}
@@ -134,13 +148,34 @@ def main() -> int:
     }
 
     if args.out:
-        out = Path(args.out)
+        out = Path(args.out).expanduser().resolve()
     else:
         root = os.environ.get("IDENTITY_RUNTIME_OUTPUT_ROOT", "").strip()
+        repo_root = Path.cwd().resolve()
         if root:
             out = Path(root).expanduser().resolve() / "metrics" / f"{args.identity_id}-route-quality.json"
         else:
-            out = Path.cwd().resolve() / ".codex" / "identity" / "runtime" / args.identity_id / "metrics" / f"{args.identity_id}-route-quality.json"
+            pack_runtime_out = pack_path / "runtime" / "metrics" / f"{args.identity_id}-route-quality.json"
+            if _is_within(pack_runtime_out, repo_root):
+                if args.allow_repo_runtime_fallback:
+                    out = repo_root / ".codex" / "identity" / "runtime" / args.identity_id / "metrics" / f"{args.identity_id}-route-quality.json"
+                else:
+                    print(
+                        "[FAIL] IP-PATH-001 route metrics output would resolve inside protocol repo; "
+                        "set IDENTITY_RUNTIME_OUTPUT_ROOT or pass --out. "
+                        "For fixture/debug only, pass --allow-repo-runtime-fallback."
+                    )
+                    print(f"       candidate={pack_runtime_out}")
+                    return 1
+            else:
+                out = pack_runtime_out
+    if _is_within(out, Path.cwd().resolve()) and not args.allow_repo_runtime_fallback:
+        print(
+            "[FAIL] IP-PATH-001 metrics output inside repository is blocked by default; "
+            "use IDENTITY_RUNTIME_OUTPUT_ROOT / --out, or explicit --allow-repo-runtime-fallback for debug only."
+        )
+        print(f"       out={out}")
+        return 1
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

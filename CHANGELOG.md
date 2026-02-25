@@ -45,6 +45,21 @@
       - normalized writeback validator invocation to use explicit
         `--repo-catalog + --local-catalog` binding in e2e/readiness/three-plane
         (prevents implicit global-catalog drift during instance-plane evaluation)
+      - capability activation now enforces GitHub auth readiness:
+        - `scripts/validate_identity_capability_activation.py` splits
+          `github` MCP readiness into `cli_present` + `auth_ready`
+        - when `required_mcp` includes `github` and auth is not ready,
+          status is `BLOCKED` with `IP-CAP-003` (no false `ACTIVATED`)
+      - `scripts/full_identity_protocol_scan.py` now supports
+        `--scan-mode target --identity-ids ...` in addition to full scan mode,
+        so release preflight can isolate target-instance posture from historical backlog
+      - `scripts/export_route_quality_metrics.py` removed default repo runtime fallback:
+        - defaults now require `IDENTITY_RUNTIME_OUTPUT_ROOT` or
+          `<resolved_pack_path>/runtime`
+        - repo fallback moved behind explicit
+          `--allow-repo-runtime-fallback` (fixture/debug only)
+      - `scripts/e2e_smoke_test.sh` now adds early global-runtime writeability preflight
+        and fail-fast guidance to switch to `project` mode when global runtime is not writable
     - `e2e_smoke_test.sh` now emits dual-plane terminal states
       (`instance_plane_status`, `release_plane_status`)
   - repo-plane contract tooling improvements:
@@ -54,6 +69,12 @@
   - identity session/runtime lifecycle quality:
     - added `scripts/sync_session_identity.py` to remove activation-chain missing-script warning
     - added single-active precheck/auto-converge option in activation/update paths
+  - CI security/path governance hardening:
+    - required-gates workflow now includes:
+      - actionlint (workflow lint)
+      - gitleaks (secret scanning)
+      - ast-grep path governance rule:
+        `.github/ast-grep/no-default-repo-runtime-fallback.yml`
   - governance documentation updates:
     - added
       `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md`
