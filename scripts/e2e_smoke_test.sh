@@ -125,6 +125,9 @@ for ID in $IDS; do
   echo "[19/30][$ID] validate orchestration contract"
   python3 scripts/validate_identity_orchestration_contract.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
+  echo "[19.5/30][$ID] probe capability activation (skill/mcp/tool attachment)"
+  python3 scripts/validate_identity_capability_activation.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID"
+
   echo "[20/30][$ID] validate knowledge contract (self-test)"
   python3 scripts/validate_identity_knowledge_contract.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test
 
@@ -177,7 +180,7 @@ p=sys.argv[1]
 d=json.load(open(p))
 ew=d.get("experience_writeback") or {}
 mandatory = all(
-    k in d for k in ("permission_state","writeback_status","next_action")
+    k in d for k in ("permission_state","writeback_status","next_action","skills_used","mcp_tools_used","tool_calls_used","capability_activation_status","capability_activation_error_code")
 ) and isinstance(ew, dict) and ("status" in ew) and ("error_code" in ew)
 vals = [
     str(bool(d.get("all_ok", False))).lower(),
@@ -185,17 +188,21 @@ vals = [
     str(d.get("permission_state","")) or "__EMPTY__",
     str(d.get("next_action","")) or "__EMPTY__",
     str(ew.get("error_code","") or d.get("permission_error_code","")) or "__EMPTY__",
+    str(d.get("capability_activation_status","")) or "__EMPTY__",
+    str(d.get("capability_activation_error_code","")) or "__EMPTY__",
     str(bool(mandatory)).lower(),
 ]
 print("\t".join(vals))
 PY
 )
-  IFS=$'\t' read -r UPG_ALL_OK UPG_WB_STATUS UPG_PERMISSION UPG_NEXT_ACTION UPG_ERR_CODE UPG_MANDATORY_OK <<<"$UPG_META_LINE"
+  IFS=$'\t' read -r UPG_ALL_OK UPG_WB_STATUS UPG_PERMISSION UPG_NEXT_ACTION UPG_ERR_CODE UPG_CAP_STATUS UPG_CAP_ERR_CODE UPG_MANDATORY_OK <<<"$UPG_META_LINE"
   [ "${UPG_WB_STATUS}" = "__EMPTY__" ] && UPG_WB_STATUS=""
   [ "${UPG_PERMISSION}" = "__EMPTY__" ] && UPG_PERMISSION=""
   [ "${UPG_NEXT_ACTION}" = "__EMPTY__" ] && UPG_NEXT_ACTION=""
   [ "${UPG_ERR_CODE}" = "__EMPTY__" ] && UPG_ERR_CODE=""
-  echo "[26.1/30][$ID] update report summary: rc=${UPDATE_RC} all_ok=${UPG_ALL_OK} writeback=${UPG_WB_STATUS} permission=${UPG_PERMISSION} next_action=${UPG_NEXT_ACTION} error_code=${UPG_ERR_CODE}"
+  [ "${UPG_CAP_STATUS}" = "__EMPTY__" ] && UPG_CAP_STATUS=""
+  [ "${UPG_CAP_ERR_CODE}" = "__EMPTY__" ] && UPG_CAP_ERR_CODE=""
+  echo "[26.1/30][$ID] update report summary: rc=${UPDATE_RC} all_ok=${UPG_ALL_OK} writeback=${UPG_WB_STATUS} permission=${UPG_PERMISSION} capability=${UPG_CAP_STATUS} next_action=${UPG_NEXT_ACTION} error_code=${UPG_ERR_CODE} capability_error=${UPG_CAP_ERR_CODE}"
   if [ "$UPG_MANDATORY_OK" != "true" ]; then
     echo "[FAIL] update report missing mandatory fields for recoverable flow semantics"
     exit 1
@@ -236,6 +243,13 @@ PY
 
   echo "[27.8/30][$ID] validate identity prompt lifecycle contract"
   python3 scripts/validate_identity_prompt_lifecycle.py --identity-id "$ID" --report "$UPGRADE_REPORT"
+
+  echo "[27.9/30][$ID] validate capability activation evidence in upgrade report"
+  CAP_ARGS=(--identity-id "$ID" --report "$UPGRADE_REPORT")
+  if [ "${UPG_ALL_OK}" = "true" ] && [ "${UPG_WB_STATUS}" = "WRITTEN" ] && [ "${UPG_PERMISSION}" = "WRITEBACK_WRITTEN" ]; then
+    CAP_ARGS+=(--require-activated)
+  fi
+  python3 scripts/validate_identity_capability_activation.py "${CAP_ARGS[@]}"
 
   echo "[28/30][$ID] validate capability arbitration contract (self-test + upgrade linkage)"
   python3 scripts/validate_identity_capability_arbitration.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"

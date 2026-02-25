@@ -326,11 +326,13 @@ def _base_report(
     runtime_output_root: str,
     metrics_path: str,
     prompt_contract: dict[str, Any],
+    capability_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Build a report skeleton with mandatory closure fields always present.
     This keeps failed/blocked/safe-auto reports machine-auditable.
     """
+    capability_contract = capability_contract or {}
     return {
         "run_id": run_id,
         "identity_id": identity_id,
@@ -362,6 +364,16 @@ def _base_report(
         "writeback_precheck": {"all_writable": False, "reason": "unknown"},
         "runtime_output_root": runtime_output_root,
         "metrics_path": metrics_path,
+        "skills_used": list(capability_contract.get("skills_used") or []),
+        "mcp_tools_used": list(capability_contract.get("mcp_tools_used") or []),
+        "tool_calls_used": list(capability_contract.get("tool_calls_used") or []),
+        "active_skills": list(capability_contract.get("active_skills") or []),
+        "mcp_servers_checked": list(capability_contract.get("mcp_servers_checked") or []),
+        "tool_routes": list(capability_contract.get("tool_routes") or []),
+        "capability_activation_status": str(capability_contract.get("capability_activation_status", "UNKNOWN")),
+        "capability_activation_error_code": str(capability_contract.get("capability_activation_error_code", "")),
+        "capability_activation_notes": list(capability_contract.get("capability_activation_notes") or []),
+        "capability_contract_required": bool(capability_contract.get("capability_contract_required", True)),
         "next_action": "",
         "failure_reason": "",
         "protocol_mode": protocol["protocol_mode"],
@@ -379,6 +391,92 @@ def _base_report(
         "identity_prompt_change_note": "",
         **prompt_contract,
     }
+
+
+def _default_capability_contract_payload(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+) -> dict[str, Any]:
+    return {
+        "identity_id": identity_id,
+        "catalog_path": str(catalog_path.expanduser().resolve()),
+        "skills_used": [],
+        "mcp_tools_used": [],
+        "tool_calls_used": [],
+        "active_skills": [],
+        "mcp_servers_checked": [],
+        "tool_routes": [],
+        "capability_activation_status": "ERROR",
+        "capability_activation_error_code": "IP-CAP-000",
+        "capability_activation_notes": ["validator_execution_failed"],
+        "capability_contract_required": True,
+    }
+
+
+def _resolve_capability_contract(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    runtime_output_root: Path,
+    run_id: str,
+) -> dict[str, Any]:
+    payload = _default_capability_contract_payload(identity_id=identity_id, catalog_path=catalog_path)
+    out_path: Path | None = None
+    out_candidates = [
+        runtime_output_root / "logs" / "capability" / f"{identity_id}-{run_id}.json",
+        Path("/tmp/identity-runtime") / identity_id / "logs" / "capability" / f"{identity_id}-{run_id}.json",
+    ]
+    for candidate in out_candidates:
+        try:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            out_path = candidate
+            break
+        except Exception:
+            continue
+    cmd = [
+        "python3",
+        "scripts/validate_identity_capability_activation.py",
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--repo-catalog",
+        str(repo_catalog_path.expanduser().resolve()),
+        "--identity-id",
+        identity_id,
+    ]
+    if out_path is not None:
+        cmd.extend(["--out", str(out_path)])
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if out_path is not None and out_path.exists():
+        try:
+            raw = _load_json(out_path)
+            if isinstance(raw, dict):
+                payload.update(raw)
+        except Exception:
+            pass
+    payload["capability_activation_validator_rc"] = proc.returncode
+    payload["capability_activation_validator_stdout_tail"] = (
+        (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else ""
+    )
+    payload["capability_activation_validator_stderr_tail"] = (
+        (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else ""
+    )
+    payload["capability_activation_report_path"] = str(out_path) if out_path is not None else ""
+    if out_path is None:
+        notes = list(payload.get("capability_activation_notes") or [])
+        notes.append("capability_report_path_unwritable")
+        payload["capability_activation_notes"] = notes
+    return payload
+
+
+def _capability_next_action(cap: dict[str, Any]) -> str:
+    code = str(cap.get("capability_activation_error_code", "")).strip()
+    if code == "IP-CAP-001":
+        return "install_required_skills_then_rerun_update"
+    if code == "IP-CAP-002":
+        return "configure_required_mcp_then_rerun_update"
+    return "resolve_capability_activation_then_rerun_update"
 
 
 def _enforce_protocol_runtime_separation(
@@ -452,6 +550,15 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)
+    capability_contract = _resolve_capability_contract(
+        identity_id=args.identity_id,
+        catalog_path=Path(args.catalog),
+        repo_catalog_path=Path(args.repo_catalog),
+        runtime_output_root=runtime_output_root,
+        run_id=run_id,
+    )
+    capability_status = str(capability_contract.get("capability_activation_status", "ERROR")).strip().upper()
+    capability_error_code = str(capability_contract.get("capability_activation_error_code", "")).strip()
 
     arb = task.get("capability_arbitration_contract") or {}
     thresholds = (arb.get("trigger_thresholds") or {}) if isinstance(arb, dict) else {}
@@ -467,6 +574,49 @@ def main() -> int:
         metrics_path = default_metrics_path
     else:
         metrics_path = contract_metrics_path
+    if capability_status in {"BLOCKED", "ERROR"} and bool(capability_contract.get("capability_contract_required", True)):
+        report = _base_report(
+            run_id=run_id,
+            identity_id=args.identity_id,
+            now=now,
+            mode=args.mode,
+            protocol=protocol,
+            catalog_path=args.catalog,
+            resolved_scope=str(args.resolved_scope or ""),
+            resolved_pack_path=str(args.resolved_pack_path or str(pack)),
+            runtime_output_root=str(runtime_output_root),
+            metrics_path=str(metrics_path),
+            prompt_contract=prompt_contract,
+            capability_contract=capability_contract,
+        )
+        report.update(
+            {
+                "upgrade_required": False,
+                "trigger_reasons": [f"capability_activation_blocked:{capability_error_code or 'IP-CAP-000'}"],
+                "permission_state": "PRECHECK",
+                "permission_error_code": "",
+                "escalation_recommendation": "activate required skill/mcp attachments before retry",
+                "writeback_precheck": {"all_writable": False, "reason": "capability_activation_blocked"},
+                "next_action": _capability_next_action(capability_contract),
+                "failure_reason": "capability activation blocked before upgrade execution",
+            }
+        )
+        report["experience_writeback"].update(
+            {
+                "required": False,
+                "status": "NOT_REQUIRED",
+                "error_code": capability_error_code or "IP-CAP-000",
+                "notes": "capability activation preflight blocked execution",
+            }
+        )
+        report["writeback_status"] = str(report["experience_writeback"]["status"])
+        report_path = out_dir / f"{run_id}.json"
+        _write_json(report_path, report)
+        print(f"report={report_path}")
+        print("upgrade_required=False")
+        print("all_ok=False")
+        print(f"next_action={report.get('next_action','')}")
+        return 2
     if not metrics_path.exists():
         report = _base_report(
             run_id=run_id,
@@ -480,6 +630,7 @@ def main() -> int:
             runtime_output_root=str(runtime_output_root),
             metrics_path=str(metrics_path),
             prompt_contract=prompt_contract,
+            capability_contract=capability_contract,
         )
         report.update(
             {
@@ -556,6 +707,8 @@ def main() -> int:
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
             "resolved_scope": str(args.resolved_scope or ""),
             "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+            "capability_activation_status": capability_status,
+            "capability_activation_error_code": capability_error_code,
         }
     )
 
@@ -638,6 +791,7 @@ def main() -> int:
                         runtime_output_root=str(runtime_output_root),
                         metrics_path=str(metrics_path),
                         prompt_contract=prompt_contract,
+                        capability_contract=capability_contract,
                     ),
                     "upgrade_required": upgrade_required,
                     "trigger_reasons": reasons,
@@ -928,6 +1082,18 @@ def main() -> int:
         "writeback_precheck": precheck,
         "runtime_output_root": str(runtime_output_root),
         "metrics_path": str(metrics_path),
+        "skills_used": list(capability_contract.get("skills_used") or []),
+        "mcp_tools_used": list(capability_contract.get("mcp_tools_used") or []),
+        "tool_calls_used": list(capability_contract.get("tool_calls_used") or []),
+        "active_skills": list(capability_contract.get("active_skills") or []),
+        "mcp_servers_checked": list(capability_contract.get("mcp_servers_checked") or []),
+        "tool_routes": list(capability_contract.get("tool_routes") or []),
+        "capability_activation_status": str(capability_contract.get("capability_activation_status", "UNKNOWN")),
+        "capability_activation_error_code": str(capability_contract.get("capability_activation_error_code", "")),
+        "capability_activation_notes": list(capability_contract.get("capability_activation_notes") or []),
+        "capability_contract_required": bool(capability_contract.get("capability_contract_required", True)),
+        "capability_activation_validator_rc": capability_contract.get("capability_activation_validator_rc"),
+        "capability_activation_report_path": str(capability_contract.get("capability_activation_report_path", "")),
         "next_action": next_action,
         "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
     }
@@ -939,15 +1105,15 @@ def main() -> int:
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-        "resolved_scope": str(args.resolved_scope or ""),
-        "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
-        "prompt_change_required": prompt_change_required,
-        "prompt_change_applied": prompt_change_applied,
-        "identity_prompt_hash_before": prompt_hash_before,
-        "identity_prompt_hash_after": prompt_hash_after,
-        "identity_prompt_change_note": prompt_change_note,
-        **prompt_contract_final,
-    }
+            "resolved_scope": str(args.resolved_scope or ""),
+            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+            "prompt_change_required": prompt_change_required,
+            "prompt_change_applied": prompt_change_applied,
+            "identity_prompt_hash_before": prompt_hash_before,
+            "identity_prompt_hash_after": prompt_hash_after,
+            "identity_prompt_change_note": prompt_change_note,
+            **prompt_contract_final,
+        }
     )
     report_path = out_dir / f"{run_id}.json"
     _write_json(report_path, report)

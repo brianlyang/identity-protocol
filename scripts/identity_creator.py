@@ -910,6 +910,21 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] instance isolation validation failed; update blocked")
             return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_identity_capability_activation.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] capability activation preflight failed; update blocked")
+            return rc
         cmd = [
             "python3",
             "scripts/execute_identity_upgrade.py",

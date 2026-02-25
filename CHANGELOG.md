@@ -31,6 +31,17 @@
   - update/e2e/reporting governance consistency uplift:
     - `execute_identity_upgrade.py` now guarantees structured failure/report fields
       for recoverable vs hard-boundary interpretation
+    - added capability activation evidence contract for skill/MCP/tool attachment:
+      - `scripts/validate_identity_capability_activation.py`
+      - `identity_creator update` now probes capability activation before upgrade execution
+      - upgrade execution report now always includes
+        `skills_used` / `mcp_tools_used` / `tool_calls_used` /
+        `capability_activation_status` / `capability_activation_error_code`
+      - wired capability evidence checks into:
+        - `scripts/e2e_smoke_test.sh`
+        - `scripts/release_readiness_check.py`
+        - `scripts/report_three_plane_status.py`
+        - `scripts/full_identity_protocol_scan.py`
     - `e2e_smoke_test.sh` now emits dual-plane terminal states
       (`instance_plane_status`, `release_plane_status`)
   - repo-plane contract tooling improvements:

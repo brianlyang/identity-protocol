@@ -114,7 +114,19 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
 
     data = _load_json(str(report_path))
     ew = data.get("experience_writeback") or {}
-    mandatory = all(k in data for k in ("permission_state", "writeback_status", "next_action")) and isinstance(ew, dict) and (
+    mandatory = all(
+        k in data
+        for k in (
+            "permission_state",
+            "writeback_status",
+            "next_action",
+            "skills_used",
+            "mcp_tools_used",
+            "tool_calls_used",
+            "capability_activation_status",
+            "capability_activation_error_code",
+        )
+    ) and isinstance(ew, dict) and (
         "status" in ew and "error_code" in ew
     )
     wb = str(data.get("writeback_status", "")).strip()
@@ -122,6 +134,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     all_ok = _bool(data.get("all_ok", False))
     err_code = str((ew.get("error_code", "") or data.get("permission_error_code", ""))).strip()
     next_action = str(data.get("next_action", "")).strip()
+    cap_status = str(data.get("capability_activation_status", "")).strip().upper()
+    cap_error = str(data.get("capability_activation_error_code", "")).strip()
     hard_boundary = err_code.startswith("IP-PATH-") or err_code.startswith("IP-PERM-")
 
     validators: dict[str, Any] = {}
@@ -182,11 +196,31 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_prompt_lc,
     }
 
+    cap_cmd = [
+        "python3",
+        "scripts/validate_identity_capability_activation.py",
+        "--identity-id",
+        args.identity_id,
+        "--report",
+        str(report_path),
+    ]
+    if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN":
+        cap_cmd.append("--require-activated")
+    rc_cap, out_cap, err_cap = _run(cap_cmd)
+    validators["capability_activation"] = {
+        "rc": rc_cap,
+        "ok": rc_cap == 0,
+        "out": out_cap,
+        "err": err_cap,
+    }
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,
         "writeback_status": wb,
         "permission_state": ps,
+        "capability_activation_status": cap_status,
+        "capability_activation_error_code": cap_error,
         "next_action": next_action,
         "error_code": err_code,
         "mandatory_fields_complete": bool(mandatory),
@@ -195,7 +229,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
 
     validators_all_ok = all(v.get("ok", False) for v in validators.values())
-    if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN" and mandatory and validators_all_ok:
+    capability_strict_ok = cap_status in {"ACTIVATED", "NOT_REQUIRED"}
+    if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN" and mandatory and validators_all_ok and capability_strict_ok:
         return "CLOSED", detail
     if hard_boundary:
         return "BLOCKED", detail

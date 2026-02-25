@@ -59,6 +59,20 @@ def _parse_json_safely(raw: str) -> dict[str, Any] | None:
     return None
 
 
+def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
+    if not report_dir.exists():
+        return None
+    rows = [
+        p
+        for p in report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json")
+        if not p.name.endswith("-patch-plan.json")
+    ]
+    if not rows:
+        return None
+    rows.sort(key=lambda p: p.stat().st_mtime)
+    return rows[-1]
+
+
 def _severity_for_row(row: dict[str, Any]) -> str:
     active = str(row.get("status", "")).lower() == "active"
     profile = str(row.get("profile", "")).lower()
@@ -71,9 +85,13 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("prompt_quality", "prompt_activation", "prompt_lifecycle")
     )
-    if active and profile == "runtime" and (core_fail or prompt_fail):
+    capability_fail = any(
+        name in checks and not checks.get(name, {}).get("ok", False)
+        for name in ("capability_activation_preflight", "capability_activation_report")
+    )
+    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail):
         return "P0"
-    if core_fail or prompt_fail:
+    if core_fail or prompt_fail or capability_fail:
         return "P1"
     return "OK"
 
@@ -199,8 +217,22 @@ def main() -> int:
                     iid,
                 ],
             }
+            cap_preflight_cmd = [
+                "python3",
+                "scripts/validate_identity_capability_activation.py",
+                "--catalog",
+                str(catalog),
+                "--repo-catalog",
+                str(repo_catalog),
+                "--identity-id",
+                iid,
+            ]
             if is_active_runtime:
-                runtime_report_dir = str((Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"))
+                cap_preflight_cmd.append("--require-activated")
+            checks["capability_activation_preflight"] = cap_preflight_cmd
+            if is_active_runtime:
+                runtime_report_dir_path = Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"
+                runtime_report_dir = str(runtime_report_dir_path)
                 checks["prompt_activation"] = [
                     "python3",
                     "scripts/validate_identity_prompt_activation.py",
@@ -219,6 +251,17 @@ def main() -> int:
                     "--report-dir",
                     runtime_report_dir,
                 ]
+                latest_report = _latest_runtime_report(iid, runtime_report_dir_path)
+                if latest_report:
+                    checks["capability_activation_report"] = [
+                        "python3",
+                        "scripts/validate_identity_capability_activation.py",
+                        "--identity-id",
+                        iid,
+                        "--report",
+                        str(latest_report),
+                        "--require-activated",
+                    ]
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 item["checks"][name] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}

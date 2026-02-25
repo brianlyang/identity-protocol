@@ -102,6 +102,16 @@ def main() -> int:
         ["python3", "scripts/validate_identity_install_provenance.py", "--catalog", catalog, "--identity-id", identity_id],
         [
             "python3",
+            "scripts/validate_identity_capability_activation.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+        ],
+        [
+            "python3",
             "scripts/validate_identity_self_upgrade_enforcement.py",
             "--identity-id",
             identity_id,
@@ -211,6 +221,17 @@ def main() -> int:
             identity_id,
             "--report",
             execution_report,
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_capability_activation.py",
+            "--identity-id",
+            identity_id,
+            "--report",
+            execution_report,
+            "--require-activated",
         ]
     )
     seq.append(
