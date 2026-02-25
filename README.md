@@ -15,6 +15,10 @@ This system is intentionally designed to solve three recurring failure modes:
 3. **Identity becoming a static shell**  
    `IDENTITY_PROMPT.md` is treated as a runtime contract object (activation, validation, hash evidence, lifecycle updates), not just a passive file.
    Current loading model is **command-time reload** (per validate/update/e2e/readiness invocation), not daemon hot-reload.
+   Upgrade execution reports now carry prompt activation evidence fields:
+   `identity_prompt_path`, `identity_prompt_sha256`, `identity_prompt_bytes`,
+   `identity_prompt_activated_at`, `identity_prompt_source_layer`, `identity_prompt_scope`,
+   `identity_prompt_status`.
 
 ### Practical outcomes
 

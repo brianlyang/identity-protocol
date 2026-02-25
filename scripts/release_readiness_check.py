@@ -213,6 +213,18 @@ def main() -> int:
             execution_report,
         ]
     )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_prompt_activation.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--report",
+            execution_report,
+        ]
+    )
 
     for cmd in seq:
         rc = _run(cmd)

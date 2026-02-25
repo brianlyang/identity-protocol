@@ -925,6 +925,8 @@ def main() -> int:
             args.protocol_root,
             "--protocol-mode",
             args.protocol_mode,
+            "--repo-catalog",
+            args.repo_catalog,
             "--resolved-scope",
             str(resolved.get("resolved_scope", "")),
             "--resolved-pack-path",

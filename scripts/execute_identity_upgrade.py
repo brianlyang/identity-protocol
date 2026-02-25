@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from resolve_identity_context import collect_protocol_evidence, default_identity_home
+from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -47,6 +47,49 @@ def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:
     if legacy.exists():
         return legacy
     raise FileNotFoundError(f"identity pack not found: {identity_id}")
+
+
+def _resolve_prompt_contract(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    resolved_scope: str,
+    resolved_pack_path: str,
+) -> dict[str, Any]:
+    source_layer = "local"
+    scope = str(resolved_scope or "").strip()
+    pack = Path(str(resolved_pack_path or "")).expanduser().resolve() if str(resolved_pack_path or "").strip() else None
+    if pack is None:
+        ctx = resolve_identity(
+            identity_id,
+            repo_catalog_path.expanduser().resolve(),
+            catalog_path.expanduser().resolve(),
+            preferred_scope=scope,
+            allow_conflict=True,
+        )
+        source_layer = str(ctx.get("source_layer", "local"))
+        scope = str(ctx.get("resolved_scope", "")).strip()
+        pack = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve()
+    prompt_path = pack / "IDENTITY_PROMPT.md"
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    contract = {
+        "identity_prompt_path": str(prompt_path),
+        "identity_prompt_sha256": "",
+        "identity_prompt_bytes": 0,
+        "identity_prompt_activated_at": now,
+        "identity_prompt_source_layer": source_layer,
+        "identity_prompt_scope": scope,
+        "identity_prompt_status": "MISSING",
+    }
+    if prompt_path.exists():
+        try:
+            contract["identity_prompt_sha256"] = _sha256_file(prompt_path)
+            contract["identity_prompt_bytes"] = int(prompt_path.stat().st_size)
+            contract["identity_prompt_status"] = "ACTIVATED"
+        except Exception:
+            contract["identity_prompt_status"] = "ERROR"
+    return contract
 
 
 def _sha256_file(path: Path) -> str:
@@ -241,6 +284,7 @@ def _base_report(
     resolved_pack_path: str,
     runtime_output_root: str,
     metrics_path: str,
+    prompt_contract: dict[str, Any],
 ) -> dict[str, Any]:
     """
     Build a report skeleton with mandatory closure fields always present.
@@ -287,6 +331,7 @@ def _base_report(
         "catalog_path": str(Path(catalog_path).expanduser().resolve()),
         "resolved_scope": str(resolved_scope or ""),
         "resolved_pack_path": str(resolved_pack_path or ""),
+        **prompt_contract,
     }
 
 
@@ -322,6 +367,7 @@ def main() -> int:
     ap.add_argument("--out-dir", default="/tmp/identity-upgrade-reports")
     ap.add_argument("--protocol-root", default="")
     ap.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--resolved-scope", default="")
     ap.add_argument("--resolved-pack-path", default="")
     ap.add_argument(
@@ -346,6 +392,13 @@ def main() -> int:
         identity_id=args.identity_id,
     )
     runtime_output_root = _resolve_runtime_output_root(effective_pack, args.identity_id, protocol_root)
+    prompt_contract = _resolve_prompt_contract(
+        identity_id=args.identity_id,
+        catalog_path=Path(args.catalog),
+        repo_catalog_path=Path(args.repo_catalog),
+        resolved_scope=str(args.resolved_scope or ""),
+        resolved_pack_path=str(args.resolved_pack_path or str(effective_pack)),
+    )
     out_dir = Path(args.out_dir)
     if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
         out_dir = runtime_output_root / "reports"
@@ -379,6 +432,7 @@ def main() -> int:
             resolved_pack_path=str(args.resolved_pack_path or str(pack)),
             runtime_output_root=str(runtime_output_root),
             metrics_path=str(metrics_path),
+            prompt_contract=prompt_contract,
         )
         report.update(
             {
@@ -529,6 +583,7 @@ def main() -> int:
                         resolved_pack_path=str(args.resolved_pack_path or str(pack)),
                         runtime_output_root=str(runtime_output_root),
                         metrics_path=str(metrics_path),
+                        prompt_contract=prompt_contract,
                     ),
                     "upgrade_required": upgrade_required,
                     "trigger_reasons": reasons,
@@ -790,9 +845,10 @@ def main() -> int:
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-            "resolved_scope": str(args.resolved_scope or ""),
-            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
-        }
+        "resolved_scope": str(args.resolved_scope or ""),
+        "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+        **prompt_contract,
+    }
     )
     report_path = out_dir / f"{run_id}.json"
     _write_json(report_path, report)

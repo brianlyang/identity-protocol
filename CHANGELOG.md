@@ -8,6 +8,10 @@
     - standardized output contract now includes
       `instance_plane_status` / `repo_plane_status` / `release_plane_status`
       plus release evidence fields and `overall_release_decision`
+  - upgraded `IDENTITY_PROMPT.md` from static doc to runtime contract object:
+    - `execute_identity_upgrade.py` now writes prompt activation evidence fields into execution reports
+    - added `scripts/validate_identity_prompt_activation.py`
+    - wired prompt activation validator into e2e (`27.7/30`), release readiness, and three-plane status reporter
   - added full-repo identity governance scanner:
     - `scripts/full_identity_protocol_scan.py`
     - scans project/global catalogs with shared validator matrix and

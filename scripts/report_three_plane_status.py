@@ -151,6 +151,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_perm, out_perm, err_perm = _run(perm_cmd)
     validators["permission_state"] = {"rc": rc_perm, "ok": rc_perm == 0, "out": out_perm, "err": err_perm}
 
+    rc_prompt, out_prompt, err_prompt = _run(
+        [
+            "python3",
+            "scripts/validate_identity_prompt_activation.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--report",
+            str(report_path),
+        ]
+    )
+    validators["prompt_activation"] = {"rc": rc_prompt, "ok": rc_prompt == 0, "out": out_prompt, "err": err_prompt}
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,

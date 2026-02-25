@@ -231,6 +231,9 @@ PY
   echo "[27.6/30][$ID] validate identity binding tuple contract"
   python3 scripts/validate_identity_binding_tuple.py --identity-id "$ID" --report "$UPGRADE_REPORT"
 
+  echo "[27.7/30][$ID] validate identity prompt activation contract"
+  python3 scripts/validate_identity_prompt_activation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --report "$UPGRADE_REPORT"
+
   echo "[28/30][$ID] validate capability arbitration contract (self-test + upgrade linkage)"
   python3 scripts/validate_identity_capability_arbitration.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"
 
