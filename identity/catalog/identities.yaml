@@ -1,5 +1,5 @@
 version: "1.0"
-updated_at: "2026-02-23"
+updated_at: "2026-02-26"
 default_identity: ""
 identities:
   - id: "store-manager"
@@ -59,3 +59,71 @@ identities:
       required_artifacts:
         - "submission_snapshot.json"
         - "listing_gate_summary.json"
+
+  - id: "system-requirements-analyst"
+    title: "System Requirements Analyst"
+    description: "Converts mixed-source documents into requirement, architecture, and vibe-coding handoff packs for interactive POC delivery."
+    status: "inactive"
+    owner: "architecture-and-product"
+    methodology_version: "v1.5"
+    profile: "fixture"
+    runtime_mode: "demo_only"
+    pack_path: "identity/packs/system-requirements-analyst"
+    tags:
+      - "requirements"
+      - "system-design"
+      - "vibe-coding"
+      - "architecture"
+    capability_bindings:
+      skills:
+        - "identity-creator"
+        - "web-docs-to-markdown"
+      mcp:
+        - "chrome-devtools"
+        - "fetcher"
+        - "n8n-mcp"
+        - "context7"
+    governance:
+      hard_guardrails:
+        - "evidence-traceability-required"
+        - "no-architecture-without-tradeoff-analysis"
+        - "no-vibe-handoff-without-acceptance-criteria"
+      escalation:
+        offline_blockers_only: true
+        notify_channel: "ops-notification-router"
+    interface:
+      display_name: "System Requirements Analyst"
+      short_description: "Transforms source documents into implementation-ready requirements and system designs."
+      default_prompt: "Operate as system-requirements-analyst and output requirements, architecture, and vibe handoff artifacts with source traceability."
+    policy:
+      allow_implicit_activation: true
+      activation_priority: 88
+      conflict_resolution: "priority_then_objective"
+    dependencies:
+      tools:
+        - type: "mcp"
+          value: "chrome-devtools"
+          description: "Read web docs and capture UI/runtime evidence."
+        - type: "mcp"
+          value: "fetcher"
+          description: "Retrieve official docs as structured text for synthesis."
+        - type: "mcp"
+          value: "context7"
+          description: "Supplemental structured library/doc context lookup."
+        - type: "network"
+          value: "official-doc-sites"
+          description: "Official product docs for OpenAI, Claude, Google AI Studio, Kimi, and MCP."
+        - type: "filesystem_scope"
+          value: "resource/input-docs,resource/reports,resource/requirements,resource/system-design,resource/vibe-handoff"
+          description: "Local evidence and report output paths for requirements workflow."
+    observability:
+      event_topics:
+        - "requirements.generated"
+        - "architecture.generated"
+        - "vibe_handoff.generated"
+        - "requirements.blocked"
+      required_artifacts:
+        - "resource/requirements/*.md"
+        - "resource/system-design/*.md"
+        - "resource/vibe-handoff/*.md"
+        - "resource/vibe-handoff/*.json"

@@ -1,0 +1,7 @@
+id: "system-requirements-analyst"
+title: "System Requirements Analyst"
+description: "Converts mixed-source documents into requirement, architecture, and vibe-coding handoff packs for interactive POC delivery."
+status: "inactive"
+methodology_version: "v1.5"
+profile: "fixture"
+runtime_mode: "demo_only"

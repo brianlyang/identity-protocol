@@ -1,0 +1,29 @@
+{
+  "handoff_id": "handoff-2026-02-20-neg-002",
+  "task_id": "system-requirements-analyst_bootstrap",
+  "from_agent": "product-visual-qa",
+  "to_agent": "system-requirements-analyst-master",
+  "input_scope": "negative sample: forbidden mutation",
+  "actions_taken": [
+    "tried to alter top-level gate"
+  ],
+  "artifacts": [
+    {
+      "path": "identity/runtime/examples/handoff/artifacts/task-10000514174106-route-audit.md",
+      "kind": "route_audit"
+    }
+  ],
+  "result": "FAIL",
+  "next_action": {
+    "owner": "system-requirements-analyst-master",
+    "action": "Reject sub-agent mutation and reassign task",
+    "input": "policy=mutation_forbidden"
+  },
+  "rulebook_update": {
+    "applied": false,
+    "evidence_run_id": ""
+  },
+  "attempted_mutations": [
+    "gates"
+  ]
+}

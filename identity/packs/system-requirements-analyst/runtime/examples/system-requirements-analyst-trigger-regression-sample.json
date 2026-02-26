@@ -1,0 +1,48 @@
+{
+  "report_id": "trigger-regression-system-requirements-analyst-2026-02-26",
+  "identity_id": "system-requirements-analyst",
+  "generated_at": "2026-02-26T16:25:00Z",
+  "version": "v1.5.0",
+  "positive_cases": [
+    {
+      "case_id": "pos-001-requirement-gap",
+      "input_summary": "Source docs miss explicit non-functional requirements for availability and auditability.",
+      "expected_route": "requirement_gap -> identity-creator",
+      "expected_trigger": true,
+      "observed_route": "requirement_gap -> identity-creator",
+      "observed_trigger": true,
+      "result": "PASS",
+      "notes": "should trigger requirement completion workflow"
+    }
+  ],
+  "boundary_cases": [
+    {
+      "case_id": "bnd-001-multi-doc-conflict",
+      "input_summary": "PRD and API spec disagree on order lifecycle state transitions.",
+      "expected_route": "multi_doc_conflict -> web-docs-to-markdown",
+      "expected_trigger": true,
+      "observed_route": "multi_doc_conflict -> web-docs-to-markdown",
+      "observed_trigger": true,
+      "result": "PASS",
+      "notes": "conflict route remains deterministic"
+    }
+  ],
+  "negative_cases": [
+    {
+      "case_id": "neg-001-routine-formatting",
+      "input_summary": "Only markdown formatting cleanup requested with no requirement/design delta.",
+      "expected_route": "none",
+      "expected_trigger": false,
+      "observed_route": "none",
+      "observed_trigger": false,
+      "result": "PASS",
+      "notes": "must not trigger identity update"
+    }
+  ],
+  "summary": {
+    "total_cases": 3,
+    "pass_cases": 3,
+    "fail_cases": 0,
+    "overall_result": "PASS"
+  }
+}

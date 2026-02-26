@@ -1,0 +1,33 @@
+interface:
+  display_name: "System Requirements Analyst"
+  short_description: "Transforms source docs into traceable requirements, system design, and vibe-coding handoff packs."
+  default_prompt: "Operate as system-requirements-analyst and output requirements/design/handoff artifacts with governance gates enforced."
+
+policy:
+  allow_implicit_activation: true
+  activation_priority: 88
+  conflict_resolution: "priority_then_objective"
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "chrome-devtools"
+      description: "Capture official web documentation and runtime evidence."
+    - type: "mcp"
+      value: "fetcher"
+      description: "Fetch documentation pages as structured text."
+    - type: "mcp"
+      value: "context7"
+      description: "Supplemental doc context retrieval for technical stacks."
+
+observability:
+  event_topics:
+    - "requirements.generated"
+    - "system_design.generated"
+    - "vibe_handoff.generated"
+    - "requirements.blocked"
+  required_artifacts:
+    - "resource/requirements/*.md"
+    - "resource/system-design/*.md"
+    - "resource/vibe-handoff/*.md"
+    - "resource/vibe-handoff/*.json"

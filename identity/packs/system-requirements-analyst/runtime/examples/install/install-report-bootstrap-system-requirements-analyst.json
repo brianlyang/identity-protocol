@@ -1,0 +1,22 @@
+{
+  "report_id": "identity-install-system-requirements-analyst-install-1771785280-717",
+  "identity_id": "system-requirements-analyst",
+  "generated_at": "2026-02-22T18:34:40Z",
+  "operation": "install",
+  "conflict_type": "same_signature",
+  "action": "no_op_with_report",
+  "source_pack": "identity/system-requirements-analyst",
+  "target_pack": "identity/system-requirements-analyst",
+  "source_signature": "75cf043ac9d359286348df12556e5a94749918733b6680fd49992cb1a8c270e3",
+  "target_signature_before": "75cf043ac9d359286348df12556e5a94749918733b6680fd49992cb1a8c270e3",
+  "preserved_paths": [
+    "identity/system-requirements-analyst"
+  ],
+  "dry_run": false,
+  "changed_files": [],
+  "installer_invocation": {
+    "tool": "identity-installer",
+    "entrypoint": "scripts/identity_installer.py",
+    "command": "identity-installer install --identity-id system-requirements-analyst"
+  }
+}
