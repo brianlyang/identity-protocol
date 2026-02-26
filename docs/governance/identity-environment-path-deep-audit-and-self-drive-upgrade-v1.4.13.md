@@ -286,3 +286,76 @@ gitleaks dir . -f json -r /tmp/identity-tools/reports/gitleaks-identity-protocol
 5. 下一轮未收口项（只列 P0/P1）
 
 建议将上述 5 项作为每次“bug 修复收口”的固定模板，写入治理快照或 PR 描述。
+
+---
+
+## 9. 2026-02-26 补充收口：activate 会话主指针一致性（P1）
+
+> 本节对应新增问题单：`identity activate 后会话指针分裂（catalog 已切换，但 active_identity 可能未切换）`。
+
+### 9.1 根因复盘（已修）
+
+1. `identity_creator.py activate` 调用 `sync_session_identity.py` 时未显式传 `--out`，
+   默认只写 `/tmp/identity-session/current.json`（legacy 路径）。
+2. `sync_session_identity.py` 旧实现默认输出为 `/tmp`，未定义 catalog 同域 canonical path。
+3. 会话同步失败曾是 warning-only，不触发激活事务失败/回滚，存在“catalog 已切、session 未切”风险。
+
+### 9.2 本轮修复内容
+
+1. **定义 canonical session pointer**
+   - 统一为：`<catalog_dir>/session/active_identity.json`
+   - legacy mirror 保留：`/tmp/identity-session/current.json`
+2. **同步脚本升级**
+   - `scripts/sync_session_identity.py` 默认写 canonical；
+   - 支持 mirror 写入（默认兼容），并区分 `session_pointer_type=canonical|mirror`。
+3. **激活事务语义收紧**
+   - `scripts/identity_creator.py activate` 显式传 `--out <canonical>` + `--mirror-out <legacy>`;
+   - canonical 写失败 => 激活事务失败并回滚（catalog/META/evidence）。
+4. **新增一致性校验器并接线**
+   - 新增：`scripts/validate_identity_session_pointer_consistency.py`
+   - 接线到：
+     - `identity_creator.py activate`
+     - `scripts/e2e_smoke_test.sh`
+     - `scripts/release_readiness_check.py`
+     - `scripts/report_three_plane_status.py`
+     - `scripts/full_identity_protocol_scan.py`
+
+### 9.3 交叉验证（实跑）
+
+1. **正向验证（canonical + mirror）**
+   - 命令：
+     - `python3 scripts/validate_identity_session_pointer_consistency.py --catalog .../.agents/identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --require-mirror`
+   - 结果：`[OK] session pointer consistency validated`
+
+2. **异常验证（canonical 写失败触发回滚）**
+   - 手法：临时把 `<catalog_dir>/session` 替换成同名文件，强制 canonical 写入失败；
+   - 命令：`identity_creator.py activate --identity-id store-manager ...`
+   - 结果：
+     - `activate_rc=1`
+     - 输出包含：
+       - `canonical session sync failed ...`
+       - `activation transaction rolled back: session pointer canonical sync failed`
+     - `before_active == after_active == base-repo-audit-expert-v3`
+   - 证据文件：`/tmp/identity-session-rollback-state.json`
+
+3. **recoverable blocked 报告契约复验（P0 联动）**
+   - 使用 fake `gh` 强制触发 `IP-CAP-003`；
+   - `execute_identity_upgrade.py` 报告：
+     - `capability_activation_status=BLOCKED`
+     - `capability_activation_error_code=IP-CAP-003`
+     - `checks_len=19`, `check_results_len=19`（不再空列表）
+   - `validate_identity_self_upgrade_enforcement.py --execution-report ...` 通过。
+
+4. **主链回归**
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog .../.agents/identity/catalog.local.yaml`：PASSED
+   - `IDENTITY_CATALOG=.../.agents/identity/catalog.local.yaml IDENTITY_IDS=base-repo-audit-expert-v3 bash scripts/e2e_smoke_test.sh`：PASSED
+   - `python3 scripts/report_three_plane_status.py --with-docs-contract ...`：
+     - `instance_plane_status=CLOSED`
+     - `repo_plane_status=BLOCKED`（当前分支有未提交改动，符合新洁净性语义）
+     - `release_plane_status=NOT_STARTED`
+
+### 9.4 当前口径（本轮）
+
+- 会话主指针一致性缺口已关闭（P1 修复完成，具备回滚保障）。
+- 实例主链可继续 fail-operational 自驱迭代（recoverable 阻断报告契约完整）。
+- 发布口径仍保持 **Conditional Go**（Release-plane 未提供云端 required-gates 闭环证据）。

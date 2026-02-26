@@ -256,6 +256,14 @@ def main() -> int:
             if is_active_runtime:
                 runtime_report_dir_path = Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"
                 runtime_report_dir = str(runtime_report_dir_path)
+                checks["session_pointer"] = [
+                    "python3",
+                    "scripts/validate_identity_session_pointer_consistency.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                ]
                 checks["prompt_activation"] = [
                     "python3",
                     "scripts/validate_identity_prompt_activation.py",

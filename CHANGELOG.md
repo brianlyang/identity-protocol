@@ -131,6 +131,17 @@
     - wired guard into `identity_creator.py` (`validate`/`activate`/`update`),
       `scripts/release_readiness_check.py`, and `scripts/e2e_smoke_test.sh`
       to block project/global mode drift early with explicit remediation hints
+  - activation session pointer consistency hardening:
+    - canonical session pointer path standardized to
+      `<catalog_dir>/session/active_identity.json` (legacy mirror remains
+      `/tmp/identity-session/current.json`)
+    - `scripts/sync_session_identity.py` now writes canonical pointer by default
+      and mirror pointer as warning-only compatibility path
+    - `identity_creator.py activate` now passes explicit canonical `--out` and
+      treats canonical sync failure as transactional failure (rollback catalog/META/evidence)
+    - added `scripts/validate_identity_session_pointer_consistency.py` and wired
+      into activate flow, `e2e_smoke_test.sh`, `release_readiness_check.py`,
+      `report_three_plane_status.py`, and `full_identity_protocol_scan.py`
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

@@ -113,6 +113,7 @@ def main() -> int:
         ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
+        ["python3", "scripts/validate_identity_session_pointer_consistency.py", "--catalog", catalog],
         [
             "python3",
             "scripts/collect_identity_health_report.py",

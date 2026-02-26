@@ -30,6 +30,9 @@ python3 scripts/validate_identity_creation_boundary.py
 echo "[2.5/30] validate identity state consistency (catalog vs META)"
 python3 scripts/validate_identity_state_consistency.py --catalog "$CATALOG_PATH"
 
+echo "[2.55/30] validate session pointer consistency (catalog-scoped canonical + legacy mirror)"
+python3 scripts/validate_identity_session_pointer_consistency.py --catalog "$CATALOG_PATH"
+
 echo "[3/30] validate governance snapshot index"
 python3 scripts/validate_audit_snapshot_index.py
 

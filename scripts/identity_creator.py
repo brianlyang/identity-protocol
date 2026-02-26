@@ -256,6 +256,9 @@ def _activate_identity(
 
     created_evidence: list[Path] = []
     meta_backups: dict[Path, str | None] = {}
+    switch_report: Path | None = None
+    canonical_session_pointer = (local_catalog.parent / "session" / "active_identity.json").resolve()
+    legacy_session_mirror = Path("/tmp/identity-session/current.json").resolve()
     try:
         # promote target to active binding first (activation validator requires this for active identities)
         created_evidence.append(
@@ -308,6 +311,8 @@ def _activate_identity(
             "catalog_path": str(local_catalog),
             "resolved_scope": str(resolved.get("resolved_scope", "")),
             "resolved_pack_path": str(resolved.get("resolved_pack_path", "")),
+            "session_pointer_canonical_path": str(canonical_session_pointer),
+            "session_pointer_mirror_path": str(legacy_session_mirror),
         }
         protocol = collect_protocol_evidence(protocol_root, protocol_mode)
         switch_payload.update(
@@ -328,18 +333,38 @@ def _activate_identity(
                 str(local_catalog),
                 "--identity-id",
                 identity_id,
+                "--out",
+                str(canonical_session_pointer),
+                "--mirror-out",
+                str(legacy_session_mirror),
             ],
             capture_output=True,
             text=True,
         )
         if sync.returncode != 0:
-            print("[WARN] session identity sync failed after activation")
             if sync.stdout.strip():
                 print(sync.stdout.strip())
             if sync.stderr.strip():
                 print(sync.stderr.strip())
-        elif sync.stdout.strip():
+            raise RuntimeError("session pointer canonical sync failed")
+        if sync.stdout.strip():
             print(sync.stdout.strip())
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_identity_session_pointer_consistency.py",
+                "--catalog",
+                str(local_catalog),
+                "--identity-id",
+                identity_id,
+                "--canonical-out",
+                str(canonical_session_pointer),
+                "--mirror-out",
+                str(legacy_session_mirror),
+            ]
+        )
+        if rc != 0:
+            raise RuntimeError("session pointer consistency validation failed")
         print(f"[OK] activated identity in catalog (single-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
@@ -349,6 +374,8 @@ def _activate_identity(
         for p in created_evidence:
             if p.exists():
                 p.unlink()
+        if switch_report and switch_report.exists():
+            switch_report.unlink()
         print(f"[FAIL] activation transaction rolled back: {e}")
         return 1
 

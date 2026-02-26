@@ -189,6 +189,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_perm, out_perm, err_perm = _run(perm_cmd)
     validators["permission_state"] = {"rc": rc_perm, "ok": rc_perm == 0, "out": out_perm, "err": err_perm}
 
+    rc_session, out_session, err_session = _run(
+        [
+            "python3",
+            "scripts/validate_identity_session_pointer_consistency.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+        ]
+    )
+    validators["session_pointer"] = {
+        "rc": rc_session,
+        "ok": rc_session == 0,
+        "out": out_session,
+        "err": err_session,
+    }
+
     rc_prompt, out_prompt, err_prompt = _run(
         [
             "python3",
