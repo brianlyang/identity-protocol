@@ -19,8 +19,13 @@ INDEX_REQUIRED_MARKERS = (
 
 CANONICAL_REQUIRED_MARKERS = (
     "Status:",
+    "Governance layer: protocol",
+    "Layered governance boundary (mandatory)",
     "Scope guardrails",
+    "Repository path governance matrix (mandatory)",
     "Protocol layer only",
+    "Document lifecycle governance (mandatory)",
+    "SSOT + gate binding + periodic archive",
 )
 
 ARTIFACT_NORMATIVE_MARKERS = (
@@ -98,6 +103,9 @@ def main() -> int:
         if marker not in handoff_text:
             print(f"[FAIL] IP-SSOT-003 canonical handoff missing required marker: {marker}")
             return 1
+    if "docs/governance/templates/" not in handoff_text:
+        print("[FAIL] IP-SSOT-006 canonical handoff missing template reference under docs/governance/templates/")
+        return 1
     if _contains_absolute_user_path(handoff_text):
         print(f"[FAIL] IP-SSOT-005 canonical handoff contains user absolute path: {canonical}")
         return 1

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 updated_at: "2026-02-26"
 purpose: >
   Protocol core-change coupling map. Used by validate_protocol_handoff_coupling.py
@@ -10,6 +10,8 @@ handoff:
 
 core_change_map:
   files:
+    - README.md
+    - VERSIONING.md
     - .github/workflows/_identity-required-gates.yml
     - scripts/e2e_smoke_test.sh
     - scripts/release_readiness_check.py
@@ -19,7 +21,10 @@ core_change_map:
     - scripts/execute_identity_upgrade.py
     - scripts/create_identity_pack.py
     - scripts/identity_installer.py
+    - identity/catalog/identities.yaml
+    - identity/catalog/schema/identities.schema.json
   prefixes:
+    - identity/protocol/
+    - skills/identity-
     - scripts/validate_identity_
     - scripts/validate_protocol_
-
