@@ -106,6 +106,34 @@ Lifecycle rules:
 4. dialogue governance validator chain (contract-first, optional, warn/enforce)
 5. required-gates / e2e / readiness / three-plane integration
 
+## v1.4.13 follow-up closure scope (2026-02-26, protocol-layer)
+
+1. Session pointer mirror deconfliction
+   - mirror default moved to catalog-scoped path (`<catalog_dir>/session/mirror/current.json`)
+   - mirror mismatch is warning-only by default; `--require-mirror` enables hard-fail mode
+   - canonical pointer write/validation remains hard-fail in activation transaction
+2. Capability preflight robustness
+   - GitHub capability checks split into CLI presence + auth readiness semantics
+   - explicit blocked code path (`IP-CAP-003`) remains recoverable/fail-operational
+   - hidden/missing `gh` binary now handled without traceback
+3. Install/adopt relocation safety
+   - install flow now runs path rewrite (aligned with adopt)
+   - rewrite coverage expanded to runtime JSON evidence surfaces and path-bearing fields
+   - rewrite counters emitted in install report for audit traceability
+4. Validator portability + path governance hardening
+   - validator subprocess calls are cwd-agnostic where required
+   - contract pattern resolution supports absolute and pack-relative forms
+   - migrated instances with absolute historical patterns no longer fail on `Path.glob` limitations
+5. Local audit parity
+   - preflight now checks `actionlint + ast-grep + gitleaks + gh-auth`
+   - strict profile (`--require-gh-auth`) makes auth readiness gating explicit
+6. Historical changelog linkage closure
+   - changelog gate supports explicit backfill linkage for historical ranges
+   - strict in-range mode remains available via `--strict-range-only`
+7. Governance templates (protocol-safe extension)
+   - onboarding playbook/audit-return templates add dual-ledger + roundtable evidence structure
+   - templates remain non-normative unless promoted via canonical SSOT workflow
+
 ## Required validation command set
 
 Run environment preflight first (toolchain + auth readiness visibility):
