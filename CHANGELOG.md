@@ -142,6 +142,20 @@
     - added `scripts/validate_identity_session_pointer_consistency.py` and wired
       into activate flow, `e2e_smoke_test.sh`, `release_readiness_check.py`,
       `report_three_plane_status.py`, and `full_identity_protocol_scan.py`
+  - blocked-arbitration semantics and release capability policy clarification:
+    - `scripts/validate_identity_capability_arbitration.py` now applies
+      blocked-aware linkage handling: when upgrade report shows
+      `capability_activation_status=BLOCKED` and trigger reason contains
+      `capability_activation_blocked:*`, metrics-trigger mismatch is bypassed
+      as recoverable fail-operational state instead of hard failure
+    - `scripts/release_readiness_check.py` now exposes
+      `--capability-activation-policy {strict-union,route-any-ready}`
+      and passes policy through to both preflight validation and
+      auto-generated `identity_creator update` execution path
+    - `scripts/identity_creator.py update` and
+      `scripts/execute_identity_upgrade.py` now accept/propagate
+      `--capability-activation-policy` for deterministic policy semantics across
+      preflight and execution reports
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

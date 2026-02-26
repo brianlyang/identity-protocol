@@ -255,7 +255,22 @@ def main() -> int:
 
             if "upgrade_required" in trigger_source:
                 reported_trigger = bool(trigger_source.get("upgrade_required", False))
-                if should_trigger != reported_trigger:
+                trigger_reasons = trigger_source.get("trigger_reasons") or []
+                if not isinstance(trigger_reasons, list):
+                    trigger_reasons = []
+                capability_status = str(trigger_source.get("capability_activation_status", "")).strip().upper()
+                blocked_by_capability = capability_status == "BLOCKED" and any(
+                    str(reason).startswith("capability_activation_blocked")
+                    for reason in trigger_reasons
+                )
+
+                if blocked_by_capability:
+                    print(
+                        "[OK] metrics/threshold linkage blocked-aware bypass: "
+                        f"should_trigger={should_trigger}, upgrade_required={reported_trigger}, "
+                        f"capability_status={capability_status}, trigger_reasons={trigger_reasons}"
+                    )
+                elif should_trigger != reported_trigger:
                     print(
                         "[FAIL] metrics/threshold linkage mismatch: "
                         f"should_trigger={should_trigger}, upgrade_required={reported_trigger}"

@@ -485,6 +485,7 @@ def _resolve_capability_contract(
     repo_catalog_path: Path,
     runtime_output_root: Path,
     run_id: str,
+    activation_policy: str = "strict-union",
 ) -> dict[str, Any]:
     payload = _default_capability_contract_payload(identity_id=identity_id, catalog_path=catalog_path)
     out_path: Path | None = None
@@ -508,6 +509,8 @@ def _resolve_capability_contract(
         str(repo_catalog_path.expanduser().resolve()),
         "--identity-id",
         identity_id,
+        "--activation-policy",
+        str(activation_policy or "strict-union"),
     ]
     if out_path is not None:
         cmd.extend(["--out", str(out_path)])
@@ -579,6 +582,15 @@ def main() -> int:
     ap.add_argument("--resolved-scope", default="")
     ap.add_argument("--resolved-pack-path", default="")
     ap.add_argument(
+        "--capability-activation-policy",
+        choices=["strict-union", "route-any-ready"],
+        default="strict-union",
+        help=(
+            "capability preflight policy used to evaluate skill/mcp route readiness before upgrade execution; "
+            "strict-union requires all declared route capabilities, route-any-ready allows execution when at least one route is ready."
+        ),
+    )
+    ap.add_argument(
         "--allow-protocol-root-pack",
         action="store_true",
         help="allow executing upgrade for identities whose pack_path is inside protocol root (fixture/debug only)",
@@ -635,6 +647,7 @@ def main() -> int:
         repo_catalog_path=Path(args.repo_catalog),
         runtime_output_root=runtime_output_root,
         run_id=run_id,
+        activation_policy=args.capability_activation_policy,
     )
     capability_status = str(capability_contract.get("capability_activation_status", "ERROR")).strip().upper()
     capability_error_code = str(capability_contract.get("capability_activation_error_code", "")).strip()

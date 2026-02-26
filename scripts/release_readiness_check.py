@@ -72,6 +72,15 @@ def main() -> int:
         default="",
         help="catalog path override. required unless IDENTITY_CATALOG is set.",
     )
+    ap.add_argument(
+        "--capability-activation-policy",
+        choices=["strict-union", "route-any-ready"],
+        default="strict-union",
+        help=(
+            "capability evaluation policy used by preflight and auto-generated update report. "
+            "strict-union requires all declared route capabilities; route-any-ready allows progress when at least one route is ready."
+        ),
+    )
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
@@ -156,6 +165,8 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--identity-id",
             identity_id,
+            "--activation-policy",
+            args.capability_activation_policy,
         ],
         [
             "python3",
@@ -183,6 +194,8 @@ def main() -> int:
             "review-required",
             "--catalog",
             catalog,
+            "--capability-activation-policy",
+            args.capability_activation_policy,
         ]
         rc = _run(gen_cmd)
         if rc != 0:

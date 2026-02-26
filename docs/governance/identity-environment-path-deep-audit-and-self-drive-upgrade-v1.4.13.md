@@ -359,3 +359,31 @@ gitleaks dir . -f json -r /tmp/identity-tools/reports/gitleaks-identity-protocol
 - 会话主指针一致性缺口已关闭（P1 修复完成，具备回滚保障）。
 - 实例主链可继续 fail-operational 自驱迭代（recoverable 阻断报告契约完整）。
 - 发布口径仍保持 **Conditional Go**（Release-plane 未提供云端 required-gates 闭环证据）。
+
+### 9.5 协议层追加收口（P0/P1，2026-02-26）
+
+1. **P0 已修复：blocked capability 场景下 arbitration linkage 误判**
+   - 问题：`should_trigger=True` 且 `upgrade_required=False` 时，旧逻辑硬失败。
+   - 修复：`scripts/validate_identity_capability_arbitration.py` 增加 blocked-aware 分支：
+     - 当 `capability_activation_status=BLOCKED` 且 `trigger_reasons` 含
+       `capability_activation_blocked:*` 时，跳过 metrics-trigger 强对齐，
+       作为 recoverable fail-operational 语义通过。
+   - 实测：
+     - blocked 报告：`identity-upgrade-exec-...-1772096416.json` => PASS（blocked-aware bypass）
+     - 正常报告：`identity-upgrade-exec-...-1772096913.json` => PASS（aligned）
+
+2. **P1 已收口：release_readiness capability policy 显式化**
+   - 修复：
+     - `scripts/release_readiness_check.py` 新增
+       `--capability-activation-policy {strict-union,route-any-ready}`
+     - `scripts/identity_creator.py update` 与
+       `scripts/execute_identity_upgrade.py` 同步新增并传递该参数，
+       保证 preflight 与 upgrade execution 语义一致。
+   - 实测：
+     - strict-union：`release_readiness_check` PASS（当前 auth ready 环境）
+     - fake-gh 注入下策略差异可复现：
+       - strict-union => `BLOCKED/IP-CAP-003`
+       - route-any-ready => `ACTIVATED`（`route_ready_count=1/2`）
+
+3. **P1 会话 canonical pointer 协议化（已在 9.2/9.3 完成）**
+   - validator 已接入 e2e/readiness/three-plane/full-scan，防止多指针分裂回归。

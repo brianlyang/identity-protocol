@@ -816,6 +816,15 @@ def main() -> int:
     p_update.add_argument("--protocol-root", default="")
     p_update.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     p_update.add_argument(
+        "--capability-activation-policy",
+        choices=["strict-union", "route-any-ready"],
+        default="strict-union",
+        help=(
+            "capability preflight policy: strict-union requires all declared route capabilities; "
+            "route-any-ready allows progress when at least one route is ready."
+        ),
+    )
+    p_update.add_argument(
         "--allow-protocol-root-pack",
         action="store_true",
         help="allow update on identities whose pack_path is inside protocol root (fixture/debug only)",
@@ -986,6 +995,8 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--activation-policy",
+                args.capability_activation_policy,
             ]
         )
         if rc != 0:
@@ -1012,6 +1023,8 @@ def main() -> int:
             str(resolved.get("resolved_scope", "")),
             "--resolved-pack-path",
             str(resolved.get("resolved_pack_path", "")),
+            "--capability-activation-policy",
+            args.capability_activation_policy,
         ]
         if args.allow_protocol_root_pack:
             cmd.append("--allow-protocol-root-pack")

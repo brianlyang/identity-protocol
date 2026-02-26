@@ -374,6 +374,10 @@ python scripts/export_route_quality_metrics.py --identity-id store-manager
 python scripts/execute_identity_upgrade.py --identity-id store-manager --mode review-required
 # optional: run release-readiness bundle
 python scripts/release_readiness_check.py --identity-id store-manager
+# optional: make capability policy explicit (default=strict-union)
+python scripts/release_readiness_check.py --identity-id store-manager --capability-activation-policy strict-union
+# optional (instance iteration / route-level degrade): allow at-least-one-route-ready
+python scripts/release_readiness_check.py --identity-id store-manager --capability-activation-policy route-any-ready
 # optional: scaffold a new local runtime identity
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
 # optional: explicit fixture creation under repo (demo only; requires double confirmation)
