@@ -1,7 +1,7 @@
 # identity 环境与路径治理深度审计报告（含自驱升级协同要求）v1.4.13
 
 - 审计日期: 2026-02-25
-- 审计仓库: `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local`
+- 审计仓库: `${IDENTITY_PROTOCOL_HOME:-<identity-protocol-local-repo>}`
 - 审计分支: `docs/readme-core-goal-snapshot-v1.4.13`
 - 审计基线提交: `f5f58da`（包含 `94bf09d` 的 P0 修复并继续补边界收口）
 - 审计定位: 代码层 + git 层 + 工具链交叉验证（actionlint/gitleaks/ast-grep）
@@ -168,7 +168,7 @@
 建议验收命令:
 
 ```bash
-cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+cd "${IDENTITY_PROTOCOL_HOME:-<identity-protocol-local-repo>}"
 source ./scripts/use_project_identity_runtime.sh
 
 # 1) capability 阻断场景

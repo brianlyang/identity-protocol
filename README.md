@@ -496,12 +496,12 @@ For any release posture update (Conditional Go/Full Go), the following files mus
 
 The release/audit source-of-truth repository is:
 
-`/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local`
+`${IDENTITY_PROTOCOL_HOME:-<identity-protocol-local-repo>}`
 
 Before running release commands, verify working directory and branch:
 
 ```bash
-cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+cd "${IDENTITY_PROTOCOL_HOME:-<identity-protocol-local-repo>}"
 pwd
 git rev-parse --abbrev-ref HEAD
 ```
