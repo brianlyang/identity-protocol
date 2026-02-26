@@ -738,5 +738,33 @@
     "runtime_bootstrap_live_revalidate": true,
     "evidence_max_age_days": 7,
     "active_binding_status_required": "BOUND_ACTIVE"
+  },
+  "dialogue_governance_contract": {
+    "required": false,
+    "rollout_mode": "warn",
+    "rollout_phase": "phase-1",
+    "report_path_pattern": "identity/runtime/reports/*store-manager*dialogue*.json",
+    "dialogue_content_report_path_pattern": "identity/runtime/reports/dialogue-content-synthesis-store-manager-*.json",
+    "dialogue_cross_validation_report_path_pattern": "identity/runtime/reports/dialogue-cross-validation-matrix-store-manager-*.json",
+    "dialogue_result_support_report_path_pattern": "identity/runtime/reports/dialogue-result-support-store-manager-*.json",
+    "top3_thresholds": {
+      "dialogue_constraint_coverage_rate": 95,
+      "dialogue_traceability_rate": 95,
+      "dialogue_change_reconciliation_rate": 90
+    },
+    "hard_subset_min": 100,
+    "redline_thresholds": {
+      "hard_constraint_missing_artifact_count": {
+        "max": 0
+      },
+      "untraceable_final_claim_count": {
+        "max": 0
+      }
+    },
+    "done_state_blocker": {
+      "unresolved_ambiguity_count": {
+        "max": 0
+      }
+    }
   }
 }

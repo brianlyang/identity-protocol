@@ -47,6 +47,12 @@ Rollout semantics are contract-driven:
 - `required=true` + `rollout_mode=enforce`: violations fail with deterministic codes
   (`IP-DCIC-001..004`).
 
+Scaffold default:
+
+- `identity_creator init` / `create_identity_pack.py` now inject a
+  `dialogue_governance_contract` skeleton by default with `required=false`,
+  so new identities are protocol-ready with zero runtime disruption.
+
 ### Boundary model: Identity vs Agent vs Skill vs MCP vs Tool
 
 To avoid capability overlap and policy conflicts, use this layered model:

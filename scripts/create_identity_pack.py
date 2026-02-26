@@ -94,7 +94,7 @@ def _repo_root() -> Path:
 
 
 def _minimal_current_task(identity_id: str, title: str, description: str) -> dict:
-    return {
+    task = {
         "task_id": f"{identity_id}_bootstrap",
         "agent_identity": {
             "name": identity_id,
@@ -205,6 +205,52 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
             "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         },
     }
+    return _ensure_dialogue_governance_contract(task, identity_id)
+
+
+def _dialogue_governance_contract_skeleton(identity_id: str) -> dict:
+    return {
+        "required": False,
+        "rollout_mode": "warn",
+        "rollout_phase": "phase-1",
+        "report_path_pattern": f"identity/runtime/reports/*{identity_id}*dialogue*.json",
+        "dialogue_content_report_path_pattern": f"identity/runtime/reports/dialogue-content-synthesis-{identity_id}-*.json",
+        "dialogue_cross_validation_report_path_pattern": f"identity/runtime/reports/dialogue-cross-validation-matrix-{identity_id}-*.json",
+        "dialogue_result_support_report_path_pattern": f"identity/runtime/reports/dialogue-result-support-{identity_id}-*.json",
+        "top3_thresholds": {
+            "dialogue_constraint_coverage_rate": 95,
+            "dialogue_traceability_rate": 95,
+            "dialogue_change_reconciliation_rate": 90,
+        },
+        "hard_subset_min": 100,
+        "redline_thresholds": {
+            "hard_constraint_missing_artifact_count": {"max": 0},
+            "untraceable_final_claim_count": {"max": 0},
+        },
+        "done_state_blocker": {
+            "unresolved_ambiguity_count": {"max": 0},
+        },
+    }
+
+
+def _deep_merge_defaults(defaults: dict, current: dict) -> dict:
+    out = copy.deepcopy(defaults)
+    for k, v in current.items():
+        if k in out and isinstance(out[k], dict) and isinstance(v, dict):
+            out[k] = _deep_merge_defaults(out[k], v)
+        else:
+            out[k] = copy.deepcopy(v)
+    return out
+
+
+def _ensure_dialogue_governance_contract(task: dict, identity_id: str) -> dict:
+    base = _dialogue_governance_contract_skeleton(identity_id)
+    cur = task.get("dialogue_governance_contract")
+    if not isinstance(cur, dict):
+        task["dialogue_governance_contract"] = base
+        return task
+    task["dialogue_governance_contract"] = _deep_merge_defaults(base, cur)
+    return task
 
 
 def _default_protocol_review_sample(identity_id: str) -> dict:
@@ -387,7 +433,7 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     rbc = task.setdefault("identity_role_binding_contract", {})
     if isinstance(rbc, dict):
         rbc["role_type"] = f"{identity_id.replace('-', '_')}_runtime_operator"
-    return task
+    return _ensure_dialogue_governance_contract(task, identity_id)
 
 
 def _sha256_file(path: Path) -> str:

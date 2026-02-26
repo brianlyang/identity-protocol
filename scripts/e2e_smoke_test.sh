@@ -36,8 +36,14 @@ python3 scripts/validate_identity_session_pointer_consistency.py --catalog "$CAT
 echo "[3/30] validate governance snapshot index"
 python3 scripts/validate_audit_snapshot_index.py
 
+echo "[3.2/30] validate protocol SSOT source boundary"
+python3 scripts/validate_protocol_ssot_source.py
+
 echo "[4/30] validate changelog freshness linkage"
 python3 scripts/validate_changelog_updated.py
+
+echo "[4.2/30] validate protocol handoff coupling (core changes require handoff update)"
+python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
 
 echo "[5/30] validate release metadata synchronization"
 python3 scripts/validate_release_metadata_sync.py

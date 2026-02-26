@@ -174,6 +174,24 @@
       - compatibility alias:
         `docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md`
       - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - dialogue-governance scaffold defaults for new identities:
+    - `scripts/create_identity_pack.py` now injects
+      `dialogue_governance_contract` skeleton into both `minimal` and `full-contract`
+      init profiles with safe default `required=false`
+    - `identity/store-manager/CURRENT_TASK.json` now includes the same contract skeleton
+      as template baseline for future scaffolds
+  - protocol SSOT hardening (handoff canonical + artifacts non-normative):
+    - added `scripts/validate_protocol_ssot_source.py`
+      (index policy marker checks, canonical handoff integrity checks, anti-normative artifact guard)
+    - added `scripts/validate_protocol_handoff_coupling.py`
+      (protocol-core file changes must include canonical handoff doc update in same git range)
+    - wired SSOT validators into:
+      - `.github/workflows/_identity-required-gates.yml`
+      - `scripts/release_readiness_check.py`
+      - `scripts/e2e_smoke_test.sh`
+    - updated `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+      with explicit execution directive:
+      "execute by handoff only; artifacts are evidence mirrors"
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

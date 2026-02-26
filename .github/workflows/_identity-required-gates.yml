@@ -42,6 +42,9 @@ jobs:
       - name: Validate governance snapshot index
         run: python3 scripts/validate_audit_snapshot_index.py
 
+      - name: Validate protocol SSOT source boundary
+        run: python3 scripts/validate_protocol_ssot_source.py
+
       - name: Validate changelog update for significant changes
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -131,6 +134,9 @@ jobs:
           echo "IDS=${IDS}" >> "$GITHUB_ENV"
           echo "PRIMARY_ID=${PRIMARY_ID}" >> "$GITHUB_ENV"
           echo "resolved identities: ${IDS}"
+
+      - name: Validate protocol handoff coupling
+        run: python3 scripts/validate_protocol_handoff_coupling.py --base "${BASE_SHA}" --head "${HEAD_SHA}"
 
       - name: Compile runtime
         run: python3 scripts/compile_identity_runtime.py --identity-id "${PRIMARY_ID}"

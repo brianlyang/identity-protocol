@@ -5,6 +5,11 @@ Status: Canonical handoff summary (protocol-layer only)
 This handoff note exists to keep index links stable and provide a concise execution bridge
 between audit findings and implementation tasks in v1.4.13.
 
+Execution directive (mandatory):
+
+1. Execute protocol-strengthening items based on this handoff document only.
+2. Any `artifacts/` mirror is evidence-only and must not be treated as normative source.
+
 ## Scope guardrails
 
 1. Protocol layer only (no business-scene coupling)
@@ -35,5 +40,6 @@ python3 scripts/validate_identity_local_persistence.py
 python3 scripts/validate_identity_creation_boundary.py
 python3 scripts/docs_command_contract_check.py
 python3 scripts/validate_release_workspace_cleanliness.py
+python3 scripts/validate_protocol_ssot_source.py
+python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
 ```
-

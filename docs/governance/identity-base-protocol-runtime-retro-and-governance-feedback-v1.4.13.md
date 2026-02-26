@@ -34,6 +34,8 @@ python3 scripts/validate_identity_local_persistence.py
 python3 scripts/validate_identity_creation_boundary.py
 python3 scripts/docs_command_contract_check.py
 python3 scripts/validate_release_workspace_cleanliness.py
+python3 scripts/validate_protocol_ssot_source.py
+python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
 ```
 
 Observed result:
@@ -43,6 +45,8 @@ Observed result:
 3. `validate_identity_creation_boundary.py`: PASS (4/4)
 4. `docs_command_contract_check.py`: PASS (index-driven dynamic coverage; current run: `docs checked=23`, `command snippets checked=103`)
 5. `validate_release_workspace_cleanliness.py`: PASS
+6. `validate_protocol_ssot_source.py`: PASS
+7. `validate_protocol_handoff_coupling.py`: PASS
 
 ### 1.2 Path governance proof
 
@@ -95,6 +99,9 @@ The following protocol hardening items from this retro are now landed:
    - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
    - compatibility alias
      `docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md`
+5. SSOT enforcement validators:
+   - `scripts/validate_protocol_ssot_source.py`
+   - `scripts/validate_protocol_handoff_coupling.py`
 
 ---
 
