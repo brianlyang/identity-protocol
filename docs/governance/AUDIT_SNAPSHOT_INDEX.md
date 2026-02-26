@@ -9,6 +9,10 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-policy-v1.2.11.md`
 - Template: `docs/governance/templates/audit-snapshot-template.md`
 - Upgrade cross-validation template: `docs/governance/templates/upgrade-cross-validation-template.md`
+- Identity onboarding 72h playbook template:
+  - `docs/governance/templates/identity-onboarding-72h-playbook-template.md`
+- Identity onboarding 72h audit-return template:
+  - `docs/governance/templates/identity-onboarding-72h-audit-return-template.md`
 - Architect follow-up issue template pack:
   - `docs/governance/templates/protocol-p1-followup-issue-pack-v1.4.13.md`
 - Canonical SSOT rule for protocol-strengthening handoff:
