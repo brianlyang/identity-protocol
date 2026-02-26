@@ -27,6 +27,7 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-2026-02-25-readme-core-goal-alignment-v1.4.13.md` — root README core objective alignment (deterministic/auditable/release-safe), boundary model clarification (identity/agent/skill/MCP/tool), and prompt-lifecycle governance semantics
 - `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md` — token-consumption governance upgrade requirements with cross-vendor validation (tiered gates, incremental execution, summary/full report split, cache strategy, and skill-parity operator model)
 - `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md` — three-plane audit checklist (instance fail-operational / release fail-closed) and cloud-closure evidence contract
+- `docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md` — environment/path governance deep audit with 2026-02-26 closure addendum (recoverable report contract, runtime mode drift guard, and cross-validated evidence log)
 
 ## Protocol hardening plans
 
