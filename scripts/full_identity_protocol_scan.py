@@ -89,9 +89,13 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("capability_activation_preflight", "capability_activation_report")
     )
-    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail):
+    dialogue_fail = any(
+        name in checks and not checks.get(name, {}).get("ok", False)
+        for name in ("dialogue_content", "dialogue_cross_validation", "dialogue_result_support")
+    )
+    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail):
         return "P0"
-    if core_fail or prompt_fail or capability_fail:
+    if core_fail or prompt_fail or capability_fail or dialogue_fail:
         return "P1"
     return "OK"
 
@@ -253,6 +257,30 @@ def main() -> int:
             if is_active_runtime:
                 cap_preflight_cmd.append("--require-activated")
             checks["capability_activation_preflight"] = cap_preflight_cmd
+            checks["dialogue_content"] = [
+                "python3",
+                "scripts/validate_identity_dialogue_content.py",
+                "--catalog",
+                str(catalog),
+                "--identity-id",
+                iid,
+            ]
+            checks["dialogue_cross_validation"] = [
+                "python3",
+                "scripts/validate_identity_dialogue_cross_validation.py",
+                "--catalog",
+                str(catalog),
+                "--identity-id",
+                iid,
+            ]
+            checks["dialogue_result_support"] = [
+                "python3",
+                "scripts/validate_identity_dialogue_result_support.py",
+                "--catalog",
+                str(catalog),
+                "--identity-id",
+                iid,
+            ]
             if is_active_runtime:
                 runtime_report_dir_path = Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"
                 runtime_report_dir = str(runtime_report_dir_path)

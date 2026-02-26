@@ -54,7 +54,7 @@ def _resolve_pack_path(catalog_path: str, identity_id: str) -> Path | None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run release-readiness validators in a deterministic order.")
-    ap.add_argument("--identity-id", default="store-manager")
+    ap.add_argument("--identity-id", required=True)
     ap.add_argument("--base", default="")
     ap.add_argument("--head", default="")
     ap.add_argument(
@@ -167,6 +167,30 @@ def main() -> int:
             identity_id,
             "--activation-policy",
             args.capability_activation_policy,
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_content.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_cross_validation.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_result_support.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
         ],
         [
             "python3",

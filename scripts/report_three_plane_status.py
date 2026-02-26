@@ -255,6 +255,47 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_cap,
     }
 
+    rc_dc, out_dc, err_dc = _run(
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_content.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+        ]
+    )
+    validators["dialogue_content"] = {"rc": rc_dc, "ok": rc_dc == 0, "out": out_dc, "err": err_dc}
+
+    rc_dcv, out_dcv, err_dcv = _run(
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_cross_validation.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+        ]
+    )
+    validators["dialogue_cross_validation"] = {
+        "rc": rc_dcv,
+        "ok": rc_dcv == 0,
+        "out": out_dcv,
+        "err": err_dcv,
+    }
+
+    rc_drs, out_drs, err_drs = _run(
+        [
+            "python3",
+            "scripts/validate_identity_dialogue_result_support.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+        ]
+    )
+    validators["dialogue_result_support"] = {"rc": rc_drs, "ok": rc_drs == 0, "out": out_drs, "err": err_drs}
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,

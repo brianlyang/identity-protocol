@@ -156,6 +156,24 @@
       `scripts/execute_identity_upgrade.py` now accept/propagate
       `--capability-activation-policy` for deterministic policy semantics across
       preflight and execution reports
+  - dialogue governance contract landing (optional contract-first, protocol-only):
+    - added shared helper `scripts/dialogue_governance_common.py`
+      (contract resolution, report discovery, threshold parsing, warn/enforce outcome handling)
+    - added dialogue validators with deterministic `IP-DCIC-*` semantics:
+      - `scripts/validate_identity_dialogue_content.py`
+      - `scripts/validate_identity_dialogue_cross_validation.py`
+      - `scripts/validate_identity_dialogue_result_support.py`
+    - wired dialogue validators into:
+      - `scripts/e2e_smoke_test.sh` (instance-plane optional contract checks)
+      - `scripts/release_readiness_check.py` (release-plane protocol gate chain)
+      - `scripts/report_three_plane_status.py` (instance-plane validator matrix)
+      - `scripts/full_identity_protocol_scan.py` (cross-catalog severity model)
+      - `.github/workflows/_identity-required-gates.yml` (CI required-gates loop)
+    - added protocol-governance documentation:
+      - `docs/governance/identity-base-protocol-runtime-retro-and-governance-feedback-v1.4.13.md`
+      - compatibility alias:
+        `docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md`
+      - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

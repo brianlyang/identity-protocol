@@ -9,6 +9,9 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-policy-v1.2.11.md`
 - Template: `docs/governance/templates/audit-snapshot-template.md`
 - Upgrade cross-validation template: `docs/governance/templates/upgrade-cross-validation-template.md`
+- Canonical SSOT rule for protocol-strengthening handoff:
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+  - Any `artifacts/` mirror is non-normative evidence only.
 
 ## Snapshots
 
@@ -28,6 +31,9 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md` — token-consumption governance upgrade requirements with cross-vendor validation (tiered gates, incremental execution, summary/full report split, cache strategy, and skill-parity operator model)
 - `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md` — three-plane audit checklist (instance fail-operational / release fail-closed) and cloud-closure evidence contract
 - `docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md` — environment/path governance deep audit with 2026-02-26 closure addendum (recoverable report contract, runtime mode drift guard, and cross-validated evidence log)
+- `docs/governance/identity-base-protocol-runtime-retro-and-governance-feedback-v1.4.13.md` — protocol-only retro + governance hardening baseline (anti-coupling rules, dialogue governance contract/KPI model, and implementation DoD)
+- `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` — canonical execution handoff (SSOT) for protocol strengthening: anti-sprawl budget, gate/validator/error-code mapping, DCIC + audit-ownership enforcement, and architect action checklist
+- `docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md` — compatibility alias that forwards to canonical protocol-only v1.4.13 governance doc
 
 ## Protocol hardening plans
 

@@ -182,6 +182,15 @@ for ID in $IDS; do
   echo "[19.5/30][$ID] probe capability activation (skill/mcp/tool attachment)"
   python3 scripts/validate_identity_capability_activation.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID"
 
+  echo "[19.6/30][$ID] validate dialogue synthesis governance (optional contract)"
+  python3 scripts/validate_identity_dialogue_content.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
+  echo "[19.7/30][$ID] validate dialogue cross-validation governance (optional contract)"
+  python3 scripts/validate_identity_dialogue_cross_validation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
+  echo "[19.8/30][$ID] validate dialogue result-support governance (optional contract)"
+  python3 scripts/validate_identity_dialogue_result_support.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
   echo "[20/30][$ID] validate knowledge contract (self-test)"
   python3 scripts/validate_identity_knowledge_contract.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test
 

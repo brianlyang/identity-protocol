@@ -27,6 +27,26 @@ This system is intentionally designed to solve three recurring failure modes:
 - Lower audit cost: every key decision can be traced to report fields and validator outputs.
 - Continuous identity evolution: prompt/rulebook/task-history can evolve with explicit evidence and replayability.
 
+### Dialogue governance (optional, contract-first)
+
+For identities that need stronger conversation-to-result evidence guarantees, add
+`dialogue_governance_contract` to `CURRENT_TASK.json` and provide dialogue artifacts.
+
+Three optional validators are available and are wired into e2e/readiness/required-gates:
+
+```bash
+python3 scripts/validate_identity_dialogue_content.py --identity-id <id> --catalog <catalog>
+python3 scripts/validate_identity_dialogue_cross_validation.py --identity-id <id> --catalog <catalog>
+python3 scripts/validate_identity_dialogue_result_support.py --identity-id <id> --catalog <catalog>
+```
+
+Rollout semantics are contract-driven:
+
+- `required=false` (or contract absent): validators skip without blocking.
+- `required=true` + `rollout_mode=warn`: issues are reported but non-blocking.
+- `required=true` + `rollout_mode=enforce`: violations fail with deterministic codes
+  (`IP-DCIC-001..004`).
+
 ### Boundary model: Identity vs Agent vs Skill vs MCP vs Tool
 
 To avoid capability overlap and policy conflicts, use this layered model:
@@ -479,6 +499,7 @@ If a document defines required behavior for CI/release/audit decisions, it belon
   - `docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md`
   - `docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md`
   - `docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md`
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (canonical SSOT; do not use artifacts mirror as normative source)
 
 ### Release documentation closure set (MUST, same PR batch)
 
