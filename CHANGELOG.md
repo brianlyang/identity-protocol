@@ -124,6 +124,13 @@
     - `scripts/export_route_quality_metrics.py` repo fallback path construction is now
       centralized via `_repo_runtime_metrics_path(...)` so explicit debug-only fallback
       remains auditable while avoiding rule false positives on guarded branches
+  - runtime mode/catalog fail-fast guard:
+    - added `scripts/validate_identity_runtime_mode_guard.py` to enforce resolver tuple
+      (`source_layer`, `catalog_path`, `pack_path`, `resolved_scope`) against selected
+      runtime mode before identity operations
+    - wired guard into `identity_creator.py` (`validate`/`activate`/`update`),
+      `scripts/release_readiness_check.py`, and `scripts/e2e_smoke_test.sh`
+      to block project/global mode drift early with explicit remediation hints
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

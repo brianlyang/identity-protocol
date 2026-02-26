@@ -37,6 +37,27 @@ def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
     return p.returncode, p.stdout or "", p.stderr or ""
 
 
+def _runtime_mode_guard(identity_id: str, catalog: str, repo_catalog: str, scope: str = "") -> int:
+    cmd = [
+        "python3",
+        "scripts/validate_identity_runtime_mode_guard.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        repo_catalog,
+        "--expect-mode",
+        "auto",
+    ]
+    if scope.strip():
+        cmd.extend(["--scope", scope.strip()])
+    rc = _run(cmd)
+    if rc != 0:
+        print("[FAIL] runtime mode/catalog binding guard failed; aborting identity operation.")
+    return rc
+
+
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -823,6 +844,9 @@ def main() -> int:
 
     if args.command == "validate":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+        if rc_guard != 0:
+            return rc_guard
         try:
             _ = resolve_identity(
                 args.identity_id,
@@ -863,6 +887,9 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
+        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+        if rc_guard != 0:
+            return rc_guard
         rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
         if rc != 0:
             return rc
@@ -877,6 +904,9 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+        if rc_guard != 0:
+            return rc_guard
         rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
         if rc != 0:
             return rc

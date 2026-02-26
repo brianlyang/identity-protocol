@@ -88,6 +88,22 @@ def main() -> int:
     if not Path(catalog).expanduser().exists():
         print(f"[FAIL] catalog path does not exist: {catalog}")
         return 2
+    rc_guard = _run(
+        [
+            "python3",
+            "scripts/validate_identity_runtime_mode_guard.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--expect-mode",
+            "auto",
+        ]
+    )
+    if rc_guard != 0:
+        return rc_guard
 
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],

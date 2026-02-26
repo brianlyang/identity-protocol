@@ -56,6 +56,12 @@ if [ -z "$IDS" ]; then
   echo "       example: IDENTITY_IDS=office-ops-expert bash scripts/e2e_smoke_test.sh"
   exit 1
 fi
+
+echo "[10.15/30] validate runtime mode/catalog binding guard (for each target identity)"
+for ID in $IDS; do
+  python3 scripts/validate_identity_runtime_mode_guard.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --expect-mode auto
+done
+
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
   echo "[10.2/30] preflight writeability probe for global runtime targets"
   if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'

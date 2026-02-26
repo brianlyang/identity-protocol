@@ -337,6 +337,10 @@ python scripts/migrate_repo_instances_to_local.py --apply
 # NOTE (v1.4.12+ hardening):
 # release-bound scripts no longer allow implicit catalog fallback.
 # You must pass --catalog or export IDENTITY_CATALOG from selected runtime mode.
+#
+# Runtime mode drift guard (v1.4.13+):
+# Fail fast if resolved catalog/pack does not match selected mode.
+python3 scripts/validate_identity_runtime_mode_guard.py --identity-id store-manager --catalog "${IDENTITY_CATALOG}"
 
 python scripts/validate_identity_protocol.py
 python scripts/validate_identity_local_persistence.py
