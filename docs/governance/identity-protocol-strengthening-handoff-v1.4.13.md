@@ -26,6 +26,7 @@ Execution directive (mandatory):
 - `docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md`
 - `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md`
 - `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md`
+- `docs/governance/templates/protocol-p1-followup-issue-pack-v1.4.13.md` (copy-ready architect issue templates for P1 hardening)
 
 ## v1.4.13 implementation highlights (landed)
 
@@ -36,6 +37,24 @@ Execution directive (mandatory):
 5. required-gates / e2e / readiness / three-plane integration
 
 ## Required validation command set
+
+Run environment preflight first (toolchain + auth readiness visibility):
+
+```bash
+bash scripts/preflight_protocol_audit_env.sh
+```
+
+For release-grade strict profiles that require GitHub capability auth readiness:
+
+```bash
+bash scripts/preflight_protocol_audit_env.sh --require-gh-auth
+```
+
+Notes:
+
+1. If `gh auth` is not ready, strict-union readiness may fail with `IP-CAP-003`.
+2. This is an environment-auth state, not a protocol-regression signal.
+3. Local protocol-gate replay can still proceed without `--require-gh-auth`.
 
 ```bash
 python3 scripts/validate_identity_protocol.py

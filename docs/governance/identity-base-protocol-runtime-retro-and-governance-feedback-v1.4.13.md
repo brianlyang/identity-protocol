@@ -26,6 +26,23 @@ Validation date baseline: 2026-02-26 (local run)
 
 ### 1.1 Required protocol gates
 
+Preflight command (recommended before running protocol gates):
+
+```bash
+bash scripts/preflight_protocol_audit_env.sh
+```
+
+Release-grade strict profile (requires GitHub auth readiness):
+
+```bash
+bash scripts/preflight_protocol_audit_env.sh --require-gh-auth
+```
+
+Interpretation rule:
+
+1. `IP-CAP-003` under strict capability policy with invalid/missing `gh auth` is environment-auth blocked.
+2. It is not a protocol-regression signal by itself.
+
 Command set:
 
 ```bash

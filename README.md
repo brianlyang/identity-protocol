@@ -37,6 +37,13 @@ This system is intentionally designed to solve three recurring failure modes:
 - Enforcement validators:
   - `scripts/validate_protocol_ssot_source.py`
   - `scripts/validate_protocol_handoff_coupling.py`
+- Local preflight helper (tooling + auth readiness):
+  - `scripts/preflight_protocol_audit_env.sh`
+  - run before protocol audits:
+    - `bash scripts/preflight_protocol_audit_env.sh`
+    - `bash scripts/preflight_protocol_audit_env.sh --require-gh-auth` (release-grade strict profile)
+  - when `gh auth` is not ready, strict-union readiness may fail with `IP-CAP-003`;
+    treat this as environment-auth not-ready state, not protocol-regression.
 
 ### Dialogue governance (optional, contract-first)
 

@@ -195,6 +195,15 @@
     - updated `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
       with explicit execution directive:
       "execute by handoff only; artifacts are evidence mirrors"
+  - protocol audit preflight hardening (local reproducibility + auth clarity):
+    - added `scripts/preflight_protocol_audit_env.sh`
+      (checks `gh auth status`, `actionlint`, and `ast-grep` availability)
+    - supports `--install-missing` to reduce local-vs-CI tooling drift
+    - supports `--require-gh-auth` for strict release profiles where capability auth
+      readiness is mandatory
+    - SSOT/README guidance now explicitly treats strict-union `IP-CAP-003`
+      with unauthenticated `gh` as environment-auth blocked state
+      (not protocol regression by itself)
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`
