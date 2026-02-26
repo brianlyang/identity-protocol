@@ -9,6 +9,9 @@ Execution directive (mandatory):
 
 1. Execute protocol-strengthening items based on this handoff document only.
 2. Any `artifacts/` mirror is evidence-only and must not be treated as normative source.
+3. Core-change coupling scope is maintained in:
+   - `docs/governance/templates/protocol-core-change-map.yaml`
+   - update this map when protocol-core scope changes.
 
 ## Scope guardrails
 

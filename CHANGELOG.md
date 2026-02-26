@@ -185,6 +185,9 @@
       (index policy marker checks, canonical handoff integrity checks, anti-normative artifact guard)
     - added `scripts/validate_protocol_handoff_coupling.py`
       (protocol-core file changes must include canonical handoff doc update in same git range)
+    - added configurable protocol-core scope map:
+      `docs/governance/templates/protocol-core-change-map.yaml`
+      used by coupling validator to avoid hardcoded matcher drift
     - wired SSOT validators into:
       - `.github/workflows/_identity-required-gates.yml`
       - `scripts/release_readiness_check.py`

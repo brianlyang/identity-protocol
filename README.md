@@ -27,6 +27,17 @@ This system is intentionally designed to solve three recurring failure modes:
 - Lower audit cost: every key decision can be traced to report fields and validator outputs.
 - Continuous identity evolution: prompt/rulebook/task-history can evolve with explicit evidence and replayability.
 
+### Protocol SSOT governance (canonical source + coupling)
+
+- Canonical protocol-strengthening source:
+  `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+- `artifacts/` content is evidence-only and non-normative.
+- Protocol core-change scope is maintained in:
+  `docs/governance/templates/protocol-core-change-map.yaml`
+- Enforcement validators:
+  - `scripts/validate_protocol_ssot_source.py`
+  - `scripts/validate_protocol_handoff_coupling.py`
+
 ### Dialogue governance (optional, contract-first)
 
 For identities that need stronger conversation-to-result evidence guarantees, add
