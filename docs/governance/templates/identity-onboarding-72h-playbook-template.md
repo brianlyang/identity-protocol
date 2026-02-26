@@ -3,12 +3,15 @@
 Status: discussion template (safe to tailor per identity)
 Primary layer: instance
 Protocol guardrails source: canonical SSOT handoff (protocol layer)
+SSOT execution rule: execute protocol decisions only from `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`; external artifacts are evidence mirrors, not normative sources.
 
 Normative boundary (must keep):
 
 1. Identity instance must deeply analyze business details to improve domain expertise.
 2. Protocol governance records must not store non-redacted business details.
-3. Business details must be preserved in instance knowledge artifacts and linked from governance records via references.
+3. Protocol governance records must not inline unredacted business details.
+4. Business details must be mapped by `domain_artifact_refs` references.
+5. Business details must be preserved in instance knowledge artifacts and linked from governance records via references.
 
 ---
 
@@ -50,6 +53,7 @@ Normative boundary (must keep):
 - Governance ledger (this playbook): capability-upgrade facts, machine-checkable fields, and evidence references only.
 - Domain knowledge ledger (instance runtime): business details, domain hypotheses, and outcome analysis.
 - Cross-ledger rule: governance entries must reference domain artifacts through `domain_artifact_refs`, not inline business details.
+- Cross-ledger rule (hard): protocol records cannot carry raw business payloads; use reference-only pointers.
 
 ---
 
@@ -156,7 +160,56 @@ Exit criteria:
 
 ---
 
-## 4) Roundtable intelligence and cross-validation (mandatory for complex upgrades)
+## 4) Skill protocol attachment block (mandatory)
+
+Fill before concluding onboarding:
+
+- selected_skills:
+- skill_trigger_basis:
+- update_chain_status:
+  - trigger:
+  - patch:
+  - validate:
+  - replay:
+- creator_plane_changes:
+- installer_plane_distribution:
+
+Rules:
+
+1. `selected_skills` must list only actually activated skills in this run window.
+2. `skill_trigger_basis` must reference explicit trigger evidence (command/report id), not free-form claim.
+3. `update_chain_status(trigger/patch/validate/replay)` must be fully populated and machine-checkable.
+4. `creator_plane_changes` and `installer_plane_distribution` must be layer-tagged (`protocol` or `instance`).
+
+---
+
+## 5) Multimodal fact-input role contract (mandatory)
+
+Core semantics (must keep):
+
+1. Multimodal inputs are fact-input layer inputs, not display-only attachment defaults.
+2. Attachments are allowed, but default role is `DISPLAY_ONLY`.
+3. Non-gated attachments cannot support final claims.
+4. Critical gate failure must downgrade run state to `manual_review` or `blocked`.
+5. Thresholds are instance-config referenced and must not be hardcoded into protocol templates.
+
+Evidence role fields:
+
+- evidence_role: `DISPLAY_ONLY | FACT_INPUT`
+- role_transition_state:
+- role_transition_gate_refs:
+- final_claim_evidence_refs:
+
+Role transition hard rules:
+
+1. Default on ingest: `DISPLAY_ONLY`.
+2. Only when mandatory gates pass can role transition to `FACT_INPUT`.
+3. `DISPLAY_ONLY` evidence cannot support final claim.
+4. `inconsistent evidence cannot transition to done`.
+
+---
+
+## 6) Roundtable intelligence and cross-validation (mandatory for complex upgrades)
 
 Trigger rule:
 
@@ -174,20 +227,21 @@ Roundtable output fields:
 
 Cross-vendor evidence matrix (fact vs inference separated):
 
-| Vendor | Source URL | Retrieved at (UTC) | Claim | Claim type (`fact`/`inference`) | Mapped contract/validator |
-|---|---|---|---|---|---|
-|  |  |  |  |  |  |
+| vendor | source_url | retrieved_at | claim | claim_type (`fact`/`inference`) | mapped_contract_or_validator | risk_note |
+|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |
 
 Rule:
 
 1. Claims used for final conclusion must include `source_url` and `claim_type`.
-2. `inference` claims must include mapped contract/validator and an explicit risk note.
+2. Final conclusion must map to at least one `fact` row.
+3. `inference` claims must include mapped validator/contract basis and explicit risk note.
 
 ---
 
-## 5) Completion gates (DoD checklist)
+## 7) Completion gates (DoD checklist)
 
-### 5.1 Instance-plane DoD
+### 7.1 Instance-plane DoD
 
 - [ ] Target identity update report exists.
 - [ ] Mandatory report fields are complete.
@@ -195,21 +249,24 @@ Rule:
 - [ ] e2e target run reaches terminal output with deterministic status.
 - [ ] Self-driven upgrade ledger entries are complete (`run_id`, `acceptance_command`, `evidence_ref`).
 - [ ] Business details are referenced via `domain_artifact_refs` only (no inline non-redacted details).
+- [ ] Skill protocol attachment block fields are complete.
+- [ ] Multimodal evidence-role contract is complete and consistent.
+- [ ] `inconsistent evidence cannot transition to done` is respected.
 
-### 5.2 Repo-plane DoD (only when touched)
+### 7.2 Repo-plane DoD (only when touched)
 
 - [ ] SSOT/coupling/document-contract checks pass.
 - [ ] Workspace cleanliness check is clean.
 - [ ] No repo-only validator is wired into instance main chain by mistake.
 
-### 5.3 Release-plane note
+### 7.3 Release-plane note
 
 - [ ] If Full Go is claimed, cloud closure evidence is attached.
 - [ ] If cloud closure is missing, final decision remains Conditional Go.
 
 ---
 
-## 6) Self-driven upgrade ledger (mandatory)
+## 8) Self-driven upgrade ledger (mandatory)
 
 Purpose:
 
@@ -222,6 +279,8 @@ Record rules:
 2. Each entry must bind `run_id + acceptance_command + evidence_ref`.
 3. Governance ledger stores redacted summaries only; domain details belong to referenced domain artifacts.
 4. Keep latest 5 entries here; store full details in runtime artifacts.
+5. If `result_status != PASS`, `next_action` is mandatory.
+6. `upgrade_targets` must enumerate all changed components.
 
 Allowed `trigger_mode`:
 
@@ -235,18 +294,49 @@ Allowed `capability_axis`:
 - `mcp_binding`
 - `tool_routing`
 - `validator_chain`
+- `workflow_gate`
 - `report_contract`
-- `session_pointer`
+- `session_orchestration`
 - `path_boundary`
 - `roundtable_intelligence`
 
-| upgrade_id | run_id | ts_utc | trigger_mode | trigger_source | capability_axis | change_surface_ref | acceptance_command | evidence_ref | domain_artifact_refs | result_status | next_action | owner_layer |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-|  |  |  |  |  |  |  |  |  |  |  |  |  |
+| upgrade_id | run_id | ts_utc | trigger_mode | trigger_source | capability_axis | change_surface_ref | selected_skills | skill_trigger_basis | update_chain_status | creator_plane_changes | installer_plane_distribution | acceptance_command | evidence_ref | domain_artifact_refs | upgrade_targets | result_status | next_action | owner_layer |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |  |  | trigger/patch/validate/replay |  |  |  |  |  |  |  |  |  |
+
+Upgrade targets schema (mandatory):
+
+- `upgrade_targets` row format:
+  - target_type
+  - target_ref
+  - change_kind
+  - owner_layer
+
+Allowed `target_type`:
+
+- `identity_prompt`
+- `identity_task_contract`
+- `skill`
+- `mcp_server`
+- `tool_route`
+- `validator`
+- `workflow_gate`
+- `report_contract`
+- `session_orchestration`
+- `path_boundary`
+
+Allowed `change_kind`:
+
+- `add`
+- `update`
+- `remove`
+- `rewire`
+- `tuning`
+- `fix`
 
 ---
 
-## 7) Residual risk register
+## 9) Residual risk register
 
 Use one row per unresolved risk.
 
@@ -256,7 +346,7 @@ Use one row per unresolved risk.
 
 ---
 
-## 8) Final handoff summary (fixed)
+## 10) Final handoff summary (fixed)
 
 - Instance-plane status:
 - Repo-plane status:
