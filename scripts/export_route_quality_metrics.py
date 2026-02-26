@@ -10,6 +10,10 @@ from typing import Any
 import yaml
 
 
+def _repo_runtime_metrics_path(repo_root: Path, identity_id: str) -> Path:
+    return repo_root / ".codex" / "identity" / "runtime" / identity_id / "metrics" / f"{identity_id}-route-quality.json"
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
@@ -158,7 +162,7 @@ def main() -> int:
             pack_runtime_out = pack_path / "runtime" / "metrics" / f"{args.identity_id}-route-quality.json"
             if _is_within(pack_runtime_out, repo_root):
                 if args.allow_repo_runtime_fallback:
-                    out = repo_root / ".codex" / "identity" / "runtime" / args.identity_id / "metrics" / f"{args.identity_id}-route-quality.json"
+                    out = _repo_runtime_metrics_path(repo_root, args.identity_id)
                 else:
                     print(
                         "[FAIL] IP-PATH-001 route metrics output would resolve inside protocol repo; "

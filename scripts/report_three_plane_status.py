@@ -17,6 +17,15 @@ def _run(cmd: list[str]) -> tuple[int, str, str]:
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
+def _tracked_worktree_state() -> tuple[bool, list[str], str]:
+    rc, out, err = _run(["git", "status", "--porcelain"])
+    if rc != 0:
+        return False, [], (err or out or "git_status_failed")
+    rows = [ln for ln in out.splitlines() if ln.strip()]
+    tracked_dirty = [ln for ln in rows if not ln.startswith("??")]
+    return len(tracked_dirty) == 0, tracked_dirty[:20], ""
+
+
 def _bool(v: Any) -> bool:
     if isinstance(v, bool):
         return v
@@ -92,10 +101,14 @@ def _release_plane_status(args: argparse.Namespace) -> tuple[str, dict[str, Any]
 
 
 def _repo_plane_status(args: argparse.Namespace, resolved: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    workspace_clean, workspace_dirty_entries, workspace_status_error = _tracked_worktree_state()
     checks: dict[str, Any] = {
         "catalog_explicit": bool(args.catalog and Path(args.catalog).exists()),
         "resolved_scope_known": str(resolved.get("resolved_scope", "")).upper() != "UNKNOWN",
         "conflict_detected": bool(resolved.get("conflict_detected", False)),
+        "workspace_clean": workspace_clean,
+        "workspace_dirty_entries": workspace_dirty_entries,
+        "workspace_status_error": workspace_status_error,
     }
     if args.with_docs_contract:
         rc, out, err = _run(["python3", "scripts/docs_command_contract_check.py"])
@@ -109,6 +122,8 @@ def _repo_plane_status(args: argparse.Namespace, resolved: dict[str, Any]) -> tu
     if checks["conflict_detected"]:
         status = "BLOCKED"
     if not checks["catalog_explicit"] or not checks["resolved_scope_known"]:
+        status = "BLOCKED"
+    if not checks["workspace_clean"] or checks["workspace_status_error"]:
         status = "BLOCKED"
     if args.with_docs_contract and not checks["docs_command_contract"]["ok"]:
         status = "BLOCKED"

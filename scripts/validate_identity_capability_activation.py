@@ -114,21 +114,31 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
     for route_name, route in routes.items():
         if not isinstance(route, dict):
             continue
+        route_skills: set[str] = set()
+        route_mcp: set[str] = set()
         for s in route.get("primary_skills") or []:
             if str(s).strip():
-                required_skills.add(str(s).strip())
+                token = str(s).strip()
+                required_skills.add(token)
+                route_skills.add(token)
         for s in route.get("fallback_skills") or []:
             if str(s).strip():
-                required_skills.add(str(s).strip())
+                token = str(s).strip()
+                required_skills.add(token)
+                route_skills.add(token)
         for m in route.get("required_mcp") or []:
             if str(m).strip():
-                required_mcp.add(str(m).strip())
+                token = str(m).strip()
+                required_mcp.add(token)
+                route_mcp.add(token)
         tool_routes.append(
             {
                 "route": str(route_name),
                 "pipeline": route.get("pipeline") or [],
                 "max_tool_calls": route.get("max_tool_calls"),
                 "max_runtime_minutes": route.get("max_runtime_minutes"),
+                "required_skills": sorted(route_skills),
+                "required_mcp": sorted(route_mcp),
             }
         )
     return {
@@ -185,6 +195,7 @@ def _build_runtime_payload(
     identity_id: str,
     catalog_path: Path,
     repo_catalog_path: Path,
+    activation_policy: str = "strict-union",
 ) -> dict[str, Any]:
     pack, task_path = _resolve_current_task(catalog_path, identity_id)
     contract = _collect_contract(pack, task_path)
@@ -208,6 +219,7 @@ def _build_runtime_payload(
     mcp_tools_used: list[str] = []
     missing_mcp: list[str] = []
     missing_mcp_auth: list[str] = []
+    mcp_ok_map: dict[str, bool] = {}
     for name in contract["required_mcp"]:
         ok = False
         reason = ""
@@ -229,26 +241,70 @@ def _build_runtime_payload(
             reason = "not_configured"
         row = {"mcp": name, "available": ok, "source": source, "reason": reason}
         mcp_rows.append(row)
+        mcp_ok_map[name] = ok
         if ok:
             mcp_tools_used.append(name)
         else:
             missing_mcp.append(name)
 
+    skill_ok_map = {row["skill"]: bool(row["available"]) for row in skill_rows}
+    route_activation_matrix: list[dict[str, Any]] = []
+    route_ready_count = 0
+    for route in contract["tool_routes"]:
+        route_name = str(route.get("route", "")).strip()
+        route_skills = [str(x).strip() for x in (route.get("required_skills") or []) if str(x).strip()]
+        route_mcp = [str(x).strip() for x in (route.get("required_mcp") or []) if str(x).strip()]
+        route_missing_skills = [s for s in route_skills if not skill_ok_map.get(s, False)]
+        route_missing_mcp = [m for m in route_mcp if not mcp_ok_map.get(m, False)]
+        route_ready = not route_missing_skills and not route_missing_mcp
+        if route_ready:
+            route_ready_count += 1
+        route_activation_matrix.append(
+            {
+                "route": route_name,
+                "required_skills": route_skills,
+                "required_mcp": route_mcp,
+                "missing_skills": route_missing_skills,
+                "missing_mcp": route_missing_mcp,
+                "ready": route_ready,
+            }
+        )
+
     status = "ACTIVATED"
     error_code = ""
     notes: list[str] = []
-    if missing_skills:
-        status = "BLOCKED"
-        error_code = "IP-CAP-001"
-        notes.append(f"missing_skills={missing_skills}")
-    if missing_mcp:
-        status = "BLOCKED"
-        error_code = "IP-CAP-002"
-        notes.append(f"missing_mcp={missing_mcp}")
-    if missing_mcp_auth:
-        status = "BLOCKED"
-        error_code = "IP-CAP-003"
-        notes.append(f"mcp_auth_not_ready={missing_mcp_auth}")
+    policy = str(activation_policy or "strict-union").strip().lower()
+    if policy == "route-any-ready" and route_activation_matrix:
+        if route_ready_count == 0:
+            status = "BLOCKED"
+            error_code = "IP-CAP-004"
+            notes.append("no_route_ready")
+            if missing_skills:
+                error_code = "IP-CAP-001"
+                notes.append(f"missing_skills={missing_skills}")
+            if missing_mcp:
+                error_code = "IP-CAP-002"
+                notes.append(f"missing_mcp={missing_mcp}")
+            if missing_mcp_auth:
+                error_code = "IP-CAP-003"
+                notes.append(f"mcp_auth_not_ready={missing_mcp_auth}")
+        elif route_ready_count < len(route_activation_matrix):
+            notes.append(f"route_partial_ready={route_ready_count}/{len(route_activation_matrix)}")
+            if missing_mcp_auth:
+                notes.append(f"mcp_auth_not_ready_for_non_primary_routes={missing_mcp_auth}")
+    else:
+        if missing_skills:
+            status = "BLOCKED"
+            error_code = "IP-CAP-001"
+            notes.append(f"missing_skills={missing_skills}")
+        if missing_mcp:
+            status = "BLOCKED"
+            error_code = "IP-CAP-002"
+            notes.append(f"missing_mcp={missing_mcp}")
+        if missing_mcp_auth:
+            status = "BLOCKED"
+            error_code = "IP-CAP-003"
+            notes.append(f"mcp_auth_not_ready={missing_mcp_auth}")
     if not contract["required"]:
         status = "NOT_REQUIRED"
         error_code = ""
@@ -280,6 +336,10 @@ def _build_runtime_payload(
         "mcp_tools_used": mcp_tools_used,
         "tool_calls_used": ["validate_identity_capability_activation"],
         "tool_routes": contract["tool_routes"],
+        "route_activation_strategy": policy,
+        "route_activation_matrix": route_activation_matrix,
+        "route_ready_count": route_ready_count,
+        "route_total_count": len(route_activation_matrix),
         "capability_contract_required": bool(contract.get("required", False)),
         "capability_activation_status": status,
         "capability_activation_error_code": error_code,
@@ -328,6 +388,12 @@ def main() -> int:
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
     ap.add_argument("--require-activated", action="store_true")
+    ap.add_argument(
+        "--activation-policy",
+        choices=["strict-union", "route-any-ready"],
+        default="strict-union",
+        help="strict-union blocks when any required capability is unavailable; route-any-ready allows activation when at least one route is ready.",
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -350,7 +416,12 @@ def main() -> int:
     repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
 
     try:
-        payload = _build_runtime_payload(identity_id=args.identity_id, catalog_path=catalog_path, repo_catalog_path=repo_catalog_path)
+        payload = _build_runtime_payload(
+            identity_id=args.identity_id,
+            catalog_path=catalog_path,
+            repo_catalog_path=repo_catalog_path,
+            activation_policy=args.activation_policy,
+        )
     except Exception as exc:
         print(f"[FAIL] {exc}")
         return 1

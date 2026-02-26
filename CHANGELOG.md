@@ -101,6 +101,29 @@
       and wired it into `scripts/e2e_smoke_test.sh` + `scripts/release_readiness_check.py`
     - e2e compile step now writes to `/tmp/identity-compiled-runtime/*.md` to avoid
       tracked workspace churn from runtime brief generation
+  - recoverable self-drive contract alignment (fail-operational):
+    - `execute_identity_upgrade.py` now emits complete preflight-blocked evidence
+      (synthetic `checks/check_results`, `required_checks`, matching patch plan,
+      `creator_invocation`, and structured next_action) for capability/metrics blocked paths
+      instead of empty check arrays
+    - this removes false-fail in `validate_identity_self_upgrade_enforcement.py`
+      for recoverable blocked reports (`IP-CAP-*`, metrics-missing) while keeping
+      machine-auditable evidence integrity
+  - capability activation policy extension:
+    - `validate_identity_capability_activation.py` now emits per-route readiness matrix
+      (`route_activation_matrix`, `route_ready_count`, `route_total_count`)
+    - added `--activation-policy`:
+      - `strict-union` (default, backward-compatible, keeps IP-CAP-003 hard block semantics)
+      - `route-any-ready` (opt-in route-scoped activation semantics)
+  - three-plane repo-status hardening:
+    - `report_three_plane_status.py` repo-plane now includes tracked worktree cleanliness
+      (`workspace_clean`, dirty entries) and blocks `repo_plane_status=CLOSED` when tracked files are dirty
+  - ast-grep path governance rule strengthened:
+    - `.github/ast-grep/no-default-repo-runtime-fallback.yml` now covers broader Python path variants
+      and prevents unguarded repo `.codex/identity/runtime` fallback patterns across scripts
+    - `scripts/export_route_quality_metrics.py` repo fallback path construction is now
+      centralized via `_repo_runtime_metrics_path(...)` so explicit debug-only fallback
+      remains auditable while avoiding rule false positives on guarded branches
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

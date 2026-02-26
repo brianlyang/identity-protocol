@@ -175,6 +175,55 @@ def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int) -> dict[str, Any]
     }
 
 
+def _build_skipped_check_results(
+    *,
+    check_cmds: list[list[str]],
+    log_dir: Path,
+    run_id: str,
+    reason: str,
+    exit_code: int = 97,
+) -> list[dict[str, Any]]:
+    """
+    Build synthetic check/check_results rows for recoverable preflight-blocked flows.
+    Keeps report contract machine-auditable while preserving fail-operational semantics.
+    """
+    start = datetime.now(timezone.utc)
+    started = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    rows: list[dict[str, Any]] = []
+    log_dir.mkdir(parents=True, exist_ok=True)
+    for i, cmd in enumerate(check_cmds, start=1):
+        ended = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        log_path = log_dir / f"{run_id}-check-{i:02d}.log"
+        log_content = (
+            f"$ {' '.join(cmd)}\n"
+            f"[exit_code] {exit_code}\n"
+            f"[started_at] {started}\n"
+            f"[ended_at] {ended}\n\n"
+            f"[stdout]\n\n"
+            f"[stderr]\n"
+            f"skipped_preflight_blocked: {reason}\n"
+        )
+        log_path.write_text(log_content, encoding="utf-8")
+        log_sha256 = _sha256_file(log_path)
+        rows.append(
+            {
+                "command": " ".join(cmd),
+                "cmd": " ".join(cmd),
+                "code": exit_code,
+                "ok": False,
+                "stdout": "",
+                "stderr": f"skipped_preflight_blocked:{reason}",
+                "started_at": started,
+                "ended_at": ended,
+                "duration_ms": 0,
+                "exit_code": exit_code,
+                "log_path": str(log_path),
+                "sha256": log_sha256,
+            }
+        )
+    return rows
+
+
 def _resolve_git_range() -> tuple[str, str]:
     def _git(cmd: list[str]) -> str:
         p = subprocess.run(["git", *cmd], capture_output=True, text=True)
@@ -327,17 +376,32 @@ def _base_report(
     metrics_path: str,
     prompt_contract: dict[str, Any],
     capability_contract: dict[str, Any] | None = None,
+    required_checks: list[str] | None = None,
 ) -> dict[str, Any]:
     """
     Build a report skeleton with mandatory closure fields always present.
     This keeps failed/blocked/safe-auto reports machine-auditable.
     """
     capability_contract = capability_contract or {}
+    required_checks = required_checks or []
     return {
         "run_id": run_id,
         "identity_id": identity_id,
         "generated_at": now,
         "mode": mode,
+        "creator_invocation": {
+            "tool": "identity-creator",
+            "mode": "update",
+            "entrypoint": "scripts/execute_identity_upgrade.py",
+            "base_contract": "identity_update_lifecycle_contract",
+            "run_id": run_id,
+        },
+        "execution_context": {
+            "generated_by": "ci" if os.environ.get("CI") else "local",
+            "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "github_sha": os.environ.get("GITHUB_SHA", ""),
+        },
+        "required_checks": list(required_checks),
         "actions_taken": [],
         "checks": [],
         "check_results": [],
@@ -550,6 +614,21 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)
+    required_checks = (
+        task.get("identity_update_lifecycle_contract", {})
+        .get("validation_contract", {})
+        .get("required_checks", [])
+    )
+    if not isinstance(required_checks, list) or not required_checks:
+        required_checks = [
+            "scripts/validate_identity_upgrade_prereq.py",
+            "scripts/validate_identity_runtime_contract.py",
+            "scripts/validate_identity_update_lifecycle.py",
+            "scripts/validate_identity_capability_arbitration.py",
+        ]
+    check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
+    log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
+
     capability_contract = _resolve_capability_contract(
         identity_id=args.identity_id,
         catalog_path=Path(args.catalog),
@@ -575,6 +654,36 @@ def main() -> int:
     else:
         metrics_path = contract_metrics_path
     if capability_status in {"BLOCKED", "ERROR"} and bool(capability_contract.get("capability_contract_required", True)):
+        plan_path = out_dir / f"{run_id}-patch-plan.json"
+        _write_json(
+            plan_path,
+            {
+                "run_id": run_id,
+                "identity_id": args.identity_id,
+                "generated_at": now,
+                "mode": args.mode,
+                "upgrade_required": False,
+                "trigger_reasons": [f"capability_activation_blocked:{capability_error_code or 'IP-CAP-000'}"],
+                "patch_surface": [],
+                "planned_actions": ["resolve capability activation and rerun update"],
+                "required_checks": required_checks,
+                "protocol_mode": protocol["protocol_mode"],
+                "protocol_root": protocol["protocol_root"],
+                "protocol_commit_sha": protocol["protocol_commit_sha"],
+                "protocol_ref": protocol["protocol_ref"],
+                "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+                "resolved_scope": str(args.resolved_scope or ""),
+                "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+                "capability_activation_status": capability_status,
+                "capability_activation_error_code": capability_error_code,
+            },
+        )
+        skipped_checks = _build_skipped_check_results(
+            check_cmds=check_cmds,
+            log_dir=log_dir,
+            run_id=run_id,
+            reason=f"capability_activation_blocked:{capability_error_code or 'IP-CAP-000'}",
+        )
         report = _base_report(
             run_id=run_id,
             identity_id=args.identity_id,
@@ -588,11 +697,23 @@ def main() -> int:
             metrics_path=str(metrics_path),
             prompt_contract=prompt_contract,
             capability_contract=capability_contract,
+            required_checks=required_checks,
         )
         report.update(
             {
                 "upgrade_required": False,
                 "trigger_reasons": [f"capability_activation_blocked:{capability_error_code or 'IP-CAP-000'}"],
+                "required_checks": required_checks,
+                "checks": skipped_checks,
+                "check_results": skipped_checks,
+                "actions_taken": [
+                    f"patch_plan_written:{plan_path}",
+                    "validator_execution_skipped_preflight_blocked",
+                ],
+                "artifacts": [
+                    str(plan_path),
+                    str(capability_contract.get("capability_activation_report_path", "")),
+                ],
                 "permission_state": "PRECHECK",
                 "permission_error_code": "",
                 "escalation_recommendation": "activate required skill/mcp attachments before retry",
@@ -618,6 +739,36 @@ def main() -> int:
         print(f"next_action={report.get('next_action','')}")
         return 2
     if not metrics_path.exists():
+        plan_path = out_dir / f"{run_id}-patch-plan.json"
+        _write_json(
+            plan_path,
+            {
+                "run_id": run_id,
+                "identity_id": args.identity_id,
+                "generated_at": now,
+                "mode": args.mode,
+                "upgrade_required": False,
+                "trigger_reasons": [f"metrics_artifact_missing:{metrics_path}"],
+                "patch_surface": [],
+                "planned_actions": ["generate route metrics and rerun update"],
+                "required_checks": required_checks,
+                "protocol_mode": protocol["protocol_mode"],
+                "protocol_root": protocol["protocol_root"],
+                "protocol_commit_sha": protocol["protocol_commit_sha"],
+                "protocol_ref": protocol["protocol_ref"],
+                "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+                "resolved_scope": str(args.resolved_scope or ""),
+                "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+                "capability_activation_status": capability_status,
+                "capability_activation_error_code": capability_error_code,
+            },
+        )
+        skipped_checks = _build_skipped_check_results(
+            check_cmds=check_cmds,
+            log_dir=log_dir,
+            run_id=run_id,
+            reason=f"metrics_artifact_missing:{metrics_path}",
+        )
         report = _base_report(
             run_id=run_id,
             identity_id=args.identity_id,
@@ -631,11 +782,20 @@ def main() -> int:
             metrics_path=str(metrics_path),
             prompt_contract=prompt_contract,
             capability_contract=capability_contract,
+            required_checks=required_checks,
         )
         report.update(
             {
                 "upgrade_required": False,
                 "trigger_reasons": [f"metrics_artifact_missing:{metrics_path}"],
+                "required_checks": required_checks,
+                "checks": skipped_checks,
+                "check_results": skipped_checks,
+                "actions_taken": [
+                    f"patch_plan_written:{plan_path}",
+                    "validator_execution_skipped_metrics_missing",
+                ],
+                "artifacts": [str(plan_path)],
                 "permission_state": "PRECHECK",
                 "permission_error_code": "IP-UPG-001",
                 "escalation_recommendation": "generate metrics artifact then rerun update",
@@ -778,6 +938,13 @@ def main() -> int:
                 if not ok:
                     violations.append({"path": pth, "reason": reason})
             if violations:
+                skipped_checks = _build_skipped_check_results(
+                    check_cmds=check_cmds,
+                    log_dir=log_dir,
+                    run_id=run_id,
+                    reason="safe_auto_path_policy_violation",
+                    exit_code=98,
+                )
                 report = {
                     **_base_report(
                         run_id=run_id,
@@ -792,12 +959,14 @@ def main() -> int:
                         metrics_path=str(metrics_path),
                         prompt_contract=prompt_contract,
                         capability_contract=capability_contract,
+                        required_checks=required_checks,
                     ),
                     "upgrade_required": upgrade_required,
                     "trigger_reasons": reasons,
+                    "required_checks": required_checks,
                     "actions_taken": actions_taken,
-                    "checks": [],
-                    "check_results": [],
+                    "checks": skipped_checks,
+                    "check_results": skipped_checks,
                     "artifacts": artifacts,
                     "all_ok": False,
                     "path_policy_violations": violations,
@@ -911,20 +1080,6 @@ def main() -> int:
             )
 
     # Run required validators + replay-equivalent gate checks
-    required_checks = (
-        task.get("identity_update_lifecycle_contract", {})
-        .get("validation_contract", {})
-        .get("required_checks", [])
-    )
-    if not isinstance(required_checks, list) or not required_checks:
-        required_checks = [
-            "scripts/validate_identity_upgrade_prereq.py",
-            "scripts/validate_identity_runtime_contract.py",
-            "scripts/validate_identity_update_lifecycle.py",
-            "scripts/validate_identity_capability_arbitration.py",
-        ]
-    check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
-    log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
 
     all_ok = all(c["ok"] for c in checks)
@@ -1064,6 +1219,7 @@ def main() -> int:
             "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
             "github_sha": os.environ.get("GITHUB_SHA", ""),
         },
+        "required_checks": required_checks,
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
         "actions_taken": actions_taken,
