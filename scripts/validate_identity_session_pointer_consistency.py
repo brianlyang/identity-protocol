@@ -27,6 +27,10 @@ def _default_canonical_out(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "active_identity.json").resolve()
 
 
+def _default_mirror_out(catalog_path: Path) -> Path:
+    return (catalog_path.parent / "session" / "mirror" / "current.json").resolve()
+
+
 def _validate_pointer(
     *,
     pointer_path: Path,
@@ -86,13 +90,24 @@ def main() -> int:
     )
     ap.add_argument(
         "--mirror-out",
-        default="/tmp/identity-session/current.json",
-        help="legacy mirror pointer path; empty disables mirror check",
+        default="",
+        help=(
+            "mirror pointer path; default: <catalog_dir>/session/mirror/current.json. "
+            "empty disables mirror check"
+        ),
+    )
+    ap.add_argument(
+        "--legacy-mirror-out",
+        default="",
+        help=(
+            "optional legacy mirror pointer path (for compatibility only, e.g. /tmp/identity-session/current.json). "
+            "empty disables legacy mirror check"
+        ),
     )
     ap.add_argument(
         "--require-mirror",
         action="store_true",
-        help="fail if mirror pointer is missing or inconsistent",
+        help="fail if mirror/legacy-mirror pointer is missing or inconsistent (default: warning-only)",
     )
     args = ap.parse_args()
 
@@ -141,25 +156,47 @@ def main() -> int:
         print(f"[FAIL] {reason}")
         return 1
 
+    mirror_targets: list[Path] = []
     mirror_raw = args.mirror_out.strip()
     if mirror_raw:
-        mirror_out = Path(mirror_raw).expanduser().resolve()
+        mirror_targets.append(Path(mirror_raw).expanduser().resolve())
+    else:
+        mirror_targets.append(_default_mirror_out(catalog_path))
+    legacy_mirror_raw = args.legacy_mirror_out.strip()
+    if legacy_mirror_raw:
+        mirror_targets.append(Path(legacy_mirror_raw).expanduser().resolve())
+
+    seen: set[str] = set()
+    dedup_targets: list[Path] = []
+    for t in mirror_targets:
+        k = str(t)
+        if k in seen:
+            continue
+        seen.add(k)
+        dedup_targets.append(t)
+
+    for i, mirror_out in enumerate(dedup_targets, start=1):
+        pointer_name = "mirror" if i == 1 else f"mirror_{i}"
         if mirror_out.exists():
             ok, reason = _validate_pointer(
                 pointer_path=mirror_out,
-                pointer_name="mirror",
+                pointer_name=pointer_name,
                 catalog_path=catalog_path,
                 active_identity_id=active_identity_id,
                 active_pack_path=active_pack_path,
             )
             if not ok:
-                print(f"[FAIL] {reason}")
-                return 1
-        elif args.require_mirror:
-            print(f"[FAIL] mirror_missing:{mirror_out}")
+                if args.require_mirror:
+                    print(f"[FAIL] {reason}")
+                    return 1
+                print(f"[WARN] {reason}")
+                continue
+            print(f"[OK] {pointer_name} pointer aligned: {mirror_out}")
+            continue
+        if args.require_mirror:
+            print(f"[FAIL] {pointer_name}_missing:{mirror_out}")
             return 1
-        else:
-            print(f"[WARN] mirror pointer not found (allowed): {mirror_out}")
+        print(f"[WARN] {pointer_name} pointer not found (allowed): {mirror_out}")
 
     print(
         "[OK] session pointer consistency validated: "
@@ -170,4 +207,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

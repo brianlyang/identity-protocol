@@ -42,6 +42,11 @@ This system is intentionally designed to solve three recurring failure modes:
   - run before protocol audits:
     - `bash scripts/preflight_protocol_audit_env.sh`
     - `bash scripts/preflight_protocol_audit_env.sh --require-gh-auth` (release-grade strict profile)
+  - checks local parity for:
+    - `actionlint`
+    - `ast-grep`
+    - `gitleaks`
+    - `gh auth status -h github.com`
   - when `gh auth` is not ready, strict-union readiness may fail with `IP-CAP-003`;
     treat this as environment-auth not-ready state, not protocol-regression.
 
@@ -359,7 +364,8 @@ For runtime operations (validate/activate/update/install/writeback), always use 
 
 - Active status source-of-truth: catalog (`catalog.local.yaml` for runtime).
 - Session pointer canonical path: `<catalog_dir>/session/active_identity.json`
-  (legacy mirror: `/tmp/identity-session/current.json` for compatibility).
+- Session pointer mirror path (default): `<catalog_dir>/session/mirror/current.json`
+  (legacy `/tmp/identity-session/current.json` is compatibility-only and opt-in).
 - Strategy selected in v1.4.x hardening: **dual-write + strong consistency**.
   - catalog drives activation/scheduling decisions.
   - `META.status` is a required mirrored field for audit/readability.

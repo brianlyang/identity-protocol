@@ -355,11 +355,21 @@ Failure code recommendation:
 
 #### FR-005 Dialogue Content Intelligence Contract (DCIC)
 
-Add protocol-level DCIC with mandatory gates:
+Protocol-level meaning (must not be confused):
 
-1. `dialogue_content_gate=required`
-2. `dialogue_cross_validation_gate=required`
-3. `dialogue_result_support_gate=required`
+1. Protocol defines the validator chain and gate path for dialogue governance.
+2. Instance activation is contract-first:
+   - `dialogue_governance_contract.required=false` -> validators skip (non-blocking).
+   - `dialogue_governance_contract.required=true` -> validators execute by rollout policy.
+3. Rollout policy stays explicit:
+   - `rollout_mode=warn` -> report issues without blocking.
+   - `rollout_mode=enforce` -> fail by deterministic `IP-DCIC-*` codes.
+
+Protocol gate capability (routing path) includes:
+
+1. `dialogue_content_gate`
+2. `dialogue_cross_validation_gate`
+3. `dialogue_result_support_gate`
 
 Required artifacts for each run:
 

@@ -258,7 +258,7 @@ def _activate_identity(
     meta_backups: dict[Path, str | None] = {}
     switch_report: Path | None = None
     canonical_session_pointer = (local_catalog.parent / "session" / "active_identity.json").resolve()
-    legacy_session_mirror = Path("/tmp/identity-session/current.json").resolve()
+    scoped_session_mirror = (local_catalog.parent / "session" / "mirror" / "current.json").resolve()
     try:
         # promote target to active binding first (activation validator requires this for active identities)
         created_evidence.append(
@@ -312,7 +312,7 @@ def _activate_identity(
             "resolved_scope": str(resolved.get("resolved_scope", "")),
             "resolved_pack_path": str(resolved.get("resolved_pack_path", "")),
             "session_pointer_canonical_path": str(canonical_session_pointer),
-            "session_pointer_mirror_path": str(legacy_session_mirror),
+            "session_pointer_mirror_path": str(scoped_session_mirror),
         }
         protocol = collect_protocol_evidence(protocol_root, protocol_mode)
         switch_payload.update(
@@ -336,7 +336,7 @@ def _activate_identity(
                 "--out",
                 str(canonical_session_pointer),
                 "--mirror-out",
-                str(legacy_session_mirror),
+                str(scoped_session_mirror),
             ],
             capture_output=True,
             text=True,
@@ -360,7 +360,7 @@ def _activate_identity(
                 "--canonical-out",
                 str(canonical_session_pointer),
                 "--mirror-out",
-                str(legacy_session_mirror),
+                str(scoped_session_mirror),
             ]
         )
         if rc != 0:
@@ -906,6 +906,9 @@ def main() -> int:
             ["python3", "scripts/validate_identity_install_safety.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_capability_arbitration.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_dialogue_content.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_dialogue_cross_validation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            ["python3", "scripts/validate_identity_dialogue_result_support.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
         ]
         for cmd in checks:

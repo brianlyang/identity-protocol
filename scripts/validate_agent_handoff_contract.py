@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -65,11 +66,23 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
-def _iter_handoff_files(pattern: str, explicit_file: str) -> list[Path]:
+def _iter_handoff_files(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Path]:
     if explicit_file:
-        p = Path(explicit_file)
+        p = Path(explicit_file).expanduser()
         return [p] if p.exists() else []
-    return sorted(Path(".").glob(pattern))
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
 
 
 def _bad_placeholder(value: str) -> bool:
@@ -326,7 +339,7 @@ def main() -> int:
         print("[FAIL] agent_handoff_contract.handoff_log_path_pattern missing")
         return 1
 
-    files = _iter_handoff_files(pattern, args.file)
+    files = _iter_handoff_files(pattern, args.file, pack_root=task_path.parent.resolve())
     if not files:
         print(f"[FAIL] no handoff logs found (pattern={pattern}, file={args.file})")
         return 1

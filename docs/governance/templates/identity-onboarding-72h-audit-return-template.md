@@ -5,6 +5,7 @@ Purpose:
 1. Standardize architect ↔ audit-expert handoff for onboarding closure.
 2. Enforce A-track/B-track separation to avoid mixed-layer conclusions.
 3. Keep output machine-checkable and replayable.
+4. Preserve domain-learning depth while keeping protocol governance records clean.
 
 Status: template
 
@@ -27,6 +28,10 @@ Status: template
 - A-track layer declaration: protocol
 - B-track layer declaration: instance
 - Mixed-layer statement: prohibited
+- Dual-ledger statement:
+  - governance ledger carries capability-upgrade facts and evidence references only
+  - domain ledger carries business details and learning artifacts
+  - governance must link domain artifacts via references, not inline non-redacted business details
 
 ---
 
@@ -118,6 +123,14 @@ Minimum recommended set:
    - command:
    - rc:
    - output summary:
+10. Self-driven upgrade ledger validator (when available)
+   - command:
+   - rc:
+   - output summary:
+11. Roundtable/cross-validation output check
+   - command:
+   - rc:
+   - output summary:
 
 ### 3.4 Residual risks + next milestone
 
@@ -126,7 +139,46 @@ Minimum recommended set:
 
 ---
 
-## 4) Three-plane final declaration (mandatory)
+## 4) Self-driven upgrade ledger summary (mandatory)
+
+Rules:
+
+1. Include one row per upgrade event in the reporting window.
+2. `trigger_mode` must be `active` or `passive`.
+3. If `result_status` is not `PASS`, `next_action` must be non-empty.
+4. `domain_artifact_refs` is required when business learning is part of upgrade evidence.
+
+| upgrade_id | run_id | ts_utc | trigger_mode | capability_axis | acceptance_command | evidence_ref | domain_artifact_refs | result_status | next_action |
+|---|---|---|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |  |  |  |
+
+---
+
+## 5) Roundtable and cross-vendor validation evidence (mandatory for complex upgrades)
+
+Roundtable summary:
+
+- roundtable_required: yes/no
+- roundtable_decision_ref:
+- decision_matrix_ref:
+- participants_role_set:
+- unresolved_items_count:
+- skip_reason_if_not_required:
+
+Cross-vendor matrix (fact/inference separated):
+
+| Vendor | Source URL | Retrieved at (UTC) | Claim | Claim type (`fact`/`inference`) | Mapped contract/validator | Risk note |
+|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |
+
+Constraint:
+
+1. Final claims must reference at least one `fact` row.
+2. `inference` rows must include risk notes and mapped validator/contract.
+
+---
+
+## 6) Three-plane final declaration (mandatory)
 
 - instance_plane_status:
 - repo_plane_status:
@@ -140,7 +192,7 @@ Rule:
 
 ---
 
-## 5) Identity context tuple evidence (mandatory)
+## 7) Identity context tuple evidence (mandatory)
 
 Attach tuple from resolver:
 
@@ -154,9 +206,8 @@ If catalog_path is unexpected for current runtime mode, report as misconfigurati
 
 ---
 
-## 6) Sign-off
+## 8) Sign-off
 
 - Architect sign-off:
 - Audit expert sign-off:
 - Pending follow-ups:
-

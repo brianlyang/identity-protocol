@@ -21,6 +21,10 @@ def _default_canonical_out(catalog: Path) -> Path:
     return (catalog.parent / "session" / "active_identity.json").resolve()
 
 
+def _default_mirror_out(catalog: Path) -> Path:
+    return (catalog.parent / "session" / "mirror" / "current.json").resolve()
+
+
 def _write_payload(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -37,13 +41,24 @@ def main() -> int:
     )
     ap.add_argument(
         "--mirror-out",
-        default="/tmp/identity-session/current.json",
-        help="optional legacy mirror pointer path; empty string disables mirror write",
+        default="",
+        help=(
+            "optional mirror pointer path; default: <catalog_dir>/session/mirror/current.json. "
+            "empty string disables mirror write"
+        ),
+    )
+    ap.add_argument(
+        "--legacy-mirror-out",
+        default="",
+        help=(
+            "optional legacy mirror pointer path (for compatibility only, e.g. /tmp/identity-session/current.json). "
+            "empty string disables legacy mirror write"
+        ),
     )
     ap.add_argument(
         "--require-mirror",
         action="store_true",
-        help="treat mirror write failure as fatal (default mirror failure is warning-only)",
+        help="treat mirror/legacy-mirror write failure as fatal (default failure is warning-only)",
     )
     args = ap.parse_args()
 
@@ -78,24 +93,41 @@ def main() -> int:
         return 1
     print(f"[OK] session identity synced (canonical): {canonical_out}")
 
+    mirror_targets: list[Path] = []
     mirror_raw = args.mirror_out.strip()
     if mirror_raw:
-        mirror_out = Path(mirror_raw).expanduser().resolve()
-        if mirror_out != canonical_out:
-            mirror_payload = dict(payload)
-            mirror_payload["session_pointer_type"] = "mirror"
-            mirror_payload["canonical_session_pointer"] = str(canonical_out)
-            try:
-                _write_payload(mirror_out, mirror_payload)
-                print(f"[OK] session identity mirrored: {mirror_out}")
-            except Exception as exc:
-                msg = f"mirror session sync failed: {mirror_out} ({exc})"
-                if args.require_mirror:
-                    print(f"[FAIL] {msg}")
-                    return 1
-                print(f"[WARN] {msg}")
-        else:
+        mirror_targets.append(Path(mirror_raw).expanduser().resolve())
+    else:
+        mirror_targets.append(_default_mirror_out(catalog))
+    legacy_mirror_raw = args.legacy_mirror_out.strip()
+    if legacy_mirror_raw:
+        mirror_targets.append(Path(legacy_mirror_raw).expanduser().resolve())
+
+    dedup_targets: list[Path] = []
+    seen: set[str] = set()
+    for t in mirror_targets:
+        k = str(t)
+        if k in seen:
+            continue
+        seen.add(k)
+        dedup_targets.append(t)
+
+    for mirror_out in dedup_targets:
+        if mirror_out == canonical_out:
             print("[INFO] mirror path equals canonical path; mirror write skipped")
+            continue
+        mirror_payload = dict(payload)
+        mirror_payload["session_pointer_type"] = "mirror"
+        mirror_payload["canonical_session_pointer"] = str(canonical_out)
+        try:
+            _write_payload(mirror_out, mirror_payload)
+            print(f"[OK] session identity mirrored: {mirror_out}")
+        except Exception as exc:
+            msg = f"mirror session sync failed: {mirror_out} ({exc})"
+            if args.require_mirror:
+                print(f"[FAIL] {msg}")
+                return 1
+            print(f"[WARN] {msg}")
     return 0
 
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -82,6 +83,36 @@ def _validate_record(rec: dict[str, Any], identity_id: str, *, strict_identity: 
     return issues
 
 
+def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
+
+
+def _resolve_path(path_value: str, *, pack_root: Path) -> Path:
+    raw = str(path_value or "").strip()
+    if not raw:
+        return Path("")
+    p = Path(raw).expanduser()
+    if p.is_absolute():
+        return p
+    candidate = (pack_root / raw).resolve()
+    if candidate.exists():
+        return candidate
+    return (Path.cwd() / raw).resolve()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate capability arbitration contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -100,6 +131,7 @@ def main() -> int:
 
     print(f"[INFO] validate capability arbitration for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
+    pack_root = task_path.parent.resolve()
 
     task = _load_json(task_path)
     c = task.get("capability_arbitration_contract") or {}
@@ -194,9 +226,13 @@ def main() -> int:
             print(f"[FAIL] safe_auto_patch_surface.denylist missing required entries: {sorted(required_deny - set(deny))}")
             rc = 1
 
-    report_path = Path(args.report) if args.report else Path("identity/runtime/examples") / f"{args.identity_id}-capability-arbitration-sample.json"
+    report_path = (
+        Path(args.report).expanduser().resolve()
+        if args.report
+        else (pack_root / "runtime" / "examples" / f"{args.identity_id}-capability-arbitration-sample.json").resolve()
+    )
     if not report_path.exists():
-        files = sorted(Path(".").glob(c.get("sample_report_path_pattern", "")))
+        files = _glob_paths(str(c.get("sample_report_path_pattern", "")), pack_root=pack_root)
         if files:
             report_path = files[-1]
     if not report_path.exists():
@@ -219,8 +255,9 @@ def main() -> int:
 
     # Optional threshold/metrics linkage validation (enabled when metrics artifact exists)
     route_quality = task.get("route_quality_contract") or {}
-    metrics_path = Path(args.metrics_path) if args.metrics_path else Path(
-        route_quality.get("metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json")
+    metrics_path = _resolve_path(
+        str(args.metrics_path or route_quality.get("metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json")),
+        pack_root=pack_root,
     )
     if metrics_path.exists():
         try:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import tomllib
 from pathlib import Path
@@ -153,7 +154,7 @@ def _collect_contract(pack: Path, task_path: Path) -> dict[str, Any]:
 
 
 def _check_gh_cli() -> bool:
-    return subprocess.call(["bash", "-lc", "command -v gh >/dev/null 2>&1"]) == 0
+    return shutil.which("gh") is not None
 
 
 def _check_gh_auth_status() -> tuple[bool, str]:
@@ -168,7 +169,10 @@ def _check_gh_auth_status() -> tuple[bool, str]:
         ["gh", "auth", "status"],
     ]
     for cmd in cmds:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+        except FileNotFoundError:
+            return False, "gh_cli_missing"
         msg = ((proc.stderr or "") + "\n" + (proc.stdout or "")).strip().lower()
         if "failed to log in" in msg:
             return False, "gh_auth_invalid"

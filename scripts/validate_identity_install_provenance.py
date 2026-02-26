@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -38,6 +39,22 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate install provenance contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -47,6 +64,7 @@ def main() -> int:
 
     task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
     task = _load_json(task_path)
+    pack_root = task_path.parent.resolve()
 
     gates = task.get("gates") or {}
     if gates.get("install_provenance_gate") != "required":
@@ -75,7 +93,7 @@ def main() -> int:
         return 1
 
     report_path = Path(args.report) if args.report else None
-    all_reports = sorted(Path(".").glob(str(c.get("report_path_pattern", ""))))
+    all_reports = _glob_paths(str(c.get("report_path_pattern", "")), pack_root=pack_root)
     if not report_path or not report_path.exists():
         if all_reports:
             report_path = all_reports[-1]

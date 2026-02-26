@@ -204,6 +204,44 @@
     - SSOT/README guidance now explicitly treats strict-union `IP-CAP-003`
       with unauthenticated `gh` as environment-auth blocked state
       (not protocol regression by itself)
+  - instance baseline extension (separate from protocol contract change):
+    - added `system-requirements-analyst` baseline identity assets:
+      - `identity/catalog/identities.yaml` registration
+      - `identity/packs/system-requirements-analyst/**` scaffold and runtime examples
+    - explicit linkage for historical baseline commit: `6ecdaae`
+    - governance classification: this is instance/baseline track (B-track),
+      not protocol SSOT contract mutation
+  - session pointer mirror deconfliction:
+    - default mirror path switched from global `/tmp` to catalog-scoped
+      `<catalog_dir>/session/mirror/current.json`
+    - `validate_identity_session_pointer_consistency.py` now enforces canonical pointer
+      by default while keeping mirror mismatch warning-only unless `--require-mirror`
+    - `identity_creator.py activate` sync/verify now uses catalog-scoped mirror by default
+  - local preflight parity with CI required-gates:
+    - `scripts/preflight_protocol_audit_env.sh` now checks `gitleaks` availability
+      in addition to `actionlint` and `ast-grep`
+  - validate-chain alignment for local/release/e2e semantics:
+    - `identity_creator.py validate` now includes dialogue validators:
+      - `validate_identity_dialogue_content.py`
+      - `validate_identity_dialogue_cross_validation.py`
+      - `validate_identity_dialogue_result_support.py`
+    - keeps contract-first semantics (`required=false` remains skip/non-blocking)
+  - install/migration rewrite consistency hardening:
+    - `identity_installer.py install` now runs path normalization rewrite after `_sync_pack`
+      (same semantic level as adopt flow)
+    - rewrite coverage expanded to `CURRENT_TASK.json` + `runtime/**/*.json` path-bearing fields
+      with install report counters (`rewritten_files_count`, `rewritten_fields_count`)
+    - `validate_identity_update_lifecycle.py` now resolves relative-first evidence paths
+      against pack root for relocation-safe replay checks
+    - `create_identity_pack.py` replay sample generator now writes relative
+      `evidence_path` / `log_path` fields by default
+  - validator portability hardening:
+    - `validate_identity_role_binding.py` runtime live-revalidation no longer depends
+      on caller cwd; validator path/cwd now anchored to script/repo root
+  - FR-005 wording/implementation alignment:
+    - DCIC documentation now explicitly states protocol defines gate routing path,
+      while `dialogue_governance_contract.required` controls per-instance activation stage
+      (`warn` / `enforce`)
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`

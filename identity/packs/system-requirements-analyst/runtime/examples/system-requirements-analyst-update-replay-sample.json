@@ -34,7 +34,7 @@
     "tool": "identity-creator",
     "mode": "update",
     "run_id": "system-requirements-analyst-update-replay-sample",
-    "evidence_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/examples/system-requirements-analyst-update-replay-sample.json"
+    "evidence_path": "runtime/examples/system-requirements-analyst-update-replay-sample.json"
   },
   "check_results": [
     {
@@ -42,7 +42,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-01.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-01.log",
       "sha256": "39e3cae0812a1a15bc7e882c257b4280e79667ccfe7fd659d8e9dbb041d8d343"
     },
     {
@@ -50,7 +50,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-02.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-02.log",
       "sha256": "1a5defbf7a61637158bf1984d3cc063cbb3517aab401311d3135abb16e50f7ca"
     },
     {
@@ -58,7 +58,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-03.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-03.log",
       "sha256": "41738c9d44dcc74f636d0d43e5897911e45afd2632347c2e4540b57986ef927e"
     },
     {
@@ -66,7 +66,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-04.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-04.log",
       "sha256": "be8848dbae681627faa7abc9c51d929907786554b545d72d119e89f594b306df"
     },
     {
@@ -74,7 +74,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-05.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-05.log",
       "sha256": "fa2365e0bff93517e78cf9ed0e4c2c11900b56cdbd2374e4f5fefde91a194b6a"
     },
     {
@@ -82,7 +82,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-06.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-06.log",
       "sha256": "de0cc3611cbfec035f848f82aa98ad6c3a1ae1bdc7a7cc3b2d5d42ece1aac85e"
     },
     {
@@ -90,7 +90,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-07.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-07.log",
       "sha256": "260bba12e5d31f4c6a1a376852a4eb1b7574d7dacc598f58cb11bc4d9934698d"
     },
     {
@@ -98,7 +98,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-08.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-08.log",
       "sha256": "36373e29128b7761aafe9e7b46b0f15ad500e3727534094c602e3c68df1540ac"
     },
     {
@@ -106,7 +106,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-09.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-09.log",
       "sha256": "8b2c1bad7327cc538411df7c837da24dcebd7d78b6b4335c841a061c09bf069d"
     },
     {
@@ -114,7 +114,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-10.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-10.log",
       "sha256": "2cefb0b6ce4963a7b52f62b6f3bf174093ed9ee7ed8685327cc880249f25d60b"
     },
     {
@@ -122,7 +122,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-11.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-11.log",
       "sha256": "f23548a231ccef9581fa9ccd6751d927f649ac7acdb74c570d73ac26ced3535f"
     },
     {
@@ -130,7 +130,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-12.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-12.log",
       "sha256": "b9a6818b2c12581df0d73cf844e43509631b806c702475a7db516a39a314bc32"
     },
     {
@@ -138,7 +138,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-13.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-13.log",
       "sha256": "b8ae0a308204da7efe0663ece317627d7f8e8b3b2e5afb08ab28cc5446b374a6"
     },
     {
@@ -146,7 +146,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-14.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-14.log",
       "sha256": "24ce0820ced051a76856c880d626aa92ee7c307b0c96136b6bc9d0be6bb44daa"
     },
     {
@@ -154,7 +154,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-15.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-15.log",
       "sha256": "fabc4aa2b74857de8d1f413f172e19c19d3627f708732ec7d4a9f890c5163eff"
     },
     {
@@ -162,7 +162,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-16.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-16.log",
       "sha256": "a17c56ce9a6700449a4e2bfe66c2450ed250f8f52edd9ac762a9795e815e64aa"
     },
     {
@@ -170,7 +170,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-17.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-17.log",
       "sha256": "51a159db628f37ac767ba79f554f9675ded65a106ce182a63b0e0b0339756cb7"
     },
     {
@@ -178,7 +178,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-18.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-18.log",
       "sha256": "250f19c9bc61d40f20b3054e6955cf566cbfdb944217c531e35c7ad0bea91491"
     },
     {
@@ -186,7 +186,7 @@
       "started_at": "2026-02-26T15:06:44Z",
       "ended_at": "2026-02-26T15:06:44Z",
       "exit_code": 0,
-      "log_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-19.log",
+      "log_path": "runtime/logs/upgrade/system-requirements-analyst/system-requirements-analyst-update-replay-check-19.log",
       "sha256": "8565c7c1009e8e75594766d0d86e6edad5c8b945774494bad73cc857d941deec"
     }
   ],

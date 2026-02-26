@@ -22,9 +22,10 @@ Checks local audit execution prerequisites:
   - GitHub CLI auth readiness (gh auth status -h github.com)
   - actionlint availability
   - ast-grep availability (sg or ast-grep)
+  - gitleaks availability
 
 Options:
-  --install-missing   Try to install missing actionlint/ast-grep locally.
+  --install-missing   Try to install missing actionlint/ast-grep/gitleaks locally.
   --require-gh-auth   Exit non-zero when gh auth is not ready.
 USAGE
       exit 0
@@ -38,6 +39,7 @@ done
 
 ACTIONLINT_CMD=""
 AST_GREP_CMD=""
+GITLEAKS_CMD=""
 GH_CMD=""
 MISSING_TOOLS=()
 
@@ -75,6 +77,15 @@ resolve_ast_grep() {
   return 1
 }
 
+resolve_gitleaks() {
+  if command -v gitleaks >/dev/null 2>&1; then
+    GITLEAKS_CMD="$(command -v gitleaks)"
+    return 0
+  fi
+  GITLEAKS_CMD=""
+  return 1
+}
+
 install_actionlint() {
   if resolve_actionlint; then
     return 0
@@ -105,12 +116,28 @@ install_ast_grep() {
   return 0
 }
 
+install_gitleaks() {
+  if resolve_gitleaks; then
+    return 0
+  fi
+  echo "[INFO] gitleaks missing, attempting install..."
+  if command -v brew >/dev/null 2>&1; then
+    brew install gitleaks || true
+  else
+    echo "[WARN] cannot auto-install gitleaks (brew unavailable)"
+  fi
+  resolve_gitleaks || return 1
+  return 0
+}
+
 if [[ "$INSTALL_MISSING" == "true" ]]; then
   install_actionlint || true
   install_ast_grep || true
+  install_gitleaks || true
 else
   resolve_actionlint || true
   resolve_ast_grep || true
+  resolve_gitleaks || true
 fi
 
 if [[ -z "$ACTIONLINT_CMD" ]]; then
@@ -123,6 +150,12 @@ if [[ -z "$AST_GREP_CMD" ]]; then
   MISSING_TOOLS+=("ast-grep")
 else
   echo "[OK] ast-grep ready: $AST_GREP_CMD"
+fi
+
+if [[ -z "$GITLEAKS_CMD" ]]; then
+  MISSING_TOOLS+=("gitleaks")
+else
+  echo "[OK] gitleaks ready: $GITLEAKS_CMD"
 fi
 
 GH_AUTH_READY="false"
@@ -153,4 +186,3 @@ fi
 echo "[OK] protocol audit preflight completed"
 echo "     tools_ready=true gh_auth_ready=${GH_AUTH_READY} require_gh_auth=${REQUIRE_GH_AUTH}"
 exit 0
-

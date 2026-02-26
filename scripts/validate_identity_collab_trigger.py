@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,11 +79,23 @@ def _parse_iso_dt(value: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
-def _iter_logs(pattern: str, explicit_file: str) -> list[Path]:
+def _iter_logs(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Path]:
     if explicit_file:
-        p = Path(explicit_file)
+        p = Path(explicit_file).expanduser()
         return [p] if p.exists() else []
-    return sorted(Path(".").glob(pattern))
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
 
 
 def _validate_log(
@@ -227,6 +240,7 @@ def main() -> int:
         return 1
 
     task = _load_json(task_path)
+    pack_root = task_path.parent.resolve()
 
     gates = task.get("gates") or {}
     if gates.get("collaboration_trigger_gate") != "required":
@@ -328,7 +342,7 @@ def main() -> int:
         print("[FAIL] collaboration_trigger_contract.evidence_log_path_pattern missing")
         return 1
 
-    files = _iter_logs(pattern, args.file)
+    files = _iter_logs(pattern, args.file, pack_root=pack_root)
     minimum = int(contract.get("minimum_evidence_logs_required") or 1)
     if len(files) < minimum:
         print(f"[FAIL] collaboration evidence logs insufficient: found={len(files)}, required={minimum}")
