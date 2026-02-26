@@ -130,7 +130,14 @@ Lifecycle rules:
 6. Historical changelog linkage closure
    - changelog gate supports explicit backfill linkage for historical ranges
    - strict in-range mode remains available via `--strict-range-only`
-7. Governance templates (protocol-safe extension)
+7. Release freeze boundary track separation
+   - fixture/demo catalog rows under `identity/packs/*` are explicitly allowed
+   - non-fixture rows under `identity/packs/*` remain hard-fail
+   - keeps A-track protocol hardening executable while preserving B-track asset isolation semantics
+8. Full-scan environment-aware capability severity
+   - `full_identity_protocol_scan.py` marks `IP-CAP-003` as environment-auth blocker (`P1`) instead of protocol-regression `P0`
+   - capability output now carries parsed status/code hints for deterministic downstream audit interpretation
+9. Governance templates (protocol-safe extension)
    - onboarding playbook/audit-return templates add dual-ledger + roundtable evidence structure
    - templates remain non-normative unless promoted via canonical SSOT workflow
 

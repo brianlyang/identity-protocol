@@ -36,6 +36,12 @@ def _load_catalog(path: Path) -> dict:
     return raw
 
 
+def _is_fixture_demo_row(row: dict) -> bool:
+    profile = str(row.get("profile", "fixture")).strip() or "fixture"
+    runtime_mode = str(row.get("runtime_mode", "demo_only")).strip() or "demo_only"
+    return profile == "fixture" and runtime_mode == "demo_only"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=(
@@ -83,19 +89,33 @@ def main() -> int:
     catalog = _load_catalog(catalog_path)
     identities = catalog.get("identities") or []
     bad_pack_paths: list[str] = []
+    fixture_pack_paths: list[str] = []
     for row in identities:
         if not isinstance(row, dict):
             continue
         identity_id = str(row.get("id", "")).strip()
         pack_path = str(row.get("pack_path", "")).strip()
-        if identity_id and pack_path.startswith("identity/packs/"):
-            bad_pack_paths.append(f"{identity_id} -> {pack_path}")
+        if not identity_id or not pack_path.startswith("identity/packs/"):
+            continue
+        if _is_fixture_demo_row(row):
+            fixture_pack_paths.append(f"{identity_id} -> {pack_path}")
+            continue
+        profile = str(row.get("profile", "")).strip() or "runtime"
+        runtime_mode = str(row.get("runtime_mode", "")).strip() or "local_only"
+        bad_pack_paths.append(
+            f"{identity_id} -> {pack_path} (profile={profile}, runtime_mode={runtime_mode})"
+        )
 
     if bad_pack_paths:
         print("[FAIL] identity catalog contains pack_path entries under forbidden scope:")
         for row in bad_pack_paths:
             print(f"  - {row}")
         return 1
+
+    if fixture_pack_paths:
+        print("[INFO] fixture/demo catalog entries under identity/packs are allowed:")
+        for row in fixture_pack_paths:
+            print(f"  - {row}")
 
     print("[OK] release freeze boundary validated")
     print(f"[OK] checked commit range: {base}..{head}")

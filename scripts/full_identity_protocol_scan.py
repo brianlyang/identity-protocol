@@ -59,6 +59,30 @@ def _parse_json_safely(raw: str) -> dict[str, Any] | None:
     return None
 
 
+def _extract_capability_signal(raw: str) -> tuple[str, str]:
+    """
+    Best-effort parser for capability preflight output.
+    Handles mixed stdout with leading [WARN]/[FAIL] lines + trailing JSON payload.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return "", ""
+    payload: dict[str, Any] | None = _parse_json_safely(text)
+    if payload is None:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            try:
+                payload = json.loads(text[start : end + 1])
+            except Exception:
+                payload = None
+    if not isinstance(payload, dict):
+        return "", ""
+    status = str(payload.get("capability_activation_status", "")).strip().upper()
+    code = str(payload.get("capability_activation_error_code", "")).strip()
+    return status, code
+
+
 def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
     if not report_dir.exists():
         return None
@@ -89,12 +113,21 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("capability_activation_preflight", "capability_activation_report")
     )
+    cap_preflight = checks.get("capability_activation_preflight") or {}
+    capability_env_blocked = bool(cap_preflight.get("env_auth_blocked", False))
+    if capability_env_blocked:
+        capability_fail = any(
+            name in checks and not checks.get(name, {}).get("ok", False)
+            for name in ("capability_activation_report",)
+        )
     dialogue_fail = any(
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("dialogue_content", "dialogue_cross_validation", "dialogue_result_support")
     )
     if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail):
         return "P0"
+    if capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail):
+        return "P1"
     if core_fail or prompt_fail or capability_fail or dialogue_fail:
         return "P1"
     return "OK"
@@ -323,7 +356,16 @@ def main() -> int:
                     ]
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
-                item["checks"][name] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
+                check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
+                if name == "capability_activation_preflight":
+                    cap_status, cap_code = _extract_capability_signal(r.stdout)
+                    if cap_status:
+                        check_payload["capability_activation_status"] = cap_status
+                    if cap_code:
+                        check_payload["capability_activation_error_code"] = cap_code
+                    if cap_code == "IP-CAP-003":
+                        check_payload["env_auth_blocked"] = True
+                item["checks"][name] = check_payload
 
             env = os.environ.copy()
             env["IDENTITY_CATALOG"] = str(catalog)

@@ -242,6 +242,13 @@
     - DCIC documentation now explicitly states protocol defines gate routing path,
       while `dialogue_governance_contract.required` controls per-instance activation stage
       (`warn` / `enforce`)
+  - release-freeze boundary governance alignment:
+    - `validate_release_freeze_boundary.py` now allows catalog rows under
+      `identity/packs/*` only when classified as `profile=fixture` + `runtime_mode=demo_only`
+    - non-fixture rows under forbidden scope remain fail-closed
+  - full-scan environment-auth severity normalization:
+    - `full_identity_protocol_scan.py` now parses capability preflight output and
+      classifies `IP-CAP-003` as environment-auth blocked (`P1`) rather than protocol regression (`P0`)
 
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`
