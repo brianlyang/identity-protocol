@@ -174,6 +174,9 @@ jobs:
             python3 scripts/validate_identity_experience_feedback.py --identity-id "$ID" --self-test
             python3 scripts/validate_identity_install_safety.py --identity-id "$ID"
             python3 scripts/validate_identity_install_provenance.py --identity-id "$ID"
+            python3 scripts/validate_identity_tool_installation.py --identity-id "$ID"
+            python3 scripts/validate_identity_vendor_api_discovery.py --identity-id "$ID"
+            python3 scripts/validate_identity_vendor_api_solution.py --identity-id "$ID"
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
             PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports

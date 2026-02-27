@@ -726,6 +726,72 @@
     "enforcement_validator": "scripts/validate_identity_install_provenance.py",
     "non_destructive_default": true
   },
+  "tool_installation_contract": {
+    "required": false,
+    "report_path_pattern": "identity/runtime/reports/tool-installation-store-manager-*.json",
+    "required_report_fields": [
+      "tool_gap_detected",
+      "tool_gap_summary_ref",
+      "install_plan_ref",
+      "approval_receipt_ref",
+      "execution_log_ref",
+      "installed_artifact_ref",
+      "installed_version",
+      "post_install_healthcheck_ref",
+      "task_smoke_result_ref",
+      "route_binding_update_ref",
+      "fallback_route_if_install_fails",
+      "rollback_ref"
+    ],
+    "enforcement_validator": "scripts/validate_identity_tool_installation.py"
+  },
+  "vendor_api_discovery_contract": {
+    "required": false,
+    "report_path_pattern": "identity/runtime/reports/vendor-api-discovery-store-manager-*.json",
+    "required_report_fields": [
+      "vendor_name",
+      "vendor_surface_name",
+      "official_reference_url",
+      "machine_readable_contract_ref",
+      "contract_kind",
+      "auth_discovery_ref",
+      "versioning_policy_ref",
+      "rate_limit_policy_ref",
+      "capability_probe_command_ref",
+      "attach_readiness_decision",
+      "fallback_vendor_or_route_ref"
+    ],
+    "source_priority": [
+      "official_vendor_source",
+      "standards_body_source",
+      "community_mirror_or_wrapper"
+    ],
+    "t2_source_requires_approval": true,
+    "enforcement_validator": "scripts/validate_identity_vendor_api_discovery.py"
+  },
+  "vendor_api_solution_contract": {
+    "required": false,
+    "report_path_pattern": "identity/runtime/reports/vendor-api-solution-store-manager-*.json",
+    "required_report_fields": [
+      "problem_statement_ref",
+      "selected_vendor_api_ref",
+      "solution_pattern",
+      "decision_rationale_ref",
+      "option_comparison_ref",
+      "security_boundary_ref",
+      "auth_scope_strategy_ref",
+      "rate_limit_strategy_ref",
+      "fallback_solution_ref",
+      "rollback_solution_ref",
+      "owner_layer_declaration_ref"
+    ],
+    "single_selected_option_required": true,
+    "no_solution_allowed_states": [
+      "defer",
+      "blocked"
+    ],
+    "enforcement_validator": "scripts/validate_identity_vendor_api_solution.py"
+  },
   "identity_role_binding_contract": {
     "required": true,
     "role_type": "store_manager_runtime_operator",

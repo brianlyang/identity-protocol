@@ -113,6 +113,15 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("capability_activation_preflight", "capability_activation_report")
     )
+    tool_vendor_fail = any(
+        name in checks and not checks.get(name, {}).get("ok", False)
+        for name in (
+            "tool_installation",
+            "install_provenance",
+            "vendor_api_discovery",
+            "vendor_api_solution",
+        )
+    )
     cap_preflight = checks.get("capability_activation_preflight") or {}
     capability_env_blocked = bool(cap_preflight.get("env_auth_blocked", False))
     if capability_env_blocked:
@@ -124,11 +133,11 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("dialogue_content", "dialogue_cross_validation", "dialogue_result_support")
     )
-    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail):
+    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail):
         return "P0"
-    if capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail):
+    if capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
         return "P1"
-    if core_fail or prompt_fail or capability_fail or dialogue_fail:
+    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail:
         return "P1"
     return "OK"
 
@@ -271,6 +280,38 @@ def main() -> int:
                 "runtime_contract": [
                     "python3",
                     "scripts/validate_identity_runtime_contract.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                ],
+                "tool_installation": [
+                    "python3",
+                    "scripts/validate_identity_tool_installation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                ],
+                "install_provenance": [
+                    "python3",
+                    "scripts/validate_identity_install_provenance.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                ],
+                "vendor_api_discovery": [
+                    "python3",
+                    "scripts/validate_identity_vendor_api_discovery.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                ],
+                "vendor_api_solution": [
+                    "python3",
+                    "scripts/validate_identity_vendor_api_solution.py",
                     "--catalog",
                     str(catalog),
                     "--identity-id",

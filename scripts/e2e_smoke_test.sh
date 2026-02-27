@@ -209,6 +209,15 @@ for ID in $IDS; do
   echo "[23/30][$ID] validate install provenance contract"
   python3 scripts/validate_identity_install_provenance.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
+  echo "[23.2/30][$ID] validate tool installation closure contract (contract-first)"
+  python3 scripts/validate_identity_tool_installation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
+  echo "[23.3/30][$ID] validate vendor/api discovery closure contract (contract-first)"
+  python3 scripts/validate_identity_vendor_api_discovery.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
+  echo "[23.4/30][$ID] validate vendor/api solution closure contract (contract-first)"
+  python3 scripts/validate_identity_vendor_api_solution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
   echo "[24/30][$ID] validate experience feedback governance"
   python3 scripts/validate_identity_experience_feedback_governance.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 

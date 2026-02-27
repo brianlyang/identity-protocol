@@ -205,7 +205,8 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
             "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         },
     }
-    return _ensure_dialogue_governance_contract(task, identity_id)
+    task = _ensure_dialogue_governance_contract(task, identity_id)
+    return _ensure_tool_vendor_governance_contracts(task, identity_id)
 
 
 def _dialogue_governance_contract_skeleton(identity_id: str) -> dict:
@@ -250,6 +251,93 @@ def _ensure_dialogue_governance_contract(task: dict, identity_id: str) -> dict:
         task["dialogue_governance_contract"] = base
         return task
     task["dialogue_governance_contract"] = _deep_merge_defaults(base, cur)
+    return task
+
+
+def _tool_installation_contract_skeleton(identity_id: str) -> dict:
+    return {
+        "required": False,
+        "report_path_pattern": f"identity/runtime/reports/tool-installation-{identity_id}-*.json",
+        "required_report_fields": [
+            "tool_gap_detected",
+            "tool_gap_summary_ref",
+            "install_plan_ref",
+            "approval_receipt_ref",
+            "execution_log_ref",
+            "installed_artifact_ref",
+            "installed_version",
+            "post_install_healthcheck_ref",
+            "task_smoke_result_ref",
+            "route_binding_update_ref",
+            "fallback_route_if_install_fails",
+            "rollback_ref",
+        ],
+        "enforcement_validator": "scripts/validate_identity_tool_installation.py",
+    }
+
+
+def _vendor_api_discovery_contract_skeleton(identity_id: str) -> dict:
+    return {
+        "required": False,
+        "report_path_pattern": f"identity/runtime/reports/vendor-api-discovery-{identity_id}-*.json",
+        "required_report_fields": [
+            "vendor_name",
+            "vendor_surface_name",
+            "official_reference_url",
+            "machine_readable_contract_ref",
+            "contract_kind",
+            "auth_discovery_ref",
+            "versioning_policy_ref",
+            "rate_limit_policy_ref",
+            "capability_probe_command_ref",
+            "attach_readiness_decision",
+            "fallback_vendor_or_route_ref",
+        ],
+        "source_priority": [
+            "official_vendor_source",
+            "standards_body_source",
+            "community_mirror_or_wrapper",
+        ],
+        "t2_source_requires_approval": True,
+        "enforcement_validator": "scripts/validate_identity_vendor_api_discovery.py",
+    }
+
+
+def _vendor_api_solution_contract_skeleton(identity_id: str) -> dict:
+    return {
+        "required": False,
+        "report_path_pattern": f"identity/runtime/reports/vendor-api-solution-{identity_id}-*.json",
+        "required_report_fields": [
+            "problem_statement_ref",
+            "selected_vendor_api_ref",
+            "solution_pattern",
+            "decision_rationale_ref",
+            "option_comparison_ref",
+            "security_boundary_ref",
+            "auth_scope_strategy_ref",
+            "rate_limit_strategy_ref",
+            "fallback_solution_ref",
+            "rollback_solution_ref",
+            "owner_layer_declaration_ref",
+        ],
+        "single_selected_option_required": True,
+        "no_solution_allowed_states": ["defer", "blocked"],
+        "enforcement_validator": "scripts/validate_identity_vendor_api_solution.py",
+    }
+
+
+def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
+    defaults = {
+        "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
+        "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
+        "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
+    }
+    for key, default in defaults.items():
+        cur = task.get(key)
+        if not isinstance(cur, dict):
+            task[key] = default
+            continue
+        task[key] = _deep_merge_defaults(default, cur)
     return task
 
 
@@ -433,7 +521,8 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     rbc = task.setdefault("identity_role_binding_contract", {})
     if isinstance(rbc, dict):
         rbc["role_type"] = f"{identity_id.replace('-', '_')}_runtime_operator"
-    return _ensure_dialogue_governance_contract(task, identity_id)
+    task = _ensure_dialogue_governance_contract(task, identity_id)
+    return _ensure_tool_vendor_governance_contracts(task, identity_id)
 
 
 def _sha256_file(path: Path) -> str:
