@@ -106,6 +106,39 @@ Lifecycle rules:
 4. dialogue governance validator chain (contract-first, optional, warn/enforce)
 5. required-gates / e2e / readiness / three-plane integration
 
+## v1.4.13 protocol closure addendum (2026-02-27, protocol-layer)
+
+1. Execution report freshness preflight (P0 closure)
+   - `release_readiness_check.py` now runs `validate_execution_report_freshness.py` before late-stage writeback/activation linkage validators.
+   - freshness gate checks report binding consistency against current runtime tuple:
+     - `identity_id`
+     - `catalog_path`
+     - `resolved_pack_path`
+     - prompt path + prompt sha
+     - report mtime vs key-input mtime (`IDENTITY_PROMPT.md` / `CURRENT_TASK.json`)
+   - stale/mismatch is emitted as structured code `IP-REL-001` with policy control:
+     - `--execution-report-policy strict|warn` (default `strict`)
+2. Required-contract coverage semantics (P1 closure)
+   - added `validate_required_contract_coverage.py` to classify contract-first tool/vendor validators:
+     - `PASS_REQUIRED`
+     - `SKIPPED_NOT_REQUIRED`
+     - `FAIL_REQUIRED`
+     - `FAIL_OPTIONAL`
+   - coverage metrics are machine-readable:
+     - `required_contract_total`
+     - `required_contract_passed`
+     - `required_contract_coverage_rate`
+     - `skipped_contract_count`
+   - optional policy threshold:
+     - `--min-required-contract-coverage <0-100>`
+3. Main-chain wiring completed (protocol gates only)
+   - readiness: `scripts/release_readiness_check.py`
+   - e2e: `scripts/e2e_smoke_test.sh`
+   - three-plane: `scripts/report_three_plane_status.py`
+   - full-scan: `scripts/full_identity_protocol_scan.py`
+   - creator validate chain: `scripts/identity_creator.py validate`
+   - required workflow gates: `.github/workflows/_identity-required-gates.yml`
+
 ## v1.4.13 follow-up closure scope (2026-02-26, protocol-layer)
 
 1. Session pointer mirror deconfliction
@@ -169,4 +202,6 @@ python3 scripts/docs_command_contract_check.py
 python3 scripts/validate_release_workspace_cleanliness.py
 python3 scripts/validate_protocol_ssot_source.py
 python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
+python3 scripts/validate_execution_report_freshness.py --identity-id <id> --catalog <catalog> --repo-catalog identity/catalog/identities.yaml --execution-report-policy strict
+python3 scripts/validate_required_contract_coverage.py --identity-id <id> --catalog <catalog>
 ```
