@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from glob import glob
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +64,13 @@ def _pct(n: int, d: int) -> float:
     return round((n / d) * 100.0, 2)
 
 
+def _resolve_log_files(pattern: str) -> list[Path]:
+    expanded = os.path.expanduser(pattern)
+    if os.path.isabs(expanded):
+        return [Path(p).expanduser().resolve() for p in sorted(glob(expanded))]
+    return [p.resolve() for p in sorted(Path(".").glob(expanded))]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Export route quality metrics from handoff production logs")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -84,7 +92,7 @@ def main() -> int:
         print("[FAIL] agent_handoff_contract.handoff_log_path_pattern missing")
         return 1
 
-    files = sorted(Path(".").glob(pattern))
+    files = _resolve_log_files(pattern)
     if not files:
         print(f"[FAIL] no handoff logs for metrics: pattern={pattern}")
         return 1

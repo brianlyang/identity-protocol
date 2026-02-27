@@ -21,6 +21,11 @@
       `vendor_api_solution_contract`) with safe default `required=false`
     - `identity/store-manager/CURRENT_TASK.json` updated to include the same optional
       tool/vendor closure contract skeletons
+  - route quality export compatibility fix for local runtime identities:
+    - `scripts/export_route_quality_metrics.py` now supports absolute
+      `handoff_log_path_pattern` values (via glob-based resolution) in addition
+      to relative repo patterns, preventing false `NotImplementedError` in
+      `e2e_smoke_test.sh` for instance-local runtime paths
 
 - **v1.4.13 layered-governance closure hardening (draft)**:
   - added unified three-plane governance reporter:
