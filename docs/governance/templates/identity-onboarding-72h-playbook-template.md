@@ -183,6 +183,156 @@ Rules:
 
 ---
 
+## 4.1 Tool discovery and installation closure (mandatory when `capability_gap` includes tool/runtime gaps)
+
+Purpose:
+
+1. Keep identity self-drive capable of discovering and adopting new tools under controlled governance.
+2. Separate "can use existing tools" from "can drive installation of new tools" with auditable steps.
+
+Fields:
+
+- tool_gap_detected: yes/no
+- tool_gap_summary_ref:
+- install_plan_ref:
+- approval_receipt_ref:
+- execution_log_ref:
+- installed_artifact_ref:
+- installed_version:
+- post_install_healthcheck_ref:
+- task_smoke_result_ref:
+- route_binding_update_ref:
+- fallback_route_if_install_fails:
+- rollback_ref:
+
+Rules:
+
+1. If `tool_gap_detected=yes`, `install_plan_ref` and `approval_receipt_ref` are mandatory before execute stage.
+2. Installation outcome is valid only when healthcheck and task smoke evidence both exist.
+3. Install failure must not deadlock task flow; `fallback_route_if_install_fails` is mandatory.
+4. Protocol templates define fields only; implementation details stay in scripts/workflow wiring.
+
+## 4.2 New-object discovery trust closure (mandatory when introducing new `skill`/`mcp_server`/`tool_runtime`)
+
+Purpose:
+
+1. Prevent weak-source discovery from polluting protocol execution.
+2. Force trusted-source selection before attach/install.
+3. Keep discovery and installation decisions replayable and auditable.
+
+Fields:
+
+- object_type: `skill | mcp_server | tool_runtime`
+- object_name:
+- discovery_trigger_ref:
+- selected_source_ref:
+- source_selection_rationale:
+- trust_verification_refs:
+- attach_or_install_plan_ref:
+- approval_receipt_ref:
+- execution_log_ref:
+- post_attach_validator_refs:
+- fallback_route_ref:
+- rollback_ref:
+
+Discovery source matrix (fill at least one row per candidate source):
+
+| object_type | source_url | source_kind (`official_doc`/`official_registry`/`official_repo`/`community_repo`) | trust_tier (`T0`/`T1`/`T2`) | provenance_or_signature_ref | decision (`selected`/`rejected`) | rejection_reason |
+|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |
+
+Rules:
+
+1. Any `selected` source must include `trust_tier` and `trust_verification_refs`.
+2. `T2` sources (community) require explicit `approval_receipt_ref` before execution.
+3. `tool_runtime` installation must include provenance/hash/signature evidence, otherwise cannot transition to active route.
+4. `mcp_server` onboarding must record tool scoping (`allowed_tools`) and approval policy (`require_approval`) in `attach_or_install_plan_ref`.
+5. Missing `fallback_route_ref` blocks completion for object onboarding.
+
+---
+
+## 4.3 Vendor and API interface discovery closure (mandatory when introducing or upgrading vendor integrations)
+
+Purpose:
+
+1. Ensure vendor/API selection is based on official, machine-readable contracts before changing execution scripts.
+2. Prevent hardcoded endpoint-driven integrations without provenance, auth, and version governance.
+3. Keep vendor/API attach decisions reproducible, reviewable, and reversible.
+
+Fields:
+
+- vendor_name:
+- vendor_surface_name:
+- api_surface_type: `rest | graphql | rpc | mcp | webhook | mixed`
+- official_reference_url:
+- machine_readable_contract_ref:
+- contract_kind: `openapi | graphql_schema | odata_metadata | mcp_tool_list | other`
+- auth_discovery_ref:
+- versioning_policy_ref:
+- rate_limit_policy_ref:
+- deprecation_policy_ref:
+- sandbox_or_test_env_ref:
+- sdk_reference_ref:
+- capability_probe_command_ref:
+- attach_readiness_decision: `ready | defer | blocked`
+- fallback_vendor_or_route_ref:
+- rejection_reason:
+
+Vendor/API candidate matrix (fill at least one row per candidate):
+
+| vendor_name | vendor_surface_name | official_doc_url | contract_kind (`openapi`/`graphql_schema`/`odata_metadata`/`mcp_tool_list`/`other`) | machine_readable_contract_ref | auth_model_ref | rate_limit_ref | decision (`selected`/`rejected`) | rejection_reason |
+|---|---|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |  |  |
+
+Rules:
+
+1. Any `selected` candidate must include both `official_doc_url` and `machine_readable_contract_ref`.
+2. Source priority must follow: `official vendor source` -> `standards body source` -> `community mirror/wrapper`.
+3. Community-only candidates cannot become active route without explicit exception approval and fallback route evidence.
+4. Protocol templates must not hardcode vendor endpoints; endpoint values live in runtime/config artifacts referenced by `*_ref` fields.
+5. Vendor/API selection must include a successful capability probe and rollback/fallback evidence.
+
+---
+
+## 4.4 Vendor/API solution closure (mandatory after discovery selection)
+
+Purpose:
+
+1. Convert vendor/API discovery outputs into an executable integration solution instead of direct script patching.
+2. Make architectural tradeoffs explicit and auditable before route activation.
+3. Bind solution choice to rollback and ownership boundaries.
+
+Fields:
+
+- problem_statement_ref:
+- selected_vendor_api_ref:
+- solution_pattern: `direct_api | official_sdk_adapter | managed_connector | mcp_bridge | hybrid`
+- decision_rationale_ref:
+- option_comparison_ref:
+- security_boundary_ref:
+- auth_scope_strategy_ref:
+- rate_limit_strategy_ref:
+- change_management_ref:
+- fallback_solution_ref:
+- rollback_solution_ref:
+- owner_layer_declaration_ref:
+
+Solution option matrix:
+
+| option_id | solution_pattern (`direct_api`/`official_sdk_adapter`/`managed_connector`/`mcp_bridge`/`hybrid`) | expected_capability_gain | implementation_complexity (`low`/`medium`/`high`) | governance_risk (`low`/`medium`/`high`) | selected (`yes`/`no`) | rejection_reason |
+|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |
+
+Rules:
+
+1. Exactly one option must be marked `selected=yes` for each onboarding decision.
+2. Selected option must include `security_boundary_ref`, `auth_scope_strategy_ref`, and `rate_limit_strategy_ref`.
+3. Selected option must include both fallback and rollback solution references.
+4. `owner_layer_declaration_ref` must explicitly separate protocol-layer governance from instance-layer execution.
+5. If no option is acceptable, run state must remain `defer` or `blocked`; no silent default route.
+
+---
+
 ## 5) Multimodal fact-input role contract (mandatory)
 
 Core semantics (must keep):
@@ -213,7 +363,7 @@ Role transition hard rules:
 
 Trigger rule:
 
-1. Required when upgrade affects any of: `skill_routing`, `mcp_binding`, `tool_routing`, `validator_chain`, `path_boundary`.
+1. Required when upgrade affects any of: `skill_routing`, `mcp_binding`, `tool_routing`, `vendor_api_discovery`, `solution_architecture`, `validator_chain`, `path_boundary`.
 2. Optional for isolated low-risk edits, but skip reason must be explicitly recorded.
 
 Roundtable output fields:
@@ -250,6 +400,9 @@ Rule:
 - [ ] Self-driven upgrade ledger entries are complete (`run_id`, `acceptance_command`, `evidence_ref`).
 - [ ] Business details are referenced via `domain_artifact_refs` only (no inline non-redacted details).
 - [ ] Skill protocol attachment block fields are complete.
+- [ ] Tool discovery/installation closure fields are complete when tool-gap path is triggered.
+- [ ] Vendor/API discovery closure fields are complete when vendor or API onboarding path is triggered.
+- [ ] Vendor/API solution closure fields are complete and selected-option rules are satisfied.
 - [ ] Multimodal evidence-role contract is complete and consistent.
 - [ ] `inconsistent evidence cannot transition to done` is respected.
 
@@ -293,6 +446,8 @@ Allowed `capability_axis`:
 - `skill_routing`
 - `mcp_binding`
 - `tool_routing`
+- `vendor_api_discovery`
+- `solution_architecture`
 - `validator_chain`
 - `workflow_gate`
 - `report_contract`
@@ -319,11 +474,20 @@ Allowed `target_type`:
 - `skill`
 - `mcp_server`
 - `tool_route`
+- `tool_runtime`
+- `vendor_api_contract`
+- `vendor_adapter`
+- `integration_solution_contract`
+- `other` (requires `target_type_other_reason`)
 - `validator`
 - `workflow_gate`
 - `report_contract`
 - `session_orchestration`
 - `path_boundary`
+
+If `target_type=other`, add this required field per item:
+
+- `target_type_other_reason` (why existing enum cannot represent this target yet)
 
 Allowed `change_kind`:
 

@@ -145,6 +145,22 @@ Minimum recommended set:
     - command:
     - rc:
     - output summary:
+12. Install safety validator (when tool-install path is used)
+    - command:
+    - rc:
+    - output summary:
+13. Install provenance validator (when tool-install path is used)
+    - command:
+    - rc:
+    - output summary:
+14. Vendor API discovery validator (when vendor/api onboarding path is used)
+    - command:
+    - rc:
+    - output summary:
+15. Vendor API solution validator (when vendor/api onboarding path is used)
+    - command:
+    - rc:
+    - output summary:
 
 ### 3.4 Skill protocol execution attachment (mandatory)
 
@@ -193,6 +209,85 @@ Fields:
 
 - layer declaration: `instance`
 
+### 3.8 Tool discovery and installation return block (mandatory when tool-gap path is triggered)
+
+- tool_gap_detected: yes/no
+- tool_gap_summary_ref:
+- install_plan_ref:
+- approval_receipt_ref:
+- execution_log_ref:
+- installed_artifact_ref:
+- installed_version:
+- post_install_healthcheck_ref:
+- task_smoke_result_ref:
+- route_binding_update_ref:
+- fallback_route_if_install_fails:
+- rollback_ref:
+
+Rules:
+
+1. `tool_gap_detected=yes` requires full evidence chain from plan -> approval -> execution -> verify -> route binding.
+2. Missing healthcheck or smoke evidence means installation is not accepted as active route.
+3. Installation failure must include fallback route evidence and rollback reference.
+
+### 3.9 New-object discovery trust return block (mandatory when introducing new `skill`/`mcp_server`/`tool_runtime`)
+
+- object_type:
+- object_name:
+- discovery_trigger_ref:
+- selected_source_ref:
+- source_selection_rationale:
+- trust_verification_refs:
+- attach_or_install_plan_ref:
+- approval_receipt_ref:
+- execution_log_ref:
+- post_attach_validator_refs:
+- fallback_route_ref:
+- rollback_ref:
+
+Discovery source matrix:
+
+| object_type | source_url | source_kind (`official_doc`/`official_registry`/`official_repo`/`community_repo`) | trust_tier (`T0`/`T1`/`T2`) | provenance_or_signature_ref | decision (`selected`/`rejected`) | rejection_reason |
+|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |
+
+Rules:
+
+1. `selected` source rows must carry trust and provenance/signature evidence.
+2. `T2` source usage requires explicit approval receipt.
+3. For `tool_runtime`, active-route acceptance requires post-attach validators and rollback references.
+
+---
+
+### 3.10 Vendor/API solution return block (mandatory after vendor/API discovery selection)
+
+- problem_statement_ref:
+- selected_vendor_api_ref:
+- solution_pattern: `direct_api | official_sdk_adapter | managed_connector | mcp_bridge | hybrid`
+- decision_rationale_ref:
+- option_comparison_ref:
+- security_boundary_ref:
+- auth_scope_strategy_ref:
+- rate_limit_strategy_ref:
+- change_management_ref:
+- fallback_solution_ref:
+- rollback_solution_ref:
+- owner_layer_declaration_ref:
+
+Solution option matrix:
+
+| option_id | solution_pattern (`direct_api`/`official_sdk_adapter`/`managed_connector`/`mcp_bridge`/`hybrid`) | expected_capability_gain | implementation_complexity (`low`/`medium`/`high`) | governance_risk (`low`/`medium`/`high`) | selected (`yes`/`no`) | rejection_reason |
+|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |
+
+Rules:
+
+1. Exactly one option must be `selected=yes` for each decision window.
+2. Selected option must include security/auth/rate-limit strategy references.
+3. Selected option must include both fallback and rollback references.
+4. `owner_layer_declaration_ref` must clearly separate protocol and instance responsibilities.
+5. If no option is selected, status must remain `defer` or `blocked`; no implicit default.
+
 ---
 
 ## 4) self-driven upgrade ledger (mandatory)
@@ -213,6 +308,8 @@ Allowed `capability_axis` values:
 - `mcp_binding`
 - `tool_routing`
 - `validator_chain`
+- `vendor_api_discovery`
+- `solution_architecture`
 - `workflow_gate`
 - `report_contract`
 - `session_orchestration`
@@ -237,11 +334,20 @@ Allowed `target_type` values:
 - `skill`
 - `mcp_server`
 - `tool_route`
+- `tool_runtime`
 - `validator`
+- `vendor_api_contract`
+- `vendor_adapter`
+- `integration_solution_contract`
+- `other` (requires `target_type_other_reason`)
 - `workflow_gate`
 - `report_contract`
 - `session_orchestration`
 - `path_boundary`
+
+If `target_type=other`, add this required field per item:
+
+- `target_type_other_reason` (why existing enum cannot represent this target yet)
 
 Allowed `change_kind` values:
 
@@ -261,6 +367,8 @@ Roundtable required when any impacted axis includes:
 - `skill_routing`
 - `mcp_binding`
 - `tool_routing`
+- `vendor_api_discovery`
+- `solution_architecture`
 - `validator_chain`
 - `path_boundary`
 
