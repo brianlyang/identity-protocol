@@ -71,6 +71,21 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _baseline_next_action(status: str, error_code: str, stale_reasons: list[str]) -> str:
+    status_norm = str(status or "").strip().upper()
+    code = str(error_code or "").strip().upper()
+    reasons = {str(x).strip() for x in (stale_reasons or []) if str(x).strip()}
+    if status_norm == "PASS":
+        return "identity_aligned_to_current_protocol"
+    if code == "IP-PBL-001" or "protocol_commit_sha_mismatch" in reasons:
+        return "run_identity_creator_update"
+    if code == "IP-PBL-002" or "execution_report_not_found" in reasons:
+        return "bootstrap_or_update_required"
+    if code in {"IP-PBL-003", "IP-PBL-004"}:
+        return "resolve_protocol_baseline_source_then_update"
+    return "review_protocol_baseline_then_update"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run protocol upgrade wave for runtime identities based on baseline freshness.")
     ap.add_argument("--catalog", required=True)
@@ -139,10 +154,11 @@ def main() -> int:
         if not isinstance(stale_reasons, list):
             stale_reasons = [str(stale_reasons)]
 
-        outdated = baseline_error_code == "IP-PBL-001" or "protocol_commit_sha_mismatch" in {str(x) for x in stale_reasons}
+        outdated = baseline_status != "PASS"
         if outdated:
             outdated_ids.append(iid)
 
+        next_action = _baseline_next_action(baseline_status, baseline_error_code, stale_reasons)
         item: dict[str, Any] = {
             "identity_id": iid,
             "baseline_status": baseline_status,
@@ -150,15 +166,13 @@ def main() -> int:
             "baseline_rc": rc_base,
             "report_path": str(base_payload.get("report_selected_path", "")).strip(),
             "update_rc": None,
-            "next_action": "identity_aligned_to_current_protocol",
+            "next_action": next_action,
             "error_code": "",
             "stale_reasons": stale_reasons,
         }
 
         if dry_run:
             skipped_count += 1
-            if outdated:
-                item["next_action"] = "run_identity_creator_update"
             item["error_code"] = baseline_error_code
             items.append(item)
             continue

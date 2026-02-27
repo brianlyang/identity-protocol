@@ -86,6 +86,10 @@
       optional apply mode to trigger `identity_creator update`
     - emits machine-readable wave report:
       `outdated_identities`, `updated_count`, `blocked_count`, `items[]`
+    - stale/outdated detection policy now treats all non-`PASS` baseline states
+      as convergence candidates (including `IP-PBL-002` report-missing),
+      preventing false `identity_aligned_to_current_protocol` labels for
+      bootstrap-required identities
 
 - **v1.4.13 layered-governance closure hardening (draft)**:
   - added unified three-plane governance reporter:
