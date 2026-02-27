@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import glob
+import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -19,6 +21,49 @@ def _run(cmd: list[str]) -> int:
         print(f"[FAIL] command failed ({p.returncode}): {' '.join(cmd)}")
         return p.returncode
     return 0
+
+
+def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
+    print(f"[RUN] {' '.join(cmd)}")
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    out = (p.stdout or "").strip()
+    err = (p.stderr or "").strip()
+    if out:
+        print(out)
+    if err:
+        print(err, file=sys.stderr)
+    if p.returncode != 0:
+        print(f"[FAIL] command failed ({p.returncode}): {' '.join(cmd)}")
+    return p.returncode, out, err
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _parse_json_payload(raw: str) -> dict[str, Any] | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _git_rev(expr: str) -> str:
@@ -79,6 +124,24 @@ def main() -> int:
         help=(
             "capability evaluation policy used by preflight and auto-generated update report. "
             "strict-union requires all declared route capabilities; route-any-ready allows progress when at least one route is ready."
+        ),
+    )
+    ap.add_argument(
+        "--execution-report-policy",
+        choices=["strict", "warn"],
+        default="strict",
+        help=(
+            "freshness policy for execution report binding preflight. "
+            "strict fails early with IP-REL-001 on stale/mismatch reports; warn logs drift but continues."
+        ),
+    )
+    ap.add_argument(
+        "--min-required-contract-coverage",
+        type=float,
+        default=-1.0,
+        help=(
+            "optional minimum required-contract coverage percentage (0-100) for tool/vendor closures. "
+            "default disabled."
         ),
     )
     args = ap.parse_args()
@@ -161,6 +224,7 @@ def main() -> int:
         ["python3", "scripts/validate_identity_tool_installation.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_vendor_api_discovery.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_vendor_api_solution.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_required_contract_coverage.py", "--catalog", catalog, "--identity-id", identity_id],
         [
             "python3",
             "scripts/validate_identity_capability_activation.py",
@@ -211,6 +275,12 @@ def main() -> int:
         ],
         ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", catalog, "--identity-id", identity_id],
     ]
+    if args.min_required_contract_coverage >= 0.0:
+        for cmd in seq:
+            if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
+                cmd.extend(["--min-required-contract-coverage", str(args.min_required_contract_coverage)])
+                break
+
     execution_report = args.execution_report.strip()
     if not execution_report:
         gen_cmd = [
@@ -249,7 +319,26 @@ def main() -> int:
                 if pp.name.endswith("-patch-plan.json"):
                     continue
                 candidates.append(pp)
-        candidates = sorted(candidates, key=lambda p: p.stat().st_mtime)
+        prompt_sha = ""
+        if pack_path is not None:
+            prompt_path = pack_path / "IDENTITY_PROMPT.md"
+            if prompt_path.exists():
+                try:
+                    prompt_sha = _sha256(prompt_path)
+                except Exception:
+                    prompt_sha = ""
+
+        def _candidate_key(path: Path) -> tuple[int, float]:
+            if not prompt_sha:
+                return (0, path.stat().st_mtime)
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                report_sha = str(data.get("identity_prompt_sha256", "")).strip()
+            except Exception:
+                report_sha = ""
+            return (1 if report_sha and report_sha == prompt_sha else 0, path.stat().st_mtime)
+
+        candidates = sorted(candidates, key=_candidate_key)
         if not candidates:
             print(
                 "[FAIL] writeback validation requires execution report, but auto-generation produced none: "
@@ -258,6 +347,35 @@ def main() -> int:
             return 2
         execution_report = str(candidates[-1])
         print(f"[INFO] auto-generated execution report: {execution_report}")
+
+    freshness_cmd = [
+        "python3",
+        "scripts/validate_execution_report_freshness.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--report",
+        execution_report,
+        "--execution-report-policy",
+        args.execution_report_policy,
+        "--json-only",
+    ]
+    rc_fresh, out_fresh, _ = _run_capture(freshness_cmd)
+    freshness_payload = _parse_json_payload(out_fresh) or {}
+    freshness_status = str(freshness_payload.get("freshness_status", "")).strip().upper() or "UNKNOWN"
+    freshness_code = str(freshness_payload.get("freshness_error_code", "")).strip() or "-"
+    selected_report = str(freshness_payload.get("report_selected_path", "")).strip()
+    if selected_report and Path(selected_report).exists():
+        execution_report = selected_report
+    print(
+        "[INFO] execution report freshness preflight: "
+        f"status={freshness_status} error_code={freshness_code} report={execution_report}"
+    )
+    if rc_fresh != 0:
+        return rc_fresh
 
     seq.append(
         [

@@ -120,8 +120,11 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "install_provenance",
             "vendor_api_discovery",
             "vendor_api_solution",
+            "required_contract_coverage",
         )
     )
+    freshness = checks.get("execution_report_freshness") or {}
+    freshness_fail = (not freshness.get("ok", True)) or str(freshness.get("freshness_status", "")).upper() == "FAIL"
     cap_preflight = checks.get("capability_activation_preflight") or {}
     capability_env_blocked = bool(cap_preflight.get("env_auth_blocked", False))
     if capability_env_blocked:
@@ -133,11 +136,11 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("dialogue_content", "dialogue_cross_validation", "dialogue_result_support")
     )
-    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail):
+    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail):
         return "P0"
     if capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
         return "P1"
-    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail:
+    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail:
         return "P1"
     return "OK"
 
@@ -317,6 +320,15 @@ def main() -> int:
                     "--identity-id",
                     iid,
                 ],
+                "required_contract_coverage": [
+                    "python3",
+                    "scripts/validate_required_contract_coverage.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--json-only",
+                ],
             }
             cap_preflight_cmd = [
                 "python3",
@@ -354,6 +366,19 @@ def main() -> int:
                 str(catalog),
                 "--identity-id",
                 iid,
+            ]
+            checks["execution_report_freshness"] = [
+                "python3",
+                "scripts/validate_execution_report_freshness.py",
+                "--identity-id",
+                iid,
+                "--catalog",
+                str(catalog),
+                "--repo-catalog",
+                str(repo_catalog),
+                "--execution-report-policy",
+                "warn",
+                "--json-only",
             ]
             if is_active_runtime:
                 runtime_report_dir_path = Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"
@@ -406,6 +431,29 @@ def main() -> int:
                         check_payload["capability_activation_error_code"] = cap_code
                     if cap_code == "IP-CAP-003":
                         check_payload["env_auth_blocked"] = True
+                if name == "required_contract_coverage":
+                    coverage_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "required_contract_total",
+                        "required_contract_passed",
+                        "required_contract_coverage_rate",
+                        "skipped_contract_count",
+                        "failed_required_contract_count",
+                        "failed_optional_contract_count",
+                    ):
+                        if k in coverage_doc:
+                            check_payload[k] = coverage_doc.get(k)
+                if name == "execution_report_freshness":
+                    freshness_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "freshness_status",
+                        "freshness_error_code",
+                        "report_selected_path",
+                        "stale_reasons",
+                        "checks",
+                    ):
+                        if k in freshness_doc:
+                            check_payload[k] = freshness_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

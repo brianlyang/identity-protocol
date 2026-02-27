@@ -218,6 +218,9 @@ for ID in $IDS; do
   echo "[23.4/30][$ID] validate vendor/api solution closure contract (contract-first)"
   python3 scripts/validate_identity_vendor_api_solution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
+  echo "[23.45/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
+  python3 scripts/validate_required_contract_coverage.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+
   echo "[24/30][$ID] validate experience feedback governance"
   python3 scripts/validate_identity_experience_feedback_governance.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
@@ -270,6 +273,14 @@ PY
     echo "[FAIL] unable to locate latest upgrade report for $ID"
     exit 1
   fi
+  echo "[26.15/30][$ID] validate execution report freshness/binding preflight"
+  python3 scripts/validate_execution_report_freshness.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --report "$UPGRADE_REPORT" \
+    --execution-report-policy strict
+
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
 p=sys.argv[1]

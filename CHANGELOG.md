@@ -27,6 +27,34 @@
       to relative repo patterns, preventing false `NotImplementedError` in
       `e2e_smoke_test.sh` for instance-local runtime paths
 
+- **v1.4.13 execution-report freshness + required-contract coverage semantics (draft)**:
+  - added report freshness preflight validator:
+    - `scripts/validate_execution_report_freshness.py`
+    - structured freshness payload with policy gate (`strict|warn`) and
+      stale/mismatch error code `IP-REL-001`
+  - release readiness now enforces freshness before late-stage validators:
+    - `scripts/release_readiness_check.py` now runs report freshness preflight
+      and supports `--execution-report-policy`
+    - auto report discovery now prioritizes prompt-sha-aligned report candidates
+      when selecting latest execution report
+  - added required-contract coverage classifier for tool/vendor closures:
+    - `scripts/validate_required_contract_coverage.py`
+    - machine-readable statuses:
+      `PASS_REQUIRED` / `SKIPPED_NOT_REQUIRED` / `FAIL_REQUIRED` / `FAIL_OPTIONAL`
+    - coverage metrics:
+      `required_contract_coverage_rate`,
+      `required_contract_total`,
+      `required_contract_passed`,
+      `skipped_contract_count`
+    - optional policy threshold: `--min-required-contract-coverage`
+  - coverage/freshness surfaced in governance chains:
+    - `scripts/release_readiness_check.py`
+    - `scripts/e2e_smoke_test.sh`
+    - `scripts/report_three_plane_status.py`
+    - `scripts/full_identity_protocol_scan.py`
+    - `scripts/identity_creator.py validate`
+    - `.github/workflows/_identity-required-gates.yml`
+
 - **v1.4.13 layered-governance closure hardening (draft)**:
   - added unified three-plane governance reporter:
     - `scripts/report_three_plane_status.py`

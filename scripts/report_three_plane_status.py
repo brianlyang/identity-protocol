@@ -41,6 +41,27 @@ def _load_json(path: str) -> dict[str, Any]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+def _parse_json_payload(raw: str) -> dict[str, Any] | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        data = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: str = "") -> Path | None:
     roots: list[Path] = []
     if preferred_pack.strip():
@@ -296,6 +317,50 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     )
     validators["dialogue_result_support"] = {"rc": rc_drs, "ok": rc_drs == 0, "out": out_drs, "err": err_drs}
 
+    rc_cov, out_cov, err_cov = _run(
+        [
+            "python3",
+            "scripts/validate_required_contract_coverage.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--json-only",
+        ]
+    )
+    coverage_payload = _parse_json_payload(out_cov) or {}
+    validators["required_contract_coverage"] = {
+        "rc": rc_cov,
+        "ok": rc_cov == 0,
+        "out": out_cov,
+        "err": err_cov,
+    }
+
+    rc_fresh, out_fresh, err_fresh = _run(
+        [
+            "python3",
+            "scripts/validate_execution_report_freshness.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--report",
+            str(report_path),
+            "--execution-report-policy",
+            "strict",
+            "--json-only",
+        ]
+    )
+    freshness_payload = _parse_json_payload(out_fresh) or {}
+    validators["execution_report_freshness"] = {
+        "rc": rc_fresh,
+        "ok": rc_fresh == 0,
+        "out": out_fresh,
+        "err": err_fresh,
+    }
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,
@@ -307,6 +372,21 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "error_code": err_code,
         "mandatory_fields_complete": bool(mandatory),
         "hard_boundary": hard_boundary,
+        "required_contract_coverage": {
+            "required_contract_total": coverage_payload.get("required_contract_total"),
+            "required_contract_passed": coverage_payload.get("required_contract_passed"),
+            "required_contract_coverage_rate": coverage_payload.get("required_contract_coverage_rate"),
+            "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
+            "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
+            "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "execution_report_freshness": {
+            "freshness_status": freshness_payload.get("freshness_status"),
+            "freshness_error_code": freshness_payload.get("freshness_error_code"),
+            "report_selected_path": freshness_payload.get("report_selected_path"),
+            "stale_reasons": freshness_payload.get("stale_reasons", []),
+            "checks": freshness_payload.get("checks", {}),
+        },
         "validators": validators,
     }
 
