@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
+  - added protocol-level contract-first validators:
+    - `scripts/validate_identity_tool_installation.py`
+    - `scripts/validate_identity_vendor_api_discovery.py`
+    - `scripts/validate_identity_vendor_api_solution.py`
+    - shared resolver/helper: `scripts/tool_vendor_governance_common.py`
+  - wired the new validator chain into required protocol execution paths:
+    - `scripts/identity_creator.py validate`
+    - `scripts/e2e_smoke_test.sh`
+    - `scripts/release_readiness_check.py`
+    - `scripts/full_identity_protocol_scan.py`
+    - `.github/workflows/_identity-required-gates.yml`
+  - extended runtime health collection and default scaffold contracts:
+    - `scripts/collect_identity_health_report.py` now includes tool/vendor closure checks
+    - `scripts/create_identity_pack.py` now injects optional contracts
+      (`tool_installation_contract`, `vendor_api_discovery_contract`,
+      `vendor_api_solution_contract`) with safe default `required=false`
+    - `identity/store-manager/CURRENT_TASK.json` updated to include the same optional
+      tool/vendor closure contract skeletons
+
 - **v1.4.13 layered-governance closure hardening (draft)**:
   - added unified three-plane governance reporter:
     - `scripts/report_three_plane_status.py`
