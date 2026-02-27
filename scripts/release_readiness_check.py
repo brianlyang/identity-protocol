@@ -136,6 +136,15 @@ def main() -> int:
         ),
     )
     ap.add_argument(
+        "--baseline-policy",
+        choices=["strict", "warn"],
+        default="strict",
+        help=(
+            "protocol baseline freshness policy for execution report protocol_commit_sha vs current protocol HEAD. "
+            "strict fails with IP-PBL-001 on stale baseline; warn logs drift but continues."
+        ),
+    )
+    ap.add_argument(
         "--min-required-contract-coverage",
         type=float,
         default=-1.0,
@@ -376,6 +385,35 @@ def main() -> int:
     )
     if rc_fresh != 0:
         return rc_fresh
+
+    baseline_cmd = [
+        "python3",
+        "scripts/validate_identity_protocol_baseline_freshness.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--execution-report",
+        execution_report,
+        "--baseline-policy",
+        args.baseline_policy,
+        "--json-only",
+    ]
+    rc_baseline, out_baseline, _ = _run_capture(baseline_cmd)
+    baseline_payload = _parse_json_payload(out_baseline) or {}
+    baseline_status = str(baseline_payload.get("baseline_status", "")).strip().upper() or "UNKNOWN"
+    baseline_code = str(baseline_payload.get("baseline_error_code", "")).strip() or "-"
+    selected_report = str(baseline_payload.get("report_selected_path", "")).strip()
+    if selected_report and Path(selected_report).exists():
+        execution_report = selected_report
+    print(
+        "[INFO] protocol baseline freshness preflight: "
+        f"status={baseline_status} error_code={baseline_code} report={execution_report}"
+    )
+    if rc_baseline != 0:
+        return rc_baseline
 
     seq.append(
         [

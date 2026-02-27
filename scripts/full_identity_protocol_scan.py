@@ -123,6 +123,9 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "required_contract_coverage",
         )
     )
+    baseline = checks.get("protocol_baseline_freshness") or {}
+    baseline_status = str(baseline.get("baseline_status", "")).upper()
+    baseline_issue = (not baseline.get("ok", True)) or baseline_status in {"WARN", "FAIL"}
     freshness = checks.get("execution_report_freshness") or {}
     freshness_fail = (not freshness.get("ok", True)) or str(freshness.get("freshness_status", "")).upper() == "FAIL"
     cap_preflight = checks.get("capability_activation_preflight") or {}
@@ -140,7 +143,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         return "P0"
     if capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
         return "P1"
-    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail:
+    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue:
         return "P1"
     return "OK"
 
@@ -329,6 +332,19 @@ def main() -> int:
                     iid,
                     "--json-only",
                 ],
+                "protocol_baseline_freshness": [
+                    "python3",
+                    "scripts/validate_identity_protocol_baseline_freshness.py",
+                    "--identity-id",
+                    iid,
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--baseline-policy",
+                    "warn",
+                    "--json-only",
+                ],
             }
             cap_preflight_cmd = [
                 "python3",
@@ -454,6 +470,20 @@ def main() -> int:
                     ):
                         if k in freshness_doc:
                             check_payload[k] = freshness_doc.get(k)
+                if name == "protocol_baseline_freshness":
+                    baseline_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "baseline_status",
+                        "baseline_error_code",
+                        "report_selected_path",
+                        "report_protocol_root",
+                        "report_protocol_commit_sha",
+                        "current_protocol_head_sha",
+                        "lag_commits",
+                        "stale_reasons",
+                    ):
+                        if k in baseline_doc:
+                            check_payload[k] = baseline_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

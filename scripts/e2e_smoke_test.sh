@@ -281,6 +281,14 @@ PY
     --report "$UPGRADE_REPORT" \
     --execution-report-policy strict
 
+  echo "[26.2/30][$ID] validate protocol baseline freshness (strict)"
+  python3 scripts/validate_identity_protocol_baseline_freshness.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --execution-report "$UPGRADE_REPORT" \
+    --baseline-policy strict
+
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
 p=sys.argv[1]

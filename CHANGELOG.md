@@ -55,6 +55,38 @@
     - `scripts/identity_creator.py validate`
     - `.github/workflows/_identity-required-gates.yml`
 
+- **v1.4.13 protocol baseline propagation + upgrade-wave closure (draft)**:
+  - added protocol baseline freshness validator:
+    - `scripts/validate_identity_protocol_baseline_freshness.py`
+    - compares execution report `protocol_commit_sha` against current protocol
+      HEAD under `report.protocol_root`
+    - policy gate: `--baseline-policy strict|warn`
+    - structured error codes:
+      `IP-PBL-001` / `IP-PBL-002` / `IP-PBL-003` / `IP-PBL-004`
+  - upgraded health checks with warn-aware contract semantics:
+    - `scripts/collect_identity_health_report.py` adds
+      `protocol_baseline_freshness` check (warn policy by default)
+    - health report now emits:
+      `warning_count`, `failed_count`, `checks[].status`, `checks[].error_code`
+    - `scripts/validate_identity_health_contract.py` accepts `PASS/WARN/FAIL`
+      and keeps `--require-pass` fail-only on `FAIL` checks
+  - wired baseline freshness visibility into core governance chains:
+    - `scripts/release_readiness_check.py` adds baseline preflight
+      (`--baseline-policy`)
+    - `scripts/full_identity_protocol_scan.py` adds
+      `protocol_baseline_freshness` check and parsed fields
+    - `scripts/report_three_plane_status.py` exposes baseline freshness detail
+      in instance-plane output (warn-visible by default)
+    - `scripts/e2e_smoke_test.sh` adds strict baseline freshness step
+    - `.github/workflows/_identity-required-gates.yml` adds strict baseline
+      freshness check on generated upgrade report
+  - added batch protocol upgrade orchestrator:
+    - `scripts/run_protocol_upgrade_wave.py`
+    - supports catalog-driven stale detection + dry-run inventory +
+      optional apply mode to trigger `identity_creator update`
+    - emits machine-readable wave report:
+      `outdated_identities`, `updated_count`, `blocked_count`, `items[]`
+
 - **v1.4.13 layered-governance closure hardening (draft)**:
   - added unified three-plane governance reporter:
     - `scripts/report_three_plane_status.py`

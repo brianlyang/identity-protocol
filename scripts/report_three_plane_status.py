@@ -361,6 +361,31 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_fresh,
     }
 
+    rc_baseline, out_baseline, err_baseline = _run(
+        [
+            "python3",
+            "scripts/validate_identity_protocol_baseline_freshness.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--execution-report",
+            str(report_path),
+            "--baseline-policy",
+            "warn",
+            "--json-only",
+        ]
+    )
+    baseline_payload = _parse_json_payload(out_baseline) or {}
+    validators["protocol_baseline_freshness"] = {
+        "rc": rc_baseline,
+        "ok": rc_baseline == 0,
+        "out": out_baseline,
+        "err": err_baseline,
+    }
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,
@@ -386,6 +411,16 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "report_selected_path": freshness_payload.get("report_selected_path"),
             "stale_reasons": freshness_payload.get("stale_reasons", []),
             "checks": freshness_payload.get("checks", {}),
+        },
+        "protocol_baseline_freshness": {
+            "baseline_status": baseline_payload.get("baseline_status"),
+            "baseline_error_code": baseline_payload.get("baseline_error_code"),
+            "report_selected_path": baseline_payload.get("report_selected_path"),
+            "report_protocol_root": baseline_payload.get("report_protocol_root"),
+            "report_protocol_commit_sha": baseline_payload.get("report_protocol_commit_sha"),
+            "current_protocol_head_sha": baseline_payload.get("current_protocol_head_sha"),
+            "lag_commits": baseline_payload.get("lag_commits"),
+            "stale_reasons": baseline_payload.get("stale_reasons", []),
         },
         "validators": validators,
     }

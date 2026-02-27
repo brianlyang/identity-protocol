@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +24,16 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("install_provenance", ["python3", "scripts/validate_identity_install_provenance.py"]),
     ("vendor_api_discovery", ["python3", "scripts/validate_identity_vendor_api_discovery.py"]),
     ("vendor_api_solution", ["python3", "scripts/validate_identity_vendor_api_solution.py"]),
+    (
+        "protocol_baseline_freshness",
+        [
+            "python3",
+            "scripts/validate_identity_protocol_baseline_freshness.py",
+            "--baseline-policy",
+            "warn",
+            "--json-only",
+        ],
+    ),
     ("experience_feedback_governance", ["python3", "scripts/validate_identity_experience_feedback_governance.py"]),
     ("capability_arbitration", ["python3", "scripts/validate_identity_capability_arbitration.py"]),
     ("ci_enforcement", ["python3", "scripts/validate_identity_ci_enforcement.py"]),
@@ -42,15 +53,45 @@ SUGGESTIONS = {
     "install_provenance": "Generate identity-installer provenance chain reports (plan/dry-run/install/verify).",
     "vendor_api_discovery": "Record vendor/API discovery closure with official contract refs and trust tier/provenance evidence.",
     "vendor_api_solution": "Complete solution option matrix with exactly one selected option and rollback/fallback refs.",
+    "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
     "experience_feedback_governance": "Refresh feedback sample/log linkage for target identity only.",
     "capability_arbitration": "Refresh route quality metrics and arbitration sample for current identity.",
     "ci_enforcement": "Align evidence and CI execution metadata with protocol requirements.",
 }
 
+ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
     p = subprocess.run(cmd, capture_output=True, text=True)
     return p.returncode, p.stdout or "", p.stderr or ""
+
+
+def _extract_error_code(out: str, err: str) -> str:
+    text = f"{out}\n{err}".strip()
+    m = ERR_RE.search(text)
+    return m.group(1) if m else ""
+
+
+def _parse_json_payload(raw: str) -> dict[str, Any] | None:
+    text = (raw or "").strip()
+    if not text:
+        return None
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        data = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def main() -> int:
@@ -70,6 +111,8 @@ def main() -> int:
         cmd = [*base, "--identity-id", args.identity_id]
         if name == "state_consistency":
             cmd = [*base, "--catalog", catalog]
+        elif name == "protocol_baseline_freshness":
+            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
             if args.scope:
@@ -78,20 +121,39 @@ def main() -> int:
             cmd += ["--catalog", catalog]
 
         rc, out, err = _run(cmd)
+        status = "PASS" if rc == 0 else "FAIL"
+        error_code = _extract_error_code(out, err)
+        if name == "protocol_baseline_freshness":
+            payload = _parse_json_payload(out) or {}
+            baseline_status = str(payload.get("baseline_status", "")).strip().upper()
+            if baseline_status in {"PASS", "WARN", "FAIL"}:
+                status = baseline_status
+            baseline_code = str(payload.get("baseline_error_code", "")).strip()
+            if baseline_code:
+                error_code = baseline_code
+
         checks.append(
             {
                 "name": name,
                 "command": cmd,
                 "rc": rc,
-                "ok": rc == 0,
+                "ok": status != "FAIL",
+                "status": status,
+                "error_code": error_code,
                 "stdout": out,
                 "stderr": err,
-                "suggestion": "" if rc == 0 else SUGGESTIONS.get(name, "Review validator output and fix failing contract fields."),
+                "suggestion": "" if status == "PASS" else SUGGESTIONS.get(name, "Review validator output and fix failing contract fields."),
             }
         )
 
-    failed = [c for c in checks if not c["ok"]]
-    overall = "PASS" if not failed else "FAIL"
+    failed = [c for c in checks if str(c.get("status", "")).upper() == "FAIL"]
+    warns = [c for c in checks if str(c.get("status", "")).upper() == "WARN"]
+    if failed:
+        overall = "FAIL"
+    elif warns:
+        overall = "WARN"
+    else:
+        overall = "PASS"
     now = datetime.now(timezone.utc)
     report = {
         "report_id": f"identity-health-{args.identity_id}-{int(now.timestamp())}",
@@ -100,14 +162,18 @@ def main() -> int:
         "catalog_path": str(Path(catalog).expanduser().resolve()),
         "scope": args.scope,
         "overall_status": overall,
+        "warning_count": len(warns),
         "failed_count": len(failed),
         "checks": checks,
         "recommendations": [
             {
                 "check": c["name"],
                 "action": c["suggestion"],
+                "status": c.get("status"),
+                "error_code": c.get("error_code"),
             }
-            for c in failed
+            for c in checks
+            if str(c.get("status", "")).upper() in {"FAIL", "WARN"}
         ],
     }
 
@@ -117,10 +183,14 @@ def main() -> int:
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"report={report_path}")
     print(f"overall_status={overall}")
+    print(f"warning_count={len(warns)}")
     print(f"failed_count={len(failed)}")
     if failed:
         for c in failed:
             print(f"- fail:{c['name']} -> {c['suggestion']}")
+    if warns:
+        for c in warns:
+            print(f"- warn:{c['name']} -> {c['suggestion']}")
 
     if args.enforce_pass and failed:
         return 2

@@ -138,6 +138,28 @@ Lifecycle rules:
    - full-scan: `scripts/full_identity_protocol_scan.py`
    - creator validate chain: `scripts/identity_creator.py validate`
    - required workflow gates: `.github/workflows/_identity-required-gates.yml`
+4. Protocol baseline propagation closure (P0/P1)
+   - added `scripts/validate_identity_protocol_baseline_freshness.py`:
+     - compares `report.protocol_commit_sha` against current protocol HEAD under `report.protocol_root`
+     - emits machine-readable status: `PASS|WARN|FAIL`
+     - error codes:
+       - `IP-PBL-001` baseline stale
+       - `IP-PBL-002` report missing/invalid
+       - `IP-PBL-003` protocol sha invalid
+       - `IP-PBL-004` protocol root unavailable
+   - health integration:
+     - `collect_identity_health_report.py` includes `protocol_baseline_freshness` with `--baseline-policy warn`
+     - health contract supports `PASS/WARN/FAIL` and keeps `--require-pass` fail only on `FAIL`
+   - preflight + visibility integration:
+     - readiness adds protocol baseline preflight (`--baseline-policy strict|warn`, default `strict`)
+     - full-scan and three-plane expose baseline freshness fields for audit visibility
+     - e2e and required workflow gates run baseline freshness checks
+5. Protocol upgrade wave orchestration (P1)
+   - added `scripts/run_protocol_upgrade_wave.py` for catalog-driven closure:
+     - discover runtime identities from catalog (or explicit `--identity-ids`)
+     - detect stale protocol baseline via validator
+     - dry-run inventory and optional apply mode for batched `identity_creator update`
+     - emits machine-readable wave report with per-identity `baseline_status/update_rc/next_action/error_code`
 
 ## v1.4.13 follow-up closure scope (2026-02-26, protocol-layer)
 
@@ -203,5 +225,7 @@ python3 scripts/validate_release_workspace_cleanliness.py
 python3 scripts/validate_protocol_ssot_source.py
 python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
 python3 scripts/validate_execution_report_freshness.py --identity-id <id> --catalog <catalog> --repo-catalog identity/catalog/identities.yaml --execution-report-policy strict
+python3 scripts/validate_identity_protocol_baseline_freshness.py --identity-id <id> --catalog <catalog> --repo-catalog identity/catalog/identities.yaml --baseline-policy warn
 python3 scripts/validate_required_contract_coverage.py --identity-id <id> --catalog <catalog>
+python3 scripts/run_protocol_upgrade_wave.py --catalog <catalog> --dry-run --out /tmp/identity-upgrade-wave-dryrun.json
 ```
