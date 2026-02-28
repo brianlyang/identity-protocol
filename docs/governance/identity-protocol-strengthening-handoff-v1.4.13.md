@@ -214,6 +214,19 @@ Lifecycle rules:
 9. Governance templates (protocol-safe extension)
    - onboarding playbook/audit-return templates add dual-ledger + roundtable evidence structure
    - templates remain non-normative unless promoted via canonical SSOT workflow
+10. Scope-arbitrated full-scan + fixture noise suppression
+   - `resolve_identity_context.py` now classifies fixture/demo identities as `SYSTEM`
+     scope independent of source layer (`repo` or `local`) to avoid split semantics.
+   - scope validators accept explicit arbitration (`--scope`) as conflict-closure signal:
+     - `validate_identity_scope_resolution.py`
+     - `validate_identity_scope_isolation.py`
+   - `report_three_plane_status.py` now supports explicit `--scope` pass-through to
+     keep three-plane runs deterministic under dual-catalog overlap.
+   - `full_identity_protocol_scan.py` now propagates catalog-derived scope hints
+     into resolve/scope/three-plane checks and avoids false P1 on fixture/demo-only
+     prompt-quality + baseline-warn combinations.
+   - runtime identities keep strict semantics unchanged; only fixture/demo
+     non-runtime paths are downgraded from false-blocking P1 noise to non-blocking visibility.
 
 ## Required validation command set
 

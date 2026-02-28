@@ -289,7 +289,7 @@ def resolve_identity(
         pack = Path(pack_raw).expanduser().resolve()
         profile = str((row or {}).get("profile", "")).strip().lower()
         runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
-        if source_layer == "repo" and (profile == "fixture" or runtime_mode == "demo_only"):
+        if profile == "fixture" or runtime_mode == "demo_only":
             scope: ScopeName = "SYSTEM"
         else:
             scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)

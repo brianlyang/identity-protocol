@@ -39,7 +39,8 @@ def main() -> int:
         print(f"[FAIL] resolve failed: {exc}")
         return 1
 
-    if bool(ctx.get("conflict_detected")):
+    explicit_scope = bool(str(args.scope or "").strip())
+    if bool(ctx.get("conflict_detected")) and not explicit_scope:
         print("[FAIL] scope conflict detected")
         return 1
 

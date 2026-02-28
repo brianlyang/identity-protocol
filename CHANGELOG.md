@@ -107,6 +107,23 @@
       preventing false `identity_aligned_to_current_protocol` labels for
       bootstrap-required identities
 
+- **v1.4.13 scope-arbitrated full-scan/three-plane stabilization (draft)**:
+  - scope classification now treats `profile=fixture` / `runtime_mode=demo_only`
+    as `SYSTEM` regardless catalog source layer:
+    - `scripts/resolve_identity_context.py`
+  - scope validators now support explicit arbitration without false conflict hard-fail:
+    - `scripts/validate_identity_scope_resolution.py`
+    - `scripts/validate_identity_scope_isolation.py`
+  - three-plane reporter now accepts explicit scope binding:
+    - `scripts/report_three_plane_status.py --scope REPO|USER|ADMIN|SYSTEM`
+  - full scan now injects catalog-layer scope hints and forwards explicit scope to:
+    - resolve/scope validators
+    - three-plane reporter
+  - full scan severity now keeps fixture/demo baseline `WARN` as non-blocking and
+    skips prompt-quality hard-gate for fixture/demo identities to avoid
+    protocol/fixture mixed-layer false P1 noise:
+    - `scripts/full_identity_protocol_scan.py`
+
 - **v1.4.13 layered-governance closure hardening (draft)**:
   - added unified three-plane governance reporter:
     - `scripts/report_three_plane_status.py`

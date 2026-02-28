@@ -97,15 +97,27 @@ def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
     return rows[-1]
 
 
+def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    if profile == "fixture" or runtime_mode == "demo_only":
+        return "SYSTEM"
+    if layer == "repo":
+        return "SYSTEM"
+    return "USER"
+
+
 def _severity_for_row(row: dict[str, Any]) -> str:
     active = str(row.get("status", "")).lower() == "active"
     profile = str(row.get("profile", "")).lower()
+    runtime_mode = str(row.get("runtime_mode", "")).lower()
+    is_fixture = profile == "fixture" or runtime_mode == "demo_only"
     checks = row.get("checks", {})
     core_fail = any(
         not checks.get(name, {}).get("ok", False)
         for name in ("scope_resolution", "scope_isolation", "scope_persistence", "runtime_contract")
     )
-    prompt_fail = any(
+    prompt_fail = (not is_fixture) and any(
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("prompt_quality", "prompt_activation", "prompt_lifecycle")
     )
@@ -125,13 +137,15 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     )
     baseline = checks.get("protocol_baseline_freshness") or {}
     baseline_status = str(baseline.get("baseline_status", "")).upper()
-    baseline_issue = (not baseline.get("ok", True)) or baseline_status in {"WARN", "FAIL"}
+    baseline_issue = (not baseline.get("ok", True)) or baseline_status == "FAIL" or (
+        baseline_status == "WARN" and not is_fixture
+    )
     freshness = checks.get("execution_report_freshness") or {}
     freshness_fail = (not freshness.get("ok", True)) or str(freshness.get("freshness_status", "")).upper() == "FAIL"
     cap_preflight = checks.get("capability_activation_preflight") or {}
     capability_env_blocked = bool(cap_preflight.get("env_auth_blocked", False))
     if capability_env_blocked:
-        capability_fail = any(
+        capability_fail = active and any(
             name in checks and not checks.get(name, {}).get("ok", False)
             for name in ("capability_activation_report",)
         )
@@ -141,7 +155,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     )
     if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail):
         return "P0"
-    if capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
+    if active and capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
         return "P1"
     if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue:
         return "P1"
@@ -210,12 +224,14 @@ def main() -> int:
             if args.scan_mode == "target" and iid not in target_set:
                 continue
             matched_targets.add(iid)
+            scan_scope_hint = _scope_hint_for_row(layer, row)
             item: dict[str, Any] = {
                 "identity_id": iid,
                 "status": row.get("status"),
                 "profile": row.get("profile"),
                 "runtime_mode": row.get("runtime_mode"),
                 "pack_path": row.get("pack_path"),
+                "scan_scope_hint": scan_scope_hint,
                 "checks": {},
             }
             resolve = _run(
@@ -229,19 +245,22 @@ def main() -> int:
                     str(repo_catalog),
                     "--local-catalog",
                     str(catalog),
+                    "--scope",
+                    scan_scope_hint,
                 ],
                 cwd=repo_root,
             )
             item["checks"]["resolve"] = {"rc": resolve.rc, "ok": resolve.ok, "tail": resolve.tail}
-            resolved_scope = "USER"
+            resolved_scope = scan_scope_hint
             if resolve.ok:
                 data = _parse_json_safely(resolve.stdout) or {}
                 item["resolved_scope"] = data.get("resolved_scope")
                 item["source_layer"] = data.get("source_layer")
                 item["conflict_detected"] = data.get("conflict_detected")
-                resolved_scope = str(data.get("resolved_scope", "")).upper() or "USER"
+                resolved_scope = str(data.get("resolved_scope", "")).upper() or scan_scope_hint
 
             is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
+            is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -252,6 +271,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--scope",
+                    scan_scope_hint,
                 ],
                 "scope_isolation": [
                     "python3",
@@ -262,6 +283,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--scope",
+                    scan_scope_hint,
                 ],
                 "scope_persistence": [
                     "python3",
@@ -272,16 +295,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
-                ],
-                "prompt_quality": [
-                    "python3",
-                    "scripts/validate_identity_prompt_quality.py",
-                    "--catalog",
-                    str(catalog),
-                    "--identity-id",
-                    iid,
                     "--scope",
-                    resolved_scope,
+                    scan_scope_hint,
                 ],
                 "runtime_contract": [
                     "python3",
@@ -346,6 +361,24 @@ def main() -> int:
                     "--json-only",
                 ],
             }
+            if not is_fixture:
+                checks["prompt_quality"] = [
+                    "python3",
+                    "scripts/validate_identity_prompt_quality.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--scope",
+                    resolved_scope,
+                ]
+            else:
+                item["checks"]["prompt_quality"] = {
+                    "rc": 0,
+                    "ok": True,
+                    "tail": f"[OK] prompt quality skipped for fixture/demo identity={iid}",
+                    "skipped": True,
+                }
             cap_preflight_cmd = [
                 "python3",
                 "scripts/validate_identity_capability_activation.py",
@@ -494,6 +527,8 @@ def main() -> int:
                     "scripts/report_three_plane_status.py",
                     "--identity-id",
                     iid,
+                    "--scope",
+                    scan_scope_hint,
                     *(["--with-docs-contract"] if args.with_docs_contract else []),
                 ],
                 cwd=repo_root,

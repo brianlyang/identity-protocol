@@ -455,6 +455,7 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default=os.environ.get("IDENTITY_CATALOG", ""))
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--scope", default="", help="optional explicit scope arbitration: REPO/USER/ADMIN/SYSTEM")
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--with-docs-contract", action="store_true", help="run repo-plane docs contract checker")
     ap.add_argument("--target-branch", default="")
@@ -481,7 +482,12 @@ def main() -> int:
         return 2
 
     try:
-        resolved = resolve_identity(args.identity_id, repo_catalog_path, catalog_path)
+        resolved = resolve_identity(
+            args.identity_id,
+            repo_catalog_path,
+            catalog_path,
+            preferred_scope=str(args.scope or ""),
+        )
     except Exception as exc:
         print(f"[FAIL] unable to resolve identity context: {exc}")
         return 2
