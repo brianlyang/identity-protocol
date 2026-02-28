@@ -457,6 +457,26 @@ Kernel extension requirement:
 1. The same coverage and evidence semantics must be gradually extended to `skill` / `mcp` / `tool` capability validators and release surfaces.
 2. Migration must keep current vendor/tool gates backward-compatible while introducing kernel-level aggregation outputs.
 
+### 6.3A P0 mandatory confirmation matrix (multi-agent x multi-identity)
+
+This subsection is a no-ambiguity lock for architect and auditor communication.
+The six items below are mandatory protocol targets and must be treated as one closure set.
+
+| Confirm item | Mandatory protocol statement | Acceptance signal (must be explicit) | Current baseline interpretation |
+| --- | --- | --- | --- |
+| C1 | Session model must move from `single-active` to actor-scoped binding (`actor_id` as first-class runtime key). | Runtime no longer uses global single-active as authoritative control for activation/consistency decisions. | P0 target; currently tracked by ASB-RQ-010 and still pending implementation. |
+| C2 | New contract `actor_session_binding_contract_v1` is required. | Contract schema fields and validation behavior are implemented and versioned. | P0 target; currently tracked by ASB-RQ-001 and pending implementation. |
+| C3 | Canonical source of truth must be `<catalog_dir>/session/actors/<actor_id>.json`. | Resolver and validators read actor-scoped canonical records by default. | P0 target; currently tracked by ASB-RQ-001 and pending implementation. |
+| C4 | Legacy `active_identity.json` is compatibility mirror only (not authoritative). | Any authoritative decision that still depends on legacy pointer is removed. | P0 target; currently tracked by ASB-RQ-002/ASB-RQ-010 and pending implementation. |
+| C5 | Three new validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | Scripts exist, produce stable machine-readable outputs, and are referenced by acceptance gates. | P0 target; currently tracked by ASB-RQ-003/004/005 and pending implementation. |
+| C6 | Gate wiring must cover `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, and CI required-gates workflow. | Wire-up evidence exists in code and acceptance output across all listed surfaces. | P0 target; currently tracked by ASB-RQ-009 and pending implementation. |
+
+Hard interpretation rules:
+
+1. C1~C6 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
+2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
+3. Until C1~C6 are all `DONE`, this topic is governance-ready (`SPEC_READY`) but runtime-not-closed.
+
 ### 6.4 Requirement ledger (canonical tracker for `v1.5` unlock)
 
 | Requirement ID | Requirement summary | Code surface / validator | Blocking level | Current status | Evidence ref / notes |
@@ -575,6 +595,24 @@ python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids
 # Docs command contract integrity
 python3 scripts/docs_command_contract_check.py
 ```
+
+### 9.1 P0 deep-remediation closure checklist (no-ambiguity lock)
+
+This checklist is the protocol-level closure contract for "deep remediation + cross-validation" and must be read together with section 6.3A (C1~C6) and section 6.4 (`ASB-RQ-*`).
+
+| Closure item | Mandatory statement | Evidence requirement | Tracker linkage |
+| --- | --- | --- | --- |
+| DRC-1 | Session model is upgraded from `single-active` to `actor-scoped binding` (multi-agent, multi-identity capable). | activation/update/state/session paths no longer treat catalog single-active as authoritative decision primitive. | `C1`, `ASB-RQ-010`, `ASB-RC-001~005` |
+| DRC-2 | Contract `actor_session_binding_contract_v1` is implemented and versioned. | contract schema + validator behavior are machine-checkable and replayable in CI. | `C2`, `ASB-RQ-001` |
+| DRC-3 | Canonical session source is `<catalog_dir>/session/actors/<actor_id>.json`. | resolver/validators use actor pointer as first source; report includes canonical actor pointer evidence. | `C3`, `ASB-RQ-001`, `ASB-RC-004/006` |
+| DRC-4 | `active_identity.json` remains compatibility mirror only and cannot be authoritative. | mirror drift is reported as compatibility warning path; canonical actor pointer remains the binding source. | `C4`, `ASB-RQ-002`, `ASB-RC-006` |
+| DRC-5 | Three validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | each validator has command contract, machine-readable output, and gate visibility in readiness/scan/three-plane/CI. | `C5`, `ASB-RQ-003/004/005` |
+| DRC-6 | Gate wiring covers: `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, CI required-gates. | same target identity shows consistent semantics across all listed surfaces; no silent pass when required wiring is missing. | `C6`, `ASB-RQ-009`, `ASB-RC-012` |
+
+Hard closure rule:
+
+1. Any one of `DRC-1..DRC-6` not reaching `DONE` means runtime milestone is not closed.
+2. Narrative "cross-validated" claim without evidence on all six surfaces is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
 
