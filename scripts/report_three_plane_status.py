@@ -537,6 +537,62 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_cov,
     }
 
+    rc_writeback, out_writeback, err_writeback = _run(
+        [
+            "python3",
+            "scripts/validate_writeback_continuity.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--report",
+            str(report_path),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    writeback_payload = _parse_json_payload(out_writeback) or {}
+    validators["writeback_continuity"] = {
+        "rc": rc_writeback,
+        "ok": rc_writeback == 0,
+        "out": out_writeback,
+        "err": err_writeback,
+    }
+    writeback_status = str(writeback_payload.get("writeback_continuity_status", "")).strip().upper()
+    if rc_writeback != 0 or writeback_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_post_exec, out_post_exec, err_post_exec = _run(
+        [
+            "python3",
+            "scripts/validate_post_execution_mandatory.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--report",
+            str(report_path),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    post_exec_payload = _parse_json_payload(out_post_exec) or {}
+    validators["post_execution_mandatory"] = {
+        "rc": rc_post_exec,
+        "ok": rc_post_exec == 0,
+        "out": out_post_exec,
+        "err": err_post_exec,
+    }
+    post_exec_status = str(post_exec_payload.get("post_execution_mandatory_status", "")).strip().upper()
+    if rc_post_exec != 0 or post_exec_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_fresh, out_fresh, err_fresh = _run(
         [
             "python3",
@@ -605,6 +661,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "writeback_continuity": {
+            "writeback_continuity_status": writeback_payload.get("writeback_continuity_status"),
+            "error_code": writeback_payload.get("error_code", ""),
+            "required_contract": writeback_payload.get("required_contract"),
+            "report_selected_path": writeback_payload.get("report_selected_path"),
+            "writeback_mode": writeback_payload.get("writeback_mode"),
+            "writeback_status": writeback_payload.get("writeback_status"),
+            "upgrade_required": writeback_payload.get("upgrade_required"),
+            "all_ok": writeback_payload.get("all_ok"),
+            "degrade_reason": writeback_payload.get("degrade_reason", ""),
+            "risk_level": writeback_payload.get("risk_level", ""),
+            "next_recovery_action": writeback_payload.get("next_recovery_action", ""),
+            "stale_reasons": writeback_payload.get("stale_reasons", []),
+        },
+        "post_execution_mandatory": {
+            "post_execution_mandatory_status": post_exec_payload.get("post_execution_mandatory_status"),
+            "error_code": post_exec_payload.get("error_code", ""),
+            "required_contract": post_exec_payload.get("required_contract"),
+            "report_selected_path": post_exec_payload.get("report_selected_path"),
+            "missing_fields": post_exec_payload.get("missing_fields", []),
+            "writeback_mode": post_exec_payload.get("writeback_mode", ""),
+            "writeback_status": post_exec_payload.get("writeback_status", ""),
+            "next_action": post_exec_payload.get("next_action", ""),
+            "next_recovery_action": post_exec_payload.get("next_recovery_action", ""),
+            "stale_reasons": post_exec_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),

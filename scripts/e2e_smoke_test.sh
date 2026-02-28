@@ -318,6 +318,22 @@ PY
     --execution-report "$UPGRADE_REPORT" \
     --baseline-policy strict
 
+  echo "[26.25/30][$ID] validate writeback continuity contract (Track-A)"
+  python3 scripts/validate_writeback_continuity.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --report "$UPGRADE_REPORT" \
+    --operation e2e
+
+  echo "[26.3/30][$ID] validate post-execution mandatory contract (Track-A)"
+  python3 scripts/validate_post_execution_mandatory.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --report "$UPGRADE_REPORT" \
+    --operation e2e
+
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
 p=sys.argv[1]

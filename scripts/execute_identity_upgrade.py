@@ -420,6 +420,10 @@ def _base_report(
         "writeback_paths": [],
         "writeback_status": "MISSING",
         "writeback_rule_id": "",
+        "writeback_mode": "STRICT_WRITEBACK",
+        "degrade_reason": "",
+        "risk_level": "",
+        "next_recovery_action": "",
         "all_ok": False,
         "permission_state": "PRECHECK",
         "permission_error_code": "",
@@ -454,6 +458,66 @@ def _base_report(
         "identity_prompt_hash_after": str(prompt_contract.get("identity_prompt_sha256", "")),
         "identity_prompt_change_note": "",
         **prompt_contract,
+    }
+
+
+def _derive_writeback_continuity_fields(
+    *,
+    upgrade_required: bool,
+    all_ok: bool,
+    writeback_status: str,
+    writeback_error_code: str,
+    permission_error_code: str,
+    next_action: str,
+) -> dict[str, str]:
+    ws = str(writeback_status or "").strip().upper()
+    wb_err = str(writeback_error_code or "").strip().upper()
+    perm_err = str(permission_error_code or "").strip().upper()
+    na = str(next_action or "").strip()
+
+    if not upgrade_required:
+        return {
+            "writeback_mode": "STRICT_WRITEBACK",
+            "degrade_reason": "",
+            "risk_level": "",
+            "next_recovery_action": "",
+        }
+
+    if all_ok and ws == "WRITTEN":
+        return {
+            "writeback_mode": "STRICT_WRITEBACK",
+            "degrade_reason": "",
+            "risk_level": "",
+            "next_recovery_action": "",
+        }
+
+    # Degraded mode for non-closure or recoverable execution paths.
+    degrade_reason = "validator_failure_before_writeback"
+    risk_level = "medium"
+    recovery = na or "fix_failing_validators_and_rerun_update"
+
+    if ws == "DEFERRED_PERMISSION_BLOCKED" or wb_err.startswith("IP-PERM-") or perm_err.startswith("IP-PERM-"):
+        degrade_reason = "permission_blocked_writeback"
+        risk_level = "high"
+        recovery = na or "restore_write_permission_or_escalate_then_rerun_update"
+    elif ws == "DEFERRED_POLICY_BLOCKED" or wb_err.startswith("IP-SAFEAUTO-") or perm_err.startswith("IP-UPG-001"):
+        degrade_reason = "policy_blocked_writeback"
+        risk_level = "high"
+        recovery = na or "adjust_safe_auto_policy_or_switch_mode_then_rerun_update"
+    elif ws == "DEFERRED_VALIDATION_FAILED" or wb_err.startswith("IP-UPG-"):
+        degrade_reason = "validator_failure_before_writeback"
+        risk_level = "medium"
+        recovery = na or "resolve_validation_failures_then_rerun_update"
+    elif ws in {"MISSING", "NOT_EXECUTED"}:
+        degrade_reason = "writeback_not_executed"
+        risk_level = "high"
+        recovery = na or "produce_valid_execution_report_with_degraded_or_strict_writeback"
+
+    return {
+        "writeback_mode": "DEGRADED_WRITEBACK",
+        "degrade_reason": degrade_reason,
+        "risk_level": risk_level,
+        "next_recovery_action": recovery,
     }
 
 
@@ -744,6 +808,16 @@ def main() -> int:
             }
         )
         report["writeback_status"] = str(report["experience_writeback"]["status"])
+        report.update(
+            _derive_writeback_continuity_fields(
+                upgrade_required=bool(report.get("upgrade_required", False)),
+                all_ok=bool(report.get("all_ok", False)),
+                writeback_status=str(report.get("writeback_status", "")),
+                writeback_error_code=str((report.get("experience_writeback") or {}).get("error_code", "")),
+                permission_error_code=str(report.get("permission_error_code", "")),
+                next_action=str(report.get("next_action", "")),
+            )
+        )
         report_path = out_dir / f"{run_id}.json"
         _write_json(report_path, report)
         print(f"report={report_path}")
@@ -826,6 +900,16 @@ def main() -> int:
             }
         )
         report["writeback_status"] = str(report["experience_writeback"]["status"])
+        report.update(
+            _derive_writeback_continuity_fields(
+                upgrade_required=bool(report.get("upgrade_required", False)),
+                all_ok=bool(report.get("all_ok", False)),
+                writeback_status=str(report.get("writeback_status", "")),
+                writeback_error_code=str((report.get("experience_writeback") or {}).get("error_code", "")),
+                permission_error_code=str(report.get("permission_error_code", "")),
+                next_action=str(report.get("next_action", "")),
+            )
+        )
         report_path = out_dir / f"{run_id}.json"
         _write_json(report_path, report)
         print(f"report={report_path}")
@@ -1001,6 +1085,16 @@ def main() -> int:
                     }
                 )
                 report["writeback_status"] = str(report["experience_writeback"]["status"])
+                report.update(
+                    _derive_writeback_continuity_fields(
+                        upgrade_required=bool(report.get("upgrade_required", False)),
+                        all_ok=bool(report.get("all_ok", False)),
+                        writeback_status=str(report.get("writeback_status", "")),
+                        writeback_error_code=str((report.get("experience_writeback") or {}).get("error_code", "")),
+                        permission_error_code=str(report.get("permission_error_code", "")),
+                        next_action=str(report.get("next_action", "")),
+                    )
+                )
                 report_path = out_dir / f"{run_id}.json"
                 _write_json(report_path, report)
                 print(f"report={report_path}")
@@ -1266,6 +1360,16 @@ def main() -> int:
         "next_action": next_action,
         "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
     }
+    report.update(
+        _derive_writeback_continuity_fields(
+            upgrade_required=bool(upgrade_required),
+            all_ok=bool(all_ok),
+            writeback_status=str(report.get("writeback_status", "")),
+            writeback_error_code=str((report.get("experience_writeback") or {}).get("error_code", "")),
+            permission_error_code=str(report.get("permission_error_code", "")),
+            next_action=str(report.get("next_action", "")),
+        )
+    )
     report.update(
         {
             "protocol_mode": protocol["protocol_mode"],

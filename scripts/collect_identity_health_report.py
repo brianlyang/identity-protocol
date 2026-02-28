@@ -25,6 +25,26 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("vendor_api_discovery", ["python3", "scripts/validate_identity_vendor_api_discovery.py"]),
     ("vendor_api_solution", ["python3", "scripts/validate_identity_vendor_api_solution.py"]),
     (
+        "writeback_continuity",
+        [
+            "python3",
+            "scripts/validate_writeback_continuity.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
+        "post_execution_mandatory",
+        [
+            "python3",
+            "scripts/validate_post_execution_mandatory.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
         "protocol_baseline_freshness",
         [
             "python3",
@@ -53,6 +73,8 @@ SUGGESTIONS = {
     "install_provenance": "Generate identity-installer provenance chain reports (plan/dry-run/install/verify).",
     "vendor_api_discovery": "Record vendor/API discovery closure with official contract refs and trust tier/provenance evidence.",
     "vendor_api_solution": "Complete solution option matrix with exactly one selected option and rollback/fallback refs.",
+    "writeback_continuity": "Regenerate update execution report and ensure writeback_mode/degrade_reason/risk_level/next_recovery_action satisfy continuity contract.",
+    "post_execution_mandatory": "Ensure post-execution mandatory fields and recovery actions are complete in execution report; rerun update and validate.",
     "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
     "experience_feedback_governance": "Refresh feedback sample/log linkage for target identity only.",
     "capability_arbitration": "Refresh route quality metrics and arbitration sample for current identity.",
@@ -113,6 +135,8 @@ def main() -> int:
             cmd = [*base, "--catalog", catalog]
         elif name == "protocol_baseline_freshness":
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
+        elif name in {"writeback_continuity", "post_execution_mandatory"}:
+            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
             if args.scope:
@@ -131,6 +155,26 @@ def main() -> int:
             baseline_code = str(payload.get("baseline_error_code", "")).strip()
             if baseline_code:
                 error_code = baseline_code
+        elif name == "writeback_continuity":
+            payload = _parse_json_payload(out) or {}
+            continuity_status = str(payload.get("writeback_continuity_status", "")).strip().upper()
+            if continuity_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif continuity_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            continuity_code = str(payload.get("error_code", "")).strip()
+            if continuity_code:
+                error_code = continuity_code
+        elif name == "post_execution_mandatory":
+            payload = _parse_json_payload(out) or {}
+            post_exec_status = str(payload.get("post_execution_mandatory_status", "")).strip().upper()
+            if post_exec_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif post_exec_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            post_exec_code = str(payload.get("error_code", "")).strip()
+            if post_exec_code:
+                error_code = post_exec_code
 
         checks.append(
             {

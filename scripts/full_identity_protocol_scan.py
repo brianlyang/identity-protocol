@@ -127,6 +127,8 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "cross_actor_isolation",
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
+            "writeback_continuity",
+            "post_execution_mandatory",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -462,6 +464,32 @@ def main() -> int:
                     iid,
                     "--json-only",
                 ],
+                "writeback_continuity": [
+                    "python3",
+                    "scripts/validate_writeback_continuity.py",
+                    "--identity-id",
+                    iid,
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "post_execution_mandatory": [
+                    "python3",
+                    "scripts/validate_post_execution_mandatory.py",
+                    "--identity-id",
+                    iid,
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "protocol_baseline_freshness": [
                     "python3",
                     "scripts/validate_identity_protocol_baseline_freshness.py",
@@ -607,6 +635,40 @@ def main() -> int:
                     ):
                         if k in coverage_doc:
                             check_payload[k] = coverage_doc.get(k)
+                if name == "writeback_continuity":
+                    writeback_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "writeback_continuity_status",
+                        "error_code",
+                        "required_contract",
+                        "report_selected_path",
+                        "writeback_mode",
+                        "writeback_status",
+                        "upgrade_required",
+                        "all_ok",
+                        "degrade_reason",
+                        "risk_level",
+                        "next_recovery_action",
+                        "stale_reasons",
+                    ):
+                        if k in writeback_doc:
+                            check_payload[k] = writeback_doc.get(k)
+                if name == "post_execution_mandatory":
+                    post_exec_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "post_execution_mandatory_status",
+                        "error_code",
+                        "required_contract",
+                        "report_selected_path",
+                        "missing_fields",
+                        "writeback_mode",
+                        "writeback_status",
+                        "next_action",
+                        "next_recovery_action",
+                        "stale_reasons",
+                    ):
+                        if k in post_exec_doc:
+                            check_payload[k] = post_exec_doc.get(k)
                 if name == "execution_report_freshness":
                     freshness_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

@@ -67,6 +67,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | REJECT |
 | FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PASS |
 | FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PASS |
+| FIX-011 | 2026-02-28 | protocol | Track-A writeback continuity + post-execution mandatory gates landing | `TBD` | DONE | PENDING_REVIEW |
+| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `TBD` | PLANNED | PENDING_REVIEW |
 
 ---
 
@@ -1459,3 +1461,111 @@ Alignment note (2026-02-28, anti-drift):
    - FIX-009: `PASS`
    - FIX-010: `PASS`
    - FIX-008: historical `REJECT` with explicit `closed-by FIX-010` linkage.
+
+---
+
+### FIX-011 — Track-A writeback continuity + post-execution mandatory gates (initial landing)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for static checks and scan/three-plane replay
+  - `escalated` for runtime update/readiness replay against `~/.codex`
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`5.7.1`, `ASB-RQ-032`, `ASB-RQ-033`, `DRC-11`)
+
+#### Change summary
+
+1. Added Track-A validators:
+   - `scripts/validate_writeback_continuity.py`
+   - `scripts/validate_post_execution_mandatory.py`
+2. Added writeback continuity fields into execution report payload:
+   - `writeback_mode`
+   - `degrade_reason`
+   - `risk_level`
+   - `next_recovery_action`
+   - file: `scripts/execute_identity_upgrade.py`
+3. Wired new validators into main-chain surfaces:
+   - `scripts/identity_creator.py` (`validate`)
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+4. Health visibility update:
+   - `scripts/collect_identity_health_report.py` now includes Track-A checks (`scan` operation).
+
+#### Acceptance replay (architect run, pre-audit)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/execute_identity_upgrade.py scripts/validate_writeback_continuity.py scripts/validate_post_execution_mandatory.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py scripts/collect_identity_health_report.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Validator behavior:
+   - `validate_writeback_continuity` on latest runtime report (`custom-creative-ecom-analyst`) => `FAIL_REQUIRED`, `error_code=IP-WRB-001` when `writeback_status=MISSING`.
+   - `validate_post_execution_mandatory` on same report => `FAIL_REQUIRED`, `error_code=IP-WRB-003` when post-execution closure is incomplete.
+3. Chain visibility:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix011.json` => `rc=0`; includes `checks.writeback_continuity` + `checks.post_execution_mandatory`.
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix011.json` => `rc=0`; includes `instance_plane_detail.writeback_continuity` + `instance_plane_detail.post_execution_mandatory`.
+   - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out-dir /tmp/identity-health-reports` => `rc=0`; report shows Track-A failures as health signals.
+
+#### Residual risk
+
+1. Track-A checks now surface deterministic failures, but closure still depends on upstream update validators producing `all_ok=true` + non-missing writeback path.
+2. `release_readiness_check` for target identity can still stop early if `identity_creator update` returns non-zero before downstream Track-A checks.
+3. Track-B (`semantic_routing_guard_contract_v1`) is still pending implementation and audited separately per non-merge rule.
+
+#### Next action
+
+1. Submit FIX-011 patch set for audit replay.
+2. Keep v1.5 tag blocked until Track-A audit verdict is `PASS` and Track-B implementation/replay is completed.
+
+---
+
+## 7) Next release-blocking verifier: FIX-015 (concurrent actor x identity activation)
+
+### Scope declaration
+
+1. Layer: `protocol`
+2. Type: `release-blocking verifier` (not business-feature patch)
+3. Purpose: prove runtime can hold concurrent actor bindings without hidden demotion or pointer drift regression.
+
+### Why FIX-015 is mandatory
+
+1. Current runtime has actor-scoped validators, but core activation/state/pointer/installer/compile paths still carry legacy single-active assumptions.
+2. Without a dedicated concurrency replay gate, regressions can pass local checks and reintroduce implicit actor demotion in later fixes.
+3. FIX-015 is the hard proof step between "spec/governance ready" and "runtime concurrent activation ready".
+
+### Dependency boundary (must be true before FIX-015 can pass)
+
+1. FIX-011 completed: activation path no longer demotes other identities by global singleton rule.
+2. FIX-012 completed: state consistency validator no longer fails only because active count > 1.
+3. FIX-013 completed: session pointer consistency uses actor-scoped canonical source as authority.
+4. FIX-014 completed: installer/compile flow no longer depends on single-active precheck semantics.
+
+### Acceptance replay template (required evidence)
+
+1. Build two independent actor bindings in same catalog:
+   - actor A -> identity X
+   - actor B -> identity Y
+2. Run validators for both actor tuples:
+   - `validate_actor_session_binding.py` => PASS for both tuples
+   - `validate_no_implicit_switch.py` => PASS for both tuples
+   - `validate_cross_actor_isolation.py` => PASS with consistent actor binding set
+3. Run state/session checks under new model:
+   - `validate_identity_state_consistency.py` => PASS under concurrent activation semantics
+   - `validate_identity_session_pointer_consistency.py` => PASS using actor-scoped canonical semantics
+4. Run chain surfaces:
+   - `release_readiness_check.py` => PASS
+   - `e2e_smoke_test.sh` => PASS
+   - `full_identity_protocol_scan.py` and `report_three_plane_status.py` show machine-readable actor-scoped PASS outputs (no strict-fallback artifact).
+5. Regression guard:
+   - any replay output showing implicit demotion, singleton-only enforcement, or pointer authority fallback to legacy global pointer is `FAIL_REQUIRED`.
+
+### Source refs
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`:
+   - `DRC-1`, `DRC-4`
+   - `ASB-RQ-009`, `ASB-RQ-010`
+   - `ASB-RC-001~006`
+2. This review ledger remains L3 tracking only and must not override L1/L2 contract semantics.
