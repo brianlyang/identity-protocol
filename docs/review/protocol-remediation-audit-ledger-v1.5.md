@@ -40,7 +40,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | --- | --- | --- | --- | --- | --- |
 | HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | REJECT |
 | HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PASS |
-| HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | TODO | PENDING_PATCH |
+| HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | DONE | PENDING_REVIEW |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -64,7 +64,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-005 | 2026-02-28 | protocol | execution-report path contract gate + readiness wiring | `8963b0e` | DONE | PASS |
 | FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PASS |
 | FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PASS |
-| FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | PENDING_REVIEW |
+| FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | REJECT |
 | FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PENDING_REVIEW |
 
 ---
@@ -152,7 +152,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-005 | PASS | audit-expert(codex) | 2026-02-28T13:15:55Z | Scoped PASS. IP-PATH-002 validator behavior and readiness preflight wiring are reproducible in sandbox + escalated replay. |
 | FIX-006 | PASS | audit-expert(codex) | 2026-02-28T13:27:06Z | Scoped PASS. IP-PATH-003 validator + readiness/full-scan/three-plane/creator/e2e wiring replayed; docs/SSOT checks clean. |
 | FIX-007 | PASS | audit-expert(codex) | 2026-02-28T14:02:10Z | Scoped PASS. IP-PATH-004 semantics replayed: runtime pass, fixture mutation fail w/o override, fixture scan skip, fixture override+receipt pass; readiness/e2e/full-scan/three-plane wiring verified. |
-| FIX-008 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:20:00Z | Architect patch landed. Pending replay for inspection-mode actor isolation semantics in full-scan/three-plane and strict-mode behavior retention in readiness/e2e/ci. |
+| FIX-008 | REJECT | audit-expert(codex) | 2026-02-28T15:02:10Z | Replayed strict/inspection paths; actor semantics are mostly correct, but three-plane still invokes `validate_cross_actor_isolation.py` without `--operation three-plane`, so inspection surface can fall back to strict default (`operation=validate`) and emit false FAIL_REQUIRED. |
 | FIX-009 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:50:00Z | Architect patch landed. Pending replay for no-implicit-switch operation semantics and parser-error removal in three-plane/full-scan surfaces. |
 
 ---
@@ -908,12 +908,40 @@ Alignment note (2026-02-28, anti-drift):
 #### Residual risk
 
 1. This fix addresses inspection-surface signal quality; it does not complete all actor-scoped migration requirements.
-2. HOTFIX-P0-001/HOTFIX-P0-002 remain separately release-blocking until audit replay marks PASS.
+2. HOTFIX-P0-001 (`REJECT`) and HOTFIX-P0-003 (`PENDING_PATCH`) remain separately release-blocking.
 
 #### Next action
 
 1. Submit FIX-008 for audit replay with strict/inspection dual-path evidence.
 2. Keep release decision locked to full P0 closure policy.
+
+---
+
+#### Audit review verdict (2026-02-28T15:02:10Z)
+
+1. Decision: `REJECT` (scope: FIX-008 objective not fully met on three-plane chain wiring).
+2. Replayed evidence:
+   - static checks:
+     - `python3 -m py_compile ...` + `bash -n scripts/e2e_smoke_test.sh` => rc=`0`
+   - inspection-vs-strict semantics are correct at validator level:
+     - `validate_actor_session_binding --operation scan` => `SKIPPED_NOT_REQUIRED` (rc=`0`)
+     - `validate_actor_session_binding --operation validate` => `FAIL_REQUIRED` (rc=`1`)
+     - `validate_cross_actor_isolation --operation scan` => `SKIPPED_NOT_REQUIRED` (rc=`0`)
+     - `validate_cross_actor_isolation --operation validate` => `FAIL_REQUIRED` (rc=`1`)
+   - strict chains (escalated) pass and include operation routing:
+     - `release_readiness_check.py ...` => rc=`0`; logs include:
+       - `validate_actor_session_binding.py ... --operation readiness`
+       - `validate_no_implicit_switch.py ... --operation readiness`
+       - `validate_cross_actor_isolation.py ... --operation readiness`
+     - `e2e_smoke_test.sh` => rc=`0`; includes `[10.18/30] validate actor-scoped session isolation gates ...`
+3. Blocking mismatch:
+   - `scripts/report_three_plane_status.py` invokes cross-actor validator without operation argument:
+     - `scripts/report_three_plane_status.py:328`
+     - `scripts/report_three_plane_status.py:336`
+   - project-catalog replay confirms fallback to strict default:
+     - payload shows `"operation":"validate"` and `cross_actor_isolation_status="FAIL_REQUIRED"` in inspection surface where expected behavior is inspection semantics.
+4. Disposition:
+   - keep `FIX-008` in `REJECT` until three-plane passes `--operation three-plane` for cross-actor validator and replay shows expected inspection-mode status outputs.
 
 ---
 
@@ -1261,3 +1289,35 @@ Alignment note (2026-02-28, anti-drift):
 1. Sequential replay `fail-sample -> pass-sample -> identity_creator validate` must be deterministic and reproducible across identities.
 2. `identity_creator validate --identity-id base-repo-architect ...` returns rc=`0` after patch under clean and previously-failed receipt states.
 3. receipt validator behavior matches writer contract with no empty-required-field contradictions.
+
+#### Architect patch result (2026-02-28)
+
+1. Commit:
+   - `f385419` — `hotfix(stamp): make blocker receipt lifecycle deterministic`
+2. Changed files:
+   - `scripts/validate_identity_response_stamp.py`
+3. Key implementation points:
+   - On fail path, blocker receipt now forces non-empty `actual_identity_id` (`MISSING_STAMP` fallback) to satisfy receipt schema contract.
+   - On pass path, stale blocker receipt at the same target path is removed, preventing cross-run residue from poisoning subsequent validation.
+4. Acceptance replay (rc + key tail):
+   - fail sample (hard-gate missing stamp):
+     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
+     - rc=`1`, `error_code=IP-ASB-STAMP-004`, blocker receipt includes `actual_identity_id=MISSING_STAMP`
+   - blocker receipt schema check:
+     - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt /tmp/identity-stamp-blocker-receipt-base-repo-architect.json --json-only`
+     - rc=`0`, `receipt_status=PASS`
+   - pass sample with same receipt path:
+     - `python3 scripts/render_identity_response_stamp.py ... --out /tmp/hotfix3-stamp.json --json-only`
+     - `python3 scripts/validate_identity_response_stamp.py ... --stamp-json /tmp/hotfix3-stamp.json --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/identity-stamp-blocker-receipt-base-repo-architect.json --json-only`
+     - rc=`0`, `stamp_status=PASS`, `blocker_receipt_path=""`
+     - `ls -l /tmp/identity-stamp-blocker-receipt-base-repo-architect.json` => missing (expected cleanup)
+   - deterministic validate chain replay:
+     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml`
+     - rc=`0`, includes:
+       - `validate_identity_response_stamp PASSED`
+       - `validate_identity_response_stamp_blocker_receipt PASSED`
+
+#### Next action
+
+1. Submit HOTFIX-P0-003 patch for audit replay.
+2. Keep v1.5 release freeze until HOTFIX-P0-001/003 audit status is PASS.
