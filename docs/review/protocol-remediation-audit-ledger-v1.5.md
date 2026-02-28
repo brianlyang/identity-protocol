@@ -38,9 +38,9 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 | Emergency ID | Date (UTC) | Layer | Scope | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- |
-| HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | REJECT |
+| HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | REJECT (Superseded by HOTFIX-P0-003 PASS) |
 | HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PASS |
-| HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | DONE | PENDING_REVIEW |
+| HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | DONE | PASS |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -65,8 +65,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PASS |
 | FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PASS |
 | FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | REJECT |
-| FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PENDING_REVIEW |
-| FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PENDING_REVIEW |
+| FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PASS |
+| FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PASS |
 
 ---
 
@@ -154,8 +154,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-006 | PASS | audit-expert(codex) | 2026-02-28T13:27:06Z | Scoped PASS. IP-PATH-003 validator + readiness/full-scan/three-plane/creator/e2e wiring replayed; docs/SSOT checks clean. |
 | FIX-007 | PASS | audit-expert(codex) | 2026-02-28T14:02:10Z | Scoped PASS. IP-PATH-004 semantics replayed: runtime pass, fixture mutation fail w/o override, fixture scan skip, fixture override+receipt pass; readiness/e2e/full-scan/three-plane wiring verified. |
 | FIX-008 | REJECT | audit-expert(codex) | 2026-02-28T15:02:10Z | Replayed strict/inspection paths; actor semantics are mostly correct, but three-plane still invokes `validate_cross_actor_isolation.py` without `--operation three-plane`, so inspection surface can fall back to strict default (`operation=validate`) and emit false FAIL_REQUIRED. |
-| FIX-009 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:50:00Z | Architect patch landed. Pending replay for no-implicit-switch operation semantics and parser-error removal in three-plane/full-scan surfaces. |
-| FIX-010 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T15:12:00Z | Architect follow-up patch landed to route `--operation three-plane` for cross-actor validator; pending replay for inspection-surface status alignment. |
+| FIX-009 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. `no_implicit_switch` now carries operation semantics (`scan/readiness/e2e/ci/validate`) and chain routing is reproducible in full-scan/readiness/e2e replay. |
+| FIX-010 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. three-plane now passes `--operation three-plane` to cross-actor validator; project-catalog replay shows inspection-consistent `SKIPPED_NOT_REQUIRED` (no strict fallback). |
 
 ---
 
@@ -827,7 +827,7 @@ Alignment note (2026-02-28, anti-drift):
        - parsed: `instance_plane_detail.fixture_runtime_boundary.path_governance_status=PASS_REQUIRED`, validator `rc=0`
 3. Audit note:
    - FIX-007 acceptance is independent from emergency lane HOTFIX items.
-   - HOTFIX-P0-001 is `REJECT` and HOTFIX-P0-003 is `PENDING_PATCH`; both remain release-blocking.
+   - HOTFIX-P0-003 is now `PASS`; HOTFIX-P0-001 remains historical `REJECT` and is superseded by HOTFIX-P0-003 closure.
 
 ---
 
@@ -910,7 +910,7 @@ Alignment note (2026-02-28, anti-drift):
 #### Residual risk
 
 1. This fix addresses inspection-surface signal quality; it does not complete all actor-scoped migration requirements.
-2. HOTFIX-P0-001 (`REJECT`) and HOTFIX-P0-003 (`PENDING_PATCH`) remain separately release-blocking.
+2. HOTFIX-P0-003 is `PASS`; no additional stamp-lifecycle blocker remains from this fix line.
 
 #### Next action
 
@@ -1017,8 +1017,30 @@ Alignment note (2026-02-28, anti-drift):
 
 #### Next action
 
-1. Submit FIX-009 for audit replay.
-2. Continue next pending governance item per v1.5 ledger order after replay result.
+1. Replay completed and marked `PASS`; keep this section as closure evidence for future regressions.
+2. Continue next pending governance item per v1.5 ledger order.
+
+---
+
+#### Audit review verdict (2026-02-28T15:03:40Z)
+
+1. Decision: `PASS` (scoped to FIX-009 objective).
+2. Replayed evidence:
+   - validator direct replay:
+     - `python3 scripts/validate_no_implicit_switch.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => rc=`0`, payload includes `"operation":"scan"`, `implicit_switch_status=SKIPPED_NOT_REQUIRED`.
+   - full-scan replay:
+     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/fix009-full-scan-audit.json` => rc=`0`
+     - project/global `no_implicit_switch` tails include `"operation":"scan"`.
+   - readiness replay (escalated):
+     - `python3 scripts/release_readiness_check.py ...` => rc=`0`
+     - log includes:
+       - `validate_no_implicit_switch.py ... --operation readiness`
+       - `[OK] release readiness checks PASSED`
+   - e2e replay (escalated):
+     - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` => rc=`0`
+     - output includes `"operation":"e2e"` and `E2E smoke test PASSED`.
+3. Audit note:
+   - FIX-009 closure does not change FIX-008 historical `REJECT`; that gap is closed by FIX-010.
 
 ---
 
@@ -1061,12 +1083,28 @@ Alignment note (2026-02-28, anti-drift):
 #### Residual risk
 
 1. This patch closes the specific three-plane routing hole identified in FIX-008 reject.
-2. Full FIX-008/FIX-010 closure still depends on audit replay verdict.
+2. FIX-010 is now audit-closed; FIX-008 remains as historical reject record (closed-by linkage).
 
 #### Next action
 
-1. Submit FIX-010 for audit replay.
-2. If replay passes, lift FIX-008 reject linkage in decision board and keep actor isolation semantics under continuous regression checks.
+1. Replay completed and marked `PASS`; keep FIX-008 -> FIX-010 closure linkage explicit in decision board.
+2. Keep actor isolation semantics under continuous regression checks.
+
+---
+
+#### Audit review verdict (2026-02-28T15:03:40Z)
+
+1. Decision: `PASS` (scoped to FIX-010 objective).
+2. Replayed evidence:
+   - code wiring:
+     - `scripts/report_three_plane_status.py` cross-actor call now includes `--operation three-plane`.
+   - project-catalog three-plane replay:
+     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/fix008-three-plane-project-audit.json` => rc=`0`
+     - `instance_plane_detail.cross_actor_isolation.cross_actor_isolation_status=SKIPPED_NOT_REQUIRED`
+     - `validators.cross_actor_isolation.rc=0`
+     - validator payload includes `"operation":"three-plane"`.
+3. Audit note:
+   - FIX-010 closes the exact reject condition recorded under FIX-008 (`strict fallback in three-plane cross-actor call`).
 
 ---
 
@@ -1290,7 +1328,7 @@ Alignment note (2026-02-28, anti-drift):
      - rc=`1`, tail includes `[FAIL] cross-actor demotion blocked by default ...`
 3. Audit note:
    - this verdict is isolated to actor-scoped binding and cross-actor isolation behavior.
-   - release remains blocked by HOTFIX-P0-001/HOTFIX-P0-003.
+   - HOTFIX-P0-003 is closed (`PASS`); HOTFIX-P0-001 remains historical REJECT and is superseded by HOTFIX-P0-003 patch closure.
 
 ---
 
@@ -1369,5 +1407,22 @@ Alignment note (2026-02-28, anti-drift):
 
 #### Next action
 
-1. Submit HOTFIX-P0-003 patch for audit replay.
-2. Keep v1.5 release freeze until HOTFIX-P0-001/003 audit status is PASS.
+1. Replay completed and marked `PASS`; emergency board updated for HOTFIX-P0-003.
+2. Release freeze should now depend on remaining unresolved P0 items, not HOTFIX-P0-003.
+
+#### Audit review verdict (2026-02-28T15:03:40Z)
+
+1. Decision: `PASS` (scoped to HOTFIX-P0-003 objective).
+2. Replayed evidence:
+   - fail path receipt field hardening:
+     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix003-receipt-audit.json --json-only` => fail as expected; payload includes `error_code=IP-ASB-STAMP-004` and blocker receipt `actual_identity_id=MISSING_STAMP`.
+   - pass path stale-receipt cleanup:
+     - render + validate with same `--blocker-receipt-out /tmp/hotfix003-receipt-audit.json` => rc=`0`, `stamp_status=PASS`.
+     - receipt file no longer exists after PASS path (`cleanup confirmed`).
+   - downstream receipt validator determinism:
+     - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --receipt /tmp/hotfix003-receipt-audit.json --force-check --json-only` => rc=`0`, `receipt_status=PASS`.
+   - full validate-chain determinism:
+     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`
+     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`.
+3. Audit note:
+   - HOTFIX-P0-003 resolves the blocker-receipt lifecycle nondeterminism that caused HOTFIX-P0-001 rejection replay.
