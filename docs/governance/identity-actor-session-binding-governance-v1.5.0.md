@@ -725,6 +725,7 @@ Interpretation rule:
 1. Protocol text must use placeholders and schema contracts, not business-scene constants.
 2. Examples are illustrative only; examples cannot become implicit production defaults.
 3. Capability binding decisions must be derived from contract fields and evidence, not from script-local hardcoded mappings.
+4. Script-only edits cannot be claimed as capability upgrade closure; closure requires evidence envelope completeness + required-gates pass + requirement-ledger status transition.
 
 ### 5.6 `identity_system_path_governance_contract_v1` (P0)
 
