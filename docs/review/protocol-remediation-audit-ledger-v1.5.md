@@ -64,6 +64,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PASS |
 | FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PASS |
 | FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | PENDING_REVIEW |
+| FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -151,6 +152,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-006 | PASS | audit-expert(codex) | 2026-02-28T13:27:06Z | Scoped PASS. IP-PATH-003 validator + readiness/full-scan/three-plane/creator/e2e wiring replayed; docs/SSOT checks clean. |
 | FIX-007 | PASS | audit-expert(codex) | 2026-02-28T14:02:10Z | Scoped PASS. IP-PATH-004 semantics replayed: runtime pass, fixture mutation fail w/o override, fixture scan skip, fixture override+receipt pass; readiness/e2e/full-scan/three-plane wiring verified. |
 | FIX-008 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:20:00Z | Architect patch landed. Pending replay for inspection-mode actor isolation semantics in full-scan/three-plane and strict-mode behavior retention in readiness/e2e/ci. |
+| FIX-009 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:50:00Z | Architect patch landed. Pending replay for no-implicit-switch operation semantics and parser-error removal in three-plane/full-scan surfaces. |
 
 ---
 
@@ -911,6 +913,81 @@ Alignment note (2026-02-28, anti-drift):
 
 1. Submit FIX-008 for audit replay with strict/inspection dual-path evidence.
 2. Keep release decision locked to full P0 closure policy.
+
+---
+
+### FIX-009 — no-implicit-switch operation routing + parser-safe chain semantics
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for static checks + three-plane/full-scan replay
+  - `escalated` required for readiness/e2e in global runtime contexts that write under `~/.codex`
+- Source issue: `validate_no_implicit_switch.py` lacked `--operation` and caused parser failures (`rc=2`) when wired from inspection surfaces; this created noisy hard-boundary signals in `three-plane`/`full-scan`.
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-001..010`, `ASB-RQ-037`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (machine-readable gate semantics + chain consistency)
+
+#### Change summary
+
+1. Added operation routing to validator:
+   - `scripts/validate_no_implicit_switch.py`
+   - new arg: `--operation` with strict/inspection enum
+   - payload now includes `operation` field for audit visibility.
+2. Main-chain wiring now passes explicit operation context:
+   - `scripts/release_readiness_check.py` -> `--operation readiness`
+   - `scripts/identity_creator.py validate` -> `--operation validate`
+   - `scripts/e2e_smoke_test.sh` -> `--operation e2e`
+   - `scripts/full_identity_protocol_scan.py` -> `--operation scan`
+   - `scripts/report_three_plane_status.py` already used `--operation three-plane` (now parser-safe)
+   - `.github/workflows/_identity-required-gates.yml` -> `--operation ci`
+3. Result:
+   - removed parser mismatch (`unrecognized arguments: --operation three-plane`)
+   - no-implicit-switch gate is now consistent with other actor isolation validators.
+
+#### Commit
+
+- `77b09ef` — `fix(actor-gates): add operation routing for no-implicit-switch validator`
+
+#### Acceptance commands (rc + key tail)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_no_implicit_switch.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+   - key tail: `RC_FIX009_STATIC=0`
+
+2. Three-plane replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix009.json`
+   - rc: `0`
+   - key tail:
+     - `validators.no_implicit_switch.rc=0`
+     - `instance_plane_detail.no_implicit_switch.implicit_switch_status=SKIPPED_NOT_REQUIRED`
+     - no parser error text appears.
+
+3. Full scan replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix009.json`
+   - rc: `0`
+   - key tail:
+     - check `no_implicit_switch` includes `"operation":"scan"` payload
+     - check `no_implicit_switch.rc=0` in both project/global layer outputs.
+
+4. Creator validate replay:
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+   - rc: `0`
+   - key tail:
+     - command trace includes `validate_no_implicit_switch.py ... --operation validate`
+     - validator output includes `"operation":"validate"`.
+
+#### Residual risk
+
+1. This fix closes parser/operation consistency for `no_implicit_switch`, but does not by itself close all actor-session migration P0 requirements.
+2. HOTFIX lane closure still requires audit replay on HOTFIX-P0 items before release unfreeze.
+
+#### Next action
+
+1. Submit FIX-009 for audit replay.
+2. Continue next pending governance item per v1.5 ledger order after replay result.
 
 ---
 
