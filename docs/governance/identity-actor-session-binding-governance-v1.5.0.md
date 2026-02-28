@@ -1180,6 +1180,9 @@ Required outputs:
    - `legacy_single_actor_assumption`
    - `legacy_doc_norm_conflict`
    - `legacy_evidence_interpreted_as_norm`
+   - `path_canonicalization_gap`
+   - `path_mixed_source_drift`
+   - `runtime_fixture_boundary_gap`
 2. Action class:
    - `REMOVE` (must be removed from normative/runtime path)
    - `COMPAT_TAG` (allowed only in migration compatibility path)
@@ -1206,7 +1209,7 @@ Ledger schema (mandatory columns):
 7. `action_class` (`REMOVE|COMPAT_TAG|EVIDENCE_ONLY|ARCHIVE`)
 8. `blocking_level` (`P0|P1`)
 9. `owner`
-10. `status` (`SPEC_READY|CODE_READY|GATE_READY|VERIFIED|DONE`)
+10. `status` (`SPEC_READY|IMPL_READY|CODE_READY(alias)|GATE_READY|VERIFIED|DONE`)
 11. `evidence_ref`
 
 Anti-forget rule:
@@ -1229,6 +1232,10 @@ Anti-forget rule:
 | ASB-RC-010 | `identity/runtime/reports/activation/*.json` | `"single_active_enforced": true` | `legacy_evidence_interpreted_as_norm` | historical activation artifacts embed old enforcement semantics | keep as historical evidence but enforce `EVIDENCE_ONLY` interpretation (non-normative) | EVIDENCE_ONLY | P1 | protocol-architect | SPEC_READY | historical activation reports |
 | ASB-RC-011 | `identity/runtime/*/examples/identity-role-binding-*.json` | `demoted by single-active switch` | `legacy_evidence_interpreted_as_norm` | role-binding samples still narrate single-active demotion semantics | keep historical records, prevent normative reuse in validators/docs | EVIDENCE_ONLY | P1 | protocol-architect | SPEC_READY | sample evidence scan |
 | ASB-RC-012 | cross-surface (creator/installer/state/session/compile/e2e/readiness/full-scan/three-plane) | any unresolved `single-active` semantic branch | `legacy_single_actor_assumption` | mixed old/new semantics can coexist and cause drift | all actor-binding mandatory branches mapped to ASB-RQ + ASB-RC rows before merge | REMOVE | P0 | protocol-architect | SPEC_READY | this SSOT + residue ledger |
+| ASB-RC-013 | runtime catalogs (`*.local.yaml`) | `pack_path` is relative / non-canonical / missing | `path_canonicalization_gap` | runtime catalog may carry non-canonical pack path entries | catalog entries must be canonical absolute and mode-root compliant | REMOVE | P0 | protocol-architect | SPEC_READY | local runtime catalog evidence + path gate replay |
+| ASB-RC-014 | execution reports (`identity-upgrade-exec-*.json`) | `resolved_pack_path` is relative token (`.`/`..`) or non-canonical | `path_canonicalization_gap` | report persists non-canonical pack path values | report writer must normalize/reject non-canonical path values before persistence | REMOVE | P0 | protocol-architect | SPEC_READY | report contract replay evidence |
+| ASB-RC-015 | `scripts/execute_identity_upgrade.py` path tuple persistence | mixed source for `identity_home` vs runtime-resolved catalog/pack fields | `path_mixed_source_drift` | one report can contain path fields from different domains | all path fields derive from one canonical runtime resolution tuple | REMOVE | P0 | protocol-architect | SPEC_READY | code inspection + tuple consistency validator evidence |
+| ASB-RC-016 | runtime entry/guard surfaces (`use_project_identity_runtime.sh`, `validate_identity_runtime_mode_guard.py`) | missing strict home/catalog alignment + fixture boundary enforcement | `runtime_fixture_boundary_gap` | runtime mutation can proceed with home/catalog drift or fixture leakage | enforce fail-closed alignment and boundary guard before mutation | REMOVE | P0 | protocol-architect | SPEC_READY | guard replay evidence |
 
 ### 14.3 Step C — Cleanup execution waves (P0 -> P1, no mixed merge)
 
