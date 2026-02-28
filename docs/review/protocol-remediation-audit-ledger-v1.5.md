@@ -36,7 +36,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | FIX-001 | 2026-02-28 | protocol | wave outdated classification | `ee01d56` | DONE | PASS |
 | FIX-002 | 2026-02-28 | protocol | path-governance pack canonical gate | `0add536` | DONE | PASS |
 | FIX-003 | 2026-02-28 | protocol | readiness preflight wiring for pack path gate | `b80521e` | DONE | PASS |
-| FIX-004 | 2026-02-28 | protocol | dynamic response identity stamp closure (non-hardcoded + fail-closed) | `TBD` | TODO | BLOCKED_WAITING_IMPL |
+| FIX-004 | 2026-02-28 | protocol | dynamic response identity stamp closure (non-hardcoded + fail-closed) | `f1587e9` | DONE | PENDING_REVIEW |
 | FIX-005 | 2026-02-28 | protocol | execution-report path contract gate + readiness wiring | `8963b0e` | DONE | PENDING_REVIEW |
 
 ---
@@ -120,7 +120,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | FIX-001 | PASS | audit-expert(codex) | 2026-02-28T12:09:47Z | Scoped PASS. Command-2 should keep explicit `--repo-catalog` to avoid cwd-sensitive false failure. |
 | FIX-002 | PASS | audit-expert(codex) | 2026-02-28T12:09:47Z | Scoped PASS. Validator behavior and positive/negative samples are reproducible. Chain wiring remains tracked in next fixes. |
 | FIX-003 | PASS | audit-expert(codex) | 2026-02-28T12:18:23Z | Scoped PASS. Preflight wiring is effective and fail-closed behavior is present in readiness chain. |
-| FIX-004 | BLOCKED_WAITING_IMPL | audit-expert(codex) | 2026-02-28T12:13:37Z | Evidence of stamped reply exists, but closure scripts/gates are not landed yet (`ASB-RQ-018/019/020/021` still `SPEC_READY`). |
+| FIX-004 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T12:47:00Z | FIX-004 implementation landed in `f1587e9`; waiting audit re-check on chain wiring + contract-first skip semantics. |
 | FIX-005 | PENDING | - | - | - |
 
 ---
@@ -272,6 +272,110 @@ Purpose: Central place for architect + audit-expert review/verification of each 
    - Residual risk and next milestone remain valid and should continue as separate fixes.
 
 ---
+
+
+### FIX-004 — Dynamic response identity stamp closure (non-hardcoded + fail-closed)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for compile checks, validator unit checks, identity_creator/full-scan/three-plane local verification
+  - `escalated` for readiness/e2e commands that write runtime artifacts under `~/.codex`
+- Source issue: response identity stamp governance closure (`ASB-RQ-018/019/020/021`) + user/audit requirement “每次输出动态标注 identity 对象，禁止硬编码”
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-018`, `ASB-RQ-019`, `ASB-RQ-020`, `ASB-RQ-021`, `DRC-8`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (contract-first gate wiring + machine-readable receipt semantics)
+
+#### Change summary
+
+1. New script `scripts/response_stamp_common.py`:
+   - resolves identity stamp context from canonical resolver (`resolve_identity`),
+   - emits redacted refs (`catalog_ref`, `pack_ref`) + source-domain + lock-state + lease token,
+   - provides blocker receipt payload helper.
+2. New script `scripts/render_identity_response_stamp.py`:
+   - renders `external|internal|dual` identity stamp,
+   - supports machine-readable `--json-only`.
+3. New script `scripts/validate_identity_response_stamp.py`:
+   - validates dynamic stamp contract and mismatch detection,
+   - supports hard checks: `--require-dynamic`, `--require-redacted-external`, `--require-lock-match`,
+   - emits blocker receipt on fail (`IP-ASB-STAMP-001/002/003`),
+   - contract-first skip semantics (`SKIPPED_NOT_REQUIRED`) with JSON payload.
+4. New script `scripts/validate_identity_response_stamp_blocker_receipt.py`:
+   - validates blocker receipt schema and required fields,
+   - supports contract-first skip semantics (`SKIPPED_NOT_REQUIRED`) with JSON payload.
+5. Chain wiring landed:
+   - `scripts/release_readiness_check.py` (stamp render + stamp validate + receipt validate),
+   - `scripts/identity_creator.py validate`,
+   - `scripts/full_identity_protocol_scan.py` (new checks + severity core-fail wiring),
+   - `scripts/report_three_plane_status.py` (instance plane stamp detail + validator visibility),
+   - `scripts/e2e_smoke_test.sh`,
+   - `.github/workflows/_identity-required-gates.yml` (CI required-gates loop).
+
+#### Commit
+
+- `f1587e9` — `feat(stamp): add dynamic identity response stamp validators and gate wiring`
+
+#### Acceptance commands (rc + key tail)
+
+1. Command:
+   - `python3 -m py_compile scripts/response_stamp_common.py scripts/render_identity_response_stamp.py scripts/validate_identity_response_stamp.py scripts/validate_identity_response_stamp_blocker_receipt.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py && bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+   - key tail: `RC_STATIC_ALL=0`
+
+2. Command (positive stamp validation; forced check):
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --require-dynamic --require-redacted-external --require-lock-match --json-only`
+   - rc: `0`
+   - key tail:
+     - `"stamp_status":"PASS"`
+     - `"error_code":""`
+
+3. Command (negative stamp mismatch; blocker receipt generated):
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --require-dynamic --require-redacted-external --require-lock-match --stamp-line "Identity-Context: actor_id=user:test; identity_id=wrong-id; catalog_ref=bad; pack_ref=bad; scope=USER; lock=LOCK_MISMATCH; lease=l1; source=global" --json-only`
+   - rc: `1`
+   - key tail:
+     - `"error_code":"IP-ASB-STAMP-001"`
+     - `"blocker_receipt_path":"/private/tmp/identity-stamp-blocker-receipt-custom-creative-ecom-analyst.json"`
+
+4. Command (blocker receipt schema validation):
+   - `python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt /tmp/identity-stamp-blocker-receipt-custom-creative-ecom-analyst.json --json-only`
+   - rc: `0`
+   - key tail:
+     - `"receipt_status":"PASS"`
+     - `"error_code":"IP-ASB-STAMP-001"` (inside receipt payload)
+
+5. Command (contract-first skip remains machine-readable):
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --require-dynamic --require-redacted-external --require-lock-match --json-only`
+   - rc: `0`
+   - key tail:
+     - `"stamp_status":"SKIPPED_NOT_REQUIRED"`
+     - `"stale_reasons":["contract_not_required"]`
+
+6. Command (three-plane visibility with stamp detail):
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix004.json`
+   - rc: `0`
+   - key tail:
+     - `instance_plane_detail.response_identity_stamp.stamp_status=SKIPPED_NOT_REQUIRED`
+     - `validators.response_stamp_render/validation/blocker_receipt all present`
+
+7. Command (e2e chain includes stamp gates; escalated):
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+   - rc: `0`
+   - key tail:
+     - `[12.2/30] render dynamic response identity stamp`
+     - `[12.3/30] validate response identity stamp contract`
+     - `[12.4/30] validate response stamp blocker receipt schema`
+     - `E2E smoke test PASSED`
+
+#### Residual risk
+
+1. Contract-first semantics are functioning, but strict enforcement still depends on each instance enabling `identity_response_stamp_contract.required=true` (instance-layer action, out of protocol-only scope).
+2. Freshness/prompt lifecycle remains dynamic by design; readiness results may vary across runs if key input files change between report generation and late-stage validators.
+3. Current `lease_id_short` output truncates long tokens for external stamp readability; this is intentional but may need normalization guidance in later UX-focused pass.
+
+#### Next action
+
+1. Submit FIX-004 to audit expert for replay and verdict.
+2. Continue remaining open protocol fixes (path-governance residual gates, dual-P0 Track-A/Track-B implementation).
 
 ### FIX-005 — Add `validate_identity_execution_report_path_contract` (IP-PATH-002) and wire readiness preflight
 
