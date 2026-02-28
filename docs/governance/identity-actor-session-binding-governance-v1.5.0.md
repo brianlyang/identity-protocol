@@ -59,7 +59,7 @@ Hard rule:
 As-of baseline:
 
 1. `as_of_utc`: `2026-02-28`
-2. `protocol_repo_head`: `6bb95af`
+2. `protocol_repo_head`: `d2df834`
 3. `topic_status`: governance specification substantially complete; runtime implementation not closed.
 
 Normative interpretation:
@@ -70,8 +70,8 @@ Normative interpretation:
 Hard evidence (repository-local):
 
 1. Topic P0 framing and explicit non-safe state:
-   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:54`
-   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:97`
+   - section `0.4 Hard rule`
+   - section `1) Problem Statement (P0)` observed failure pattern
 2. Runtime still enforces single-active semantics (conflicts with multi-actor target):
    - `scripts/identity_creator.py:150`
    - `scripts/identity_installer.py:253`
@@ -87,6 +87,14 @@ Hard evidence (repository-local):
    - `refresh_identity_session_status`
    - `validate_identity_response_stamp_blocker_receipt`
    - `validate_identity_session_refresh_status`
+
+### 0.6 Baseline snapshot refresh policy (anti-stale)
+
+Mandatory refresh triggers:
+
+1. Update `protocol_repo_head` when this document receives normative changes.
+2. Update snapshot fields before any release-lock or milestone status report.
+3. If snapshot is not updated after normative edits, reviewer must mark status as `WARN` (baseline stale) until corrected.
 
 ## 1) Problem Statement (P0)
 
@@ -908,6 +916,12 @@ Hard rule:
 1. Recoverable actor-binding failures must not be silently promoted to hard-fail unless they cross hard-boundary conditions.
 
 ## 9) Acceptance Command Set (Cross-Validation)
+
+Command interpretation note (to avoid execution ambiguity):
+
+1. This section contains both current-runnable checks and target-state checks.
+2. For commands whose owning ledger rows remain `SPEC_READY`, runtime failure is expected and must be reported as implementation gap evidence (not treated as protocol contradiction).
+3. Release-lock closure requires converting target-state commands into runnable passes via status transitions (`SPEC_READY -> ... -> DONE`).
 
 ```bash
 # SSOT / coupling
