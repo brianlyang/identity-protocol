@@ -66,6 +66,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PASS |
 | FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | REJECT |
 | FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PENDING_REVIEW |
+| FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -154,6 +155,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-007 | PASS | audit-expert(codex) | 2026-02-28T14:02:10Z | Scoped PASS. IP-PATH-004 semantics replayed: runtime pass, fixture mutation fail w/o override, fixture scan skip, fixture override+receipt pass; readiness/e2e/full-scan/three-plane wiring verified. |
 | FIX-008 | REJECT | audit-expert(codex) | 2026-02-28T15:02:10Z | Replayed strict/inspection paths; actor semantics are mostly correct, but three-plane still invokes `validate_cross_actor_isolation.py` without `--operation three-plane`, so inspection surface can fall back to strict default (`operation=validate`) and emit false FAIL_REQUIRED. |
 | FIX-009 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:50:00Z | Architect patch landed. Pending replay for no-implicit-switch operation semantics and parser-error removal in three-plane/full-scan surfaces. |
+| FIX-010 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T15:12:00Z | Architect follow-up patch landed to route `--operation three-plane` for cross-actor validator; pending replay for inspection-surface status alignment. |
 
 ---
 
@@ -1017,6 +1019,54 @@ Alignment note (2026-02-28, anti-drift):
 
 1. Submit FIX-009 for audit replay.
 2. Continue next pending governance item per v1.5 ledger order after replay result.
+
+---
+
+### FIX-010 — three-plane cross-actor operation wiring (close FIX-008 reject gap)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context: `sandbox`
+- Source issue: audit replay rejected FIX-008 because `report_three_plane_status.py` invoked `validate_cross_actor_isolation.py` without inspection operation, causing fallback to strict default (`operation=validate`) in three-plane surface.
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-001..010`, `ASB-RQ-037`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (inspection-vs-strict gate semantics)
+
+#### Change summary
+
+1. File changed: `scripts/report_three_plane_status.py`.
+2. Added missing arguments to cross-actor validator call:
+   - `--operation three-plane`
+3. Result:
+   - three-plane now passes explicit inspection context to all actor-isolation validators (`actor_session_binding`, `no_implicit_switch`, `cross_actor_isolation`).
+
+#### Commit
+
+- `00dcf6b` — `fix(actor-gates): pass three-plane operation to cross-actor validator`
+
+#### Acceptance commands (rc + key tail)
+
+1. Static check:
+   - `python3 -m py_compile scripts/report_three_plane_status.py`
+   - rc: `0`
+   - key tail: `RC_FIX010_STATIC=0`
+
+2. Three-plane replay (project runtime catalog, inspection context):
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix010-project.json`
+   - rc: `0`
+   - key tail:
+     - `instance_plane_detail.cross_actor_isolation.cross_actor_isolation_status=SKIPPED_NOT_REQUIRED`
+     - validator payload includes `"operation":"three-plane"` (no strict fallback).
+
+#### Residual risk
+
+1. This patch closes the specific three-plane routing hole identified in FIX-008 reject.
+2. Full FIX-008/FIX-010 closure still depends on audit replay verdict.
+
+#### Next action
+
+1. Submit FIX-010 for audit replay.
+2. If replay passes, lift FIX-008 reject linkage in decision board and keep actor isolation semantics under continuous regression checks.
 
 ---
 
