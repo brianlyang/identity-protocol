@@ -241,6 +241,77 @@ Health report must include actor-binding risk classes:
 
 Self-heal output must include deterministic remediation actions and re-validation commands.
 
+### 5.3A Health/heal cross-validation hardening profile (mandatory)
+
+This subsection operationalizes requirement-3 ("instance can self-check and self-repair using protocol health tooling")
+into machine-verifiable closure semantics.
+
+Health contract hard requirements:
+
+1. Health report must expose actor-risk checks explicitly (not inferred from generic status):
+   - `actor_binding_integrity`
+   - `actor_lease_freshness`
+   - `implicit_switch_guard`
+   - `pointer_drift_guard`
+2. Every non-pass actor-risk check must include:
+   - `error_code` (prefer `IP-ASB-*` family),
+   - deterministic `suggestion` command,
+   - `status in {PASS, WARN, FAIL}`.
+3. Health report must include coverage metadata for actor-risk profile:
+   - `actor_risk_required_count`
+   - `actor_risk_present_count`
+   - `actor_risk_coverage_rate`
+4. Actor-risk profile coverage below 100% is not allowed to be treated as runtime-closed.
+
+Self-heal contract hard requirements:
+
+1. `identity_creator heal --apply` must support actor-centric repair branches for:
+   - actor binding repair,
+   - lease repair/renewal,
+   - pointer reconciliation (actor canonical pointer first, legacy mirror compatibility only).
+2. Self-heal report must include replay references:
+   - `health_report_ref`
+   - `heal_report_ref`
+   - `post_validate_ref`
+3. Any "auto-repaired" claim without post-validate evidence is invalid.
+
+Deterministic replay binding rule (anti-stale):
+
+1. Health validators consumed in acceptance/release flow must use explicit report binding (`--report <path>`) when available.
+2. "latest file by timestamp" is allowed only for exploratory runs; it is not sufficient as release/audit closure evidence.
+3. Closure evidence must demonstrate a single bound chain:
+   `health_report -> heal_report -> validate_result`.
+
+### 5.3B Health/heal acceptance semantics and execution-context declaration (mandatory)
+
+Purpose:
+
+1. Prevent false "self-heal closed" claims caused by mixed execution context or non-replayable evidence.
+
+Acceptance semantics (must all hold):
+
+1. Phase-1 (`detect`): first `collect_identity_health_report` run must produce a bound report artifact, even when status is `WARN`/`FAIL`.
+2. Phase-2 (`repair`): `identity_creator heal --apply` must emit a heal report that references the Phase-1 health report.
+3. Phase-3 (`verify`): post-repair `identity_creator validate` must be executed on the same identity/catalog tuple.
+4. Phase-4 (`recheck`): a second health report must be generated and compared against Phase-1 for closure evidence.
+5. Runtime closure claim is valid only when:
+   - Phase-1 proves findings were detectable,
+   - Phase-3 returns pass,
+   - Phase-4 has no unresolved actor-risk `FAIL` entries.
+6. If actor-risk findings remain unresolved after Phase-3/Phase-4, status must remain `blocked` (not `done`).
+
+Execution-context declaration (must be included in architect/audit return):
+
+1. `collect_identity_health_report` can run in sandbox when target paths are read-only accessible.
+2. `identity_creator heal --apply` and any command mutating runtime catalog/session state must declare writable context (typically escalated for `~/.codex`).
+3. `identity_creator validate` after repair must run in the same effective catalog context used in Phase-2.
+4. Return payload must include:
+   - `execution_context_detect`
+   - `execution_context_repair`
+   - `execution_context_verify`
+   - `catalog_path`
+   - `identity_id`
+
 ### 5.4 `vendor_api_discovery_solution_contract_v1`
 
 This capability is protocol-generic and must not be implemented as scattered business scripts.
@@ -427,6 +498,8 @@ Interpretation rule:
 3. activation/session-pointer sync routine in `scripts/identity_creator.py`
 4. `scripts/validate_identity_state_consistency.py`
 5. `scripts/validate_identity_session_pointer_consistency.py`
+6. `scripts/collect_identity_health_report.py`
+7. `scripts/validate_identity_health_contract.py`
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -436,6 +509,8 @@ Interpretation rule:
 4. `render_identity_response_stamp`
 5. `validate_identity_response_stamp`
 6. `refresh_identity_session_status`
+7. `validate_identity_actor_health_profile`
+8. `validate_identity_heal_replay_closure`
 
 ### 6.3 Gate wiring surfaces
 
@@ -445,6 +520,12 @@ Interpretation rule:
 4. `scripts/full_identity_protocol_scan.py`
 5. `scripts/report_three_plane_status.py`
 6. `.github/workflows/_identity-required-gates.yml`
+
+Health/heal closure must be wired in the same surfaces through:
+
+1. actor-risk profile checks in health report generation.
+2. deterministic health report contract validation (`--report` binding in closure flows).
+3. heal replay closure validation (`health -> heal --apply -> validate`).
 
 Vendor/API chain must be wired in the same surfaces through:
 
@@ -494,6 +575,10 @@ Hard interpretation rules:
 | ASB-RQ-011 | vendor discovery/solution baseline gates (legacy chain) remain wired and compatible | `validate_identity_vendor_api_discovery.py`, `validate_identity_vendor_api_solution.py`, `validate_required_contract_coverage.py` | P1 | GATE_READY | Existing chain already wired in protocol gates |
 | ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
 | ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
+| ASB-RQ-014 | actor-risk health profile coverage (binding/lease/implicit-switch/pointer) is mandatory and machine-counted | `collect_identity_health_report.py`, `validate_identity_actor_health_profile` (new) | P0 | SPEC_READY | Spec defined in 5.3A; implementation pending |
+| ASB-RQ-015 | heal apply supports actor-centric repair branches with deterministic output refs | `identity_creator.py heal`, `validate_identity_heal_replay_closure` (new) | P0 | SPEC_READY | Spec defined in 5.3A; implementation pending |
+| ASB-RQ-016 | deterministic report-binding in closure gates (explicit `--report` for health contract checks) | readiness/e2e/CI health-contract invocation surfaces | P0 | SPEC_READY | Anti-stale closure rule defined in 5.3A; wiring pending |
+| ASB-RQ-017 | health-heal-validate chain evidence exported in three-plane/full-scan views | `report_three_plane_status.py`, `full_identity_protocol_scan.py` | P1 | SPEC_READY | Visibility semantics declared; implementation pending |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -577,7 +662,8 @@ python3 scripts/validate_protocol_ssot_source.py
 python3 scripts/validate_protocol_handoff_coupling.py --base <base_sha> --head <head_sha>
 
 # Health -> heal -> validate loop
-python3 scripts/collect_identity_health_report.py --identity-id <id> --catalog <catalog> --out-dir /tmp/identity-health-reports
+HEALTH_REPORT=$(python3 scripts/collect_identity_health_report.py --identity-id <id> --catalog <catalog> --out-dir /tmp/identity-health-reports | awk -F= '/^report=/{print $2}')
+python3 scripts/validate_identity_health_contract.py --identity-id <id> --report "${HEALTH_REPORT}"
 python3 scripts/identity_creator.py heal --identity-id <id> --catalog <catalog>
 python3 scripts/identity_creator.py heal --identity-id <id> --catalog <catalog> --apply
 python3 scripts/identity_creator.py validate --identity-id <id> --catalog <catalog>
@@ -608,11 +694,12 @@ This checklist is the protocol-level closure contract for "deep remediation + cr
 | DRC-4 | `active_identity.json` remains compatibility mirror only and cannot be authoritative. | mirror drift is reported as compatibility warning path; canonical actor pointer remains the binding source. | `C4`, `ASB-RQ-002`, `ASB-RC-006` |
 | DRC-5 | Three validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | each validator has command contract, machine-readable output, and gate visibility in readiness/scan/three-plane/CI. | `C5`, `ASB-RQ-003/004/005` |
 | DRC-6 | Gate wiring covers: `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, CI required-gates. | same target identity shows consistent semantics across all listed surfaces; no silent pass when required wiring is missing. | `C6`, `ASB-RQ-009`, `ASB-RC-012` |
+| DRC-7 | Health/heal closure is actor-risk complete and replay-deterministic. | health report shows actor-risk coverage fields; heal apply output binds to health report ref and post-validate ref; closure checks use explicit `--report` binding. | `ASB-RQ-014/015/016` |
 
 Hard closure rule:
 
-1. Any one of `DRC-1..DRC-6` not reaching `DONE` means runtime milestone is not closed.
-2. Narrative "cross-validated" claim without evidence on all six surfaces is invalid.
+1. Any one of `DRC-1..DRC-7` not reaching `DONE` means runtime milestone is not closed.
+2. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
 
@@ -622,6 +709,8 @@ Post-implementation command contract (must be enabled in same PR as script landi
 4. `render_identity_response_stamp` command + output contract.
 5. `validate_identity_response_stamp` command + CI enforcement.
 6. `refresh_identity_session_status` command + three-plane visibility.
+7. `validate_identity_actor_health_profile` command + health coverage contract.
+8. `validate_identity_heal_replay_closure` command + replay-bound closure contract.
 
 ## 10) Definition of Done (Split to Avoid False Closure)
 
