@@ -200,15 +200,25 @@ Storage contract:
 
 ### 5.2 `identity_response_stamp_contract_v1`
 
-Every user-facing response must include runtime-generated stamp fields (header line or structured block):
+Every user-facing response must include runtime-generated stamp fields (header line or structured block).
+To avoid path leakage and semantic ambiguity, fields are split into external and internal views:
 
-1. `actor_id`
-2. `identity_id`
-3. `catalog_path`
-4. `resolved_pack_path`
-5. `scope`
-6. `lock_state`
-7. `lease_id` (full or shortened)
+1. External/user-facing required fields:
+   - `actor_id`
+   - `identity_id`
+   - `catalog_ref`
+   - `pack_ref`
+   - `scope`
+   - `lock_state`
+   - `lease_id_short`
+2. Internal evidence required fields:
+   - `actor_id`
+   - `identity_id`
+   - `catalog_path`
+   - `resolved_pack_path`
+   - `scope`
+   - `lock_state`
+   - `lease_id` (full or shortened)
 
 Hard rules:
 
@@ -227,8 +237,165 @@ Display safety boundary (mandatory):
 
 Canonical stamp format (example template, placeholders must be runtime-resolved):
 
-1. `Identity-Context: actor_id=<actor_id>; identity_id=<identity_id>; catalog=<catalog_path>; pack=<resolved_pack_path>; scope=<scope>; lock=<lock_state>; lease=<lease_id_short>`
-2. If structured output is used, the same fields must be present under a dedicated `identity_context` object.
+1. External/user-facing (redacted):
+   - `Identity-Context: actor_id=<actor_id>; identity_id=<identity_id>; catalog_ref=<catalog_ref>; pack_ref=<pack_ref>; scope=<scope>; lock=<lock_state>; lease=<lease_id_short>; source=<source_domain>`
+2. Internal evidence/audit:
+   - `Identity-Context-Internal: actor_id=<actor_id>; identity_id=<identity_id>; catalog_path=<catalog_path>; resolved_pack_path=<resolved_pack_path>; scope=<scope>; lock=<lock_state>; lease=<lease_id_short>; source=<source_domain>`
+3. If structured output is used, the same fields must be present under a dedicated `identity_context` object.
+
+### 5.2A Response stamp enforcement hardening profile (mandatory)
+
+This subsection operationalizes requirement-4 ("every user-facing reply must include dynamic identity stamp; no hardcoding")
+into fail-safe runtime and gate semantics.
+
+Mandatory response-stamp behavior:
+
+1. Stamp must be generated from live resolved binding context at response time (not from prompt literals, cached constants, or static templates).
+2. Required runtime fields (external view):
+   - `actor_id`
+   - `identity_id`
+   - `scope`
+   - `lock_state`
+   - `lease_id_short`
+   - `source_domain` (`project` | `global` | `auto` | `env`)
+   - `catalog_ref` (redacted reference, not host absolute path)
+   - `pack_ref` (redacted reference, not host absolute path)
+3. Required runtime fields (internal evidence view):
+   - all external view fields, plus canonical resolved pointers used for validation/audit replay.
+4. `source_domain=auto` must follow deterministic arbitration:
+   - prefer project-scoped pointer when present,
+   - do not let ambient env silently override project pointer.
+
+Mismatch and blocker semantics (hard boundary):
+
+1. If stamp context mismatches current binding (`identity_id`, pointer tuple, or lock state), business reply must be blocked.
+2. System must emit `blocker_receipt` first, then stop business payload.
+3. `blocker_receipt` minimum fields:
+   - `error_code`
+   - `expected_identity_id`
+   - `actual_identity_id`
+   - `source_domain`
+   - `resolver_ref`
+   - `next_action`
+4. Recommended error code family:
+   - `IP-ASB-STAMP-001` (stamp/binding mismatch)
+   - `IP-ASB-STAMP-002` (stamp source arbitration conflict)
+   - `IP-ASB-STAMP-003` (stamp hardcoded/placeholder leakage)
+
+Determinism and portability guard:
+
+1. Stamp renderer and stamp validator must be CWD-invariant (no execution-directory-dependent resolution).
+2. Relative-path parsing inside stamp validation is forbidden in closure gates; canonical absolute resolution is required before comparison.
+
+### 5.2B Response stamp configuration profile (message/email style, governance-safe)
+
+Response stamp may be configured for presentation style, but must not weaken protocol safety rules.
+
+Config contract (recommended location: identity runtime contract fields):
+
+1. `response_stamp_profile.enabled`:
+   - allowed values: `true` only when protocol stamp gate is required,
+   - `false` is allowed only for explicitly declared non-governed/debug channels and must never apply to governed user-facing outputs.
+2. `response_stamp_profile.format`:
+   - allowed values: `header_line` | `structured_block` | `mail_header`
+3. `response_stamp_profile.audience_mode`:
+   - allowed values: `external` | `internal` | `dual`
+4. `response_stamp_profile.redaction_policy`:
+   - allowed values: `strict` | `standard`
+   - `strict` is default for external outputs.
+5. `response_stamp_profile.template_ref`:
+   - reference to template id/path (placeholders only),
+   - hardcoded identity literals in templates are forbidden.
+6. `response_stamp_profile.on_mismatch`:
+   - allowed values: `blocker_receipt` only for governed flows.
+
+Governance invariants (cannot be configured away):
+
+1. Dynamic runtime resolution is mandatory.
+2. Non-hardcoded policy is mandatory.
+3. Mismatch fail-closed + blocker receipt is mandatory.
+4. External redaction boundary is mandatory.
+
+### 5.2C Disclosure level and user-named explicit trigger
+
+Stamp display may vary by configured disclosure level, with user-named explicit trigger support.
+This allows message/email-style ergonomics without weakening governance controls.
+
+Disclosure level contract:
+
+1. `response_stamp_profile.disclosure_level`:
+   - `minimal`: concise one-line external stamp (required core fields only).
+   - `standard`: default external stamp with required core fields + source domain.
+   - `verbose`: external stamp with additional diagnostic refs allowed by redaction policy.
+   - `audit`: internal evidence-oriented structured stamp (for authorized internal channels only).
+2. Required core fields remain mandatory for all governed user-facing levels.
+3. Level changes are presentation-only; they must not alter binding resolution or gate results.
+
+User-named explicit trigger contract:
+
+1. Trigger must be explicit and user-named (no implicit carry-over), for example:
+   - `identity stamp level=minimal`
+   - `identity stamp level=standard`
+   - `identity stamp level=verbose`
+2. Trigger effect scope must be declared:
+   - `once` (single response),
+   - `session` (until changed by explicit trigger or session reset).
+3. Every trigger application must be auditable with:
+   - `actor_id`
+   - `identity_id`
+   - `trigger_text`
+   - `applied_level`
+   - `scope`
+   - `timestamp`
+4. Explicit trigger cannot bypass mismatch fail-closed behavior; blocker receipt remains mandatory on mismatch.
+5. Explicit trigger cannot request unredacted absolute paths in external mode.
+
+Natural-language explicit trigger parsing contract:
+
+1. Natural-language command is allowed as explicit trigger source when parser confidence is sufficient.
+2. Recommended trigger intent examples (illustrative, non-hardcoded):
+   - "把身份回显切到简洁"
+   - "身份标头用标准模式"
+   - "把 identity stamp 调成 verbose（本轮）"
+3. Parser output must be normalized into structured command fields:
+   - `intent=identity_stamp_level_switch`
+   - `target_level in {minimal, standard, verbose, audit}`
+   - `scope in {once, session}`
+   - `trigger_source=natural_language`
+4. Ambiguous natural-language trigger must not be silently applied:
+   - require clarification or fallback to `standard` with explicit notice.
+5. Natural-language trigger execution must be logged with parse confidence and normalization result.
+
+### 5.2D Dynamic disclosure rendering profile (cross-instance replay alignment)
+
+This subsection clarifies how "message/email-style identity disclosure" should be rendered without violating protocol safety.
+
+Rendering channels and allowed payload:
+
+1. `external` channel (default governed user-facing):
+   - must use redacted references (`catalog_ref`, `pack_ref`),
+   - must not expose host absolute paths,
+   - must include runtime-resolved identity fields (no hardcoded literals).
+2. `internal/audit` channel:
+   - may include absolute `catalog_path` / `resolved_pack_path`,
+   - may include resolver evidence pointer (for example `resolver_ref=<.../CURRENT_TASK.json:line>`),
+   - remains non-user-default and must be explicitly configured/authorized.
+
+Recommended mail-header style templates (placeholders are runtime-only):
+
+1. External default:
+   - `Identity-Context: actor_id=<actor_id>; identity_id=<identity_id>; catalog_ref=<catalog_ref>; pack_ref=<pack_ref>; scope=<scope>; lock=<lock_state>; source=<source_domain>`
+2. Internal/audit diagnostic:
+   - `identity_id=<identity_id> | catalog_path=<catalog_path> | resolved_pack_path=<resolved_pack_path> | scope=<scope> | lock_state=<lock_state> | source=<source_domain> | resolver_ref=<resolver_ref>`
+
+Cross-instance replay requirement:
+
+1. For any replay evidence claiming "dynamic disclosure", at least two different identity instances must produce distinct `identity_id`/pack references under the same renderer logic.
+2. Replays that only show one fixed identity literal are invalid for non-hardcoded closure claims.
+3. Validation output should include a machine-readable flag set:
+   - `dynamic_identity_resolved=true|false`
+   - `redaction_boundary_respected=true|false`
+   - `resolver_binding_consistent=true|false`
 
 ### 5.3 `identity_health_self_heal_contract_v1`
 
@@ -511,6 +678,7 @@ Interpretation rule:
 6. `refresh_identity_session_status`
 7. `validate_identity_actor_health_profile`
 8. `validate_identity_heal_replay_closure`
+9. `validate_identity_response_stamp_blocker_receipt`
 
 ### 6.3 Gate wiring surfaces
 
@@ -526,6 +694,12 @@ Health/heal closure must be wired in the same surfaces through:
 1. actor-risk profile checks in health report generation.
 2. deterministic health report contract validation (`--report` binding in closure flows).
 3. heal replay closure validation (`health -> heal --apply -> validate`).
+
+Response-stamp closure must be wired in the same surfaces through:
+
+1. dynamic stamp rendering before user-facing output.
+2. stamp contract validation (non-hardcoded + redaction + field completeness).
+3. mismatch fail-closed behavior (`blocker_receipt` before any business payload).
 
 Vendor/API chain must be wired in the same surfaces through:
 
@@ -579,6 +753,13 @@ Hard interpretation rules:
 | ASB-RQ-015 | heal apply supports actor-centric repair branches with deterministic output refs | `identity_creator.py heal`, `validate_identity_heal_replay_closure` (new) | P0 | SPEC_READY | Spec defined in 5.3A; implementation pending |
 | ASB-RQ-016 | deterministic report-binding in closure gates (explicit `--report` for health contract checks) | readiness/e2e/CI health-contract invocation surfaces | P0 | SPEC_READY | Anti-stale closure rule defined in 5.3A; wiring pending |
 | ASB-RQ-017 | health-heal-validate chain evidence exported in three-plane/full-scan views | `report_three_plane_status.py`, `full_identity_protocol_scan.py` | P1 | SPEC_READY | Visibility semantics declared; implementation pending |
+| ASB-RQ-018 | dynamic response stamp fields are runtime-resolved and non-hardcoded | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | SPEC_READY | Spec defined in 5.2/5.2A; implementation pending |
+| ASB-RQ-019 | stamp mismatch must fail-closed with `blocker_receipt` contract | `validate_identity_response_stamp_blocker_receipt` (new), release/e2e gate behavior | P0 | SPEC_READY | Spec defined in 5.2A; implementation pending |
+| ASB-RQ-020 | external stamp output is redacted by default; absolute paths reserved for internal evidence view | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | SPEC_READY | Display boundary hardened in 5.2/5.2A |
+| ASB-RQ-021 | stamp render/validate must be CWD-invariant and deterministic across project/global pointer arbitration | stamp renderer + stamp validator + readiness/e2e/full-scan/three-plane/CI surfaces | P0 | SPEC_READY | Portability guard defined in 5.2A; implementation pending |
+| ASB-RQ-022 | response stamp presentation is configurable (message/email style) under governance-safe invariants | renderer + runtime contract + stamp validator | P1 | SPEC_READY | Spec defined in 5.2B; style configurable, safety invariants non-configurable |
+| ASB-RQ-023 | disclosure-level + user-named explicit trigger support with auditable scope and non-bypass guarantees | runtime stamp config + trigger parser + stamp validator | P1 | SPEC_READY | Spec defined in 5.2C; explicit trigger allowed, governance invariants unchanged |
+| ASB-RQ-024 | natural-language explicit trigger normalization and confidence-gated execution | trigger parser + stamp config applier + audit log + stamp validator | P1 | SPEC_READY | Spec defined in 5.2C; NL trigger allowed with non-ambiguous normalization |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -669,6 +850,11 @@ python3 scripts/identity_creator.py heal --identity-id <id> --catalog <catalog> 
 python3 scripts/identity_creator.py validate --identity-id <id> --catalog <catalog>
 python3 scripts/resolve_identity_context.py resolve --identity-id <id> --local-catalog <catalog>
 
+# Dynamic response stamp closure (must be fail-closed on mismatch)
+python3 scripts/render_identity_response_stamp --identity-id <id> --catalog <catalog> --view external
+python3 scripts/validate_identity_response_stamp --identity-id <id> --catalog <catalog> --require-dynamic --require-redacted-external --require-lock-match
+python3 scripts/validate_identity_response_stamp_blocker_receipt --identity-id <id> --catalog <catalog>
+
 # Vendor/API one-shot closure (current validator chain)
 python3 scripts/validate_identity_vendor_api_discovery.py --identity-id <id> --catalog <catalog>
 python3 scripts/validate_identity_vendor_api_solution.py --identity-id <id> --catalog <catalog>
@@ -695,10 +881,11 @@ This checklist is the protocol-level closure contract for "deep remediation + cr
 | DRC-5 | Three validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | each validator has command contract, machine-readable output, and gate visibility in readiness/scan/three-plane/CI. | `C5`, `ASB-RQ-003/004/005` |
 | DRC-6 | Gate wiring covers: `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, CI required-gates. | same target identity shows consistent semantics across all listed surfaces; no silent pass when required wiring is missing. | `C6`, `ASB-RQ-009`, `ASB-RC-012` |
 | DRC-7 | Health/heal closure is actor-risk complete and replay-deterministic. | health report shows actor-risk coverage fields; heal apply output binds to health report ref and post-validate ref; closure checks use explicit `--report` binding. | `ASB-RQ-014/015/016` |
+| DRC-8 | Response stamp closure is dynamic, non-hardcoded, redacted-by-default, and mismatch fail-closed. | stamp is present on every user-facing reply; validator confirms live-binding fields; mismatch produces blocker receipt before business output; CWD-invariant behavior verified. | `ASB-RQ-018/019/020/021` |
 
 Hard closure rule:
 
-1. Any one of `DRC-1..DRC-7` not reaching `DONE` means runtime milestone is not closed.
+1. Any one of `DRC-1..DRC-8` not reaching `DONE` means runtime milestone is not closed.
 2. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
@@ -711,6 +898,7 @@ Post-implementation command contract (must be enabled in same PR as script landi
 6. `refresh_identity_session_status` command + three-plane visibility.
 7. `validate_identity_actor_health_profile` command + health coverage contract.
 8. `validate_identity_heal_replay_closure` command + replay-bound closure contract.
+9. `validate_identity_response_stamp_blocker_receipt` command + mismatch fail-closed contract.
 
 ## 10) Definition of Done (Split to Avoid False Closure)
 
