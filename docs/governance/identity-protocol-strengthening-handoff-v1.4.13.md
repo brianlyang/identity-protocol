@@ -118,6 +118,10 @@ Lifecycle rules:
      - report mtime vs key-input mtime (`IDENTITY_PROMPT.md` / `CURRENT_TASK.json`)
    - stale/mismatch is emitted as structured code `IP-REL-001` with policy control:
      - `--execution-report-policy strict|warn` (default `strict`)
+   - report candidate binding is now pack-local first:
+     - search `<resolved_pack>/runtime/reports` then `<resolved_pack>/runtime`
+     - only fallback to shared roots (`/tmp`, `$IDENTITY_HOME`) when local reports are absent
+     - purpose: prevent cross-catalog identity-id collisions from selecting another instance's report
 2. Required-contract coverage semantics (P1 closure)
    - added `validate_required_contract_coverage.py` to classify contract-first tool/vendor validators:
      - `PASS_REQUIRED`
@@ -154,6 +158,10 @@ Lifecycle rules:
      - readiness adds protocol baseline preflight (`--baseline-policy strict|warn`, default `strict`)
      - full-scan and three-plane expose baseline freshness fields for audit visibility
      - e2e and required workflow gates run baseline freshness checks
+   - baseline report selection follows the same local-first rule as freshness preflight:
+     - prioritize reports under resolved pack runtime path
+     - use shared-root fallback only when local reports are missing
+     - avoids protocol baseline checks drifting across project/global instances with same identity id
 5. Protocol upgrade wave orchestration (P1)
    - added `scripts/run_protocol_upgrade_wave.py` for catalog-driven closure:
      - discover runtime identities from catalog (or explicit `--identity-ids`)

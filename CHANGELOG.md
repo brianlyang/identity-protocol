@@ -61,6 +61,8 @@
       (`/tmp`, `$IDENTITY_HOME`) when local candidates are absent
     - avoids cross-catalog identity-id collisions selecting another instance's
       report under dual-layer (project/global) environments
+  - canonical handoff synced with local-first report binding semantics:
+    - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
 
 - **v1.4.13 protocol baseline propagation + upgrade-wave closure (draft)**:
   - added protocol baseline freshness validator:
