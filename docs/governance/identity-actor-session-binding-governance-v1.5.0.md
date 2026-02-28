@@ -5,7 +5,7 @@ Governance layer: protocol
 Scope: identity protocol base-repo only (no instance business policy)  
 Owner: identity protocol base-repo architect
 Execution mode: topic-level canonical SSOT for actor-session-binding governance  
-Tag policy: `v1.5` remains locked until mandatory requirement ledger rows are `DONE` and audit sign-off is `PASS`
+Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DONE` and audit sign-off is `PASS` (`P1` rows block only when explicitly promoted to `P0`)
 
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
@@ -59,7 +59,7 @@ Hard rule:
 As-of baseline:
 
 1. `as_of_utc`: `2026-02-28`
-2. `protocol_repo_head`: `ec6507c`
+2. `protocol_repo_head`: `2762c67`
 3. `topic_status`: governance specification substantially complete; runtime implementation not closed.
 
 Normative interpretation:
@@ -771,6 +771,88 @@ Hard rule:
 1. If any mandatory path gate is `FAIL_REQUIRED`, runtime closure claim is invalid.
 2. Path-governance failures cannot be masked by unrelated PASS checks.
 
+### 5.7 `protocol_feedback_robustness_contract_v1` (P0, non-merge twin-track)
+
+Non-merge rule (hard boundary):
+
+1. `Track-A` writeback freeze and `Track-B` semantic routing retrigger are independent P0 tracks.
+2. They MUST be remediated and audited separately; one track passing cannot be used to close the other.
+3. Architect/auditor returns MUST include explicit A/B separation in commit diff, gate output, and residual risk.
+4. Architect/auditor returns MUST expose separate per-track fields: `commit_sha_list`, `changed_files`, `acceptance_rc_tail`, `residual_risk`.
+
+#### 5.7.1 Track-A `writeback_continuity_contract_v1`
+
+Goal:
+
+1. Prevent runtime executions from completing without mandatory state writeback.
+2. Preserve strict governance while allowing controlled degraded writeback for non-fatal checks.
+3. Keep execution report path semantics canonical and identical across producer/consumer/gates.
+
+Mandatory semantics:
+
+1. Writeback mode MUST be explicit and machine-readable:
+   - `STRICT_WRITEBACK`
+   - `DEGRADED_WRITEBACK`
+2. `DEGRADED_WRITEBACK` is allowed only for non-fatal failures with required risk fields:
+   - `writeback_mode`
+   - `degrade_reason`
+   - `risk_level`
+   - `next_recovery_action`
+3. `post_execution_mandatory` validation MUST run after each upgrade execution and before closure claims.
+4. Canonical report path MUST be shared by:
+   - execution producer,
+   - freshness/coverage/readiness consumers,
+   - health/scan/three-plane report readers.
+
+Failure code family (`IP-WRB-*`):
+
+1. `IP-WRB-001` missing mandatory writeback in execution closure.
+2. `IP-WRB-002` degraded writeback used without required risk fields.
+3. `IP-WRB-003` post-execution mandatory state not advanced.
+4. `IP-WRB-004` report path mismatch between producer and gate consumers.
+
+#### 5.7.2 Track-B `semantic_routing_guard_contract_v1`
+
+Goal:
+
+1. Eliminate semantic retrigger caused by mixing `protocol_vendor` and `business_partner` domains.
+2. Make terminology boundary executable through deterministic validators.
+3. Keep business main loop fail-operational by default, but fail-closed on governance boundary violations.
+
+Mandatory semantics:
+
+1. Pre-routing classification is required before retrieval when intent contains vendor-like trigger terms.
+2. Required fields:
+   - `intent_domain`
+   - `intent_confidence`
+   - `classifier_reason`
+3. Domain enum:
+   - `protocol_vendor`
+   - `business_partner`
+   - `mixed`
+   - `unknown`
+4. Namespace policy:
+   - `runtime/protocol-feedback/protocol-vendor-intel/*`
+   - `runtime/protocol-feedback/business-partner-intel/*`
+   - legacy broad namespace `vendor-intel/*` MUST NOT be default write target.
+5. `mixed` handling policy:
+   - auto split + tagged output, or explicit manual review handoff.
+6. `unknown` handling policy:
+   - ask/clarify or split-and-tag; no silent one-domain default.
+
+Failure code family (`IP-SEM-*`):
+
+1. `IP-SEM-001` missing intent classification.
+2. `IP-SEM-002` mixed-domain output without split.
+3. `IP-SEM-003` namespace violation.
+4. `IP-SEM-004` domain whitelist violation.
+
+#### 5.7.3 Cross-track coexistence rule (A/B with sidecar)
+
+1. `protocol-feedback sidecar` remains default non-blocking for routine signals.
+2. Escalation to blocking is allowed only for governance-boundary P0 violations.
+3. Track-A and Track-B validators MUST emit deterministic machine-readable outputs so that sidecar escalation is auditable.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -786,6 +868,12 @@ Hard rule:
 9. `scripts/validate_identity_runtime_mode_guard.py`
 10. `scripts/use_project_identity_runtime.sh`
 11. report writers/readers persisting `identity_home` / `catalog_path` / `resolved_pack_path`
+12. `scripts/execute_identity_upgrade.py` writeback branch and closure payload writer
+13. `scripts/validate_agent_handoff_contract.py` (post-execution dependency for writeback continuity)
+14. `scripts/validate_identity_update_lifecycle.py`
+15. protocol-feedback outbox writer and feedback-batch serializer surfaces
+16. vendor/biz retrieval router surfaces used by protocol-feedback sidecar
+17. gate/report surfaces persisting `intent_domain` / `intent_confidence` / `classifier_reason`
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -803,6 +891,11 @@ Hard rule:
 12. `validate_identity_execution_report_path_contract`
 13. `validate_identity_home_catalog_alignment`
 14. `validate_fixture_runtime_boundary`
+15. `validate_writeback_continuity`
+16. `validate_post_execution_mandatory`
+17. `validate_semantic_routing_guard`
+18. `validate_vendor_namespace_separation`
+19. `validate_protocol_feedback_sidecar_contract`
 
 ### 6.3 Gate wiring surfaces
 
@@ -837,6 +930,19 @@ Path-governance closure must be wired in the same surfaces through:
 2. report path contract check (`resolved_pack_report_gate`).
 3. home/catalog alignment check (`identity_home_catalog_alignment_gate`).
 4. fixture/runtime boundary check (`fixture_runtime_boundary_gate`).
+
+Writeback-continuity closure (Track-A) must be wired in the same surfaces through:
+
+1. `validate_writeback_continuity` and `validate_post_execution_mandatory` invocation after upgrade execution.
+2. `writeback_mode/degrade_reason/risk_level` mandatory field checks in readiness/e2e/scan pipelines.
+3. canonical report path parity check between execution output and all gate consumers.
+4. CI required-gates deterministic fail-closed on `IP-WRB-*` when contract is required.
+
+Semantic-routing closure (Track-B) must be wired in the same surfaces through:
+
+1. `validate_semantic_routing_guard` and `validate_vendor_namespace_separation` on feedback artifacts.
+2. required-gates fail-closed on `IP-SEM-*`.
+3. sidecar escalation only when semantic violation crosses governance boundary (`P0-blocking`).
 
 Vendor/API chain must be wired in the same surfaces through:
 
@@ -905,6 +1011,11 @@ Hard interpretation rules:
 | ASB-RQ-029 | report `resolved_pack_path` is canonical absolute and non-relative | `validate_identity_execution_report_path_contract` (new), `execute_identity_upgrade.py` | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
 | ASB-RQ-030 | `identity_home == dirname(identity_catalog)` alignment is fail-closed for runtime mutation | `validate_identity_home_catalog_alignment` (new), runtime mode guard surfaces | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
 | ASB-RQ-031 | fixture/runtime boundary is validator-enforced for activate/update/readiness paths | `validate_fixture_runtime_boundary` (new), creator/update/readiness/scan surfaces | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
+| ASB-RQ-032 | writeback continuity contract enforces strict/degraded writeback semantics with mandatory risk fields | `validate_writeback_continuity` (new), `execute_identity_upgrade.py`, readiness/e2e/scan surfaces | P0 | SPEC_READY | Spec defined in 5.7.1; implementation pending |
+| ASB-RQ-033 | post-execution mandatory validator blocks closure when runtime state machine is not advanced | `validate_post_execution_mandatory` (new), upgrade execution closure surfaces | P0 | SPEC_READY | Spec defined in 5.7.1; implementation pending |
+| ASB-RQ-034 | semantic routing guard contract enforces intent-domain pre-classification before retrieval | `validate_semantic_routing_guard` (new), protocol-feedback router surfaces | P0 | SPEC_READY | Spec defined in 5.7.2; implementation pending |
+| ASB-RQ-035 | protocol-vendor and business-partner namespace separation is validator-enforced | `validate_vendor_namespace_separation` (new), feedback artifact writers/readers | P0 | SPEC_READY | Spec defined in 5.7.2; implementation pending |
+| ASB-RQ-036 | protocol-feedback sidecar escalation remains auditable and non-blocking-by-default | `validate_protocol_feedback_sidecar_contract` (new), required-gates escalation logic | P0 | SPEC_READY | Spec defined in 5.7.3; implementation pending |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -985,6 +1096,20 @@ Path-governance gate codes (aligned with section 5.6):
 4. `IP-PATH-004` fixture/runtime boundary violation without explicit override + receipt (fail-closed).
 5. `IP-PATH-005` path tuple mixed-source warning in non-mutation inspection flow (fail-operational warning, must be tracked).
 
+Writeback-continuity codes (aligned with section 5.7.1):
+
+1. `IP-WRB-001` missing mandatory writeback in closure path (fail-closed).
+2. `IP-WRB-002` degraded writeback without mandatory risk fields (fail-closed).
+3. `IP-WRB-003` post-execution mandatory state not advanced (fail-closed).
+4. `IP-WRB-004` canonical report path mismatch between producer and gate consumers (fail-closed).
+
+Semantic-routing codes (aligned with section 5.7.2):
+
+1. `IP-SEM-001` missing intent classification (fail-operational warning by default; escalates when repeated).
+2. `IP-SEM-002` mixed-domain output without split (fail-closed for protocol-feedback track).
+3. `IP-SEM-003` namespace violation (fail-closed for protocol-feedback track).
+4. `IP-SEM-004` domain whitelist violation (fail-closed).
+
 Hard rule:
 
 1. Recoverable actor-binding failures must not be silently promoted to hard-fail unless they cross hard-boundary conditions.
@@ -1024,6 +1149,16 @@ python3 scripts/validate_identity_pack_path_canonical --identity-id <id> --catal
 python3 scripts/validate_identity_execution_report_path_contract --identity-id <id> --catalog <catalog> --report <report_path>
 python3 scripts/validate_identity_home_catalog_alignment --identity-id <id> --catalog <catalog>
 python3 scripts/validate_fixture_runtime_boundary --identity-id <id> --catalog <catalog>
+rg -n "\"resolved_pack_path\"\\s*:\\s*\"\\.\"" <runtime_reports_root>
+
+# Track-A writeback continuity closure
+python3 scripts/validate_writeback_continuity --identity-id <id> --catalog <catalog> --report <report_path>
+python3 scripts/validate_post_execution_mandatory --identity-id <id> --catalog <catalog> --report <report_path>
+
+# Track-B semantic routing closure
+python3 scripts/validate_semantic_routing_guard --identity-id <id> --catalog <catalog> --feedback-batch <batch_path>
+python3 scripts/validate_vendor_namespace_separation --identity-id <id> --catalog <catalog> --feedback-root <runtime_protocol_feedback_dir>
+python3 scripts/validate_protocol_feedback_sidecar_contract --identity-id <id> --catalog <catalog> --feedback-root <runtime_protocol_feedback_dir>
 
 # Vendor/API one-shot closure (current validator chain)
 python3 scripts/validate_identity_vendor_api_discovery.py --identity-id <id> --catalog <catalog>
@@ -1054,11 +1189,14 @@ This checklist is the protocol-level closure contract for "deep remediation + cr
 | DRC-8 | Response stamp closure is dynamic, non-hardcoded, redacted-by-default, and mismatch fail-closed. | stamp is present on every user-facing reply; validator confirms live-binding fields; mismatch produces blocker receipt before business output; CWD-invariant behavior verified. | `ASB-RQ-018/019/020/021` |
 | DRC-9 | Anytime self-check/refresh closure is available and protocol baseline visibility is included. | refresh command callable anytime; output contains actor/session status + baseline lag fields; three-plane/full-scan remain consistent with refresh semantics. | `ASB-RQ-025/026/027` |
 | DRC-10 | Path-governance closure is canonical, aligned, and boundary-safe across catalog/runtime/report surfaces. | path gates pass; report path contract rejects relative path values; home/catalog alignment enforced; fixture/runtime boundary is auditable and enforced. | `ASB-RQ-028/029/030/031` |
+| DRC-11 | Track-A writeback continuity closure prevents frozen runtime state. | `STRICT_WRITEBACK/DEGRADED_WRITEBACK` semantics are enforced; post-execution mandatory validation passes; no closure report with missing writeback. | `ASB-RQ-032/033` |
+| DRC-12 | Track-B semantic routing closure prevents vendor/business domain retrigger drift. | pre-classification fields are present; namespace split is enforced; `IP-SEM-*` violations are deterministically caught by required-gates. | `ASB-RQ-034/035/036` |
 
 Hard closure rule:
 
 1. Any one of `DRC-1..DRC-10` not reaching `DONE` means runtime milestone is not closed.
-2. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
+2. `DRC-11` and `DRC-12` are P0 closures for protocol-feedback robustness and must be `DONE` before declaring v1.5 runtime closure.
+3. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
 
@@ -1074,8 +1212,13 @@ Post-implementation command contract (must be enabled in same PR as script landi
 10. `validate_identity_session_refresh_status` command + anytime self-check/refresh contract.
 11. `validate_identity_pack_path_canonical` command + catalog/runtime canonical path contract.
 12. `validate_identity_execution_report_path_contract` command + report path contract.
-13. `validate_identity_home_catalog_alignment` command + home/catalog alignment contract.
-14. `validate_fixture_runtime_boundary` command + fixture/runtime boundary contract.
+13. `validate_writeback_continuity` command + strict/degraded writeback closure contract.
+14. `validate_post_execution_mandatory` command + post-execution state advancement contract.
+15. `validate_semantic_routing_guard` command + intent-domain pre-classification contract.
+16. `validate_vendor_namespace_separation` command + protocol-vendor/business-partner namespace contract.
+17. `validate_protocol_feedback_sidecar_contract` command + sidecar escalation contract.
+18. `validate_identity_home_catalog_alignment` command + home/catalog alignment contract.
+19. `validate_fixture_runtime_boundary` command + fixture/runtime boundary contract.
 
 ## 10) Definition of Done (Split to Avoid False Closure)
 
@@ -1105,6 +1248,8 @@ All conditions must be true:
 9. `zero_shot` / `one_shot` / `multi_shot` become validator-enforced fields.
 10. Kernel-level capability evolution coverage is visible across `identity_prompt` / `skill` / `mcp` / `tool` / `vendor_api`.
 11. Path governance chain is validator-enforced and replay-stable (`pack_path` + report `resolved_pack_path` + home/catalog alignment + fixture/runtime boundary).
+12. Track-A writeback continuity is validator-enforced (`STRICT_WRITEBACK` / `DEGRADED_WRITEBACK` + `post_execution_mandatory`).
+13. Track-B semantic routing boundary is validator-enforced (`intent_domain` pre-classification + namespace separation + deterministic `IP-SEM-*` gates).
 
 ### 10.3 Milestone assertion guard (mandatory wording)
 
@@ -1126,6 +1271,17 @@ Use fixed reply schema:
 3. acceptance command outputs (rc + key tail lines)
 4. residual risks + next milestone
 5. layer declaration (`protocol`)
+6. non-merge A/B closure status (`Track-A writeback` and `Track-B semantic routing` reported separately)
+7. Track-A fields (must be independent):
+   - `track_a_commit_sha_list`
+   - `track_a_changed_files`
+   - `track_a_acceptance_rc_tail`
+   - `track_a_residual_risk`
+8. Track-B fields (must be independent):
+   - `track_b_commit_sha_list`
+   - `track_b_changed_files`
+   - `track_b_acceptance_rc_tail`
+   - `track_b_residual_risk`
 
 ## 12) Official References (Vendor and Specification)
 
@@ -1142,18 +1298,22 @@ Use fixed reply schema:
 6. Google API Discovery documents  
    - https://developers.google.com/discovery/v1/building-a-client-library
 7. OpenAI function calling and remote MCP  
-   - https://platform.openai.com/docs/guides/function-calling  
-   - https://platform.openai.com/docs/guides/tools-remote-mcp
+   - https://developers.openai.com/api/docs/guides/function-calling  
+   - https://developers.openai.com/api/docs/guides/tools-connectors-mcp/
 8. Anthropic tool use and MCP connector  
    - https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use  
    - https://docs.anthropic.com/en/docs/agents-and-tools/mcp-connector
 9. Gemini function calling  
    - https://ai.google.dev/gemini-api/docs/function-calling
 10. MCP specification  
-   - https://modelcontextprotocol.io/specification/2025-11-25/
+   - https://modelcontextprotocol.io/specification/2025-11-25
 11. Internal skill-governance references  
    - `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`  
    - `docs/references/identity-skill-mcp-cross-vendor-governance-guide-v1.0.md`
+12. Canonical path resolution references  
+   - https://www.gnu.org/software/coreutils/manual/html_node/realpath-invocation.html  
+   - https://docs.python.org/3/library/pathlib.html#pathlib.Path.resolve  
+   - https://www.gnu.org/software/bash/manual/html_node/Bourne-Shell-Builtins.html
 
 ## 13) Roundtable Framing Note
 
@@ -1161,7 +1321,8 @@ This document is an engineering synthesis based on:
 
 1. local protocol repository behavior,
 2. official vendor/spec documentation,
-3. internal skill-governance references.
+3. Context7 indexed specification extracts (for cross-check, not as sole authority),
+4. internal skill-governance references.
 
 It is not a transcript of direct human roundtable participation by vendor architects.
 
