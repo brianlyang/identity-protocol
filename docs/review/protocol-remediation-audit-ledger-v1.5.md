@@ -41,6 +41,10 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | REJECT (Superseded by HOTFIX-P0-003 PASS) |
 | HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PASS |
 | HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | DONE | PASS |
+| HOTFIX-P0-004 | 2026-02-28 | protocol | user-visible reply channel allowed missing `Identity-Context` prefix in live audit session | OPEN | PENDING_REVIEW |
+| HOTFIX-P0-005 | 2026-03-01 | protocol | instance-to-base-repo write boundary gate missing (docs-allow/code-deny not codified) | OPEN | PENDING_REVIEW |
+| HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | OPEN | PENDING_REVIEW |
+| HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | OPEN | PENDING_REVIEW |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -50,6 +54,22 @@ Alignment note (2026-02-28, anti-drift):
    - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` section `5.5.6`
    - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` section `5.7.2A`
    - requirement id `ASB-RQ-037`
+
+HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
+
+1. Finding:
+   - user-visible assistant replies were observed without explicit first-line `Identity-Context` stamp in some turns.
+2. Why this is P0:
+   - violates response-stamp closure invariant and increases hidden identity drift risk during long remediation threads.
+3. Source refs:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-018`, `ASB-RQ-019`, `ASB-RQ-020`, `ASB-RQ-021`, `DRC-8`)
+4. Required remediation (protocol-layer, non-negotiable):
+   - hard gate on outbound user-visible channel: missing `Identity-Context` first line => fail-closed.
+   - fail path must emit blocker receipt before any business content.
+   - add replay case that simulates long-thread/compaction pressure and asserts zero missing-stamp turns.
+   - add machine-readable counter in three-plane/full-scan for `reply_stamp_missing_count` within replay scope.
+5. Acceptance target:
+   - sampled replay window shows `reply_stamp_missing_count=0` and zero bypasses across creator/readiness/e2e/audit-chat outputs.
 
 ---
 
@@ -69,8 +89,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PASS |
 | FIX-011 | 2026-02-28 | protocol | Track-A writeback continuity + post-execution mandatory gates landing | `ca23c1d` | DONE | PASS |
 | FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PASS |
-| FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PENDING_REVIEW |
-| FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PENDING_REVIEW |
+| FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PASS |
+| FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `TBD` | PLANNED | PENDING_REVIEW |
 
 ---
@@ -163,8 +183,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-010 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. three-plane now passes `--operation three-plane` to cross-actor validator; project-catalog replay shows inspection-consistent `SKIPPED_NOT_REQUIRED` (no strict fallback). |
 | FIX-011 | PASS | audit-expert(codex) | 2026-02-28T15:36:55Z | Scoped PASS. Track-A validators are landed and fail-closed (`IP-WRB-001` / `IP-WRB-003`), with visibility wired through full-scan/three-plane/health and CI/readiness/e2e chains; readiness early-stop remains expected when auto update report generation is non-closed. |
 | FIX-012 | PASS | audit-expert(codex) | 2026-02-28T16:11:35Z | Scoped PASS. Replayed on isolated baseline commit `a8e2671`; Track-B validators show expected contract-first skip + auto-required fail-closed semantics, and wiring is visible in readiness/e2e/full-scan/three-plane/health/CI surfaces. |
-| FIX-013 | PENDING_REVIEW | - | - | Architect patch in progress for ASB-RQ-036 sidecar escalation contract (non-blocking default + auditable P0 escalation). |
-| FIX-014 | PENDING_REVIEW | - | - | Architect patch landed; waiting audit replay for coverage semantics across tool/vendor + Track-B + sidecar (operation-aware). |
+| FIX-013 | PASS | audit-expert(codex) | 2026-02-28T18:24:00Z | Scoped PASS. Sidecar validator semantics + chain wiring replayed (`scan/three-plane/health`) with deterministic `SKIPPED_NOT_REQUIRED`/`FAIL_REQUIRED` behavior and machine-readable escalation fields; strict-operation positive escalation path replay remains a follow-up test gap. |
+| FIX-014 | PASS | audit-expert(codex) | 2026-02-28T16:22:30Z | Scoped PASS. Coverage validator now ingests operation-aware Track-B/sidecar payload semantics (`required_contract`/`auto_required_signal`) and reproduces expected required-vs-optional accounting across scan/full-scan/three-plane surfaces. |
 
 ---
 
@@ -1683,6 +1703,27 @@ Alignment note (2026-02-28, anti-drift):
 1. Commit FIX-013 patch set and update rolling summary with concrete sha.
 2. Submit FIX-013 for audit replay; keep v1.5 tag blocked until Track-B verdict and sidecar closure are both PASS.
 
+#### Audit review verdict (2026-02-28T18:24:00Z)
+
+1. Decision: `PASS` (scoped to FIX-013 objective).
+2. Replay evidence summary (sandbox):
+   - static checks:
+     - `python3 -m py_compile scripts/validate_protocol_feedback_sidecar_contract.py scripts/collect_identity_health_report.py scripts/full_identity_protocol_scan.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/report_three_plane_status.py` + `bash -n scripts/e2e_smoke_test.sh` => `rc=0`.
+   - sidecar validator behavior:
+     - `validate_protocol_feedback_sidecar_contract --identity-id custom-creative-ecom-analyst --operation scan --json-only` => `rc=0`, `sidecar_contract_status=SKIPPED_NOT_REQUIRED`.
+     - `validate_protocol_feedback_sidecar_contract --identity-id system-requirements-analyst --operation scan --json-only` => `rc=1`, `sidecar_contract_status=FAIL_REQUIRED`, `sidecar_error_code=IP-SID-001`, `auto_required_signal=true`.
+   - chain visibility:
+     - `full_identity_protocol_scan --scan-mode target --identity-ids system-requirements-analyst ... --out /tmp/full-scan-fix013-audit-system.json` => `rc=0`; includes `checks.protocol_feedback_sidecar` with escalation fields.
+     - `report_three_plane_status --identity-id system-requirements-analyst ... --out /tmp/three-plane-fix013-audit-system.json` => `rc=0`; includes `instance_plane_detail.protocol_feedback_sidecar`.
+     - `collect_identity_health_report --identity-id system-requirements-analyst ... --out-dir /tmp/identity-health-reports-fix013-audit` => `rc=0`; includes `protocol_feedback_sidecar` check with deterministic FAIL semantics.
+   - governance consistency:
+     - `python3 scripts/docs_command_contract_check.py` => `rc=0`
+     - `python3 scripts/validate_protocol_ssot_source.py` => `rc=0`
+3. Audit note:
+   - PASS confirms protocol-layer sidecar contract semantics + machine-readable wiring closure.
+   - This verdict does not claim runtime debt cleanup for `system-requirements-analyst` (legacy feedback artifacts remain and are correctly surfaced by `IP-SID-001`).
+   - Additional replay suggested: strict-operation positive path (`--enforce-blocking` + complete sidecar contract + no blocking P0) through readiness/e2e/ci surfaces.
+
 ---
 
 ### FIX-014 — Required-contract coverage extension for Track-B + sidecar (operation-aware)
@@ -1740,6 +1781,30 @@ Alignment note (2026-02-28, anti-drift):
 1. Submit FIX-014 to audit replay and wait for PASS/REJECT verdict.
 2. Keep v1.5 tag blocked until FIX-013/FIX-014 verdicts are both PASS.
 
+#### Audit review verdict (2026-02-28T16:22:30Z)
+
+1. Decision: `PASS` (scoped to FIX-014 objective).
+2. Replay evidence summary (sandbox):
+   - static checks:
+     - `python3 -m py_compile scripts/validate_required_contract_coverage.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py` + `bash -n scripts/e2e_smoke_test.sh` => `rc=0`.
+   - validator behavior (`scan`):
+     - `validate_required_contract_coverage --identity-id custom-creative-ecom-analyst --operation scan --json-only` => `rc=0`; `required_contract_total=3`, `required_contract_passed=3`, `skipped_contract_count=3`.
+     - `validate_required_contract_coverage --identity-id system-requirements-analyst --operation scan --json-only` => `rc=1`; `required_contract_total=3`, `failed_required_contract_count=3`, reason codes include `IP-SEM-001`, `IP-SEM-003`, `IP-SID-001`.
+   - chain visibility:
+     - `full_identity_protocol_scan --scan-mode target --identity-ids system-requirements-analyst ... --out /tmp/full-scan-fix014-audit-system.json` => `rc=0`; includes `checks.required_contract_coverage` with Track-B/sidecar required coverage stats.
+     - `report_three_plane_status --identity-id system-requirements-analyst ... --out /tmp/three-plane-fix014-audit-system.json` => `rc=0`; includes `instance_plane_detail.required_contract_coverage` with consistent totals/failed-required counts.
+   - operation routing evidence:
+     - `identity_creator validate` includes `validate_required_contract_coverage.py --operation validate`.
+     - `release_readiness_check.py` includes `validate_required_contract_coverage.py --operation readiness`.
+     - `e2e_smoke_test.sh` includes `validate_required_contract_coverage.py --operation e2e`.
+     - `required-gates` workflow includes `validate_required_contract_coverage.py --operation ci`.
+   - governance consistency:
+     - `python3 scripts/docs_command_contract_check.py` => `rc=0`
+     - `python3 scripts/validate_protocol_ssot_source.py` => `rc=0`
+3. Audit note:
+   - PASS confirms FIX-014 closed the coverage semantic gap for auto-required Track-B/sidecar failures being misclassified as optional.
+   - This verdict does not alter instance debt outcomes; legacy artifacts under `system-requirements-analyst` correctly remain deterministic FAIL_REQUIRED signals.
+
 ---
 
 ## 7) Next release-blocking verifier: FIX-015 (concurrent actor x identity activation)
@@ -1790,3 +1855,376 @@ Alignment note (2026-02-28, anti-drift):
    - `ASB-RQ-009`, `ASB-RQ-010`
    - `ASB-RC-001~006`
 2. This review ledger remains L3 tracking only and must not override L1/L2 contract semantics.
+
+---
+
+## 8) Deep-scan cross-validation snapshot (2026-02-28, audit replay)
+
+- Layer declaration: `protocol-audit`
+- Execution context:
+  - `sandbox`: full-scan + three-plane + validator cross-check + docs/SSOT replay
+  - `escalated`: self identity upgrade/release-readiness/heal replay on `~/.codex`
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`DRC-8`, `DRC-11`, `DRC-12`, `ASB-RQ-015`, `ASB-RQ-018~021`, `ASB-RQ-032/033`)
+
+### 8.1 Deep-scan summary
+
+1. Command:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids "custom-creative-ecom-analyst system-requirements-analyst base-repo-audit-expert-v3" --repo-catalog identity/catalog/identities.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --include-repo-catalog --out /tmp/full-scan-fix015-deep-audit.json`
+2. Result:
+   - `summary={"total_identities":6,"p0":1,"p1":3,"ok":2}`
+   - `repo:system-requirements-analyst => OK`
+   - `project:custom-creative-ecom-analyst => P0`
+   - `project:base-repo-audit-expert-v3 => P1`
+   - `global:system-requirements-analyst => OK`
+   - `global:custom-creative-ecom-analyst => P1`
+   - `global:base-repo-audit-expert-v3 => P1`
+
+### 8.2 Two-instance cross-validation + self sample
+
+1. Command family:
+   - `report_three_plane_status.py` + actor validators (`validate_actor_session_binding.py`, `validate_no_implicit_switch.py`, `validate_cross_actor_isolation.py`) for:
+     - `custom-creative-ecom-analyst`
+     - `system-requirements-analyst`
+     - `base-repo-audit-expert-v3` (self sample)
+2. Three-plane key outputs:
+   - `custom-creative-ecom-analyst`:
+     - `required_contract_coverage: required_total=3/pass=3`
+     - `writeback_continuity=FAIL_REQUIRED(IP-WRB-001)`
+     - `post_execution_mandatory=FAIL_REQUIRED(IP-WRB-003)`
+     - `response_identity_stamp=PASS`
+   - `system-requirements-analyst`:
+     - `required_contract_coverage: required_total=3/pass=3`
+     - `protocol_feedback_sidecar=PASS_REQUIRED`
+     - `writeback_continuity=PASS_REQUIRED`
+     - `post_execution_mandatory=PASS_REQUIRED`
+     - `response_identity_stamp=PASS`
+   - `base-repo-audit-expert-v3`:
+     - `required_contract_coverage: required_total=3/pass=3`
+     - `writeback_continuity=FAIL_REQUIRED(IP-WRB-001)`
+     - `post_execution_mandatory=FAIL_REQUIRED(IP-WRB-003)`
+     - `response_identity_stamp=PASS`
+
+### 8.3 Self-upgrade replay (audit identity instance)
+
+1. `identity_creator update --mode review-required`:
+   - `rc=2`, report generated:
+     - `/Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772296492.json`
+   - key: `all_ok=false`, `next_action=review_required_create_pr_from_patch_plan`
+2. `identity_creator update --mode safe-auto`:
+   - `rc=3`, report generated:
+     - `/Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772297050.json`
+   - key: `all_ok=false`, `next_action=blocked_by_safe_auto_path_policy`, `permission_error_code=IP-UPG-001`, `experience_writeback.error_code=IP-SAFEAUTO-001`
+3. `release_readiness_check.py` (self):
+   - `rc=2`, fail point:
+     - `collect_identity_health_report --enforce-pass`
+   - failing items:
+     - `writeback_continuity=FAIL_REQUIRED(IP-WRB-001)`
+     - `post_execution_mandatory=FAIL_REQUIRED(IP-WRB-003)`
+4. `identity_creator heal --apply` (self):
+   - `rc=1` (`FAIL_VALIDATE`)
+   - replay shows post-repair validate failed on runtime contract (`rulebook_contract.rulebook_path` resolution path regression branch).
+
+### 8.4 Audit decision from this snapshot
+
+1. `system-requirements-analyst` now demonstrates Track-A/Track-B/sidecar closure on global runtime sample (PASS_REQUIRED set complete).
+2. `custom-creative-ecom-analyst` and `base-repo-audit-expert-v3` remain blocked by Track-A post-execution closure (`IP-WRB-001` / `IP-WRB-003`).
+3. Self identity upgrade did not converge to `all_ok=true` in this replay window; therefore no "self-upgrade success" claim is allowed for current state.
+
+---
+
+## 9) External handoff intake audit — `identity_protocol_l5_handoff_2026-02-28.md`
+
+- Intake source:
+  - `/Users/yangxi/claude/codex_project/webbrowser/artifacts/report-facts/identity_protocol_l5_handoff_2026-02-28.md`
+- Intake identity context:
+  - `actor_id=user:yangxi`
+  - `identity_id=custom-creative-ecom-analyst`
+  - `scope=USER`
+- Audit decision:
+  - `PARTIAL_ACCEPT` (claims are valid only under constrained project-local setup; not yet protocol-level L5 closure)
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-025/026/027`, `ASB-RQ-030`, `ASB-RQ-018~021`, `DRC-8`, `DRC-9`, `DRC-10`)
+
+### 9.1 Claim-by-claim replay result
+
+1. Claim: `health FAIL(6) -> PASS(0)` and local runtime closure.
+   - Replay result: `CONFIRMED (project-local sample)`
+   - Evidence:
+     - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --out-dir /tmp/identity-health-reports-l5-audit-project`
+     - output: `overall_status=PASS`, `failed_count=0`.
+2. Claim: `validate` full chain pass in project-local.
+   - Replay result: `NOT_STABLE (default env mismatch)`
+   - Evidence:
+     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+     - output includes `IP-PATH-003` (`identity_home_catalog_parent_mismatch`) and exits non-zero.
+   - Counterfactual control:
+     - forcing aligned home passes:
+       - `python3 scripts/validate_identity_home_catalog_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-home /Users/yangxi/claude/codex_project/weixinstore/.agents/identity --json-only`
+       - result: `PASS_REQUIRED`.
+3. Claim: P0 requires refresh scripts and gate wiring.
+   - Replay result: `CONFIRMED`
+   - Evidence:
+     - `rg --files scripts | rg 'refresh_identity_session_status\\.py|validate_identity_session_refresh_status\\.py'`
+     - result: no matches.
+4. Claim: response identity stamp must be mandatory on every user-visible reply.
+   - Replay result: `CONFIRMED as unresolved protocol/runtime boundary issue`
+   - Evidence:
+     - live audit thread observed missing first-line `Identity-Context` outputs.
+     - tracked under `HOTFIX-P0-004` in this ledger.
+
+### 9.2 Required architect actions (derived from replay)
+
+1. P0: implement and wire `refresh_identity_session_status.py` + `validate_identity_session_refresh_status.py` into readiness/e2e/full-scan/three-plane/CI.
+2. P0: enforce project-local default alignment (`IDENTITY_HOME == dirname(IDENTITY_CATALOG)`) in mutation/validate entrypoints, not only via optional explicit arg.
+3. P0: enforce user-visible channel hard gate for missing `Identity-Context` first line (fail-closed + blocker receipt).
+4. P1: align health and validate gate coverage so `health PASS` cannot coexist with default-entry `validate FAIL` for the same identity context tuple.
+
+### 9.3 L5 readiness status after this intake
+
+1. L5 cannot be declared yet at protocol level.
+2. Current best classification remains `L4/5` with validated instance capability but unresolved protocol asset completeness.
+
+### 9.4 Intake-2 cross-validation addendum (2026-02-28)
+
+1. Replay input:
+   - external feedback payload from `custom-creative-ecom-analyst` (L4+/L5 delta claims).
+2. Claim verification matrix:
+   - `health PASS` claim: `CONFIRMED`
+     - `/private/tmp/identity-health-reports/identity-health-custom-creative-ecom-analyst-1772296143.json` => `overall_status=PASS`, `failed_count=0`.
+   - `validate rc=0` claim: `CONDITIONALLY_CONFIRMED`
+     - default env replay (`IDENTITY_HOME` still global) => `rc=1`, `IP-PATH-003`.
+     - aligned env replay (`IDENTITY_HOME=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity`) => `rc=0`.
+     - conclusion: pass depends on explicit environment alignment; not default-stable.
+   - refresh scripts missing claim: `CONFIRMED`
+     - no matches for `refresh_identity_session_status.py` / `validate_identity_session_refresh_status.py`.
+   - prompt/history stale claim: `CONFIRMED`
+     - `IDENTITY_PROMPT.md:100` still points to `1772267244`.
+     - `TASK_HISTORY.md:49` latest recorded run still `1772267244`.
+   - rulebook negative-sample gap claim: `CONFIRMED`
+     - `CURRENT_TASK.json` declares `required_rule_types=['negative','positive']`.
+     - `RULEBOOK.jsonl` observed distribution: `{'positive': 21}`.
+   - validator blind spot claim: `CONFIRMED`
+     - `validate_identity_runtime_contract.py` checks `required_fields` but does not enforce `required_rule_types`.
+   - full-scan P1 persistence claim: `CONFIRMED`
+     - `/private/tmp/full-scan-custom-creative-ecom-analyst-20260228.json` summary => `p1=2`.
+     - project layer: `no_implicit_switch=SKIPPED_NOT_REQUIRED`, writeback/post-exec pass.
+     - global layer: `writeback=FAIL_REQUIRED(IP-WRB-001)`, `post_execution_mandatory=FAIL_REQUIRED(IP-WRB-003)`.
+
+### 9.5 Release impact from Intake-2
+
+1. This addendum reinforces `L4/5` classification; no evidence supports `L5/5` declaration yet.
+2. v1.5 release gate decision remains `NO-GO` until the following are closed:
+   - default-stable project-local environment alignment (eliminate conditional `IP-PATH-003` pass behavior),
+   - refresh/status scripts + gate wiring closure,
+   - user-visible response stamp hard gate closure (`HOTFIX-P0-004`),
+   - rulebook required type enforcement + validator closure for `required_rule_types`.
+
+---
+
+## 10) External handoff intake audit — base-repo write boundary + SSOT archival (2026-03-01 batch)
+
+- Intake sources:
+  - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-protocol-p0-base-repo-write-boundary-2026-03-01.md`
+  - instance feedback context: `system-requirements-analyst` (`CURRENT_TASK.json:4`)
+- Audit decision:
+  - `PARTIAL_ACCEPT` (core P0 direction accepted; two factual statements required rebase to current code state)
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`DRC-8`, `DRC-10`, `ASB-RQ-009`, `ASB-RQ-025/026/027`, `ASB-RQ-028/030/031`)
+
+### 10.1 Claim verification matrix
+
+1. Claim: existing freeze gate does not represent instance-level base-repo write boundary.
+   - Verdict: `CONFIRMED`
+   - Evidence:
+     - `scripts/validate_release_freeze_boundary.py:55-58` default forbidden prefixes only `identity/packs/`.
+     - no policy-level allowlist/denylist for `docs/**` vs `scripts/**`/protocol code mutation.
+2. Claim: readiness has unresolved scope arbitration gap and can hit `IP-ENV-002`.
+   - Verdict: `CONFIRMED`
+   - Evidence:
+     - `scripts/release_readiness_check.py:174-186` calls runtime-mode-guard without `--scope`.
+     - replay:
+       - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --base HEAD~1 --head HEAD --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn`
+       - result: `IP-ENV-002 ... multiple pack paths ... Pass --scope to arbitrate explicitly.`
+     - scope enum reference remains canonical in resolver:
+       - `scripts/resolve_identity_context.py:393` (`REPO/USER/ADMIN/SYSTEM`).
+3. Claim: refresh scripts are still missing.
+   - Verdict: `REJECT (stale statement)`
+   - Evidence (current head):
+     - scripts exist:
+       - `scripts/refresh_identity_session_status.py`
+       - `scripts/validate_identity_session_refresh_status.py`
+     - gate wiring exists:
+       - `scripts/release_readiness_check.py:311`
+       - `scripts/e2e_smoke_test.sh:99`
+       - `scripts/full_identity_protocol_scan.py:390`
+       - `scripts/report_three_plane_status.py:357`
+       - `.github/workflows/_identity-required-gates.yml:167`
+4. Claim: current session cannot write base repo and `~/.codex/identity`.
+   - Verdict: `PARTIAL / CONTEXT-DEPENDENT`
+   - Evidence from audit replay context:
+     - base repo probe (`identity-protocol-local`) write: `ok`
+     - `~/.codex/identity` write: `Operation not permitted`
+   - implication:
+     - platform/sandbox rights differ by path/context; governance gate must enforce policy independent of runtime permission profile.
+5. Claim: protocol-feedback SSOT archival needs required gate with fail-closed errors (`IP-GOV-FEEDBACK-*`).
+   - Verdict: `ACCEPTED AS P0 DIRECTION`
+   - Evidence:
+     - no `validate_protocol_feedback_ssot_archival.py` exists at current head.
+     - mirror-only risk is real unless SSOT archival becomes machine-enforced.
+
+### 10.2 Required architect actions (P0, non-merge lane)
+
+1. `HOTFIX-P0-005`: codify `instance_base_repo_mutation_policy_v1` + implement `validate_instance_base_repo_write_boundary.py`.
+   - required behavior: docs allowlist + protocol/code denylist + fail-closed.
+2. `HOTFIX-P0-006`: implement `validate_protocol_feedback_ssot_archival.py`.
+   - required behavior: outbox + evidence-index SSOT linkage mandatory; mirror-only report => fail (`IP-GOV-FEEDBACK-001/002/003`).
+3. `HOTFIX-P0-007`: add `--scope` to `release_readiness_check.py` and forward to runtime-mode/scope validators for deterministic dual-catalog arbitration.
+4. Add CI/readiness/e2e replay cases for:
+   - docs-only pass,
+   - code/protocol mutation fail,
+   - mirror-only feedback archival fail,
+   - explicit-scope dual-catalog pass and no-scope fail-closed.
+
+### 10.3 Release impact (post-intake-3)
+
+1. v1.5 remains `NO-GO`.
+2. L5 cannot be declared while HOTFIX-P0-004/005/006/007 are open.
+
+---
+
+## 11) Roundtable publication policy (where to push this batch)
+
+This section is a stable publication rule to avoid governance/review drift.
+
+### 11.1 What goes to governance SSOT (L1)
+
+1. Normative protocol contracts and hard rules (must/shall/fail-closed semantics).
+2. Requirement IDs (`ASB-RQ-*`), closure checklist (`DRC-*`), error-code families.
+3. Required gate surfaces, unlock formula, and release-blocking conditions.
+
+### 11.2 What goes to review ledger (L3)
+
+1. Replay evidence, command outputs (`rc + key tail`), audit verdict (`PASS/REJECT`).
+2. Intake claim verification matrix (`CONFIRMED/REJECT/PARTIAL`) with file/line anchors.
+3. Residual risks, next milestones, and architect action items by hotfix/fix lane.
+
+### 11.3 Mapping for this batch (confirmed)
+
+1. Governance SSOT already carries normative additions under:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` section `5.8`
+   - `ASB-RQ-037/038/039/040`
+   - `DRC-13`
+2. Review ledger keeps implementation/audit tracking for these items as:
+   - `HOTFIX-P0-005` (base-repo write boundary gate)
+   - `HOTFIX-P0-006` (protocol-feedback SSOT archival gate)
+   - `HOTFIX-P0-007` (readiness `--scope` arbitration chain)
+   - `HOTFIX-P0-004` (user-visible identity-context stamp hard gate)
+
+### 11.4 Hard anti-drift rule
+
+1. If L3 text conflicts with L1 normative contract wording, treat L3 as stale.
+2. Any new semantic claim must first be codified in L1 before it can be marked `DONE` in L3.
+
+
+---
+
+## 12) Architect execution update — HOTFIX-P0-005/006/007 candidate closure (2026-03-01)
+
+Layer declaration:
+
+1. protocol layer only (contracts/validators/gates/wiring/error-code semantics).
+2. no business data constants introduced.
+3. instance behavior referenced only as validation sample.
+
+### 12.1 HOTFIX-P0-005 (`validate_instance_base_repo_write_boundary.py`)
+
+Implemented:
+
+1. New validator: `scripts/validate_instance_base_repo_write_boundary.py`
+   - status envelope: `PASS_REQUIRED|SKIPPED_NOT_REQUIRED|FAIL_REQUIRED`
+   - error code: `IP-GOV-BASE-001`
+   - supports report-surface enforcement + optional git-diff replay (`--check-git-diff`).
+2. Wired to protocol main surfaces:
+   - `scripts/identity_creator.py` (`validate` chain)
+   - `scripts/release_readiness_check.py` (`readiness` chain, report-bound)
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+
+Replay evidence (architect local):
+
+1. docs-only range pass:
+   - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --check-git-diff --base 92e9af1 --head dfc0e51 --operation ci --json-only`
+   - `rc=0`, `base_repo_write_boundary_status=PASS_REQUIRED`.
+2. protocol/code range fail:
+   - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --check-git-diff --base HEAD~1 --head HEAD --operation ci --json-only`
+   - `rc=1`, `error_code=IP-GOV-BASE-001`, blocked paths under `scripts/*`.
+
+### 12.2 HOTFIX-P0-006 (`validate_protocol_feedback_ssot_archival.py`)
+
+Implemented:
+
+1. New validator: `scripts/validate_protocol_feedback_ssot_archival.py`
+   - status envelope: `PASS_REQUIRED|SKIPPED_NOT_REQUIRED|FAIL_REQUIRED`
+   - error codes:
+     - `IP-GOV-FEEDBACK-001` required outbox missing
+     - `IP-GOV-FEEDBACK-002` evidence-index missing or unlinked batch
+     - `IP-GOV-FEEDBACK-003` mirror-only without SSOT outbox
+2. Wired to protocol main surfaces:
+   - `scripts/identity_creator.py` (`validate` chain)
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+
+Replay evidence (architect local):
+
+1. mirror-only fail simulation:
+   - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --feedback-root /tmp/ssot-mirror-only --operation ci --json-only`
+   - `rc=1`, `error_code=IP-GOV-FEEDBACK-003`.
+2. outbox+index pass simulation:
+   - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --feedback-root /tmp/ssot-pass --operation ci --json-only`
+   - `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`.
+3. runtime real sample pass (`system-requirements-analyst`):
+   - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`.
+
+### 12.3 HOTFIX-P0-007 (readiness `--scope` arbitration chain)
+
+Implemented:
+
+1. `scripts/release_readiness_check.py`新增 `--scope` 参数。
+2. `--scope` 已前传到：
+   - `validate_identity_runtime_mode_guard.py`
+   - `validate_identity_scope_resolution.py`
+   - `validate_identity_scope_isolation.py`
+   - `validate_identity_scope_persistence.py`
+   - auto-generated update path (`identity_creator.py update`) during readiness no-report path.
+
+Replay evidence (architect local):
+
+1. no-scope dual-catalog ambiguity fail-closed:
+   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - `rc=2`, early fail `IP-ENV-002`.
+2. explicit scope replay enters main chain:
+   - same command + `--scope USER`
+   - runtime/scope preflight no longer hit `IP-ENV-002`; chain proceeds to later health/other gates.
+
+### 12.4 main-surface smoke after wiring
+
+1. `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+   - `rc=0` (new validators wired and replayed).
+2. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-hotfix-p0.json`
+   - `rc=0`, outputs contain `instance_base_repo_write_boundary` + `protocol_feedback_ssot_archival` checks.
+3. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-hotfix-p0.json`
+   - `rc=0`, `instance_plane_detail` contains both new governance-boundary sections.
+
+### 12.5 status
+
+1. HOTFIX-P0-005: `PENDING_REVIEW` (architect replay completed).
+2. HOTFIX-P0-006: `PENDING_REVIEW` (architect replay completed).
+3. HOTFIX-P0-007: `PENDING_REVIEW` (architect replay completed).
+4. Non-merge release constraint unchanged: v1.5 remains blocked until auditor replay signs off.

@@ -369,6 +369,21 @@ PY
     --operation e2e \
     --enforce-blocking
 
+  echo "[26.36/30][$ID] validate instance/base-repo write boundary gate (HOTFIX-P0-005)"
+  python3 scripts/validate_instance_base_repo_write_boundary.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --report "$UPGRADE_REPORT" \
+    --operation e2e
+
+  echo "[26.37/30][$ID] validate protocol-feedback SSOT archival gate (HOTFIX-P0-006)"
+  python3 scripts/validate_protocol_feedback_ssot_archival.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --operation e2e
+
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
 p=sys.argv[1]

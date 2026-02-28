@@ -45,6 +45,16 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _boolish(v: Any) -> bool:
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    if v is None:
+        return False
+    return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     text = (raw or "").strip()
     if not text:
@@ -100,6 +110,7 @@ def _resolve_pack_path(catalog_path: str, identity_id: str) -> Path | None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run release-readiness validators in a deterministic order.")
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--scope", default="", help="explicit scope arbitration (REPO/USER/ADMIN/SYSTEM)")
     ap.add_argument("--base", default="")
     ap.add_argument("--head", default="")
     ap.add_argument(
@@ -158,6 +169,7 @@ def main() -> int:
     base = args.base.strip() or _git_rev("HEAD~1")
     head = args.head.strip() or _git_rev("HEAD")
     identity_id = args.identity_id.strip()
+    scope = args.scope.strip().upper()
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog = explicit_catalog or env_catalog
@@ -171,20 +183,21 @@ def main() -> int:
     if not Path(catalog).expanduser().exists():
         print(f"[FAIL] catalog path does not exist: {catalog}")
         return 2
-    rc_guard = _run(
-        [
-            "python3",
-            "scripts/validate_identity_runtime_mode_guard.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--repo-catalog",
-            "identity/catalog/identities.yaml",
-            "--expect-mode",
-            "auto",
-        ]
-    )
+    guard_cmd = [
+        "python3",
+        "scripts/validate_identity_runtime_mode_guard.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--expect-mode",
+        "auto",
+    ]
+    if scope:
+        guard_cmd.extend(["--scope", scope])
+    rc_guard = _run(guard_cmd)
     if rc_guard != 0:
         return rc_guard
 
@@ -271,9 +284,36 @@ def main() -> int:
         ["python3", "scripts/validate_identity_protocol.py"],
         ["python3", "scripts/validate_identity_local_persistence.py"],
         ["python3", "scripts/validate_identity_creation_boundary.py"],
-        ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", catalog, "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
-        ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", catalog, "--identity-id", identity_id],
+        [
+            "python3",
+            "scripts/validate_identity_scope_resolution.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_scope_isolation.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_scope_persistence.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+        ],
         ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
         ["python3", "scripts/validate_identity_session_pointer_consistency.py", "--catalog", catalog],
         [
@@ -484,6 +524,17 @@ def main() -> int:
         ],
         ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", catalog, "--identity-id", identity_id],
     ]
+    if scope:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            script = cmd[1]
+            if script in {
+                "scripts/validate_identity_scope_resolution.py",
+                "scripts/validate_identity_scope_isolation.py",
+                "scripts/validate_identity_scope_persistence.py",
+            }:
+                cmd.extend(["--scope", scope])
     if args.min_required_contract_coverage >= 0.0:
         for cmd in seq:
             if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
@@ -505,6 +556,8 @@ def main() -> int:
             "--capability-activation-policy",
             args.capability_activation_policy,
         ]
+        if scope:
+            gen_cmd.extend(["--scope", scope])
         rc = _run(gen_cmd)
         if rc != 0:
             return rc
@@ -691,6 +744,36 @@ def main() -> int:
             "--enforce-blocking",
         ]
     )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_instance_base_repo_write_boundary.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--report",
+            execution_report,
+            "--operation",
+            "readiness",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_ssot_archival.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--operation",
+            "readiness",
+        ]
+    )
 
     seq.append(
         [
@@ -730,17 +813,25 @@ def main() -> int:
             execution_report,
         ]
     )
-    seq.append(
-        [
-            "python3",
-            "scripts/validate_identity_permission_state.py",
-            "--identity-id",
-            identity_id,
-            "--report",
-            execution_report,
-            "--require-written",
-        ]
-    )
+    report_meta: dict[str, Any] = {}
+    try:
+        report_meta = json.loads(Path(execution_report).read_text(encoding="utf-8"))
+    except Exception:
+        report_meta = {}
+    permission_cmd = [
+        "python3",
+        "scripts/validate_identity_permission_state.py",
+        "--identity-id",
+        identity_id,
+        "--report",
+        execution_report,
+    ]
+    report_all_ok = _boolish(report_meta.get("all_ok"))
+    report_writeback_status = str(report_meta.get("writeback_status", "")).strip().upper()
+    report_permission_state = str(report_meta.get("permission_state", "")).strip().upper()
+    if report_all_ok and report_writeback_status == "WRITTEN" and report_permission_state == "WRITEBACK_WRITTEN":
+        permission_cmd.append("--require-written")
+    seq.append(permission_cmd)
     seq.append(
         [
             "python3",

@@ -1244,13 +1244,42 @@ def main() -> int:
         all_ok = False
         actions_taken.append("writeback_skipped_due_to_permission_precheck")
     elif upgrade_required:
-        experience_writeback.update(
-            {
-                "status": "MISSING",
-                "error_code": "IP-UPG-002",
-                "notes": "upgrade was required but writeback not appended (run failed or policy blocked)",
-            }
-        )
+        # Track-A contract hardening:
+        # upgrade-required + non-closure must emit explicit degraded writeback status
+        # (never leave writeback_status as MISSING).
+        existing_status = str(experience_writeback.get("status", "")).strip().upper()
+        existing_error = str(experience_writeback.get("error_code", "")).strip()
+        deferred_statuses = {
+            "WRITTEN",
+            "DEFERRED_PERMISSION_BLOCKED",
+            "DEFERRED_POLICY_BLOCKED",
+            "DEFERRED_VALIDATION_FAILED",
+            "DEFERRED_NOT_EXECUTED",
+        }
+        if existing_status not in deferred_statuses:
+            if permission_error_code.startswith("IP-PERM-"):
+                status = "DEFERRED_PERMISSION_BLOCKED"
+                code = existing_error or permission_error_code or "IP-PERM-002"
+                note = "upgrade required but writeback deferred due to permission boundary"
+            elif permission_error_code == "IP-UPG-001" or existing_error.startswith("IP-SAFEAUTO-"):
+                status = "DEFERRED_POLICY_BLOCKED"
+                code = existing_error or "IP-SAFEAUTO-001"
+                note = "upgrade required but writeback deferred by safe-auto policy boundary"
+            elif not all_ok:
+                status = "DEFERRED_VALIDATION_FAILED"
+                code = existing_error or "IP-UPG-002"
+                note = "upgrade required but writeback deferred because one or more validators failed"
+            else:
+                status = "DEFERRED_NOT_EXECUTED"
+                code = existing_error or "IP-UPG-002"
+                note = "upgrade required but writeback was not executed"
+            experience_writeback.update(
+                {
+                    "status": status,
+                    "error_code": code,
+                    "notes": note,
+                }
+            )
     else:
         experience_writeback.update(
             {

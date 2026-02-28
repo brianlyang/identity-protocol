@@ -207,14 +207,31 @@ def main() -> int:
             dynamic_history_path = rb_path.replace("RULEBOOK.jsonl", "TASK_HISTORY.md")
         has_rulebook_glob = any(str(x).endswith("rulebooks/*") for x in allow)
         has_logs_glob = any(str(x).endswith("logs/*") for x in allow)
-        required_allow = {dynamic_history_path}
+        allow_norm: set[str] = set()
+        for item in allow:
+            raw_item = str(item).strip()
+            if not raw_item:
+                continue
+            if any(ch in raw_item for ch in ["*", "?", "["]):
+                allow_norm.add(raw_item)
+                continue
+            allow_norm.add(str(_resolve_path(raw_item, pack_root=pack_root)))
+
+        history_candidates = {
+            str(_resolve_path(dynamic_history_path, pack_root=pack_root)),
+            str((pack_root / "TASK_HISTORY.md").resolve()),
+        }
+        has_history_allow = any(x in allow_norm for x in history_candidates)
         required_deny = {
             "identity/protocol/*",
             ".github/workflows/*",
             "scripts/validate_*",
         }
-        if not required_allow.issubset(set(allow)):
-            print(f"[FAIL] safe_auto_patch_surface.allowlist missing required entries: {sorted(required_allow - set(allow))}")
+        if not has_history_allow:
+            print(
+                "[FAIL] safe_auto_patch_surface.allowlist missing required entries: "
+                f"{sorted(history_candidates)}"
+            )
             rc = 1
         if not has_rulebook_glob:
             print("[FAIL] safe_auto_patch_surface.allowlist missing rulebooks/* entry")

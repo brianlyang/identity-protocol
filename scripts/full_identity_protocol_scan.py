@@ -133,6 +133,8 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "semantic_routing_guard",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
+            "instance_base_repo_write_boundary",
+            "protocol_feedback_ssot_archival",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -513,6 +515,32 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "instance_base_repo_write_boundary": [
+                    "python3",
+                    "scripts/validate_instance_base_repo_write_boundary.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "protocol_feedback_ssot_archival": [
+                    "python3",
+                    "scripts/validate_protocol_feedback_ssot_archival.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "required_contract_coverage": [
                     "python3",
                     "scripts/validate_required_contract_coverage.py",
@@ -747,6 +775,46 @@ def main() -> int:
                     ):
                         if k in sidecar_doc:
                             check_payload[k] = sidecar_doc.get(k)
+                if name == "instance_base_repo_write_boundary":
+                    base_boundary_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "base_repo_write_boundary_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "report_selected_path",
+                        "source_mode",
+                        "allowlist_prefixes",
+                        "denylist_prefixes",
+                        "repo_relative_candidates",
+                        "allowed_paths",
+                        "blocked_paths",
+                        "explicit_deny_hits",
+                        "override_receipt_path",
+                        "override_applied",
+                        "stale_reasons",
+                    ):
+                        if k in base_boundary_doc:
+                            check_payload[k] = base_boundary_doc.get(k)
+                if name == "protocol_feedback_ssot_archival":
+                    archival_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "feedback_ssot_archival_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "feedback_root",
+                        "outbox_dir",
+                        "evidence_index_path",
+                        "batch_file_count",
+                        "batch_files",
+                        "index_linked_batches",
+                        "index_unlinked_batches",
+                        "mirror_candidate_refs",
+                        "stale_reasons",
+                    ):
+                        if k in archival_doc:
+                            check_payload[k] = archival_doc.get(k)
                 if name == "writeback_continuity":
                     writeback_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

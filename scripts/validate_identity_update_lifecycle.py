@@ -180,7 +180,11 @@ def main() -> int:
 
     required_file_paths = patch.get("required_file_paths") or []
     if required_file_paths:
-        missing_paths = [p for p in required_file_paths if not Path(str(p)).exists()]
+        missing_paths = []
+        for p in required_file_paths:
+            resolved = _resolve_path_with_pack(str(p), pack_root)
+            if not resolved.exists():
+                missing_paths.append(str(p))
         if missing_paths:
             print(f"[FAIL] patch_surface_contract.required_file_paths not found: {missing_paths}")
             return 1

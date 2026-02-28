@@ -271,11 +271,21 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
         print("[OK]   routing_contract.problem_type_routes is non-empty")
 
     rb = data.get("rulebook_contract") or {}
-    rulebook_path = Path(rb.get("rulebook_path", ""))
-    if not rulebook_path or not rulebook_path.exists():
-        print(f"[FAIL] rulebook_contract.rulebook_path missing or not found: {rulebook_path}")
+    rulebook_raw = str(rb.get("rulebook_path", "")).strip()
+    rulebook_path = Path()
+    if not rulebook_raw:
+        print("[FAIL] rulebook_contract.rulebook_path missing or empty")
         rc = 1
     else:
+        rulebook_path = Path(rulebook_raw).expanduser()
+        if not rulebook_path.is_absolute():
+            rulebook_path = (task_path.parent / rulebook_path).resolve()
+        else:
+            rulebook_path = rulebook_path.resolve()
+    if rulebook_raw and not rulebook_path.exists():
+        print(f"[FAIL] rulebook_contract.rulebook_path missing or not found: {rulebook_raw}")
+        rc = 1
+    elif rulebook_raw:
         print(f"[OK]   rulebook exists: {rulebook_path}")
 
     if rb.get("append_only") is not True:

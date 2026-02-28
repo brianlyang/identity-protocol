@@ -703,6 +703,60 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_sidecar != 0 or sidecar_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_base_boundary, out_base_boundary, err_base_boundary = _run(
+        [
+            "python3",
+            "scripts/validate_instance_base_repo_write_boundary.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--report",
+            str(report_path),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    base_boundary_payload = _parse_json_payload(out_base_boundary) or {}
+    validators["instance_base_repo_write_boundary"] = {
+        "rc": rc_base_boundary,
+        "ok": rc_base_boundary == 0,
+        "out": out_base_boundary,
+        "err": err_base_boundary,
+    }
+    base_boundary_status = str(base_boundary_payload.get("base_repo_write_boundary_status", "")).strip().upper()
+    if rc_base_boundary != 0 or base_boundary_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_archival, out_archival, err_archival = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_ssot_archival.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    archival_payload = _parse_json_payload(out_archival) or {}
+    validators["protocol_feedback_ssot_archival"] = {
+        "rc": rc_archival,
+        "ok": rc_archival == 0,
+        "out": out_archival,
+        "err": err_archival,
+    }
+    archival_status = str(archival_payload.get("feedback_ssot_archival_status", "")).strip().upper()
+    if rc_archival != 0 or archival_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_fresh, out_fresh, err_fresh = _run(
         [
             "python3",
@@ -835,6 +889,38 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "track_a": sidecar_payload.get("track_a", {}),
             "track_b": sidecar_payload.get("track_b", {}),
             "stale_reasons": sidecar_payload.get("stale_reasons", []),
+        },
+        "instance_base_repo_write_boundary": {
+            "base_repo_write_boundary_status": base_boundary_payload.get("base_repo_write_boundary_status"),
+            "error_code": base_boundary_payload.get("error_code", ""),
+            "required_contract": base_boundary_payload.get("required_contract"),
+            "auto_required_signal": base_boundary_payload.get("auto_required_signal"),
+            "report_selected_path": base_boundary_payload.get("report_selected_path", ""),
+            "source_mode": base_boundary_payload.get("source_mode", ""),
+            "allowlist_prefixes": base_boundary_payload.get("allowlist_prefixes", []),
+            "denylist_prefixes": base_boundary_payload.get("denylist_prefixes", []),
+            "repo_relative_candidates": base_boundary_payload.get("repo_relative_candidates", []),
+            "allowed_paths": base_boundary_payload.get("allowed_paths", []),
+            "blocked_paths": base_boundary_payload.get("blocked_paths", []),
+            "explicit_deny_hits": base_boundary_payload.get("explicit_deny_hits", []),
+            "override_receipt_path": base_boundary_payload.get("override_receipt_path", ""),
+            "override_applied": base_boundary_payload.get("override_applied"),
+            "stale_reasons": base_boundary_payload.get("stale_reasons", []),
+        },
+        "protocol_feedback_ssot_archival": {
+            "feedback_ssot_archival_status": archival_payload.get("feedback_ssot_archival_status"),
+            "error_code": archival_payload.get("error_code", ""),
+            "required_contract": archival_payload.get("required_contract"),
+            "auto_required_signal": archival_payload.get("auto_required_signal"),
+            "feedback_root": archival_payload.get("feedback_root", ""),
+            "outbox_dir": archival_payload.get("outbox_dir", ""),
+            "evidence_index_path": archival_payload.get("evidence_index_path", ""),
+            "batch_file_count": archival_payload.get("batch_file_count"),
+            "batch_files": archival_payload.get("batch_files", []),
+            "index_linked_batches": archival_payload.get("index_linked_batches", []),
+            "index_unlinked_batches": archival_payload.get("index_unlinked_batches", []),
+            "mirror_candidate_refs": archival_payload.get("mirror_candidate_refs", []),
+            "stale_reasons": archival_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),
