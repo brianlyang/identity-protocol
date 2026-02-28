@@ -1426,3 +1426,36 @@ Alignment note (2026-02-28, anti-drift):
      - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` => rc=`0`.
 3. Audit note:
    - HOTFIX-P0-003 resolves the blocker-receipt lifecycle nondeterminism that caused HOTFIX-P0-001 rejection replay.
+
+---
+
+## 6) Post-fix release snapshot (2026-02-28, protocol-only residual view)
+
+### Snapshot command set
+
+1. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids "base-repo-audit-expert-v3 office-ops-expert store-manager base-repo-architect custom-creative-ecom-analyst system-requirements-analyst" --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-next-task.json`
+2. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix010-project-replay2.json`
+3. `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix010-global-replay2.json`
+
+### Observed summary
+
+1. full-scan summary:
+   - `{"total_identities": 9, "p0": 1, "p1": 6, "ok": 2}`
+2. three-plane project catalog replay:
+   - `cross_actor_isolation_status=SKIPPED_NOT_REQUIRED`
+   - validator payload contains `"operation":"three-plane"` (FIX-010 effective)
+3. three-plane global catalog replay:
+   - `cross_actor_isolation_status=PASS_REQUIRED`
+   - validator payload contains `"operation":"three-plane"` (FIX-010 effective)
+
+### Residual classification (do not mix layers)
+
+1. Remaining `P0/P1` counts in full-scan are dominated by cross-catalog/runtime-context drift (project `.agents` catalog vs global runtime catalog), including:
+   - `identity_home_catalog_alignment` mismatch for project catalog contexts
+   - project-pack prompt/report path mismatch against global reports
+2. These are **instance/environment governance residuals**, not newly introduced protocol gate regressions.
+3. Protocol-layer closures from this batch remain:
+   - HOTFIX-P0-003: `PASS`
+   - FIX-009: `PASS`
+   - FIX-010: `PASS`
+   - FIX-008: historical `REJECT` with explicit `closed-by FIX-010` linkage.
