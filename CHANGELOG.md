@@ -134,6 +134,16 @@
     - wired rulebook schema backfill into `scripts/e2e_smoke_test.sh` preflight (step 2.45/30)
       and `identity_creator.py heal` auto-repair flow
   - update/e2e/reporting governance consistency uplift:
+  - prompt lifecycle validator now supports deferred blocked execution semantics:
+    - `scripts/validate_identity_prompt_lifecycle.py` now treats known
+      pre-mutation blocked outcomes (`IP-UPG-001` / `IP-PERM-001`) as valid
+      deferred lifecycle state when `all_ok=false`
+    - review-required deferred outcomes with
+      `next_action=review_required_create_pr_from_patch_plan` and
+      `identity_prompt_change_note=prompt_change_deferred_due_to_failed_validators`
+      are now classified as valid deferred lifecycle state (not false hard-fail)
+    - prevents false P0 escalation when prompt mutation is intentionally
+      blocked before writeback by policy/permission boundaries
     - `execute_identity_upgrade.py` now guarantees structured failure/report fields
       for recoverable vs hard-boundary interpretation
     - added capability activation evidence contract for skill/MCP/tool attachment:

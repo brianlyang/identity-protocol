@@ -168,6 +168,17 @@ Lifecycle rules:
      - detect stale protocol baseline via validator
      - dry-run inventory and optional apply mode for batched `identity_creator update`
      - emits machine-readable wave report with per-identity `baseline_status/update_rc/next_action/error_code`
+6. Prompt lifecycle deferred-blocked semantics (P0 false-positive closure)
+   - `validate_identity_prompt_lifecycle.py` now distinguishes:
+     - mutation-required failures
+     - pre-mutation blocked outcomes (`IP-UPG-001` / `IP-PERM-001`)
+     - review-required deferred outcomes
+       (`next_action=review_required_create_pr_from_patch_plan`,
+       `identity_prompt_change_note=prompt_change_deferred_due_to_failed_validators`)
+   - when execution report is `all_ok=false` due known policy/permission hard boundary,
+     prompt lifecycle can remain deferred without being misclassified as malformed.
+   - keeps fail-closed behavior for real lifecycle inconsistencies while avoiding
+     false P0 escalation on intentionally blocked mutation paths.
 
 ## v1.4.13 follow-up closure scope (2026-02-26, protocol-layer)
 

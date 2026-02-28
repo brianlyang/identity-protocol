@@ -48,14 +48,31 @@ def main() -> int:
     h_after = str(data.get("identity_prompt_hash_after", "")).strip()
     status = str(data.get("identity_prompt_status", "")).strip().upper()
     note = str(data.get("identity_prompt_change_note", "")).strip()
+    permission_error_code = str(data.get("permission_error_code", "")).strip()
+    next_action = str(data.get("next_action", "")).strip()
+    failure_reason = str(data.get("failure_reason", "")).strip()
+    writeback_status = str(data.get("writeback_status", "")).strip().upper()
+    all_ok = bool(data.get("all_ok", False))
+    deferred_blocked = (not all_ok) and (
+        permission_error_code in {"IP-UPG-001", "IP-PERM-001"}
+        or next_action
+        in {
+            "blocked_by_safe_auto_path_policy",
+            "resolve_capability_activation_then_rerun_update",
+            "review_required_create_pr_from_patch_plan",
+        }
+        or failure_reason in {"safe_auto_path_policy_violation", "permission_precheck_blocked"}
+        or note == "prompt_change_deferred_due_to_failed_validators"
+        or writeback_status.startswith("DEFERRED")
+    )
 
-    if upgrade_required and not change_required:
+    if upgrade_required and not change_required and not deferred_blocked:
         print("[FAIL] upgrade_required=true requires prompt_change_required=true")
         return 1
     if not upgrade_required and change_required:
         print("[FAIL] prompt_change_required=true while upgrade_required=false")
         return 1
-    if change_required and not change_applied:
+    if change_required and not change_applied and not deferred_blocked:
         print(f"[FAIL] prompt_change_required=true but prompt_change_applied=false note={note}")
         return 1
     if change_applied and (not h_before or not h_after):
@@ -86,4 +103,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
