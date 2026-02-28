@@ -333,6 +333,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--catalog",
             args.catalog,
+            "--operation",
+            "three-plane",
             "--json-only",
         ]
     )
