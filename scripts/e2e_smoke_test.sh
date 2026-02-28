@@ -340,6 +340,15 @@ PY
     --report "$UPGRADE_REPORT" \
     --operation e2e
 
+  echo "[26.35/30][$ID] validate protocol-feedback sidecar escalation contract (A/B coexistence)"
+  python3 scripts/validate_protocol_feedback_sidecar_contract.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --report "$UPGRADE_REPORT" \
+    --operation e2e \
+    --enforce-blocking
+
   UPG_META_LINE=$(python3 - "$UPGRADE_REPORT" <<'PY'
 import json,sys
 p=sys.argv[1]

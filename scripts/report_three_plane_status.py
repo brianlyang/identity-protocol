@@ -641,6 +641,34 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_post_exec != 0 or post_exec_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_sidecar, out_sidecar, err_sidecar = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_sidecar_contract.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--report",
+            str(report_path),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    sidecar_payload = _parse_json_payload(out_sidecar) or {}
+    validators["protocol_feedback_sidecar"] = {
+        "rc": rc_sidecar,
+        "ok": rc_sidecar == 0,
+        "out": out_sidecar,
+        "err": err_sidecar,
+    }
+    sidecar_status = str(sidecar_payload.get("sidecar_contract_status", "")).strip().upper()
+    if rc_sidecar != 0 or sidecar_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_fresh, out_fresh, err_fresh = _run(
         [
             "python3",
@@ -759,6 +787,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "next_action": post_exec_payload.get("next_action", ""),
             "next_recovery_action": post_exec_payload.get("next_recovery_action", ""),
             "stale_reasons": post_exec_payload.get("stale_reasons", []),
+        },
+        "protocol_feedback_sidecar": {
+            "sidecar_contract_status": sidecar_payload.get("sidecar_contract_status"),
+            "sidecar_error_code": sidecar_payload.get("sidecar_error_code", ""),
+            "required_contract": sidecar_payload.get("required_contract"),
+            "auto_required_signal": sidecar_payload.get("auto_required_signal"),
+            "enforce_blocking": sidecar_payload.get("enforce_blocking"),
+            "escalation_required": sidecar_payload.get("escalation_required"),
+            "escalation_decision": sidecar_payload.get("escalation_decision"),
+            "blocking_error_codes": sidecar_payload.get("blocking_error_codes", []),
+            "p0_violations": sidecar_payload.get("p0_violations", []),
+            "track_a": sidecar_payload.get("track_a", {}),
+            "track_b": sidecar_payload.get("track_b", {}),
+            "stale_reasons": sidecar_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),

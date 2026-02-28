@@ -45,6 +45,16 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
         ],
     ),
     (
+        "protocol_feedback_sidecar",
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_sidecar_contract.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
         "writeback_continuity",
         [
             "python3",
@@ -95,6 +105,7 @@ SUGGESTIONS = {
     "vendor_api_solution": "Complete solution option matrix with exactly one selected option and rollback/fallback refs.",
     "semantic_routing_guard": "Add semantic_routing_guard_contract_v1 evidence and ensure intent_domain/intent_confidence/classifier_reason are present in feedback batches.",
     "vendor_namespace_separation": "Split protocol feedback artifacts into protocol-vendor-intel and business-partner-intel namespaces; eliminate legacy vendor-intel default writes.",
+    "protocol_feedback_sidecar": "Align protocol_feedback_sidecar_contract_v1 (default non-blocking + auditable P0 escalation); resolve blocking IP-WRB/IP-SEM violations before strict gates.",
     "writeback_continuity": "Regenerate update execution report and ensure writeback_mode/degrade_reason/risk_level/next_recovery_action satisfy continuity contract.",
     "post_execution_mandatory": "Ensure post-execution mandatory fields and recovery actions are complete in execution report; rerun update and validate.",
     "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
@@ -159,6 +170,8 @@ def main() -> int:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"semantic_routing_guard", "vendor_namespace_separation"}:
             cmd += ["--catalog", catalog]
+        elif name == "protocol_feedback_sidecar":
+            cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"writeback_continuity", "post_execution_mandatory"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
@@ -199,6 +212,18 @@ def main() -> int:
             ns_code = str(payload.get("error_code", "")).strip()
             if ns_code:
                 error_code = ns_code
+        elif name == "protocol_feedback_sidecar":
+            payload = _parse_json_payload(out) or {}
+            sidecar_status = str(payload.get("sidecar_contract_status", "")).strip().upper()
+            if sidecar_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif sidecar_status == "WARN_NON_BLOCKING":
+                status = "WARN"
+            elif sidecar_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            sidecar_code = str(payload.get("sidecar_error_code", "")).strip()
+            if sidecar_code:
+                error_code = sidecar_code
         elif name == "writeback_continuity":
             payload = _parse_json_payload(out) or {}
             continuity_status = str(payload.get("writeback_continuity_status", "")).strip().upper()

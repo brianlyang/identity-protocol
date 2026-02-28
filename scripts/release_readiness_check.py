@@ -647,6 +647,23 @@ def main() -> int:
             "readiness",
         ]
     )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_sidecar_contract.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--report",
+            execution_report,
+            "--operation",
+            "readiness",
+            "--enforce-blocking",
+        ]
+    )
 
     seq.append(
         [

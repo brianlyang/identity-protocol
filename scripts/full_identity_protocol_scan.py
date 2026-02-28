@@ -131,6 +131,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "post_execution_mandatory",
             "semantic_routing_guard",
             "vendor_namespace_separation",
+            "protocol_feedback_sidecar",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -479,6 +480,19 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "protocol_feedback_sidecar": [
+                    "python3",
+                    "scripts/validate_protocol_feedback_sidecar_contract.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "required_contract_coverage": [
                     "python3",
                     "scripts/validate_required_contract_coverage.py",
@@ -691,6 +705,24 @@ def main() -> int:
                     ):
                         if k in namespace_doc:
                             check_payload[k] = namespace_doc.get(k)
+                if name == "protocol_feedback_sidecar":
+                    sidecar_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "sidecar_contract_status",
+                        "sidecar_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "enforce_blocking",
+                        "escalation_required",
+                        "escalation_decision",
+                        "blocking_error_codes",
+                        "p0_violations",
+                        "track_a",
+                        "track_b",
+                        "stale_reasons",
+                    ):
+                        if k in sidecar_doc:
+                            check_payload[k] = sidecar_doc.get(k)
                 if name == "writeback_continuity":
                     writeback_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

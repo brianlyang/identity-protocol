@@ -69,6 +69,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PASS |
 | FIX-011 | 2026-02-28 | protocol | Track-A writeback continuity + post-execution mandatory gates landing | `ca23c1d` | DONE | PASS |
 | FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PENDING_REVIEW |
+| FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `TBD` | IN_PROGRESS | PENDING_REVIEW |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `TBD` | PLANNED | PENDING_REVIEW |
 
 ---
@@ -161,6 +162,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-010 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. three-plane now passes `--operation three-plane` to cross-actor validator; project-catalog replay shows inspection-consistent `SKIPPED_NOT_REQUIRED` (no strict fallback). |
 | FIX-011 | PASS | audit-expert(codex) | 2026-02-28T15:36:55Z | Scoped PASS. Track-A validators are landed and fail-closed (`IP-WRB-001` / `IP-WRB-003`), with visibility wired through full-scan/three-plane/health and CI/readiness/e2e chains; readiness early-stop remains expected when auto update report generation is non-closed. |
 | FIX-012 | PENDING_REVIEW | - | - | Architect patch landed; waiting audit replay for Track-B semantic routing and namespace separation gate behavior. |
+| FIX-013 | PENDING_REVIEW | - | - | Architect patch in progress for ASB-RQ-036 sidecar escalation contract (non-blocking default + auditable P0 escalation). |
 
 ---
 
@@ -1594,6 +1596,67 @@ Alignment note (2026-02-28, anti-drift):
 
 1. Submit FIX-012 patch set for audit replay and verdict.
 2. Keep v1.5 release tag blocked until Track-B audit verdict is `PASS` and follow-up sidecar escalation contract is aligned.
+
+---
+
+### FIX-013 — Sidecar escalation contract closure (ASB-RQ-036, Track-A/B coexistence)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for static checks + validator/full-scan/three-plane/health replay
+  - `escalated` not required in this architect replay batch
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`5.7.3`, `ASB-RQ-036`, `DRC-12`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (machine-readable gate outputs required)
+
+#### Change summary
+
+1. Added validator:
+   - `scripts/validate_protocol_feedback_sidecar_contract.py`
+2. Contract semantics landed:
+   - sidecar default is non-blocking (`NON_BLOCKING_DEFAULT`);
+   - escalation becomes blocking only on governance-boundary P0 violations;
+   - structured payload fields for escalation decision (`escalation_required`, `escalation_decision`, `p0_violations`, `blocking_error_codes`).
+3. Main-chain wiring completed:
+   - `scripts/identity_creator.py` (`validate`, enforce-blocking)
+   - `scripts/release_readiness_check.py` (post-report preflight chain, enforce-blocking)
+   - `scripts/e2e_smoke_test.sh` (post-report gate, enforce-blocking)
+   - `scripts/full_identity_protocol_scan.py` (scan visibility)
+   - `scripts/report_three_plane_status.py` (instance-plane detail visibility)
+   - `.github/workflows/_identity-required-gates.yml` (CI gate, enforce-blocking)
+   - `scripts/collect_identity_health_report.py` (health check + WARN/FAIL mapping)
+
+#### Acceptance replay (architect run, pre-audit)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_protocol_feedback_sidecar_contract.py scripts/collect_identity_health_report.py scripts/full_identity_protocol_scan.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Contract-first skip path (no sidecar contract + no protocol-feedback artifacts):
+   - `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - result: `rc=0`, `sidecar_contract_status=SKIPPED_NOT_REQUIRED`
+3. Auto-required risk path (legacy protocol-feedback artifacts present, sidecar contract missing):
+   - `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - result: `rc=1`, `sidecar_contract_status=FAIL_REQUIRED`, `sidecar_error_code=IP-SID-001`, `auto_required_signal=true`
+4. Chain visibility:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix013-system.json`
+   - result: `rc=0`; includes `checks.protocol_feedback_sidecar` with machine-readable sidecar fields.
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix013-system.json`
+   - result: `rc=0`; includes `instance_plane_detail.protocol_feedback_sidecar`.
+5. Health visibility:
+   - `python3 scripts/collect_identity_health_report.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out-dir /tmp/identity-health-reports-fix013`
+   - result: `rc=0`; `checks[].name=protocol_feedback_sidecar` mapped to structured FAIL/WARN/PASS semantics.
+
+#### Residual risk
+
+1. Identities with existing `runtime/protocol-feedback` artifacts but without `protocol_feedback_sidecar_contract_v1` now fail with `IP-SID-001`; instance owners must add sidecar contract fields.
+2. Audit replay is still required for strict-operation surfaces (`readiness/e2e/ci`) under escalated context.
+
+#### Next action
+
+1. Commit FIX-013 patch set and update rolling summary with concrete sha.
+2. Submit FIX-013 for audit replay; keep v1.5 tag blocked until Track-B verdict and sidecar closure are both PASS.
 
 ---
 
