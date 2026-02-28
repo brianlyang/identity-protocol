@@ -25,6 +25,18 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("vendor_api_discovery", ["python3", "scripts/validate_identity_vendor_api_discovery.py"]),
     ("vendor_api_solution", ["python3", "scripts/validate_identity_vendor_api_solution.py"]),
     (
+        "session_refresh_status",
+        [
+            "python3",
+            "scripts/validate_identity_session_refresh_status.py",
+            "--operation",
+            "scan",
+            "--baseline-policy",
+            "warn",
+            "--json-only",
+        ],
+    ),
+    (
         "semantic_routing_guard",
         [
             "python3",
@@ -103,6 +115,7 @@ SUGGESTIONS = {
     "install_provenance": "Generate identity-installer provenance chain reports (plan/dry-run/install/verify).",
     "vendor_api_discovery": "Record vendor/API discovery closure with official contract refs and trust tier/provenance evidence.",
     "vendor_api_solution": "Complete solution option matrix with exactly one selected option and rollback/fallback refs.",
+    "session_refresh_status": "Run refresh_identity_session_status and repair actor binding/session pointer drift before re-validating health.",
     "semantic_routing_guard": "Add semantic_routing_guard_contract_v1 evidence and ensure intent_domain/intent_confidence/classifier_reason are present in feedback batches.",
     "vendor_namespace_separation": "Split protocol feedback artifacts into protocol-vendor-intel and business-partner-intel namespaces; eliminate legacy vendor-intel default writes.",
     "protocol_feedback_sidecar": "Align protocol_feedback_sidecar_contract_v1 (default non-blocking + auditable P0 escalation); resolve blocking IP-WRB/IP-SEM violations before strict gates.",
@@ -224,6 +237,18 @@ def main() -> int:
             sidecar_code = str(payload.get("sidecar_error_code", "")).strip()
             if sidecar_code:
                 error_code = sidecar_code
+        elif name == "session_refresh_status":
+            payload = _parse_json_payload(out) or {}
+            refresh_status = str(payload.get("session_refresh_status", "")).strip().upper()
+            if refresh_status == "PASS_REQUIRED":
+                status = "PASS"
+            elif refresh_status == "WARN_NON_BLOCKING":
+                status = "WARN"
+            elif refresh_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            refresh_code = str(payload.get("error_code", "")).strip()
+            if refresh_code:
+                error_code = refresh_code
         elif name == "writeback_continuity":
             payload = _parse_json_payload(out) or {}
             continuity_status = str(payload.get("writeback_continuity_status", "")).strip().upper()

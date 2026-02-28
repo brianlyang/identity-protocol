@@ -237,6 +237,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--repo-catalog",
             args.repo_catalog,
+            "--identity-home",
+            str(Path(args.catalog).expanduser().resolve().parent),
             "--json-only",
         ]
     )
@@ -347,6 +349,34 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     cross_actor_status = str(cross_actor_payload.get("cross_actor_isolation_status", "")).strip().upper()
     if rc_cross_actor != 0 or cross_actor_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_refresh, out_refresh, err_refresh = _run(
+        [
+            "python3",
+            "scripts/validate_identity_session_refresh_status.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "three-plane",
+            "--baseline-policy",
+            "warn",
+            "--json-only",
+        ]
+    )
+    refresh_payload = _parse_json_payload(out_refresh) or {}
+    validators["session_refresh_status"] = {
+        "rc": rc_refresh,
+        "ok": rc_refresh == 0,
+        "out": out_refresh,
+        "err": err_refresh,
+    }
+    refresh_status = str(refresh_payload.get("session_refresh_status", "")).strip().upper()
+    if rc_refresh != 0 or refresh_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     stamp_artifact = f"/tmp/identity-response-stamp-three-plane-{args.identity_id}.json"
@@ -847,6 +877,22 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "actor_binding_count": cross_actor_payload.get("actor_binding_count"),
             "active_identities": cross_actor_payload.get("active_identities", []),
             "stale_reasons": cross_actor_payload.get("stale_reasons", []),
+        },
+        "session_refresh_status": {
+            "session_refresh_status": refresh_payload.get("session_refresh_status"),
+            "error_code": refresh_payload.get("error_code", ""),
+            "actor_id": refresh_payload.get("actor_id", ""),
+            "lease_status": refresh_payload.get("lease_status", ""),
+            "pointer_consistency": refresh_payload.get("pointer_consistency", ""),
+            "risk_flags": refresh_payload.get("risk_flags", []),
+            "next_action": refresh_payload.get("next_action", ""),
+            "baseline_status": refresh_payload.get("baseline_status", ""),
+            "baseline_error_code": refresh_payload.get("baseline_error_code", ""),
+            "report_protocol_commit_sha": refresh_payload.get("report_protocol_commit_sha", ""),
+            "current_protocol_head_sha": refresh_payload.get("current_protocol_head_sha", ""),
+            "lag_commits": refresh_payload.get("lag_commits"),
+            "report_selected_path": refresh_payload.get("report_selected_path", ""),
+            "stale_reasons": refresh_payload.get("stale_reasons", []),
         },
         "response_identity_stamp": {
             "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",

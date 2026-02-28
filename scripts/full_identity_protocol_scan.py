@@ -125,6 +125,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "actor_session_binding",
             "no_implicit_switch",
             "cross_actor_isolation",
+            "session_refresh_status",
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
             "writeback_continuity",
@@ -334,6 +335,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--identity-home",
+                    str(catalog.parent.resolve()),
                     "--json-only",
                 ],
                 "fixture_runtime_boundary": [
@@ -380,6 +383,21 @@ def main() -> int:
                     iid,
                     "--operation",
                     "scan",
+                    "--json-only",
+                ],
+                "session_refresh_status": [
+                    "python3",
+                    "scripts/validate_identity_session_refresh_status.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--baseline-policy",
+                    "warn",
                     "--json-only",
                 ],
                 "response_stamp_render": [
@@ -848,6 +866,26 @@ def main() -> int:
                     ):
                         if k in isolation_doc:
                             check_payload[k] = isolation_doc.get(k)
+                if name == "session_refresh_status":
+                    refresh_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "session_refresh_status",
+                        "error_code",
+                        "actor_id",
+                        "lease_status",
+                        "pointer_consistency",
+                        "risk_flags",
+                        "next_action",
+                        "baseline_status",
+                        "baseline_error_code",
+                        "report_protocol_commit_sha",
+                        "current_protocol_head_sha",
+                        "lag_commits",
+                        "report_selected_path",
+                        "stale_reasons",
+                    ):
+                        if k in refresh_doc:
+                            check_payload[k] = refresh_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

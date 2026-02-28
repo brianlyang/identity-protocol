@@ -1016,6 +1016,7 @@ def main() -> int:
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
+        identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
         stamp_artifact = f"/tmp/identity-response-stamp-{args.identity_id}.json"
         stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json"
         try:
@@ -1045,6 +1046,8 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--identity-home",
+                identity_home_expected,
             ],
             [
                 "python3",
@@ -1087,6 +1090,20 @@ def main() -> int:
                 args.identity_id,
                 "--operation",
                 "validate",
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_session_refresh_status.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--baseline-policy",
+                "warn",
             ],
             [
                 "python3",
@@ -1245,6 +1262,24 @@ def main() -> int:
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
+        identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
+        rc_home_align = _run(
+            [
+                "python3",
+                "scripts/validate_identity_home_catalog_alignment.py",
+                "--identity-id",
+                args.identity_id,
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-home",
+                identity_home_expected,
+            ]
+        )
+        if rc_home_align != 0:
+            print("[FAIL] identity home/catalog alignment validation failed; activate blocked")
+            return rc_home_align
         fixture_boundary_cmd = [
             "python3",
             "scripts/validate_fixture_runtime_boundary.py",
@@ -1287,6 +1322,24 @@ def main() -> int:
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
+        identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
+        rc_home_align = _run(
+            [
+                "python3",
+                "scripts/validate_identity_home_catalog_alignment.py",
+                "--identity-id",
+                args.identity_id,
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-home",
+                identity_home_expected,
+            ]
+        )
+        if rc_home_align != 0:
+            print("[FAIL] identity home/catalog alignment validation failed; update blocked")
+            return rc_home_align
         fixture_boundary_cmd = [
             "python3",
             "scripts/validate_fixture_runtime_boundary.py",
@@ -1348,6 +1401,25 @@ def main() -> int:
         )
         if rc != 0:
             print("[FAIL] instance isolation validation failed; update blocked")
+            return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_identity_session_refresh_status.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--baseline-policy",
+                "warn",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] session refresh status validation failed; update blocked")
             return rc
         rc = _run(
             [

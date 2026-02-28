@@ -220,6 +220,8 @@ def main() -> int:
         catalog,
         "--repo-catalog",
         "identity/catalog/identities.yaml",
+        "--identity-home",
+        str(Path(catalog).expanduser().resolve().parent),
         "--json-only",
     ]
     rc_home_align, out_home_align, _ = _run_capture(home_alignment_cmd)
@@ -303,6 +305,20 @@ def main() -> int:
             identity_id,
             "--operation",
             "readiness",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_session_refresh_status.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--baseline-policy",
+            "warn",
         ],
         [
             "python3",

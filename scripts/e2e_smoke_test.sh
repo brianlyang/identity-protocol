@@ -14,6 +14,12 @@ if [ ! -f "$CATALOG_PATH" ]; then
   echo "[FAIL] IDENTITY_CATALOG does not exist: $CATALOG_PATH"
   exit 1
 fi
+CATALOG_PARENT="$(python3 - "$CATALOG_PATH" <<'PY'
+import sys
+from pathlib import Path
+print(Path(sys.argv[1]).expanduser().resolve().parent)
+PY
+)"
 
 INSTANCE_PLANE_STATUS="NOT_STARTED"
 RELEASE_PLANE_STATUS="NOT_STARTED"
@@ -73,7 +79,7 @@ done
 
 echo "[10.16/30] validate identity_home/catalog alignment gate (for each target identity)"
 for ID in $IDS; do
-  python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml
+  python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-home "$CATALOG_PARENT"
 done
 
 echo "[10.17/30] validate fixture/runtime boundary gate (for each target identity)"
@@ -86,6 +92,16 @@ for ID in $IDS; do
   python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
+done
+
+echo "[10.19/30] validate anytime session refresh status contract (for each target identity)"
+for ID in $IDS; do
+  python3 scripts/validate_identity_session_refresh_status.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --operation e2e \
+    --baseline-policy warn
 done
 
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
