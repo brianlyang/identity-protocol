@@ -10,16 +10,22 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 2. Governance contracts/requirements remain in:
    - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
    - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
-3. Every remediation must be recorded as one independent item with:
+3. **Source-document precedence (anti-drift, mandatory):**
+   - `L1 topic governance SSOT`: `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - `L2 global protocol handoff SSOT`: `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+   - `L3 this remediation ledger`: `docs/review/protocol-remediation-audit-ledger-v1.5.md` (tracking only, no contract override authority)
+4. If any statement in this ledger conflicts with L1/L2, reviewers MUST treat ledger text as stale and follow L1/L2.
+5. Every fix record must include at least one explicit `source_ref` to L1/L2 section/requirement id (`ASB-RQ-*`, `DRC-*`, or handoff gate id) to prevent interpretation drift.
+6. Every remediation must be recorded as one independent item with:
    - `commit sha`
    - `changed files`
    - `acceptance commands (rc + key tail)`
    - `execution context` (`sandbox` / `escalated`)
    - `residual risk`
-4. Non-merge policy for dual P0 tracks remains mandatory:
+7. Non-merge policy for dual P0 tracks remains mandatory:
    - Track-A (`writeback continuity`)
    - Track-B (`semantic routing guard`)
-5. v1.5 tag remains locked until all protocol P0 requirements are `DONE` and audit sign-off is `PASS`.
+8. v1.5 tag remains locked until all protocol P0 requirements are `DONE` and audit sign-off is `PASS`.
 
 ---
 
@@ -39,6 +45,9 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 - Layer declaration: `protocol`
 - Execution context: `sandbox`
 - Source issue: `IDP-GATE-COVERAGE-001` follow-up / audit finding (IP-PBL-002 was not guaranteed outdated in prior wave semantics)
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-026/027`, `DRC-9`, `DRC-6`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (freshness + coverage handoff alignment)
 
 #### Change summary
 
