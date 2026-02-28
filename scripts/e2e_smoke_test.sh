@@ -254,7 +254,11 @@ for ID in $IDS; do
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
   echo "[23.45/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
-  python3 scripts/validate_required_contract_coverage.py --catalog "$CATALOG_PATH" --identity-id "$ID"
+  python3 scripts/validate_required_contract_coverage.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --operation e2e
 
   echo "[24/30][$ID] validate experience feedback governance"
   python3 scripts/validate_identity_experience_feedback_governance.py --catalog "$CATALOG_PATH" --identity-id "$ID"

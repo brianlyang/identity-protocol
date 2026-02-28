@@ -68,8 +68,9 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PASS |
 | FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PASS |
 | FIX-011 | 2026-02-28 | protocol | Track-A writeback continuity + post-execution mandatory gates landing | `ca23c1d` | DONE | PASS |
-| FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PENDING_REVIEW |
-| FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `TBD` | IN_PROGRESS | PENDING_REVIEW |
+| FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PASS |
+| FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PENDING_REVIEW |
+| FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `70902cf` | DONE | PENDING_REVIEW |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `TBD` | PLANNED | PENDING_REVIEW |
 
 ---
@@ -161,8 +162,9 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-009 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. `no_implicit_switch` now carries operation semantics (`scan/readiness/e2e/ci/validate`) and chain routing is reproducible in full-scan/readiness/e2e replay. |
 | FIX-010 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. three-plane now passes `--operation three-plane` to cross-actor validator; project-catalog replay shows inspection-consistent `SKIPPED_NOT_REQUIRED` (no strict fallback). |
 | FIX-011 | PASS | audit-expert(codex) | 2026-02-28T15:36:55Z | Scoped PASS. Track-A validators are landed and fail-closed (`IP-WRB-001` / `IP-WRB-003`), with visibility wired through full-scan/three-plane/health and CI/readiness/e2e chains; readiness early-stop remains expected when auto update report generation is non-closed. |
-| FIX-012 | PENDING_REVIEW | - | - | Architect patch landed; waiting audit replay for Track-B semantic routing and namespace separation gate behavior. |
+| FIX-012 | PASS | audit-expert(codex) | 2026-02-28T16:11:35Z | Scoped PASS. Replayed on isolated baseline commit `a8e2671`; Track-B validators show expected contract-first skip + auto-required fail-closed semantics, and wiring is visible in readiness/e2e/full-scan/three-plane/health/CI surfaces. |
 | FIX-013 | PENDING_REVIEW | - | - | Architect patch in progress for ASB-RQ-036 sidecar escalation contract (non-blocking default + auditable P0 escalation). |
+| FIX-014 | PENDING_REVIEW | - | - | Architect patch landed; waiting audit replay for coverage semantics across tool/vendor + Track-B + sidecar (operation-aware). |
 
 ---
 
@@ -1597,6 +1599,29 @@ Alignment note (2026-02-28, anti-drift):
 1. Submit FIX-012 patch set for audit replay and verdict.
 2. Keep v1.5 release tag blocked until Track-B audit verdict is `PASS` and follow-up sidecar escalation contract is aligned.
 
+#### Audit review verdict (2026-02-28T16:11:35Z)
+
+1. Decision: `PASS` (scoped to FIX-012 objective).
+2. Replay method:
+   - audit replay was executed in isolated worktree pinned to commit `a8e2671` (`/tmp/idp_fix012_audit`) to avoid contamination from in-progress FIX-013 edits.
+3. Replayed evidence:
+   - static checks:
+     - `python3 -m py_compile scripts/validate_semantic_routing_guard.py scripts/validate_vendor_namespace_separation.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py scripts/collect_identity_health_report.py scripts/identity_creator.py` + `bash -n scripts/e2e_smoke_test.sh` => `rc=0`.
+   - contract-first skip path (`custom-creative-ecom-analyst`):
+     - `validate_semantic_routing_guard --operation scan --json-only` => `rc=0`, `semantic_routing_status=SKIPPED_NOT_REQUIRED`.
+     - `validate_vendor_namespace_separation --operation scan --json-only` => `rc=0`, `vendor_namespace_status=SKIPPED_NOT_REQUIRED`.
+   - auto-required fail-closed path (`system-requirements-analyst`):
+     - `validate_semantic_routing_guard --operation scan --json-only` => `rc=1`, `semantic_routing_status=FAIL_REQUIRED`, `error_code=IP-SEM-001`, `auto_required_signal=true`.
+     - `validate_vendor_namespace_separation --operation scan --json-only` => `rc=1`, `vendor_namespace_status=FAIL_REQUIRED`, `error_code=IP-SEM-003`, `legacy_vendor_file_count=1`.
+   - chain visibility:
+     - `full_identity_protocol_scan --scan-mode target ... --out /tmp/full-scan-fix012-audit-system.json` => `rc=0`; summary `{\"total_identities\":1,\"p0\":0,\"p1\":1,\"ok\":0}`; includes `checks.semantic_routing_guard` + `checks.vendor_namespace_separation` with `FAIL_REQUIRED`.
+     - `report_three_plane_status ... --out /tmp/three-plane-fix012-audit-system.json` => `rc=0`; includes `instance_plane_detail.semantic_routing_guard` + `instance_plane_detail.vendor_namespace_separation` with `FAIL_REQUIRED`; `overall_release_decision=Conditional Go`.
+   - health visibility:
+     - `collect_identity_health_report` includes Track-B checks and preserves machine-readable status projection.
+4. Audit note:
+   - FIX-012 is accepted as Track-B gate landing and fail-closed visibility closure.
+   - This verdict does not claim instance data migration closure for `system-requirements-analyst` legacy namespace debt; that debt is correctly surfaced as deterministic boundary failure.
+
 ---
 
 ### FIX-013 — Sidecar escalation contract closure (ASB-RQ-036, Track-A/B coexistence)
@@ -1657,6 +1682,63 @@ Alignment note (2026-02-28, anti-drift):
 
 1. Commit FIX-013 patch set and update rolling summary with concrete sha.
 2. Submit FIX-013 for audit replay; keep v1.5 tag blocked until Track-B verdict and sidecar closure are both PASS.
+
+---
+
+### FIX-014 — Required-contract coverage extension for Track-B + sidecar (operation-aware)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context: `sandbox` (architect pre-audit replay)
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-034`, `ASB-RQ-035`, `ASB-RQ-036`, `ASB-RQ-009`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (coverage semantics and machine-readable gate reporting)
+
+#### Change summary
+
+1. Extended `scripts/validate_required_contract_coverage.py` target set:
+   - existing: `tool_installation`, `vendor_api_discovery`, `vendor_api_solution`
+   - added: `semantic_routing_guard`, `vendor_namespace_separation`, `protocol_feedback_sidecar`
+2. Added operation-aware execution support in coverage validator:
+   - new args: `--repo-catalog`, `--operation`
+   - operation-aware forwarding for Track-B + sidecar validators.
+3. Added payload-aware requiredness handling:
+   - supports `required_contract` and `auto_required_signal` emitted by Track-B/sidecar validators.
+   - avoids legacy misclassification where auto-required failures could be reported as optional.
+4. Main-chain calls updated to pass operation context explicitly:
+   - `scripts/identity_creator.py` (`--operation validate`)
+   - `scripts/release_readiness_check.py` (`--operation readiness`)
+   - `scripts/e2e_smoke_test.sh` (`--operation e2e`)
+   - `scripts/full_identity_protocol_scan.py` (`--operation scan`)
+   - `scripts/report_three_plane_status.py` (`--operation three-plane`)
+   - `.github/workflows/_identity-required-gates.yml` (`--operation ci`)
+
+#### Acceptance replay (architect run, pre-audit)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_required_contract_coverage.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Contract-first skip path:
+   - `python3 scripts/validate_required_contract_coverage.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - expected: rc reflects required-contract snapshot and includes Track-B/sidecar rows as `SKIPPED_NOT_REQUIRED` when no contract/auto-required signal.
+3. Auto-required fail path visibility:
+   - `python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - expected: non-zero with Track-B rows carrying `FAIL_REQUIRED` and `IP-SEM-*` reason codes.
+4. Chain wiring visibility:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix014-system.json`
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix014-system.json`
+   - expected: coverage payload fields remain machine-readable and operation-consistent.
+
+#### Residual risk
+
+1. FIX-014 depends on FIX-013 sidecar validator being present and stable.
+2. Final required-coverage thresholds remain policy-level decisions; FIX-014 only hardens status semantics + operation consistency.
+
+#### Next action
+
+1. Submit FIX-014 to audit replay and wait for PASS/REJECT verdict.
+2. Keep v1.5 tag blocked until FIX-013/FIX-014 verdicts are both PASS.
 
 ---
 

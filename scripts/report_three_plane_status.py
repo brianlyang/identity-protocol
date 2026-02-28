@@ -524,8 +524,12 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "scripts/validate_required_contract_coverage.py",
             "--catalog",
             args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
             "--identity-id",
             args.identity_id,
+            "--operation",
+            "three-plane",
             "--json-only",
         ]
     )

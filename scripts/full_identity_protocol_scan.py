@@ -498,8 +498,12 @@ def main() -> int:
                     "scripts/validate_required_contract_coverage.py",
                     "--catalog",
                     str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--operation",
+                    "scan",
                     "--json-only",
                 ],
                 "writeback_continuity": [
