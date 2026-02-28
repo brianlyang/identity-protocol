@@ -50,20 +50,7 @@ def _safe_json(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _collect_candidates(identity_id: str, preferred_pack: Path | None, report: str) -> list[Path]:
-    if report.strip():
-        p = Path(report).expanduser().resolve()
-        return [p] if p.exists() else []
-
-    roots: list[Path] = []
-    if preferred_pack is not None:
-        roots.append((preferred_pack / "runtime" / "reports").resolve())
-        roots.append((preferred_pack / "runtime").resolve())
-    roots.extend([Path("/tmp/identity-upgrade-reports"), Path("/tmp/identity-runtime")])
-    identity_home = os.environ.get("IDENTITY_HOME", "").strip()
-    if identity_home:
-        roots.append(Path(identity_home).expanduser().resolve())
-
+def _collect_from_roots(identity_id: str, roots: list[Path]) -> list[Path]:
     rows: list[Path] = []
     for root in roots:
         if not root.exists():
@@ -72,8 +59,27 @@ def _collect_candidates(identity_id: str, preferred_pack: Path | None, report: s
             if p.name.endswith("-patch-plan.json"):
                 continue
             rows.append(p.resolve())
-    rows = sorted(set(rows), key=lambda p: p.stat().st_mtime, reverse=True)
-    return rows
+    return sorted(set(rows), key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _collect_candidates(identity_id: str, preferred_pack: Path | None, report: str) -> list[Path]:
+    if report.strip():
+        p = Path(report).expanduser().resolve()
+        return [p] if p.exists() else []
+
+    preferred_roots: list[Path] = []
+    if preferred_pack is not None:
+        preferred_roots.append((preferred_pack / "runtime" / "reports").resolve())
+        preferred_roots.append((preferred_pack / "runtime").resolve())
+    preferred_rows = _collect_from_roots(identity_id, preferred_roots)
+    if preferred_rows:
+        return preferred_rows
+
+    fallback_roots: list[Path] = [Path("/tmp/identity-upgrade-reports"), Path("/tmp/identity-runtime")]
+    identity_home = os.environ.get("IDENTITY_HOME", "").strip()
+    if identity_home:
+        fallback_roots.append(Path(identity_home).expanduser().resolve())
+    return _collect_from_roots(identity_id, fallback_roots)
 
 
 def _eval_candidate(

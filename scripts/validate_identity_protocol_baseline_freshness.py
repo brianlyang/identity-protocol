@@ -42,21 +42,7 @@ def _safe_json(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _collect_reports(identity_id: str, resolved_pack_path: Path, explicit_report: str) -> list[Path]:
-    if explicit_report.strip():
-        rp = Path(explicit_report).expanduser().resolve()
-        return [rp] if rp.exists() else []
-
-    roots: list[Path] = [
-        (resolved_pack_path / "runtime" / "reports").resolve(),
-        (resolved_pack_path / "runtime").resolve(),
-        Path("/tmp/identity-upgrade-reports"),
-        Path("/tmp/identity-runtime"),
-    ]
-    identity_home = os.environ.get("IDENTITY_HOME", "").strip()
-    if identity_home:
-        roots.append(Path(identity_home).expanduser().resolve())
-
+def _collect_from_roots(identity_id: str, roots: list[Path]) -> list[Path]:
     rows: list[Path] = []
     for root in roots:
         if not root.exists():
@@ -66,6 +52,29 @@ def _collect_reports(identity_id: str, resolved_pack_path: Path, explicit_report
                 continue
             rows.append(p.resolve())
     return sorted(set(rows), key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _collect_reports(identity_id: str, resolved_pack_path: Path, explicit_report: str) -> list[Path]:
+    if explicit_report.strip():
+        rp = Path(explicit_report).expanduser().resolve()
+        return [rp] if rp.exists() else []
+
+    preferred_roots: list[Path] = [
+        (resolved_pack_path / "runtime" / "reports").resolve(),
+        (resolved_pack_path / "runtime").resolve(),
+    ]
+    preferred = _collect_from_roots(identity_id, preferred_roots)
+    if preferred:
+        return preferred
+
+    fallback_roots: list[Path] = [
+        Path("/tmp/identity-upgrade-reports"),
+        Path("/tmp/identity-runtime"),
+    ]
+    identity_home = os.environ.get("IDENTITY_HOME", "").strip()
+    if identity_home:
+        fallback_roots.append(Path(identity_home).expanduser().resolve())
+    return _collect_from_roots(identity_id, fallback_roots)
 
 
 def _resolve_current_head(protocol_root: Path) -> tuple[str, str]:

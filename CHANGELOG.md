@@ -54,6 +54,13 @@
     - `scripts/full_identity_protocol_scan.py`
     - `scripts/identity_creator.py validate`
     - `.github/workflows/_identity-required-gates.yml`
+  - report candidate selection now follows pack-local first resolution:
+    - `scripts/validate_execution_report_freshness.py` and
+      `scripts/validate_identity_protocol_baseline_freshness.py` now search
+      `<resolved_pack>/runtime/**` first and only fallback to shared roots
+      (`/tmp`, `$IDENTITY_HOME`) when local candidates are absent
+    - avoids cross-catalog identity-id collisions selecting another instance's
+      report under dual-layer (project/global) environments
 
 - **v1.4.13 protocol baseline propagation + upgrade-wave closure (draft)**:
   - added protocol baseline freshness validator:
