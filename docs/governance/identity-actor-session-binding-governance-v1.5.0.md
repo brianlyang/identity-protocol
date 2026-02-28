@@ -4,6 +4,49 @@ Status: Draft (P0 remediation directive)
 Governance layer: protocol  
 Scope: identity protocol base-repo only (no instance business policy)  
 Owner: identity protocol base-repo architect
+Execution mode: topic-level canonical SSOT for actor-session-binding governance  
+Tag policy: `v1.5` remains locked until mandatory requirement ledger rows are `DONE` and audit sign-off is `PASS`
+
+## 0) Governance Execution Mode and Release Lock (Mandatory)
+
+### 0.1 Single execution entrypoint (topic SSOT)
+
+1. This document is the only normative execution entrypoint for actor-session-binding governance.
+2. `artifacts/**` and ad-hoc issue notes are evidence-only; they cannot override this document.
+3. No same-topic parallel normative document is allowed.
+
+### 0.2 SSOT layering relationship (to avoid ambiguity)
+
+1. This file is **topic-canonical** for actor-session-binding governance.
+2. `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` remains **global protocol execution SSOT**.
+3. Core code changes from this topic must synchronize:
+   - topic SSOT (`v1.5.0` actor-session-binding), and
+   - global execution handoff (`v1.4.13` canonical handoff).
+
+### 0.3 Release lock table (`v1.5` tag is hard-locked)
+
+| Decision Gate | Unlock condition | Current state |
+| --- | --- | --- |
+| D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | OPEN |
+| D2 Implementation complete | Mandatory scripts/validators/tools landed | OPEN |
+| D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | OPEN |
+| D4 Acceptance pass | Mandatory acceptance command set green | OPEN |
+| D5 Audit sign-off | Architect + audit expert both PASS | OPEN |
+| D6 Tag allowed | D1~D5 all PASS | LOCKED |
+
+### 0.4 Requirement status model (machine-readable governance semantics)
+
+Allowed status values:
+
+1. `SPEC_READY` — requirement finalized in governance, implementation not complete.
+2. `CODE_READY` — implementation landed but not fully wired.
+3. `GATE_READY` — implementation + gate wiring landed.
+4. `VERIFIED` — acceptance commands pass with evidence.
+5. `DONE` — verified and audit accepted for release gating.
+
+Hard rule:
+
+1. Any `P0`/`P1` requirement not reaching `DONE` keeps `v1.5` tag locked.
 
 ## 1) Problem Statement (P0)
 
@@ -49,7 +92,7 @@ Current single-active coupling is enforced in:
 1. `scripts/identity_creator.py` (`_single_active_precheck`, activation demotion).
 2. `scripts/validate_identity_state_consistency.py` (fails when active identities > 1).
 3. `scripts/validate_identity_session_pointer_consistency.py` (expects single active row + canonical pointer).
-4. `scripts/sync_session_identity.py` (writes single canonical pointer by active identity).
+4. activation/session-pointer sync routine in `scripts/identity_creator.py` (writes canonical pointer by active identity).
 
 Conclusion: current default model is not multi-actor safe.
 
@@ -127,6 +170,16 @@ Hard rules:
 
 1. Stamp must be generated from live binding context.
 2. Hardcoded identity literals are forbidden.
+
+Display safety boundary (mandatory):
+
+1. External/user-facing stamp output must not expose host absolute paths directly.
+2. Internal evidence view may include `catalog_path` / `resolved_pack_path`, but default external view should emit redacted references:
+   - `catalog_ref`
+   - `pack_ref`
+   - `scope`
+   - `lease_id_short`
+3. Absolute path fields are reserved for audit logs/reports and validator consumption.
 
 Canonical stamp format (example template, placeholders must be runtime-resolved):
 
@@ -327,7 +380,7 @@ Interpretation rule:
 
 1. `scripts/identity_creator.py`
 2. `scripts/resolve_identity_context.py`
-3. `scripts/sync_session_identity.py`
+3. activation/session-pointer sync routine in `scripts/identity_creator.py`
 4. `scripts/validate_identity_state_consistency.py`
 5. `scripts/validate_identity_session_pointer_consistency.py`
 
@@ -360,6 +413,24 @@ Kernel extension requirement:
 1. The same coverage and evidence semantics must be gradually extended to `skill` / `mcp` / `tool` capability validators and release surfaces.
 2. Migration must keep current vendor/tool gates backward-compatible while introducing kernel-level aggregation outputs.
 
+### 6.4 Requirement ledger (canonical tracker for `v1.5` unlock)
+
+| Requirement ID | Requirement summary | Code surface / validator | Blocking level | Current status | Evidence ref / notes |
+| --- | --- | --- | --- | --- | --- |
+| ASB-RQ-001 | actor session binding contract schema + storage contract (`session/actors/<actor_id>.json`) | `resolve_identity_context.py`, activation/session pointer sync routine | P0 | SPEC_READY | Spec defined in 5.1; code pending |
+| ASB-RQ-002 | dual-write migration (actor pointer + legacy mirror) | activation/session pointer mirror routine, migration utilities | P0 | SPEC_READY | Phase A defined; code pending |
+| ASB-RQ-003 | validator: actor session binding integrity | `validate_actor_session_binding` (new) | P0 | SPEC_READY | Command declared; script pending |
+| ASB-RQ-004 | validator: no implicit switch across actors | `validate_no_implicit_switch` (new) | P0 | SPEC_READY | Command declared; script pending |
+| ASB-RQ-005 | validator: cross-actor isolation | `validate_cross_actor_isolation` (new) | P0 | SPEC_READY | Command declared; script pending |
+| ASB-RQ-006 | dynamic response stamp renderer (redacted external view + internal evidence view) | `render_identity_response_stamp` (new) | P0 | SPEC_READY | Display safety boundary defined in 5.2 |
+| ASB-RQ-007 | response stamp validator + CI enforcement | `validate_identity_response_stamp` (new), required-gates | P0 | SPEC_READY | Validator/gate pending |
+| ASB-RQ-008 | refresh command for live actor binding status | `refresh_identity_session_status` (new) | P1 | SPEC_READY | three-plane visibility binding pending |
+| ASB-RQ-009 | mandatory gate wiring across creator/e2e/readiness/full-scan/three-plane/CI | multiple surfaces listed in 6.3 | P0 | SPEC_READY | Wiring pending |
+| ASB-RQ-010 | single-active removal from activation/consistency path | `identity_creator.py`, `identity_installer.py`, `validate_identity_state_consistency.py`, `validate_identity_session_pointer_consistency.py`, `compile_identity_runtime.py` | P0 | SPEC_READY | Current repo still has single-active checks |
+| ASB-RQ-011 | vendor discovery/solution baseline gates (legacy chain) remain wired and compatible | `validate_identity_vendor_api_discovery.py`, `validate_identity_vendor_api_solution.py`, `validate_required_contract_coverage.py` | P1 | GATE_READY | Existing chain already wired in protocol gates |
+| ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
+| ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
+
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
 Mandatory policy:
@@ -367,6 +438,7 @@ Mandatory policy:
 1. This document is canonical for actor-scoped binding governance.
 2. Any `artifacts/**` note is evidence-only (non-normative).
 3. Same-topic parallel normative documents are disallowed.
+4. Topic-canonical status here does not override global execution SSOT ownership in `identity-protocol-strengthening-handoff-v1.4.13.md`.
 
 Required cleanup actions:
 
@@ -395,6 +467,26 @@ Required cleanup actions:
 
 1. Remove single-active assumptions from validators and activation paths.
 2. Keep migration utility for historical reports.
+
+### 8.1 Error semantics (fail-operational vs fail-closed)
+
+Error code family: `IP-ASB-*`
+
+Fail-closed (hard boundary):
+
+1. `IP-ASB-PATH-001` actor pointer path boundary violation.
+2. `IP-ASB-AUTH-001` actor identity spoofing / signature mismatch.
+3. `IP-ASB-SCOPE-001` forbidden cross-scope actor binding write.
+
+Fail-operational (recoverable blocked/warn):
+
+1. `IP-ASB-BIND-001` actor binding missing.
+2. `IP-ASB-LEASE-001` lease stale or expired.
+3. `IP-ASB-MIRROR-001` legacy mirror drift while canonical actor binding remains valid.
+
+Hard rule:
+
+1. Recoverable actor-binding failures must not be silently promoted to hard-fail unless they cross hard-boundary conditions.
 
 ## 9) Acceptance Command Set (Cross-Validation)
 
