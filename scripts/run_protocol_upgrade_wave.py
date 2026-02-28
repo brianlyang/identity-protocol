@@ -13,6 +13,7 @@ import yaml
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 REPORT_RE = re.compile(r"^report=(.+)$", re.MULTILINE)
+OUTDATED_BASELINE_CODES = {"IP-PBL-001", "IP-PBL-002", "IP-PBL-003", "IP-PBL-004"}
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -84,6 +85,27 @@ def _baseline_next_action(status: str, error_code: str, stale_reasons: list[str]
     if code in {"IP-PBL-003", "IP-PBL-004"}:
         return "resolve_protocol_baseline_source_then_update"
     return "review_protocol_baseline_then_update"
+
+
+def _is_outdated_baseline(status: str, error_code: str, stale_reasons: list[str], baseline_rc: int) -> bool:
+    status_norm = str(status or "").strip().upper()
+    code = str(error_code or "").strip().upper()
+    reasons = {str(x).strip() for x in (stale_reasons or []) if str(x).strip()}
+    if status_norm != "PASS":
+        return True
+    if code in OUTDATED_BASELINE_CODES:
+        return True
+    if baseline_rc != 0:
+        return True
+    if "protocol_commit_sha_mismatch" in reasons:
+        return True
+    if "execution_report_not_found" in reasons:
+        return True
+    if "protocol_commit_sha_invalid" in reasons:
+        return True
+    if "protocol_root_unavailable" in reasons:
+        return True
+    return False
 
 
 def _is_review_required_outcome(update_rc: int, next_action: str, error_code: str) -> bool:
@@ -168,7 +190,7 @@ def main() -> int:
         if not isinstance(stale_reasons, list):
             stale_reasons = [str(stale_reasons)]
 
-        outdated = baseline_status != "PASS"
+        outdated = _is_outdated_baseline(baseline_status, baseline_error_code, stale_reasons, rc_base)
         if outdated:
             outdated_ids.append(iid)
 
@@ -178,6 +200,7 @@ def main() -> int:
             "baseline_status": baseline_status,
             "baseline_error_code": baseline_error_code,
             "baseline_rc": rc_base,
+            "outdated": outdated,
             "report_path": str(base_payload.get("report_selected_path", "")).strip(),
             "update_rc": None,
             "update_status": "",
