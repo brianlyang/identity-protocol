@@ -18,6 +18,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical SSOT rule for protocol-strengthening handoff:
   - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
   - Any `artifacts/` mirror is non-normative evidence only.
+- Canonical actor-scoped session binding governance (v1.5.0):
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+  - Scope is protocol-only; no instance business policy allowed.
 
 ## Snapshots
 
