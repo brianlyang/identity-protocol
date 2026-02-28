@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from actor_session_common import actor_session_path, resolve_actor_id
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -59,6 +62,15 @@ def main() -> int:
         "--require-mirror",
         action="store_true",
         help="treat mirror/legacy-mirror write failure as fatal (default failure is warning-only)",
+    )
+    ap.add_argument("--actor-id", default="", help="actor id for actor-scoped session binding write")
+    ap.add_argument("--run-id", default="", help="run id associated with this session sync")
+    ap.add_argument("--switch-reason", default="", help="reason for activation/switch")
+    ap.add_argument("--entrypoint-pid", default="", help="entrypoint process id for audit trail")
+    ap.add_argument(
+        "--cross-actor-override-receipt",
+        default="",
+        help="override receipt path when cross-actor demotion was explicitly approved",
     )
     args = ap.parse_args()
 
@@ -128,6 +140,29 @@ def main() -> int:
                 print(f"[FAIL] {msg}")
                 return 1
             print(f"[WARN] {msg}")
+
+    actor_id = resolve_actor_id(args.actor_id)
+    actor_out = actor_session_path(catalog, actor_id)
+    actor_payload = {
+        "actor_id": actor_id,
+        "identity_id": args.identity_id,
+        "catalog_path": str(catalog),
+        "pack_path": str(target.get("pack_path", "")),
+        "status": status,
+        "bound_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "session_pointer_type": "actor_binding",
+        "canonical_session_pointer": str(canonical_out),
+        "run_id": str(args.run_id or "").strip(),
+        "switch_reason": str(args.switch_reason or "").strip() or "explicit_activate",
+        "entrypoint_pid": str(args.entrypoint_pid or "").strip() or str(os.getpid()),
+        "cross_actor_override_receipt": str(args.cross_actor_override_receipt or "").strip(),
+    }
+    try:
+        _write_payload(actor_out, actor_payload)
+    except Exception as exc:
+        print(f"[FAIL] actor session binding sync failed: {actor_out} ({exc})")
+        return 1
+    print(f"[OK] session identity actor-bound: {actor_out}")
     return 0
 
 

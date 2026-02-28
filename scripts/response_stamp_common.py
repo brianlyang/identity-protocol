@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import load_actor_binding, resolve_actor_id
 from resolve_identity_context import resolve_identity
 from tool_vendor_governance_common import load_json
 
@@ -76,7 +77,12 @@ def _session_pointer_path(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "active_identity.json").resolve()
 
 
-def _session_data(catalog_path: Path) -> dict[str, Any]:
+def _session_data(catalog_path: Path, actor_id: str) -> dict[str, Any]:
+    actor_binding = load_actor_binding(catalog_path, actor_id)
+    if actor_binding:
+        payload = dict(actor_binding)
+        payload["session_pointer_source"] = "actor"
+        return payload
     p = _session_pointer_path(catalog_path)
     if not p.exists():
         return {}
@@ -84,7 +90,10 @@ def _session_data(catalog_path: Path) -> dict[str, Any]:
         data = load_json(p)
     except Exception:
         return {}
-    return data if isinstance(data, dict) else {}
+    if isinstance(data, dict):
+        data["session_pointer_source"] = "canonical"
+        return data
+    return {}
 
 
 def _lock_state(identity_id: str, pointer: dict[str, Any]) -> str:
@@ -102,6 +111,9 @@ def _lease_id(pointer: dict[str, Any]) -> str:
     lease = str(pointer.get("lease_id", "")).strip()
     if lease:
         return lease
+    run_id = str(pointer.get("run_id", "")).strip()
+    if run_id:
+        return f"lease-{run_id[:16]}"
     lock_hash = str(pointer.get("state_hash", "")).strip()
     if lock_hash:
         return f"lease-{lock_hash[:10]}"
@@ -116,6 +128,7 @@ def resolve_stamp_context(
     actor_id: str = "",
     explicit_catalog: bool = True,
 ) -> StampContext:
+    actor = resolve_actor_id(actor_id)
     resolved = resolve_identity(
         identity_id,
         repo_catalog_path.resolve(),
@@ -124,10 +137,9 @@ def resolve_stamp_context(
     )
     pack_path = Path(str(resolved.get("pack_path", "")).strip()).expanduser().resolve()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper() or "UNKNOWN"
-    pointer = _session_data(catalog_path)
+    pointer = _session_data(catalog_path, actor)
     lock_state = _lock_state(identity_id, pointer)
     lease_id = _lease_id(pointer)
-    actor = actor_id.strip() or os.environ.get("CODEX_ACTOR_ID", "").strip() or f"user:{os.environ.get('USER', 'unknown')}"
     source = _source_domain(catalog_path, explicit_catalog=explicit_catalog)
     return StampContext(
         actor_id=actor,

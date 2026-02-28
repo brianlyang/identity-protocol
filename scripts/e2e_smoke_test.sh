@@ -81,6 +81,13 @@ for ID in $IDS; do
   python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e
 done
 
+echo "[10.18/30] validate actor-scoped session isolation gates (for each target identity)"
+for ID in $IDS; do
+  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH"
+  python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH"
+  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH"
+done
+
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
   echo "[10.2/30] preflight writeability probe for global runtime targets"
   if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'
@@ -167,14 +174,17 @@ for ID in $IDS; do
   echo "[12/30][$ID] validate role-binding contract"
   python3 scripts/validate_identity_role_binding.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
-  echo "[12.2/30][$ID] render dynamic response identity stamp"
-  python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --json-only >/tmp/identity-response-stamp-${ID}.json
+  STAMP_JSON="/tmp/identity-response-stamp-${ID}.json"
+  STAMP_BLOCKER_RECEIPT="/tmp/identity-stamp-blocker-receipt-${ID}.json"
 
-  echo "[12.3/30][$ID] validate response identity stamp contract (dynamic + redacted + lock-match)"
-  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --require-dynamic --require-redacted-external --require-lock-match
+  echo "[12.2/30][$ID] render dynamic response identity stamp"
+  python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --out "$STAMP_JSON" --json-only
+
+  echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"
+  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.4/30][$ID] validate response stamp blocker receipt schema"
-  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID"
+  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.5/30][$ID] validate identity prompt quality"
   # scope is resolved from bound catalog/runtime context; avoid hard-coded scope injection drift.

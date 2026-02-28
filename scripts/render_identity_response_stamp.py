@@ -20,6 +20,7 @@ def main() -> int:
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
+    ap.add_argument("--out", default="", help="optional path to persist rendered stamp payload JSON")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -55,6 +56,11 @@ def main() -> int:
         "internal_stamp": internal,
         "identity_context": render_structured_context(ctx),
     }
+
+    if args.out.strip():
+        out_path = Path(args.out).expanduser().resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))

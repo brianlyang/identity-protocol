@@ -277,6 +277,75 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_fixture_boundary != 0 or fixture_boundary_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_actor_binding, out_actor_binding, err_actor_binding = _run(
+        [
+            "python3",
+            "scripts/validate_actor_session_binding.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--json-only",
+        ]
+    )
+    actor_binding_payload = _parse_json_payload(out_actor_binding) or {}
+    validators["actor_session_binding"] = {
+        "rc": rc_actor_binding,
+        "ok": rc_actor_binding == 0,
+        "out": out_actor_binding,
+        "err": err_actor_binding,
+    }
+    actor_binding_status = str(actor_binding_payload.get("actor_binding_status", "")).strip().upper()
+    if rc_actor_binding != 0 or actor_binding_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_no_implicit, out_no_implicit, err_no_implicit = _run(
+        [
+            "python3",
+            "scripts/validate_no_implicit_switch.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--json-only",
+        ]
+    )
+    no_implicit_payload = _parse_json_payload(out_no_implicit) or {}
+    validators["no_implicit_switch"] = {
+        "rc": rc_no_implicit,
+        "ok": rc_no_implicit == 0,
+        "out": out_no_implicit,
+        "err": err_no_implicit,
+    }
+    no_implicit_status = str(no_implicit_payload.get("implicit_switch_status", "")).strip().upper()
+    if rc_no_implicit != 0 or no_implicit_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_cross_actor, out_cross_actor, err_cross_actor = _run(
+        [
+            "python3",
+            "scripts/validate_cross_actor_isolation.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--json-only",
+        ]
+    )
+    cross_actor_payload = _parse_json_payload(out_cross_actor) or {}
+    validators["cross_actor_isolation"] = {
+        "rc": rc_cross_actor,
+        "ok": rc_cross_actor == 0,
+        "out": out_cross_actor,
+        "err": err_cross_actor,
+    }
+    cross_actor_status = str(cross_actor_payload.get("cross_actor_isolation_status", "")).strip().upper()
+    if rc_cross_actor != 0 or cross_actor_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    stamp_artifact = f"/tmp/identity-response-stamp-three-plane-{args.identity_id}.json"
+    stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-three-plane-{args.identity_id}.json"
+
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(
         [
             "python3",
@@ -289,6 +358,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--view",
             "external",
+            "--out",
+            stamp_artifact,
             "--json-only",
         ]
     )
@@ -310,9 +381,12 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.repo_catalog,
             "--identity-id",
             args.identity_id,
-            "--require-dynamic",
-            "--require-redacted-external",
-            "--require-lock-match",
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-user-visible-gate",
+            "--blocker-receipt-out",
+            stamp_blocker_receipt,
             "--json-only",
         ]
     )
@@ -334,6 +408,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.repo_catalog,
             "--identity-id",
             args.identity_id,
+            "--force-check",
+            "--receipt",
+            stamp_blocker_receipt,
             "--json-only",
         ]
     )
@@ -538,6 +615,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "allow_fixture_runtime": fixture_boundary_payload.get("allow_fixture_runtime"),
             "fixture_audit_receipt": fixture_boundary_payload.get("fixture_audit_receipt"),
             "stale_reasons": fixture_boundary_payload.get("stale_reasons", []),
+        },
+        "actor_session_binding": {
+            "actor_binding_status": actor_binding_payload.get("actor_binding_status"),
+            "error_code": actor_binding_payload.get("error_code", ""),
+            "actor_id": actor_binding_payload.get("actor_id", ""),
+            "actor_session_path": actor_binding_payload.get("actor_session_path", ""),
+            "bound_identity_id": actor_binding_payload.get("bound_identity_id", ""),
+            "catalog_identity_status": actor_binding_payload.get("catalog_identity_status", ""),
+            "stale_reasons": actor_binding_payload.get("stale_reasons", []),
+        },
+        "no_implicit_switch": {
+            "implicit_switch_status": no_implicit_payload.get("implicit_switch_status"),
+            "error_code": no_implicit_payload.get("error_code", ""),
+            "switch_report_path": no_implicit_payload.get("switch_report_path", ""),
+            "switch_id": no_implicit_payload.get("switch_id", ""),
+            "actor_id": no_implicit_payload.get("actor_id", ""),
+            "run_id": no_implicit_payload.get("run_id", ""),
+            "cross_actor_demotion_detected": no_implicit_payload.get("cross_actor_demotion_detected"),
+            "stale_reasons": no_implicit_payload.get("stale_reasons", []),
+        },
+        "cross_actor_isolation": {
+            "cross_actor_isolation_status": cross_actor_payload.get("cross_actor_isolation_status"),
+            "error_code": cross_actor_payload.get("error_code", ""),
+            "actor_binding_count": cross_actor_payload.get("actor_binding_count"),
+            "active_identities": cross_actor_payload.get("active_identities", []),
+            "stale_reasons": cross_actor_payload.get("stale_reasons", []),
         },
         "response_identity_stamp": {
             "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",

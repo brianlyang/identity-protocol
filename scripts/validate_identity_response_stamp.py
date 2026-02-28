@@ -17,6 +17,7 @@ from tool_vendor_governance_common import contract_required, load_json
 ERR_STAMP_MISMATCH = "IP-ASB-STAMP-001"
 ERR_STAMP_SOURCE = "IP-ASB-STAMP-002"
 ERR_STAMP_HARDCODED = "IP-ASB-STAMP-003"
+ERR_STAMP_HARD_GATE = "IP-ASB-STAMP-004"
 ALLOWED_SOURCES = {"project", "global", "auto", "env"}
 PLACEHOLDER_RE = re.compile(r"<[^>]+>")
 
@@ -93,9 +94,15 @@ def main() -> int:
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--stamp-line", default="")
     ap.add_argument("--stamp-file", default="")
+    ap.add_argument("--stamp-json", default="", help="render payload json file containing external_stamp field")
     ap.add_argument("--require-dynamic", action="store_true")
     ap.add_argument("--require-redacted-external", action="store_true")
     ap.add_argument("--require-lock-match", action="store_true")
+    ap.add_argument(
+        "--enforce-user-visible-gate",
+        action="store_true",
+        help="hard gate for user-visible reply channel; disables contract-not-required skip path",
+    )
     ap.add_argument("--force-check", action="store_true", help="run checks even when contract.required is false")
     ap.add_argument("--blocker-receipt-out", default="")
     ap.add_argument("--json-only", action="store_true")
@@ -118,7 +125,8 @@ def main() -> int:
         return 1
 
     contract = _select_contract(task)
-    if not args.force_check and not contract_required(contract):
+    force_required = bool(args.force_check or args.enforce_user_visible_gate)
+    if not force_required and not contract_required(contract):
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
@@ -155,30 +163,56 @@ def main() -> int:
             return 1
         lines = [x.strip() for x in stamp_path.read_text(encoding="utf-8").splitlines() if x.strip()]
         stamp_line = lines[0] if lines else ""
+    elif args.stamp_json.strip():
+        stamp_json_path = Path(args.stamp_json).expanduser().resolve()
+        if not stamp_json_path.exists():
+            print(f"[FAIL] stamp json file not found: {stamp_json_path}")
+            return 1
+        try:
+            stamp_json_payload = json.loads(stamp_json_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"[FAIL] stamp json invalid: {stamp_json_path} ({exc})")
+            return 1
+        if not isinstance(stamp_json_payload, dict):
+            print(f"[FAIL] stamp json payload must be object: {stamp_json_path}")
+            return 1
+        stamp_line = str(stamp_json_payload.get("external_stamp", "")).strip()
     else:
-        stamp_line = render_external_stamp(ctx)
+        if args.enforce_user_visible_gate:
+            stamp_line = ""
+        else:
+            stamp_line = render_external_stamp(ctx)
 
     parsed = _parse_stamp_line(stamp_line)
     stale_reasons: list[str] = []
     error_code = ""
 
+    if args.enforce_user_visible_gate and not stamp_line:
+        stale_reasons.append("missing_user_visible_identity_context_stamp")
+        error_code = ERR_STAMP_HARD_GATE
+
     required_keys = ("actor_id", "identity_id", "catalog_ref", "pack_ref", "scope", "lock", "lease", "source")
-    missing = [k for k in required_keys if not parsed.get(k)]
-    if missing:
-        stale_reasons.append(f"missing_fields:{','.join(missing)}")
-        error_code = ERR_STAMP_HARDCODED
+    if not error_code:
+        missing = [k for k in required_keys if not parsed.get(k)]
+        if missing:
+            stale_reasons.append(f"missing_fields:{','.join(missing)}")
+            error_code = ERR_STAMP_HARDCODED
 
     if not error_code and (PLACEHOLDER_RE.search(stamp_line) or "identity_id=<" in stamp_line):
         stale_reasons.append("placeholder_leakage_detected")
         error_code = ERR_STAMP_HARDCODED
 
     actual_identity = parsed.get("identity_id", "")
-    if not error_code and args.require_dynamic:
+    require_dynamic = bool(args.require_dynamic or args.enforce_user_visible_gate)
+    require_redacted_external = bool(args.require_redacted_external or args.enforce_user_visible_gate)
+    require_lock_match = bool(args.require_lock_match or args.enforce_user_visible_gate)
+
+    if not error_code and require_dynamic:
         if actual_identity != ctx.identity_id:
             stale_reasons.append("identity_id_mismatch")
             error_code = ERR_STAMP_MISMATCH
 
-    if not error_code and args.require_redacted_external:
+    if not error_code and require_redacted_external:
         if not _looks_redacted(parsed.get("catalog_ref", "")) or not _looks_redacted(parsed.get("pack_ref", "")):
             stale_reasons.append("external_ref_not_redacted")
             error_code = ERR_STAMP_HARDCODED
@@ -192,7 +226,7 @@ def main() -> int:
             stale_reasons.append("source_domain_mismatch")
             error_code = ERR_STAMP_SOURCE
 
-    if not error_code and args.require_lock_match:
+    if not error_code and require_lock_match:
         if parsed.get("lock", "") != ctx.lock_state:
             stale_reasons.append("lock_state_mismatch")
             error_code = ERR_STAMP_MISMATCH

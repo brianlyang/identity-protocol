@@ -11,6 +11,7 @@ from pathlib import Path
 
 import yaml
 
+from actor_session_common import list_actor_bindings, resolve_actor_id
 from resolve_identity_context import (
     collect_protocol_evidence,
     default_identity_home,
@@ -214,6 +215,47 @@ def _write_binding_evidence(catalog_data: dict, identity_id: str, binding_status
     return out
 
 
+def _load_cross_actor_receipt(path_raw: str) -> tuple[dict, list[str], str]:
+    if not str(path_raw or "").strip():
+        return {}, ["cross_actor_override_receipt_missing"], ""
+    p = Path(path_raw).expanduser().resolve()
+    if not p.exists():
+        return {}, ["cross_actor_override_receipt_not_found"], str(p)
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}, ["cross_actor_override_receipt_invalid_json"], str(p)
+    if not isinstance(data, dict):
+        return {}, ["cross_actor_override_receipt_payload_not_object"], str(p)
+    required = ("receipt_id", "actor_id", "run_id", "approved_by", "approved_at", "reason")
+    missing = [f"cross_actor_override_receipt_missing_field:{k}" for k in required if not str(data.get(k, "")).strip()]
+    return data, missing, str(p)
+
+
+def _cross_actor_conflicts(catalog_path: Path, active_identities: list[str], actor_id: str) -> list[dict]:
+    out: list[dict] = []
+    active_set = {x for x in active_identities if x}
+    if not active_set:
+        return out
+    for binding in list_actor_bindings(catalog_path):
+        bound_identity = str(binding.get("identity_id", "")).strip()
+        bound_actor = str(binding.get("actor_id", "")).strip()
+        if not bound_identity or not bound_actor:
+            continue
+        if bound_identity not in active_set:
+            continue
+        if bound_actor == actor_id:
+            continue
+        out.append(
+            {
+                "actor_id": bound_actor,
+                "identity_id": bound_identity,
+                "actor_session_path": str(binding.get("actor_session_path", "")),
+            }
+        )
+    return out
+
+
 def _activate_identity(
     repo_catalog: Path,
     local_catalog: Path,
@@ -221,6 +263,11 @@ def _activate_identity(
     scope: str = "",
     protocol_root: str = "",
     protocol_mode: str = "mode_a_shared",
+    actor_id: str = "",
+    run_id: str = "",
+    switch_reason: str = "",
+    allow_cross_actor_switch: bool = False,
+    cross_actor_receipt: str = "",
 ) -> int:
     ensure_local_catalog(repo_catalog, local_catalog)
     try:
@@ -228,6 +275,9 @@ def _activate_identity(
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    actor_id_resolved = resolve_actor_id(actor_id)
+    run_id_resolved = str(run_id or "").strip() or f"activate-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
 
     rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
     if rc != 0:
@@ -253,6 +303,31 @@ def _activate_identity(
         and str(x.get("id", "")).strip()
         and str(x.get("id", "")).strip() != identity_id
     ]
+    cross_actor_conflicts = _cross_actor_conflicts(local_catalog, previously_active, actor_id_resolved)
+    cross_actor_receipt_payload: dict = {}
+    cross_actor_receipt_path = ""
+    cross_actor_receipt_errors: list[str] = []
+    if cross_actor_conflicts:
+        if not allow_cross_actor_switch:
+            conflict_ids = [f"{x.get('actor_id')}->{x.get('identity_id')}" for x in cross_actor_conflicts]
+            print(
+                "[FAIL] cross-actor demotion blocked by default: "
+                f"target={identity_id} actor={actor_id_resolved} conflicts={conflict_ids}. "
+                "Use --allow-cross-actor-switch with audited --cross-actor-receipt to proceed."
+            )
+            return 1
+        cross_actor_receipt_payload, cross_actor_receipt_errors, cross_actor_receipt_path = _load_cross_actor_receipt(
+            cross_actor_receipt
+        )
+        receipt_actor = str(cross_actor_receipt_payload.get("actor_id", "")).strip()
+        receipt_run = str(cross_actor_receipt_payload.get("run_id", "")).strip()
+        if receipt_actor and receipt_actor != actor_id_resolved:
+            cross_actor_receipt_errors.append("cross_actor_override_receipt_actor_mismatch")
+        if receipt_run and receipt_run != run_id_resolved:
+            cross_actor_receipt_errors.append("cross_actor_override_receipt_run_id_mismatch")
+        if cross_actor_receipt_errors:
+            print(f"[FAIL] cross-actor override receipt invalid: {cross_actor_receipt_errors}")
+            return 1
 
     created_evidence: list[Path] = []
     meta_backups: dict[Path, str | None] = {}
@@ -275,7 +350,10 @@ def _activate_identity(
                     data,
                     old_id,
                     "BOUND_READY",
-                    note=f"demoted by single-active switch to {identity_id}",
+                    note=(
+                        f"demoted by single-active switch to {identity_id}; "
+                        f"actor_id={actor_id_resolved}; run_id={run_id_resolved}; reason={switch_reason_resolved}"
+                    ),
                 )
             )
 
@@ -306,6 +384,18 @@ def _activate_identity(
             "target_identity_id": identity_id,
             "demoted_identities": previously_active,
             "single_active_enforced": True,
+            "activation_model": "single_active_catalog_with_actor_scoped_session_binding",
+            "actor_id": actor_id_resolved,
+            "run_id": run_id_resolved,
+            "entrypoint_pid": str(os.getpid()),
+            "switch_reason": switch_reason_resolved,
+            "cross_actor_demotion_detected": bool(cross_actor_conflicts),
+            "cross_actor_conflicts": cross_actor_conflicts,
+            "cross_actor_override": {
+                "applied": bool(cross_actor_conflicts and allow_cross_actor_switch),
+                "receipt_path": cross_actor_receipt_path,
+                "receipt_fields": cross_actor_receipt_payload if cross_actor_receipt_payload else {},
+            },
             "binding_evidence_paths": [str(p) for p in created_evidence],
             "catalog_layer": "local",
             "catalog_path": str(local_catalog),
@@ -337,6 +427,16 @@ def _activate_identity(
                 str(canonical_session_pointer),
                 "--mirror-out",
                 str(scoped_session_mirror),
+                "--actor-id",
+                actor_id_resolved,
+                "--run-id",
+                run_id_resolved,
+                "--switch-reason",
+                switch_reason_resolved,
+                "--entrypoint-pid",
+                str(os.getpid()),
+                "--cross-actor-override-receipt",
+                cross_actor_receipt_path,
             ],
             capture_output=True,
             text=True,
@@ -800,6 +900,19 @@ def main() -> int:
     p_activate.add_argument("--scope", default="")
     p_activate.add_argument("--protocol-root", default="")
     p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
+    p_activate.add_argument("--actor-id", default="", help="actor id for actor-scoped session binding")
+    p_activate.add_argument("--run-id", default="", help="activation run id for audit traceability")
+    p_activate.add_argument("--switch-reason", default="explicit_activate", help="reason for activation switch")
+    p_activate.add_argument(
+        "--allow-cross-actor-switch",
+        action="store_true",
+        help="allow cross-actor demotion only with audited --cross-actor-receipt",
+    )
+    p_activate.add_argument(
+        "--cross-actor-receipt",
+        default="",
+        help="JSON receipt path required when --allow-cross-actor-switch is used with cross-actor conflicts",
+    )
     p_activate.add_argument("--auto-converge-active", action="store_true")
     p_activate.add_argument(
         "--allow-fixture-runtime",
@@ -903,6 +1016,8 @@ def main() -> int:
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
+        stamp_artifact = f"/tmp/identity-response-stamp-{args.identity_id}.json"
+        stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json"
         try:
             _ = resolve_identity(
                 args.identity_id,
@@ -945,6 +1060,30 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_actor_session_binding.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+            ],
+            [
+                "python3",
+                "scripts/validate_no_implicit_switch.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+            ],
+            [
+                "python3",
+                "scripts/validate_cross_actor_isolation.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+            ],
+            [
+                "python3",
                 "scripts/render_identity_response_stamp.py",
                 "--catalog",
                 args.catalog,
@@ -954,6 +1093,8 @@ def main() -> int:
                 args.identity_id,
                 "--view",
                 "external",
+                "--out",
+                stamp_artifact,
                 "--json-only",
             ],
             [
@@ -965,9 +1106,12 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
-                "--require-dynamic",
-                "--require-redacted-external",
-                "--require-lock-match",
+                "--stamp-json",
+                stamp_artifact,
+                "--force-check",
+                "--enforce-user-visible-gate",
+                "--blocker-receipt-out",
+                stamp_blocker_receipt,
             ],
             [
                 "python3",
@@ -978,6 +1122,9 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--force-check",
+                "--receipt",
+                stamp_blocker_receipt,
             ],
             ["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
@@ -1054,6 +1201,11 @@ def main() -> int:
             args.scope,
             args.protocol_root,
             args.protocol_mode,
+            args.actor_id,
+            args.run_id,
+            args.switch_reason,
+            bool(args.allow_cross_actor_switch),
+            args.cross_actor_receipt,
         )
 
     if args.command == "update":

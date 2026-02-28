@@ -122,6 +122,9 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "runtime_contract",
             "identity_home_catalog_alignment",
             "fixture_runtime_boundary",
+            "actor_session_binding",
+            "no_implicit_switch",
+            "cross_actor_isolation",
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
         )
@@ -270,6 +273,8 @@ def main() -> int:
 
             is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
             is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
+            stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
+            stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -339,6 +344,33 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "actor_session_binding": [
+                    "python3",
+                    "scripts/validate_actor_session_binding.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--json-only",
+                ],
+                "no_implicit_switch": [
+                    "python3",
+                    "scripts/validate_no_implicit_switch.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--json-only",
+                ],
+                "cross_actor_isolation": [
+                    "python3",
+                    "scripts/validate_cross_actor_isolation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--json-only",
+                ],
                 "response_stamp_render": [
                     "python3",
                     "scripts/render_identity_response_stamp.py",
@@ -350,6 +382,8 @@ def main() -> int:
                     iid,
                     "--view",
                     "external",
+                    "--out",
+                    stamp_artifact,
                     "--json-only",
                 ],
                 "response_stamp_validation": [
@@ -361,9 +395,12 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
-                    "--require-dynamic",
-                    "--require-redacted-external",
-                    "--require-lock-match",
+                    "--stamp-json",
+                    stamp_artifact,
+                    "--force-check",
+                    "--enforce-user-visible-gate",
+                    "--blocker-receipt-out",
+                    stamp_blocker_receipt,
                 ],
                 "response_stamp_blocker_receipt": [
                     "python3",
@@ -374,6 +411,9 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--force-check",
+                    "--receipt",
+                    stamp_blocker_receipt,
                 ],
                 "tool_installation": [
                     "python3",
@@ -610,6 +650,44 @@ def main() -> int:
                     ):
                         if k in boundary_doc:
                             check_payload[k] = boundary_doc.get(k)
+                if name == "actor_session_binding":
+                    actor_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "actor_binding_status",
+                        "error_code",
+                        "actor_id",
+                        "actor_session_path",
+                        "bound_identity_id",
+                        "catalog_identity_status",
+                        "stale_reasons",
+                    ):
+                        if k in actor_doc:
+                            check_payload[k] = actor_doc.get(k)
+                if name == "no_implicit_switch":
+                    implicit_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "implicit_switch_status",
+                        "error_code",
+                        "switch_report_path",
+                        "switch_id",
+                        "actor_id",
+                        "run_id",
+                        "cross_actor_demotion_detected",
+                        "stale_reasons",
+                    ):
+                        if k in implicit_doc:
+                            check_payload[k] = implicit_doc.get(k)
+                if name == "cross_actor_isolation":
+                    isolation_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "cross_actor_isolation_status",
+                        "error_code",
+                        "actor_binding_count",
+                        "active_identities",
+                        "stale_reasons",
+                    ):
+                        if k in isolation_doc:
+                            check_payload[k] = isolation_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

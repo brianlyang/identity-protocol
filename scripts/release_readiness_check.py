@@ -161,6 +161,8 @@ def main() -> int:
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog = explicit_catalog or env_catalog
+    stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
+    stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
     if not catalog:
         print("[FAIL] catalog is required (implicit fallback disabled).")
         print("       pass --catalog <path> or set IDENTITY_CATALOG after mode selection.")
@@ -272,6 +274,9 @@ def main() -> int:
         ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", catalog, "--identity-id", identity_id],
         ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
         ["python3", "scripts/validate_identity_session_pointer_consistency.py", "--catalog", catalog],
+        ["python3", "scripts/validate_actor_session_binding.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_no_implicit_switch.py", "--catalog", catalog, "--identity-id", identity_id],
+        ["python3", "scripts/validate_cross_actor_isolation.py", "--catalog", catalog, "--identity-id", identity_id],
         [
             "python3",
             "scripts/collect_identity_health_report.py",
@@ -313,6 +318,8 @@ def main() -> int:
             identity_id,
             "--view",
             "external",
+            "--out",
+            stamp_artifact,
             "--json-only",
         ],
         [
@@ -324,9 +331,12 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--identity-id",
             identity_id,
-            "--require-dynamic",
-            "--require-redacted-external",
-            "--require-lock-match",
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-user-visible-gate",
+            "--blocker-receipt-out",
+            stamp_blocker_receipt,
         ],
         [
             "python3",
@@ -337,6 +347,9 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--identity-id",
             identity_id,
+            "--force-check",
+            "--receipt",
+            stamp_blocker_receipt,
         ],
         # scope must come from bound runtime/catalog resolution (single source of truth).
         ["python3", "scripts/validate_identity_prompt_quality.py", "--catalog", catalog, "--identity-id", identity_id],
