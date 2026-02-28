@@ -34,6 +34,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | Fix ID | Date (UTC) | Layer | Scope | Commit | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | FIX-001 | 2026-02-28 | protocol | wave outdated classification | `ee01d56` | DONE | PENDING_REVIEW |
+| FIX-002 | 2026-02-28 | protocol | path-governance pack canonical gate | `0add536` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -103,3 +104,72 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | Fix ID | Audit Decision | Reviewer | Reviewed At (UTC) | Notes |
 | --- | --- | --- | --- | --- |
 | FIX-001 | PENDING | - | - | - |
+| FIX-002 | PENDING | - | - | - |
+
+---
+
+## 4) Additional fix records
+
+### FIX-002 — Add `validate_identity_pack_path_canonical` (IP-PATH-001 gate)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context: `sandbox`
+- Source issue: `IDP-PATH-001` (path governance chain lacked standalone canonical pack-path gate)
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-028`, `DRC-10`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (protocol-level path-governance hardening alignment)
+
+#### Change summary
+
+1. Added script: `scripts/validate_identity_pack_path_canonical.py`.
+2. Gate contract checks implemented:
+   - catalog row exists for `identity_id`,
+   - `pack_path` is absolute,
+   - `pack_path` is canonical (`raw == resolved`),
+   - resolved path exists,
+   - resolved path remains inside allowed runtime roots.
+3. Machine-readable payload fields:
+   - `path_governance_status` (`PASS_REQUIRED|FAIL_REQUIRED`)
+   - `path_error_codes` (`IP-PATH-001`)
+   - `stale_reasons`
+   - `allowed_runtime_roots`
+4. Exit semantics:
+   - PASS => rc=0
+   - FAIL_REQUIRED => rc=1
+
+#### Commit
+
+- `0add536` — `feat(path): add pack path canonical gate validator`
+
+#### Acceptance commands (rc + key tail)
+
+1. Command:
+   - `python3 -m py_compile scripts/validate_identity_pack_path_canonical.py`
+   - rc: `0`
+   - tail: `no output (compile success)`
+
+2. Command (positive sample):
+   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only`
+   - rc: `0`
+   - key tail:
+     - `\"path_governance_status\": \"PASS_REQUIRED\"`
+     - `\"path_error_codes\": []`
+
+3. Command (negative sample, relative path in runtime catalog):
+   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only`
+   - rc: `1`
+   - key tail:
+     - `\"path_governance_status\": \"FAIL_REQUIRED\"`
+     - `\"path_error_codes\": [\"IP-PATH-001\"]`
+     - `\"stale_reasons\": [\"pack_path_not_absolute\"]`
+
+#### Residual risk
+
+1. Script is landed, but chain wiring into readiness/e2e/full-scan/three-plane/CI is pending.
+2. Existing runtime catalog entries with relative path (example: `store-manager`) remain unresolved until data/governance cleanup is executed.
+
+#### Next action
+
+1. Wire this gate into at least one primary chain (recommended next: `release_readiness_check.py` preflight).
+2. Add corresponding visibility field in full-scan and three-plane outputs.
