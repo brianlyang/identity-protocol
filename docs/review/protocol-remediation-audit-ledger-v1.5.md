@@ -38,8 +38,9 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 | Emergency ID | Date (UTC) | Layer | Scope | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- |
-| HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | PENDING_REVIEW |
-| HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PENDING_REVIEW |
+| HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | REJECT |
+| HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PASS |
+| HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | TODO | PENDING_PATCH |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -824,7 +825,7 @@ Alignment note (2026-02-28, anti-drift):
        - parsed: `instance_plane_detail.fixture_runtime_boundary.path_governance_status=PASS_REQUIRED`, validator `rc=0`
 3. Audit note:
    - FIX-007 acceptance is independent from emergency lane HOTFIX items.
-   - HOTFIX-P0-001 and HOTFIX-P0-002 remain release-blocking until architect patch + replay closure.
+   - HOTFIX-P0-001 is `REJECT` and HOTFIX-P0-003 is `PENDING_PATCH`; both remain release-blocking.
 
 ---
 
@@ -1069,6 +1070,34 @@ Alignment note (2026-02-28, anti-drift):
        - `[12.3/30] ... validate response identity stamp hard gate (user-visible channel)`
        - `E2E smoke test PASSED`
 
+#### Audit review verdict (2026-02-28T14:38:40Z)
+
+1. Decision: `REJECT` (HOTFIX-P0-001 is not closed due receipt lifecycle inconsistency).
+2. Replayed evidence:
+   - hard-gate negative path:
+     - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
+     - rc=`1`, `error_code=IP-ASB-STAMP-004`, blocker receipt generated.
+   - hard-gate positive path:
+     - `python3 scripts/render_identity_response_stamp.py ... --out /tmp/hotfix1-stamp-audit.json --json-only`
+     - `python3 scripts/validate_identity_response_stamp.py ... --stamp-json /tmp/hotfix1-stamp-audit.json --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix1-blocker-audit.json --json-only`
+     - rc=`0`, `stamp_status=PASS`.
+   - nondeterministic failure path in validate chain:
+     - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml`
+     - rc=`1`, key failure:
+       - `[FAIL] IP-ASB-STAMP-001 blocker receipt missing required fields: ['actual_identity_id']`
+3. Root-cause anchors:
+   - blocker receipt writer allows empty `actual_identity_id` on missing stamp path:
+     - `scripts/validate_identity_response_stamp.py:259`
+     - `scripts/validate_identity_response_stamp.py:263`
+   - blocker receipt validator enforces non-empty required fields:
+     - `scripts/validate_identity_response_stamp_blocker_receipt.py:46`
+     - `scripts/validate_identity_response_stamp_blocker_receipt.py:56`
+   - validate chain always re-checks fixed receipt path:
+     - `scripts/identity_creator.py:1106`
+     - `scripts/identity_creator.py:1122`
+4. Disposition:
+   - open new release-blocking item `HOTFIX-P0-003` for receipt lifecycle contract consistency and deterministic validation.
+
 ---
 
 ### HOTFIX-P0-002 — Explicit `activate` caused cross-identity hard switch/demotion
@@ -1166,3 +1195,69 @@ Alignment note (2026-02-28, anti-drift):
      - `IDENTITY_CATALOG=... IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` => rc=`0`, includes `[10.18/30] validate actor-scoped session isolation gates ...`
      - `python3 scripts/report_three_plane_status.py ...` => rc=`0`, includes `instance_plane_detail.actor_session_binding/no_implicit_switch/cross_actor_isolation`
      - `python3 scripts/full_identity_protocol_scan.py ...` => rc=`0`, includes new check fields for actor isolation validators.
+
+#### Audit review verdict (2026-02-28T14:38:40Z)
+
+1. Decision: `PASS` (scoped to HOTFIX-P0-002 objective).
+2. Replayed evidence:
+   - actor session source exists:
+     - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+     - key fields include `actor_id=user:yangxi`, `identity_id=base-repo-architect`, `session_pointer_type=actor_binding`.
+   - validators:
+     - `python3 scripts/validate_actor_session_binding.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only` => rc=`0`, `actor_binding_status=PASS_REQUIRED`
+     - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --json-only` => rc=`0`, `implicit_switch_status=PASS_REQUIRED`
+     - `python3 scripts/validate_cross_actor_isolation.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id base-repo-architect --json-only` => rc=`0`, `cross_actor_isolation_status=PASS_REQUIRED`
+   - default cross-actor block:
+     - `python3 scripts/identity_creator.py activate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id hotfix-cross-actor-block-audit --switch-reason cross_actor_probe`
+     - rc=`1`, tail includes `[FAIL] cross-actor demotion blocked by default ...`
+3. Audit note:
+   - this verdict is isolated to actor-scoped binding and cross-actor isolation behavior.
+   - release remains blocked by HOTFIX-P0-001/HOTFIX-P0-003.
+
+---
+
+### HOTFIX-P0-003 — Stamp blocker receipt lifecycle mismatch causes nondeterministic validation
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context: `sandbox`
+- Source issue: stamp hard-gate and blocker-receipt checker have incompatible assumptions, causing stateful/nondeterministic failures in `identity_creator validate`.
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-018`, `ASB-RQ-019`, `ASB-RQ-020`, `DRC-8`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (fail-closed determinism and auditable gate semantics)
+
+#### Confirmed impact
+
+1. Same protocol code path can pass/fail depending on stale receipt residue in `/tmp`, violating deterministic gate expectations.
+2. `identity_creator validate` for `base-repo-architect` can fail despite stamp PASS path being wired.
+3. This creates a false-negative gate and blocks reliable release readiness judgments.
+
+#### Evidence (replay)
+
+1. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml`
+   - rc=`1`
+   - failure tail:
+     - `[FAIL] IP-ASB-STAMP-001 blocker receipt missing required fields: ['actual_identity_id']`
+2. receipt payload observed:
+   - `/tmp/identity-stamp-blocker-receipt-base-repo-architect.json`
+   - `actual_identity_id` is empty string.
+3. contrast sample:
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst ...`
+   - rc=`0`
+   - indicates state-dependent behavior rather than deterministic contract closure.
+
+#### Required architect patch (quick-fix scope)
+
+1. Harmonize receipt contract:
+   - either ensure writer always sets non-empty `actual_identity_id` on fail paths, or adjust receipt validator schema to a clear two-mode contract (`BLOCK_FAIL` vs `PASS_NO_RECEIPT`).
+2. Make validate chain deterministic:
+   - do not validate stale receipt on stamp PASS path, or always regenerate canonical receipt before validation.
+3. Keep hard-gate semantics:
+   - user-visible channel still requires fail-closed on missing/mismatch stamp.
+4. Preserve machine-readable outputs for readiness/e2e/full-scan/three-plane.
+
+#### Acceptance criteria (post-patch)
+
+1. Sequential replay `fail-sample -> pass-sample -> identity_creator validate` must be deterministic and reproducible across identities.
+2. `identity_creator validate --identity-id base-repo-architect ...` returns rc=`0` after patch under clean and previously-failed receipt states.
+3. receipt validator behavior matches writer contract with no empty-required-field contradictions.
