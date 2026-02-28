@@ -86,6 +86,13 @@
       optional apply mode to trigger `identity_creator update`
     - emits machine-readable wave report:
       `outdated_identities`, `updated_count`, `blocked_count`, `items[]`
+    - review-required convergence semantics hardened:
+      - `identity_creator update` exit code `2` with empty hard error and
+        review-required next action is now classified as `REVIEW_REQUIRED`
+        instead of `BLOCKED`
+      - wave payload now emits `review_required_count` and per-item
+        `update_status` (`UPDATED` / `REVIEW_REQUIRED` / `BLOCKED` /
+        `SKIPPED_*`) for clearer audit triage
     - stale/outdated detection policy now treats all non-`PASS` baseline states
       as convergence candidates (including `IP-PBL-002` report-missing),
       preventing false `identity_aligned_to_current_protocol` labels for

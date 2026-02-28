@@ -86,6 +86,19 @@ def _baseline_next_action(status: str, error_code: str, stale_reasons: list[str]
     return "review_protocol_baseline_then_update"
 
 
+def _is_review_required_outcome(update_rc: int, next_action: str, error_code: str) -> bool:
+    action = str(next_action or "").strip()
+    code = str(error_code or "").strip()
+    if update_rc != 2:
+        return False
+    if code:
+        return False
+    return action in {
+        "review_required_create_pr_from_patch_plan",
+        "safe_auto_blocked_require_review",
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run protocol upgrade wave for runtime identities based on baseline freshness.")
     ap.add_argument("--catalog", required=True)
@@ -126,6 +139,7 @@ def main() -> int:
     items: list[dict[str, Any]] = []
     outdated_ids: list[str] = []
     updated_count = 0
+    review_required_count = 0
     blocked_count = 0
     skipped_count = 0
 
@@ -166,6 +180,7 @@ def main() -> int:
             "baseline_rc": rc_base,
             "report_path": str(base_payload.get("report_selected_path", "")).strip(),
             "update_rc": None,
+            "update_status": "",
             "next_action": next_action,
             "error_code": "",
             "stale_reasons": stale_reasons,
@@ -173,12 +188,14 @@ def main() -> int:
 
         if dry_run:
             skipped_count += 1
+            item["update_status"] = "SKIPPED_DRY_RUN"
             item["error_code"] = baseline_error_code
             items.append(item)
             continue
 
         if not outdated:
             skipped_count += 1
+            item["update_status"] = "SKIPPED_NOT_OUTDATED"
             item["next_action"] = "skip_not_outdated"
             item["error_code"] = baseline_error_code
             items.append(item)
@@ -222,8 +239,13 @@ def main() -> int:
         )
         if rc_upd == 0:
             updated_count += 1
+            item["update_status"] = "UPDATED"
+        elif _is_review_required_outcome(rc_upd, item["next_action"], item["error_code"]):
+            review_required_count += 1
+            item["update_status"] = "REVIEW_REQUIRED"
         else:
             blocked_count += 1
+            item["update_status"] = "BLOCKED"
         items.append(item)
 
     payload = {
@@ -238,6 +260,7 @@ def main() -> int:
         "total_identities": len(items),
         "outdated_identities": sorted(outdated_ids),
         "updated_count": updated_count,
+        "review_required_count": review_required_count,
         "blocked_count": blocked_count,
         "skipped_count": skipped_count,
         "items": items,
