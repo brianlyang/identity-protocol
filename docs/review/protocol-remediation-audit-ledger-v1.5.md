@@ -29,6 +29,29 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 ---
 
+## 0.5) Emergency quick-fix lane (P0, discovered during remediation)
+
+1. Items in this lane are **not normal FIX stream items** and MUST NOT be merged into `FIX-00x` tracking.
+2. IDs use `HOTFIX-P0-00x`.
+3. These incidents are release blocking for v1.5 until architect patch + audit replay are both complete.
+4. Source-document precedence remains unchanged (`L1/L2` contracts are authoritative).
+
+| Emergency ID | Date (UTC) | Layer | Scope | Architect Status | Audit Status |
+| --- | --- | --- | --- | --- | --- |
+| HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | PENDING_REVIEW |
+| HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PENDING_REVIEW |
+
+Alignment note (2026-02-28, anti-drift):
+
+1. `zero_shot` / `one_shot` / `multi_shot` are protocol-kernel policies, not vendor-only policies.
+2. Protocol-layer vendor vs business-layer partner semantic disambiguation is mandatory governance scope for v1.5.
+3. Related governance source refs:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` section `5.5.6`
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` section `5.7.2A`
+   - requirement id `ASB-RQ-037`
+
+---
+
 ## 1) Rolling summary
 
 | Fix ID | Date (UTC) | Layer | Scope | Commit | Architect Status | Audit Status |
@@ -39,7 +62,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | FIX-004 | 2026-02-28 | protocol | dynamic response identity stamp closure (non-hardcoded + fail-closed) | `f1587e9` | DONE | PASS |
 | FIX-005 | 2026-02-28 | protocol | execution-report path contract gate + readiness wiring | `8963b0e` | DONE | PASS |
 | FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PASS |
-| FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PENDING_REVIEW |
+| FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PASS |
 
 ---
 
@@ -125,7 +148,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | FIX-004 | PASS | audit-expert(codex) | 2026-02-28T13:02:18Z | Scoped PASS. Stamp render/validate/blocker-receipt validators are landed and wired in readiness/e2e/full-scan/three-plane/identity_creator/CI loop; skip semantics remain contract-first by design. |
 | FIX-005 | PASS | audit-expert(codex) | 2026-02-28T13:15:55Z | Scoped PASS. IP-PATH-002 validator behavior and readiness preflight wiring are reproducible in sandbox + escalated replay. |
 | FIX-006 | PASS | audit-expert(codex) | 2026-02-28T13:27:06Z | Scoped PASS. IP-PATH-003 validator + readiness/full-scan/three-plane/creator/e2e wiring replayed; docs/SSOT checks clean. |
-| FIX-007 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T13:44:00Z | FIX-007 implementation landed; pending replay on IP-PATH-004 boundary semantics (fail on fixture mutation without override+receipt, pass/skip on non-mutation surfaces). |
+| FIX-007 | PASS | audit-expert(codex) | 2026-02-28T14:02:10Z | Scoped PASS. IP-PATH-004 semantics replayed: runtime pass, fixture mutation fail w/o override, fixture scan skip, fixture override+receipt pass; readiness/e2e/full-scan/three-plane wiring verified. |
 
 ---
 
@@ -760,3 +783,219 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 1. Submit FIX-007 to audit expert for replay verdict.
 2. Continue next pending protocol P0 item per governance ledger order.
+
+#### Audit review verdict (2026-02-28T14:02:10Z)
+
+1. Decision: `PASS` (scoped to FIX-007 objective).
+2. Replayed evidence:
+   - static:
+     - `python3 -m py_compile scripts/validate_fixture_runtime_boundary.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+     - `bash -n scripts/e2e_smoke_test.sh`
+     - result: `RC_STATIC_FIX007=0`
+   - validator semantics:
+     - runtime pass:
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+       - rc=0, `path_governance_status=PASS_REQUIRED`
+     - fixture mutation fail without override:
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+       - rc=1, `path_error_codes=["IP-PATH-004"]`, stale reasons include `fixture_runtime_override_required` and `fixture_override_receipt_missing`
+     - fixture non-mutation skip:
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation scan --json-only`
+       - rc=0, `path_governance_status=SKIPPED_NOT_REQUIRED`
+     - fixture override+receipt pass:
+       - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --allow-fixture-runtime --fixture-audit-receipt /tmp/fix007-fixture-receipt.json --json-only`
+       - rc=0, `path_governance_status=PASS_REQUIRED`
+   - chain wiring:
+     - readiness (escalated): `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --capability-activation-policy route-any-ready`
+       - rc=0, logs include:
+         - `[RUN] ... validate_fixture_runtime_boundary.py ... --operation readiness --json-only`
+         - `[INFO] fixture/runtime boundary preflight: status=PASS_REQUIRED ...`
+         - `[OK] release readiness checks PASSED`
+     - e2e (escalated): `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+       - rc=0, includes `[10.17/30] validate fixture/runtime boundary gate ...`, and tail `E2E smoke test PASSED`
+     - visibility:
+       - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix007-audit.json`
+       - parsed rows: `('project', ..., 0, 'PASS_REQUIRED', [])`, `('global', ..., 0, 'PASS_REQUIRED', [])`
+       - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix007-audit.json`
+       - parsed: `instance_plane_detail.fixture_runtime_boundary.path_governance_status=PASS_REQUIRED`, validator `rc=0`
+3. Audit note:
+   - FIX-007 acceptance is independent from emergency lane HOTFIX items.
+   - HOTFIX-P0-001 and HOTFIX-P0-002 remain release-blocking until architect patch + replay closure.
+
+---
+
+## 5) Emergency quick-fix incident records (P0, separate from FIX-00x)
+
+### HOTFIX-P0-001 — Missing hard-gate for user-visible identity context stamp
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context: `sandbox` (evidence extraction)
+- Source issue: response identity context can be omitted from user-facing output even when governance expects explicit stamp visibility.
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-018`, `ASB-RQ-019`, `ASB-RQ-020`, `DRC-8`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (gate wiring + fail-closed contract semantics)
+
+#### Confirmed impact
+
+1. User-visible responses can appear without explicit identity-context stamp, which increases undetected identity-drift risk (`串台` risk).
+2. Current validator supports contract-first skip path (`SKIPPED_NOT_REQUIRED`) and does not universally hard-block user-facing output channels.
+
+#### Evidence (paths / lines)
+
+1. Skip branch proving hard-gate gap:
+   - `scripts/validate_identity_response_stamp.py:121`
+   - `scripts/validate_identity_response_stamp.py:125`
+   - `scripts/validate_identity_response_stamp.py:127`
+2. Runtime conversation evidence supplied by user (2026-02-28) showing missing explicit stamp in an output turn.
+
+#### Required architect patch (quick-fix scope)
+
+1. Add a protocol-level hard-gate mode for user-visible reply channel:
+   - missing or mismatched stamp => fail-closed before business reply.
+2. Keep blocker receipt path mandatory when blocked (no silent downgrade).
+3. Wire hard-gate mode into:
+   - `identity_creator.py validate`
+   - `release_readiness_check.py`
+   - `e2e_smoke_test.sh`
+   - `full_identity_protocol_scan.py`
+   - `report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+4. Ensure stamp rendering remains dynamic (resolver-derived), never hardcoded identity text.
+
+#### Acceptance criteria (post-patch)
+
+1. In governed output mode, stamp absence/mismatch must return non-zero with blocker receipt.
+2. Replay of readiness/e2e/full-scan/three-plane must expose hard-gate results as machine-readable fields.
+3. Audit replay must include both positive and negative samples.
+
+#### Architect patch result (2026-02-28)
+
+1. Commit:
+   - `55c6bca` — `hotfix(p0): enforce visible stamp gate and actor-scoped session isolation`
+2. Changed files (HOTFIX-P0-001 relevant):
+   - `scripts/validate_identity_response_stamp.py`
+   - `scripts/render_identity_response_stamp.py`
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Key implementation points:
+   - Added hard-gate mode `--enforce-user-visible-gate` and forced check path to bypass `contract_not_required` skip for user-visible channel checks.
+   - Added stamp evidence input channel `--stamp-json` (from rendered payload) and `IP-ASB-STAMP-004` for missing user-visible stamp evidence.
+   - Wired `--force-check --enforce-user-visible-gate` into validate/readiness/e2e/full-scan/three-plane/required-gates.
+   - Added deterministic stamp artifact output support via `render_identity_response_stamp.py --out <path>`.
+4. Acceptance replay (rc + key tail):
+   - `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --enforce-user-visible-gate --force-check --json-only`
+     - rc=`1`, `error_code=IP-ASB-STAMP-004`, `blocker_receipt_path=/private/tmp/identity-stamp-blocker-receipt-base-repo-architect.json`
+   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --view external --out /tmp/hotfix1-stamp.json --json-only`
+     + `python3 scripts/validate_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/hotfix1-stamp.json --enforce-user-visible-gate --force-check --blocker-receipt-out /tmp/hotfix1-blocker.json --json-only`
+     - rc=`0`, `stamp_status=PASS`
+   - `python3 scripts/release_readiness_check.py ...`
+     - rc=`0`, includes:
+       - `[RUN] ... validate_identity_response_stamp.py ... --force-check --enforce-user-visible-gate ...`
+       - `[OK] release readiness checks PASSED`
+   - `IDENTITY_CATALOG=... IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+     - rc=`0`, includes:
+       - `[12.3/30] ... validate response identity stamp hard gate (user-visible channel)`
+       - `E2E smoke test PASSED`
+
+---
+
+### HOTFIX-P0-002 — Explicit `activate` caused cross-identity hard switch/demotion
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context: `sandbox` (log and artifact evidence extraction)
+- Source issue: under current single-active global model, explicit `activate` demotes previously active identity and rewrites session pointer; this enables identity hard-switch during remediation flow.
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-001`..`ASB-RQ-010`, `DRC-1`, `DRC-2`, `DRC-3`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (session/governance fail-closed expectations)
+
+#### Confirmed impact
+
+1. A single explicit command switched active identity from audit instance to architect instance.
+2. Demotion was deterministic and recorded as `single_active_enforced=true`.
+3. This is a P0 governance/runtime issue for multi-actor safety, not an accidental UI artifact.
+
+#### Evidence (absolute paths / lines / artifacts)
+
+1. Session log file:
+   - `/Users/yangxi/.codex/sessions/2026/02/24/rollout-2026-02-24T02-11-15-019c8bb2-c691-7163-af90-f48b3962e279.jsonl`
+2. Preceding failure (triggering switch attempt):
+   - same file: `:24327` (`[FAIL] identity is not active; status=inactive`)
+3. Explicit switch command:
+   - same file: `:24346`
+   - command contains `python3 scripts/identity_creator.py activate --identity-id base-repo-architect ...`
+4. Successful switch output:
+   - same file: `:24348`
+   - contains `[OK] switch report: /tmp/identity-activation-reports/identity-activation-switch-base-repo-architect-1772283537.json`
+5. Switch artifact proving demotion:
+   - `/tmp/identity-activation-reports/identity-activation-switch-base-repo-architect-1772283537.json`
+   - key fields: `generated_at=2026-02-28T12:58:57Z`, `target_identity_id=base-repo-architect`, `demoted_identities=["base-repo-audit-expert-v3"]`
+6. Deterministic single-active implementation:
+   - `scripts/identity_creator.py:248`
+   - `scripts/identity_creator.py:282`
+   - `scripts/identity_creator.py:307`
+
+#### Required architect patch (quick-fix scope)
+
+1. Add actor-scoped session truth (`<catalog>/session/actors/<actor_id>.json`) and stop using global single-active pointer as authority for all actors.
+2. Forbid cross-actor demotion by default during `activate`.
+3. If override is truly needed, require explicit audited flag + actor/run receipt (no implicit switch).
+4. Add dedicated validators and wire required-gates:
+   - `validate_actor_session_binding.py`
+   - `validate_no_implicit_switch.py`
+   - `validate_cross_actor_isolation.py`
+5. Extend activation switch report schema with `actor_id`, `run_id`, `entrypoint_pid`, `switch_reason`.
+
+#### Acceptance criteria (post-patch)
+
+1. Replaying the same scenario must not demote another actor-bound identity unless audited override is explicit.
+2. New validators must fail-closed on implicit switch patterns.
+3. Three-plane/full-scan must surface actor-binding status and cross-actor isolation result fields.
+
+#### Architect patch result (2026-02-28)
+
+1. Commit:
+   - `55c6bca` — `hotfix(p0): enforce visible stamp gate and actor-scoped session isolation`
+2. Changed files (HOTFIX-P0-002 relevant):
+   - `scripts/actor_session_common.py` (new)
+   - `scripts/sync_session_identity.py`
+   - `scripts/response_stamp_common.py`
+   - `scripts/validate_actor_session_binding.py` (new)
+   - `scripts/validate_no_implicit_switch.py` (new)
+   - `scripts/validate_cross_actor_isolation.py` (new)
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Key implementation points:
+   - Added actor-scoped session truth source at `<catalog>/session/actors/<actor_id>.json` through `sync_session_identity.py`.
+   - `identity_creator activate` now carries actor audit tuple (`actor_id`, `run_id`, `switch_reason`, `entrypoint_pid`) into switch report.
+   - Cross-actor demotion is blocked by default; explicit override requires `--allow-cross-actor-switch` + audited `--cross-actor-receipt`.
+   - Added and wired validators:
+     - `validate_actor_session_binding.py`
+     - `validate_no_implicit_switch.py`
+     - `validate_cross_actor_isolation.py`
+4. Acceptance replay (rc + key tail):
+   - actor binding source creation:
+     - `python3 scripts/identity_creator.py activate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:yangxi --run-id hotfix-p0-002-actor-sync --switch-reason hotfix_p0_002_actor_binding`
+     - rc=`0`, includes `[OK] session identity actor-bound: /Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+   - default cross-actor demotion block:
+     - `python3 scripts/identity_creator.py activate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id hotfix-cross-actor-block-2 --switch-reason cross_actor_probe`
+     - rc=`1`, includes `[FAIL] cross-actor demotion blocked by default ...`
+   - validator replay:
+     - `validate_actor_session_binding(base-repo-architect)` => rc=`0`, `actor_binding_status=PASS_REQUIRED`
+     - `validate_actor_session_binding(custom-creative-ecom-analyst)` => rc=`0`, `actor_binding_status=SKIPPED_NOT_REQUIRED`
+     - `validate_no_implicit_switch(base-repo-architect)` => rc=`0`, `implicit_switch_status=PASS_REQUIRED`
+     - `validate_cross_actor_isolation` => rc=`0`, `cross_actor_isolation_status=PASS_REQUIRED`
+   - chain wiring:
+     - `python3 scripts/release_readiness_check.py ...` => rc=`0`, includes new validator runs
+     - `IDENTITY_CATALOG=... IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` => rc=`0`, includes `[10.18/30] validate actor-scoped session isolation gates ...`
+     - `python3 scripts/report_three_plane_status.py ...` => rc=`0`, includes `instance_plane_detail.actor_session_binding/no_implicit_switch/cross_actor_isolation`
+     - `python3 scripts/full_identity_protocol_scan.py ...` => rc=`0`, includes new check fields for actor isolation validators.
