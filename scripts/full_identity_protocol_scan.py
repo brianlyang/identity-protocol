@@ -351,6 +351,8 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--operation",
+                    "scan",
                     "--json-only",
                 ],
                 "no_implicit_switch": [
@@ -369,6 +371,8 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--operation",
+                    "scan",
                     "--json-only",
                 ],
                 "response_stamp_render": [

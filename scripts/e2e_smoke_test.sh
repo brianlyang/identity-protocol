@@ -83,9 +83,9 @@ done
 
 echo "[10.18/30] validate actor-scoped session isolation gates (for each target identity)"
 for ID in $IDS; do
-  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH"
+  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH"
-  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH"
+  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
 done
 
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then

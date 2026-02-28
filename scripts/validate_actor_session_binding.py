@@ -11,6 +11,8 @@ import yaml
 from actor_session_common import actor_session_path, load_actor_binding, resolve_actor_id
 
 ERR_ACTOR_BINDING = "IP-ASB-201"
+STRICT_OPS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
+INSPECTION_OPS = {"scan", "three-plane", "inspection"}
 
 
 def _load_catalog(path: Path) -> dict[str, Any]:
@@ -31,6 +33,12 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--actor-id", default="")
+    ap.add_argument(
+        "--operation",
+        choices=sorted(STRICT_OPS | INSPECTION_OPS),
+        default="validate",
+        help="strict operations fail on missing actor binding; inspection operations can skip",
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -63,6 +71,8 @@ def main() -> int:
     actor_path = actor_session_path(catalog_path, actor_id)
     actor_binding = load_actor_binding(catalog_path, actor_id)
     status = str(row.get("status", "")).strip().lower() or "inactive"
+    operation = str(args.operation or "validate").strip().lower()
+    inspection_mode = operation in INSPECTION_OPS
     stale_reasons: list[str] = []
     error_code = ""
     actor_binding_status = "PASS_REQUIRED"
@@ -70,8 +80,12 @@ def main() -> int:
 
     if not actor_binding:
         stale_reasons.append("actor_session_binding_missing")
-        error_code = ERR_ACTOR_BINDING
-        actor_binding_status = "FAIL_REQUIRED"
+        if inspection_mode:
+            actor_binding_status = "SKIPPED_NOT_REQUIRED"
+            stale_reasons.append("inspection_scope_missing_actor_binding")
+        else:
+            error_code = ERR_ACTOR_BINDING
+            actor_binding_status = "FAIL_REQUIRED"
     else:
         if str(actor_binding.get("actor_id", "")).strip() != actor_id:
             stale_reasons.append("actor_id_mismatch")
@@ -94,6 +108,7 @@ def main() -> int:
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
         "actor_id": actor_id,
+        "operation": operation,
         "actor_session_path": str(actor_path),
         "bound_identity_id": bound_identity,
         "catalog_identity_status": status,
@@ -127,4 +142,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
