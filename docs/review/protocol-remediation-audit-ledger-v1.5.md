@@ -33,8 +33,9 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 | Fix ID | Date (UTC) | Layer | Scope | Commit | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| FIX-001 | 2026-02-28 | protocol | wave outdated classification | `ee01d56` | DONE | PENDING_REVIEW |
-| FIX-002 | 2026-02-28 | protocol | path-governance pack canonical gate | `0add536` | DONE | PENDING_REVIEW |
+| FIX-001 | 2026-02-28 | protocol | wave outdated classification | `ee01d56` | DONE | PASS |
+| FIX-002 | 2026-02-28 | protocol | path-governance pack canonical gate | `0add536` | DONE | PASS |
+| FIX-003 | 2026-02-28 | protocol | readiness preflight wiring for pack path gate | `b80521e` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -97,14 +98,26 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 1. Continue with next P0/P1 remediation item as separate fix record.
 2. Audit expert reviews this item and marks `Audit Status` from `PENDING_REVIEW` to `PASS/REJECT`.
 
+#### Audit review verdict (2026-02-28T12:09:47Z)
+
+1. Decision: `PASS` (scoped to FIX-001 objective).
+2. Re-validated evidence:
+   - `python3 -m py_compile scripts/run_protocol_upgrade_wave.py` => rc=0
+   - `python3 scripts/run_protocol_upgrade_wave.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --dry-run --out /tmp/identity-upgrade-wave-dryrun-audit.json` => rc=0
+   - deterministic branch proof for `IP-PBL-002` => `outdated=True` and `next_action=bootstrap_or_update_required`
+3. Audit note:
+   - The dry-run command is cwd-sensitive if `--repo-catalog` is omitted.
+   - Future acceptance records should keep explicit `--repo-catalog` to avoid false-negative review noise.
+
 ---
 
 ## 3) Reviewer decision log (to be filled by audit expert)
 
 | Fix ID | Audit Decision | Reviewer | Reviewed At (UTC) | Notes |
 | --- | --- | --- | --- | --- |
-| FIX-001 | PENDING | - | - | - |
-| FIX-002 | PENDING | - | - | - |
+| FIX-001 | PASS | audit-expert(codex) | 2026-02-28T12:09:47Z | Scoped PASS. Command-2 should keep explicit `--repo-catalog` to avoid cwd-sensitive false failure. |
+| FIX-002 | PASS | audit-expert(codex) | 2026-02-28T12:09:47Z | Scoped PASS. Validator behavior and positive/negative samples are reproducible. Chain wiring remains tracked in next fixes. |
+| FIX-003 | PENDING | - | - | - |
 
 ---
 
@@ -173,3 +186,68 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 1. Wire this gate into at least one primary chain (recommended next: `release_readiness_check.py` preflight).
 2. Add corresponding visibility field in full-scan and three-plane outputs.
+
+#### Audit review verdict (2026-02-28T12:09:47Z)
+
+1. Decision: `PASS` (scoped to FIX-002 objective).
+2. Re-validated evidence:
+   - `python3 -m py_compile scripts/validate_identity_pack_path_canonical.py` => rc=0
+   - positive sample (`custom-creative-ecom-analyst`) => rc=0, `path_governance_status=PASS_REQUIRED`
+   - negative sample (`store-manager`) => rc=1, `path_error_codes=["IP-PATH-001"]`
+3. Audit note:
+   - FIX-002 is accepted as a standalone gate addition.
+   - Primary-chain wiring remains an open follow-up and must be tracked as a separate fix item.
+
+---
+
+### FIX-003 — Wire `validate_identity_pack_path_canonical` into release readiness preflight
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for compile checks
+  - `escalated` for readiness end-to-end (needs write access in `~/.codex`)
+- Source issue: `IDP-PATH-001` chain closure (primary gate wiring required in release path)
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-028`, `DRC-10`, section `6.3 gate wiring`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (readiness preflight governance)
+
+#### Change summary
+
+1. File changed: `scripts/release_readiness_check.py`.
+2. Added preflight invocation (before main seq):
+   - `python3 scripts/validate_identity_pack_path_canonical.py --identity-id <id> --catalog <catalog> --json-only`
+3. Added machine-readable preflight log line:
+   - `[INFO] pack path canonical preflight: status=<...> error_codes=<...> identity=<...>`
+4. Fail behavior:
+   - if path gate returns non-zero, readiness exits early (fail-closed).
+
+#### Commit
+
+- `b80521e` — `feat(readiness): add pack path canonical preflight gate`
+
+#### Acceptance commands (rc + key tail)
+
+1. Command:
+   - `python3 -m py_compile scripts/release_readiness_check.py scripts/validate_identity_pack_path_canonical.py`
+   - rc: `0`
+   - tail: `no output (compile success)`
+
+2. Command (readiness flow with preflight visibility; escalated context):
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy strict-union`
+   - rc: `0`
+   - key tail:
+     - `[RUN] python3 scripts/validate_identity_pack_path_canonical.py ... --json-only`
+     - `[INFO] pack path canonical preflight: status=PASS_REQUIRED error_codes=- identity=custom-creative-ecom-analyst`
+     - `[OK] release readiness checks PASSED`
+
+#### Residual risk
+
+1. Readiness wiring is complete for pack-path gate, but other path-governance gates are still pending (`resolved_pack_report_gate`, `identity_home_catalog_alignment_gate`, `fixture_runtime_boundary_gate`).
+2. This fix does not yet add path-governance fields into full-scan / three-plane outputs.
+
+#### Next action
+
+1. Implement `validate_identity_execution_report_path_contract.py` (IP-PATH-002).
+2. Wire it into readiness preflight after report selection/freshness validation.
+3. Then continue with full-scan and three-plane visibility wiring.
