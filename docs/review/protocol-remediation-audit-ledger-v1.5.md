@@ -38,7 +38,8 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | FIX-003 | 2026-02-28 | protocol | readiness preflight wiring for pack path gate | `b80521e` | DONE | PASS |
 | FIX-004 | 2026-02-28 | protocol | dynamic response identity stamp closure (non-hardcoded + fail-closed) | `f1587e9` | DONE | PASS |
 | FIX-005 | 2026-02-28 | protocol | execution-report path contract gate + readiness wiring | `8963b0e` | DONE | PASS |
-| FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PENDING_REVIEW |
+| FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PASS |
+| FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -123,7 +124,8 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | FIX-003 | PASS | audit-expert(codex) | 2026-02-28T12:18:23Z | Scoped PASS. Preflight wiring is effective and fail-closed behavior is present in readiness chain. |
 | FIX-004 | PASS | audit-expert(codex) | 2026-02-28T13:02:18Z | Scoped PASS. Stamp render/validate/blocker-receipt validators are landed and wired in readiness/e2e/full-scan/three-plane/identity_creator/CI loop; skip semantics remain contract-first by design. |
 | FIX-005 | PASS | audit-expert(codex) | 2026-02-28T13:15:55Z | Scoped PASS. IP-PATH-002 validator behavior and readiness preflight wiring are reproducible in sandbox + escalated replay. |
-| FIX-006 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T13:28:00Z | FIX-006 implementation landed in `40ff2e9`; waiting replay on IP-PATH-003 validator + multi-surface gate wiring. |
+| FIX-006 | PASS | audit-expert(codex) | 2026-02-28T13:27:06Z | Scoped PASS. IP-PATH-003 validator + readiness/full-scan/three-plane/creator/e2e wiring replayed; docs/SSOT checks clean. |
+| FIX-007 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T13:44:00Z | FIX-007 implementation landed; pending replay on IP-PATH-004 boundary semantics (fail on fixture mutation without override+receipt, pass/skip on non-mutation surfaces). |
 
 ---
 
@@ -621,5 +623,140 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 
 #### Next action
 
-1. Submit FIX-006 to audit expert for replay verdict.
+1. FIX-006 is closed after audit replay PASS.
 2. Continue FIX-007: implement `validate_fixture_runtime_boundary.py` and wire to all mandatory surfaces.
+
+#### Audit review verdict (2026-02-28T13:27:06Z)
+
+1. Decision: `PASS` (scoped to FIX-006 objective).
+2. Replayed evidence:
+   - `python3 scripts/docs_command_contract_check.py` => rc=0
+   - `python3 scripts/validate_protocol_ssot_source.py` => rc=0
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh` (escalated) => rc=0
+3. Key assertions observed from replay output:
+   - e2e contains `[10.16/30] validate identity_home/catalog alignment gate (for each target identity)`.
+   - e2e tail confirms `E2E smoke test PASSED`, `instance_plane_status=CLOSED`, `release_plane_status=NOT_STARTED`.
+   - readiness/full-scan/three-plane wiring claims remain consistent with command outputs already recorded in FIX-006 section.
+
+### FIX-007 — Add `fixture_runtime_boundary_gate` (IP-PATH-004) and wire mandatory surfaces
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for validator behavior checks and chain wiring verification in readiness/creator/full-scan/three-plane
+  - `escalated` for e2e replay under `~/.codex` runtime writes
+- Source issue: `IDP-PATH-001` residual path-governance closure gap (`fixture/demo` entering runtime mutation flows without explicit override + receipt)
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-031`, `DRC-10`, section `5.6` + `6.3`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (machine-readable gate wiring and fail-closed posture)
+
+#### Change summary
+
+1. Added script: `scripts/validate_fixture_runtime_boundary.py`.
+2. Gate semantics:
+   - fixture/demo + mutation surfaces (`activate|update|readiness|mutation|e2e`) require:
+     - explicit `--allow-fixture-runtime`
+     - valid `--fixture-audit-receipt` JSON
+   - otherwise fail-closed with `IP-PATH-004`.
+3. Non-mutation surfaces (`scan|three-plane|ci|validate|inspection`):
+   - fixture identities are `SKIPPED_NOT_REQUIRED` when inactive,
+   - fail when fixture appears active on inspection surface.
+4. Chain wiring landed:
+   - `scripts/identity_creator.py`:
+     - validate check list includes fixture boundary validator (`--operation validate`)
+     - activate/update commands now preflight fixture boundary (`--operation activate|update`)
+     - new args: `--allow-fixture-runtime`, `--fixture-audit-receipt`
+   - `scripts/release_readiness_check.py` preflight (`--operation readiness`)
+   - `scripts/e2e_smoke_test.sh` (`[10.17/30]`, `--operation e2e`)
+   - `scripts/full_identity_protocol_scan.py` (`--operation scan`, visibility fields)
+   - `scripts/report_three_plane_status.py` (`--operation three-plane`, detail + hard-boundary)
+   - `.github/workflows/_identity-required-gates.yml` (`--operation ci`)
+
+#### Commits
+
+1. `ff0453b` — `feat(path): add fixture runtime boundary gate and chain wiring`
+
+#### Acceptance commands (rc + key tail)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_fixture_runtime_boundary.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py && bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+   - key tail: `RC_STATIC_FIX007=0`
+
+2. Runtime identity (non-fixture) mutation pass sample:
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+   - rc: `0`
+   - key tail:
+     - `"path_governance_status":"PASS_REQUIRED"`
+     - `"path_error_codes":[]`
+
+3. Fixture mutation fail sample (no override/receipt):
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --json-only`
+   - rc: `1`
+   - key tail:
+     - `"path_governance_status":"FAIL_REQUIRED"`
+     - `"path_error_codes":["IP-PATH-004"]`
+     - `"stale_reasons":["fixture_runtime_override_required","fixture_override_receipt_missing"]`
+
+4. Fixture non-mutation scan sample:
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation scan --json-only`
+   - rc: `0`
+   - key tail:
+     - `"path_governance_status":"SKIPPED_NOT_REQUIRED"`
+     - `"stale_reasons":["fixture_non_mutation_scope"]`
+
+5. Fixture override+receipt positive sample:
+   - `python3 scripts/validate_fixture_runtime_boundary.py --identity-id store-manager --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation update --allow-fixture-runtime --fixture-audit-receipt /tmp/fix007-fixture-receipt.json --json-only`
+   - rc: `0`
+   - key tail:
+     - `"path_governance_status":"PASS_REQUIRED"`
+      - `"allow_fixture_runtime":true`
+
+6. Readiness preflight wiring:
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --capability-activation-policy route-any-ready`
+   - rc: `0`
+   - key tail includes:
+     - `[RUN] python3 scripts/validate_fixture_runtime_boundary.py ... --operation readiness --json-only`
+     - `[INFO] fixture/runtime boundary preflight: status=PASS_REQUIRED ...`
+     - `[OK] release readiness checks PASSED`
+
+7. `identity_creator validate` wiring:
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+   - rc: `0`
+   - key tail includes:
+     - `$ python3 scripts/validate_fixture_runtime_boundary.py ... --operation validate`
+
+8. Full-scan visibility:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix007.json`
+   - rc: `0`
+   - key parsed fields include `checks.fixture_runtime_boundary` with machine-readable fields (`path_governance_status`, `path_error_codes`, `operation`, `stale_reasons`) for both project/global layers.
+
+9. Three-plane visibility:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix007.json`
+   - rc: `0`
+   - key parsed fields include:
+     - `instance_plane_detail.fixture_runtime_boundary.path_governance_status=PASS_REQUIRED`
+     - `validators.fixture_runtime_boundary.rc=0`
+
+10. e2e wiring (escalated):
+    - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+    - rc: `0`
+    - key tail includes:
+      - `[10.17/30] validate fixture/runtime boundary gate (for each target identity)`
+      - `E2E smoke test PASSED`
+      - `instance_plane_status=CLOSED`
+
+11. Docs/SSOT checks:
+    - `python3 scripts/docs_command_contract_check.py` => rc=0
+    - `python3 scripts/validate_protocol_ssot_source.py` => rc=0
+
+#### Residual risk
+
+1. CI required-gates still invokes `identity_creator.py update` for resolved identities; fixture-heavy contexts may require explicit governance decision whether update should be skipped or explicitly overridden with audited receipt in CI policy.
+2. Actor-scoped session migration P0 cluster (`ASB-RQ-001..010`) remains open and is orthogonal to this path gate.
+3. Track-A/Track-B dual P0 (`ASB-RQ-032..036`) remains pending.
+
+#### Next action
+
+1. Submit FIX-007 to audit expert for replay verdict.
+2. Continue next pending protocol P0 item per governance ledger order.
