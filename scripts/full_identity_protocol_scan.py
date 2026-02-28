@@ -115,7 +115,14 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     checks = row.get("checks", {})
     core_fail = any(
         not checks.get(name, {}).get("ok", False)
-        for name in ("scope_resolution", "scope_isolation", "scope_persistence", "runtime_contract")
+        for name in (
+            "scope_resolution",
+            "scope_isolation",
+            "scope_persistence",
+            "runtime_contract",
+            "response_stamp_validation",
+            "response_stamp_blocker_receipt",
+        )
     )
     prompt_fail = (not is_fixture) and any(
         name in checks and not checks.get(name, {}).get("ok", False)
@@ -303,6 +310,42 @@ def main() -> int:
                     "scripts/validate_identity_runtime_contract.py",
                     "--catalog",
                     str(catalog),
+                    "--identity-id",
+                    iid,
+                ],
+                "response_stamp_render": [
+                    "python3",
+                    "scripts/render_identity_response_stamp.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--view",
+                    "external",
+                    "--json-only",
+                ],
+                "response_stamp_validation": [
+                    "python3",
+                    "scripts/validate_identity_response_stamp.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--require-dynamic",
+                    "--require-redacted-external",
+                    "--require-lock-match",
+                ],
+                "response_stamp_blocker_receipt": [
+                    "python3",
+                    "scripts/validate_identity_response_stamp_blocker_receipt.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
                     "--identity-id",
                     iid,
                 ],

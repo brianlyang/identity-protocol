@@ -227,6 +227,74 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_session,
     }
 
+    rc_stamp_render, out_stamp_render, err_stamp_render = _run(
+        [
+            "python3",
+            "scripts/render_identity_response_stamp.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--view",
+            "external",
+            "--json-only",
+        ]
+    )
+    stamp_render_payload = _parse_json_payload(out_stamp_render) or {}
+    validators["response_stamp_render"] = {
+        "rc": rc_stamp_render,
+        "ok": rc_stamp_render == 0,
+        "out": out_stamp_render,
+        "err": err_stamp_render,
+    }
+
+    rc_stamp, out_stamp, err_stamp = _run(
+        [
+            "python3",
+            "scripts/validate_identity_response_stamp.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--require-dynamic",
+            "--require-redacted-external",
+            "--require-lock-match",
+            "--json-only",
+        ]
+    )
+    stamp_payload = _parse_json_payload(out_stamp) or {}
+    validators["response_stamp_validation"] = {
+        "rc": rc_stamp,
+        "ok": rc_stamp == 0,
+        "out": out_stamp,
+        "err": err_stamp,
+    }
+
+    rc_receipt, out_receipt, err_receipt = _run(
+        [
+            "python3",
+            "scripts/validate_identity_response_stamp_blocker_receipt.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--json-only",
+        ]
+    )
+    receipt_payload = _parse_json_payload(out_receipt) or {}
+    validators["response_stamp_blocker_receipt"] = {
+        "rc": rc_receipt,
+        "ok": rc_receipt == 0,
+        "out": out_receipt,
+        "err": err_receipt,
+    }
+
     rc_prompt, out_prompt, err_prompt = _run(
         [
             "python3",
@@ -404,6 +472,15 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "response_identity_stamp": {
+            "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",
+            "stamp_status": stamp_payload.get("stamp_status"),
+            "stamp_error_code": stamp_payload.get("error_code"),
+            "blocker_receipt_status": receipt_payload.get("receipt_status"),
+            "blocker_receipt_path": stamp_payload.get("blocker_receipt_path", ""),
+            "external_stamp": stamp_render_payload.get("external_stamp"),
+            "stale_reasons": stamp_payload.get("stale_reasons", []),
         },
         "execution_report_freshness": {
             "freshness_status": freshness_payload.get("freshness_status"),
