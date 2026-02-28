@@ -186,6 +186,29 @@ def main() -> int:
     if rc_guard != 0:
         return rc_guard
 
+    path_pack_cmd = [
+        "python3",
+        "scripts/validate_identity_pack_path_canonical.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--json-only",
+    ]
+    rc_pack, out_pack, _ = _run_capture(path_pack_cmd)
+    pack_payload = _parse_json_payload(out_pack) or {}
+    path_status = str(pack_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
+    path_codes = pack_payload.get("path_error_codes", [])
+    if not isinstance(path_codes, list):
+        path_codes = [str(path_codes)]
+    print(
+        "[INFO] pack path canonical preflight: "
+        f"status={path_status} error_codes={','.join(str(x) for x in path_codes if str(x).strip()) or '-'} "
+        f"identity={identity_id}"
+    )
+    if rc_pack != 0:
+        return rc_pack
+
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
         ["python3", "scripts/validate_identity_local_persistence.py"],
