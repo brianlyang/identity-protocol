@@ -51,14 +51,15 @@ Compatibility note (to avoid legacy ambiguity):
 
 Hard rule:
 
-1. Any `P0`/`P1` requirement not reaching `DONE` keeps `v1.5` tag locked.
+1. Any `P0` requirement not reaching `DONE` keeps `v1.5` tag locked.
+2. `P1` requirements are mandatory backlog items and remain visible in the ledger; they block `v1.5` only if explicitly promoted to `P0`.
 
 ### 0.5 Baseline snapshot (normative as-of checkpoint)
 
 As-of baseline:
 
 1. `as_of_utc`: `2026-02-28`
-2. `protocol_repo_head`: `f3d4836`
+2. `protocol_repo_head`: `6bb95af`
 3. `topic_status`: governance specification substantially complete; runtime implementation not closed.
 
 Normative interpretation:
@@ -84,6 +85,8 @@ Hard evidence (repository-local):
    - `render_identity_response_stamp`
    - `validate_identity_response_stamp`
    - `refresh_identity_session_status`
+   - `validate_identity_response_stamp_blocker_receipt`
+   - `validate_identity_session_refresh_status`
 
 ## 1) Problem Statement (P0)
 
@@ -224,6 +227,8 @@ Hard rules:
 
 1. Stamp must be generated from live binding context.
 2. Hardcoded identity literals are forbidden.
+3. For governed user-facing text replies, stamp must appear on the first line (`Identity-Context: ...`).
+4. Structured `identity_context` blocks are allowed as supplemental output, but cannot replace the first-line stamp requirement for governed text replies.
 
 Display safety boundary (mandatory):
 
@@ -513,6 +518,28 @@ Consistency and cross-surface rule:
    - `report_three_plane_status.py`
    - `full_identity_protocol_scan.py`
 2. Any mismatch between refresh output and three-plane/full-scan visibility is treated as governance drift and must surface as `WARN`/`FAIL`.
+
+Three-plane/full-scan mandatory visibility fields (same identity/catalog tuple):
+
+1. `report_three_plane_status` instance detail must expose actor-refresh fields:
+   - `actor_id`
+   - `lease_status`
+   - `pointer_consistency`
+   - `risk_flags`
+   - `baseline_status`
+   - `baseline_error_code`
+   - `report_protocol_commit_sha`
+   - `current_protocol_head_sha`
+2. `full_identity_protocol_scan` must include `session_refresh_status` check payload with machine-readable actor/baseline fields:
+   - `identity_id`
+   - `actor_id`
+   - `lease_status`
+   - `pointer_consistency`
+   - `risk_flags`
+   - `baseline_status`
+   - `baseline_error_code`
+   - `lag_commits`
+3. Missing fields above are not allowed to be interpreted as implicit pass.
 
 ### 5.4 `vendor_api_discovery_solution_contract_v1`
 
@@ -810,7 +837,7 @@ Hard interpretation rules:
 
 `v1.5` tag unlock condition:
 
-1. `unlock_allowed = true` iff all `P0` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
+1. `unlock_allowed = true` iff all `P0`/`P1` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
 
 Non-equivalence constraints:
 
