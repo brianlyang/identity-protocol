@@ -801,6 +801,16 @@ def main() -> int:
     p_activate.add_argument("--protocol-root", default="")
     p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     p_activate.add_argument("--auto-converge-active", action="store_true")
+    p_activate.add_argument(
+        "--allow-fixture-runtime",
+        action="store_true",
+        help="explicitly allow fixture identity activation with audited override receipt",
+    )
+    p_activate.add_argument(
+        "--fixture-audit-receipt",
+        default="",
+        help="JSON receipt path required when --allow-fixture-runtime is used for fixture mutation",
+    )
 
     p_update = sub.add_parser("update", help="Run identity upgrade executor")
     p_update.add_argument("--identity-id", required=True)
@@ -828,6 +838,16 @@ def main() -> int:
         "--allow-protocol-root-pack",
         action="store_true",
         help="allow update on identities whose pack_path is inside protocol root (fixture/debug only)",
+    )
+    p_update.add_argument(
+        "--allow-fixture-runtime",
+        action="store_true",
+        help="explicitly allow fixture identity update with audited override receipt",
+    )
+    p_update.add_argument(
+        "--fixture-audit-receipt",
+        default="",
+        help="JSON receipt path required when --allow-fixture-runtime is used for fixture mutation",
     )
     p_update.add_argument("--auto-converge-active", action="store_true")
 
@@ -913,6 +933,18 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_fixture_runtime_boundary.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+            ],
+            [
+                "python3",
                 "scripts/render_identity_response_stamp.py",
                 "--catalog",
                 args.catalog,
@@ -992,6 +1024,26 @@ def main() -> int:
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
+        fixture_boundary_cmd = [
+            "python3",
+            "scripts/validate_fixture_runtime_boundary.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "activate",
+        ]
+        if args.allow_fixture_runtime:
+            fixture_boundary_cmd.append("--allow-fixture-runtime")
+        if args.fixture_audit_receipt.strip():
+            fixture_boundary_cmd.extend(["--fixture-audit-receipt", args.fixture_audit_receipt.strip()])
+        rc_boundary = _run(fixture_boundary_cmd)
+        if rc_boundary != 0:
+            print("[FAIL] fixture/runtime boundary validation failed; activate blocked")
+            return rc_boundary
         rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
         if rc != 0:
             return rc
@@ -1009,6 +1061,26 @@ def main() -> int:
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
+        fixture_boundary_cmd = [
+            "python3",
+            "scripts/validate_fixture_runtime_boundary.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "update",
+        ]
+        if args.allow_fixture_runtime:
+            fixture_boundary_cmd.append("--allow-fixture-runtime")
+        if args.fixture_audit_receipt.strip():
+            fixture_boundary_cmd.extend(["--fixture-audit-receipt", args.fixture_audit_receipt.strip()])
+        rc_fixture = _run(fixture_boundary_cmd)
+        if rc_fixture != 0:
+            print("[FAIL] fixture/runtime boundary validation failed; update blocked")
+            return rc_fixture
         rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
         if rc != 0:
             return rc

@@ -251,6 +251,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_home_align != 0 or home_align_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_fixture_boundary, out_fixture_boundary, err_fixture_boundary = _run(
+        [
+            "python3",
+            "scripts/validate_fixture_runtime_boundary.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fixture_boundary_payload = _parse_json_payload(out_fixture_boundary) or {}
+    validators["fixture_runtime_boundary"] = {
+        "rc": rc_fixture_boundary,
+        "ok": rc_fixture_boundary == 0,
+        "out": out_fixture_boundary,
+        "err": err_fixture_boundary,
+    }
+    fixture_boundary_status = str(fixture_boundary_payload.get("path_governance_status", "")).strip().upper()
+    if rc_fixture_boundary != 0 or fixture_boundary_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(
         [
             "python3",
@@ -504,6 +530,14 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "identity_home_expected": home_align_payload.get("identity_home_expected"),
             "identity_home_source": home_align_payload.get("identity_home_source"),
             "stale_reasons": home_align_payload.get("stale_reasons", []),
+        },
+        "fixture_runtime_boundary": {
+            "path_governance_status": fixture_boundary_payload.get("path_governance_status"),
+            "path_error_codes": fixture_boundary_payload.get("path_error_codes", []),
+            "operation": fixture_boundary_payload.get("operation"),
+            "allow_fixture_runtime": fixture_boundary_payload.get("allow_fixture_runtime"),
+            "fixture_audit_receipt": fixture_boundary_payload.get("fixture_audit_receipt"),
+            "stale_reasons": fixture_boundary_payload.get("stale_reasons", []),
         },
         "response_identity_stamp": {
             "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",

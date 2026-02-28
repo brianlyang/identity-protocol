@@ -121,6 +121,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "scope_persistence",
             "runtime_contract",
             "identity_home_catalog_alignment",
+            "fixture_runtime_boundary",
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
         )
@@ -323,6 +324,19 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--json-only",
+                ],
+                "fixture_runtime_boundary": [
+                    "python3",
+                    "scripts/validate_fixture_runtime_boundary.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
                     "--json-only",
                 ],
                 "response_stamp_render": [
@@ -584,6 +598,18 @@ def main() -> int:
                     ):
                         if k in home_doc:
                             check_payload[k] = home_doc.get(k)
+                if name == "fixture_runtime_boundary":
+                    boundary_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "path_governance_status",
+                        "path_error_codes",
+                        "operation",
+                        "allow_fixture_runtime",
+                        "fixture_audit_receipt",
+                        "stale_reasons",
+                    ):
+                        if k in boundary_doc:
+                            check_payload[k] = boundary_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

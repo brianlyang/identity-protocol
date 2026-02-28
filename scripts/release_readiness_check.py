@@ -234,6 +234,35 @@ def main() -> int:
     if rc_home_align != 0:
         return rc_home_align
 
+    fixture_boundary_cmd = [
+        "python3",
+        "scripts/validate_fixture_runtime_boundary.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--operation",
+        "readiness",
+        "--json-only",
+    ]
+    rc_fixture_boundary, out_fixture_boundary, _ = _run_capture(fixture_boundary_cmd)
+    fixture_boundary_payload = _parse_json_payload(out_fixture_boundary) or {}
+    fixture_boundary_status = (
+        str(fixture_boundary_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
+    )
+    fixture_boundary_codes = fixture_boundary_payload.get("path_error_codes", [])
+    if not isinstance(fixture_boundary_codes, list):
+        fixture_boundary_codes = [str(fixture_boundary_codes)]
+    print(
+        "[INFO] fixture/runtime boundary preflight: "
+        f"status={fixture_boundary_status} error_codes={','.join(str(x) for x in fixture_boundary_codes if str(x).strip()) or '-'} "
+        f"identity={identity_id}"
+    )
+    if rc_fixture_boundary != 0:
+        return rc_fixture_boundary
+
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
         ["python3", "scripts/validate_identity_local_persistence.py"],

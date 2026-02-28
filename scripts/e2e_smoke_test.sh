@@ -76,6 +76,11 @@ for ID in $IDS; do
   python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml
 done
 
+echo "[10.17/30] validate fixture/runtime boundary gate (for each target identity)"
+for ID in $IDS; do
+  python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e
+done
+
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
   echo "[10.2/30] preflight writeability probe for global runtime targets"
   if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'
