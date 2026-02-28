@@ -430,6 +430,7 @@ def main() -> int:
                     "--enforce-user-visible-gate",
                     "--blocker-receipt-out",
                     stamp_blocker_receipt,
+                    "--json-only",
                 ],
                 "response_stamp_blocker_receipt": [
                     "python3",
@@ -443,6 +444,7 @@ def main() -> int:
                     "--force-check",
                     "--receipt",
                     stamp_blocker_receipt,
+                    "--json-only",
                 ],
                 "tool_installation": [
                     "python3",
@@ -886,6 +888,28 @@ def main() -> int:
                     ):
                         if k in refresh_doc:
                             check_payload[k] = refresh_doc.get(k)
+                if name == "response_stamp_validation":
+                    stamp_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "stamp_status",
+                        "error_code",
+                        "stale_reasons",
+                        "blocker_receipt_path",
+                        "reply_sample_count",
+                        "reply_stamp_missing_count",
+                        "reply_stamp_missing_refs",
+                    ):
+                        if k in stamp_doc:
+                            check_payload[k] = stamp_doc.get(k)
+                if name == "response_stamp_blocker_receipt":
+                    receipt_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "receipt_status",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in receipt_doc:
+                            check_payload[k] = receipt_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

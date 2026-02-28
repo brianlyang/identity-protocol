@@ -86,6 +86,106 @@ def _emit_blocker(receipt_path: Path, payload: dict[str, Any]) -> None:
     receipt_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _message_to_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+                elif isinstance(item.get("content"), str):
+                    parts.append(str(item.get("content")))
+        return "\n".join([x for x in parts if x]).strip()
+    if isinstance(value, dict):
+        if isinstance(value.get("text"), str):
+            return str(value.get("text"))
+        if isinstance(value.get("content"), str):
+            return str(value.get("content"))
+    return ""
+
+
+def _extract_reply_samples(reply_log_path: Path) -> list[str]:
+    text = reply_log_path.read_text(encoding="utf-8", errors="ignore")
+    suffix = reply_log_path.suffix.lower()
+
+    if suffix == ".jsonl":
+        out: list[str] = []
+        for raw in text.splitlines():
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                row = json.loads(raw)
+            except Exception:
+                continue
+            if not isinstance(row, dict):
+                continue
+            role = str(row.get("role", "")).strip().lower()
+            if role and role not in {"assistant", "ai", "model"}:
+                continue
+            msg = _message_to_text(row.get("content"))
+            if not msg:
+                msg = _message_to_text(row.get("message"))
+            if not msg:
+                msg = _message_to_text(row.get("output"))
+            if msg:
+                out.append(msg)
+        return out
+
+    if suffix == ".json":
+        try:
+            doc = json.loads(text)
+        except Exception:
+            doc = None
+        out: list[str] = []
+        if isinstance(doc, dict):
+            replies = doc.get("replies")
+            if isinstance(replies, list):
+                for item in replies:
+                    msg = _message_to_text(item)
+                    if msg:
+                        out.append(msg)
+            messages = doc.get("messages")
+            if isinstance(messages, list):
+                for row in messages:
+                    if not isinstance(row, dict):
+                        continue
+                    role = str(row.get("role", "")).strip().lower()
+                    if role and role not in {"assistant", "ai", "model"}:
+                        continue
+                    msg = _message_to_text(row.get("content"))
+                    if msg:
+                        out.append(msg)
+            if not out:
+                msg = _message_to_text(doc.get("content"))
+                if msg:
+                    out.append(msg)
+        elif isinstance(doc, list):
+            for item in doc:
+                msg = _message_to_text(item)
+                if msg:
+                    out.append(msg)
+        return out
+
+    chunks = [x.strip() for x in text.split("\n---\n") if x.strip()]
+    if chunks:
+        return chunks
+    return [x.strip() for x in text.splitlines() if x.strip()]
+
+
+def _first_nonempty_line(text: str) -> str:
+    for line in str(text or "").splitlines():
+        s = line.strip()
+        if s:
+            return s
+    return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate dynamic identity response stamp contract.")
     ap.add_argument("--identity-id", required=True)
@@ -95,6 +195,14 @@ def main() -> int:
     ap.add_argument("--stamp-line", default="")
     ap.add_argument("--stamp-file", default="")
     ap.add_argument("--stamp-json", default="", help="render payload json file containing external_stamp field")
+    ap.add_argument(
+        "--reply-log",
+        default="",
+        help=(
+            "optional reply evidence file (.json/.jsonl/.txt). "
+            "when provided, each assistant reply is checked for first-line Identity-Context stamp."
+        ),
+    )
     ap.add_argument("--require-dynamic", action="store_true")
     ap.add_argument("--require-redacted-external", action="store_true")
     ap.add_argument("--require-lock-match", action="store_true")
@@ -154,8 +262,17 @@ def main() -> int:
         print(f"[FAIL] unable to resolve stamp context: {exc}")
         return 1
 
-    if args.stamp_line.strip():
+    reply_samples: list[str] = []
+    if args.reply_log.strip():
+        reply_log_path = Path(args.reply_log).expanduser().resolve()
+        if not reply_log_path.exists():
+            print(f"[FAIL] reply log file not found: {reply_log_path}")
+            return 1
+        reply_samples = _extract_reply_samples(reply_log_path)
+        stamp_line = _first_nonempty_line(reply_samples[0]) if reply_samples else ""
+    elif args.stamp_line.strip():
         stamp_line = args.stamp_line.strip()
+        reply_samples = [stamp_line]
     elif args.stamp_file.strip():
         stamp_path = Path(args.stamp_file).expanduser().resolve()
         if not stamp_path.exists():
@@ -163,6 +280,7 @@ def main() -> int:
             return 1
         lines = [x.strip() for x in stamp_path.read_text(encoding="utf-8").splitlines() if x.strip()]
         stamp_line = lines[0] if lines else ""
+        reply_samples = [stamp_line] if stamp_line else []
     elif args.stamp_json.strip():
         stamp_json_path = Path(args.stamp_json).expanduser().resolve()
         if not stamp_json_path.exists():
@@ -177,18 +295,35 @@ def main() -> int:
             print(f"[FAIL] stamp json payload must be object: {stamp_json_path}")
             return 1
         stamp_line = str(stamp_json_payload.get("external_stamp", "")).strip()
+        reply_samples = [stamp_line] if stamp_line else []
     else:
         if args.enforce_user_visible_gate:
             stamp_line = ""
+            reply_samples = []
         else:
             stamp_line = render_external_stamp(ctx)
+            reply_samples = [stamp_line]
+
+    sample_first_lines = [_first_nonempty_line(x) for x in reply_samples]
+    sample_first_lines = [x for x in sample_first_lines if x]
+    reply_stamp_missing_refs = [
+        idx for idx, line in enumerate(sample_first_lines, start=1) if not line.startswith("Identity-Context:")
+    ]
+    reply_stamp_missing_count = len(reply_stamp_missing_refs)
+    reply_sample_count = len(sample_first_lines)
+
+    if not stamp_line and sample_first_lines:
+        stamp_line = sample_first_lines[0]
 
     parsed = _parse_stamp_line(stamp_line)
     stale_reasons: list[str] = []
     error_code = ""
 
-    if args.enforce_user_visible_gate and not stamp_line:
+    if args.enforce_user_visible_gate and (reply_sample_count == 0 or not stamp_line):
         stale_reasons.append("missing_user_visible_identity_context_stamp")
+        error_code = ERR_STAMP_HARD_GATE
+    if args.enforce_user_visible_gate and reply_stamp_missing_count > 0 and not error_code:
+        stale_reasons.append("reply_stamp_missing_in_replay_window")
         error_code = ERR_STAMP_HARD_GATE
 
     required_keys = ("actor_id", "identity_id", "catalog_ref", "pack_ref", "scope", "lock", "lease", "source")
@@ -253,6 +388,9 @@ def main() -> int:
         "stamp_status": "PASS" if ok else "FAIL",
         "error_code": error_code,
         "stale_reasons": stale_reasons,
+        "reply_sample_count": reply_sample_count,
+        "reply_stamp_missing_count": reply_stamp_missing_count,
+        "reply_stamp_missing_refs": reply_stamp_missing_refs,
         "blocker_receipt_path": str(receipt_path) if not ok else "",
     }
 
