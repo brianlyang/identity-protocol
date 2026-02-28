@@ -977,6 +977,14 @@ Fail-operational (recoverable blocked/warn):
 2. `IP-ASB-LEASE-001` lease stale or expired.
 3. `IP-ASB-MIRROR-001` legacy mirror drift while canonical actor binding remains valid.
 
+Path-governance gate codes (aligned with section 5.6):
+
+1. `IP-PATH-001` non-canonical catalog `pack_path` (fail-closed).
+2. `IP-PATH-002` report `resolved_pack_path` invalid/non-canonical (fail-closed).
+3. `IP-PATH-003` `identity_home` / `identity_catalog` alignment mismatch in runtime mutation flow (fail-closed).
+4. `IP-PATH-004` fixture/runtime boundary violation without explicit override + receipt (fail-closed).
+5. `IP-PATH-005` path tuple mixed-source warning in non-mutation inspection flow (fail-operational warning, must be tracked).
+
 Hard rule:
 
 1. Recoverable actor-binding failures must not be silently promoted to hard-fail unless they cross hard-boundary conditions.
