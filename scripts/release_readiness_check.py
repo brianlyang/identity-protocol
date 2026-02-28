@@ -409,6 +409,33 @@ def main() -> int:
     if rc_fresh != 0:
         return rc_fresh
 
+    report_path_cmd = [
+        "python3",
+        "scripts/validate_identity_execution_report_path_contract.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--report",
+        execution_report,
+        "--json-only",
+    ]
+    rc_report_path, out_report_path, _ = _run_capture(report_path_cmd)
+    report_path_payload = _parse_json_payload(out_report_path) or {}
+    report_path_status = str(report_path_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
+    report_path_codes = report_path_payload.get("path_error_codes", [])
+    if not isinstance(report_path_codes, list):
+        report_path_codes = [str(report_path_codes)]
+    print(
+        "[INFO] execution report path preflight: "
+        f"status={report_path_status} error_codes={','.join(str(x) for x in report_path_codes if str(x).strip()) or '-'} "
+        f"report={execution_report}"
+    )
+    if rc_report_path != 0:
+        return rc_report_path
+
     baseline_cmd = [
         "python3",
         "scripts/validate_identity_protocol_baseline_freshness.py",
