@@ -39,14 +39,51 @@ Tag policy: `v1.5` remains locked until mandatory requirement ledger rows are `D
 Allowed status values:
 
 1. `SPEC_READY` — requirement finalized in governance, implementation not complete.
-2. `CODE_READY` — implementation landed but not fully wired.
+2. `IMPL_READY` — implementation landed but not fully wired.
 3. `GATE_READY` — implementation + gate wiring landed.
 4. `VERIFIED` — acceptance commands pass with evidence.
 5. `DONE` — verified and audit accepted for release gating.
 
+Compatibility note (to avoid legacy ambiguity):
+
+1. Historical `CODE_READY` is treated as alias of `IMPL_READY`.
+2. New governance updates must use `IMPL_READY` as canonical status text.
+
 Hard rule:
 
 1. Any `P0`/`P1` requirement not reaching `DONE` keeps `v1.5` tag locked.
+
+### 0.5 Baseline snapshot (normative as-of checkpoint)
+
+As-of baseline:
+
+1. `as_of_utc`: `2026-02-28`
+2. `protocol_repo_head`: `f3d4836`
+3. `topic_status`: governance specification substantially complete; runtime implementation not closed.
+
+Normative interpretation:
+
+1. This topic is not allowed to be declared `implemented` while requirement ledger rows remain `SPEC_READY`.
+2. `SPEC_READY` coverage means governance direction is usable; it does not satisfy runtime closure claims.
+
+Hard evidence (repository-local):
+
+1. Topic P0 framing and explicit non-safe state:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:54`
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:97`
+2. Runtime still enforces single-active semantics (conflicts with multi-actor target):
+   - `scripts/identity_creator.py:150`
+   - `scripts/identity_installer.py:253`
+   - `scripts/validate_identity_state_consistency.py:44`
+   - `scripts/validate_identity_session_pointer_consistency.py:124`
+   - `scripts/sync_session_identity.py:21`
+3. Required actor scripts declared but not yet landed:
+   - `validate_actor_session_binding`
+   - `validate_no_implicit_switch`
+   - `validate_cross_actor_isolation`
+   - `render_identity_response_stamp`
+   - `validate_identity_response_stamp`
+   - `refresh_identity_session_status`
 
 ## 1) Problem Statement (P0)
 
@@ -119,6 +156,13 @@ Alignment points:
 1. Mandatory layer split: identity / skill / mcp / tool runtime.
 2. Multi-agent handoff must use explicit structured payloads.
 3. Registry-based routing decisions must be reproducible, not implicit.
+
+### 3.4 Cross-validation boundary declaration (anti-misrepresentation)
+
+1. Vendor/spec alignment in this document is an engineering synthesis against public specifications and official documentation.
+2. It is not a claim of direct vendor architect participation.
+3. Any statement about external parity must reference concrete spec/docs links listed in section 12.
+4. Skill protocol alignment is normative for runtime trigger/handoff semantics and must remain independent from instance business data.
 
 ## 4) Governance Targets (Mapped to P0 Closure Requirements)
 
@@ -431,6 +475,23 @@ Kernel extension requirement:
 | ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
 | ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
 
+### 6.5 v1.5 unlock formula (release-lock hard rule)
+
+`v1.5` tag unlock condition:
+
+1. `unlock_allowed = true` iff all `P0` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
+
+Non-equivalence constraints:
+
+1. `SPEC_READY != IMPL_READY`
+2. `IMPL_READY != GATE_READY`
+3. `GATE_READY != DONE`
+4. Passing a subset of ad-hoc commands cannot override the formula above.
+
+Audit output requirement:
+
+1. Every architect return must include explicit calculation evidence for unlock formula inputs, not just narrative conclusions.
+
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
 Mandatory policy:
@@ -552,6 +613,17 @@ All conditions must be true:
 9. `zero_shot` / `one_shot` / `multi_shot` become validator-enforced fields.
 10. Kernel-level capability evolution coverage is visible across `identity_prompt` / `skill` / `mcp` / `tool` / `vendor_api`.
 
+### 10.3 Milestone assertion guard (mandatory wording)
+
+When reporting status to any stakeholder, exactly one of the following assertions must be used:
+
+1. `Governance baseline closed, runtime not closed` (allowed when section 10.1 satisfied and section 10.2 unsatisfied).
+2. `Runtime milestone closed` (allowed only when section 10.2 satisfied).
+
+Forbidden statement:
+
+1. Any wording equivalent to `v1.5 implemented` while one or more P0 rows remain below `DONE`.
+
 ## 11) Architect Mandatory Reply Format
 
 Use fixed reply schema:
@@ -599,3 +671,107 @@ This document is an engineering synthesis based on:
 3. internal skill-governance references.
 
 It is not a transcript of direct human roundtable participation by vendor architects.
+
+## 14) Repository Legacy-Residue Cleanup Program (Mandatory, Step-A/B/C)
+
+Purpose:
+
+1. Remove mixed legacy semantics (single-active / single-pointer assumptions) from protocol base-repo surfaces.
+2. Prevent inconsistent implementation caused by partial memory or ad-hoc fixes.
+3. Keep actor-scoped target model and repository-wide behavior aligned.
+
+### 14.1 Step A — Semantic freeze and boundary declaration (must do first)
+
+Scope:
+
+1. Define legacy residue taxonomy and allowed compatibility zones.
+2. Freeze normative semantics so all contributors use the same vocabulary.
+
+Required outputs:
+
+1. Residue taxonomy:
+   - `legacy_single_active_enforcement`
+   - `legacy_single_pointer_enforcement`
+   - `legacy_single_actor_assumption`
+   - `legacy_doc_norm_conflict`
+   - `legacy_evidence_interpreted_as_norm`
+2. Action class:
+   - `REMOVE` (must be removed from normative/runtime path)
+   - `COMPAT_TAG` (allowed only in migration compatibility path)
+   - `EVIDENCE_ONLY` (historical artifact, never normative)
+   - `ARCHIVE` (historical doc with explicit superseded marker)
+3. Freeze rule:
+   - no code/gate semantics change may merge unless mapped to a residue row in Step B.
+
+### 14.2 Step B — Repository residue inventory ledger (machine-checkable)
+
+Rule:
+
+1. Every detected mixed legacy item must be recorded before cleanup execution.
+2. No “silent cleanup” is allowed.
+
+Ledger schema (mandatory columns):
+
+1. `residue_id` (e.g., `ASB-RC-001`)
+2. `file_path`
+3. `line_or_pattern`
+4. `residue_type` (from Step A taxonomy)
+5. `current_behavior`
+6. `target_behavior`
+7. `action_class` (`REMOVE|COMPAT_TAG|EVIDENCE_ONLY|ARCHIVE`)
+8. `blocking_level` (`P0|P1`)
+9. `owner`
+10. `status` (`SPEC_READY|CODE_READY|GATE_READY|VERIFIED|DONE`)
+11. `evidence_ref`
+
+Anti-forget rule:
+
+1. If a residue is discussed in review but has no ledger row, it is treated as unresolved and cannot be marked done.
+
+### 14.3 Step C — Cleanup execution waves (P0 -> P1, no mixed merge)
+
+Wave order:
+
+1. `Wave-1 (P0 runtime/core validators)`:
+   - remove single-active hard assumptions from activation/state/session critical path.
+2. `Wave-2 (P1 gate/readiness/scan semantics)`:
+   - align e2e/readiness/full-scan/three-plane interpretation with actor-scoped model.
+3. `Wave-3 (P1 docs/history channel cleanup)`:
+   - normalize docs to topic/global SSOT boundaries and mark old notes as archive/evidence-only.
+
+Wave control fields (mandatory):
+
+1. `entry_criteria`
+2. `exit_criteria`
+3. `rollback_trigger`
+4. `acceptance_commands`
+
+No-mix hard rule:
+
+1. One PR belongs to one cleanup wave only.
+2. Cross-wave bundling is forbidden unless explicitly approved in this document with reason and risk note.
+
+### 14.4 Consistency guard (prevent oral drift and forgotten work)
+
+1. Any status claim must reference:
+   - requirement row (`ASB-RQ-*`) and
+   - residue row (`ASB-RC-*`).
+2. “Looks fixed” without row status transition is invalid.
+3. Done transition requires:
+   - command evidence,
+   - row status update to `DONE`,
+   - reviewer confirmation note in same change set.
+
+### 14.5 Minimal acceptance commands for Step A/B/C governance loop
+
+```bash
+# docs contract and SSOT consistency
+python3 scripts/docs_command_contract_check.py
+python3 scripts/validate_protocol_ssot_source.py
+
+# full-scan baseline posture after each cleanup wave
+python3 scripts/full_identity_protocol_scan.py --scan-mode full --out /tmp/full-identity-scan-asb-cleanup.json
+
+# optional residue discovery probe (non-normative helper)
+rg -n "single[-_ ]active|active_identity.json|multiple active identities|session pointer consistency" scripts docs README.md
+```
