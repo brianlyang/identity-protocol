@@ -227,6 +227,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_session,
     }
 
+    rc_home_align, out_home_align, err_home_align = _run(
+        [
+            "python3",
+            "scripts/validate_identity_home_catalog_alignment.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--json-only",
+        ]
+    )
+    home_align_payload = _parse_json_payload(out_home_align) or {}
+    validators["identity_home_catalog_alignment"] = {
+        "rc": rc_home_align,
+        "ok": rc_home_align == 0,
+        "out": out_home_align,
+        "err": err_home_align,
+    }
+    home_align_status = str(home_align_payload.get("path_governance_status", "")).strip().upper()
+    if rc_home_align != 0 or home_align_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(
         [
             "python3",
@@ -472,6 +496,14 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "identity_home_catalog_alignment": {
+            "path_governance_status": home_align_payload.get("path_governance_status"),
+            "path_error_codes": home_align_payload.get("path_error_codes", []),
+            "identity_home": home_align_payload.get("identity_home"),
+            "identity_home_expected": home_align_payload.get("identity_home_expected"),
+            "identity_home_source": home_align_payload.get("identity_home_source"),
+            "stale_reasons": home_align_payload.get("stale_reasons", []),
         },
         "response_identity_stamp": {
             "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",

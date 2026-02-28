@@ -209,6 +209,31 @@ def main() -> int:
     if rc_pack != 0:
         return rc_pack
 
+    home_alignment_cmd = [
+        "python3",
+        "scripts/validate_identity_home_catalog_alignment.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--json-only",
+    ]
+    rc_home_align, out_home_align, _ = _run_capture(home_alignment_cmd)
+    home_align_payload = _parse_json_payload(out_home_align) or {}
+    home_align_status = str(home_align_payload.get("path_governance_status", "")).strip().upper() or "UNKNOWN"
+    home_align_codes = home_align_payload.get("path_error_codes", [])
+    if not isinstance(home_align_codes, list):
+        home_align_codes = [str(home_align_codes)]
+    print(
+        "[INFO] identity home/catalog alignment preflight: "
+        f"status={home_align_status} error_codes={','.join(str(x) for x in home_align_codes if str(x).strip()) or '-'} "
+        f"identity={identity_id}"
+    )
+    if rc_home_align != 0:
+        return rc_home_align
+
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
         ["python3", "scripts/validate_identity_local_persistence.py"],

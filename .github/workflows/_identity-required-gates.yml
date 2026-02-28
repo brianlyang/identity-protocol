@@ -159,6 +159,7 @@ jobs:
           for ID in $IDS; do
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_role_binding.py --identity-id "$ID"
+            python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml
             python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --view external --json-only
             python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --require-dynamic --require-redacted-external --require-lock-match
             python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml

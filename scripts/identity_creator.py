@@ -903,6 +903,16 @@ def main() -> int:
             ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             [
                 "python3",
+                "scripts/validate_identity_home_catalog_alignment.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+            ],
+            [
+                "python3",
                 "scripts/render_identity_response_stamp.py",
                 "--catalog",
                 args.catalog,

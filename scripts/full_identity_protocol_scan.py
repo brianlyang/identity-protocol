@@ -120,6 +120,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "scope_isolation",
             "scope_persistence",
             "runtime_contract",
+            "identity_home_catalog_alignment",
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
         )
@@ -312,6 +313,17 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                ],
+                "identity_home_catalog_alignment": [
+                    "python3",
+                    "scripts/validate_identity_home_catalog_alignment.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--json-only",
                 ],
                 "response_stamp_render": [
                     "python3",
@@ -560,6 +572,18 @@ def main() -> int:
                     ):
                         if k in baseline_doc:
                             check_payload[k] = baseline_doc.get(k)
+                if name == "identity_home_catalog_alignment":
+                    home_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "path_governance_status",
+                        "path_error_codes",
+                        "identity_home",
+                        "identity_home_expected",
+                        "identity_home_source",
+                        "stale_reasons",
+                    ):
+                        if k in home_doc:
+                            check_payload[k] = home_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

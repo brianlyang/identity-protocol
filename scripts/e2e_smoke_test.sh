@@ -71,6 +71,11 @@ for ID in $IDS; do
   python3 scripts/validate_identity_runtime_mode_guard.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --expect-mode auto
 done
 
+echo "[10.16/30] validate identity_home/catalog alignment gate (for each target identity)"
+for ID in $IDS; do
+  python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml
+done
+
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
   echo "[10.2/30] preflight writeability probe for global runtime targets"
   if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'
