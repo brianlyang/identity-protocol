@@ -726,6 +726,51 @@ Interpretation rule:
 2. Examples are illustrative only; examples cannot become implicit production defaults.
 3. Capability binding decisions must be derived from contract fields and evidence, not from script-local hardcoded mappings.
 
+### 5.6 `identity_system_path_governance_contract_v1` (P0)
+
+Goal:
+
+1. Close the path-governance chain across catalog/runtime/report so evidence is replayable and non-ambiguous.
+2. Prevent mixed-source path tuples (e.g., catalog from one domain, pack/report from another) from being interpreted as valid closure.
+3. Keep all path checks machine-verifiable and CWD-invariant.
+
+Problem framing (protocol layer):
+
+1. Catalog `pack_path` can be non-canonical (relative/missing/out-of-boundary).
+2. Execution reports can persist non-canonical `resolved_pack_path` values.
+3. `identity_home` / `catalog_path` / `resolved_pack_path` can be sourced from inconsistent domains if no strict tuple guard exists.
+4. Runtime entry/guard can pass without enforcing canonical `identity_home == dirname(identity_catalog)` alignment.
+
+Mandatory path gates:
+
+1. `pack_path_canonical_gate`
+   - catalog `pack_path` must be canonical absolute and exist,
+   - path must remain in allowed runtime root for selected mode.
+2. `resolved_pack_report_gate`
+   - report `resolved_pack_path` must be canonical absolute,
+   - forbidden values include empty, `.`, `..`, relative strings, and unresolved symbolic traversals.
+3. `identity_home_catalog_alignment_gate`
+   - canonical `identity_home` must equal canonical `dirname(identity_catalog)`,
+   - mismatch is fail-closed for runtime mutation flows.
+4. `fixture_runtime_boundary_gate`
+   - fixture/demo assets cannot enter runtime active/update path without explicit override + audit receipt.
+
+Path evidence envelope (required fields):
+
+1. `identity_id`
+2. `catalog_path`
+3. `identity_home`
+4. `resolved_pack_path`
+5. `path_scope`
+6. `path_governance_status` (`PASS_REQUIRED|FAIL_REQUIRED|SKIPPED_NOT_REQUIRED`)
+7. `path_error_codes` (array)
+8. `canonicalization_ref` (resolver/version/timestamp)
+
+Hard rule:
+
+1. If any mandatory path gate is `FAIL_REQUIRED`, runtime closure claim is invalid.
+2. Path-governance failures cannot be masked by unrelated PASS checks.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -737,6 +782,10 @@ Interpretation rule:
 5. `scripts/validate_identity_session_pointer_consistency.py`
 6. `scripts/collect_identity_health_report.py`
 7. `scripts/validate_identity_health_contract.py`
+8. `scripts/execute_identity_upgrade.py`
+9. `scripts/validate_identity_runtime_mode_guard.py`
+10. `scripts/use_project_identity_runtime.sh`
+11. report writers/readers persisting `identity_home` / `catalog_path` / `resolved_pack_path`
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -750,6 +799,10 @@ Interpretation rule:
 8. `validate_identity_heal_replay_closure`
 9. `validate_identity_response_stamp_blocker_receipt`
 10. `validate_identity_session_refresh_status`
+11. `validate_identity_pack_path_canonical`
+12. `validate_identity_execution_report_path_contract`
+13. `validate_identity_home_catalog_alignment`
+14. `validate_fixture_runtime_boundary`
 
 ### 6.3 Gate wiring surfaces
 
@@ -778,6 +831,13 @@ Refresh closure must be wired in the same surfaces through:
 2. refresh output contract validation (including protocol baseline fields).
 3. consistent actor/baseline visibility in three-plane and full-scan outputs.
 
+Path-governance closure must be wired in the same surfaces through:
+
+1. catalog/runtime canonical path check (`pack_path_canonical_gate`).
+2. report path contract check (`resolved_pack_report_gate`).
+3. home/catalog alignment check (`identity_home_catalog_alignment_gate`).
+4. fixture/runtime boundary check (`fixture_runtime_boundary_gate`).
+
 Vendor/API chain must be wired in the same surfaces through:
 
 1. `scripts/validate_identity_vendor_api_discovery.py`
@@ -792,7 +852,7 @@ Kernel extension requirement:
 ### 6.3A P0 mandatory confirmation matrix (multi-agent x multi-identity)
 
 This subsection is a no-ambiguity lock for architect and auditor communication.
-The six items below are mandatory protocol targets and must be treated as one closure set.
+The seven items below are mandatory protocol targets and must be treated as one closure set.
 
 | Confirm item | Mandatory protocol statement | Acceptance signal (must be explicit) | Current baseline interpretation |
 | --- | --- | --- | --- |
@@ -802,12 +862,13 @@ The six items below are mandatory protocol targets and must be treated as one cl
 | C4 | Legacy `active_identity.json` is compatibility mirror only (not authoritative). | Any authoritative decision that still depends on legacy pointer is removed. | P0 target; currently tracked by ASB-RQ-002/ASB-RQ-010 and pending implementation. |
 | C5 | Three new validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | Scripts exist, produce stable machine-readable outputs, and are referenced by acceptance gates. | P0 target; currently tracked by ASB-RQ-003/004/005 and pending implementation. |
 | C6 | Gate wiring must cover `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, and CI required-gates workflow. | Wire-up evidence exists in code and acceptance output across all listed surfaces. | P0 target; currently tracked by ASB-RQ-009 and pending implementation. |
+| C7 | Path governance must be canonical and mixed-source safe across catalog/runtime/report surfaces. | Canonical path gates pass and no relative or cross-domain ambiguous path tuple appears in closure evidence. | P0 target; currently tracked by ASB-RQ-028/029/030/031 and pending implementation. |
 
 Hard interpretation rules:
 
-1. C1~C6 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
+1. C1~C7 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
 2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
-3. Until C1~C6 are all `DONE`, this topic is governance-ready (`SPEC_READY`) but runtime-not-closed.
+3. Until C1~C7 are all `DONE`, this topic is governance-ready (`SPEC_READY`) but runtime-not-closed.
 
 ### 6.4 Requirement ledger (canonical tracker for `v1.5` unlock)
 
@@ -840,12 +901,17 @@ Hard interpretation rules:
 | ASB-RQ-025 | anytime refresh command exports actor session status and risk hints | `refresh_identity_session_status` (new), `validate_identity_session_refresh_status` (new) | P1 | SPEC_READY | Spec defined in 5.3C; implementation pending |
 | ASB-RQ-026 | refresh output includes protocol baseline version visibility fields | refresh command + baseline payload contract | P1 | SPEC_READY | Spec defined in 5.3C; implementation pending |
 | ASB-RQ-027 | three-plane/full-scan include refresh-consistent actor and baseline visibility for same identity context | `report_three_plane_status.py`, `full_identity_protocol_scan.py` + refresh validator wiring | P1 | SPEC_READY | Spec defined in 5.3C; visibility/wiring pending |
+| ASB-RQ-028 | runtime catalog `pack_path` canonicalization is strict and machine-validated | `validate_identity_pack_path_canonical` (new), resolver/catalog write paths | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
+| ASB-RQ-029 | report `resolved_pack_path` is canonical absolute and non-relative | `validate_identity_execution_report_path_contract` (new), `execute_identity_upgrade.py` | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
+| ASB-RQ-030 | `identity_home == dirname(identity_catalog)` alignment is fail-closed for runtime mutation | `validate_identity_home_catalog_alignment` (new), runtime mode guard surfaces | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
+| ASB-RQ-031 | fixture/runtime boundary is validator-enforced for activate/update/readiness paths | `validate_fixture_runtime_boundary` (new), creator/update/readiness/scan surfaces | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:
 
-1. `unlock_allowed = true` iff all `P0`/`P1` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
+1. `unlock_allowed = true` iff all `P0` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
+2. `P1` rows remain mandatory backlog visibility items and block unlock only when explicitly promoted to `P0`.
 
 Non-equivalence constraints:
 
@@ -945,6 +1011,12 @@ python3 scripts/validate_identity_response_stamp_blocker_receipt --identity-id <
 python3 scripts/refresh_identity_session_status --identity-id <id> --catalog <catalog> --json-only
 python3 scripts/validate_identity_session_refresh_status --identity-id <id> --catalog <catalog>
 
+# Path-governance closure (canonical + alignment + boundary)
+python3 scripts/validate_identity_pack_path_canonical --identity-id <id> --catalog <catalog>
+python3 scripts/validate_identity_execution_report_path_contract --identity-id <id> --catalog <catalog> --report <report_path>
+python3 scripts/validate_identity_home_catalog_alignment --identity-id <id> --catalog <catalog>
+python3 scripts/validate_fixture_runtime_boundary --identity-id <id> --catalog <catalog>
+
 # Vendor/API one-shot closure (current validator chain)
 python3 scripts/validate_identity_vendor_api_discovery.py --identity-id <id> --catalog <catalog>
 python3 scripts/validate_identity_vendor_api_solution.py --identity-id <id> --catalog <catalog>
@@ -960,7 +1032,7 @@ python3 scripts/docs_command_contract_check.py
 
 ### 9.1 P0 deep-remediation closure checklist (no-ambiguity lock)
 
-This checklist is the protocol-level closure contract for "deep remediation + cross-validation" and must be read together with section 6.3A (C1~C6) and section 6.4 (`ASB-RQ-*`).
+This checklist is the protocol-level closure contract for "deep remediation + cross-validation" and must be read together with section 6.3A (C1~C7) and section 6.4 (`ASB-RQ-*`).
 
 | Closure item | Mandatory statement | Evidence requirement | Tracker linkage |
 | --- | --- | --- | --- |
@@ -973,10 +1045,11 @@ This checklist is the protocol-level closure contract for "deep remediation + cr
 | DRC-7 | Health/heal closure is actor-risk complete and replay-deterministic. | health report shows actor-risk coverage fields; heal apply output binds to health report ref and post-validate ref; closure checks use explicit `--report` binding. | `ASB-RQ-014/015/016` |
 | DRC-8 | Response stamp closure is dynamic, non-hardcoded, redacted-by-default, and mismatch fail-closed. | stamp is present on every user-facing reply; validator confirms live-binding fields; mismatch produces blocker receipt before business output; CWD-invariant behavior verified. | `ASB-RQ-018/019/020/021` |
 | DRC-9 | Anytime self-check/refresh closure is available and protocol baseline visibility is included. | refresh command callable anytime; output contains actor/session status + baseline lag fields; three-plane/full-scan remain consistent with refresh semantics. | `ASB-RQ-025/026/027` |
+| DRC-10 | Path-governance closure is canonical, aligned, and boundary-safe across catalog/runtime/report surfaces. | path gates pass; report path contract rejects relative path values; home/catalog alignment enforced; fixture/runtime boundary is auditable and enforced. | `ASB-RQ-028/029/030/031` |
 
 Hard closure rule:
 
-1. Any one of `DRC-1..DRC-9` not reaching `DONE` means runtime milestone is not closed.
+1. Any one of `DRC-1..DRC-10` not reaching `DONE` means runtime milestone is not closed.
 2. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
@@ -991,6 +1064,10 @@ Post-implementation command contract (must be enabled in same PR as script landi
 8. `validate_identity_heal_replay_closure` command + replay-bound closure contract.
 9. `validate_identity_response_stamp_blocker_receipt` command + mismatch fail-closed contract.
 10. `validate_identity_session_refresh_status` command + anytime self-check/refresh contract.
+11. `validate_identity_pack_path_canonical` command + catalog/runtime canonical path contract.
+12. `validate_identity_execution_report_path_contract` command + report path contract.
+13. `validate_identity_home_catalog_alignment` command + home/catalog alignment contract.
+14. `validate_fixture_runtime_boundary` command + fixture/runtime boundary contract.
 
 ## 10) Definition of Done (Split to Avoid False Closure)
 
@@ -1019,6 +1096,7 @@ All conditions must be true:
 8. Vendor/API discovery-solution chain is one-shot verifiable under policy.
 9. `zero_shot` / `one_shot` / `multi_shot` become validator-enforced fields.
 10. Kernel-level capability evolution coverage is visible across `identity_prompt` / `skill` / `mcp` / `tool` / `vendor_api`.
+11. Path governance chain is validator-enforced and replay-stable (`pack_path` + report `resolved_pack_path` + home/catalog alignment + fixture/runtime boundary).
 
 ### 10.3 Milestone assertion guard (mandatory wording)
 
