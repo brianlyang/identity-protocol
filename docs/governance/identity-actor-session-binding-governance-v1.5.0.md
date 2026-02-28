@@ -479,6 +479,41 @@ Execution-context declaration (must be included in architect/audit return):
    - `catalog_path`
    - `identity_id`
 
+### 5.3C Anytime self-check/refresh contract (including protocol version visibility)
+
+Purpose:
+
+1. Allow operators and instances to self-check current identity binding state at any time.
+2. Ensure "current protocol baseline lag" is visible in the same self-check output.
+
+Refresh command contract:
+
+1. `refresh_identity_session_status` must be callable on-demand outside release windows.
+2. Required output fields:
+   - `identity_id`
+   - `actor_id`
+   - `catalog_path`
+   - `resolved_pack_path`
+   - `resolved_scope`
+   - `lease_status` (`ACTIVE` | `STALE` | `MISSING`)
+   - `pointer_consistency` (`PASS` | `WARN` | `FAIL`)
+   - `risk_flags` (array)
+   - `next_action`
+3. Protocol version visibility fields are mandatory:
+   - `report_protocol_commit_sha`
+   - `current_protocol_head_sha`
+   - `baseline_status`
+   - `baseline_error_code`
+   - `lag_commits`
+4. Output must be machine-readable (`--json-only`) for gate reuse.
+
+Consistency and cross-surface rule:
+
+1. Refresh output for the same identity/catalog tuple must be semantically consistent with:
+   - `report_three_plane_status.py`
+   - `full_identity_protocol_scan.py`
+2. Any mismatch between refresh output and three-plane/full-scan visibility is treated as governance drift and must surface as `WARN`/`FAIL`.
+
 ### 5.4 `vendor_api_discovery_solution_contract_v1`
 
 This capability is protocol-generic and must not be implemented as scattered business scripts.
@@ -679,6 +714,7 @@ Interpretation rule:
 7. `validate_identity_actor_health_profile`
 8. `validate_identity_heal_replay_closure`
 9. `validate_identity_response_stamp_blocker_receipt`
+10. `validate_identity_session_refresh_status`
 
 ### 6.3 Gate wiring surfaces
 
@@ -700,6 +736,12 @@ Response-stamp closure must be wired in the same surfaces through:
 1. dynamic stamp rendering before user-facing output.
 2. stamp contract validation (non-hardcoded + redaction + field completeness).
 3. mismatch fail-closed behavior (`blocker_receipt` before any business payload).
+
+Refresh closure must be wired in the same surfaces through:
+
+1. on-demand `refresh_identity_session_status` output collection.
+2. refresh output contract validation (including protocol baseline fields).
+3. consistent actor/baseline visibility in three-plane and full-scan outputs.
 
 Vendor/API chain must be wired in the same surfaces through:
 
@@ -760,6 +802,9 @@ Hard interpretation rules:
 | ASB-RQ-022 | response stamp presentation is configurable (message/email style) under governance-safe invariants | renderer + runtime contract + stamp validator | P1 | SPEC_READY | Spec defined in 5.2B; style configurable, safety invariants non-configurable |
 | ASB-RQ-023 | disclosure-level + user-named explicit trigger support with auditable scope and non-bypass guarantees | runtime stamp config + trigger parser + stamp validator | P1 | SPEC_READY | Spec defined in 5.2C; explicit trigger allowed, governance invariants unchanged |
 | ASB-RQ-024 | natural-language explicit trigger normalization and confidence-gated execution | trigger parser + stamp config applier + audit log + stamp validator | P1 | SPEC_READY | Spec defined in 5.2C; NL trigger allowed with non-ambiguous normalization |
+| ASB-RQ-025 | anytime refresh command exports actor session status and risk hints | `refresh_identity_session_status` (new), `validate_identity_session_refresh_status` (new) | P1 | SPEC_READY | Spec defined in 5.3C; implementation pending |
+| ASB-RQ-026 | refresh output includes protocol baseline version visibility fields | refresh command + baseline payload contract | P1 | SPEC_READY | Spec defined in 5.3C; implementation pending |
+| ASB-RQ-027 | three-plane/full-scan include refresh-consistent actor and baseline visibility for same identity context | `report_three_plane_status.py`, `full_identity_protocol_scan.py` + refresh validator wiring | P1 | SPEC_READY | Spec defined in 5.3C; visibility/wiring pending |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -855,6 +900,10 @@ python3 scripts/render_identity_response_stamp --identity-id <id> --catalog <cat
 python3 scripts/validate_identity_response_stamp --identity-id <id> --catalog <catalog> --require-dynamic --require-redacted-external --require-lock-match
 python3 scripts/validate_identity_response_stamp_blocker_receipt --identity-id <id> --catalog <catalog>
 
+# Anytime self-check + refresh (including protocol baseline visibility)
+python3 scripts/refresh_identity_session_status --identity-id <id> --catalog <catalog> --json-only
+python3 scripts/validate_identity_session_refresh_status --identity-id <id> --catalog <catalog>
+
 # Vendor/API one-shot closure (current validator chain)
 python3 scripts/validate_identity_vendor_api_discovery.py --identity-id <id> --catalog <catalog>
 python3 scripts/validate_identity_vendor_api_solution.py --identity-id <id> --catalog <catalog>
@@ -882,10 +931,11 @@ This checklist is the protocol-level closure contract for "deep remediation + cr
 | DRC-6 | Gate wiring covers: `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, CI required-gates. | same target identity shows consistent semantics across all listed surfaces; no silent pass when required wiring is missing. | `C6`, `ASB-RQ-009`, `ASB-RC-012` |
 | DRC-7 | Health/heal closure is actor-risk complete and replay-deterministic. | health report shows actor-risk coverage fields; heal apply output binds to health report ref and post-validate ref; closure checks use explicit `--report` binding. | `ASB-RQ-014/015/016` |
 | DRC-8 | Response stamp closure is dynamic, non-hardcoded, redacted-by-default, and mismatch fail-closed. | stamp is present on every user-facing reply; validator confirms live-binding fields; mismatch produces blocker receipt before business output; CWD-invariant behavior verified. | `ASB-RQ-018/019/020/021` |
+| DRC-9 | Anytime self-check/refresh closure is available and protocol baseline visibility is included. | refresh command callable anytime; output contains actor/session status + baseline lag fields; three-plane/full-scan remain consistent with refresh semantics. | `ASB-RQ-025/026/027` |
 
 Hard closure rule:
 
-1. Any one of `DRC-1..DRC-8` not reaching `DONE` means runtime milestone is not closed.
+1. Any one of `DRC-1..DRC-9` not reaching `DONE` means runtime milestone is not closed.
 2. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
@@ -899,6 +949,7 @@ Post-implementation command contract (must be enabled in same PR as script landi
 7. `validate_identity_actor_health_profile` command + health coverage contract.
 8. `validate_identity_heal_replay_closure` command + replay-bound closure contract.
 9. `validate_identity_response_stamp_blocker_receipt` command + mismatch fail-closed contract.
+10. `validate_identity_session_refresh_status` command + anytime self-check/refresh contract.
 
 ## 10) Definition of Done (Split to Avoid False Closure)
 
