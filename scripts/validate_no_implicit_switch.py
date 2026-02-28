@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 ERR_NO_IMPLICIT_SWITCH = "IP-ASB-202"
+STRICT_OPS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
+INSPECTION_OPS = {"scan", "three-plane", "inspection"}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -30,14 +32,22 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--switch-report", default="")
+    ap.add_argument(
+        "--operation",
+        choices=sorted(STRICT_OPS | INSPECTION_OPS),
+        default="validate",
+        help="operation context for machine-readable routing semantics",
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
+    operation = str(args.operation or "validate").strip().lower()
     report_path = Path(args.switch_report).expanduser().resolve() if args.switch_report.strip() else _latest_switch_report(args.identity_id)
     if not report_path or not report_path.exists():
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": operation,
             "switch_report_path": str(report_path) if report_path else "",
             "implicit_switch_status": "SKIPPED_NOT_REQUIRED",
             "error_code": "",
@@ -93,6 +103,7 @@ def main() -> int:
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+        "operation": operation,
         "switch_report_path": str(report_path),
         "implicit_switch_status": status,
         "error_code": error_code,

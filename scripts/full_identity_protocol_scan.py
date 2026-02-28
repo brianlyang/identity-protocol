@@ -362,6 +362,8 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--operation",
+                    "scan",
                     "--json-only",
                 ],
                 "cross_actor_isolation": [

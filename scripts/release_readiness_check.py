@@ -284,7 +284,16 @@ def main() -> int:
             "--operation",
             "readiness",
         ],
-        ["python3", "scripts/validate_no_implicit_switch.py", "--catalog", catalog, "--identity-id", identity_id],
+        [
+            "python3",
+            "scripts/validate_no_implicit_switch.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+        ],
         [
             "python3",
             "scripts/validate_cross_actor_isolation.py",

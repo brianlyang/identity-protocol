@@ -1075,6 +1075,8 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--operation",
+                "validate",
             ],
             [
                 "python3",
