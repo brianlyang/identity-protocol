@@ -67,7 +67,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | REJECT |
 | FIX-009 | 2026-02-28 | protocol | no-implicit-switch operation routing + chain wiring closure | `77b09ef` | DONE | PASS |
 | FIX-010 | 2026-02-28 | protocol | three-plane cross-actor operation wiring fix (close FIX-008 reject gap) | `00dcf6b` | DONE | PASS |
-| FIX-011 | 2026-02-28 | protocol | Track-A writeback continuity + post-execution mandatory gates landing | `TBD` | DONE | PENDING_REVIEW |
+| FIX-011 | 2026-02-28 | protocol | Track-A writeback continuity + post-execution mandatory gates landing | `ca23c1d` | DONE | PASS |
+| FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `8868d71` | DONE | PENDING_REVIEW |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `TBD` | PLANNED | PENDING_REVIEW |
 
 ---
@@ -158,6 +159,8 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-008 | REJECT | audit-expert(codex) | 2026-02-28T15:02:10Z | Replayed strict/inspection paths; actor semantics are mostly correct, but three-plane still invokes `validate_cross_actor_isolation.py` without `--operation three-plane`, so inspection surface can fall back to strict default (`operation=validate`) and emit false FAIL_REQUIRED. |
 | FIX-009 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. `no_implicit_switch` now carries operation semantics (`scan/readiness/e2e/ci/validate`) and chain routing is reproducible in full-scan/readiness/e2e replay. |
 | FIX-010 | PASS | audit-expert(codex) | 2026-02-28T15:03:40Z | Scoped PASS. three-plane now passes `--operation three-plane` to cross-actor validator; project-catalog replay shows inspection-consistent `SKIPPED_NOT_REQUIRED` (no strict fallback). |
+| FIX-011 | PASS | audit-expert(codex) | 2026-02-28T15:36:55Z | Scoped PASS. Track-A validators are landed and fail-closed (`IP-WRB-001` / `IP-WRB-003`), with visibility wired through full-scan/three-plane/health and CI/readiness/e2e chains; readiness early-stop remains expected when auto update report generation is non-closed. |
+| FIX-012 | PENDING_REVIEW | - | - | Architect patch landed; waiting audit replay for Track-B semantic routing and namespace separation gate behavior. |
 
 ---
 
@@ -1520,6 +1523,78 @@ Alignment note (2026-02-28, anti-drift):
 1. Submit FIX-011 patch set for audit replay.
 2. Keep v1.5 tag blocked until Track-A audit verdict is `PASS` and Track-B implementation/replay is completed.
 
+#### Audit review verdict (2026-02-28T15:36:55Z)
+
+1. Decision: `PASS` (scoped to FIX-011 objective).
+2. Replay evidence summary:
+   - sandbox:
+     - `python3 scripts/validate_writeback_continuity.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only` => `rc=1`, `writeback_continuity_status=FAIL_REQUIRED`, `error_code=IP-WRB-001`.
+     - `python3 scripts/validate_post_execution_mandatory.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only` => `rc=1`, `post_execution_mandatory_status=FAIL_REQUIRED`, `error_code=IP-WRB-003`.
+     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix011-audit.json` => `rc=0`, includes `checks.writeback_continuity` + `checks.post_execution_mandatory`.
+     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix011-audit.json` => `rc=0`, includes `instance_plane_detail.writeback_continuity` + `instance_plane_detail.post_execution_mandatory`.
+     - `python3 scripts/collect_identity_health_report.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out-dir /tmp/identity-health-reports-fix011-audit` => `rc=0`, `overall_status=FAIL`, `failed_count=2` with Track-A repair guidance.
+   - escalated (`~/.codex` writable):
+     - `python3 scripts/identity_creator.py update --identity-id custom-creative-ecom-analyst --mode review-required --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --capability-activation-policy route-any-ready` => `rc=2`, report generated with `all_ok=False` and non-closure `next_action`.
+     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready` => `rc=2`, early-stop at update non-zero path (expected current behavior).
+3. Audit note:
+   - FIX-011 is accepted as Track-A gate landing and visibility closure; this does not claim Track-A runtime closure for the target identity state.
+   - `python3 scripts/docs_command_contract_check.py` and `python3 scripts/validate_protocol_ssot_source.py` replayed clean (`rc=0`).
+
+---
+
+### FIX-012 — Track-B semantic routing guard + vendor namespace separation gates (initial landing)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for static checks and validator/full-scan/three-plane replay
+  - `escalated` not required in this architect replay batch
+- Source refs:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`5.7.2`, `ASB-RQ-034`, `ASB-RQ-035`, `DRC-12`)
+
+#### Change summary
+
+1. Added Track-B validators:
+   - `scripts/validate_semantic_routing_guard.py`
+   - `scripts/validate_vendor_namespace_separation.py`
+2. Added auto-required safety signal for legacy protocol-feedback artifacts (prevents silent skip when semantic-risk artifacts already exist).
+3. Wired validators into main-chain surfaces:
+   - `scripts/identity_creator.py` (`validate`)
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+4. Health visibility update:
+   - `scripts/collect_identity_health_report.py` now includes Track-B checks.
+
+#### Acceptance replay (architect run, pre-audit)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_semantic_routing_guard.py scripts/validate_vendor_namespace_separation.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py scripts/collect_identity_health_report.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Contract-first skip path (no Track-B contract and no feedback artifacts):
+   - `python3 scripts/validate_semantic_routing_guard.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=0`, `semantic_routing_status=SKIPPED_NOT_REQUIRED`.
+   - `python3 scripts/validate_vendor_namespace_separation.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=0`, `vendor_namespace_status=SKIPPED_NOT_REQUIRED`.
+3. Auto-required risk path (legacy feedback artifacts present):
+   - `python3 scripts/validate_semantic_routing_guard.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=1`, `semantic_routing_status=FAIL_REQUIRED`, `error_code=IP-SEM-001`, `auto_required_signal=true`.
+   - `python3 scripts/validate_vendor_namespace_separation.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only` => `rc=1`, `vendor_namespace_status=FAIL_REQUIRED`, `error_code=IP-SEM-003`, includes legacy `vendor-intel/*` evidence refs.
+4. Chain visibility:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix012-system.json` => `rc=0`; includes `checks.semantic_routing_guard` + `checks.vendor_namespace_separation`.
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix012-system.json` => `rc=0`; includes `instance_plane_detail.semantic_routing_guard` + `instance_plane_detail.vendor_namespace_separation`.
+
+#### Residual risk
+
+1. Track-B validators now expose deterministic boundary violations, but closure still requires instance-side contract/report namespace migration.
+2. `system-requirements-analyst` currently surfaces real legacy violations (`vendor-intel/*`, missing semantic contract fields).
+3. Track-B sidecar escalation policy (`ASB-RQ-036`) remains to be finalized in a dedicated follow-up patch.
+
+#### Next action
+
+1. Submit FIX-012 patch set for audit replay and verdict.
+2. Keep v1.5 release tag blocked until Track-B audit verdict is `PASS` and follow-up sidecar escalation contract is aligned.
+
 ---
 
 ## 7) Next release-blocking verifier: FIX-015 (concurrent actor x identity activation)
@@ -1538,10 +1613,11 @@ Alignment note (2026-02-28, anti-drift):
 
 ### Dependency boundary (must be true before FIX-015 can pass)
 
-1. FIX-011 completed: activation path no longer demotes other identities by global singleton rule.
-2. FIX-012 completed: state consistency validator no longer fails only because active count > 1.
-3. FIX-013 completed: session pointer consistency uses actor-scoped canonical source as authority.
-4. FIX-014 completed: installer/compile flow no longer depends on single-active precheck semantics.
+1. Activation path no longer demotes other identities by global singleton rule (`ASB-RC-001`, `ASB-RQ-010`).
+2. State consistency validator no longer fails only because active count > 1 (`ASB-RC-003`).
+3. Session pointer consistency uses actor-scoped canonical source as authority (`ASB-RC-004`, `ASB-RC-006`).
+4. Installer/compile flow no longer depends on single-active precheck semantics (`ASB-RC-002`, `ASB-RC-005`).
+5. Concurrency-stream fix IDs must be assigned in a dedicated numbering lane; do not reuse Track-A/Track-B fix IDs.
 
 ### Acceptance replay template (required evidence)
 

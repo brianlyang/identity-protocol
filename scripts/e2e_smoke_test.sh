@@ -247,6 +247,12 @@ for ID in $IDS; do
   echo "[23.4/30][$ID] validate vendor/api solution closure contract (contract-first)"
   python3 scripts/validate_identity_vendor_api_solution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
+  echo "[23.42/30][$ID] validate semantic routing guard contract (Track-B)"
+  python3 scripts/validate_semantic_routing_guard.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
+
+  echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
+  python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
+
   echo "[23.45/30][$ID] summarize required-contract coverage semantics (PASS_REQUIRED/SKIPPED_NOT_REQUIRED)"
   python3 scripts/validate_required_contract_coverage.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 

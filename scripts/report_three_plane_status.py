@@ -537,6 +537,54 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_cov,
     }
 
+    rc_semantic, out_semantic, err_semantic = _run(
+        [
+            "python3",
+            "scripts/validate_semantic_routing_guard.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    semantic_payload = _parse_json_payload(out_semantic) or {}
+    validators["semantic_routing_guard"] = {
+        "rc": rc_semantic,
+        "ok": rc_semantic == 0,
+        "out": out_semantic,
+        "err": err_semantic,
+    }
+    semantic_status = str(semantic_payload.get("semantic_routing_status", "")).strip().upper()
+    if rc_semantic != 0 or semantic_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_namespace, out_namespace, err_namespace = _run(
+        [
+            "python3",
+            "scripts/validate_vendor_namespace_separation.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    namespace_payload = _parse_json_payload(out_namespace) or {}
+    validators["vendor_namespace_separation"] = {
+        "rc": rc_namespace,
+        "ok": rc_namespace == 0,
+        "out": out_namespace,
+        "err": err_namespace,
+    }
+    namespace_status = str(namespace_payload.get("vendor_namespace_status", "")).strip().upper()
+    if rc_namespace != 0 or namespace_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_writeback, out_writeback, err_writeback = _run(
         [
             "python3",
@@ -661,6 +709,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "semantic_routing_guard": {
+            "semantic_routing_status": semantic_payload.get("semantic_routing_status"),
+            "error_code": semantic_payload.get("error_code", ""),
+            "required_contract": semantic_payload.get("required_contract"),
+            "auto_required_signal": semantic_payload.get("auto_required_signal"),
+            "feedback_batch_path": semantic_payload.get("feedback_batch_path"),
+            "intent_domain": semantic_payload.get("intent_domain"),
+            "intent_confidence": semantic_payload.get("intent_confidence"),
+            "classifier_reason": semantic_payload.get("classifier_reason", ""),
+            "legacy_namespace_refs": semantic_payload.get("legacy_namespace_refs", []),
+            "stale_reasons": semantic_payload.get("stale_reasons", []),
+        },
+        "vendor_namespace_separation": {
+            "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),
+            "error_code": namespace_payload.get("error_code", ""),
+            "required_contract": namespace_payload.get("required_contract"),
+            "auto_required_signal": namespace_payload.get("auto_required_signal"),
+            "feedback_root": namespace_payload.get("feedback_root"),
+            "protocol_vendor_file_count": namespace_payload.get("protocol_vendor_file_count"),
+            "business_partner_file_count": namespace_payload.get("business_partner_file_count"),
+            "legacy_vendor_file_count": namespace_payload.get("legacy_vendor_file_count"),
+            "legacy_namespace_refs": namespace_payload.get("legacy_namespace_refs", []),
+            "stale_reasons": namespace_payload.get("stale_reasons", []),
         },
         "writeback_continuity": {
             "writeback_continuity_status": writeback_payload.get("writeback_continuity_status"),

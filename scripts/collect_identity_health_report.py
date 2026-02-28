@@ -25,6 +25,26 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("vendor_api_discovery", ["python3", "scripts/validate_identity_vendor_api_discovery.py"]),
     ("vendor_api_solution", ["python3", "scripts/validate_identity_vendor_api_solution.py"]),
     (
+        "semantic_routing_guard",
+        [
+            "python3",
+            "scripts/validate_semantic_routing_guard.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
+        "vendor_namespace_separation",
+        [
+            "python3",
+            "scripts/validate_vendor_namespace_separation.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
         "writeback_continuity",
         [
             "python3",
@@ -73,6 +93,8 @@ SUGGESTIONS = {
     "install_provenance": "Generate identity-installer provenance chain reports (plan/dry-run/install/verify).",
     "vendor_api_discovery": "Record vendor/API discovery closure with official contract refs and trust tier/provenance evidence.",
     "vendor_api_solution": "Complete solution option matrix with exactly one selected option and rollback/fallback refs.",
+    "semantic_routing_guard": "Add semantic_routing_guard_contract_v1 evidence and ensure intent_domain/intent_confidence/classifier_reason are present in feedback batches.",
+    "vendor_namespace_separation": "Split protocol feedback artifacts into protocol-vendor-intel and business-partner-intel namespaces; eliminate legacy vendor-intel default writes.",
     "writeback_continuity": "Regenerate update execution report and ensure writeback_mode/degrade_reason/risk_level/next_recovery_action satisfy continuity contract.",
     "post_execution_mandatory": "Ensure post-execution mandatory fields and recovery actions are complete in execution report; rerun update and validate.",
     "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
@@ -135,6 +157,8 @@ def main() -> int:
             cmd = [*base, "--catalog", catalog]
         elif name == "protocol_baseline_freshness":
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
+        elif name in {"semantic_routing_guard", "vendor_namespace_separation"}:
+            cmd += ["--catalog", catalog]
         elif name in {"writeback_continuity", "post_execution_mandatory"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
@@ -155,6 +179,26 @@ def main() -> int:
             baseline_code = str(payload.get("baseline_error_code", "")).strip()
             if baseline_code:
                 error_code = baseline_code
+        elif name == "semantic_routing_guard":
+            payload = _parse_json_payload(out) or {}
+            sem_status = str(payload.get("semantic_routing_status", "")).strip().upper()
+            if sem_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif sem_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            sem_code = str(payload.get("error_code", "")).strip()
+            if sem_code:
+                error_code = sem_code
+        elif name == "vendor_namespace_separation":
+            payload = _parse_json_payload(out) or {}
+            ns_status = str(payload.get("vendor_namespace_status", "")).strip().upper()
+            if ns_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif ns_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            ns_code = str(payload.get("error_code", "")).strip()
+            if ns_code:
+                error_code = ns_code
         elif name == "writeback_continuity":
             payload = _parse_json_payload(out) or {}
             continuity_status = str(payload.get("writeback_continuity_status", "")).strip().upper()

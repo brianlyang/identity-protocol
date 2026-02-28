@@ -129,6 +129,8 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "response_stamp_blocker_receipt",
             "writeback_continuity",
             "post_execution_mandatory",
+            "semantic_routing_guard",
+            "vendor_namespace_separation",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -455,6 +457,28 @@ def main() -> int:
                     "--identity-id",
                     iid,
                 ],
+                "semantic_routing_guard": [
+                    "python3",
+                    "scripts/validate_semantic_routing_guard.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "vendor_namespace_separation": [
+                    "python3",
+                    "scripts/validate_vendor_namespace_separation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "required_contract_coverage": [
                     "python3",
                     "scripts/validate_required_contract_coverage.py",
@@ -635,6 +659,38 @@ def main() -> int:
                     ):
                         if k in coverage_doc:
                             check_payload[k] = coverage_doc.get(k)
+                if name == "semantic_routing_guard":
+                    semantic_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "semantic_routing_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "feedback_batch_path",
+                        "intent_domain",
+                        "intent_confidence",
+                        "classifier_reason",
+                        "legacy_namespace_refs",
+                        "stale_reasons",
+                    ):
+                        if k in semantic_doc:
+                            check_payload[k] = semantic_doc.get(k)
+                if name == "vendor_namespace_separation":
+                    namespace_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "vendor_namespace_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "feedback_root",
+                        "protocol_vendor_file_count",
+                        "business_partner_file_count",
+                        "legacy_vendor_file_count",
+                        "legacy_namespace_refs",
+                        "stale_reasons",
+                    ):
+                        if k in namespace_doc:
+                            check_payload[k] = namespace_doc.get(k)
                 if name == "writeback_continuity":
                     writeback_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
