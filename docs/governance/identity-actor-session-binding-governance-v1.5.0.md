@@ -59,7 +59,7 @@ Hard rule:
 As-of baseline:
 
 1. `as_of_utc`: `2026-02-28`
-2. `protocol_repo_head`: `d2df834`
+2. `protocol_repo_head`: `ec6507c`
 3. `topic_status`: governance specification substantially complete; runtime implementation not closed.
 
 Normative interpretation:
