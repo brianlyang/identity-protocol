@@ -63,6 +63,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-005 | 2026-02-28 | protocol | execution-report path contract gate + readiness wiring | `8963b0e` | DONE | PASS |
 | FIX-006 | 2026-02-28 | protocol | identity_home/catalog alignment gate + chain wiring | `40ff2e9` | DONE | PASS |
 | FIX-007 | 2026-02-28 | protocol | fixture/runtime boundary gate + chain wiring | `ff0453b` | DONE | PASS |
+| FIX-008 | 2026-02-28 | protocol | actor isolation inspection-mode semantics (scan/three-plane noise control) | `5e5c8d5` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -149,6 +150,7 @@ Alignment note (2026-02-28, anti-drift):
 | FIX-005 | PASS | audit-expert(codex) | 2026-02-28T13:15:55Z | Scoped PASS. IP-PATH-002 validator behavior and readiness preflight wiring are reproducible in sandbox + escalated replay. |
 | FIX-006 | PASS | audit-expert(codex) | 2026-02-28T13:27:06Z | Scoped PASS. IP-PATH-003 validator + readiness/full-scan/three-plane/creator/e2e wiring replayed; docs/SSOT checks clean. |
 | FIX-007 | PASS | audit-expert(codex) | 2026-02-28T14:02:10Z | Scoped PASS. IP-PATH-004 semantics replayed: runtime pass, fixture mutation fail w/o override, fixture scan skip, fixture override+receipt pass; readiness/e2e/full-scan/three-plane wiring verified. |
+| FIX-008 | PENDING_REVIEW | audit-expert(codex) | 2026-02-28T14:20:00Z | Architect patch landed. Pending replay for inspection-mode actor isolation semantics in full-scan/three-plane and strict-mode behavior retention in readiness/e2e/ci. |
 
 ---
 
@@ -821,6 +823,94 @@ Alignment note (2026-02-28, anti-drift):
 3. Audit note:
    - FIX-007 acceptance is independent from emergency lane HOTFIX items.
    - HOTFIX-P0-001 and HOTFIX-P0-002 remain release-blocking until architect patch + replay closure.
+
+---
+
+### FIX-008 — Actor-isolation inspection-mode semantics (reduce scan/three-plane false P0 noise)
+
+- Date (UTC): 2026-02-28
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox` for static checks and scan/three-plane replay
+  - `escalated` for readiness/e2e replay (writes under `~/.codex`)
+- Source issue: actor isolation validators were fail-closed in all surfaces; inspection surfaces (`full-scan`, `three-plane`) produced false P0 noise when actor binding artifacts were absent in non-mutation contexts.
+- Source ref:
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-001..010`, `ASB-RQ-037`)
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (gate semantics and machine-readable status contract)
+
+#### Change summary
+
+1. Added explicit operation semantics to actor validators:
+   - `scripts/validate_actor_session_binding.py`
+   - `scripts/validate_cross_actor_isolation.py`
+2. New argument:
+   - `--operation <activate|update|readiness|e2e|ci|validate|scan|three-plane|inspection>`
+3. Behavior contract:
+   - strict operations (`activate/update/readiness/e2e/ci/validate/mutation`) remain fail-closed.
+   - inspection operations (`scan/three-plane/inspection`) can emit `SKIPPED_NOT_REQUIRED` instead of false P0 failures when no mutation/activation semantics apply.
+4. Main-chain wiring updated with explicit operation values:
+   - `scripts/release_readiness_check.py` => `--operation readiness`
+   - `scripts/e2e_smoke_test.sh` => `--operation e2e`
+   - `scripts/full_identity_protocol_scan.py` => `--operation scan`
+   - `scripts/report_three_plane_status.py` => `--operation three-plane`
+   - `.github/workflows/_identity-required-gates.yml` => `--operation ci`
+   - `scripts/identity_creator.py validate` => `--operation validate`
+
+#### Commit
+
+- `5e5c8d5` — `fix(actor-scan): add inspection-mode semantics for actor isolation gates`
+
+#### Acceptance commands (rc + key tail)
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_actor_session_binding.py scripts/validate_cross_actor_isolation.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py scripts/identity_creator.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+   - key tail: `RC_FIX008_STATIC=0`
+
+2. Full scan (target):
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix008.json`
+   - rc: `0`
+   - key tail:
+     - actor validator entries visible with inspection semantics
+     - inspection scope returns `SKIPPED_NOT_REQUIRED` instead of false fail-closed P0 on absent actor artifacts
+
+3. Three-plane visibility:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-fix008.json`
+   - rc: `0`
+   - key tail:
+     - actor-related detail fields present under `instance_plane_detail`
+     - no hard failure caused by inspection-only context
+
+4. Readiness strict path (escalated):
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --capability-activation-policy strict-union`
+   - rc: `0`
+   - key tail:
+     - actor validators invoked with `--operation readiness`
+     - strict semantics retained; readiness remains fail-closed when strict conditions are violated
+
+5. Creator validate path:
+   - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+   - rc: `0`
+   - key tail:
+     - actor validators invoked with `--operation validate`
+
+6. e2e replay (escalated):
+   - `IDENTITY_CATALOG=/Users/yangxi/.codex/identity/catalog.local.yaml IDENTITY_IDS=custom-creative-ecom-analyst bash scripts/e2e_smoke_test.sh`
+   - rc: `0`
+   - key tail:
+     - `[10.18/30] validate actor-scoped session isolation gates ...`
+     - `E2E smoke test PASSED`
+
+#### Residual risk
+
+1. This fix addresses inspection-surface signal quality; it does not complete all actor-scoped migration requirements.
+2. HOTFIX-P0-001/HOTFIX-P0-002 remain separately release-blocking until audit replay marks PASS.
+
+#### Next action
+
+1. Submit FIX-008 for audit replay with strict/inspection dual-path evidence.
+2. Keep release decision locked to full P0 closure policy.
 
 ---
 
