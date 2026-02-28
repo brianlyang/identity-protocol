@@ -2228,3 +2228,29 @@ Replay evidence (architect local):
 2. HOTFIX-P0-006: `PENDING_REVIEW` (architect replay completed).
 3. HOTFIX-P0-007: `PENDING_REVIEW` (architect replay completed).
 4. Non-merge release constraint unchanged: v1.5 remains blocked until auditor replay signs off.
+
+
+### 12.6 Self-upgrade closure delta (P0-4 follow-up replay, 2026-03-01)
+
+Patch focus:
+
+1. `scripts/execute_identity_upgrade.py`
+   - report `resolved_pack_path` now always uses canonical `effective_pack` (prevents `.` regression in execution report).
+2. `scripts/identity_installer.py`
+   - `repair-paths` keeps protocol/path-governance anchor fields absolute (`resolved_pack_path`, `identity_prompt_path`, etc.), avoiding post-repair drift.
+
+Replay evidence (escalated context, `~/.codex` writable):
+
+1. update report canonicality check:
+   - `python3 scripts/identity_creator.py update --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --mode review-required --capability-activation-policy route-any-ready`
+   - latest report: `.../identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json`
+   - field check: `resolved_pack_path=/Users/yangxi/.codex/identity/base-repo-audit-expert-v3` (canonical absolute).
+2. repair-paths regression guard:
+   - `python3 scripts/identity_installer.py repair-paths --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+   - post-repair check: same report keeps absolute `resolved_pack_path` + `identity_prompt_path`.
+3. heal closure replay:
+   - `python3 scripts/identity_creator.py heal --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --apply`
+   - `rc=0` (`FAIL_VALIDATE` no longer reproduced in this replay window).
+4. readiness replay (bounded compare window to exclude changelog noise):
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
+   - `rc=0`, tail contains `[OK] release readiness checks PASSED`.

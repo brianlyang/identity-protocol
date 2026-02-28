@@ -675,13 +675,14 @@ def main() -> int:
         allow_protocol_root_pack=bool(args.allow_protocol_root_pack),
         identity_id=args.identity_id,
     )
+    report_pack_path = str(effective_pack.resolve())
     runtime_output_root = _resolve_runtime_output_root(effective_pack, args.identity_id, protocol_root)
     prompt_contract = _resolve_prompt_contract(
         identity_id=args.identity_id,
         catalog_path=Path(args.catalog),
         repo_catalog_path=Path(args.repo_catalog),
         resolved_scope=str(args.resolved_scope or ""),
-        resolved_pack_path=str(args.resolved_pack_path or str(effective_pack)),
+        resolved_pack_path=report_pack_path,
     )
     prompt_path = Path(str(prompt_contract.get("identity_prompt_path", ""))).expanduser().resolve()
     out_dir = Path(args.out_dir)
@@ -750,7 +751,7 @@ def main() -> int:
                 "protocol_ref": protocol["protocol_ref"],
                 "catalog_path": str(Path(args.catalog).expanduser().resolve()),
                 "resolved_scope": str(args.resolved_scope or ""),
-                "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+                "resolved_pack_path": report_pack_path,
                 "capability_activation_status": capability_status,
                 "capability_activation_error_code": capability_error_code,
             },
@@ -769,7 +770,7 @@ def main() -> int:
             protocol=protocol,
             catalog_path=args.catalog,
             resolved_scope=str(args.resolved_scope or ""),
-            resolved_pack_path=str(args.resolved_pack_path or str(pack)),
+            resolved_pack_path=report_pack_path,
             runtime_output_root=str(runtime_output_root),
             metrics_path=str(metrics_path),
             prompt_contract=prompt_contract,
@@ -845,7 +846,7 @@ def main() -> int:
                 "protocol_ref": protocol["protocol_ref"],
                 "catalog_path": str(Path(args.catalog).expanduser().resolve()),
                 "resolved_scope": str(args.resolved_scope or ""),
-                "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+                "resolved_pack_path": report_pack_path,
                 "capability_activation_status": capability_status,
                 "capability_activation_error_code": capability_error_code,
             },
@@ -864,7 +865,7 @@ def main() -> int:
             protocol=protocol,
             catalog_path=args.catalog,
             resolved_scope=str(args.resolved_scope or ""),
-            resolved_pack_path=str(args.resolved_pack_path or str(pack)),
+            resolved_pack_path=report_pack_path,
             runtime_output_root=str(runtime_output_root),
             metrics_path=str(metrics_path),
             prompt_contract=prompt_contract,
@@ -963,7 +964,7 @@ def main() -> int:
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
             "resolved_scope": str(args.resolved_scope or ""),
-            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+            "resolved_pack_path": report_pack_path,
             "capability_activation_status": capability_status,
             "capability_activation_error_code": capability_error_code,
         }
@@ -1051,7 +1052,7 @@ def main() -> int:
                         protocol=protocol,
                         catalog_path=args.catalog,
                         resolved_scope=str(args.resolved_scope or ""),
-                        resolved_pack_path=str(args.resolved_pack_path or str(pack)),
+                        resolved_pack_path=report_pack_path,
                         runtime_output_root=str(runtime_output_root),
                         metrics_path=str(metrics_path),
                         prompt_contract=prompt_contract,
@@ -1408,7 +1409,7 @@ def main() -> int:
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
             "resolved_scope": str(args.resolved_scope or ""),
-            "resolved_pack_path": str(args.resolved_pack_path or str(pack)),
+            "resolved_pack_path": report_pack_path,
             "prompt_change_required": prompt_change_required,
             "prompt_change_applied": prompt_change_applied,
             "identity_prompt_hash_before": prompt_hash_before,

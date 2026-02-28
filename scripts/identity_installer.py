@@ -318,6 +318,19 @@ PATH_FIELD_HINTS = {
     "required_file_paths",
 }
 
+# Protocol/path-governance anchors must remain canonical absolute in runtime reports.
+ABSOLUTE_ANCHOR_FIELDS = {
+    "resolved_pack_path",
+    "catalog_path",
+    "identity_home",
+    "protocol_root",
+    "report_selected_path",
+    "identity_prompt_path",
+    "runtime_output_root",
+    "metrics_path",
+    "task_path",
+    }
+
 
 def _looks_path_key(key: str) -> bool:
     k = str(key or "").strip().lower()
@@ -341,6 +354,16 @@ def _rewrite_path_string(
     new_prefix = str(pack_dir.resolve())
     if old_prefix and old_prefix in s:
         s = s.replace(old_prefix, new_prefix)
+
+    key_norm = str(key_hint or "").strip().lower()
+    if key_norm in ABSOLUTE_ANCHOR_FIELDS:
+        try:
+            p_abs = Path(s).expanduser()
+            if p_abs.is_absolute():
+                return str(p_abs.resolve())
+        except Exception:
+            return s
+        return s
 
     legacy_marker = f"/identity/packs/{identity_id}"
     idx = s.find(legacy_marker)
