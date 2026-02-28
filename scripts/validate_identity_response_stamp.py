@@ -257,16 +257,25 @@ def main() -> int:
     }
 
     if not ok:
+        actual_identity_for_receipt = actual_identity or "MISSING_STAMP"
         receipt = blocker_receipt(
             error_code=error_code,
             expected_identity_id=ctx.identity_id,
-            actual_identity_id=actual_identity,
+            actual_identity_id=actual_identity_for_receipt,
             source_domain=source or ctx.source_domain,
             resolver_ref=f"{catalog_path.parent}/session/active_identity.json",
             next_action="refresh_identity_binding_then_retry",
         )
         _emit_blocker(receipt_path, receipt)
         payload["blocker_receipt"] = receipt
+    else:
+        # Ensure deterministic behavior for follow-up blocker-receipt validation:
+        # a previous failed run may have left a stale blocker receipt at the same path.
+        if receipt_path.exists():
+            try:
+                receipt_path.unlink()
+            except Exception:
+                pass
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
