@@ -3957,7 +3957,7 @@ Key protocol behavior:
    - `minimal`: `actor_id`, `identity_id`, `scope`, `lock`, `source`.
    - `standard`: `minimal` + `catalog_ref`, `pack_ref`.
    - `verbose`/`audit`: `standard` + `lease`.
-2. Default governed channel output is `minimal` unless explicit override is applied.
+2. Default governed channel output is `standard` unless explicit override is applied.
 3. Natural-language trigger parser accepts explicit level intent and optional scope hints:
    - examples: "identity stamp level=minimal session", "把身份回显切到详细，会话生效".
 4. `session` scope may persist actor-scoped profile under:
@@ -3976,10 +3976,10 @@ Acceptance replay (local, cross-validated):
 
 1. `python3 -m py_compile scripts/response_stamp_common.py scripts/render_identity_response_stamp.py scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py`
    - rc=`0`
-2. default render (`minimal` expected):
+2. default render (`standard` expected):
    - `python3 scripts/render_identity_response_stamp.py ... --json-only`
    - rc=`0`
-   - key fields: `disclosure_level=minimal`, concise `external_stamp`.
+   - key fields: `disclosure_level=standard`, `catalog_ref`/`pack_ref` present in `external_stamp`.
 3. `minimal` stamp hard gate replay:
    - `python3 scripts/validate_identity_response_stamp.py ... --stamp-json /tmp/stamp-min.json --force-check --enforce-user-visible-gate --operation scan --json-only`
    - rc=`0`

@@ -348,7 +348,7 @@ Disclosure level contract:
    - `audit`: internal evidence-oriented structured stamp (for authorized internal channels only).
 2. Required core fields remain mandatory for all governed user-facing levels.
 3. Level changes are presentation-only; they must not alter binding resolution or gate results.
-4. Operational runtime default for governed user-facing replies is `minimal` unless an explicit level override is applied.
+4. Operational runtime default for governed user-facing replies is `standard` unless an explicit level override is applied.
 5. Session-scope level persistence must be actor-scoped and auditable:
    - recommended path: `<catalog_dir>/session/response-stamp-profiles/<actor_token>.json`
    - required fields: `actor_id`, `identity_id`, `disclosure_level`, `trigger_text`, `trigger_source`, `scope`, `updated_at`
