@@ -137,6 +137,9 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_data_sanitization_boundary",
             "platform_optimization_discovery_trigger",
             "vibe_coding_feeding_pack",
+            "capability_fit_optimization",
+            "capability_composition_before_discovery",
+            "capability_fit_review_freshness",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -166,6 +169,11 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     baseline_issue = (not baseline.get("ok", True)) or baseline_status == "FAIL" or (
         baseline_status == "WARN" and not is_fixture
     )
+    fit_review = checks.get("capability_fit_review_freshness") or {}
+    fit_review_status = str(fit_review.get("capability_fit_review_freshness_status", "")).upper()
+    fit_review_issue = fit_review_status == "WARN_NON_BLOCKING" or (
+        str(fit_review.get("review_freshness_status", "")).upper() == "WARN_STALE_OPTIMIZATION_REVIEW"
+    )
     freshness = checks.get("execution_report_freshness") or {}
     freshness_fail = (not freshness.get("ok", True)) or str(freshness.get("freshness_status", "")).upper() == "FAIL"
     cap_preflight = checks.get("capability_activation_preflight") or {}
@@ -183,7 +191,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         return "P0"
     if active and capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
         return "P1"
-    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue:
+    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue or fit_review_issue:
         return "P1"
     return "OK"
 
@@ -574,6 +582,39 @@ def main() -> int:
                     "/tmp/vibe-coding-feeding-packs",
                     "--json-only",
                 ],
+                "capability_fit_optimization": [
+                    "python3",
+                    "scripts/validate_identity_capability_fit_optimization.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "capability_composition_before_discovery": [
+                    "python3",
+                    "scripts/validate_capability_composition_before_discovery.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "capability_fit_review_freshness": [
+                    "python3",
+                    "scripts/validate_capability_fit_review_freshness.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -919,6 +960,56 @@ def main() -> int:
                     ):
                         if k in pack_doc:
                             check_payload[k] = pack_doc.get(k)
+                if name == "capability_fit_optimization":
+                    fit_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_fit_optimization_status",
+                        "error_code",
+                        "required_contract",
+                        "fit_matrix_path",
+                        "matrix_candidate_count",
+                        "selected_candidate_count",
+                        "selected_candidate_ids",
+                        "missing_required_fields",
+                        "selected_missing_fields",
+                        "next_review_at",
+                        "review_interval_days",
+                        "review_freshness_status",
+                        "stale_reasons",
+                    ):
+                        if k in fit_doc:
+                            check_payload[k] = fit_doc.get(k)
+                if name == "capability_composition_before_discovery":
+                    comp_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "compose_before_discovery_status",
+                        "error_code",
+                        "required_contract",
+                        "fit_matrix_path",
+                        "existing_composition_candidate_count",
+                        "selected_candidate_type",
+                        "decision_basis",
+                        "stale_reasons",
+                    ):
+                        if k in comp_doc:
+                            check_payload[k] = comp_doc.get(k)
+                if name == "capability_fit_review_freshness":
+                    fresh_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_fit_review_freshness_status",
+                        "error_code",
+                        "required_contract",
+                        "fit_matrix_path",
+                        "selected_candidate_id",
+                        "selected_candidate_type",
+                        "next_review_at",
+                        "review_interval_days",
+                        "review_freshness_status",
+                        "overdue_by_days",
+                        "stale_reasons",
+                    ):
+                        if k in fresh_doc:
+                            check_payload[k] = fresh_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

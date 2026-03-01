@@ -750,6 +750,78 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_vibe_pack,
     }
 
+    rc_cap_fit, out_cap_fit, err_cap_fit = _run(
+        [
+            "python3",
+            "scripts/validate_identity_capability_fit_optimization.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    cap_fit_payload = _parse_json_payload(out_cap_fit) or {}
+    validators["capability_fit_optimization"] = {
+        "rc": rc_cap_fit,
+        "ok": rc_cap_fit == 0,
+        "out": out_cap_fit,
+        "err": err_cap_fit,
+    }
+    cap_fit_status = str(cap_fit_payload.get("capability_fit_optimization_status", "")).strip().upper()
+    if rc_cap_fit != 0 or cap_fit_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_compose, out_compose, err_compose = _run(
+        [
+            "python3",
+            "scripts/validate_capability_composition_before_discovery.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    compose_payload = _parse_json_payload(out_compose) or {}
+    validators["capability_composition_before_discovery"] = {
+        "rc": rc_compose,
+        "ok": rc_compose == 0,
+        "out": out_compose,
+        "err": err_compose,
+    }
+    compose_status = str(compose_payload.get("compose_before_discovery_status", "")).strip().upper()
+    if rc_compose != 0 or compose_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_fit_fresh, out_fit_fresh, err_fit_fresh = _run(
+        [
+            "python3",
+            "scripts/validate_capability_fit_review_freshness.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fit_fresh_payload = _parse_json_payload(out_fit_fresh) or {}
+    validators["capability_fit_review_freshness"] = {
+        "rc": rc_fit_fresh,
+        "ok": rc_fit_fresh == 0,
+        "out": out_fit_fresh,
+        "err": err_fit_fresh,
+    }
+    fit_fresh_status = str(fit_fresh_payload.get("capability_fit_review_freshness_status", "")).strip().upper()
+    if rc_fit_fresh != 0 or fit_fresh_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -1069,6 +1141,44 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "deterministic_manifest_sha256": vibe_pack_payload.get("deterministic_manifest_sha256", ""),
             "sanitization_check_passed": vibe_pack_payload.get("sanitization_check_passed", True),
             "stale_reasons": vibe_pack_payload.get("stale_reasons", []),
+        },
+        "capability_fit_optimization": {
+            "capability_fit_optimization_status": cap_fit_payload.get("capability_fit_optimization_status"),
+            "error_code": cap_fit_payload.get("error_code", ""),
+            "required_contract": cap_fit_payload.get("required_contract"),
+            "fit_matrix_path": cap_fit_payload.get("fit_matrix_path", ""),
+            "matrix_candidate_count": cap_fit_payload.get("matrix_candidate_count"),
+            "selected_candidate_count": cap_fit_payload.get("selected_candidate_count"),
+            "selected_candidate_ids": cap_fit_payload.get("selected_candidate_ids", []),
+            "missing_required_fields": cap_fit_payload.get("missing_required_fields", []),
+            "selected_missing_fields": cap_fit_payload.get("selected_missing_fields", []),
+            "next_review_at": cap_fit_payload.get("next_review_at", ""),
+            "review_interval_days": cap_fit_payload.get("review_interval_days"),
+            "review_freshness_status": cap_fit_payload.get("review_freshness_status", ""),
+            "stale_reasons": cap_fit_payload.get("stale_reasons", []),
+        },
+        "capability_composition_before_discovery": {
+            "compose_before_discovery_status": compose_payload.get("compose_before_discovery_status"),
+            "error_code": compose_payload.get("error_code", ""),
+            "required_contract": compose_payload.get("required_contract"),
+            "fit_matrix_path": compose_payload.get("fit_matrix_path", ""),
+            "existing_composition_candidate_count": compose_payload.get("existing_composition_candidate_count"),
+            "selected_candidate_type": compose_payload.get("selected_candidate_type", ""),
+            "decision_basis": compose_payload.get("decision_basis", ""),
+            "stale_reasons": compose_payload.get("stale_reasons", []),
+        },
+        "capability_fit_review_freshness": {
+            "capability_fit_review_freshness_status": fit_fresh_payload.get("capability_fit_review_freshness_status"),
+            "error_code": fit_fresh_payload.get("error_code", ""),
+            "required_contract": fit_fresh_payload.get("required_contract"),
+            "fit_matrix_path": fit_fresh_payload.get("fit_matrix_path", ""),
+            "selected_candidate_id": fit_fresh_payload.get("selected_candidate_id", ""),
+            "selected_candidate_type": fit_fresh_payload.get("selected_candidate_type", ""),
+            "next_review_at": fit_fresh_payload.get("next_review_at", ""),
+            "review_interval_days": fit_fresh_payload.get("review_interval_days"),
+            "review_freshness_status": fit_fresh_payload.get("review_freshness_status", ""),
+            "overdue_by_days": fit_fresh_payload.get("overdue_by_days"),
+            "stale_reasons": fit_fresh_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),

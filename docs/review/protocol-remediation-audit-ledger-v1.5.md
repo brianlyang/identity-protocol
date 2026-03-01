@@ -2927,3 +2927,69 @@ Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)
 9. Residual risk (non-blocking enhancement lane):
    - current required-gate replay still uses explicit reply evidence input (`--reply-log/--reply-file/--stamp-json`);
    - end-to-end live reply stream ingestion can be enhanced later, but does not block HOTFIX closure.
+
+#### 16.7.3 P1-F progress update (2026-03-01, capability-fit optimization validator chain)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Source ref (L1 governance SSOT):
+
+1. `ASB-RQ-049` (inventory-first + fit-matrix machine-checkability)
+2. `ASB-RQ-050` (compose-before-discover gate)
+3. `ASB-RQ-051` (single selected plan + fallback/rollback/review fields)
+4. `ASB-RQ-052` (review freshness warning visibility)
+
+Implemented package (protocol-only):
+
+1. Added validator scripts:
+   - `scripts/validate_identity_capability_fit_optimization.py`
+   - `scripts/validate_capability_composition_before_discovery.py`
+   - `scripts/validate_capability_fit_review_freshness.py`
+2. Six-surface wiring completed:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Machine-readable visibility fields added:
+   - `capability_fit_optimization_status`
+   - `compose_before_discovery_status`
+   - `capability_fit_review_freshness_status`
+   - `review_freshness_status` / `overdue_by_days`
+
+Replay snapshot (local):
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_identity_capability_fit_optimization.py scripts/validate_capability_composition_before_discovery.py scripts/validate_capability_fit_review_freshness.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Direct validator replay (`custom-creative-ecom-analyst`, global runtime catalog):
+   - `python3 scripts/validate_identity_capability_fit_optimization.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_capability_composition_before_discovery.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/validate_capability_fit_review_freshness.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - result: `rc=0` for all three; statuses are `SKIPPED_NOT_REQUIRED` on non-required contract path.
+3. Full-scan wiring replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p1f-local.json`
+   - result: `rc=0`
+   - key extract:
+     - project/global both expose:
+       - `checks.capability_fit_optimization.rc=0` + `capability_fit_optimization_status`
+       - `checks.capability_composition_before_discovery.rc=0` + `compose_before_discovery_status`
+       - `checks.capability_fit_review_freshness.rc=0` + `capability_fit_review_freshness_status`
+4. Three-plane wiring replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1f-local.json`
+   - result: `rc=0`
+   - key extract:
+     - `instance_plane_detail.capability_fit_optimization.*` visible
+     - `instance_plane_detail.capability_composition_before_discovery.*` visible
+     - `instance_plane_detail.capability_fit_review_freshness.*` visible
+5. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+
+Residual risks / next lane:
+
+1. `ASB-RQ-053` roundtable `fact/inference` evidence mapping validator is not included in this patch set.
+2. `P1-H` trigger/tool surfaces (`trigger_capability_fit_review`, `build_capability_fit_matrix`) remain pending.
+3. readiness escalated replay may still fail due unrelated runtime update chain issues (`identity_creator update` path), so P1-F acceptance in this batch is scoped to validator semantics + six-surface wiring visibility.
