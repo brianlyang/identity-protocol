@@ -53,6 +53,59 @@ def _normalize_layer_value(value: str, *, allowed: set[str], fallback: str) -> s
     return fb if fb in allowed else next(iter(sorted(allowed)))
 
 
+def _run_regression_samples(default_source_layer: str) -> dict[str, Any]:
+    samples = [
+        {
+            "sample_id": "instance_intent",
+            "intent_text": "business execution runtime deliver",
+            "expect_work_layer": "instance",
+            "expect_protocol_triggered": False,
+        },
+        {
+            "sample_id": "protocol_intent",
+            "intent_text": "protocol governance required gate fail IP-LAYER-TEST-001 fix wiring",
+            "expect_work_layer": "protocol",
+            "expect_protocol_triggered": True,
+        },
+        {
+            "sample_id": "ambiguous_intent",
+            "intent_text": "business runtime with protocol governance context",
+            "expect_work_layer": "instance",
+            "expect_protocol_triggered": False,
+        },
+    ]
+    rows: list[dict[str, Any]] = []
+    failed_ids: list[str] = []
+    for sample in samples:
+        resolved = resolve_layer_intent(
+            intent_text=str(sample.get("intent_text", "")),
+            default_work_layer="instance",
+            default_source_layer=default_source_layer,
+        )
+        actual_work = str(resolved.get("resolved_work_layer", "")).strip().lower()
+        actual_trigger = bool(resolved.get("protocol_triggered", False))
+        passed = (
+            actual_work == str(sample.get("expect_work_layer", "")).strip().lower()
+            and actual_trigger == bool(sample.get("expect_protocol_triggered", False))
+        )
+        row = {
+            "sample_id": sample["sample_id"],
+            "expect_work_layer": sample["expect_work_layer"],
+            "actual_work_layer": actual_work,
+            "expect_protocol_triggered": bool(sample["expect_protocol_triggered"]),
+            "actual_protocol_triggered": actual_trigger,
+            "pass": passed,
+        }
+        rows.append(row)
+        if not passed:
+            failed_ids.append(sample["sample_id"])
+    return {
+        "status": STATUS_PASS_REQUIRED if not failed_ids else STATUS_FAIL_REQUIRED,
+        "failed_sample_ids": failed_ids,
+        "samples": rows,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate automatic layer-intent resolution for Identity-Context reply stamp.")
     ap.add_argument("--identity-id", required=True)
@@ -149,13 +202,13 @@ def main() -> int:
         explicit_work_layer=resolver_work,
         explicit_source_layer=resolver_source,
         intent_text=resolver_intent_text,
-        default_work_layer="protocol",
+        default_work_layer="instance",
         default_source_layer=ctx.source_domain,
     )
     resolved_work_layer = _normalize_layer_value(
         str(intent.get("resolved_work_layer", "")).strip(),
         allowed=set(ALLOWED_WORK_LAYERS),
-        fallback="protocol",
+        fallback="instance",
     )
     resolved_source_layer = _normalize_layer_value(
         str(intent.get("resolved_source_layer", "")).strip(),
@@ -183,12 +236,20 @@ def main() -> int:
     error_code = ""
     strict_operation = args.operation in STRICT_OPERATIONS
 
+    protocol_triggered = bool(intent.get("protocol_triggered", False))
+    protocol_trigger_reasons = list(intent.get("protocol_trigger_reasons") or [])
+
     if strict_operation and args.enforce_layer_intent_gate:
         if not stamp_line:
             stale_reasons.append("layer_intent_stamp_missing")
             error_code = ERR_LAYER_INTENT
         elif not layer_context_present:
             stale_reasons.append("layer_context_tail_missing")
+            error_code = ERR_LAYER_INTENT
+
+    if resolved_work_layer == "protocol" and not protocol_triggered:
+        stale_reasons.append("protocol_layer_without_trigger")
+        if strict_operation and not error_code:
             error_code = ERR_LAYER_INTENT
 
     if stamp_line and layer_context_present and not error_code:
@@ -214,6 +275,14 @@ def main() -> int:
     if stamp_line and strict_operation and parsed_source and parsed_source_layer and parsed_source != parsed_source_layer and not error_code:
         stale_reasons.append("source_and_source_layer_mismatch")
         error_code = ERR_LAYER_INTENT
+
+    regression = _run_regression_samples(resolved_source_layer)
+    regression_status = str(regression.get("status", STATUS_FAIL_REQUIRED))
+    regression_failed_ids = list(regression.get("failed_sample_ids") or [])
+    if regression_failed_ids:
+        stale_reasons.append("layer_intent_regression_failed:" + ",".join(regression_failed_ids))
+        if strict_operation and args.enforce_layer_intent_gate and not error_code:
+            error_code = ERR_LAYER_INTENT
 
     if not stale_reasons and str(intent.get("intent_source", "")).strip() == "default_fallback":
         fallback_reason = str(intent.get("fallback_reason", "")).strip()
@@ -243,7 +312,13 @@ def main() -> int:
         "intent_confidence": intent.get("intent_confidence", 0.0),
         "intent_source": intent.get("intent_source", "default_fallback"),
         "fallback_reason": intent.get("fallback_reason", ""),
+        "protocol_triggered": protocol_triggered,
+        "protocol_trigger_reasons": protocol_trigger_reasons,
+        "protocol_trigger_confidence": float(intent.get("protocol_trigger_confidence", 0.0) or 0.0),
         "strict_threshold": intent.get("strict_threshold"),
+        "regression_sample_status": regression_status,
+        "regression_failed_sample_ids": regression_failed_ids,
+        "regression_samples": regression.get("samples", []),
         "resolver_intent_text": resolver_intent_text,
         "layer_context_present": layer_context_present,
         "parsed_work_layer": parsed_work_layer,
@@ -259,4 +334,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

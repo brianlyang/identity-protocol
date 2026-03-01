@@ -82,13 +82,13 @@ def main() -> int:
         explicit_work_layer=str(args.work_layer or "").strip(),
         explicit_source_layer=str(args.source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
-        default_work_layer="protocol",
+        default_work_layer="instance",
         default_source_layer=ctx.source_domain,
     )
-    work_layer = str(intent.get("resolved_work_layer", "")).strip().lower() or "protocol"
+    work_layer = str(intent.get("resolved_work_layer", "")).strip().lower() or "instance"
     source_layer = str(intent.get("resolved_source_layer", "")).strip().lower() or ctx.source_domain
     if work_layer not in ALLOWED_WORK_LAYERS:
-        work_layer = "protocol"
+        work_layer = "instance"
     external = render_external_stamp_with_layer_context(
         ctx,
         disclosure_level=disclosure_level,
@@ -118,6 +118,9 @@ def main() -> int:
         "intent_confidence": intent.get("intent_confidence", 0.0),
         "intent_source": intent.get("intent_source", "default_fallback"),
         "fallback_reason": intent.get("fallback_reason", ""),
+        "protocol_triggered": bool(intent.get("protocol_triggered", False)),
+        "protocol_trigger_reasons": list(intent.get("protocol_trigger_reasons") or []),
+        "protocol_trigger_confidence": float(intent.get("protocol_trigger_confidence", 0.0) or 0.0),
         "layer_intent_text": str(args.layer_intent_text or "").strip(),
         "external_stamp": external,
         "internal_stamp": internal,

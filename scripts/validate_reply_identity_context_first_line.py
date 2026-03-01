@@ -306,13 +306,13 @@ def main() -> int:
         or str(stamp_doc.get("resolved_source_layer", "")).strip(),
         intent_text=str(args.layer_intent_text or "").strip()
         or str(stamp_doc.get("layer_intent_text", "")).strip(),
-        default_work_layer="protocol",
+        default_work_layer="instance",
         default_source_layer=ctx.source_domain,
     )
-    expected_work_layer = str(layer_intent.get("resolved_work_layer", "")).strip().lower() or "protocol"
+    expected_work_layer = str(layer_intent.get("resolved_work_layer", "")).strip().lower() or "instance"
     expected_source_layer = str(layer_intent.get("resolved_source_layer", "")).strip().lower() or ctx.source_domain
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
-        expected_work_layer = "protocol"
+        expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
         expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
 
@@ -324,6 +324,8 @@ def main() -> int:
             error_code = ERR_REPLY_FIRST_LINE
 
     strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
+    protocol_triggered = bool(layer_intent.get("protocol_triggered", False))
+    protocol_trigger_reasons = list(layer_intent.get("protocol_trigger_reasons") or [])
     has_layer_context = bool(parsed_first.get("_has_layer_context", False)) if first_lines else False
     parsed_work_layer = str(parsed_first.get("work_layer", "")).strip() if parsed_first else ""
     parsed_source_layer = str(parsed_first.get("source_layer", "")).strip() if parsed_first else ""
@@ -360,6 +362,11 @@ def main() -> int:
                 elif not strict_format_enforced:
                     stale_reasons.append("reply_first_line_source_layer_mismatch_non_blocking")
 
+    if expected_work_layer == "protocol" and not protocol_triggered:
+        stale_reasons.append("protocol_layer_without_trigger")
+        if strict_format_enforced and not error_code:
+            error_code = ERR_REPLY_FIRST_LINE
+
     lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
     parsed_lock_state = ""
     if not error_code and first_lines:
@@ -392,6 +399,9 @@ def main() -> int:
         "intent_confidence": layer_intent.get("intent_confidence", 0.0),
         "intent_source": layer_intent.get("intent_source", "default_fallback"),
         "fallback_reason": layer_intent.get("fallback_reason", ""),
+        "protocol_triggered": protocol_triggered,
+        "protocol_trigger_reasons": protocol_trigger_reasons,
+        "protocol_trigger_confidence": float(layer_intent.get("protocol_trigger_confidence", 0.0) or 0.0),
         "layer_context_enforced": strict_format_enforced,
         "layer_context_present": has_layer_context,
         "expected_work_layer": expected_work_layer,

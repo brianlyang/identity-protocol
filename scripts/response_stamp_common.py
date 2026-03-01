@@ -34,6 +34,60 @@ DEFAULT_DISCLOSURE_LEVEL = "standard"
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
 ALLOWED_SOURCE_LAYERS = {"project", "global", "env", "auto"}
 LAYER_INTENT_STRICT_THRESHOLD = 0.75
+DEFAULT_WORK_LAYER = "instance"
+
+PROTOCOL_TRIGGER_FLAG_PATTERNS = (
+    re.compile(r"\bprotocol[_\-\s]?trigger(?:ed)?\s*[:=]\s*(true|1|yes|on)\b"),
+    re.compile(r"\bwork[_\-\s]?layer\s*[:=]\s*protocol\b"),
+)
+PROTOCOL_TRIGGER_ERROR_CODE_PATTERN = re.compile(r"\bIP-[A-Z0-9-]{3,}\b")
+PROTOCOL_TRIGGER_KEYWORDS = {
+    "protocol",
+    "governance",
+    "contract",
+    "validator",
+    "gate",
+    "audit",
+    "spec",
+    "ssot",
+    "hotfix",
+    "release",
+    "readiness",
+    "required",
+    "fail",
+    "failure",
+    "blocker",
+    "fail-closed",
+    "identity-protocol",
+    "协议",
+    "治理",
+    "契约",
+    "校验",
+    "门禁",
+    "审计",
+    "升级",
+    "发布",
+    "阻断",
+}
+PROTOCOL_TRIGGER_ACTIONS = {
+    "upgrade",
+    "fix",
+    "repair",
+    "remediate",
+    "patch",
+    "wire",
+    "close",
+    "enforce",
+    "block",
+    "rollback",
+    "收口",
+    "修复",
+    "接线",
+    "落地",
+    "治理",
+    "阻断",
+    "回放",
+}
 
 
 def _detect_repo_root(start: Path | None = None) -> Path:
@@ -228,51 +282,138 @@ def _normalize_source_layer(value: str, *, fallback: str = "auto") -> str:
     return fb if fb in ALLOWED_SOURCE_LAYERS else "auto"
 
 
+def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
+    text = str(intent_text or "").strip().lower()
+    if not text:
+        return {
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+        }
+
+    reasons: list[str] = []
+    for pat in PROTOCOL_TRIGGER_FLAG_PATTERNS:
+        if pat.search(text):
+            reasons.append("explicit_protocol_trigger_flag")
+            break
+
+    if PROTOCOL_TRIGGER_ERROR_CODE_PATTERN.search(text):
+        reasons.append("protocol_error_code_signal")
+
+    tokens = set(re.findall(r"[a-zA-Z_]+|[\u4e00-\u9fff]{1,4}", text))
+    keyword_hits = sum(1 for k in PROTOCOL_TRIGGER_KEYWORDS if k in text or k in tokens)
+    action_hits = sum(1 for k in PROTOCOL_TRIGGER_ACTIONS if k in text or k in tokens)
+    if keyword_hits > 0 and action_hits > 0:
+        reasons.append("protocol_keyword_action_pair")
+    elif keyword_hits >= 2:
+        reasons.append("protocol_keyword_cluster")
+
+    unique_reasons = sorted(set(reasons))
+    triggered = len(unique_reasons) > 0
+    confidence = 0.0
+    if triggered:
+        confidence = min(0.98, 0.55 + 0.15 * len(unique_reasons))
+    return {
+        "protocol_triggered": triggered,
+        "protocol_trigger_reasons": unique_reasons,
+        "protocol_trigger_confidence": confidence,
+    }
+
+
 def resolve_layer_intent(
     *,
     explicit_work_layer: str = "",
     explicit_source_layer: str = "",
     intent_text: str = "",
-    default_work_layer: str = "protocol",
+    default_work_layer: str = DEFAULT_WORK_LAYER,
     default_source_layer: str = "auto",
 ) -> dict[str, Any]:
     resolved_source = _normalize_source_layer(explicit_source_layer, fallback=default_source_layer)
-    fallback_work = _normalize_work_layer(default_work_layer, fallback="protocol")
-    explicit_work = str(explicit_work_layer or "").strip().lower()
-    if explicit_work in ALLOWED_WORK_LAYERS:
+    fallback_work = _normalize_work_layer(default_work_layer, fallback=DEFAULT_WORK_LAYER)
+    text = str(intent_text or "").strip().lower()
+    trigger = _detect_protocol_trigger(text)
+    base_triggered = bool(trigger.get("protocol_triggered", False))
+    base_trigger_reasons = list(trigger.get("protocol_trigger_reasons") or [])
+    trigger_confidence = float(trigger.get("protocol_trigger_confidence", 0.0) or 0.0)
+
+    def _result(
+        *,
+        work_layer: str,
+        confidence: float,
+        intent_source: str,
+        fallback_reason: str,
+        protocol_triggered: bool = False,
+        protocol_trigger_reasons: list[str] | None = None,
+    ) -> dict[str, Any]:
+        resolved_work = _normalize_work_layer(work_layer, fallback=fallback_work)
+        applied_trigger = bool(protocol_triggered and resolved_work in {"protocol", "dual"})
+        reasons = sorted(set(protocol_trigger_reasons or [])) if applied_trigger else []
         return {
-            "resolved_work_layer": explicit_work,
+            "resolved_work_layer": resolved_work,
             "resolved_source_layer": resolved_source,
-            "intent_confidence": 1.0,
-            "intent_source": "explicit_arg",
-            "fallback_reason": "",
+            "intent_confidence": confidence,
+            "intent_source": intent_source,
+            "fallback_reason": fallback_reason,
             "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
+            "protocol_triggered": applied_trigger,
+            "protocol_trigger_reasons": reasons,
+            "protocol_trigger_confidence": trigger_confidence if applied_trigger else 0.0,
         }
 
-    text = str(intent_text or "").strip().lower()
+    explicit_work = str(explicit_work_layer or "").strip().lower()
+    if explicit_work in ALLOWED_WORK_LAYERS:
+        if explicit_work == "protocol":
+            reasons = sorted(set([*base_trigger_reasons, "explicit_work_layer_protocol"]))
+            return _result(
+                work_layer="protocol",
+                confidence=1.0,
+                intent_source="explicit_arg",
+                fallback_reason="",
+                protocol_triggered=True,
+                protocol_trigger_reasons=reasons,
+            )
+        return _result(
+            work_layer=explicit_work,
+            confidence=1.0,
+            intent_source="explicit_arg",
+            fallback_reason="",
+            protocol_triggered=base_triggered,
+            protocol_trigger_reasons=base_trigger_reasons,
+        )
+
     if not text:
-        return {
-            "resolved_work_layer": fallback_work,
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": 0.0,
-            "intent_source": "default_fallback",
-            "fallback_reason": "intent_text_missing",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+        return _result(
+            work_layer=fallback_work,
+            confidence=0.0,
+            intent_source="default_fallback",
+            fallback_reason="intent_text_missing",
+            protocol_triggered=False,
+            protocol_trigger_reasons=[],
+        )
 
     m_work = re.search(r"(work[_\-\s]?layer)\s*[:=]\s*(protocol|instance|dual)\b", text)
     m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|env|auto)\b", text)
     if m_source:
         resolved_source = _normalize_source_layer(m_source.group(2), fallback=resolved_source)
     if m_work:
-        return {
-            "resolved_work_layer": _normalize_work_layer(m_work.group(2), fallback=fallback_work),
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": 0.99,
-            "intent_source": "natural_language",
-            "fallback_reason": "",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+        candidate = _normalize_work_layer(m_work.group(2), fallback=fallback_work)
+        if candidate == "protocol" and not base_triggered:
+            return _result(
+                work_layer=fallback_work,
+                confidence=0.45,
+                intent_source="default_fallback",
+                fallback_reason="protocol_trigger_not_met",
+                protocol_triggered=False,
+                protocol_trigger_reasons=[],
+            )
+        return _result(
+            work_layer=candidate,
+            confidence=0.99,
+            intent_source="natural_language",
+            fallback_reason="",
+            protocol_triggered=(candidate == "protocol") or base_triggered,
+            protocol_trigger_reasons=(["explicit_layer_tuple_protocol"] if candidate == "protocol" else []) + base_trigger_reasons,
+        )
 
     # Deterministic dynamic rule: protocol_actions / instance_actions counters.
     m_protocol_actions = re.search(r"protocol[_\-\s]?actions?\s*[:=]\s*(-?\d+)\b", text)
@@ -283,40 +424,40 @@ def resolve_layer_intent(
         protocol_actions = max(0, protocol_actions)
         instance_actions = max(0, instance_actions)
         if protocol_actions > 0 and instance_actions == 0:
-            return {
-                "resolved_work_layer": "protocol",
-                "resolved_source_layer": resolved_source,
-                "intent_confidence": 0.98,
-                "intent_source": "natural_language",
-                "fallback_reason": "",
-                "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-            }
+            return _result(
+                work_layer="protocol",
+                confidence=0.98,
+                intent_source="natural_language",
+                fallback_reason="",
+                protocol_triggered=True,
+                protocol_trigger_reasons=["protocol_actions_counter_positive", *base_trigger_reasons],
+            )
         if protocol_actions == 0 and instance_actions > 0:
-            return {
-                "resolved_work_layer": "instance",
-                "resolved_source_layer": resolved_source,
-                "intent_confidence": 0.98,
-                "intent_source": "natural_language",
-                "fallback_reason": "",
-                "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-            }
+            return _result(
+                work_layer="instance",
+                confidence=0.98,
+                intent_source="natural_language",
+                fallback_reason="",
+                protocol_triggered=base_triggered,
+                protocol_trigger_reasons=base_trigger_reasons,
+            )
         if protocol_actions > 0 and instance_actions > 0:
-            return {
-                "resolved_work_layer": "dual",
-                "resolved_source_layer": resolved_source,
-                "intent_confidence": 0.98,
-                "intent_source": "natural_language",
-                "fallback_reason": "",
-                "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-            }
-        return {
-            "resolved_work_layer": fallback_work,
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": 0.4,
-            "intent_source": "default_fallback",
-            "fallback_reason": "zero_action_counters",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+            return _result(
+                work_layer="dual",
+                confidence=0.98,
+                intent_source="natural_language",
+                fallback_reason="",
+                protocol_triggered=True,
+                protocol_trigger_reasons=["dual_action_counters_positive", *base_trigger_reasons],
+            )
+        return _result(
+            work_layer=fallback_work,
+            confidence=0.4,
+            intent_source="default_fallback",
+            fallback_reason="zero_action_counters",
+            protocol_triggered=False,
+            protocol_trigger_reasons=[],
+        )
 
     instance_keywords = {
         "instance",
@@ -353,68 +494,77 @@ def resolve_layer_intent(
     tokens = set(re.findall(r"[a-zA-Z_]+|[\u4e00-\u9fff]{1,4}", text))
 
     if any(k in text for k in dual_keywords):
-        return {
-            "resolved_work_layer": "dual",
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": 0.9,
-            "intent_source": "natural_language",
-            "fallback_reason": "",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+        return _result(
+            work_layer="dual",
+            confidence=0.9,
+            intent_source="natural_language",
+            fallback_reason="",
+            protocol_triggered=base_triggered,
+            protocol_trigger_reasons=base_trigger_reasons,
+        )
 
     score_instance = sum(1 for k in instance_keywords if k in text or k in tokens)
     score_protocol = sum(1 for k in protocol_keywords if k in text or k in tokens)
 
     if score_instance == 0 and score_protocol == 0:
-        return {
-            "resolved_work_layer": fallback_work,
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": 0.25,
-            "intent_source": "default_fallback",
-            "fallback_reason": "no_intent_signal",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+        return _result(
+            work_layer=fallback_work,
+            confidence=0.25,
+            intent_source="default_fallback",
+            fallback_reason="no_intent_signal",
+            protocol_triggered=False,
+            protocol_trigger_reasons=[],
+        )
 
     if score_instance > 0 and score_protocol > 0:
-        return {
-            "resolved_work_layer": fallback_work,
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": 0.45,
-            "intent_source": "default_fallback",
-            "fallback_reason": "ambiguous_intent_signal",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+        return _result(
+            work_layer=fallback_work,
+            confidence=0.45,
+            intent_source="default_fallback",
+            fallback_reason="ambiguous_intent_signal",
+            protocol_triggered=False,
+            protocol_trigger_reasons=[],
+        )
 
     if score_instance > 0:
         confidence = min(0.95, 0.55 + 0.1 * score_instance)
         if confidence < LAYER_INTENT_STRICT_THRESHOLD:
-            return {
-                "resolved_work_layer": fallback_work,
-                "resolved_source_layer": resolved_source,
-                "intent_confidence": confidence,
-                "intent_source": "default_fallback",
-                "fallback_reason": "instance_intent_low_confidence",
-                "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-            }
-        return {
-            "resolved_work_layer": "instance",
-            "resolved_source_layer": resolved_source,
-            "intent_confidence": confidence,
-            "intent_source": "natural_language",
-            "fallback_reason": "",
-            "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-        }
+            return _result(
+                work_layer=fallback_work,
+                confidence=confidence,
+                intent_source="default_fallback",
+                fallback_reason="instance_intent_low_confidence",
+                protocol_triggered=False,
+                protocol_trigger_reasons=[],
+            )
+        return _result(
+            work_layer="instance",
+            confidence=confidence,
+            intent_source="natural_language",
+            fallback_reason="",
+            protocol_triggered=False,
+            protocol_trigger_reasons=[],
+        )
 
-    # protocol-only signal
-    confidence = min(0.95, 0.55 + 0.08 * score_protocol)
-    return {
-        "resolved_work_layer": "protocol",
-        "resolved_source_layer": resolved_source,
-        "intent_confidence": confidence,
-        "intent_source": "natural_language" if score_protocol > 0 else "default_fallback",
-        "fallback_reason": "",
-        "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
-    }
+    # protocol-only signal: only allow protocol layer when protocol trigger conditions are met.
+    if not base_triggered:
+        return _result(
+            work_layer=fallback_work,
+            confidence=0.5,
+            intent_source="default_fallback",
+            fallback_reason="protocol_trigger_not_met",
+            protocol_triggered=False,
+            protocol_trigger_reasons=[],
+        )
+    confidence = max(0.8, min(0.98, 0.55 + 0.08 * score_protocol))
+    return _result(
+        work_layer="protocol",
+        confidence=confidence,
+        intent_source="natural_language",
+        fallback_reason="",
+        protocol_triggered=True,
+        protocol_trigger_reasons=base_trigger_reasons or ["protocol_signal_high_confidence"],
+    )
 
 
 def parse_disclosure_level_trigger(trigger_text: str) -> tuple[str, float]:
@@ -570,13 +720,13 @@ def render_external_stamp_with_layer_context(
     ctx: StampContext,
     *,
     disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL,
-    work_layer: str = "protocol",
+    work_layer: str = DEFAULT_WORK_LAYER,
     source_layer: str = "",
 ) -> str:
     level = normalize_disclosure_level(disclosure_level)
-    wl = str(work_layer or "").strip().lower() or "protocol"
+    wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
-        wl = "protocol"
+        wl = DEFAULT_WORK_LAYER
     sl = str(source_layer or "").strip().lower() or ctx.source_domain
     if sl not in ALLOWED_SOURCE_LAYERS:
         sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
@@ -620,12 +770,12 @@ def render_internal_stamp(ctx: StampContext) -> str:
 def render_structured_context(
     ctx: StampContext,
     *,
-    work_layer: str = "protocol",
+    work_layer: str = DEFAULT_WORK_LAYER,
     source_layer: str = "",
 ) -> dict[str, Any]:
-    wl = str(work_layer or "").strip().lower() or "protocol"
+    wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
-        wl = "protocol"
+        wl = DEFAULT_WORK_LAYER
     sl = str(source_layer or "").strip().lower() or ctx.source_domain
     if sl not in ALLOWED_SOURCE_LAYERS:
         sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"

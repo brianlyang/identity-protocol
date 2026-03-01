@@ -302,19 +302,21 @@ def main() -> int:
         or str(stamp_doc.get("resolved_source_layer", "")).strip(),
         intent_text=str(args.layer_intent_text or "").strip()
         or str(stamp_doc.get("layer_intent_text", "")).strip(),
-        default_work_layer="protocol",
+        default_work_layer="instance",
         default_source_layer=ctx.source_domain,
     )
-    expected_work_layer = str(layer_intent.get("resolved_work_layer", "")).strip().lower() or "protocol"
+    expected_work_layer = str(layer_intent.get("resolved_work_layer", "")).strip().lower() or "instance"
     expected_source_layer = str(layer_intent.get("resolved_source_layer", "")).strip().lower() or ctx.source_domain
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
-        expected_work_layer = "protocol"
+        expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
         expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
 
     strict_operation = args.operation in STRICT_OPERATIONS
     lock_boundary_enforced = bool(args.enforce_coherence_gate and strict_operation)
     strict_format_enforced = strict_operation
+    protocol_triggered = bool(layer_intent.get("protocol_triggered", False))
+    protocol_trigger_reasons = list(layer_intent.get("protocol_trigger_reasons") or [])
 
     mismatch_fields: list[str] = []
     stale_reasons: list[str] = []
@@ -379,6 +381,11 @@ def main() -> int:
                 error_code = ERR_TUPLE_MISMATCH
 
     reply_lock_state = str(parsed.get("lock", "")).strip() if parsed else ""
+    if not error_code and expected_work_layer == "protocol" and not protocol_triggered:
+        coherence_decision = "MISMATCH"
+        stale_reasons.append("protocol_layer_without_trigger")
+        error_code = ERR_TUPLE_MISMATCH
+
     if not error_code and lock_boundary_enforced:
         if ctx.lock_state != "LOCK_MATCH":
             coherence_decision = "LOCK_MISMATCH"
@@ -416,6 +423,9 @@ def main() -> int:
         "intent_confidence": layer_intent.get("intent_confidence", 0.0),
         "intent_source": layer_intent.get("intent_source", "default_fallback"),
         "fallback_reason": layer_intent.get("fallback_reason", ""),
+        "protocol_triggered": protocol_triggered,
+        "protocol_trigger_reasons": protocol_trigger_reasons,
+        "protocol_trigger_confidence": float(layer_intent.get("protocol_trigger_confidence", 0.0) or 0.0),
         "coherence_status": coherence_status,
         "error_code": error_code,
         "coherence_decision": coherence_decision,
