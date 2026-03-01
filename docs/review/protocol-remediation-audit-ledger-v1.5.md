@@ -3643,3 +3643,52 @@ Non-merge closure status:
 1. `HOTFIX-P0-008`: `DONE / PENDING_REVIEW`.
 2. `FIX-015`: `DONE / PENDING_REVIEW`.
 3. v1.5 release-lock remains active until audit marks both as `PASS`.
+
+
+#### 16.7.16 Audit handoff packet (copy-paste ready, protocol-only)
+
+Identity-Context snapshot:
+
+1. actor_id=`user:yangxi`
+2. identity_id=`base-repo-architect`
+3. catalog_path=`/Users/yangxi/.codex/identity/catalog.local.yaml`
+4. scope=`USER`
+
+Layer declaration:
+
+1. `protocol` only (no business data / no instance-threshold semantics).
+
+Execution context declaration:
+
+1. `sandbox`:
+   - validator replay commands
+   - docs/ssot checks
+   - full-scan/readiness replay commands that do not mutate actor binding
+2. `escalated`:
+   - activation commands that write actor binding/session/runtime evidence (`~/.codex`, `.agents/identity`)
+
+Commit sha list:
+
+1. `483e368361264697c3256ff32d6b678ef4261562` (HOTFIX-P0-008 / FIX-020 code patch)
+2. `6fbf9999bac51febf3ac73887dd7e35eaecdf420` (FIX-015 actor-scoped multi-active semantics)
+3. `22b2e3e3c79449126f61b2cdb8a5f1966f79c16c` (replay evidence refresh)
+4. `d6aa00ef1015266834c18a86caf9eb83b4ad1b58` (protocol-vs-instance blocker split)
+5. `f6c94db` (copy-paste replay package matrix)
+
+Current non-merge closure status:
+
+1. `HOTFIX-P0-008`: `DONE / PENDING_REVIEW`
+2. `FIX-015`: `DONE / PENDING_REVIEW`
+3. `FIX-020`: `DONE / PENDING_REVIEW`
+4. v1.5 release-lock remains active until above rows are audit-marked `PASS`.
+
+Residual risks (explicit, non-conflicting):
+
+1. `base-repo-architect` global lane can show `IP-PBL-001` / `IP-PVA-002` on stale historical report (`warn` path) — this is dynamic baseline semantics, not lock-gate regression.
+2. project-lane e2e may still fail on sample hygiene (`trigger-regression` evidence), treated as instance/release hygiene dependency.
+3. capability activation preflight may show `IP-CAP-003` when auth/env is unavailable; this is environment readiness, not protocol gate correctness.
+
+Auditor action request:
+
+1. replay rows in `16.7.15` and verify deterministic outputs;
+2. if outputs match, mark `HOTFIX-P0-008`, `FIX-015`, `FIX-020` as `PASS`.
