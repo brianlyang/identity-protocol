@@ -132,6 +132,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "writeback_continuity",
             "post_execution_mandatory",
             "semantic_routing_guard",
+            "instance_protocol_split_receipt",
             "protocol_vendor_semantic_isolation",
             "external_source_trust_chain",
             "protocol_data_sanitization_boundary",
@@ -537,6 +538,19 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "instance_protocol_split_receipt": [
+                    "python3",
+                    "scripts/validate_instance_protocol_split_receipt.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "protocol_vendor_semantic_isolation": [
                     "python3",
                     "scripts/validate_protocol_vendor_semantic_isolation.py",
@@ -927,6 +941,26 @@ def main() -> int:
                     ):
                         if k in semantic_doc:
                             check_payload[k] = semantic_doc.get(k)
+                if name == "instance_protocol_split_receipt":
+                    split_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "instance_protocol_split_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "receipt_path",
+                        "split_notice",
+                        "instance_actions_ref",
+                        "protocol_actions_ref",
+                        "feedback_triggered",
+                        "evidence_index_ref",
+                        "feedback_paths",
+                        "trigger_conditions",
+                        "alias_fields_used",
+                        "stale_reasons",
+                    ):
+                        if k in split_doc:
+                            check_payload[k] = split_doc.get(k)
                 if name == "protocol_vendor_semantic_isolation":
                     semantic_iso_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

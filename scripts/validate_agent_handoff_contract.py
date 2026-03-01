@@ -55,11 +55,22 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
+        raw = Path(pack_path).expanduser()
+        candidates: list[Path] = []
+        if raw.is_absolute():
+            candidates.append(raw.resolve())
+        else:
+            candidates.append((catalog_path.parent / raw).resolve())
+            if catalog_path.parent.parent != catalog_path.parent:
+                candidates.append((catalog_path.parent.parent / raw).resolve())
+            protocol_root = Path(__file__).resolve().parent.parent
+            candidates.append((protocol_root / raw).resolve())
+        for base in candidates:
+            task = (base / "CURRENT_TASK.json").resolve()
+            if task.exists():
+                return task
 
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
+    legacy = (catalog_path.parent / "identity" / identity_id / "CURRENT_TASK.json").resolve()
     if legacy.exists():
         return legacy
 
@@ -67,9 +78,19 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
 
 def _iter_handoff_files(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Path]:
+    protocol_root = Path(__file__).resolve().parent.parent
     if explicit_file:
-        p = Path(explicit_file).expanduser()
-        return [p] if p.exists() else []
+        raw = Path(explicit_file).expanduser()
+        candidates: list[Path] = []
+        if raw.is_absolute():
+            candidates.append(raw.resolve())
+        else:
+            candidates.append((pack_root / raw).resolve())
+            candidates.append((protocol_root / raw).resolve())
+        for p in candidates:
+            if p.exists():
+                return [p]
+        return []
     raw = str(pattern or "").strip()
     if not raw:
         return []
@@ -82,7 +103,10 @@ def _iter_handoff_files(pattern: str, explicit_file: str, *, pack_root: Path) ->
     preferred = sorted(pack_root.glob(raw))
     if preferred:
         return preferred
-    return sorted(Path(".").glob(raw))
+    protocol_pref = sorted(protocol_root.glob(raw))
+    if protocol_pref:
+        return protocol_pref
+    return []
 
 
 def _bad_placeholder(value: str) -> bool:
@@ -250,7 +274,7 @@ def _run_self_test(
     neg = sorted((sample_root / "negative").glob("*.json"))
 
     if not pos or not neg:
-        print(f"[FAIL] self-test requires positive and negative samples under {sample_root}")
+        print(f"[FAIL] IP-CWD-002 self-test requires positive and negative samples under {sample_root}")
         return 1
 
     rc = 0
@@ -369,7 +393,13 @@ def main() -> int:
 
     if args.self_test:
         sample_pattern = str(contract.get("sample_log_path_pattern") or "identity/runtime/examples/handoff")
-        sample_root = Path(sample_pattern)
+        sample_root = Path(sample_pattern).expanduser()
+        if not sample_root.is_absolute():
+            candidate_pack = (task_path.parent.resolve() / sample_root).resolve()
+            candidate_protocol = (Path(__file__).resolve().parent.parent / sample_root).resolve()
+            sample_root = candidate_pack if candidate_pack.exists() else candidate_protocol
+        else:
+            sample_root = sample_root.resolve()
         rc = max(
             rc,
             _run_self_test(

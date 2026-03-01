@@ -29,6 +29,7 @@ REASON_FAIL = "IP-COV-999"
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_semantic_routing_guard.py": "semantic_routing_status",
+    "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
     "scripts/validate_vendor_namespace_separation.py": "vendor_namespace_status",
     "scripts/validate_protocol_feedback_sidecar_contract.py": "sidecar_contract_status",
 }
@@ -62,6 +63,12 @@ TARGETS = (
         name="semantic_routing_guard",
         contract_keys=("semantic_routing_guard_contract_v1", "semantic_routing_guard_contract"),
         validator_script="scripts/validate_semantic_routing_guard.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="instance_protocol_split_receipt",
+        contract_keys=("instance_protocol_split_receipt_contract_v1", "instance_protocol_split_receipt_contract"),
+        validator_script="scripts/validate_instance_protocol_split_receipt.py",
         validator_args=("--json-only",),
     ),
     ContractTarget(
@@ -144,6 +151,8 @@ def _run_validator(
         "scripts/validate_vendor_namespace_separation.py",
     }:
         cmd += ["--operation", operation]
+    if script == "scripts/validate_instance_protocol_split_receipt.py":
+        cmd += ["--operation", operation, "--repo-catalog", repo_catalog]
     if script == "scripts/validate_protocol_feedback_sidecar_contract.py":
         cmd += ["--repo-catalog", repo_catalog, "--operation", operation]
     cmd += list(extra_args)

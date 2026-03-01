@@ -11,9 +11,11 @@ from typing import Any
 
 from resolve_identity_context import resolve_identity
 
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
-def _run(cmd: list[str]) -> tuple[int, str, str]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
+    run_cwd = cwd.resolve() if isinstance(cwd, Path) else PROTOCOL_ROOT
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(run_cwd))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
@@ -634,6 +636,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_semantic != 0 or semantic_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_split, out_split, err_split = _run(
+        [
+            "python3",
+            "scripts/validate_instance_protocol_split_receipt.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    split_payload = _parse_json_payload(out_split) or {}
+    validators["instance_protocol_split_receipt"] = {
+        "rc": rc_split,
+        "ok": rc_split == 0,
+        "out": out_split,
+        "err": err_split,
+    }
+    split_status = str(split_payload.get("instance_protocol_split_status", "")).strip().upper()
+    if rc_split != 0 or split_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_semantic_iso, out_semantic_iso, err_semantic_iso = _run(
         [
             "python3",
@@ -1165,6 +1193,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "legacy_namespace_refs": semantic_payload.get("legacy_namespace_refs", []),
             "stale_reasons": semantic_payload.get("stale_reasons", []),
         },
+        "instance_protocol_split_receipt": {
+            "instance_protocol_split_status": split_payload.get("instance_protocol_split_status"),
+            "error_code": split_payload.get("error_code", ""),
+            "required_contract": split_payload.get("required_contract"),
+            "auto_required_signal": split_payload.get("auto_required_signal"),
+            "receipt_path": split_payload.get("receipt_path", ""),
+            "split_notice": split_payload.get("split_notice", ""),
+            "feedback_triggered": split_payload.get("feedback_triggered"),
+            "trigger_conditions": split_payload.get("trigger_conditions", {}),
+            "instance_actions_ref": split_payload.get("instance_actions_ref", ""),
+            "protocol_actions_ref": split_payload.get("protocol_actions_ref", ""),
+            "evidence_index_ref": split_payload.get("evidence_index_ref", ""),
+            "stale_reasons": split_payload.get("stale_reasons", []),
+        },
         "protocol_vendor_semantic_isolation": {
             "protocol_vendor_semantic_isolation_status": semantic_iso_payload.get("protocol_vendor_semantic_isolation_status"),
             "error_code": semantic_iso_payload.get("error_code", ""),
@@ -1558,13 +1600,21 @@ def main() -> int:
         print("[FAIL] --catalog is required (or export IDENTITY_CATALOG first).")
         return 2
     catalog_path = Path(args.catalog).expanduser().resolve()
-    repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    repo_catalog_arg = Path(args.repo_catalog).expanduser()
+    if repo_catalog_arg.is_absolute():
+        repo_catalog_path = repo_catalog_arg.resolve()
+    else:
+        repo_catalog_path = (PROTOCOL_ROOT / repo_catalog_arg).resolve()
     if not catalog_path.exists():
         print(f"[FAIL] catalog not found: {catalog_path}")
         return 2
     if not repo_catalog_path.exists():
-        print(f"[FAIL] repo catalog not found: {repo_catalog_path}")
+        print(
+            "[FAIL] IP-CWD-004 repo catalog not found under protocol-root deterministic resolution: "
+            f"{repo_catalog_path} (hint: pass explicit --repo-catalog <absolute-path>)"
+        )
         return 2
+    args.repo_catalog = str(repo_catalog_path)
 
     try:
         resolved = resolve_identity(

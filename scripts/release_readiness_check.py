@@ -488,6 +488,18 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_instance_protocol_split_receipt.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+        ],
+        [
+            "python3",
             "scripts/validate_protocol_vendor_semantic_isolation.py",
             "--catalog",
             catalog,

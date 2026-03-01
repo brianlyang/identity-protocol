@@ -1308,6 +1308,18 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_instance_protocol_split_receipt.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+            ],
+            [
+                "python3",
                 "scripts/validate_writeback_continuity.py",
                 "--catalog",
                 args.catalog,

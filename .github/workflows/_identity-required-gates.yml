@@ -190,6 +190,7 @@ jobs:
             python3 scripts/validate_identity_vendor_api_discovery.py --identity-id "$ID"
             python3 scripts/validate_identity_vendor_api_solution.py --identity-id "$ID"
             python3 scripts/validate_semantic_routing_guard.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
+            python3 scripts/validate_instance_protocol_split_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_protocol_vendor_semantic_isolation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_external_source_trust_chain.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_protocol_data_sanitization_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
