@@ -3967,6 +3967,19 @@ Architect implementation package (next execution batch):
 7. Error code family:
    - `IP-ASB-MB-001..006`.
 
+Roundtable tightening notes (implementation MUST include):
+
+1. `session_id` provenance must be explicit and reproducible:
+   - derive from declared work-unit key (`session_id` arg or declared `run_id` mapping), not PID/time-only ad-hoc token.
+2. Backward-compat read shim is allowed only as migration aid:
+   - strict write lane must always output multi-entry canonical shape;
+   - telemetry must expose migration/shim usage (`binding_key_mode`, `stale_reasons`).
+3. CAS observability is mandatory:
+   - payload must expose both pre-write and post-write compare token values in receipt/gate outputs.
+4. Atomicity check:
+   - strict lane must fail when canonical binding mutation is observed without append-only rebind receipt in the same mutation unit.
+5. Existing validators that consume actor binding (`validate_actor_session_binding`, `validate_cross_actor_isolation`, `refresh_identity_session_status`, stamp lock checks) must be updated to parse multi-entry shape without semantic downgrade.
+
 Acceptance replay template (post-implementation):
 
 1. negative: single-object overwrite payload shape -> `FAIL_REQUIRED` (`IP-ASB-MB-001`)

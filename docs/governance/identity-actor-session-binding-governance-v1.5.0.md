@@ -1223,6 +1223,18 @@ Mandatory semantics:
    - `IP-ASB-MB-006`: same-actor peer-session entry dropped after mutation.
 7. Protocol layer remains business-data neutral:
    - contract fields must use generic governance terms only; no tenant or business constants.
+8. Session key derivation must be deterministic and auditable:
+   - `session_id` must be explicitly supplied by activation lane (`run_id` may be used only when declared as derivation source),
+   - implicit process-local defaults (PID/time-only) are forbidden as sole key source in strict lanes.
+9. Schema migration and compatibility boundary:
+   - read path may provide compatibility adapter for legacy single-object payload during migration window,
+   - write path in strict lanes must emit multi-entry shape only,
+   - migration adapter usage must be surfaced in telemetry (`binding_key_mode`, `stale_reasons`).
+10. CAS token scope and monotonicity:
+   - canonical payload must include monotonic compare token at store scope (`binding_version` or equivalent),
+   - CAS success must increment token exactly once per accepted mutation.
+11. Write atomicity requirement:
+   - canonical write and rebind receipt append must be atomic from gate perspective (no "binding updated / receipt missing" split-commit state in strict lanes).
 
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
