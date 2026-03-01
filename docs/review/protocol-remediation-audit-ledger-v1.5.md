@@ -3553,3 +3553,93 @@ Eradication sequence (strict order):
 2. Run instance update wave to clear baseline stale warnings.
 3. Repair instance sample hygiene and auth prerequisites.
 4. Re-run full-scan + three-plane and confirm no protocol rows remain `PENDING_REVIEW`.
+
+
+#### 16.7.15 Architect-to-audit replay package draft (2026-03-01, protocol-only)
+
+Package scope:
+
+1. `HOTFIX-P0-008 / FIX-020` strict lock-bound reply gate closure.
+2. `FIX-015` concurrent actor x identity activation verifier refresh.
+
+Layer declaration:
+
+1. `protocol` only.
+
+Execution context declaration (mandatory):
+
+1. `sandbox`: compile/static checks + validator/readiness replay commands.
+2. `escalated`: activation commands that write runtime artifacts (`~/.codex` and `.agents/identity`).
+
+Commit sha list:
+
+1. `483e368361264697c3256ff32d6b678ef4261562` (`fix(hotfix-p0-008): fail-closed strict reply stamp on lock mismatch`)
+2. `6fbf9999bac51febf3ac73887dd7e35eaecdf420` (`fix(fix-015): enable actor-scoped multi-active runtime semantics`)
+3. `22b2e3e3c79449126f61b2cdb8a5f1966f79c16c` (`docs(review): refresh HOTFIX-P0-008 and FIX-015 replay evidence`)
+4. `d6aa00ef1015266834c18a86caf9eb83b4ad1b58` (`docs(review): add protocol-vs-instance remaining blocker split`)
+
+Changed file list (by commit):
+
+1. `483e368`:
+   - `.github/workflows/_identity-required-gates.yml`
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.5.md`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/report_three_plane_status.py`
+   - `scripts/validate_identity_response_stamp.py`
+   - `scripts/validate_reply_identity_context_first_line.py`
+2. `6fbf999`:
+   - `scripts/compile_identity_runtime.py`
+   - `scripts/identity_creator.py`
+   - `scripts/identity_installer.py`
+   - `scripts/validate_identity_session_pointer_consistency.py`
+   - `scripts/validate_identity_state_consistency.py`
+   - `scripts/validate_no_implicit_switch.py`
+3. `22b2e3e` / `d6aa00e`:
+   - `docs/review/protocol-remediation-audit-ledger-v1.5.md`
+
+Acceptance command outputs (HOTFIX-P0-008 / FIX-020):
+
+| Command ID | rc | key tail |
+| --- | --- | --- |
+| C1 | `0` | `` |
+| C2 | `0` | `` |
+| C3 | `1` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "stamp_line": "Identity-Contex...` |
+| C4 | `1` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "operation": "validate", "requ...` |
+| C5 | `0` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "stamp_line": "Identity-Contex...` |
+| C6 | `0` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "operation": "scan", "required...` |
+| C7 | `0` | `{"identity_id": "base-repo-architect", "catalog_path": "/Users/yangxi/.codex/identity/catalog.local.yaml", "stamp_line": "Identity-Context: actor_id=user:yangxi; identity_id=bas...` |
+| C8 | `0` | `{"identity_id": "base-repo-architect", "catalog_path": "/Users/yangxi/.codex/identity/catalog.local.yaml", "operation": "validate", "required_contract": true, "reply_first_line_...` |
+| C9 | `1` | `[INFO] protocol baseline freshness preflight: status=FAIL error_code=IP-PBL-001 report=/Users/yangxi/.codex/identity/instances/base-repo-architect/runtime/reports/identity-upgra...` |
+| C10 | `0` | `[PASS] docs command contract check passed.` |
+| C11 | `0` | `     artifacts_policy=evidence_only_non_normative` |
+
+
+Acceptance command outputs (FIX-015 refresh):
+
+| Command ID | rc | key tail |
+| --- | --- | --- |
+| F1 | `0` | `     checked_meta_files=3` |
+| F2 | `0` | `{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "actor_id": "user:yangxi", ...` |
+| F3 | `0` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "actor_id": "user:auditor", "o...` |
+| F4 | `0` | `{"catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "identity_id": "base-repo-audit-expert-v3", "operation": "validate", "acti...` |
+| F5 | `0` | `{"identity_id": "base-repo-audit-expert-v3", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml", "operation": "validate", "swit...` |
+| F6 | `0` | `[OK] session pointer consistency validated: expected_identity=custom-creative-ecom-analyst actor=user:yangxi active_count=2 catalog=/Users/yangxi/claude/codex_project/weixinstor...` |
+| F7 | `0` | `[OK] session pointer consistency validated: expected_identity=base-repo-audit-expert-v3 actor=user:auditor active_count=2 catalog=/Users/yangxi/claude/codex_project/weixinstore/...` |
+| F8 | `0` | `[OK] release readiness checks PASSED` |
+
+
+Residual risks:
+
+1. `HOTFIX-P0-008 / FIX-020` code path is patched and replayed; audit decision is still pending (`PENDING_REVIEW`).
+2. `FIX-015` protocol semantics replay pass is refreshed; project-lane e2e can still fail on sample hygiene (`trigger-regression` artifacts), classified as instance/release hygiene dependency.
+3. Global `base-repo-architect` currently shows baseline freshness warning (`IP-PBL-001`) on old report; this is dynamic baseline policy behavior, not HOTFIX/FIX-015 regression.
+
+Non-merge closure status:
+
+1. `HOTFIX-P0-008`: `DONE / PENDING_REVIEW`.
+2. `FIX-015`: `DONE / PENDING_REVIEW`.
+3. v1.5 release-lock remains active until audit marks both as `PASS`.
