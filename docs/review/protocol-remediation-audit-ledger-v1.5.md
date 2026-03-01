@@ -3511,3 +3511,45 @@ Replay delta (new evidence):
 Residual risk (unchanged):
 
 1. project-catalog e2e can still be blocked by sample hygiene (`trigger-regression` evidence), treated as instance/release hygiene dependency rather than FIX-015 actor semantics regression.
+
+---
+
+#### 16.7.14 Remaining blockers split (protocol vs instance, 2026-03-01 refresh)
+
+Purpose:
+
+1. Provide one non-ambiguous release-control split so governance actions and runtime-instance actions are not mixed.
+
+Protocol-layer remaining blockers (release-lock relevant):
+
+1. `HOTFIX-P0-008` (`FIX-020`) status is `PENDING_REVIEW` in emergency table / rolling summary.
+   - implementation commit: `483e368`
+   - objective: strict user-visible gate must fail-closed on `LOCK_MISMATCH`.
+   - closure condition: audit replay marks row `PASS`.
+2. `FIX-015` status is `PENDING_REVIEW`.
+   - implementation commit: `6fbf999` (semantic patch), evidence refresh commit: `22b2e3e`.
+   - objective: actor-scoped concurrent activation semantics stay stable across validator/readiness chains.
+   - closure condition: audit replay marks row `PASS`.
+
+Instance / environment blockers (must not be misclassified as protocol regression):
+
+1. Global `base-repo-architect` baseline freshness is stale in scan view:
+   - `IP-PBL-001` (`protocol_baseline_freshness=WARN`)
+   - `IP-PVA-002` (`protocol_version_alignment_status=WARN_NON_BLOCKING`)
+   - source: `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-base-repo-architect.json`
+   - action: run identity update to generate latest bound report.
+2. Capability activation preflight shows environment auth blocked:
+   - `IP-CAP-003`, `env_auth_blocked=true`
+   - action: configure required auth/tool environment; this is execution environment readiness, not protocol contract mismatch.
+3. Project lane actor tuple mismatch remains expected unless explicitly reconciled:
+   - `user:yangxi` bound to `custom-creative-ecom-analyst` while probing `base-repo-audit-expert-v3` in project catalog.
+   - action: explicit actor/catalog rebinding when running strict operation against that tuple.
+4. Project-lane e2e may still fail on sample hygiene (`trigger-regression` evidence files).
+   - action: instance owner repairs sample/report assets; protocol validators already enforce expected semantics.
+
+Eradication sequence (strict order):
+
+1. Finish protocol audit closure first (`HOTFIX-P0-008`, `FIX-015` -> `PASS`).
+2. Run instance update wave to clear baseline stale warnings.
+3. Repair instance sample hygiene and auth prerequisites.
+4. Re-run full-scan + three-plane and confirm no protocol rows remain `PENDING_REVIEW`.
