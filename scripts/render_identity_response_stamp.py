@@ -71,7 +71,7 @@ def main() -> int:
         trigger_scope=args.trigger_scope,
         persist_session_trigger=persist_session_trigger,
     )
-    disclosure_level = str(disclosure.get("disclosure_level", "minimal")).strip() or "minimal"
+    disclosure_level = str(disclosure.get("disclosure_level", "standard")).strip() or "standard"
     source_layer = str(args.source_layer or "").strip().lower() or ctx.source_domain
     external = render_external_stamp_with_layer_context(
         ctx,

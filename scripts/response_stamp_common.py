@@ -30,7 +30,7 @@ class StampContext:
 
 
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
-DEFAULT_DISCLOSURE_LEVEL = "minimal"
+DEFAULT_DISCLOSURE_LEVEL = "standard"
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
 ALLOWED_SOURCE_LAYERS = {"project", "global", "env", "auto"}
 
