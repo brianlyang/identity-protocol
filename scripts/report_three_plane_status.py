@@ -386,6 +386,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     reply_first_line_blocker_receipt = (
         f"/tmp/identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}.json"
     )
+    execution_reply_coherence_blocker_receipt = (
+        f"/tmp/identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}.json"
+    )
 
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(
         [
@@ -399,6 +402,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--view",
             "external",
+            "--disclosure-level",
+            "standard",
             "--out",
             stamp_artifact,
             "--json-only",
@@ -497,6 +502,38 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     reply_first_line_status = str(reply_first_line_payload.get("reply_first_line_status", "")).strip().upper()
     if rc_reply_first_line != 0 or reply_first_line_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_reply_coherence, out_reply_coherence, err_reply_coherence = _run(
+        [
+            "python3",
+            "scripts/validate_execution_reply_identity_coherence.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-coherence-gate",
+            "--operation",
+            "three-plane",
+            "--blocker-receipt-out",
+            execution_reply_coherence_blocker_receipt,
+            "--json-only",
+        ]
+    )
+    reply_coherence_payload = _parse_json_payload(out_reply_coherence) or {}
+    validators["execution_reply_identity_coherence"] = {
+        "rc": rc_reply_coherence,
+        "ok": rc_reply_coherence == 0,
+        "out": out_reply_coherence,
+        "err": err_reply_coherence,
+    }
+    reply_coherence_status = str(reply_coherence_payload.get("coherence_status", "")).strip().upper()
+    if rc_reply_coherence != 0 or reply_coherence_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     rc_prompt, out_prompt, err_prompt = _run(
@@ -1571,9 +1608,18 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "reply_first_line_missing_count": reply_first_line_payload.get("reply_first_line_missing_count", 0),
             "reply_first_line_missing_refs": reply_first_line_payload.get("reply_first_line_missing_refs", []),
             "reply_first_line_blocker_receipt_path": reply_first_line_payload.get("blocker_receipt_path", ""),
+            "reply_coherence_status": reply_coherence_payload.get("coherence_status"),
+            "reply_coherence_error_code": reply_coherence_payload.get("error_code", ""),
+            "reply_coherence_decision": reply_coherence_payload.get("coherence_decision", ""),
+            "reply_coherence_mismatch_fields": reply_coherence_payload.get("mismatch_fields", []),
+            "reply_coherence_command_catalog_ref": reply_coherence_payload.get("command_catalog_ref", ""),
+            "reply_coherence_resolved_catalog_ref": reply_coherence_payload.get("resolved_catalog_ref", ""),
+            "reply_coherence_catalog_ref": reply_coherence_payload.get("reply_catalog_ref", ""),
+            "reply_coherence_blocker_receipt_path": reply_coherence_payload.get("blocker_receipt_path", ""),
             "external_stamp": stamp_render_payload.get("external_stamp"),
             "stale_reasons": stamp_payload.get("stale_reasons", []),
             "first_line_stale_reasons": reply_first_line_payload.get("stale_reasons", []),
+            "coherence_stale_reasons": reply_coherence_payload.get("stale_reasons", []),
         },
         "execution_report_freshness": {
             "freshness_status": freshness_payload.get("freshness_status"),

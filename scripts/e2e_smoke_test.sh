@@ -193,9 +193,10 @@ for ID in $IDS; do
   STAMP_JSON="/tmp/identity-response-stamp-${ID}.json"
   STAMP_BLOCKER_RECEIPT="/tmp/identity-stamp-blocker-receipt-${ID}.json"
   REPLY_FIRST_LINE_BLOCKER_RECEIPT="/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
+  EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
-  python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --out "$STAMP_JSON" --json-only
+  python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only
 
   echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"
   python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
@@ -208,6 +209,12 @@ for ID in $IDS; do
 
   echo "[12.46/30][$ID] validate reply first-line blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
+
+  echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
+  python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT"
+
+  echo "[12.48/30][$ID] validate execution/reply coherence blocker receipt schema"
+  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT"
 
   echo "[12.5/30][$ID] validate identity prompt quality"
   # scope is resolved from bound catalog/runtime context; avoid hard-coded scope injection drift.

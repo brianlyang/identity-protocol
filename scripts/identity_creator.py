@@ -990,6 +990,9 @@ def main() -> int:
         reply_first_line_blocker_receipt = (
             f"/tmp/identity-reply-first-line-blocker-receipt-{args.identity_id}.json"
         )
+        execution_reply_coherence_blocker_receipt = (
+            f"/tmp/identity-execution-reply-coherence-blocker-receipt-{args.identity_id}.json"
+        )
         try:
             _ = resolve_identity(
                 args.identity_id,
@@ -1087,6 +1090,8 @@ def main() -> int:
                 args.identity_id,
                 "--view",
                 "external",
+                "--disclosure-level",
+                "standard",
                 "--out",
                 stamp_artifact,
                 "--json-only",
@@ -1152,6 +1157,37 @@ def main() -> int:
                 "--force-check",
                 "--receipt",
                 reply_first_line_blocker_receipt,
+            ],
+            [
+                "python3",
+                "scripts/validate_execution_reply_identity_coherence.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--stamp-json",
+                stamp_artifact,
+                "--force-check",
+                "--enforce-coherence-gate",
+                "--operation",
+                "validate",
+                "--blocker-receipt-out",
+                execution_reply_coherence_blocker_receipt,
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_response_stamp_blocker_receipt.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--force-check",
+                "--receipt",
+                execution_reply_coherence_blocker_receipt,
             ],
             ["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", args.catalog, "--identity-id", args.identity_id],

@@ -46,7 +46,8 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
 | HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
 | HOTFIX-P0-008 | 2026-03-01 | protocol | strict user-visible reply gates allowed `LOCK_MISMATCH` to pass, masking actor/catalog lane drift as perceived identity hard-switch | DONE | PASS |
-| HOTFIX-P0-009 | 2026-03-01 | protocol | strict operation command-target identity tuple and user-visible reply tuple can diverge under dual-catalog lanes (execution/reply coherence gap) | TODO | PENDING_PATCH |
+| HOTFIX-P0-009 | 2026-03-01 | protocol | strict operation command-target identity tuple and user-visible reply tuple can diverge under dual-catalog lanes (execution/reply coherence gap) | DONE | PENDING_REPLAY |
+| HOTFIX-P0-010 | 2026-03-01 | protocol | disclosure-profile drift can omit tuple refs (`catalog_ref`/`pack_ref`) in strict gate stamp artifacts, causing coherence false-green/false-red ambiguity | DONE | PENDING_REPLAY |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -92,6 +93,20 @@ HOTFIX-P0-009 incident note (2026-03-01, newly opened):
    - strict replay with coherent tuple passes and emits `coherence_decision=PASS`.
    - inspection replay remains non-blocking but exposes mismatch telemetry fields.
 
+HOTFIX-P0-010 incident note (2026-03-01, newly opened):
+
+1. Finding:
+   - response-stamp disclosure profile can be `minimal`, which omits `catalog_ref` and `pack_ref`.
+   - strict coherence validation then cannot deterministically compare full tuple and may produce ambiguous mismatch behavior.
+2. Why this is P0:
+   - strict release/mutation gates require deterministic tuple comparison; disclosure-level drift must not alter gate semantics.
+3. Required remediation:
+   - all strict gate artifact rendering surfaces must pin `--disclosure-level standard` (or higher) before coherence checks.
+   - missing tuple refs in strict operations must map to deterministic fail path (`IP-ASB-CTX-002` class).
+4. Acceptance target:
+   - strict gate replay is invariant under session disclosure preference changes.
+   - coherence checks do not regress when user/session profile sets minimal disclosure for conversational output.
+
 ---
 
 ## 1) Rolling summary
@@ -118,6 +133,8 @@ HOTFIX-P0-009 incident note (2026-03-01, newly opened):
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
 | FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
 | FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PASS |
+| FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering pins disclosure-level `standard` to keep tuple-coherence checks deterministic (`HOTFIX-P0-010`) | `af57cd3` | DONE | PENDING_REPLAY |
+| FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `af57cd3` | DONE | PENDING_REPLAY |
 
 ---
 
@@ -3872,6 +3889,111 @@ Acceptance replay template (post-implementation):
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.6 HOTFIX-P0-009 / HOTFIX-P0-010 implementation landing (2026-03-01, architect self-replay)
+
+Status: `DONE / PENDING_REPLAY` (code landed, awaiting independent audit replay).
+
+Scope split (non-merge):
+
+1. Track-1 / HOTFIX-P0-009:
+   - strict execution command tuple vs reply tuple coherence gate.
+   - fail-closed errors: `IP-ASB-CTX-001..003`.
+2. Track-2 / HOTFIX-P0-010:
+   - strict gate rendering pins `--disclosure-level standard` to avoid disclosure-profile drift removing tuple refs.
+
+Code landing summary:
+
+1. New validator:
+   - `scripts/validate_execution_reply_identity_coherence.py`
+2. Six-surface wiring:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Deterministic strict-gate rendering:
+   - all above rendering call sites now pass `--disclosure-level standard`.
+
+Architect replay snippets (local):
+
+1. strict mismatch replay (`operation=validate`) -> fail-closed:
+   - `validate_execution_reply_identity_coherence.py ... --operation validate ...` => `rc=1`
+   - payload includes `coherence_status=FAIL_REQUIRED` and `error_code=IP-ASB-CTX-003` (dual-domain mismatch case) or `IP-ASB-CTX-001` (same-domain tuple mismatch case).
+2. strict coherent replay:
+   - render with pinned standard disclosure then validate => `rc=0`, `coherence_status=PASS_REQUIRED`.
+3. inspection replay (`operation=scan`) on mismatch:
+   - validator returns `rc=0` with `coherence_status=WARN_NON_BLOCKING` for visibility-first paths.
+
+Residual risk (before audit replay):
+
+1. independent replay still required across readiness/e2e/full-scan/three-plane/CI surfaces.
+2. conversation runtime outside protocol scripts must keep first-line stamp and explicit catalog lane discipline; protocol lane cannot rely on implicit chat memory.
+
+#### 16.8.6 FIX-022 implementation replay: response stamp configurable disclosure + natural-language trigger (2026-03-01)
+
+Status: `DONE / PENDING_REVIEW` (protocol code landed, audit replay attached).
+
+Change intent (protocol-layer only):
+
+1. Keep first-line identity stamp hard gate unchanged.
+2. Reduce default user-facing stamp verbosity using configurable disclosure levels.
+3. Support explicit natural-language trigger for level switch with auditable scope (`once`/`session`).
+4. Maintain fail-closed semantics in stamp validators.
+
+Changed files:
+
+1. `scripts/response_stamp_common.py`
+2. `scripts/render_identity_response_stamp.py`
+3. `scripts/validate_identity_response_stamp.py`
+4. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+
+Key protocol behavior:
+
+1. Runtime disclosure levels:
+   - `minimal`: `actor_id`, `identity_id`, `scope`, `lock`, `source`.
+   - `standard`: `minimal` + `catalog_ref`, `pack_ref`.
+   - `verbose`/`audit`: `standard` + `lease`.
+2. Default governed channel output is `minimal` unless explicit override is applied.
+3. Natural-language trigger parser accepts explicit level intent and optional scope hints:
+   - examples: "identity stamp level=minimal session", "把身份回显切到详细，会话生效".
+4. `session` scope may persist actor-scoped profile under:
+   - `<catalog_dir>/session/response-stamp-profiles/<actor_token>.json`
+5. Validator now evaluates required keys by `disclosure_level` while preserving:
+   - dynamic identity binding checks,
+   - source-domain checks,
+   - lock-bound strict-operation fail-closed checks (`IP-ASB-STAMP-005`).
+
+Acceptance replay (local, cross-validated):
+
+1. `python3 -m py_compile scripts/response_stamp_common.py scripts/render_identity_response_stamp.py scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py`
+   - rc=`0`
+2. default render (`minimal` expected):
+   - `python3 scripts/render_identity_response_stamp.py ... --json-only`
+   - rc=`0`
+   - key fields: `disclosure_level=minimal`, concise `external_stamp`.
+3. `minimal` stamp hard gate replay:
+   - `python3 scripts/validate_identity_response_stamp.py ... --stamp-json /tmp/stamp-min.json --force-check --enforce-user-visible-gate --operation scan --json-only`
+   - rc=`0`
+   - key fields: `stamp_status=PASS`, `required_keys=[actor_id, identity_id, scope, lock, source]`.
+4. first-line gate compatibility replay:
+   - `python3 scripts/validate_reply_identity_context_first_line.py ... --stamp-json /tmp/stamp-min.json --force-check --enforce-first-line-gate --operation scan --json-only`
+   - rc=`0`
+   - key fields: `reply_first_line_status=PASS_REQUIRED`.
+5. natural-language session trigger replay:
+   - `python3 scripts/render_identity_response_stamp.py ... --trigger-text "把身份回显切到详细，会话生效" --persist-session-trigger --json-only`
+   - rc=`0`
+   - key fields: `disclosure_source=trigger_session`, `trigger_scope=session`, `session_profile_path` populated.
+6. follow-up render after trigger:
+   - `python3 scripts/render_identity_response_stamp.py ... --json-only`
+   - rc=`0`
+   - key fields: `disclosure_source=session_state`, level persists as expected.
+
+Residual risk:
+
+1. `session` scope persistence writes actor-scoped profile under identity home; sandboxed CI lanes may require escalated permissions for this optional path.
+2. Strict-operation lock-bound failures remain expected when actor/session lock is `LOCK_MISMATCH`; this patch does not relax that gate.
 
 #### 16.8.5 Roundtable intake: strict execution/reply tuple coherence guard (2026-03-01, HOTFIX-P0-009 docs-only)
 

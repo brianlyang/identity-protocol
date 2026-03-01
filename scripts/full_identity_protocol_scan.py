@@ -129,6 +129,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
             "reply_identity_context_first_line",
+            "execution_reply_identity_coherence",
             "writeback_continuity",
             "post_execution_mandatory",
             "semantic_routing_guard",
@@ -310,6 +311,9 @@ def main() -> int:
             stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
             stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
             reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-scan-{iid}.json"
+            execution_reply_coherence_blocker_receipt = (
+                f"/tmp/identity-execution-reply-coherence-blocker-receipt-scan-{iid}.json"
+            )
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -440,6 +444,8 @@ def main() -> int:
                     iid,
                     "--view",
                     "external",
+                    "--disclosure-level",
+                    "standard",
                     "--out",
                     stamp_artifact,
                     "--json-only",
@@ -494,6 +500,25 @@ def main() -> int:
                     "scan",
                     "--blocker-receipt-out",
                     reply_first_line_blocker_receipt,
+                    "--json-only",
+                ],
+                "execution_reply_identity_coherence": [
+                    "python3",
+                    "scripts/validate_execution_reply_identity_coherence.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--stamp-json",
+                    stamp_artifact,
+                    "--force-check",
+                    "--enforce-coherence-gate",
+                    "--operation",
+                    "scan",
+                    "--blocker-receipt-out",
+                    execution_reply_coherence_blocker_receipt,
                     "--json-only",
                 ],
                 "tool_installation": [
@@ -1468,6 +1493,28 @@ def main() -> int:
                     ):
                         if k in reply_doc:
                             check_payload[k] = reply_doc.get(k)
+                if name == "execution_reply_identity_coherence":
+                    coherence_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "coherence_status",
+                        "coherence_decision",
+                        "error_code",
+                        "command_catalog_ref",
+                        "resolved_catalog_ref",
+                        "reply_catalog_ref",
+                        "command_identity_id",
+                        "resolved_identity_id",
+                        "reply_identity_id",
+                        "command_actor_id",
+                        "resolved_actor_id",
+                        "reply_actor_id",
+                        "mismatch_fields",
+                        "reply_evidence_ref",
+                        "blocker_receipt_path",
+                        "stale_reasons",
+                    ):
+                        if k in coherence_doc:
+                            check_payload[k] = coherence_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

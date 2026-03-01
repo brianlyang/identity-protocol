@@ -9,6 +9,7 @@ from response_stamp_common import (
     render_external_stamp,
     render_internal_stamp,
     render_structured_context,
+    resolve_disclosure_level,
     resolve_stamp_context,
 )
 
@@ -20,6 +21,19 @@ def main() -> int:
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
+    ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="")
+    ap.add_argument("--trigger-text", default="", help="optional natural-language stamp level trigger")
+    ap.add_argument("--trigger-scope", choices=["once", "session"], default="")
+    ap.add_argument(
+        "--persist-session-trigger",
+        action="store_true",
+        help="legacy compatibility switch; session trigger persistence is enabled by default",
+    )
+    ap.add_argument(
+        "--no-persist-session-trigger",
+        action="store_true",
+        help="disable session-trigger persistence (useful for sandbox dry-runs)",
+    )
     ap.add_argument("--out", default="", help="optional path to persist rendered stamp payload JSON")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
@@ -45,13 +59,29 @@ def main() -> int:
         print(f"[FAIL] unable to resolve stamp context: {exc}")
         return 1
 
-    external = render_external_stamp(ctx)
+    persist_session_trigger = not bool(args.no_persist_session_trigger)
+    disclosure = resolve_disclosure_level(
+        ctx,
+        explicit_level=args.disclosure_level,
+        trigger_text=args.trigger_text,
+        trigger_scope=args.trigger_scope,
+        persist_session_trigger=persist_session_trigger,
+    )
+    disclosure_level = str(disclosure.get("disclosure_level", "minimal")).strip() or "minimal"
+    external = render_external_stamp(ctx, disclosure_level=disclosure_level)
     internal = render_internal_stamp(ctx)
     payload = {
         "identity_id": ctx.identity_id,
         "catalog_path": str(ctx.catalog_path),
         "pack_path": str(ctx.pack_path),
         "view": args.view,
+        "disclosure_level": disclosure_level,
+        "disclosure_source": disclosure.get("disclosure_source", ""),
+        "trigger_applied": bool(disclosure.get("trigger_applied", False)),
+        "trigger_scope": disclosure.get("trigger_scope", ""),
+        "trigger_text": disclosure.get("trigger_text", ""),
+        "trigger_confidence": disclosure.get("trigger_confidence", 0.0),
+        "session_profile_path": disclosure.get("session_profile_path", ""),
         "external_stamp": external,
         "internal_stamp": internal,
         "identity_context": render_structured_context(ctx),

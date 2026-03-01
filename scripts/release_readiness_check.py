@@ -185,6 +185,9 @@ def main() -> int:
     stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
     stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
     reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-{identity_id}.json"
+    execution_reply_coherence_blocker_receipt = (
+        f"/tmp/identity-execution-reply-coherence-blocker-receipt-{identity_id}.json"
+    )
     if not catalog:
         print("[FAIL] catalog is required (implicit fallback disabled).")
         print("       pass --catalog <path> or set IDENTITY_CATALOG after mode selection.")
@@ -411,6 +414,8 @@ def main() -> int:
             identity_id,
             "--view",
             "external",
+            "--disclosure-level",
+            "standard",
             "--out",
             stamp_artifact,
             "--json-only",
@@ -476,6 +481,39 @@ def main() -> int:
             "--force-check",
             "--receipt",
             reply_first_line_blocker_receipt,
+        ],
+        [
+            "python3",
+            "scripts/validate_execution_reply_identity_coherence.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-coherence-gate",
+            "--operation",
+            "readiness",
+            "--blocker-receipt-out",
+            execution_reply_coherence_blocker_receipt,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_response_stamp_blocker_receipt.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--force-check",
+            "--receipt",
+            execution_reply_coherence_blocker_receipt,
+            "--json-only",
         ],
         # scope must come from bound runtime/catalog resolution (single source of truth).
         ["python3", "scripts/validate_identity_prompt_quality.py", "--catalog", catalog, "--identity-id", identity_id],

@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +27,10 @@ class StampContext:
     source_domain: str
     catalog_ref: str
     pack_ref: str
+
+
+ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
+DEFAULT_DISCLOSURE_LEVEL = "minimal"
 
 
 def _detect_repo_root(start: Path | None = None) -> Path:
@@ -162,18 +167,213 @@ def lease_id_short(lease_id: str) -> str:
     return token[:12]
 
 
-def render_external_stamp(ctx: StampContext) -> str:
-    return (
-        "Identity-Context: "
-        f"actor_id={ctx.actor_id}; "
-        f"identity_id={ctx.identity_id}; "
-        f"catalog_ref={ctx.catalog_ref}; "
-        f"pack_ref={ctx.pack_ref}; "
-        f"scope={ctx.resolved_scope}; "
-        f"lock={ctx.lock_state}; "
-        f"lease={lease_id_short(ctx.lease_id)}; "
-        f"source={ctx.source_domain}"
+def normalize_disclosure_level(
+    level: str,
+    *,
+    default: str = DEFAULT_DISCLOSURE_LEVEL,
+    allow_empty: bool = False,
+) -> str:
+    raw = str(level or "").strip().lower()
+    if not raw and allow_empty:
+        return ""
+    if raw in {"concise", "short", "lite"}:
+        raw = "minimal"
+    elif raw in {"default"}:
+        raw = "standard"
+    elif raw in {"full", "detailed"}:
+        raw = "verbose"
+    if raw in ALLOWED_DISCLOSURE_LEVELS:
+        return raw
+    fallback = str(default or "").strip().lower()
+    if not fallback and allow_empty:
+        return ""
+    return fallback if fallback in ALLOWED_DISCLOSURE_LEVELS else DEFAULT_DISCLOSURE_LEVEL
+
+
+def infer_disclosure_level_from_stamp_fields(fields: dict[str, str]) -> str:
+    if str(fields.get("lease", "")).strip():
+        return "verbose"
+    if str(fields.get("catalog_ref", "")).strip() or str(fields.get("pack_ref", "")).strip():
+        return "standard"
+    return "minimal"
+
+
+def _infer_trigger_scope(trigger_text: str) -> str:
+    text = str(trigger_text or "").strip().lower()
+    if not text:
+        return ""
+    if any(x in text for x in ("once", "one-time", "one shot", "single response", "本轮", "一次", "单次")):
+        return "once"
+    if any(x in text for x in ("session", "会话", "持续", "一直", "后续")):
+        return "session"
+    return ""
+
+
+def parse_disclosure_level_trigger(trigger_text: str) -> tuple[str, float]:
+    text = str(trigger_text or "").strip().lower()
+    if not text:
+        return "", 0.0
+    if any(x in text for x in ("minimal", "concise", "short", "简洁", "简版", "精简")):
+        return "minimal", 0.95
+    if any(x in text for x in ("standard", "default", "标准", "默认")):
+        return "standard", 0.95
+    if any(x in text for x in ("verbose", "full", "detailed", "全量", "详细", "完整")):
+        return "verbose", 0.95
+    if any(x in text for x in ("audit", "internal", "审计", "内部")):
+        return "audit", 0.95
+    m = re.search(r"(minimal|standard|verbose|audit)", text)
+    if m:
+        return normalize_disclosure_level(m.group(1)), 0.9
+    return "", 0.0
+
+
+def _response_stamp_profile_state_path(catalog_path: Path, actor_id: str) -> Path:
+    token = re.sub(r"[^a-zA-Z0-9._-]+", "_", str(actor_id or "unknown"))
+    return (catalog_path.parent / "session" / "response-stamp-profiles" / f"{token}.json").resolve()
+
+
+def _load_task_response_stamp_profile(ctx: StampContext) -> dict[str, Any]:
+    task_path = (ctx.pack_path / "CURRENT_TASK.json").resolve()
+    if not task_path.exists():
+        return {}
+    try:
+        doc = load_json(task_path)
+    except Exception:
+        return {}
+    profile = doc.get("response_stamp_profile")
+    return profile if isinstance(profile, dict) else {}
+
+
+def _load_response_stamp_profile_state(ctx: StampContext) -> dict[str, Any]:
+    p = _response_stamp_profile_state_path(ctx.catalog_path, ctx.actor_id)
+    if not p.exists():
+        return {}
+    try:
+        data = load_json(p)
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _persist_response_stamp_profile_state(ctx: StampContext, *, level: str, trigger_text: str) -> Path:
+    p = _response_stamp_profile_state_path(ctx.catalog_path, ctx.actor_id)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "actor_id": ctx.actor_id,
+        "identity_id": ctx.identity_id,
+        "disclosure_level": normalize_disclosure_level(level),
+        "trigger_text": str(trigger_text or "").strip(),
+        "trigger_source": "natural_language",
+        "scope": "session",
+        "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    p.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return p
+
+
+def resolve_disclosure_level(
+    ctx: StampContext,
+    *,
+    explicit_level: str = "",
+    trigger_text: str = "",
+    trigger_scope: str = "",
+    persist_session_trigger: bool = True,
+) -> dict[str, Any]:
+    normalized_explicit = normalize_disclosure_level(explicit_level, default="", allow_empty=True)
+    if normalized_explicit:
+        return {
+            "disclosure_level": normalized_explicit,
+            "disclosure_source": "explicit_arg",
+            "trigger_applied": False,
+            "trigger_scope": "",
+            "trigger_text": "",
+            "trigger_confidence": 1.0,
+            "session_profile_path": "",
+        }
+
+    parsed_level, confidence = parse_disclosure_level_trigger(trigger_text)
+    normalized_scope = str(trigger_scope or "").strip().lower()
+    if normalized_scope not in {"once", "session"}:
+        normalized_scope = _infer_trigger_scope(trigger_text)
+    if parsed_level:
+        profile_path = ""
+        if normalized_scope == "session" and persist_session_trigger:
+            profile_path = str(_persist_response_stamp_profile_state(ctx, level=parsed_level, trigger_text=trigger_text))
+        return {
+            "disclosure_level": parsed_level,
+            "disclosure_source": "trigger_session" if normalized_scope == "session" else "trigger_once",
+            "trigger_applied": True,
+            "trigger_scope": normalized_scope or "once",
+            "trigger_text": str(trigger_text or "").strip(),
+            "trigger_confidence": confidence,
+            "session_profile_path": profile_path,
+        }
+
+    session_state = _load_response_stamp_profile_state(ctx)
+    session_level = normalize_disclosure_level(
+        str(session_state.get("disclosure_level", "")).strip(),
+        default="",
+        allow_empty=True,
     )
+    if session_level:
+        return {
+            "disclosure_level": session_level,
+            "disclosure_source": "session_state",
+            "trigger_applied": False,
+            "trigger_scope": str(session_state.get("scope", "session")).strip() or "session",
+            "trigger_text": str(session_state.get("trigger_text", "")).strip(),
+            "trigger_confidence": 1.0,
+            "session_profile_path": str(_response_stamp_profile_state_path(ctx.catalog_path, ctx.actor_id)),
+        }
+
+    task_profile = _load_task_response_stamp_profile(ctx)
+    task_level = normalize_disclosure_level(
+        str(task_profile.get("disclosure_level", "")).strip(),
+        default="",
+        allow_empty=True,
+    )
+    if task_level:
+        return {
+            "disclosure_level": task_level,
+            "disclosure_source": "task_profile",
+            "trigger_applied": False,
+            "trigger_scope": "",
+            "trigger_text": "",
+            "trigger_confidence": 1.0,
+            "session_profile_path": "",
+        }
+
+    return {
+        "disclosure_level": DEFAULT_DISCLOSURE_LEVEL,
+        "disclosure_source": "default",
+        "trigger_applied": False,
+        "trigger_scope": "",
+        "trigger_text": "",
+        "trigger_confidence": 1.0,
+        "session_profile_path": "",
+    }
+
+
+def render_external_stamp(ctx: StampContext, *, disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL) -> str:
+    level = normalize_disclosure_level(disclosure_level)
+    parts = [
+        f"actor_id={ctx.actor_id}",
+        f"identity_id={ctx.identity_id}",
+    ]
+    if level in {"standard", "verbose", "audit"}:
+        parts.append(f"catalog_ref={ctx.catalog_ref}")
+        parts.append(f"pack_ref={ctx.pack_ref}")
+    parts.extend(
+        [
+            f"scope={ctx.resolved_scope}",
+            f"lock={ctx.lock_state}",
+            f"source_layer={ctx.source_domain}",
+            f"source={ctx.source_domain}",
+        ]
+    )
+    if level in {"verbose", "audit"}:
+        parts.append(f"lease={lease_id_short(ctx.lease_id)}")
+    return "Identity-Context: " + "; ".join(parts)
 
 
 def render_internal_stamp(ctx: StampContext) -> str:

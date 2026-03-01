@@ -9,6 +9,8 @@ from typing import Any
 
 from response_stamp_common import (
     blocker_receipt,
+    infer_disclosure_level_from_stamp_fields,
+    normalize_disclosure_level,
     render_external_stamp,
     resolve_stamp_context,
 )
@@ -22,6 +24,12 @@ ERR_STAMP_SESSION_BINDING = "IP-ASB-STAMP-005"
 ALLOWED_SOURCES = {"project", "global", "auto", "env"}
 PLACEHOLDER_RE = re.compile(r"<[^>]+>")
 STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
+REQUIRED_KEYS_BY_DISCLOSURE = {
+    "minimal": ("actor_id", "identity_id", "scope", "lock", "source"),
+    "standard": ("actor_id", "identity_id", "catalog_ref", "pack_ref", "scope", "lock", "source"),
+    "verbose": ("actor_id", "identity_id", "catalog_ref", "pack_ref", "scope", "lock", "lease", "source"),
+    "audit": ("actor_id", "identity_id", "catalog_ref", "pack_ref", "scope", "lock", "lease", "source"),
+}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -271,6 +279,7 @@ def main() -> int:
         return 1
 
     reply_samples: list[str] = []
+    disclosure_level = ""
     if args.reply_log.strip():
         reply_log_path = Path(args.reply_log).expanduser().resolve()
         if not reply_log_path.exists():
@@ -303,6 +312,7 @@ def main() -> int:
             print(f"[FAIL] stamp json payload must be object: {stamp_json_path}")
             return 1
         stamp_line = str(stamp_json_payload.get("external_stamp", "")).strip()
+        disclosure_level = str(stamp_json_payload.get("disclosure_level", "")).strip()
         reply_samples = [stamp_line] if stamp_line else []
     else:
         if args.enforce_user_visible_gate:
@@ -324,6 +334,11 @@ def main() -> int:
         stamp_line = sample_first_lines[0]
 
     parsed = _parse_stamp_line(stamp_line)
+    # Compatibility alias: source_layer is accepted as source-domain signal.
+    if not str(parsed.get("source", "")).strip() and str(parsed.get("source_layer", "")).strip():
+        parsed["source"] = str(parsed.get("source_layer", "")).strip()
+    if not str(parsed.get("source_layer", "")).strip() and str(parsed.get("source", "")).strip():
+        parsed["source_layer"] = str(parsed.get("source", "")).strip()
     stale_reasons: list[str] = []
     error_code = ""
 
@@ -334,7 +349,14 @@ def main() -> int:
         stale_reasons.append("reply_stamp_missing_in_replay_window")
         error_code = ERR_STAMP_HARD_GATE
 
-    required_keys = ("actor_id", "identity_id", "catalog_ref", "pack_ref", "scope", "lock", "lease", "source")
+    disclosure_level = normalize_disclosure_level(
+        disclosure_level or infer_disclosure_level_from_stamp_fields(parsed),
+        default="minimal",
+    )
+    required_keys = REQUIRED_KEYS_BY_DISCLOSURE.get(
+        disclosure_level,
+        REQUIRED_KEYS_BY_DISCLOSURE["minimal"],
+    )
     if not error_code:
         missing = [k for k in required_keys if not parsed.get(k)]
         if missing:
@@ -356,9 +378,19 @@ def main() -> int:
             error_code = ERR_STAMP_MISMATCH
 
     if not error_code and require_redacted_external:
-        if not _looks_redacted(parsed.get("catalog_ref", "")) or not _looks_redacted(parsed.get("pack_ref", "")):
-            stale_reasons.append("external_ref_not_redacted")
-            error_code = ERR_STAMP_HARDCODED
+        has_catalog_ref = bool(str(parsed.get("catalog_ref", "")).strip())
+        has_pack_ref = bool(str(parsed.get("pack_ref", "")).strip())
+        if disclosure_level in {"standard", "verbose", "audit"}:
+            if not has_catalog_ref or not has_pack_ref:
+                stale_reasons.append("external_ref_missing_for_disclosure_level")
+                error_code = ERR_STAMP_HARDCODED
+            elif not _looks_redacted(parsed.get("catalog_ref", "")) or not _looks_redacted(parsed.get("pack_ref", "")):
+                stale_reasons.append("external_ref_not_redacted")
+                error_code = ERR_STAMP_HARDCODED
+        elif has_catalog_ref or has_pack_ref:
+            if not _looks_redacted(parsed.get("catalog_ref", "")) or not _looks_redacted(parsed.get("pack_ref", "")):
+                stale_reasons.append("external_ref_not_redacted")
+                error_code = ERR_STAMP_HARDCODED
 
     source = parsed.get("source", "")
     if not error_code:
@@ -395,6 +427,8 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "stamp_line": stamp_line,
         "parsed_fields": parsed,
+        "disclosure_level": disclosure_level,
+        "required_keys": list(required_keys),
         "expected_context": {
             "identity_id": ctx.identity_id,
             "lock_state": ctx.lock_state,
