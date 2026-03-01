@@ -349,14 +349,15 @@ Disclosure level contract:
 2. Required core fields remain mandatory for all governed user-facing levels.
 3. Level changes are presentation-only; they must not alter binding resolution or gate results.
 4. Operational runtime default for governed user-facing replies is `standard` unless an explicit level override is applied.
-5. Session-scope level persistence must be actor-scoped and auditable:
+5. Any runtime implementation that still defaults governed user-facing replies to `minimal` is non-conformant and must be tracked as protocol-layer closure gap.
+6. Session-scope level persistence must be actor-scoped and auditable:
    - recommended path: `<catalog_dir>/session/response-stamp-profiles/<actor_token>.json`
    - required fields: `actor_id`, `identity_id`, `disclosure_level`, `trigger_text`, `trigger_source`, `scope`, `updated_at`
-6. Natural-language trigger normalization confidence must be recorded; ambiguous trigger must not silently alter session-level profile.
-7. External stamp must keep responsibility/source cues separated:
+7. Natural-language trigger normalization confidence must be recorded; ambiguous trigger must not silently alter session-level profile.
+8. External stamp must keep responsibility/source cues separated:
    - identity block keeps `source=<...>` as runtime provenance field,
    - tail block must append `| Layer-Context: work_layer=<...>; source_layer=<...>` at line end.
-8. `work_layer` and `source_layer` are governance fields and must be machine-readable in validator payloads.
+9. `work_layer` and `source_layer` are governance fields and must be machine-readable in validator payloads.
 
 User-named explicit trigger contract:
 

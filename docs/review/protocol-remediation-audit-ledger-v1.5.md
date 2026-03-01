@@ -4005,6 +4005,7 @@ Residual risk:
 
 1. `session` scope persistence writes actor-scoped profile under identity home; sandboxed CI lanes may require escalated permissions for this optional path.
 2. Strict-operation lock-bound failures remain expected when actor/session lock is `LOCK_MISMATCH`; this patch does not relax that gate.
+3. As-of current audit replay, script baseline constant remains `DEFAULT_DISCLOSURE_LEVEL=\"minimal\"` in `scripts/response_stamp_common.py`; governance now defines `standard` as default baseline, so protocol-layer code alignment patch is still required before `DONE / PASS` closure.
 
 #### 16.8.8 FIX-023 implementation replay: identity/layer split-tail hard gate requiredization (2026-03-01)
 
