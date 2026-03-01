@@ -845,6 +845,12 @@ def main() -> int:
     p_validate.add_argument("--repo-catalog", default=repo_catalog_default)
     p_validate.add_argument("--catalog", default=local_catalog_default)
     p_validate.add_argument("--scope", default="")
+    p_validate.add_argument(
+        "--baseline-policy",
+        choices=["strict", "warn"],
+        default="strict",
+        help="protocol baseline freshness enforcement policy for validate chain",
+    )
 
     p_compile = sub.add_parser("compile", help="Compile runtime brief")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
@@ -892,6 +898,12 @@ def main() -> int:
     p_update.add_argument("--repo-catalog", default=repo_catalog_default)
     p_update.add_argument("--catalog", default=local_catalog_default)
     p_update.add_argument("--scope", default=os.environ.get("IDENTITY_SCOPE", "USER"))
+    p_update.add_argument(
+        "--baseline-policy",
+        choices=["strict", "warn"],
+        default="strict",
+        help="protocol baseline freshness enforcement policy for update preflight",
+    )
     p_update.add_argument("--protocol-root", default="")
     p_update.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     p_update.add_argument(
@@ -1062,7 +1074,7 @@ def main() -> int:
                 "--operation",
                 "validate",
                 "--baseline-policy",
-                "warn",
+                args.baseline_policy,
             ],
             [
                 "python3",
@@ -1363,7 +1375,7 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--baseline-policy",
-                "warn",
+                args.baseline_policy,
             ],
             ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_capability_arbitration.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
@@ -1537,7 +1549,7 @@ def main() -> int:
                 "--operation",
                 "update",
                 "--baseline-policy",
-                "warn",
+                args.baseline_policy,
             ]
         )
         if rc != 0:

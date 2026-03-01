@@ -101,7 +101,7 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --repo-catalog identity/catalog/identities.yaml \
     --operation e2e \
-    --baseline-policy warn
+    --baseline-policy strict
 done
 
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then

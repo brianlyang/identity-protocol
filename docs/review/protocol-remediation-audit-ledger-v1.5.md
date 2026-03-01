@@ -92,8 +92,9 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PASS |
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
-| FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
-| FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
+| FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `5016816` | DONE | PASS |
+| FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PENDING_REVIEW |
+| FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `2df2b0b` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -2347,7 +2348,8 @@ Replay evidence (escalated context, `~/.codex` writable):
 ### 13.2 Release-blocking status after this cross-validation
 
 1. `FIX-015` moved to `IN_PROGRESS` (local workspace changes completed; commit/replay package still pending).
-2. `HOTFIX-P0-004` remains `OPEN/PENDING_REVIEW` (user-visible reply-channel stamp zero-miss replay still needed).
+2. Historical snapshot note:
+   - `HOTFIX-P0-004` was open at this timestamp; final closure is recorded in `16.6.8` as `DONE/PASS`.
 3. `HOTFIX-P0-005/006/007` are now `DONE + PASS` after replay.
 4. Current runtime closure blocker for `custom-creative-ecom-analyst` is `IP-WRB-001` in validate path (not scope passthrough).
 5. P0 incident replay confirms actor session can be explicitly switched by activation command; release path still needs user-visible reply-channel hard enforcement to prevent silent perceived identity drift (`HOTFIX-P0-004`).
@@ -2420,8 +2422,8 @@ Replay evidence (escalated context, `~/.codex` writable):
 
 ### 14.4 Remaining release blockers (architect action list)
 
-1. `HOTFIX-P0-004` remains open:
-   - enforce zero-miss first-line `Identity-Context` on user-visible reply channel and keep blocker-receipt fail-closed semantics.
+1. Historical snapshot note:
+   - this item was open at this timestamp; final closure is recorded in `16.6.8` as `DONE/PASS`.
 2. `FIX-015` needs commit + packaged acceptance replay:
    - runtime semantic patch already committed (`6fbf999`); packaged acceptance replay and final audit closure are still pending.
 3. `IP-PBL-001` baseline freshness remains recurring:
@@ -2602,7 +2604,7 @@ Doc acceptance commands:
 
 #### 16.6.1 P0-D progress update (2026-03-01, local replay)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 1. Added new validator:
    - `scripts/validate_protocol_vendor_semantic_isolation.py`
@@ -2623,7 +2625,7 @@ Status: `PATCHED_PENDING_AUDIT`
 
 #### 16.6.2 P0-E progress update (2026-03-01, local replay)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 1. Added new validator:
    - `scripts/validate_external_source_trust_chain.py`
@@ -2646,7 +2648,7 @@ Status: `PATCHED_PENDING_AUDIT`
 
 #### 16.6.3 P0-F progress update (2026-03-01, local replay)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 1. Added new validator:
    - `scripts/validate_protocol_data_sanitization_boundary.py`
@@ -2787,7 +2789,7 @@ Audit note:
 
 #### 16.6.7 HOTFIX-P0-004 implementation replay (2026-03-01, protocol-only)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 Implemented package:
 
@@ -2833,7 +2835,7 @@ Replay evidence snapshot:
 
 #### 16.7.1 P1-D progress update (2026-03-01, non-blocking enhancement lane)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 1. Added new trigger surface:
    - `scripts/trigger_platform_optimization_discovery.py`
@@ -2858,7 +2860,7 @@ Status: `PATCHED_PENDING_AUDIT`
 
 #### 16.7.2 P1-E progress update (2026-03-01, non-blocking enhancement lane)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 1. Added new builder surface:
    - `scripts/build_vibe_coding_feeding_pack.py`
@@ -2932,7 +2934,7 @@ Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)
 
 #### 16.7.3 P1-F progress update (2026-03-01, capability-fit optimization validator chain)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 Source ref (L1 governance SSOT):
 
@@ -2998,7 +3000,7 @@ Residual risks / next lane:
 
 #### 16.7.4 P1-G/P1-H progress update (2026-03-01, capability-fit roundtable + trigger/builder surfaces)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, non-required path semantics)
 
 Source ref (L1 governance SSOT):
 
@@ -3061,6 +3063,49 @@ Residual risks / next lane:
 1. This patch validates P1-G/P1-H wiring and machine-readable visibility on non-required contract path; strict required-path replay still depends on contract enablement + sample evidence population.
 2. readiness escalated replay may still hit unrelated runtime update chain outcomes; not part of this P1 wiring scope.
 
+#### 16.7.4A P1-D/P1-E/P1-F/P1-G/P1-H audit replay verdict (2026-03-01, cross-validated)
+
+Status: `PASS` (scope: protocol-layer wiring + machine-readable visibility under non-required contracts)
+
+1. Commit anchors under audit:
+   - `de3868c5cebe2e55db47da4eb5137f36ce76c5b3` (`P1-D`)
+   - `181642451c3af16a59501f4c7162ac40870df726` (`P1-E`)
+   - `614e3e47bdd6f62431dd9ac2859dff2d48133357` (`P1-F`)
+   - `5016816007efae722f137cddf55f0435b1c4aad9` (`P1-G/P1-H`)
+2. Static checks:
+   - `python3 -m py_compile ...` (all new P1 scripts + wired surfaces) and `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+3. Direct replay (`custom-creative-ecom-analyst`, `/Users/yangxi/.codex/identity/catalog.local.yaml`, `--operation scan --json-only`):
+   - `trigger_platform_optimization_discovery.py` -> `rc=0`, `platform_optimization_discovery_status=SKIPPED_NOT_REQUIRED`, `triggered=false`
+   - `build_vibe_coding_feeding_pack.py` -> `rc=0`, `vibe_coding_feeding_pack_status=SKIPPED_NOT_REQUIRED`
+   - `validate_identity_capability_fit_optimization.py` -> `rc=0`, `capability_fit_optimization_status=SKIPPED_NOT_REQUIRED`
+   - `validate_capability_composition_before_discovery.py` -> `rc=0`, `compose_before_discovery_status=SKIPPED_NOT_REQUIRED`
+   - `validate_capability_fit_review_freshness.py` -> `rc=0`, `capability_fit_review_freshness_status=SKIPPED_NOT_REQUIRED`
+   - `validate_capability_fit_roundtable_evidence.py` -> `rc=0`, `capability_fit_roundtable_status=SKIPPED_NOT_REQUIRED`
+   - `trigger_capability_fit_review.py` -> `rc=0`, `capability_fit_review_trigger_status=SKIPPED_NOT_REQUIRED`, `triggered=false`
+   - `build_capability_fit_matrix.py` -> `rc=0`, `capability_fit_matrix_builder_status=SKIPPED_NOT_REQUIRED`
+4. Full-scan replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p1defgh-audit2.json`
+   - result: `rc=0`
+   - project/global both expose:
+     - `checks.platform_optimization_discovery_trigger.*`
+     - `checks.vibe_coding_feeding_pack.*`
+     - `checks.capability_fit_optimization.*`
+     - `checks.capability_composition_before_discovery.*`
+     - `checks.capability_fit_review_freshness.*`
+     - `checks.capability_fit_roundtable_evidence.*`
+     - `checks.capability_fit_review_trigger.*`
+     - `checks.capability_fit_matrix_builder.*`
+5. Three-plane replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1defgh-audit2.json`
+   - result: `rc=0`
+   - `instance_plane_detail` exposes all P1-D/E/F/G/H surfaces with non-required semantics; `hard_boundary=false` preserved.
+6. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+7. Residual risk:
+   - these P1 lanes are currently non-required for most instances; strict required-path blocking semantics depend on contract enablement and live evidence population at instance governance layer.
+
 #### 16.7.5 FIX-017 progress update (2026-03-01, P0-A readiness scope passthrough hardening)
 
 Status: `PATCHED_PENDING_AUDIT`
@@ -3095,3 +3140,55 @@ Replay evidence:
 Residual risks:
 
 1. This patch closes scope forwarding gap only; it does not alter health strictness (`--enforce-pass`) or semantic gate outcomes for identities with failing checks.
+
+#### 16.7.6 FIX-018 progress update (2026-03-01, P0-B baseline policy stratification hardening)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Source ref (L1 governance SSOT + intake action list):
+
+1. review intake section `15.1 P0-B` (baseline policy mixed hardcoding across release/mutation chains)
+2. `ASB-RQ-029` / `ASB-RQ-030` (protocol baseline freshness and path-governance fail-closed posture for release/mutation)
+
+Commit under replay:
+
+1. `2df2b0b` — `fix(protocol): harden baseline policy stratification for release/mutation paths`
+
+Implemented package (protocol-only):
+
+1. `scripts/identity_creator.py`
+   - added `--baseline-policy {strict,warn}` on `validate` and `update` commands (default `strict`).
+   - replaced hardcoded `--baseline-policy warn` with passthrough `args.baseline_policy` for:
+     - `validate_identity_session_refresh_status` (`operation=validate`)
+     - `validate_identity_protocol_baseline_freshness` (`validate` chain)
+     - `validate_identity_session_refresh_status` (`operation=update`)
+2. `scripts/release_readiness_check.py`
+   - readiness chain now forwards `args.baseline_policy` to:
+     - `validate_identity_session_refresh_status` (`operation=readiness`)
+     - auto-generated `identity_creator.py update` command when `--execution-report` is omitted.
+3. `scripts/e2e_smoke_test.sh`
+   - switched session refresh preflight from `--baseline-policy warn` to `--baseline-policy strict` for release-like E2E lane.
+4. `scripts/run_protocol_upgrade_wave.py`
+   - explicitly sets `identity_creator.py update --baseline-policy warn` in wave apply path to preserve remediation flow for stale instances under controlled override (default strict remains in generic mutation commands).
+
+Replay evidence:
+
+1. Static checks:
+   - `python3 -m py_compile scripts/identity_creator.py scripts/release_readiness_check.py scripts/run_protocol_upgrade_wave.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. CLI contract checks:
+   - `python3 scripts/identity_creator.py validate --help | rg baseline-policy`
+   - `python3 scripts/identity_creator.py update --help | rg baseline-policy`
+   - result: both commands expose `--baseline-policy {strict,warn}`.
+3. Readiness command passthrough proof (warn override):
+   - command:
+     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - key tail:
+     - readiness now emits auto-update command containing `--baseline-policy warn`.
+     - readiness update preflight also shows `validate_identity_session_refresh_status ... --baseline-policy warn`.
+
+Residual risks:
+
+1. On stale baseline, default `strict` policy now blocks generic `identity_creator update` unless explicit override is supplied (expected under P0-B hardening).
+2. Wave/batch apply path keeps explicit `warn` override by design to allow stale-instance remediation; audit replay should confirm this override is accepted as controlled exception.

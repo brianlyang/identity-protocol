@@ -359,7 +359,7 @@ def main() -> int:
             "--operation",
             "readiness",
             "--baseline-policy",
-            "warn",
+            args.baseline_policy,
         ],
         [
             "python3",
@@ -702,6 +702,8 @@ def main() -> int:
             catalog,
             "--capability-activation-policy",
             args.capability_activation_policy,
+            "--baseline-policy",
+            args.baseline_policy,
         ]
         if scope:
             gen_cmd.extend(["--scope", scope])

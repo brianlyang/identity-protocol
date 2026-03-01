@@ -238,6 +238,8 @@ def main() -> int:
             str(repo_catalog_path),
             "--capability-activation-policy",
             args.capability_activation_policy,
+            "--baseline-policy",
+            "warn",
         ]
         rc_upd, out_upd, err_upd = _run(update_cmd)
         item["update_rc"] = rc_upd
