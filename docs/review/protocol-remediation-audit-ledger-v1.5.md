@@ -3825,7 +3825,7 @@ Governance delta added in this batch:
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`:
    - `5.8.8` `instance_protocol_split_receipt_contract_v1`
    - `5.8.9` `protocol_feedback_trigger_hard_condition_contract_v1`
-   - requirement rows `ASB-RQ-055..058` (`SPEC_READY`)
+   - requirement rows `ASB-RQ-055..058` (`P0`, `SPEC_READY`)
 2. Business-scene contamination control remains hard requirement:
    - protocol lane must use generic placeholders only (no tenant/customer/business constants in contract fields).
 
@@ -3845,10 +3845,64 @@ Architect implementation package (next execution batch):
 
 Acceptance replay template (post-implementation):
 
-1. negative: missing split reminder -> `FAIL_REQUIRED` (`IP-SPLIT-001`)
+1. negative: missing `split_notice` -> `FAIL_REQUIRED` (`IP-SPLIT-001`)
 2. negative: `trigger=yes` with no SSOT outbox/index path -> `FAIL_REQUIRED` (`IP-SPLIT-003`)
 3. negative: mixed lane in same section -> `FAIL_REQUIRED` (`IP-SPLIT-004`)
 4. negative: protocol receipt carries business-scene constants -> `FAIL_REQUIRED` (`IP-SPLIT-005`)
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
+
+This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.2 Roundtable intake: CWD-invariant execution hardening (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated):
+
+1. Some validators still resolve relative sample/evidence paths from process CWD, creating false negatives when invoked outside protocol root.
+2. `three-plane` orchestration contains CWD-sensitive subprocess and repo-catalog resolution paths, causing false blocker outcomes in non-default working directories.
+3. These are protocol-level portability defects and must be fixed once in protocol scripts instead of repeated instance-side path workarounds.
+
+Cross-validation anchors:
+
+1. Trigger regression path resolution currently CWD-sensitive:
+   - `scripts/validate_identity_trigger_regression.py:146`
+   - `scripts/validate_identity_trigger_regression.py:151`
+   - `scripts/validate_identity_trigger_regression.py:152`
+2. Agent handoff self-test sample root currently CWD-sensitive:
+   - `scripts/validate_agent_handoff_contract.py:253`
+   - `scripts/validate_agent_handoff_contract.py:371`
+   - `scripts/validate_agent_handoff_contract.py:372`
+3. Three-plane orchestration subprocess and default repo-catalog resolution currently CWD-sensitive:
+   - `scripts/report_three_plane_status.py:186`
+   - `scripts/report_three_plane_status.py:1085`
+   - `scripts/report_three_plane_status.py:1110`
+   - `scripts/report_three_plane_status.py:1542`
+   - `scripts/report_three_plane_status.py:1566`
+
+Governance alignment:
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` already defines:
+   - `5.8.10` `cwd_invariant_execution_contract_v1`
+   - `ASB-RQ-059..061` (`P0`, `SPEC_READY`)
+
+Architect implementation package (next execution batch):
+
+1. `validate_identity_trigger_regression.py`:
+   - resolve `sample_report_path_pattern` against identity pack root (`CURRENT_TASK.json` parent), not shell CWD.
+2. `validate_agent_handoff_contract.py`:
+   - resolve self-test sample root against identity pack root for both positive/negative fixture scanning.
+3. `report_three_plane_status.py`:
+   - invoke child scripts with protocol-root absolute paths (`Path(__file__)` anchored) or explicit `--protocol-root`;
+   - make default repo-catalog resolution protocol-root deterministic;
+   - emit actionable hint when explicit `--repo-catalog` is required.
+4. Wire CWD invariance checks to `identity_creator`, `release_readiness_check`, `e2e_smoke_test`, `full_identity_protocol_scan`, `report_three_plane_status`, and CI required gates.
+
+Acceptance replay template (post-implementation):
+
+1. negative: run target validators from non-protocol CWD and verify CWD-sensitive false errors are eliminated.
+2. negative: inject intentionally CWD-relative broken fixture path and require `FAIL_REQUIRED` with `IP-CWD-001/002`.
+3. positive: same identity/check set yields identical status from protocol-root and non-protocol-root invocation directories.
+4. positive: three-plane report writes stable machine-readable status without CWD-dependent `BLOCKED` artifacts.
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
