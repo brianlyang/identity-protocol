@@ -353,9 +353,10 @@ Disclosure level contract:
    - recommended path: `<catalog_dir>/session/response-stamp-profiles/<actor_token>.json`
    - required fields: `actor_id`, `identity_id`, `disclosure_level`, `trigger_text`, `trigger_source`, `scope`, `updated_at`
 6. Natural-language trigger normalization confidence must be recorded; ambiguous trigger must not silently alter session-level profile.
-7. External stamp should explicitly expose layer cue:
-   - `source_layer=<project|global|env|auto>` (display-level alias),
-   - and keep `source=<...>` for validator/backward compatibility during migration.
+7. External stamp must keep responsibility/source cues separated:
+   - identity block keeps `source=<...>` as runtime provenance field,
+   - tail block must append `| Layer-Context: work_layer=<...>; source_layer=<...>` at line end.
+8. `work_layer` and `source_layer` are governance fields and must be machine-readable in validator payloads.
 
 User-named explicit trigger contract:
 

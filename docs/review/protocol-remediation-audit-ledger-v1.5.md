@@ -135,6 +135,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PASS |
 | FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering + tail-appended `Layer-Context` (`work_layer/source_layer`) to keep tuple/layer coherence deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PENDING_REPLAY |
 | FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PENDING_REPLAY |
+| FIX-023 | 2026-03-01 | protocol | layer-tail hard-gate requiredization (`work_layer/source_layer` machine-readable, fail-closed in strict lanes) | `TBD` | SPEC_READY | PENDING_PATCH |
 
 ---
 
@@ -4004,6 +4005,57 @@ Residual risk:
 
 1. `session` scope persistence writes actor-scoped profile under identity home; sandboxed CI lanes may require escalated permissions for this optional path.
 2. Strict-operation lock-bound failures remain expected when actor/session lock is `LOCK_MISMATCH`; this patch does not relax that gate.
+
+#### 16.8.8 FIX-023 intake: identity/layer split-tail hard gate requiredization (2026-03-01, docs-first)
+
+Status: `SPEC_READY` (implementation pending architect patch + replay).
+
+Change intent (protocol-layer only):
+
+1. Normalize first-line format to two blocks with mandatory tail layer block:
+   - `Identity-Context: ...; source=... | Layer-Context: work_layer=...; source_layer=...`
+2. Promote layer-tail checks to required hard gate semantics in strict operations.
+3. Keep scan/inspection compatibility observable for legacy no-tail samples.
+4. Unify parser semantics across stamp/first-line/coherence validators to avoid drift.
+
+Architect implementation package (required):
+
+1. parser/render surfaces:
+   - `scripts/response_stamp_common.py`
+   - `scripts/render_identity_response_stamp.py`
+2. validator hard-gate surfaces:
+   - `scripts/validate_identity_response_stamp.py`
+   - `scripts/validate_reply_identity_context_first_line.py`
+   - `scripts/validate_execution_reply_identity_coherence.py`
+3. wiring surfaces:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+
+Acceptance replay template (post-implementation):
+
+1. A. static checks:
+   - `python3 -m py_compile ...` + `bash -n scripts/e2e_smoke_test.sh` => rc=`0`
+2. B. render tail block:
+   - `render_identity_response_stamp.py ... --json-only` => `external_stamp` contains ` | Layer-Context: ` and ends with valid `work_layer/source_layer`.
+3. C. stamp gate:
+   - strict lane missing tail block => `FAIL_REQUIRED`
+   - strict lane invalid enum => `FAIL_REQUIRED`
+4. D. first-line gate:
+   - strict lane malformed split-tail first line => `FAIL_REQUIRED`
+5. E. coherence gate:
+   - tuple/layer mismatch in strict lane => `FAIL_REQUIRED`
+   - coherent tuple/layer => `PASS_REQUIRED`
+6. F. docs/ssot checks:
+   - `docs_command_contract_check.py` + `validate_protocol_ssot_source.py` => rc=`0`
+
+Residual risk (until implementation lands):
+
+1. Before validator/wiring patch, some channels may still rely on prior first-line parsing semantics.
+2. Release closure must keep this lane in `PENDING_PATCH` until architect replay confirms strict fail-closed behavior.
 
 #### 16.8.5 Roundtable intake: strict execution/reply tuple coherence guard (2026-03-01, HOTFIX-P0-009 docs-only)
 
