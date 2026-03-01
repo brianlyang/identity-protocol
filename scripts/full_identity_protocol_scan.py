@@ -147,6 +147,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
             "protocol_feedback_ssot_archival",
+            "protocol_version_alignment",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -761,6 +762,21 @@ def main() -> int:
                     "warn",
                     "--json-only",
                 ],
+                "protocol_version_alignment": [
+                    "python3",
+                    "scripts/validate_identity_protocol_version_alignment.py",
+                    "--identity-id",
+                    iid,
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--operation",
+                    "scan",
+                    "--alignment-policy",
+                    "warn",
+                    "--json-only",
+                ],
             }
             if not is_fixture:
                 checks["prompt_quality"] = [
@@ -1240,6 +1256,20 @@ def main() -> int:
                     ):
                         if k in baseline_doc:
                             check_payload[k] = baseline_doc.get(k)
+                if name == "protocol_version_alignment":
+                    align_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_version_alignment_status",
+                        "error_code",
+                        "required_contract",
+                        "operation",
+                        "alignment_policy",
+                        "report_selected_path",
+                        "tuple_checks",
+                        "stale_reasons",
+                    ):
+                        if k in align_doc:
+                            check_payload[k] = align_doc.get(k)
                 if name == "identity_home_catalog_alignment":
                     home_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

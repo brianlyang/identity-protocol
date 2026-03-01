@@ -93,8 +93,9 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
 | FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `5016816` | DONE | PASS |
-| FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PENDING_REVIEW |
-| FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PENDING_REVIEW |
+| FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PASS |
+| FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
+| FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -3108,7 +3109,7 @@ Status: `PASS` (scope: protocol-layer wiring + machine-readable visibility under
 
 #### 16.7.5 FIX-017 progress update (2026-03-01, P0-A readiness scope passthrough hardening)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head)
 
 Source ref (L1 governance SSOT + intake action list):
 
@@ -3140,10 +3141,11 @@ Replay evidence:
 Residual risks:
 
 1. This patch closes scope forwarding gap only; it does not alter health strictness (`--enforce-pass`) or semantic gate outcomes for identities with failing checks.
+2. Audit replay sample still ends with downstream health failure (`rc=2`) on failing identity state, which is expected and confirms no gate weakening.
 
 #### 16.7.6 FIX-018 progress update (2026-03-01, P0-B baseline policy stratification hardening)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head)
 
 Source ref (L1 governance SSOT + intake action list):
 
@@ -3192,3 +3194,92 @@ Residual risks:
 
 1. On stale baseline, default `strict` policy now blocks generic `identity_creator update` unless explicit override is supplied (expected under P0-B hardening).
 2. Wave/batch apply path keeps explicit `warn` override by design to allow stale-instance remediation; audit replay should confirm this override is accepted as controlled exception.
+
+#### 16.7.7 FIX-019 progress update (2026-03-01, P0-C protocol version alignment contract unification)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Source ref (L1 governance SSOT + intake action list):
+
+1. review intake section `15.1 P0-C` (fragmented alignment checks across baseline/prompt/binding validators).
+2. `ASB-RQ-043` + section `5.8.7 protocol_version_alignment_contract_v1`.
+
+Implemented package (protocol-only):
+
+1. New unified validator:
+   - `scripts/validate_identity_protocol_version_alignment.py`
+   - unified tuple closure fields:
+     - execution report freshness binding
+     - protocol baseline freshness (`protocol_commit_sha` vs current HEAD)
+     - prompt activation alignment
+     - binding tuple alignment
+   - machine-readable output:
+     - `protocol_version_alignment_status`
+     - `error_code` (`IP-PVA-001..004`)
+     - `tuple_checks`
+     - `report_selected_path`
+     - `stale_reasons`
+2. Six-surface wiring:
+   - `scripts/identity_creator.py` (`validate` + `update` chains)
+   - `scripts/release_readiness_check.py` (execution-report preflight)
+   - `scripts/e2e_smoke_test.sh` (strict replay lane)
+   - `scripts/full_identity_protocol_scan.py` (`checks.protocol_version_alignment`)
+   - `scripts/report_three_plane_status.py` (`instance_plane_detail.protocol_version_alignment`)
+   - `.github/workflows/_identity-required-gates.yml` (CI strict gate)
+3. Health observability extension:
+   - `scripts/collect_identity_health_report.py` adds `protocol_version_alignment` check (`warn` policy).
+
+Replay evidence (local static + targeted runtime replay):
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_identity_protocol_version_alignment.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py scripts/collect_identity_health_report.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Direct validator replay (`custom-creative-ecom-analyst`, scan/warn):
+   - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --alignment-policy warn --json-only`
+   - expected: `rc=0`, payload contains `protocol_version_alignment_status` + `tuple_checks`.
+3. Readiness preflight wiring proof:
+   - readiness log includes:
+     - `[INFO] protocol version alignment preflight: status=<...> error_code=<...> report=<...>`
+4. Full-scan/three-plane visibility:
+   - full-scan exposes `checks.protocol_version_alignment.*`.
+   - three-plane exposes `instance_plane_detail.protocol_version_alignment.*`.
+
+Residual risks:
+
+1. Existing `validate_identity_prompt_activation.py` / `validate_identity_binding_tuple.py` remain as atomic validators; this fix adds unified contract validator without removing legacy checks to avoid sudden compatibility regression.
+2. Strict policy paths can block update/readiness when no valid execution report is available; this is expected for release/mutation fail-closed semantics and should be paired with controlled remediation workflow (wave/update with explicit warn override where governance allows).
+
+#### 16.7.7 FIX-017/FIX-018 audit replay verdict (2026-03-01, cross-validated)
+
+Status: `PASS` (scope: protocol-layer behavior + command-path passthrough)
+
+1. Commit anchors under audit:
+   - `0dd074e90eed7e6458cc18a5c961f3451bc8f871` (`FIX-017`)
+   - `b0c148304dbe10da5f34c5cea190aab9ea758cf4` (`FIX-018`)
+2. Static checks:
+   - `python3 -m py_compile scripts/identity_creator.py scripts/release_readiness_check.py scripts/run_protocol_upgrade_wave.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+3. CLI contract checks:
+   - `python3 scripts/identity_creator.py validate --help | rg baseline-policy`
+   - `python3 scripts/identity_creator.py update --help | rg baseline-policy`
+   - result: both expose `--baseline-policy {strict,warn}`
+4. FIX-017 readiness passthrough replay:
+   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
+   - result: `rc=2` (downstream health failure, expected on sample state)
+   - key proof:
+     - `validate_identity_session_refresh_status ... --baseline-policy warn`
+     - `collect_identity_health_report.py ... --enforce-pass --scope USER`
+5. FIX-018 baseline-policy stratification replay:
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
+   - result: `rc=2` (expected on sample state)
+   - key proof:
+     - auto-update command emits `python3 scripts/identity_creator.py update ... --baseline-policy warn --scope USER`
+     - update preflight emits `validate_identity_session_refresh_status ... --operation update --baseline-policy warn`
+6. Source-code anchor checks:
+   - `scripts/e2e_smoke_test.sh` uses `validate_identity_session_refresh_status ... --baseline-policy strict` in E2E lane.
+   - `scripts/run_protocol_upgrade_wave.py` keeps controlled override (`identity_creator.py update --baseline-policy warn`) for wave remediation path.
+7. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`

@@ -213,6 +213,7 @@ jobs:
             python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --report "$UPGRADE_REPORT" --operation ci
             python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_protocol_baseline_freshness.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --execution-report "$UPGRADE_REPORT" --baseline-policy strict
+            python3 scripts/validate_identity_protocol_version_alignment.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --execution-report "$UPGRADE_REPORT" --operation ci --alignment-policy strict --json-only
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --execution-report "$UPGRADE_REPORT" --require-ci-binding --expect-github-run-id "${{ github.run_id }}" --expect-github-sha "${{ github.sha }}"
             python3 scripts/validate_identity_protocol_root_evidence.py --identity-id "$ID" --report "$UPGRADE_REPORT"
             python3 scripts/validate_identity_mode_promotion_arbitration.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}" --report "$UPGRADE_REPORT"

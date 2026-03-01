@@ -96,6 +96,18 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
             "--json-only",
         ],
     ),
+    (
+        "protocol_version_alignment",
+        [
+            "python3",
+            "scripts/validate_identity_protocol_version_alignment.py",
+            "--operation",
+            "scan",
+            "--alignment-policy",
+            "warn",
+            "--json-only",
+        ],
+    ),
     ("experience_feedback_governance", ["python3", "scripts/validate_identity_experience_feedback_governance.py"]),
     ("capability_arbitration", ["python3", "scripts/validate_identity_capability_arbitration.py"]),
     ("ci_enforcement", ["python3", "scripts/validate_identity_ci_enforcement.py"]),
@@ -122,6 +134,7 @@ SUGGESTIONS = {
     "writeback_continuity": "Regenerate update execution report and ensure writeback_mode/degrade_reason/risk_level/next_recovery_action satisfy continuity contract.",
     "post_execution_mandatory": "Ensure post-execution mandatory fields and recovery actions are complete in execution report; rerun update and validate.",
     "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
+    "protocol_version_alignment": "Run identity_creator update (or refresh execution report) and resolve prompt/binding tuple mismatches before release closure.",
     "experience_feedback_governance": "Refresh feedback sample/log linkage for target identity only.",
     "capability_arbitration": "Refresh route quality metrics and arbitration sample for current identity.",
     "ci_enforcement": "Align evidence and CI execution metadata with protocol requirements.",
@@ -179,7 +192,7 @@ def main() -> int:
         cmd = [*base, "--identity-id", args.identity_id]
         if name == "state_consistency":
             cmd = [*base, "--catalog", catalog]
-        elif name == "protocol_baseline_freshness":
+        elif name in {"protocol_baseline_freshness", "protocol_version_alignment"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
         elif name in {"semantic_routing_guard", "vendor_namespace_separation"}:
             cmd += ["--catalog", catalog]
@@ -205,6 +218,18 @@ def main() -> int:
             baseline_code = str(payload.get("baseline_error_code", "")).strip()
             if baseline_code:
                 error_code = baseline_code
+        elif name == "protocol_version_alignment":
+            payload = _parse_json_payload(out) or {}
+            align_status = str(payload.get("protocol_version_alignment_status", "")).strip().upper()
+            if align_status == "PASS_REQUIRED":
+                status = "PASS"
+            elif align_status == "WARN_NON_BLOCKING":
+                status = "WARN"
+            elif align_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            align_code = str(payload.get("error_code", "")).strip()
+            if align_code:
+                error_code = align_code
         elif name == "semantic_routing_guard":
             payload = _parse_json_payload(out) or {}
             sem_status = str(payload.get("semantic_routing_status", "")).strip().upper()

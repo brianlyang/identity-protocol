@@ -1377,6 +1377,23 @@ def main() -> int:
                 "--baseline-policy",
                 args.baseline_policy,
             ],
+            [
+                "python3",
+                "scripts/validate_identity_protocol_version_alignment.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--scope",
+                args.scope,
+                "--operation",
+                "validate",
+                "--alignment-policy",
+                args.baseline_policy,
+                "--json-only",
+            ],
             ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_capability_arbitration.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_dialogue_content.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
@@ -1554,6 +1571,28 @@ def main() -> int:
         )
         if rc != 0:
             print("[FAIL] session refresh status validation failed; update blocked")
+            return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_identity_protocol_version_alignment.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--scope",
+                args.scope,
+                "--operation",
+                "update",
+                "--alignment-policy",
+                args.baseline_policy,
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] protocol version alignment validation failed; update blocked")
             return rc
         rc = _run(
             [

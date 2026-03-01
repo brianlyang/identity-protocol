@@ -1102,6 +1102,36 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_baseline,
     }
 
+    rc_align, out_align, err_align = _run(
+        [
+            "python3",
+            "scripts/validate_identity_protocol_version_alignment.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--execution-report",
+            str(report_path),
+            "--operation",
+            "three-plane",
+            "--alignment-policy",
+            "warn",
+            "--json-only",
+        ]
+    )
+    align_payload = _parse_json_payload(out_align) or {}
+    validators["protocol_version_alignment"] = {
+        "rc": rc_align,
+        "ok": rc_align == 0,
+        "out": out_align,
+        "err": err_align,
+    }
+    align_status = str(align_payload.get("protocol_version_alignment_status", "")).strip().upper()
+    if rc_align != 0 or align_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     detail = {
         "report_path": str(report_path),
         "all_ok": all_ok,
@@ -1465,6 +1495,15 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "current_protocol_head_sha": baseline_payload.get("current_protocol_head_sha"),
             "lag_commits": baseline_payload.get("lag_commits"),
             "stale_reasons": baseline_payload.get("stale_reasons", []),
+        },
+        "protocol_version_alignment": {
+            "protocol_version_alignment_status": align_payload.get("protocol_version_alignment_status"),
+            "error_code": align_payload.get("error_code", ""),
+            "operation": align_payload.get("operation"),
+            "alignment_policy": align_payload.get("alignment_policy"),
+            "report_selected_path": align_payload.get("report_selected_path"),
+            "tuple_checks": align_payload.get("tuple_checks", {}),
+            "stale_reasons": align_payload.get("stale_reasons", []),
         },
         "validators": validators,
     }

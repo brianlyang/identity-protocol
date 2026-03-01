@@ -844,6 +844,36 @@ def main() -> int:
     if rc_baseline != 0:
         return rc_baseline
 
+    version_alignment_cmd = [
+        "python3",
+        "scripts/validate_identity_protocol_version_alignment.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--execution-report",
+        execution_report,
+        "--operation",
+        "readiness",
+        "--alignment-policy",
+        args.baseline_policy,
+        "--json-only",
+    ]
+    if scope:
+        version_alignment_cmd.extend(["--scope", scope])
+    rc_align, out_align, _ = _run_capture(version_alignment_cmd)
+    align_payload = _parse_json_payload(out_align) or {}
+    align_status = str(align_payload.get("protocol_version_alignment_status", "")).strip().upper() or "UNKNOWN"
+    align_code = str(align_payload.get("error_code", "")).strip() or "-"
+    print(
+        "[INFO] protocol version alignment preflight: "
+        f"status={align_status} error_code={align_code} report={execution_report}"
+    )
+    if rc_align != 0:
+        return rc_align
+
     seq.append(
         [
             "python3",

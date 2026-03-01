@@ -384,6 +384,16 @@ PY
     --execution-report "$UPGRADE_REPORT" \
     --baseline-policy strict
 
+  echo "[26.22/30][$ID] validate protocol version alignment tuple (strict)"
+  python3 scripts/validate_identity_protocol_version_alignment.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --execution-report "$UPGRADE_REPORT" \
+    --operation e2e \
+    --alignment-policy strict \
+    --json-only
+
   echo "[26.25/30][$ID] validate writeback continuity contract (Track-A)"
   python3 scripts/validate_writeback_continuity.py \
     --identity-id "$ID" \
