@@ -1113,6 +1113,29 @@ Failure code family (`IP-ASB-CTX-*`):
 2. `IP-ASB-CTX-002`: resolver evidence missing for reply tuple.
 3. `IP-ASB-CTX-003`: dual-catalog lane ambiguity unresolved in strict operation.
 
+#### 5.8.12 `send_time_reply_gate_contract_v1` (P0)
+
+Goal:
+
+1. Ensure governed user-visible replies are checked at send-time unified outlet, not only in readiness/e2e/scan artifact lanes.
+2. Keep first-line `Identity-Context` failure semantics deterministic and fail-closed before business content delivery.
+
+Mandatory semantics:
+
+1. Send-time outlet must execute unified gate before reply emission:
+   - `validate_send_time_reply_gate.py`.
+2. Missing first-line `Identity-Context` in send-time channel must fail-closed with blocker receipt:
+   - error code family reuses `IP-ASB-STAMP-SESSION-001`.
+3. Gate payload must be machine-readable and visible in scan surfaces with fields:
+   - `send_time_gate_status`
+   - `error_code`
+   - `reply_evidence_mode`
+   - `reply_sample_count`
+   - `reply_first_line_missing_count`
+   - `reply_first_line_missing_refs`
+4. three-plane/full-scan must expose send-time gate fields under response-stamp detail.
+5. At least one replay must validate real dialogue outlet evidence (`reply-file` / `reply-log`), not only `stamp-json` artifact input.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1573,6 +1596,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-065 | non-blocking discovery warnings must auto-escalate to fail-closed after configured expiry window | trigger/builder/fit status lifecycle + expiry evaluator surfaces | P1 | GATE_READY (NON_BLOCKING) | expiry evaluator + `IP-DREQ-005` auto escalation landed (`3baa355`) |
 | ASB-RQ-066 | required-contract coverage must expose discovery-subset hard threshold for requiredized contracts | `validate_required_contract_coverage.py` discovery subset counters + `min_discovery_required_coverage` gate | P0 | GATE_READY | discovery subset counters + threshold gate landed (`295daf7`) |
 | ASB-RQ-067 | strict operations must enforce execution-to-reply identity tuple coherence under dual-catalog lanes | `execution_reply_identity_coherence_contract_v1` + coherence validator/wiring across creator/readiness/e2e/full-scan/three-plane/CI | P0 | GATE_READY | implementation landed via `validate_execution_reply_identity_coherence.py` + six-surface wiring (`FIX-021`), audit replay pending |
+| ASB-RQ-068 | send-time unified reply outlet gate must enforce first-line Identity-Context fail-closed semantics and emit machine-readable telemetry in three-plane/full-scan | `validate_send_time_reply_gate.py` + creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | GATE_READY | send-time validator + six-surface wiring landed (`FIX-024`), audit replay pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1602,6 +1626,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-062 / ASB-RQ-063 / ASB-RQ-064 / ASB-RQ-066 | `SPEC_READY -> GATE_READY (P0)` | discovery requiredization gate + writeback apply path + CI sync + discovery coverage subgate landed (`295daf7`,`3baa355`) |
 | ASB-RQ-065 | `SPEC_READY -> GATE_READY (P1)` | non-blocking expiry evaluator and `IP-DREQ-005` auto escalation landed (`3baa355`) |
 | ASB-RQ-067 | `SPEC_READY -> GATE_READY (P0)` | execution/reply coherence validator + strict fail-closed semantics + six-surface wiring landed (`FIX-021`); replay closure pending |
+| ASB-RQ-068 | `SPEC_READY -> GATE_READY (P0)` | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan visibility landed (`FIX-024`); replay closure pending |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

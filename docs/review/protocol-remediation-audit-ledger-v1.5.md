@@ -136,6 +136,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering + tail-appended `Layer-Context` (`work_layer/source_layer`) to keep tuple/layer coherence deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PENDING_REPLAY |
 | FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PENDING_REPLAY |
 | FIX-023 | 2026-03-01 | protocol | layer-tail hard-gate requiredization (`work_layer/source_layer` machine-readable, fail-closed in strict lanes) | `8a97afc` | DONE | PENDING_REPLAY |
+| FIX-024 | 2026-03-01 | protocol | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan machine-readable telemetry (`IP-ASB-STAMP-SESSION-001`) | `b1cbe1f` | DONE | PENDING_REPLAY |
 
 ---
 
@@ -4098,6 +4099,65 @@ Residual risk:
 
 1. strict validate/readiness/e2e lanes remain lock-bound; non-`LOCK_MATCH` is expected hard-fail and not a regression.
 2. Audit replay still required to flip `PENDING_REPLAY` -> `PASS`.
+
+#### 16.8.9 FIX-024 implementation replay: send-time unified reply outlet gate (2026-03-01)
+
+Status: `DONE / PENDING_REPLAY` (protocol code landed, independent audit replay pending).
+
+Commit:
+
+1. `b1cbe1f` — `fix(protocol): add send-time unified reply outlet gate`
+
+Change intent (protocol-layer only):
+
+1. Add a unified send-time gate so governed user-visible reply channel is checked at delivery-time, not only readiness/e2e/scan artifact lanes.
+2. Fail-closed on missing first-line `Identity-Context` and emit blocker receipt using `IP-ASB-STAMP-SESSION-001`.
+3. Expose send-time gate machine-readable fields in three-plane/full-scan.
+4. Add real dialogue outlet replay path (reply-file evidence), not only `stamp-json` replay.
+
+Changed files:
+
+1. `scripts/validate_send_time_reply_gate.py` (new)
+2. `scripts/identity_creator.py`
+3. `scripts/release_readiness_check.py`
+4. `scripts/e2e_smoke_test.sh`
+5. `scripts/full_identity_protocol_scan.py`
+6. `scripts/report_three_plane_status.py`
+7. `.github/workflows/_identity-required-gates.yml`
+8. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+
+Acceptance replay (local):
+
+1. static:
+   - `python3 -m py_compile scripts/validate_send_time_reply_gate.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - rc=`0`
+2. send-time positive (real reply file):
+   - render stamp -> compose `/tmp/sendtime-reply-base.txt` with first-line stamp + business body
+   - `validate_send_time_reply_gate.py ... --reply-file /tmp/sendtime-reply-base.txt --force-check --enforce-send-time-gate --operation validate --json-only`
+   - rc=`0`, `send_time_gate_status=PASS_REQUIRED`.
+3. send-time negative (missing first line):
+   - `validate_send_time_reply_gate.py ... --reply-text "REAL_DIALOGUE_BODY_ONLY_NO_STAMP" --force-check --enforce-send-time-gate --operation validate --json-only`
+   - rc=`1`, `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`, blocker receipt exists.
+4. three-plane visibility:
+   - `report_three_plane_status.py ... --with-docs-contract` => rc=`0`
+   - `instance_plane_detail.response_identity_stamp` includes:
+     - `send_time_gate_status`
+     - `send_time_gate_error_code`
+     - `send_time_reply_evidence_mode`
+     - `send_time_reply_sample_count`
+     - `send_time_reply_missing_count`
+5. full-scan visibility:
+   - `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml` => rc=`0`
+   - target row checks include `send_time_reply_gate` with machine-readable fields.
+6. docs/ssot checks:
+   - `python3 scripts/docs_command_contract_check.py` => rc=`0`
+   - `python3 scripts/validate_protocol_ssot_source.py` => rc=`0`
+
+Residual risk:
+
+1. scan/three-plane currently use `stamp_json_composed_reply` mode for deterministic telemetry; production runtime should prefer `reply-file`/`reply-log` evidence when available.
+2. audit replay still required before upgrading status from `PENDING_REPLAY` to `PASS`.
 
 #### 16.8.5 Roundtable intake: strict execution/reply tuple coherence guard (2026-03-01, HOTFIX-P0-009 docs-only)
 
