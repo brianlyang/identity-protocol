@@ -667,7 +667,7 @@ def main() -> int:
             "requiredization_triggered": True,
             "trigger_classes": trigger_classes or list(DEFAULT_TRIGGER_CLASSES),
             "window_rounds": window_rounds,
-            "evidence_refs": [str(x) for x in batches],
+            "evidence_refs": [str(x) for x in batches] or [str(task_path)],
             "previous_required_state": previous_state,
             "new_required_state": required_state,
             "requiredized_at": _iso_now(),
@@ -735,7 +735,7 @@ def main() -> int:
                 "requiredization_triggered": bool(requiredization_triggered),
                 "trigger_classes": trigger_classes or ["legacy_requiredized_state"],
                 "window_rounds": window_rounds,
-                "evidence_refs": [str(x) for x in batches],
+                "evidence_refs": [str(x) for x in batches] or [str(task_path)],
                 "previous_required_state": required_state,
                 "new_required_state": required_state,
                 "requiredized_at": _iso_now(),
@@ -762,11 +762,30 @@ def main() -> int:
     payload["requiredization_receipt_path"] = str(receipt_path)
     receipt_doc, receipt_err = _validate_receipt(receipt_path)
     if receipt_doc is None:
-        payload["discovery_requiredization_status"] = STATUS_FAIL_REQUIRED
-        payload["error_code"] = ERR_RECEIPT_MISSING
-        payload["stale_reasons"] = [receipt_err]
-        _emit(payload, json_only=args.json_only)
-        return 1
+        if args.apply_requiredization:
+            repaired = {
+                "requiredization_triggered": bool(requiredization_triggered),
+                "trigger_classes": trigger_classes or ["legacy_requiredized_state"],
+                "window_rounds": window_rounds,
+                "evidence_refs": [str(x) for x in batches] or [str(task_path)],
+                "previous_required_state": required_state,
+                "new_required_state": required_state,
+                "requiredized_at": _iso_now(),
+                "required_contract_keys": list(DISCOVERY_CONTRACT_KEYS),
+            }
+            repaired_path = _receipt_output_path(pack_path, receipt_pattern)
+            _write_json(repaired_path, repaired)
+            payload["requiredization_applied"] = True
+            payload["requiredization_apply_receipt_ref"] = str(repaired_path)
+            payload["requiredization_receipt_path"] = str(repaired_path)
+            receipt_path = repaired_path
+            receipt_doc = repaired
+        else:
+            payload["discovery_requiredization_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_RECEIPT_MISSING
+            payload["stale_reasons"] = [receipt_err]
+            _emit(payload, json_only=args.json_only)
+            return 1
     payload["requiredization_receipt_fields"] = receipt_doc
 
     index_rel = (
