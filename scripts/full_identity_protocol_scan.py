@@ -230,6 +230,9 @@ def main() -> int:
         default=os.environ.get("IDENTITY_IDS", ""),
         help="target identities for --scan-mode target (space/comma separated)",
     )
+    ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
+    ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
+    ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -249,6 +252,9 @@ def main() -> int:
 
     target_ids = [x.strip() for x in args.identity_ids.replace(",", " ").split() if x.strip()]
     target_set = set(target_ids)
+    layer_intent_text = args.layer_intent_text.strip()
+    expected_work_layer = args.expected_work_layer.strip().lower()
+    expected_source_layer = args.expected_source_layer.strip().lower()
     if args.scan_mode == "target" and not target_set:
         print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
         return 2
@@ -874,6 +880,31 @@ def main() -> int:
                     "--json-only",
                 ],
             }
+            if layer_intent_text:
+                for key in (
+                    "response_stamp_render",
+                    "layer_intent_resolution",
+                    "reply_identity_context_first_line",
+                    "send_time_reply_gate",
+                    "execution_reply_identity_coherence",
+                ):
+                    checks[key].extend(["--layer-intent-text", layer_intent_text])
+            if expected_work_layer:
+                for key in (
+                    "layer_intent_resolution",
+                    "reply_identity_context_first_line",
+                    "send_time_reply_gate",
+                    "execution_reply_identity_coherence",
+                ):
+                    checks[key].extend(["--expected-work-layer", expected_work_layer])
+            if expected_source_layer:
+                for key in (
+                    "layer_intent_resolution",
+                    "reply_identity_context_first_line",
+                    "send_time_reply_gate",
+                    "execution_reply_identity_coherence",
+                ):
+                    checks[key].extend(["--expected-source-layer", expected_source_layer])
             if not is_fixture:
                 checks["prompt_quality"] = [
                     "python3",

@@ -72,6 +72,10 @@ if [ -z "$IDS" ]; then
   exit 1
 fi
 
+LAYER_INTENT_TEXT="${LAYER_INTENT_TEXT:-}"
+EXPECTED_WORK_LAYER="${EXPECTED_WORK_LAYER:-}"
+EXPECTED_SOURCE_LAYER="${EXPECTED_SOURCE_LAYER:-}"
+
 echo "[10.15/30] validate runtime mode/catalog binding guard (for each target identity)"
 for ID in $IDS; do
   python3 scripts/validate_identity_runtime_mode_guard.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --expect-mode auto
@@ -198,7 +202,11 @@ for ID in $IDS; do
   EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
-  python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only
+  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    render_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  "${render_cmd[@]}"
 
   echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"
   python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
@@ -207,10 +215,30 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.45/30][$ID] validate reply first-line Identity-Context hard gate (HOTFIX-P0-004)"
-  python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
+  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    first_line_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    first_line_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    first_line_cmd+=(--expected-source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${first_line_cmd[@]}"
 
   echo "[12.455/30][$ID] validate layer intent auto-resolution gate (P1)"
-  python3 scripts/validate_layer_intent_resolution.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-layer-intent-gate --operation e2e --json-only
+  layer_intent_cmd=(python3 scripts/validate_layer_intent_resolution.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-layer-intent-gate --operation e2e --json-only)
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    layer_intent_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    layer_intent_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    layer_intent_cmd+=(--expected-source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${layer_intent_cmd[@]}"
 
   echo "[12.46/30][$ID] validate reply first-line blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
@@ -230,13 +258,33 @@ print(f"[OK] send-time reply sample emitted: {reply_file}")
 PY
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
-  python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
+  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT")
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    send_time_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    send_time_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    send_time_cmd+=(--expected-source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${send_time_cmd[@]}"
 
   echo "[12.467/30][$ID] validate send-time reply gate blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
-  python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT"
+  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    coherence_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    coherence_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    coherence_cmd+=(--expected-source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${coherence_cmd[@]}"
 
   echo "[12.48/30][$ID] validate execution/reply coherence blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT"

@@ -184,6 +184,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     hard_boundary = err_code.startswith("IP-PATH-") or err_code.startswith("IP-PERM-")
 
     validators: dict[str, Any] = {}
+    layer_intent_text = str(getattr(args, "layer_intent_text", "") or "").strip()
+    expected_work_layer = str(getattr(args, "expected_work_layer", "") or "").strip().lower()
+    expected_source_layer = str(getattr(args, "expected_source_layer", "") or "").strip().lower()
     # Always validate tuple and writeback linkage to keep evidence machine-checkable.
     rc_tuple, out_tuple, err_tuple = _run(
         ["python3", "scripts/validate_identity_binding_tuple.py", "--identity-id", args.identity_id, "--report", str(report_path)]
@@ -393,25 +396,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         f"/tmp/identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}.json"
     )
 
-    rc_stamp_render, out_stamp_render, err_stamp_render = _run(
-        [
-            "python3",
-            "scripts/render_identity_response_stamp.py",
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--identity-id",
-            args.identity_id,
-            "--view",
-            "external",
-            "--disclosure-level",
-            "standard",
-            "--out",
-            stamp_artifact,
-            "--json-only",
-        ]
-    )
+    render_cmd = [
+        "python3",
+        "scripts/render_identity_response_stamp.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--view",
+        "external",
+        "--disclosure-level",
+        "standard",
+        "--out",
+        stamp_artifact,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        render_cmd.extend(["--layer-intent-text", layer_intent_text])
+    rc_stamp_render, out_stamp_render, err_stamp_render = _run(render_cmd)
     stamp_render_payload = _parse_json_payload(out_stamp_render) or {}
     validators["response_stamp_render"] = {
         "rc": rc_stamp_render,
@@ -475,27 +479,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_stamp != 0 or rc_receipt != 0:
         hard_boundary = True
 
-    rc_reply_first_line, out_reply_first_line, err_reply_first_line = _run(
-        [
-            "python3",
-            "scripts/validate_reply_identity_context_first_line.py",
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--identity-id",
-            args.identity_id,
-            "--stamp-json",
-            stamp_artifact,
-            "--force-check",
-            "--enforce-first-line-gate",
-            "--operation",
-            "three-plane",
-            "--blocker-receipt-out",
-            reply_first_line_blocker_receipt,
-            "--json-only",
-        ]
-    )
+    reply_first_line_cmd = [
+        "python3",
+        "scripts/validate_reply_identity_context_first_line.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--stamp-json",
+        stamp_artifact,
+        "--force-check",
+        "--enforce-first-line-gate",
+        "--operation",
+        "three-plane",
+        "--blocker-receipt-out",
+        reply_first_line_blocker_receipt,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        reply_first_line_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        reply_first_line_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        reply_first_line_cmd.extend(["--expected-source-layer", expected_source_layer])
+    rc_reply_first_line, out_reply_first_line, err_reply_first_line = _run(reply_first_line_cmd)
     reply_first_line_payload = _parse_json_payload(out_reply_first_line) or {}
     validators["reply_identity_context_first_line"] = {
         "rc": rc_reply_first_line,
@@ -507,25 +516,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_reply_first_line != 0 or reply_first_line_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_layer_intent, out_layer_intent, err_layer_intent = _run(
-        [
-            "python3",
-            "scripts/validate_layer_intent_resolution.py",
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--identity-id",
-            args.identity_id,
-            "--stamp-json",
-            stamp_artifact,
-            "--force-check",
-            "--enforce-layer-intent-gate",
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
-    )
+    layer_intent_cmd = [
+        "python3",
+        "scripts/validate_layer_intent_resolution.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--stamp-json",
+        stamp_artifact,
+        "--force-check",
+        "--enforce-layer-intent-gate",
+        "--operation",
+        "three-plane",
+        "--json-only",
+    ]
+    if layer_intent_text:
+        layer_intent_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        layer_intent_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        layer_intent_cmd.extend(["--expected-source-layer", expected_source_layer])
+    rc_layer_intent, out_layer_intent, err_layer_intent = _run(layer_intent_cmd)
     layer_intent_payload = _parse_json_payload(out_layer_intent) or {}
     validators["layer_intent_resolution"] = {
         "rc": rc_layer_intent,
@@ -537,27 +551,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_layer_intent != 0 or layer_intent_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_send_time_gate, out_send_time_gate, err_send_time_gate = _run(
-        [
-            "python3",
-            "scripts/validate_send_time_reply_gate.py",
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--identity-id",
-            args.identity_id,
-            "--stamp-json",
-            stamp_artifact,
-            "--force-check",
-            "--enforce-send-time-gate",
-            "--operation",
-            "three-plane",
-            "--blocker-receipt-out",
-            send_time_reply_gate_blocker_receipt,
-            "--json-only",
-        ]
-    )
+    send_time_cmd = [
+        "python3",
+        "scripts/validate_send_time_reply_gate.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--stamp-json",
+        stamp_artifact,
+        "--force-check",
+        "--enforce-send-time-gate",
+        "--operation",
+        "three-plane",
+        "--blocker-receipt-out",
+        send_time_reply_gate_blocker_receipt,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        send_time_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        send_time_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        send_time_cmd.extend(["--expected-source-layer", expected_source_layer])
+    rc_send_time_gate, out_send_time_gate, err_send_time_gate = _run(send_time_cmd)
     send_time_gate_payload = _parse_json_payload(out_send_time_gate) or {}
     validators["send_time_reply_gate"] = {
         "rc": rc_send_time_gate,
@@ -569,27 +588,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_send_time_gate != 0 or send_time_gate_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_reply_coherence, out_reply_coherence, err_reply_coherence = _run(
-        [
-            "python3",
-            "scripts/validate_execution_reply_identity_coherence.py",
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--identity-id",
-            args.identity_id,
-            "--stamp-json",
-            stamp_artifact,
-            "--force-check",
-            "--enforce-coherence-gate",
-            "--operation",
-            "three-plane",
-            "--blocker-receipt-out",
-            execution_reply_coherence_blocker_receipt,
-            "--json-only",
-        ]
-    )
+    reply_coherence_cmd = [
+        "python3",
+        "scripts/validate_execution_reply_identity_coherence.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--stamp-json",
+        stamp_artifact,
+        "--force-check",
+        "--enforce-coherence-gate",
+        "--operation",
+        "three-plane",
+        "--blocker-receipt-out",
+        execution_reply_coherence_blocker_receipt,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        reply_coherence_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        reply_coherence_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        reply_coherence_cmd.extend(["--expected-source-layer", expected_source_layer])
+    rc_reply_coherence, out_reply_coherence, err_reply_coherence = _run(reply_coherence_cmd)
     reply_coherence_payload = _parse_json_payload(out_reply_coherence) or {}
     validators["execution_reply_identity_coherence"] = {
         "rc": rc_reply_coherence,
@@ -1773,6 +1797,9 @@ def main() -> int:
     ap.add_argument("--run-head-sha", default="")
     ap.add_argument("--run-workflow-file-sha", default="")
     ap.add_argument("--checks-json", default="")
+    ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
+    ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
+    ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 

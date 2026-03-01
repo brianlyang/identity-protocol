@@ -26,8 +26,13 @@ def _parse_json_payload(raw: str) -> dict[str, Any]:
         return {}
 
 
-def _read_stamp_line(stamp_json_path: Path) -> str:
+def _read_stamp_payload(stamp_json_path: Path) -> dict[str, Any]:
     doc = _parse_json_payload(stamp_json_path.read_text(encoding="utf-8"))
+    return doc if isinstance(doc, dict) else {}
+
+
+def _read_stamp_line(stamp_json_path: Path) -> str:
+    doc = _read_stamp_payload(stamp_json_path)
     return str(doc.get("external_stamp", "")).strip()
 
 
@@ -87,6 +92,9 @@ def main() -> int:
     ap.add_argument("--reply-log", default="")
     ap.add_argument("--stamp-json", default="", help="optional fallback to compose send-time reply from external_stamp")
     ap.add_argument("--business-line", default="SEND_TIME_GATE_PROBE_BODY")
+    ap.add_argument("--expected-work-layer", default="")
+    ap.add_argument("--expected-source-layer", default="")
+    ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--force-check", action="store_true")
     ap.add_argument("--enforce-send-time-gate", action="store_true")
     ap.add_argument("--blocker-receipt-out", default="")
@@ -129,6 +137,25 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
+    expected_work_layer = str(args.expected_work_layer or "").strip()
+    expected_source_layer = str(args.expected_source_layer or "").strip()
+    layer_intent_text = str(args.layer_intent_text or "").strip()
+    stamp_payload: dict[str, Any] = {}
+    if str(args.stamp_json or "").strip():
+        stamp_path = Path(str(args.stamp_json)).expanduser().resolve()
+        if stamp_path.exists():
+            stamp_payload = _read_stamp_payload(stamp_path)
+    if not expected_work_layer:
+        expected_work_layer = str(stamp_payload.get("resolved_work_layer", "")).strip() or str(
+            stamp_payload.get("work_layer", "")
+        ).strip()
+    if not expected_source_layer:
+        expected_source_layer = str(stamp_payload.get("resolved_source_layer", "")).strip() or str(
+            stamp_payload.get("source_layer", "")
+        ).strip()
+    if not layer_intent_text:
+        layer_intent_text = str(stamp_payload.get("layer_intent_text", "")).strip()
+
     op_for_validator = "validate" if args.operation == "send-time" else args.operation
     cmd = [
         sys.executable,
@@ -151,6 +178,12 @@ def main() -> int:
         cmd.append("--enforce-first-line-gate")
     if str(args.blocker_receipt_out or "").strip():
         cmd.extend(["--blocker-receipt-out", str(args.blocker_receipt_out).strip()])
+    if expected_work_layer:
+        cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        cmd.extend(["--expected-source-layer", expected_source_layer])
+    if layer_intent_text:
+        cmd.extend(["--layer-intent-text", layer_intent_text])
     if evidence_mode == "reply_log":
         cmd.extend(["--reply-log", str(args.reply_log).strip()])
     elif reply_text:
@@ -182,6 +215,9 @@ def main() -> int:
         "validator_operation": op_for_validator,
         "send_time_gate_enforced": bool(args.enforce_send_time_gate),
         "required_contract": bool(validator_payload.get("required_contract", False)),
+        "expected_work_layer": expected_work_layer,
+        "expected_source_layer": expected_source_layer,
+        "layer_intent_text": layer_intent_text,
         "send_time_gate_status": send_time_status,
         "error_code": error_code,
         "reply_first_line_status": first_line_status,

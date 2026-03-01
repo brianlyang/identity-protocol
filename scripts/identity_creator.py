@@ -851,6 +851,9 @@ def main() -> int:
         default="strict",
         help="protocol baseline freshness enforcement policy for validate chain",
     )
+    p_validate.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
+    p_validate.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
+    p_validate.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
 
     p_compile = sub.add_parser("compile", help="Compile runtime brief")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
@@ -931,6 +934,9 @@ def main() -> int:
         help="JSON receipt path required when --allow-fixture-runtime is used for fixture mutation",
     )
     p_update.add_argument("--auto-converge-active", action="store_true")
+    p_update.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
+    p_update.add_argument("--expected-work-layer", default="", help="optional expected work_layer passthrough")
+    p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
 
     p_heal = sub.add_parser("heal", help="Run runtime identity self-healing flow (scan/adopt/lock/repair/validate)")
     p_heal.add_argument("--identity-id", required=True)
@@ -1515,6 +1521,43 @@ def main() -> int:
             ["python3", "scripts/validate_identity_dialogue_result_support.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
         ]
+        layer_intent_text = str(args.layer_intent_text or "").strip()
+        expected_work_layer = str(args.expected_work_layer or "").strip().lower()
+        expected_source_layer = str(args.expected_source_layer or "").strip().lower()
+        if layer_intent_text:
+            for cmd in checks:
+                if len(cmd) < 2:
+                    continue
+                if cmd[1] in {
+                    "scripts/render_identity_response_stamp.py",
+                    "scripts/validate_layer_intent_resolution.py",
+                    "scripts/validate_reply_identity_context_first_line.py",
+                    "scripts/validate_send_time_reply_gate.py",
+                    "scripts/validate_execution_reply_identity_coherence.py",
+                }:
+                    cmd.extend(["--layer-intent-text", layer_intent_text])
+        if expected_work_layer:
+            for cmd in checks:
+                if len(cmd) < 2:
+                    continue
+                if cmd[1] in {
+                    "scripts/validate_layer_intent_resolution.py",
+                    "scripts/validate_reply_identity_context_first_line.py",
+                    "scripts/validate_send_time_reply_gate.py",
+                    "scripts/validate_execution_reply_identity_coherence.py",
+                }:
+                    cmd.extend(["--expected-work-layer", expected_work_layer])
+        if expected_source_layer:
+            for cmd in checks:
+                if len(cmd) < 2:
+                    continue
+                if cmd[1] in {
+                    "scripts/validate_layer_intent_resolution.py",
+                    "scripts/validate_reply_identity_context_first_line.py",
+                    "scripts/validate_send_time_reply_gate.py",
+                    "scripts/validate_execution_reply_identity_coherence.py",
+                }:
+                    cmd.extend(["--expected-source-layer", expected_source_layer])
         for cmd in checks:
             rc = _run(cmd)
             if rc != 0:

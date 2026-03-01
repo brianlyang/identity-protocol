@@ -173,12 +173,18 @@ def main() -> int:
             "(tool_installation/vendor_api_discovery/vendor_api_solution). default disabled."
         ),
     )
+    ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
+    ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
+    ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
     head = args.head.strip() or _git_rev("HEAD")
     identity_id = args.identity_id.strip()
     scope = args.scope.strip().upper()
+    layer_intent_text = args.layer_intent_text.strip()
+    expected_work_layer = args.expected_work_layer.strip().lower()
+    expected_source_layer = args.expected_source_layer.strip().lower()
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog = explicit_catalog or env_catalog
@@ -819,6 +825,41 @@ def main() -> int:
             if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
                 cmd.extend(["--min-discovery-required-coverage", str(args.min_discovery_required_coverage)])
                 break
+    if layer_intent_text:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            script = cmd[1]
+            if script in {
+                "scripts/render_identity_response_stamp.py",
+                "scripts/validate_layer_intent_resolution.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+            }:
+                cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            if cmd[1] in {
+                "scripts/validate_layer_intent_resolution.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+            }:
+                cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            if cmd[1] in {
+                "scripts/validate_layer_intent_resolution.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+            }:
+                cmd.extend(["--expected-source-layer", expected_source_layer])
 
     execution_report = args.execution_report.strip()
     if not execution_report:
@@ -839,6 +880,12 @@ def main() -> int:
         ]
         if scope:
             gen_cmd.extend(["--scope", scope])
+        if layer_intent_text:
+            gen_cmd.extend(["--layer-intent-text", layer_intent_text])
+        if expected_work_layer:
+            gen_cmd.extend(["--expected-work-layer", expected_work_layer])
+        if expected_source_layer:
+            gen_cmd.extend(["--expected-source-layer", expected_source_layer])
         rc = _run(gen_cmd)
         if rc != 0:
             return rc
