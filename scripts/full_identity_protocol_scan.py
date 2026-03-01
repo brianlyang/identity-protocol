@@ -135,6 +135,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_vendor_semantic_isolation",
             "external_source_trust_chain",
             "protocol_data_sanitization_boundary",
+            "platform_optimization_discovery_trigger",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -548,6 +549,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "platform_optimization_discovery_trigger": [
+                    "python3",
+                    "scripts/trigger_platform_optimization_discovery.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -855,6 +867,24 @@ def main() -> int:
                     ):
                         if k in dsn_doc:
                             check_payload[k] = dsn_doc.get(k)
+                if name == "platform_optimization_discovery_trigger":
+                    opt_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "platform_optimization_discovery_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "triggered",
+                        "trigger_reason",
+                        "discovery_scope",
+                        "official_doc_retrieval_set",
+                        "cross_validation_summary",
+                        "upgrade_proposal_ref",
+                        "feedback_batches",
+                        "stale_reasons",
+                    ):
+                        if k in opt_doc:
+                            check_payload[k] = opt_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

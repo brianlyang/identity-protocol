@@ -706,6 +706,27 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_sanitization != 0 or sanitization_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_opt_trigger, out_opt_trigger, err_opt_trigger = _run(
+        [
+            "python3",
+            "scripts/trigger_platform_optimization_discovery.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    opt_trigger_payload = _parse_json_payload(out_opt_trigger) or {}
+    validators["platform_optimization_discovery_trigger"] = {
+        "rc": rc_opt_trigger,
+        "ok": rc_opt_trigger == 0,
+        "out": out_opt_trigger,
+        "err": err_opt_trigger,
+    }
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -995,6 +1016,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "sensitive_pattern_hits": sanitization_payload.get("sensitive_pattern_hits", []),
             "violation_count": sanitization_payload.get("violation_count"),
             "stale_reasons": sanitization_payload.get("stale_reasons", []),
+        },
+        "platform_optimization_discovery_trigger": {
+            "platform_optimization_discovery_status": opt_trigger_payload.get("platform_optimization_discovery_status"),
+            "error_code": opt_trigger_payload.get("error_code", ""),
+            "required_contract": opt_trigger_payload.get("required_contract"),
+            "auto_required_signal": opt_trigger_payload.get("auto_required_signal"),
+            "triggered": opt_trigger_payload.get("triggered", False),
+            "trigger_reason": opt_trigger_payload.get("trigger_reason", ""),
+            "discovery_scope": opt_trigger_payload.get("discovery_scope", ""),
+            "official_doc_retrieval_set": opt_trigger_payload.get("official_doc_retrieval_set", []),
+            "cross_validation_summary": opt_trigger_payload.get("cross_validation_summary", {}),
+            "upgrade_proposal_ref": opt_trigger_payload.get("upgrade_proposal_ref", ""),
+            "feedback_batches": opt_trigger_payload.get("feedback_batches", []),
+            "stale_reasons": opt_trigger_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),

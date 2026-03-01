@@ -41,7 +41,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-001 | 2026-02-28 | protocol | missing hard-gate for user-visible identity context stamp | DONE | REJECT (Superseded by HOTFIX-P0-003 PASS) |
 | HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PASS |
 | HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | DONE | PASS |
-| HOTFIX-P0-004 | 2026-02-28 | protocol | user-visible reply channel allowed missing `Identity-Context` prefix in live audit session | OPEN | PENDING_REVIEW |
+| HOTFIX-P0-004 | 2026-02-28 | protocol | user-visible reply channel allowed missing `Identity-Context` prefix in live audit session | DONE | PASS |
 | HOTFIX-P0-005 | 2026-03-01 | protocol | instance-to-base-repo write boundary gate missing (docs-allow/code-deny not codified) | DONE | PASS |
 | HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
 | HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
@@ -2828,3 +2828,75 @@ Replay evidence snapshot:
      - `instance_plane_detail.response_identity_stamp.reply_first_line_status=PASS_REQUIRED`
      - `reply_first_line_missing_count=0`
      - `reply_first_line_missing_refs=[]`
+
+#### 16.7.1 P1-D progress update (2026-03-01, non-blocking enhancement lane)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+1. Added new trigger surface:
+   - `scripts/trigger_platform_optimization_discovery.py`
+2. Wired six surfaces (non-blocking semantics):
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Replay snapshot (local):
+   - direct run (scan/json-only): `rc=0`, `platform_optimization_discovery_status=SKIPPED_NOT_REQUIRED` when contract is not required
+   - full-scan: project/global both expose `checks.platform_optimization_discovery_trigger.*` with `rc=0`
+   - three-plane: `instance_plane_detail.platform_optimization_discovery_trigger.*` visible, `hard_boundary` unchanged
+4. Trigger semantics implemented:
+   - repeated optimization-intent across consecutive rounds on same platform class
+   - repeated `flow not closed` under optimization context
+   - trigger payload carries `discovery_scope`, `official_doc_retrieval_set`, `cross_validation_summary`, `upgrade_proposal_ref`
+5. Non-blocking policy:
+   - this lane returns machine-readable `NOT_TRIGGERED/WARN_NON_BLOCKING/TRIGGERED_NON_BLOCKING`
+   - does not force release blocking unless governance explicitly promotes P1 to required hard gate.
+
+#### 16.6.8 HOTFIX-P0-004 audit replay verdict (2026-03-01, cross-validated)
+
+Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)
+
+1. Commit under replay:
+   - `e37db435a993ba72926be5b3c7377c3c4f9c6638`
+2. Static checks:
+   - `python3 -m py_compile ... && bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+3. Negative sample replay (must fail-closed):
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --reply-file /tmp/reply-missing-stamp.txt --force-check --enforce-first-line-gate --json-only`
+   - result: `rc=1`
+   - key fields:
+     - `reply_first_line_status=FAIL_REQUIRED`
+     - `error_code=IP-ASB-STAMP-SESSION-001`
+     - `reply_first_line_missing_count=1`
+     - blocker receipt generated
+4. Positive sample replay (must pass):
+   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/reply-stamp-pass.json --json-only`
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/reply-stamp-pass.json --force-check --enforce-first-line-gate --json-only`
+   - result: `rc=0`
+   - key fields:
+     - `reply_first_line_status=PASS_REQUIRED`
+     - `reply_first_line_missing_count=0`
+5. Full-scan machine-readable exposure:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-hotfix-p0-004-audit.json`
+   - result: `rc=0`
+   - key extract:
+     - project/global both expose `checks.reply_identity_context_first_line.reply_first_line_status=PASS_REQUIRED`
+     - `reply_first_line_missing_count=0`
+     - `reply_first_line_missing_refs=[]`
+6. Three-plane machine-readable exposure:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-hotfix-p0-004-audit.json`
+   - result: `rc=0`
+   - key extract:
+     - `instance_plane_detail.response_identity_stamp.reply_first_line_status=PASS_REQUIRED`
+     - `reply_first_line_missing_count=0`
+     - `reply_first_line_missing_refs=[]`
+7. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+8. Audit decision:
+   - close `HOTFIX-P0-004` as `DONE/PASS` for protocol-layer gate closure.
+9. Residual risk (non-blocking enhancement lane):
+   - current required-gate replay still uses explicit reply evidence input (`--reply-log/--reply-file/--stamp-json`);
+   - end-to-end live reply stream ingestion can be enhanced later, but does not block HOTFIX closure.

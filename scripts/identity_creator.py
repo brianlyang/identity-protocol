@@ -1200,6 +1200,16 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/trigger_platform_optimization_discovery.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+            ],
+            [
+                "python3",
                 "scripts/validate_vendor_namespace_separation.py",
                 "--catalog",
                 args.catalog,
