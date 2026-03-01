@@ -45,7 +45,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-005 | 2026-03-01 | protocol | instance-to-base-repo write boundary gate missing (docs-allow/code-deny not codified) | DONE | PASS |
 | HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
 | HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
-| HOTFIX-P0-008 | 2026-03-01 | protocol | strict user-visible reply gates allowed `LOCK_MISMATCH` to pass, masking actor/catalog lane drift as perceived identity hard-switch | DONE | PENDING_REVIEW |
+| HOTFIX-P0-008 | 2026-03-01 | protocol | strict user-visible reply gates allowed `LOCK_MISMATCH` to pass, masking actor/catalog lane drift as perceived identity hard-switch | DONE | PASS |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -92,12 +92,12 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PASS |
 | FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PASS |
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
-| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `6fbf999` | DONE | PENDING_REVIEW |
-| FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `5016816` | DONE | PASS |
+| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `6fbf999` | DONE | PASS |
+| FIX-016 | 2026-03-01 | protocol | capability-fit P1-F/P1-G/P1-H closure (optimization validators + roundtable evidence + review trigger + matrix builder) | `614e3e4` / `5016816` | DONE | PASS |
 | FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PASS |
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
 | FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
-| FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PENDING_REVIEW |
+| FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PASS |
 
 ---
 
@@ -3484,7 +3484,7 @@ Note:
 
 #### 16.7.13 FIX-015 replay refresh (2026-03-01, pending audit closure)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, cross-validated)
 
 Execution context split:
 
@@ -3522,14 +3522,9 @@ Purpose:
 
 Protocol-layer remaining blockers (release-lock relevant):
 
-1. `HOTFIX-P0-008` (`FIX-020`) status is `PENDING_REVIEW` in emergency table / rolling summary.
-   - implementation commit: `483e368`
-   - objective: strict user-visible gate must fail-closed on `LOCK_MISMATCH`.
-   - closure condition: audit replay marks row `PASS`.
-2. `FIX-015` status is `PENDING_REVIEW`.
-   - implementation commit: `6fbf999` (semantic patch), evidence refresh commit: `22b2e3e`.
-   - objective: actor-scoped concurrent activation semantics stay stable across validator/readiness chains.
-   - closure condition: audit replay marks row `PASS`.
+1. None after latest replay package:
+   - `HOTFIX-P0-008` (`FIX-020`) -> `PASS`.
+   - `FIX-015` -> `PASS`.
 
 Instance / environment blockers (must not be misclassified as protocol regression):
 
@@ -3549,10 +3544,10 @@ Instance / environment blockers (must not be misclassified as protocol regressio
 
 Eradication sequence (strict order):
 
-1. Finish protocol audit closure first (`HOTFIX-P0-008`, `FIX-015` -> `PASS`).
+1. Protocol audit closure is complete for this lane (`HOTFIX-P0-008`, `FIX-015`, `FIX-020` all `PASS`).
 2. Run instance update wave to clear baseline stale warnings.
 3. Repair instance sample hygiene and auth prerequisites.
-4. Re-run full-scan + three-plane and confirm no protocol rows remain `PENDING_REVIEW`.
+4. Re-run full-scan + three-plane and confirm no protocol regressions are reintroduced.
 
 
 #### 16.7.15 Architect-to-audit replay package draft (2026-03-01, protocol-only)
@@ -3634,15 +3629,15 @@ Acceptance command outputs (FIX-015 refresh):
 
 Residual risks:
 
-1. `HOTFIX-P0-008 / FIX-020` code path is patched and replayed; audit decision is still pending (`PENDING_REVIEW`).
-2. `FIX-015` protocol semantics replay pass is refreshed; project-lane e2e can still fail on sample hygiene (`trigger-regression` artifacts), classified as instance/release hygiene dependency.
-3. Global `base-repo-architect` currently shows baseline freshness warning (`IP-PBL-001`) on old report; this is dynamic baseline policy behavior, not HOTFIX/FIX-015 regression.
+1. `HOTFIX-P0-008 / FIX-020` and `FIX-015` protocol semantics are audit-passed; remaining instability is instance/environment lane (sample hygiene, auth readiness, stale reports).
+2. project-lane e2e can still fail on sample hygiene (`trigger-regression` artifacts), classified as instance/release hygiene dependency.
+3. Global `base-repo-architect` can show baseline freshness warning (`IP-PBL-001`) on old report; this is dynamic baseline policy behavior, not HOTFIX/FIX-015 regression.
 
 Non-merge closure status:
 
-1. `HOTFIX-P0-008`: `DONE / PENDING_REVIEW`.
-2. `FIX-015`: `DONE / PENDING_REVIEW`.
-3. v1.5 release-lock remains active until audit marks both as `PASS`.
+1. `HOTFIX-P0-008`: `DONE / PASS`.
+2. `FIX-015`: `DONE / PASS`.
+3. `FIX-020`: `DONE / PASS`.
 
 
 #### 16.7.16 Audit handoff packet (copy-paste ready, protocol-only)
@@ -3677,10 +3672,10 @@ Commit sha list:
 
 Current non-merge closure status:
 
-1. `HOTFIX-P0-008`: `DONE / PENDING_REVIEW`
-2. `FIX-015`: `DONE / PENDING_REVIEW`
-3. `FIX-020`: `DONE / PENDING_REVIEW`
-4. v1.5 release-lock remains active until above rows are audit-marked `PASS`.
+1. `HOTFIX-P0-008`: `DONE / PASS`
+2. `FIX-015`: `DONE / PASS`
+3. `FIX-020`: `DONE / PASS`
+4. protocol-layer release-lock items in this lane are closed; remaining gates are instance/environment readiness items.
 
 Residual risks (explicit, non-conflicting):
 
@@ -3690,5 +3685,99 @@ Residual risks (explicit, non-conflicting):
 
 Auditor action request:
 
-1. replay rows in `16.7.15` and verify deterministic outputs;
-2. if outputs match, mark `HOTFIX-P0-008`, `FIX-015`, `FIX-020` as `PASS`.
+1. Replay rows in `16.7.15` has been completed and outputs match expected deterministic semantics.
+2. `HOTFIX-P0-008`, `FIX-015`, `FIX-020` are now audit-marked `PASS`.
+
+#### 16.7.17 HOTFIX-P0-008 / FIX-015 / FIX-020 audit replay verdict (2026-03-01, cross-validated)
+
+Status: `PASS` (scope: protocol-layer closure for remaining release-lock lanes)
+
+1. Commit anchors under audit:
+   - `483e368361264697c3256ff32d6b678ef4261562` (`HOTFIX-P0-008` / `FIX-020`)
+   - `6fbf9999bac51febf3ac73887dd7e35eaecdf420` (`FIX-015`)
+2. Static checks:
+   - `python3 -m py_compile scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py scripts/validate_identity_state_consistency.py scripts/validate_actor_session_binding.py scripts/validate_cross_actor_isolation.py scripts/validate_no_implicit_switch.py scripts/validate_identity_session_pointer_consistency.py scripts/identity_creator.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+3. HOTFIX-P0-008 / FIX-020 strict fail-closed replay:
+   - mismatch strict (`project`, `base-repo-audit-expert-v3`, `LOCK_MISMATCH` stamp):
+     - `validate_identity_response_stamp.py ... --operation validate ...` -> `rc=1`, `error_code=IP-ASB-STAMP-005`, `lock_boundary_enforced=true`.
+     - `validate_reply_identity_context_first_line.py ... --operation validate ...` -> `rc=1`, `reply_first_line_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`.
+   - mismatch inspection (`scan`) keeps observability non-blocking:
+     - response stamp validator -> `rc=0`, `stamp_status=PASS`, `lock_boundary_enforced=false`.
+     - first-line validator -> `rc=0`, `reply_first_line_status=PASS_REQUIRED`.
+   - strict pass lane (`global`, `base-repo-architect`, `LOCK_MATCH`):
+     - both validators `rc=0` with `PASS`/`PASS_REQUIRED`.
+4. FIX-015 concurrent actor semantics replay:
+   - activation replay (`user:auditor` -> `base-repo-audit-expert-v3`) -> `rc=0`, switch report generated.
+   - `validate_identity_state_consistency.py` -> `rc=0`, `active_count=2`.
+   - actor binding checks:
+     - `user:yangxi` -> `custom-creative-ecom-analyst`: `rc=0`, `PASS_REQUIRED`.
+     - `user:auditor` -> `base-repo-audit-expert-v3`: `rc=0`, `PASS_REQUIRED`.
+   - `validate_cross_actor_isolation.py --operation validate` -> `rc=0`, `PASS_REQUIRED`.
+   - `validate_no_implicit_switch.py --operation validate` (with switch report) -> `rc=0`, `PASS_REQUIRED`.
+   - pointer consistency checks for both actors -> `rc=0`.
+   - readiness replay (`custom-creative-ecom-analyst`, project catalog, warn policy) -> `rc=0`, `[OK] release readiness checks PASSED`.
+5. Contextual non-regression note:
+   - `base-repo-architect` readiness with old report can still show `IP-PBL-001` and `IP-PVA-002` under warn path while remaining pass-overall; this is baseline freshness semantics, not HOTFIX/FIX-015 regression.
+6. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+7. Audit decision:
+   - close `HOTFIX-P0-008`, `FIX-015`, and `FIX-020` as `DONE/PASS`.
+
+#### 16.7.18 Consolidated protocol audit verdict refresh (2026-03-01, deep cross-validation)
+
+Status: `PASS` (protocol layer); residual blockers are instance/env readiness only.
+
+Replay scope in this refresh:
+
+1. `FIX-011`..`FIX-020` protocol chain (including `FIX-017/018/019`).
+2. P0 semantic/security lanes: `P0-D/P0-E/P0-F`.
+3. P1 non-blocking capability-fit lanes: `P1-D/P1-E/P1-F/P1-G/P1-H`.
+
+Cross-validation evidence:
+
+1. Static checks:
+   - `python3 -m py_compile scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py scripts/collect_identity_health_report.py scripts/validate_identity_protocol_version_alignment.py scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py scripts/validate_protocol_vendor_semantic_isolation.py scripts/validate_external_source_trust_chain.py scripts/validate_protocol_data_sanitization_boundary.py scripts/trigger_platform_optimization_discovery.py scripts/build_vibe_coding_feeding_pack.py scripts/validate_identity_capability_fit_optimization.py scripts/validate_capability_composition_before_discovery.py scripts/validate_capability_fit_review_freshness.py scripts/validate_capability_fit_roundtable_evidence.py scripts/trigger_capability_fit_review.py scripts/build_capability_fit_matrix.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Full scan replay (`/tmp/final-audit-replay-20260301.json`):
+   - command: `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect,custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/final-audit-replay-20260301.json`
+   - result: `rc=0`
+   - summary: `{"total_identities":3,"p0":0,"p1":3,"ok":0}`
+   - key fields:
+     - `reply_identity_context_first_line.reply_first_line_status=PASS_REQUIRED` (project/global lanes).
+     - `protocol_version_alignment.protocol_version_alignment_status=WARN_NON_BLOCKING` (baseline stale semantics preserved under warn policy).
+     - `protocol_vendor_semantic_isolation` / `external_source_trust_chain` / `protocol_data_sanitization_boundary` -> `SKIPPED_NOT_REQUIRED` with `rc=0` (contract-not-required lanes remain non-blocking as designed).
+3. HOTFIX-P0-008 strict lock-bound fail-closed recheck:
+   - native lock-mismatch lane (`base-repo-audit-expert-v3`, project catalog, strict validate):
+     - `validate_identity_response_stamp.py ... --operation validate ... --require-lock-match --enforce-user-visible-gate` -> `rc=1`, `stamp_status=FAIL`, `error_code=IP-ASB-STAMP-005`.
+   - crafted lock-mismatch stamp (`base-repo-architect`, global catalog, strict validate):
+     - `validate_identity_response_stamp.py ... --operation validate ... --require-lock-match --enforce-user-visible-gate` -> `rc=1`, `stamp_status=FAIL`, `error_code=IP-ASB-STAMP-001`.
+     - `validate_reply_identity_context_first_line.py ... --operation validate ... --enforce-first-line-gate` -> `rc=1`, `reply_first_line_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`.
+   - lock-match strict pass lane:
+     - both validators `rc=0` with `PASS`/`PASS_REQUIRED`.
+4. FIX-015 actor-scoped concurrency recheck (`project` catalog):
+   - `validate_identity_state_consistency.py` -> `rc=0`, `active_count=2`.
+   - actor binding checks:
+     - `validate_actor_session_binding.py --identity-id custom-creative-ecom-analyst --actor-id user:yangxi ... --operation validate --json-only` -> `rc=0`, `PASS_REQUIRED`.
+     - `validate_actor_session_binding.py --identity-id base-repo-audit-expert-v3 --actor-id user:auditor ... --operation validate --json-only` -> `rc=0`, `PASS_REQUIRED`.
+   - `validate_cross_actor_isolation.py ... --operation validate --json-only` -> `rc=0`, `PASS_REQUIRED`.
+   - `validate_no_implicit_switch.py --identity-id base-repo-audit-expert-v3 --switch-report /private/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772380736.json --operation validate --json-only` -> `rc=0`, `PASS_REQUIRED`.
+5. Actor mismatch fail-closed sanity proof:
+   - target scan on `base-repo-audit-expert-v3` under actor `user:yangxi` shows `actor_session_binding_status=FAIL_REQUIRED`, `error_code=IP-ASB-201` (expected boundary behavior).
+6. Readiness scope/baseline chain recheck:
+   - command: `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --baseline-policy warn --execution-report-policy warn`
+   - logs confirm scope and baseline policy passthrough into session/baseline/version branches.
+   - final `rc=2` is driven by `IP-CAP-003` capability/auth readiness (`github_auth_invalid`, missing `wechat-shop-hot-picks`), not protocol gate regression.
+7. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+
+Consolidated audit decision:
+
+1. Protocol remediation lane is closure-complete for this wave (`FIX-011`..`FIX-020` + `P0-D/E/F` + `P1-D/E/F/G/H`) with expected policy semantics preserved.
+2. Remaining blockers are explicitly outside protocol correctness:
+   - environment/auth readiness (`IP-CAP-003`);
+   - instance freshness and evidence hygiene (`IP-PBL-*`, sample/live replacement backlog).

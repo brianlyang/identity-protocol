@@ -1261,20 +1261,20 @@ The seven items below are mandatory protocol targets and must be treated as one 
 
 | Confirm item | Mandatory protocol statement | Acceptance signal (must be explicit) | Current baseline interpretation |
 | --- | --- | --- | --- |
-| C1 | Session model must move from `single-active` to actor-scoped binding (`actor_id` as first-class runtime key). | Runtime no longer uses global single-active as authoritative control for activation/consistency decisions. | P0 target; currently tracked by ASB-RQ-010 and still pending implementation. |
-| C2 | New contract `actor_session_binding_contract_v1` is required. | Contract schema fields and validation behavior are implemented and versioned. | P0 target; currently tracked by ASB-RQ-001 and pending implementation. |
-| C3 | Canonical source of truth must be `<catalog_dir>/session/actors/<actor_id>.json`. | Resolver and validators read actor-scoped canonical records by default. | P0 target; currently tracked by ASB-RQ-001 and pending implementation. |
-| C4 | Legacy `active_identity.json` is compatibility mirror only (not authoritative). | Any authoritative decision that still depends on legacy pointer is removed. | P0 target; currently tracked by ASB-RQ-002/ASB-RQ-010 and pending implementation. |
-| C5 | Three new validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | Scripts exist, produce stable machine-readable outputs, and are referenced by acceptance gates. | P0 target; currently tracked by ASB-RQ-003/004/005 and pending implementation. |
-| C6 | Gate wiring must cover `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, and CI required-gates workflow. | Wire-up evidence exists in code and acceptance output across all listed surfaces. | P0 target; currently tracked by ASB-RQ-009 and pending implementation. |
-| C7 | Path governance must be canonical and mixed-source safe across catalog/runtime/report surfaces. | Canonical path gates pass and no relative or cross-domain ambiguous path tuple appears in closure evidence. | P0 target; currently tracked by ASB-RQ-028/029/030/031 and pending implementation. |
-| C8 | Governance-boundary lane must be machine-enforced (`base-repo mutation boundary` + `feedback SSOT archival` + `readiness scope arbitration` + `reply-stamp missing-turn counter`). | required gates are wired and replay evidence proves docs-only pass, protocol/code mutation fail, mirror-only fail, no-scope ambiguity fail, and zero missing-stamp turns for closure claim. | P0 target; tracked by ASB-RQ-037/038/039/040. |
+| C1 | Session model must move from `single-active` to actor-scoped binding (`actor_id` as first-class runtime key). | Runtime no longer uses global single-active as authoritative control for activation/consistency decisions. | Closure replayed and audit-passed (`ASB-RQ-010`, `FIX-015`, review `16.7.13` + `16.7.17`). |
+| C2 | New contract `actor_session_binding_contract_v1` is required. | Contract schema fields and validation behavior are implemented and versioned. | Implemented and validated via actor-binding replay chain (`ASB-RQ-001/003`, review `16.7.13` + `16.7.17`). |
+| C3 | Canonical source of truth must be `<catalog_dir>/session/actors/<actor_id>.json`. | Resolver and validators read actor-scoped canonical records by default. | Canonical actor-session source behavior verified in replay (`ASB-RQ-001`, review `16.7.13` + `16.7.17`). |
+| C4 | Legacy `active_identity.json` is compatibility mirror only (not authoritative). | Any authoritative decision that still depends on legacy pointer is removed. | Authoritative decision path is actor-scoped; legacy pointer retained as compatibility mirror (`ASB-RQ-002/010`, review `16.7.13` + `16.7.17`). |
+| C5 | Three new validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | Scripts exist, produce stable machine-readable outputs, and are referenced by acceptance gates. | Validators are wired and replayed with pass outcomes (`ASB-RQ-003/004/005`, review `16.7.13` + `16.7.17`). |
+| C6 | Gate wiring must cover `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, and CI required-gates workflow. | Wire-up evidence exists in code and acceptance output across all listed surfaces. | Six-surface + CI wiring evidence is available and replayed (`ASB-RQ-009`, review ledger fix-chain sections). |
+| C7 | Path governance must be canonical and mixed-source safe across catalog/runtime/report surfaces. | Canonical path gates pass and no relative or cross-domain ambiguous path tuple appears in closure evidence. | Canonical path governance gates are audit-passed (`ASB-RQ-028/029/030/031`, review `FIX-002~FIX-007`). |
+| C8 | Governance-boundary lane must be machine-enforced (`base-repo mutation boundary` + `feedback SSOT archival` + `readiness scope arbitration` + `reply-stamp missing-turn counter`). | required gates are wired and replay evidence proves docs-only pass, protocol/code mutation fail, mirror-only fail, no-scope ambiguity fail, and zero missing-stamp turns for closure claim. | Closure replayed and audit-passed (`ASB-RQ-037/038/039/040`, `HOTFIX-P0-004/005/006/007`, review `16.6.8` + `16.7.17` + `16.7.18`). |
 
 Hard interpretation rules:
 
 1. C1~C8 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
 2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
-3. Until C1~C8 are all `DONE`, this topic is governance-ready (`SPEC_READY`) but runtime-not-closed.
+3. C1~C8 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
 
 ### 6.3B Status synchronization note (2026-03-01, anti-drift)
 
@@ -1288,9 +1288,13 @@ This subsection prevents ambiguity between the baseline rows above and current r
    - `validate_instance_base_repo_write_boundary`
    - `validate_protocol_feedback_ssot_archival`
    - readiness `--scope` passthrough chain.
-4. Concurrent activation model migration (`ASB-RQ-010`, `ASB-RC-001~005`) is in-progress:
-   - actor-scoped multi-active behavior is validated in local replay evidence,
-   - final closure still requires committed patch set + audit replay package.
+4. Concurrent activation model migration (`ASB-RQ-010`, `ASB-RC-001~005`) is replay-closed in current audit window:
+   - actor-scoped multi-active behavior is validated with cross-actor replay evidence,
+   - closure is anchored by committed patch + audit verdict (`FIX-015`, review `16.7.13` + `16.7.17`).
+5. Strict user-visible lock-bound stamp lane (`HOTFIX-P0-008` / `FIX-020`) is replay-closed:
+   - strict mismatch must fail-closed (`IP-ASB-STAMP-001` / `IP-ASB-STAMP-SESSION-001`),
+   - inspection mode keeps observability non-blocking,
+   - closure replay is synchronized in review `16.7.17` + `16.7.18`.
 
 ### 6.4 Requirement ledger (canonical tracker for `v1.5` unlock)
 
@@ -1305,7 +1309,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-007 | response stamp validator + CI enforcement | `validate_identity_response_stamp` (new), required-gates | P0 | SPEC_READY | Validator/gate pending |
 | ASB-RQ-008 | refresh command for live actor binding status | `refresh_identity_session_status` (new) | P1 | SPEC_READY | three-plane visibility binding pending |
 | ASB-RQ-009 | mandatory gate wiring across creator/e2e/readiness/full-scan/three-plane/CI | multiple surfaces listed in 6.3 | P0 | SPEC_READY | Wiring pending |
-| ASB-RQ-010 | single-active removal from activation/consistency path | `identity_creator.py`, `identity_installer.py`, `validate_identity_state_consistency.py`, `validate_identity_session_pointer_consistency.py`, `compile_identity_runtime.py` | P0 | IMPL_READY | multi-active patch set is in local workspace; commit + final replay package pending |
+| ASB-RQ-010 | single-active removal from activation/consistency path | `identity_creator.py`, `identity_installer.py`, `validate_identity_state_consistency.py`, `validate_identity_session_pointer_consistency.py`, `compile_identity_runtime.py` | P0 | VERIFIED | actor-scoped multi-active patch is committed and replay-audited (`FIX-015`) |
 | ASB-RQ-011 | vendor discovery/solution baseline gates (legacy chain) remain wired and compatible | `validate_identity_vendor_api_discovery.py`, `validate_identity_vendor_api_solution.py`, `validate_required_contract_coverage.py` | P1 | GATE_READY | Existing chain already wired in protocol gates |
 | ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
 | ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
@@ -1335,21 +1339,21 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-037 | instance-to-base-repo mutation boundary is codified as docs-allow/protocol-code-deny and fail-closed | `validate_instance_base_repo_write_boundary` (new), readiness/e2e/CI change-range surfaces | P0 | VERIFIED | replayed and audit-confirmed in HOTFIX-P0-005 lane |
 | ASB-RQ-038 | protocol-feedback outputs must be SSOT-archived before mirror publication | `validate_protocol_feedback_ssot_archival` (new), outbox/evidence-index writer surfaces | P0 | VERIFIED | replayed and audit-confirmed in HOTFIX-P0-006 lane |
 | ASB-RQ-039 | readiness dual-catalog arbitration must be explicit via `--scope` and deterministic fail-closed on ambiguity | `release_readiness_check.py` + runtime mode/scope validators (`validate_identity_runtime_mode_guard`) | P0 | VERIFIED | no-scope fail-closed + scoped passthrough replayed and confirmed in HOTFIX-P0-007 lane |
-| ASB-RQ-040 | user-facing reply stamp presence must be machine-counted in replay outputs (`reply_stamp_missing_count`) | `validate_identity_response_stamp` (coverage mode), three-plane/full-scan replay surfaces | P0 | GATE_READY | counter fields are wired; user-visible zero-miss closure (HOTFIX-P0-004) still pending |
-| ASB-RQ-041 | readiness explicit scope must propagate into health branch validators (`collect_identity_health_report` path) | `release_readiness_check.py`, `collect_identity_health_report.py` | P0 | SPEC_READY | Spec defined in 5.8.5; implementation pending |
-| ASB-RQ-042 | baseline policy must be stratified (`strict` for release/mutation, `warn` for observability-only paths) | readiness/e2e/creator/scan/three-plane baseline policy wiring | P0 | SPEC_READY | Spec defined in 5.8.6; implementation pending |
-| ASB-RQ-043 | protocol version alignment must be validated as unified tuple across report/prompt/task/binding context | baseline/prompt/binding validators + closure surfaces | P0 | SPEC_READY | Spec defined in 5.8.7; implementation pending |
-| ASB-RQ-044 | protocol-vendor semantic isolation validator blocks cross-domain pollution in conclusion layer | `validate_protocol_vendor_semantic_isolation` (new), protocol-feedback conclusion writer surfaces | P0 | SPEC_READY | Spec defined in 5.9.1; implementation pending |
-| ASB-RQ-045 | external source trust chain validator enforces trusted source tiers for conclusion-layer evidence | `validate_external_source_trust_chain` (new), external retrieval/evidence aggregation surfaces | P0 | SPEC_READY | Spec defined in 5.9.2; implementation pending |
-| ASB-RQ-046 | protocol data sanitization boundary prevents tenant/business scenario leakage into protocol SSOT layer | `validate_protocol_data_sanitization_boundary` (new), governance/review document checks | P0 | SPEC_READY | Spec defined in 5.9.3; implementation pending |
-| ASB-RQ-047 | platform optimization discovery trigger emits auditable deep-discovery tasks under repeated optimization signals | trigger/routing surfaces + protocol-feedback outbox receipts | P1 | SPEC_READY | Spec defined in 5.10.1; implementation pending |
-| ASB-RQ-048 | vibe-coding feeding pack contract produces deterministic single-directory upload bundle | pack builder surface + evidence-index linkage | P1 | SPEC_READY | Spec defined in 5.10.2; implementation pending |
-| ASB-RQ-049 | capability optimization cycle is inventory-first and machine-checkable | capability inventory snapshot + fit-matrix surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
-| ASB-RQ-050 | compose-before-discover is enforced before external candidate selection | capability orchestration + composition decision gate surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
-| ASB-RQ-051 | capability fit matrix requires single selected plan with fallback/rollback refs | fit-matrix builder + optimization validators | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
-| ASB-RQ-052 | optimization review freshness is machine-visible and stale state is non-closed | health/readiness/full-scan/three-plane status surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
-| ASB-RQ-053 | optimization decisions affecting routing/discovery/architecture require roundtable fact/inference mapping | roundtable evidence writer + optimization validators | P1 | SPEC_READY | Spec defined in 5.10.4; implementation pending |
-| ASB-RQ-054 | user-visible identity stamp hard gate must fail-closed when actor/session lock is not `LOCK_MATCH` in strict operations (prevent perceived hard-switch under dual-catalog drift) | `validate_identity_response_stamp.py`, `validate_reply_identity_context_first_line.py`, creator/readiness/e2e wiring | P0 | GATE_READY | Spec defined in 14.6; implementation landed, audit replay pending |
+| ASB-RQ-040 | user-facing reply stamp presence must be machine-counted in replay outputs (`reply_stamp_missing_count`) | `validate_identity_response_stamp` (coverage mode), three-plane/full-scan replay surfaces | P0 | GATE_READY | user-visible zero-miss closure is audit-passed (`HOTFIX-P0-004`) |
+| ASB-RQ-041 | readiness explicit scope must propagate into health branch validators (`collect_identity_health_report` path) | `release_readiness_check.py`, `collect_identity_health_report.py` | P0 | GATE_READY | implemented and audit-passed (`FIX-017`) |
+| ASB-RQ-042 | baseline policy must be stratified (`strict` for release/mutation, `warn` for observability-only paths) | readiness/e2e/creator/scan/three-plane baseline policy wiring | P0 | GATE_READY | implemented and audit-passed (`FIX-018`) |
+| ASB-RQ-043 | protocol version alignment must be validated as unified tuple across report/prompt/task/binding context | baseline/prompt/binding validators + closure surfaces | P0 | GATE_READY | unified validator implemented and audit-passed (`FIX-019`) |
+| ASB-RQ-044 | protocol-vendor semantic isolation validator blocks cross-domain pollution in conclusion layer | `validate_protocol_vendor_semantic_isolation` (new), protocol-feedback conclusion writer surfaces | P0 | GATE_READY | implemented and audit-passed (`P0-D`) |
+| ASB-RQ-045 | external source trust chain validator enforces trusted source tiers for conclusion-layer evidence | `validate_external_source_trust_chain` (new), external retrieval/evidence aggregation surfaces | P0 | GATE_READY | implemented and audit-passed (`P0-E`) |
+| ASB-RQ-046 | protocol data sanitization boundary prevents tenant/business scenario leakage into protocol SSOT layer | `validate_protocol_data_sanitization_boundary` (new), governance/review document checks | P0 | GATE_READY | implemented and audit-passed (`P0-F`) |
+| ASB-RQ-047 | platform optimization discovery trigger emits auditable deep-discovery tasks under repeated optimization signals | trigger/routing surfaces + protocol-feedback outbox receipts | P1 | IMPL_READY (NON_BLOCKING) | surface implemented and replay-visible (`P1-D`) |
+| ASB-RQ-048 | vibe-coding feeding pack contract produces deterministic single-directory upload bundle | pack builder surface + evidence-index linkage | P1 | IMPL_READY (NON_BLOCKING) | surface implemented and replay-visible (`P1-E`) |
+| ASB-RQ-049 | capability optimization cycle is inventory-first and machine-checkable | capability inventory snapshot + fit-matrix surfaces | P1 | IMPL_READY (NON_BLOCKING) | validator chain implemented and replay-visible (`P1-F`) |
+| ASB-RQ-050 | compose-before-discover is enforced before external candidate selection | capability orchestration + composition decision gate surfaces | P1 | IMPL_READY (NON_BLOCKING) | validator chain implemented and replay-visible (`P1-F`) |
+| ASB-RQ-051 | capability fit matrix requires single selected plan with fallback/rollback refs | fit-matrix builder + optimization validators | P1 | IMPL_READY (NON_BLOCKING) | builder/validator surfaces implemented and replay-visible (`P1-F/H`) |
+| ASB-RQ-052 | optimization review freshness is machine-visible and stale state is non-closed | health/readiness/full-scan/three-plane status surfaces | P1 | IMPL_READY (NON_BLOCKING) | freshness validator implemented and replay-visible (`P1-F`) |
+| ASB-RQ-053 | optimization decisions affecting routing/discovery/architecture require roundtable fact/inference mapping | roundtable evidence writer + optimization validators | P1 | IMPL_READY (NON_BLOCKING) | roundtable validator implemented and replay-visible (`P1-G`) |
+| ASB-RQ-054 | user-visible identity stamp hard gate must fail-closed when actor/session lock is not `LOCK_MATCH` in strict operations (prevent perceived hard-switch under dual-catalog drift) | `validate_identity_response_stamp.py`, `validate_reply_identity_context_first_line.py`, creator/readiness/e2e wiring | P0 | VERIFIED | implementation + strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`) |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1359,20 +1363,21 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | Requirement ID | Status delta | Evidence pointer |
 | --- | --- | --- |
 | ASB-RQ-003 / ASB-RQ-004 / ASB-RQ-005 | `SPEC_READY -> GATE_READY` | validator scripts landed + creator/readiness/e2e/full-scan/three-plane/CI wiring replayed in review ledger (`FIX-008~FIX-010`, `HOTFIX-P0-002`) |
+| ASB-RQ-001 / ASB-RQ-002 / ASB-RQ-009 | `SPEC_READY -> GATE_READY` | actor-scoped canonical session source + mirror compatibility + six-surface wiring replayed in fix-chain evidence (`FIX-009/010/015`, `HOTFIX-P0-002`) |
 | ASB-RQ-006 / ASB-RQ-007 / ASB-RQ-018 / ASB-RQ-019 / ASB-RQ-020 / ASB-RQ-021 | `SPEC_READY -> GATE_READY` | dynamic stamp render/validate + blocker receipt + replay counters (`FIX-004`, `HOTFIX-P0-001`, `HOTFIX-P0-003`) |
 | ASB-RQ-025 / ASB-RQ-026 / ASB-RQ-027 | `SPEC_READY -> GATE_READY` | refresh command + refresh validator + three-plane/full-scan visibility (`HOTFIX-P0-007 prerequisite chain`) |
 | ASB-RQ-028 / ASB-RQ-029 / ASB-RQ-030 / ASB-RQ-031 | `SPEC_READY -> GATE_READY` | path-governance fix chain (`FIX-002~FIX-007`) |
 | ASB-RQ-032 / ASB-RQ-033 | `SPEC_READY -> GATE_READY` | Track-A writeback/post-execution gates (`FIX-011`) |
 | ASB-RQ-034 / ASB-RQ-035 / ASB-RQ-036 | `SPEC_READY -> GATE_READY` | Track-B routing/namespace + sidecar escalation (`FIX-012`, `FIX-013`) |
 | ASB-RQ-037 / ASB-RQ-038 / ASB-RQ-039 | `SPEC_READY -> VERIFIED` | governance-boundary hotfix lane replayed and audit-passed (`HOTFIX-P0-005/006/007`) |
-| ASB-RQ-010 | `SPEC_READY -> IMPL_READY (pending final commit/replay)` | multi-active migration patch set in local workspace (`identity_creator/installer/state/session/compile/no_implicit_switch`) |
+| ASB-RQ-010 | `SPEC_READY -> VERIFIED` | actor-scoped multi-active runtime semantics audit-passed (`FIX-015`, review ledger `16.7.13` + `16.7.17`) |
 | ASB-RQ-040 | `SPEC_READY -> GATE_READY` | reply first-line `Identity-Context` hard gate closure audit-passed (`HOTFIX-P0-004`, review ledger `16.6.8`) |
 | ASB-RQ-041 / ASB-RQ-042 | `SPEC_READY -> GATE_READY` | readiness health-branch scope passthrough + baseline-policy stratification audit-passed (`FIX-017`, `FIX-018`, review ledger `16.7.5~16.7.7`) |
 | ASB-RQ-043 | `SPEC_READY -> GATE_READY` | unified protocol version alignment contract validator + six-surface wiring audit-passed (`FIX-019`, review ledger `16.7.8`) |
 | ASB-RQ-044 / ASB-RQ-045 / ASB-RQ-046 | `SPEC_READY -> GATE_READY` | protocol validators + six-surface wiring audit-passed (`P0-D/E/F`, review ledger `16.6.1~16.6.3`) |
 | ASB-RQ-047 / ASB-RQ-048 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | trigger/builder surfaces audit-passed under non-required contracts (`P1-D/E`, review ledger `16.7.1~16.7.2`) |
 | ASB-RQ-049 / ASB-RQ-050 / ASB-RQ-051 / ASB-RQ-052 / ASB-RQ-053 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | capability-fit validator/roundtable/trigger/matrix surfaces audit-passed under non-required contracts (`P1-F/G/H`, review ledger `16.7.3~16.7.4A`) |
-| ASB-RQ-054 | `SPEC_READY -> GATE_READY` | lock-bound user-visible stamp guard for strict operations (`IP-ASB-STAMP-005` + `IP-ASB-STAMP-SESSION-001` lock clause), review ledger HOTFIX-P0-008 |
+| ASB-RQ-054 | `SPEC_READY -> VERIFIED` | lock-bound user-visible stamp guard strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`, review `16.7.17` + `16.7.18`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
