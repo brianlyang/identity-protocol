@@ -2479,6 +2479,8 @@ Decision (final, anti-drift):
 1. add optimization-gap trigger path (`platform_optimization_gap`) to capability orchestration.
 2. add platform-specific capability contract gate (example: `aistudio_build_optimizer_contract`).
 3. add periodic capability delta scan task and SSOT archival output (`protocol-feedback/outbox + evidence-index`).
+4. add capability-fit self-drive loop (`inventory-first -> compose-before-discover -> fit-matrix -> selected-plan -> freshness-review`).
+5. add roundtable fact/inference mapping output for optimization decisions affecting routing/discovery/architecture.
 
 ### 15.3 Architect handoff rule for this package
 
@@ -2515,7 +2517,7 @@ Decision (final, anti-drift):
 ### 16.2 Execution split (what goes where)
 
 1. Governance SSOT (L1) receives:
-   - contract semantics and requirement IDs (`ASB-RQ-044..048`).
+   - contract semantics and requirement IDs (`ASB-RQ-044..053`).
 2. Review ledger (L3) receives:
    - replay plan,
    - acceptance commands,
@@ -2542,11 +2544,41 @@ Decision (final, anti-drift):
 
 1. `P1-D` implement `platform_optimization_discovery_trigger_v1`.
 2. `P1-E` implement `vibe_coding_feeding_pack_contract_v1` output builder.
-3. required pack outputs:
+3. `P1-F` implement `capability_fit_self_drive_optimization_contract_v1` validator chain:
+   - `validate_identity_capability_fit_optimization.py`
+   - `validate_capability_composition_before_discovery.py`
+   - `validate_capability_fit_review_freshness.py`
+4. `P1-G` implement `capability_fit_roundtable_evidence_contract_v1` evidence parser:
+   - enforce `fact` / `inference` split
+   - require selected plan -> fact evidence mapping.
+5. `P1-H` add capability-fit review trigger/tool surfaces:
+   - `trigger_capability_fit_review`
+   - `build_capability_fit_matrix`
+6. required pack outputs:
    - `PROMPT_MAIN.txt`
    - `INPUT_FILES/`
    - `RUN_ORDER.txt`
    - `REVIEW_REQUEST.txt`
+
+### 16.4A Document-layer closure checklist (this round, code-not-started lane)
+
+Goal:
+
+1. lock governance semantics before implementation so replay outcome is deterministic and non-ambiguous.
+
+Checklist:
+
+1. governance doc includes `inventory-first` and `compose-before-discover` hard semantics.
+2. governance doc includes `capability_fit_matrix` required fields and single-selected rule.
+3. governance doc includes `review freshness` stale semantics and non-closed warning behavior.
+4. governance doc includes optimization roundtable `fact`/`inference` separation and selected->fact mapping requirement.
+5. requirement ledger contains new IDs for this package (`ASB-RQ-049..053`) with explicit status and implementation scope.
+
+Doc acceptance commands:
+
+1. `python3 scripts/docs_command_contract_check.py`
+2. `python3 scripts/validate_protocol_ssot_source.py`
+3. `rg -n \"capability_fit_self_drive_optimization_contract_v1|compose-before-discover|capability_fit_matrix|WARN_STALE_OPTIMIZATION_REVIEW|ASB-RQ-049|ASB-RQ-053\" docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
 
 ### 16.5 Suggested acceptance metrics for architect replay
 
@@ -2558,3 +2590,8 @@ Decision (final, anti-drift):
    - repeated platform optimization intent (2 rounds) triggers deep-discovery action => target `>=95%`.
 4. feeding-pack execution success:
    - single-directory pack upload/consume success => target `>=95%`.
+5. capability-fit self-drive correctness:
+   - existing composition evaluated before external candidate selection => target `100%`.
+   - selected optimization plan has explicit fallback+rollback refs => target `100%`.
+6. optimization review freshness:
+   - overdue review cycles are visible as stale warning and never misreported as closed => target `100%`.

@@ -1057,6 +1057,47 @@ Mandatory semantics:
 2. Pack must remain business-data sanitized at protocol layer (no tenant-sensitive constants in template text).
 3. Pack generation outcome must be machine-readable and traceable in evidence index.
 
+#### 5.10.3 `capability_fit_self_drive_optimization_contract_v1`
+
+Goal:
+
+1. Ensure protocol can continuously improve capability match quality even when current toolchain is already usable.
+2. Convert ad-hoc optimization discussions into deterministic, machine-checkable review cycles.
+
+Mandatory semantics:
+
+1. Optimization cycle is `inventory-first`:
+   - every cycle must snapshot currently installed/available capability inventory before introducing new external candidates.
+2. Optimization cycle is `compose-before-discover`:
+   - at least one `existing_composition_candidate` must be evaluated before selecting external installation path.
+3. External discovery is conditional:
+   - allowed only when existing composition is `not_sufficient` or `not_cost_effective`, and decision basis is machine-readable.
+4. Every decision cycle must emit a `capability_fit_matrix` with required fields:
+   - `candidate_id`
+   - `candidate_type` (`existing_composition` / `external_candidate`)
+   - `fit_score`
+   - `risk_score`
+   - `operational_cost_score`
+   - `provenance_ref`
+   - `decision` (`selected` / `rejected`)
+5. Exactly one candidate in a decision window may be `selected`.
+6. Each selected plan must include:
+   - `fallback_ref`
+   - `rollback_ref`
+   - `review_interval_days`
+   - `next_review_at`
+7. If review is overdue, status must become `WARN_STALE_OPTIMIZATION_REVIEW` and cannot be represented as full closure.
+
+#### 5.10.4 `capability_fit_roundtable_evidence_contract_v1`
+
+Mandatory semantics:
+
+1. For optimization decisions affecting `tool_routing`, `vendor_api_discovery`, or `solution_architecture`, roundtable review is mandatory.
+2. Roundtable outputs must separate `fact` and `inference` in machine-readable structure.
+3. Final selected decision must map to at least one `fact` evidence reference.
+4. Source priority for fit decisions is fixed:
+   - official vendor docs / official protocol specs > standard organization specs > community mirrors/wrappers.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -1088,6 +1129,10 @@ Mandatory semantics:
 25. protocol-layer sanitization guard surfaces for governance/review outputs
 26. platform optimization discovery trigger orchestration and report writer surfaces
 27. vibe-coding feeding pack builder surfaces (`PROMPT_MAIN/INPUT_FILES/RUN_ORDER/REVIEW_REQUEST`)
+28. capability inventory snapshot + fit-matrix emission surfaces
+29. compose-before-discover arbitration surfaces in capability orchestration
+30. optimization review freshness status writer surfaces (`next_review_at` + stale warnings)
+31. roundtable fact/inference evidence mapping writer surfaces for optimization decisions
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -1118,6 +1163,11 @@ Mandatory semantics:
 25. `validate_protocol_data_sanitization_boundary`
 26. `trigger_platform_optimization_discovery` (tool/trigger surface)
 27. `build_vibe_coding_feeding_pack` (tool surface)
+28. `validate_identity_capability_fit_optimization`
+29. `validate_capability_composition_before_discovery`
+30. `validate_capability_fit_review_freshness`
+31. `trigger_capability_fit_review` (tool/trigger surface)
+32. `build_capability_fit_matrix` (tool surface)
 
 ### 6.3 Gate wiring surfaces
 
@@ -1185,6 +1235,13 @@ Platform optimization discovery + feeding-pack enhancement (P1) should be wired 
 1. optimization-intent trigger evaluation in `identity_creator` and scan/report surfaces.
 2. machine-readable discovery receipts in protocol-feedback outbox/evidence-index.
 3. deterministic `vibe_coding_feeding_pack_contract_v1` artifact generation (`PROMPT_MAIN`, `INPUT_FILES`, `RUN_ORDER`, `REVIEW_REQUEST`).
+
+Capability-fit self-drive optimization enhancement (P1) should be wired in the same surfaces through:
+
+1. periodic capability inventory snapshot and fit-matrix generation.
+2. compose-before-discover decision gate (`existing composition` must be evaluated first).
+3. stale-review warning visibility in health/readiness/scan/three-plane outputs.
+4. mandatory roundtable fact/inference evidence mapping for selected optimization plans.
 
 Vendor/API chain must be wired in the same surfaces through:
 
@@ -1287,6 +1344,11 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-046 | protocol data sanitization boundary prevents tenant/business scenario leakage into protocol SSOT layer | `validate_protocol_data_sanitization_boundary` (new), governance/review document checks | P0 | SPEC_READY | Spec defined in 5.9.3; implementation pending |
 | ASB-RQ-047 | platform optimization discovery trigger emits auditable deep-discovery tasks under repeated optimization signals | trigger/routing surfaces + protocol-feedback outbox receipts | P1 | SPEC_READY | Spec defined in 5.10.1; implementation pending |
 | ASB-RQ-048 | vibe-coding feeding pack contract produces deterministic single-directory upload bundle | pack builder surface + evidence-index linkage | P1 | SPEC_READY | Spec defined in 5.10.2; implementation pending |
+| ASB-RQ-049 | capability optimization cycle is inventory-first and machine-checkable | capability inventory snapshot + fit-matrix surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
+| ASB-RQ-050 | compose-before-discover is enforced before external candidate selection | capability orchestration + composition decision gate surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
+| ASB-RQ-051 | capability fit matrix requires single selected plan with fallback/rollback refs | fit-matrix builder + optimization validators | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
+| ASB-RQ-052 | optimization review freshness is machine-visible and stale state is non-closed | health/readiness/full-scan/three-plane status surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
+| ASB-RQ-053 | optimization decisions affecting routing/discovery/architecture require roundtable fact/inference mapping | roundtable evidence writer + optimization validators | P1 | SPEC_READY | Spec defined in 5.10.4; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1306,6 +1368,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-040 | `SPEC_READY -> GATE_READY (P0 incident closure pending)` | reply stamp missing counter is wired, but user-visible channel zero-miss closure (`HOTFIX-P0-004`) still pending audit pass |
 | ASB-RQ-041 / ASB-RQ-042 / ASB-RQ-043 | `NEW (SPEC_READY)` | strengthening package from 2026-03-01 cross-validation (scope-health passthrough, baseline policy stratification, unified version-alignment tuple) |
 | ASB-RQ-044 / ASB-RQ-045 / ASB-RQ-046 / ASB-RQ-047 / ASB-RQ-048 | `NEW (SPEC_READY)` | 2026-03-01 official-research/source-trust/optimization intake package (semantic isolation, trust chain, sanitization boundary, discovery trigger, feeding pack) |
+| ASB-RQ-049 / ASB-RQ-050 / ASB-RQ-051 / ASB-RQ-052 / ASB-RQ-053 | `NEW (SPEC_READY)` | 2026-03-01 capability-fit self-drive package (inventory-first, compose-before-discover, fit-matrix selection, stale-review visibility, roundtable fact/inference mapping) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
