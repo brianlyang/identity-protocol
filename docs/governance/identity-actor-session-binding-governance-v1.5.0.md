@@ -1063,6 +1063,31 @@ Failure code family (`IP-CWD-*`):
 3. `IP-CWD-003`: subprocess validator path CWD-dependent.
 4. `IP-CWD-004`: repo catalog default resolution CWD-sensitive.
 
+#### 5.8.11 `execution_reply_identity_coherence_contract_v1` (P0)
+
+Goal:
+
+1. Eliminate perceived "identity hard-switch" caused by cross-domain tuple drift between executed command context and user-visible reply context.
+2. Ensure one deterministic identity tuple (`identity_id`, `catalog_path`, `resolved_pack_path`, `actor_id`) is used from command execution through reply emission.
+
+Mandatory semantics:
+
+1. Strict operations (`activate`, `update`, `readiness`, `e2e`, `validate`, mutation flows) must verify command-target tuple and reply-stamp tuple coherence before user-visible business text is emitted.
+2. Reply pipeline must run a fresh runtime resolver step in the same execution domain before composing user-visible output.
+3. If command tuple and reply tuple mismatch on identity/catalog/pack domain, operation must fail-closed and emit blocker receipt (no silent downgrade).
+4. Dual-catalog environments must expose both lane refs in machine-readable output:
+   - `command_catalog_ref`
+   - `resolved_catalog_ref`
+   - `reply_catalog_ref`
+   - `coherence_decision`
+5. Inspection operations (`scan`, `three-plane`, `ci`) remain visibility-first and should surface warnings without forcing hard closure, unless explicitly promoted.
+
+Failure code family (`IP-ASB-CTX-*`):
+
+1. `IP-ASB-CTX-001`: command identity tuple != reply identity tuple.
+2. `IP-ASB-CTX-002`: resolver evidence missing for reply tuple.
+3. `IP-ASB-CTX-003`: dual-catalog lane ambiguity unresolved in strict operation.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1420,12 +1445,13 @@ The seven items below are mandatory protocol targets and must be treated as one 
 | C6 | Gate wiring must cover `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, and CI required-gates workflow. | Wire-up evidence exists in code and acceptance output across all listed surfaces. | Six-surface + CI wiring evidence is available and replayed (`ASB-RQ-009`, review ledger fix-chain sections). |
 | C7 | Path governance must be canonical and mixed-source safe across catalog/runtime/report surfaces. | Canonical path gates pass and no relative or cross-domain ambiguous path tuple appears in closure evidence. | Canonical path governance gates are audit-passed (`ASB-RQ-028/029/030/031`, review `FIX-002~FIX-007`). |
 | C8 | Governance-boundary lane must be machine-enforced (`base-repo mutation boundary` + `feedback SSOT archival` + `readiness scope arbitration` + `reply-stamp missing-turn counter`). | required gates are wired and replay evidence proves docs-only pass, protocol/code mutation fail, mirror-only fail, no-scope ambiguity fail, and zero missing-stamp turns for closure claim. | Closure replayed and audit-passed (`ASB-RQ-037/038/039/040`, `HOTFIX-P0-004/005/006/007`, review `16.6.8` + `16.7.17` + `16.7.18`). |
+| C9 | Strict execution and reply channels must share one coherent identity tuple in dual-catalog lanes (no command/reply drift). | command-target identity/catalog tuple and reply identity stamp tuple are machine-compared; mismatch is fail-closed with blocker receipt. | New P0 intake (`ASB-RQ-067`, `IP-ASB-CTX-*`) pending implementation and replay closure. |
 
 Hard interpretation rules:
 
-1. C1~C8 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
+1. C1~C9 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
 2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
-3. C1~C8 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
+3. C1~C9 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
 
 ### 6.3B Status synchronization note (2026-03-01, anti-drift)
 
@@ -1446,6 +1472,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
    - strict mismatch must fail-closed (`IP-ASB-STAMP-001` / `IP-ASB-STAMP-SESSION-001`),
    - inspection mode keeps observability non-blocking,
    - closure replay is synchronized in review `16.7.17` + `16.7.18`.
+6. New P0 intake (`ASB-RQ-067`) is opened for execution-vs-reply tuple coherence:
+   - command lane and reply lane must share same identity/catalog tuple under strict operations,
+   - dual-domain mismatch must fail-closed with `IP-ASB-CTX-*`,
+   - until replay-closed, this lane remains release-blocking.
 
 ### 6.4 Requirement ledger (canonical tracker for `v1.5` unlock)
 
@@ -1517,6 +1547,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-064 | CI required validator set must auto-include discovery trio when requiredization is active | `ci_enforcement_contract.required_validators` synchronizer + CI required-gates adapter | P0 | GATE_READY | apply-requiredization path auto-syncs CI required validators (`3baa355`) |
 | ASB-RQ-065 | non-blocking discovery warnings must auto-escalate to fail-closed after configured expiry window | trigger/builder/fit status lifecycle + expiry evaluator surfaces | P1 | GATE_READY (NON_BLOCKING) | expiry evaluator + `IP-DREQ-005` auto escalation landed (`3baa355`) |
 | ASB-RQ-066 | required-contract coverage must expose discovery-subset hard threshold for requiredized contracts | `validate_required_contract_coverage.py` discovery subset counters + `min_discovery_required_coverage` gate | P0 | GATE_READY | discovery subset counters + threshold gate landed (`295daf7`) |
+| ASB-RQ-067 | strict operations must enforce execution-to-reply identity tuple coherence under dual-catalog lanes | `execution_reply_identity_coherence_contract_v1` + coherence validator/wiring across creator/readiness/e2e/full-scan/three-plane/CI | P0 | SPEC_READY | 2026-03-01 intake: screenshot-level mismatch perception shows tuple coherence still requires explicit protocol gate |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1545,6 +1576,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-059 / ASB-RQ-060 / ASB-RQ-061 | `SPEC_READY -> GATE_READY (P0)` | CWD-invariant validator/orchestrator path resolution landed and non-repo-CWD replayed (`8778bdf`) |
 | ASB-RQ-062 / ASB-RQ-063 / ASB-RQ-064 / ASB-RQ-066 | `SPEC_READY -> GATE_READY (P0)` | discovery requiredization gate + writeback apply path + CI sync + discovery coverage subgate landed (`295daf7`,`3baa355`) |
 | ASB-RQ-065 | `SPEC_READY -> GATE_READY (P1)` | non-blocking expiry evaluator and `IP-DREQ-005` auto escalation landed (`3baa355`) |
+| ASB-RQ-067 | `SPEC_READY` | new P0 intake for execution-vs-reply identity tuple coherence under dual-catalog strict operations (`IP-ASB-CTX-*`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -2067,3 +2099,41 @@ python3 scripts/validate_identity_response_stamp.py \
   --identity-id <id> --catalog <project_or_conflict_catalog> --repo-catalog identity/catalog/identities.yaml \
   --stamp-json <stamp_json> --force-check --enforce-user-visible-gate --operation scan --json-only
 ```
+
+### 14.7 Dual-domain execution/reply coherence guard (P0, command-target vs reply tuple)
+
+Incident class:
+
+1. Under long-running dual-catalog operations, command execution can target identity tuple `A` while user-visible reply stamp is generated from tuple `B`.
+2. This produces operator-facing ambiguity ("command shows one identity, reply shows another") even when each lane is internally valid.
+3. The ambiguity is protocol-layer critical because it weakens audit replay trust and can be perceived as hidden identity switching.
+
+Normative rule:
+
+1. Strict operations must compare command-target tuple with reply tuple before emitting business content.
+2. Required tuple keys include:
+   - `identity_id`
+   - `catalog_ref` (or canonical catalog path hash reference)
+   - `resolved_pack_path` (or pack reference hash)
+   - `actor_id`
+3. Any tuple mismatch in strict operations is fail-closed and must emit blocker receipt first.
+4. Inspection operations remain non-blocking but must expose mismatch as machine-readable warning for audit visibility.
+
+Error-code contract:
+
+1. `IP-ASB-CTX-001`: command tuple and reply tuple mismatch.
+2. `IP-ASB-CTX-002`: resolver evidence missing for reply tuple.
+3. `IP-ASB-CTX-003`: strict operation executed under unresolved dual-catalog ambiguity.
+
+Gate wiring requirement:
+
+1. `identity_creator` (strict ops)
+2. `release_readiness_check.py`
+3. `e2e_smoke_test.sh`
+4. `full_identity_protocol_scan.py`
+5. `report_three_plane_status.py`
+6. CI required-gates workflow
+
+Status note:
+
+1. This lane is tracked as `ASB-RQ-067` (`P0`, `SPEC_READY`) until code and replay closure are landed.

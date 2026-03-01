@@ -46,6 +46,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
 | HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
 | HOTFIX-P0-008 | 2026-03-01 | protocol | strict user-visible reply gates allowed `LOCK_MISMATCH` to pass, masking actor/catalog lane drift as perceived identity hard-switch | DONE | PASS |
+| HOTFIX-P0-009 | 2026-03-01 | protocol | strict operation command-target identity tuple and user-visible reply tuple can diverge under dual-catalog lanes (execution/reply coherence gap) | TODO | PENDING_PATCH |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -71,6 +72,25 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
    - add machine-readable counter in three-plane/full-scan for `reply_stamp_missing_count` within replay scope.
 5. Acceptance target:
    - sampled replay window shows `reply_stamp_missing_count=0` and zero bypasses across creator/readiness/e2e/audit-chat outputs.
+
+HOTFIX-P0-009 incident note (2026-03-01, newly opened):
+
+1. Finding:
+   - strict operation command line can target identity tuple `A`, while reply first-line identity context is emitted from tuple `B` under dual-catalog lanes.
+2. Why this is P0:
+   - weakens operator trust in audit evidence chain (command evidence and reply evidence no longer prove same runtime tuple).
+   - can be perceived as hidden identity hard-switch even when actor-scoped model itself is valid.
+3. Source refs:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`5.8.11`, `ASB-RQ-067`, `C9`)
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`14.6`, `14.7`)
+4. Required remediation (protocol-layer, non-negotiable):
+   - strict operations add execution/reply tuple coherence gate (identity/catalog/pack/actor tuple compare).
+   - mismatch must fail-closed with blocker receipt (`IP-ASB-CTX-*`), no silent downgrade.
+   - six-surface wiring: creator/readiness/e2e/full-scan/three-plane/CI.
+5. Acceptance target:
+   - strict replay with intentionally mixed tuple fails deterministically (`IP-ASB-CTX-001`).
+   - strict replay with coherent tuple passes and emits `coherence_decision=PASS`.
+   - inspection replay remains non-blocking but exposes mismatch telemetry fields.
 
 ---
 
@@ -3850,6 +3870,54 @@ Acceptance replay template (post-implementation):
 3. negative: mixed lane in same section -> `FAIL_REQUIRED` (`IP-SPLIT-004`)
 4. negative: protocol receipt carries business-scene constants -> `FAIL_REQUIRED` (`IP-SPLIT-005`)
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
+
+This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.5 Roundtable intake: strict execution/reply tuple coherence guard (2026-03-01, HOTFIX-P0-009 docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated):
+
+1. In dual-catalog lanes, command execution can be run against global runtime tuple while conversational reply context is produced from project lane tuple (or vice versa).
+2. Existing lock-bound stamp gates (`HOTFIX-P0-008`) guarantee lock semantics per lane, but do not yet enforce that command lane and reply lane are the same tuple for strict operations.
+3. This creates a P0 audit perception gap: screenshot-level command evidence and reply identity context can appear contradictory.
+
+Cross-validation anchors:
+
+1. Global actor session tuple:
+   - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+   - `/Users/yangxi/.codex/identity/session/active_identity.json`
+2. Project actor session tuple:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/actors/user_yangxi.json`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/active_identity.json`
+3. Runtime resolver command confirms tuple domain:
+   - `scripts/resolve_identity_context.py resolve --identity-id <id>`
+4. Strict readiness invocation screenshot evidence (identity-id in command vs observed reply context mismatch perception):
+   - user-provided replay screenshot in current thread (`base-repo-audit-expert-v3` strict readiness command).
+
+Governance alignment:
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`:
+   - section `5.8.11` (`execution_reply_identity_coherence_contract_v1`)
+   - requirement `ASB-RQ-067` (`P0`, `SPEC_READY`)
+   - confirmation matrix `C9`
+   - section `14.7` (incident class + normative closure rule)
+
+Architect implementation package (next execution batch):
+
+1. Add strict coherence validator surface (execution tuple vs reply tuple compare).
+2. Add error codes `IP-ASB-CTX-001..003` with blocker receipt output in strict operations.
+3. Wire to creator/readiness/e2e/full-scan/three-plane/CI required-gates.
+4. Keep scan/inspection operations non-blocking but machine-visible.
+
+Acceptance replay template (post-implementation):
+
+1. negative: strict replay with deliberate tuple mismatch -> deterministic fail-closed (`IP-ASB-CTX-001`).
+2. negative: strict replay without resolver evidence -> deterministic fail-closed (`IP-ASB-CTX-002`).
+3. negative: strict dual-catalog ambiguity unresolved -> deterministic fail-closed (`IP-ASB-CTX-003`).
+4. positive: strict replay with coherent tuple -> PASS (`coherence_decision=PASS`).
+5. positive: scan/three-plane replay with mismatch -> non-blocking warning + machine fields exposed.
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
