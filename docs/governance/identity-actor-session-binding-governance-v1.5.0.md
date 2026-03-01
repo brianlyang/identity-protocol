@@ -393,6 +393,11 @@ Natural-language explicit trigger parsing contract:
 4. Ambiguous natural-language trigger must not be silently applied:
    - require clarification or fallback to `standard` with explicit notice.
 5. Natural-language trigger execution must be logged with parse confidence and normalization result.
+6. Natural-language trigger may include layer intent and must be normalized into:
+   - `work_layer in {protocol, instance, dual}`
+   - `source_layer in {project, global, env, auto}`
+7. Ambiguous layer intent must not be silently applied:
+   - require clarification or fallback to `work_layer=protocol` with explicit notice.
 
 ### 5.2D Dynamic disclosure rendering profile (cross-instance replay alignment)
 
@@ -412,9 +417,16 @@ Rendering channels and allowed payload:
 Recommended mail-header style templates (placeholders are runtime-only):
 
 1. External default:
-   - `Identity-Context: actor_id=<actor_id>; identity_id=<identity_id>; catalog_ref=<catalog_ref>; pack_ref=<pack_ref>; scope=<scope>; lock=<lock_state>; source=<source_domain>`
+   - `Identity-Context: actor_id=<actor_id>; identity_id=<identity_id>; catalog_ref=<catalog_ref>; pack_ref=<pack_ref>; scope=<scope>; lock=<lock_state>; source=<source_domain> | Layer-Context: work_layer=<work_layer>; source_layer=<source_layer>`
 2. Internal/audit diagnostic:
-   - `identity_id=<identity_id> | catalog_path=<catalog_path> | resolved_pack_path=<resolved_pack_path> | scope=<scope> | lock_state=<lock_state> | source=<source_domain> | resolver_ref=<resolver_ref>`
+   - `identity_id=<identity_id> | catalog_path=<catalog_path> | resolved_pack_path=<resolved_pack_path> | scope=<scope> | lock_state=<lock_state> | source=<source_domain> | work_layer=<work_layer> | source_layer=<source_layer> | resolver_ref=<resolver_ref>`
+
+Tail-block hard rules (governed user-facing first line):
+
+1. `Layer-Context` must be appended at line tail after `Identity-Context`.
+2. `work_layer` and `source_layer` are mandatory machine-readable fields.
+3. `source` and `source_layer` must be semantically consistent.
+4. Missing tail block or invalid layer enum is fail-closed under strict operations.
 
 Cross-instance replay requirement:
 

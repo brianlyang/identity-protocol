@@ -133,7 +133,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
 | FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
 | FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PASS |
-| FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering pins disclosure-level `standard` to keep tuple-coherence checks deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PENDING_REPLAY |
+| FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering + tail-appended `Layer-Context` (`work_layer/source_layer`) to keep tuple/layer coherence deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PENDING_REPLAY |
 | FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PENDING_REPLAY |
 
 ---
@@ -3965,6 +3965,11 @@ Key protocol behavior:
    - dynamic identity binding checks,
    - source-domain checks,
    - lock-bound strict-operation fail-closed checks (`IP-ASB-STAMP-005`).
+6. First-line identity stamp is rendered as two concatenated blocks:
+   - `Identity-Context: ...; source=<...>`
+   - tail block `| Layer-Context: work_layer=<protocol|instance|dual>; source_layer=<project|global|env|auto>`
+7. Layer-context semantics are machine-checkable:
+   - missing tail block, invalid `work_layer`, or `source/source_layer` mismatch are closure blockers in strict lanes.
 
 Acceptance replay (local, cross-validated):
 
@@ -3990,6 +3995,10 @@ Acceptance replay (local, cross-validated):
    - `python3 scripts/render_identity_response_stamp.py ... --json-only`
    - rc=`0`
    - key fields: `disclosure_source=session_state`, level persists as expected.
+7. layer-tail structure replay:
+   - first-line output must contain ` | Layer-Context: `
+   - `Layer-Context` must be at line tail
+   - `work_layer`/`source_layer` must be parseable and enum-valid.
 
 Residual risk:
 
