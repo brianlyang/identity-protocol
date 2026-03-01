@@ -3932,7 +3932,7 @@ Residual risk (before audit replay):
 1. independent replay still required across readiness/e2e/full-scan/three-plane/CI surfaces.
 2. conversation runtime outside protocol scripts must keep first-line stamp and explicit catalog lane discipline; protocol lane cannot rely on implicit chat memory.
 
-#### 16.8.6 FIX-022 implementation replay: response stamp configurable disclosure + natural-language trigger (2026-03-01)
+#### 16.8.7 FIX-022 implementation replay: response stamp configurable disclosure + natural-language trigger (2026-03-01)
 
 Status: `DONE / PENDING_REVIEW` (protocol code landed, audit replay attached).
 
