@@ -1136,6 +1136,16 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_protocol_vendor_semantic_isolation.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+            ],
+            [
+                "python3",
                 "scripts/validate_vendor_namespace_separation.py",
                 "--catalog",
                 args.catalog,

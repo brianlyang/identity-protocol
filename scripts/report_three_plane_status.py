@@ -595,6 +595,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_semantic != 0 or semantic_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_semantic_iso, out_semantic_iso, err_semantic_iso = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_vendor_semantic_isolation.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    semantic_iso_payload = _parse_json_payload(out_semantic_iso) or {}
+    validators["protocol_vendor_semantic_isolation"] = {
+        "rc": rc_semantic_iso,
+        "ok": rc_semantic_iso == 0,
+        "out": out_semantic_iso,
+        "err": err_semantic_iso,
+    }
+    semantic_iso_status = str(semantic_iso_payload.get("protocol_vendor_semantic_isolation_status", "")).strip().upper()
+    if rc_semantic_iso != 0 or semantic_iso_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -837,6 +861,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "classifier_reason": semantic_payload.get("classifier_reason", ""),
             "legacy_namespace_refs": semantic_payload.get("legacy_namespace_refs", []),
             "stale_reasons": semantic_payload.get("stale_reasons", []),
+        },
+        "protocol_vendor_semantic_isolation": {
+            "protocol_vendor_semantic_isolation_status": semantic_iso_payload.get("protocol_vendor_semantic_isolation_status"),
+            "error_code": semantic_iso_payload.get("error_code", ""),
+            "required_contract": semantic_iso_payload.get("required_contract"),
+            "auto_required_signal": semantic_iso_payload.get("auto_required_signal"),
+            "feedback_batch_path": semantic_iso_payload.get("feedback_batch_path"),
+            "intent_domain": semantic_iso_payload.get("intent_domain"),
+            "intent_confidence": semantic_iso_payload.get("intent_confidence"),
+            "intent_domain_before": semantic_iso_payload.get("intent_domain_before"),
+            "intent_domain_after": semantic_iso_payload.get("intent_domain_after"),
+            "switch_receipt_required": semantic_iso_payload.get("switch_receipt_required"),
+            "switch_receipt_present": semantic_iso_payload.get("switch_receipt_present"),
+            "switch_receipt_fields": semantic_iso_payload.get("switch_receipt_fields", {}),
+            "protocol_vendor_refs": semantic_iso_payload.get("protocol_vendor_refs", []),
+            "business_partner_refs": semantic_iso_payload.get("business_partner_refs", []),
+            "stale_reasons": semantic_iso_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),

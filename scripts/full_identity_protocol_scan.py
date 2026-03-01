@@ -131,6 +131,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "writeback_continuity",
             "post_execution_mandatory",
             "semantic_routing_guard",
+            "protocol_vendor_semantic_isolation",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -491,6 +492,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "protocol_vendor_semantic_isolation": [
+                    "python3",
+                    "scripts/validate_protocol_vendor_semantic_isolation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -741,6 +753,27 @@ def main() -> int:
                     ):
                         if k in semantic_doc:
                             check_payload[k] = semantic_doc.get(k)
+                if name == "protocol_vendor_semantic_isolation":
+                    semantic_iso_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_vendor_semantic_isolation_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "feedback_batch_path",
+                        "intent_domain",
+                        "intent_confidence",
+                        "intent_domain_before",
+                        "intent_domain_after",
+                        "switch_receipt_required",
+                        "switch_receipt_present",
+                        "switch_receipt_fields",
+                        "protocol_vendor_refs",
+                        "business_partner_refs",
+                        "stale_reasons",
+                    ):
+                        if k in semantic_iso_doc:
+                            check_payload[k] = semantic_iso_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

@@ -2595,3 +2595,26 @@ Doc acceptance commands:
    - selected optimization plan has explicit fallback+rollback refs => target `100%`.
 6. optimization review freshness:
    - overdue review cycles are visible as stale warning and never misreported as closed => target `100%`.
+
+### 16.6 Architect execution log (protocol-only implementation lane)
+
+#### 16.6.1 P0-D progress update (2026-03-01, local replay)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+1. Added new validator:
+   - `scripts/validate_protocol_vendor_semantic_isolation.py`
+2. Wired main gate surfaces:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Initial replay snapshot (local):
+   - direct validator run (scan/json-only): rc=`0`, status=`SKIPPED_NOT_REQUIRED` (contract-not-required path preserved)
+   - `report_three_plane_status.py` includes `instance_plane_detail.protocol_vendor_semantic_isolation.*`
+   - `full_identity_protocol_scan.py` includes `checks.protocol_vendor_semantic_isolation.*`
+4. Scope note:
+   - this patch is protocol-layer only (contracts/validators/gates wiring),
+   - no business data constants were introduced.

@@ -454,6 +454,16 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_protocol_vendor_semantic_isolation.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+        ],
+        [
+            "python3",
             "scripts/validate_vendor_namespace_separation.py",
             "--catalog",
             catalog,

@@ -266,6 +266,9 @@ for ID in $IDS; do
   echo "[23.42/30][$ID] validate semantic routing guard contract (Track-B)"
   python3 scripts/validate_semantic_routing_guard.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
+  echo "[23.425/30][$ID] validate protocol-vendor semantic isolation contract (P0-D)"
+  python3 scripts/validate_protocol_vendor_semantic_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
+
   echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
