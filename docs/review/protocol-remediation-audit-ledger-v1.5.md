@@ -3846,7 +3846,7 @@ Architect implementation package (next execution batch):
 Acceptance replay template (post-implementation):
 
 1. negative: missing `split_notice` -> `FAIL_REQUIRED` (`IP-SPLIT-001`)
-2. negative: `trigger=yes` with no SSOT outbox/index path -> `FAIL_REQUIRED` (`IP-SPLIT-003`)
+2. negative: `feedback_triggered=true` with no SSOT outbox/index path -> `FAIL_REQUIRED` (`IP-SPLIT-003`)
 3. negative: mixed lane in same section -> `FAIL_REQUIRED` (`IP-SPLIT-004`)
 4. negative: protocol receipt carries business-scene constants -> `FAIL_REQUIRED` (`IP-SPLIT-005`)
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
