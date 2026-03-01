@@ -139,6 +139,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-024 | 2026-03-01 | protocol | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan machine-readable telemetry (`IP-ASB-STAMP-SESSION-001`) | `b1cbe1f` | DONE | PENDING_REPLAY |
 | FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PENDING_REPLAY |
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
+| FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 
 ---
 
@@ -3893,6 +3894,50 @@ Acceptance replay template (post-implementation):
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.12 FIX-027 implementation lane: default instance layer + protocol-trigger escalation gate (P0, protocol-only)
+
+Status: `DONE / PENDING_REPLAY` (implementation landed, independent audit replay pending).
+
+Scope (protocol-only):
+
+1. Change resolver fallback from `protocol` to `instance`.
+2. Keep ambiguous/low-confidence signals on `instance` fallback (no implicit protocol escalation).
+3. Require auditable trigger evidence whenever resolved work layer is `protocol`.
+4. Add deterministic regression sample gate (`instance/protocol/ambiguous`) in layer-intent validator output.
+
+Changed surfaces:
+
+1. `scripts/response_stamp_common.py`
+2. `scripts/render_identity_response_stamp.py`
+3. `scripts/validate_layer_intent_resolution.py`
+4. `scripts/validate_reply_identity_context_first_line.py`
+5. `scripts/validate_execution_reply_identity_coherence.py`
+6. `scripts/validate_send_time_reply_gate.py`
+7. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+
+Machine-readable fields added/strengthened:
+
+1. `protocol_triggered`
+2. `protocol_trigger_reasons`
+3. `protocol_trigger_confidence`
+4. `regression_sample_status`
+5. `regression_failed_sample_ids`
+6. `regression_samples[]`
+
+Replay snapshot (architect local):
+
+1. Default (no intent text): `resolved_work_layer=instance`.
+2. Instance intent sample: `resolved_work_layer=instance`.
+3. Protocol intent sample (with protocol trigger phrase + error code): `resolved_work_layer=protocol`, `protocol_triggered=true`.
+4. Ambiguous sample: `resolved_work_layer=instance`, `fallback_reason=ambiguous_intent_signal`.
+5. Layer-intent validator strict replay:
+   - `regression_sample_status=PASS_REQUIRED`
+   - `regression_failed_sample_ids=[]`
+
+Layer declaration:
+
+1. protocol-only; no business-scene constants introduced.
 
 #### 16.8.11 FIX-026 implementation lane: layer-intent pass-through closure (P1, protocol-only)
 

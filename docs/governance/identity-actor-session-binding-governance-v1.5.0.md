@@ -1153,10 +1153,35 @@ Mandatory semantics:
    - `intent_source` (`explicit_arg` / `natural_language` / `default_fallback`)
    - `fallback_reason`
 2. Explicit command args remain highest priority (`explicit_arg`).
-3. Natural-language layer intent may auto-switch to `instance` only when confidence is high; ambiguous/low-confidence signals must fallback to safe default (`protocol`) with `fallback_reason`.
+3. Default work layer is `instance`; natural-language layer intent may auto-switch to `protocol` only when protocol trigger conditions are met and confidence is high. Ambiguous/low-confidence signals must fallback to safe default (`instance`) with `fallback_reason`.
 4. Strict operations must remain fail-closed on inconsistent tuple semantics (mismatch/invalid tail/illegal enum), reusing strict gate family semantics (`IP-ASB-STAMP-SESSION-001`).
 5. `three-plane` and `full-scan` must expose layer-intent telemetry fields for audit visibility.
 6. Protocol layer must remain business-data neutral; no business-scene constants may be introduced for intent resolution.
+
+#### 5.8.14 `default_work_layer_and_protocol_trigger_contract_v1` (P0)
+
+Goal:
+
+1. Ensure identity instances default to `instance` work layer for routine delivery.
+2. Prevent implicit escalation to `protocol` layer without auditable trigger evidence.
+
+Mandatory semantics:
+
+1. `default_work_layer_contract_v1`:
+   - resolver fallback must be `work_layer=instance` (never implicit `protocol`).
+2. `protocol_trigger_contract_v1`:
+   - `work_layer=protocol` is allowed only when protocol trigger conditions are met (explicit protocol override, protocol error-code signal, or protocol-governance trigger phrase with action semantics).
+3. `layer_consistency_gate`:
+   - strict operations must fail-closed when `work_layer=protocol` but trigger evidence is missing.
+4. Trigger evidence must be machine-readable:
+   - `protocol_triggered`
+   - `protocol_trigger_reasons`
+   - `protocol_trigger_confidence`
+5. Regression gate must cover three deterministic samples:
+   - `instance-intent -> instance`
+   - `protocol-intent -> protocol`
+   - `ambiguous-intent -> instance`
+6. `source_layer` remains source-lane metadata only and must not be used as work-layer escalation substitute.
 
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
@@ -1620,6 +1645,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-067 | strict operations must enforce execution-to-reply identity tuple coherence under dual-catalog lanes | `execution_reply_identity_coherence_contract_v1` + coherence validator/wiring across creator/readiness/e2e/full-scan/three-plane/CI | P0 | GATE_READY | implementation landed via `validate_execution_reply_identity_coherence.py` + six-surface wiring (`FIX-021`), audit replay pending |
 | ASB-RQ-068 | send-time unified reply outlet gate must enforce first-line Identity-Context fail-closed semantics and emit machine-readable telemetry in three-plane/full-scan | `validate_send_time_reply_gate.py` + creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | GATE_READY | send-time validator + six-surface wiring landed (`FIX-024`), audit replay pending |
 | ASB-RQ-069 | layer intent resolution must auto-resolve `work_layer/source_layer` with confidence + fallback telemetry and keep strict tuple fail-closed semantics | `resolve_layer_intent` + `validate_layer_intent_resolution.py` + render/readiness/e2e/full-scan/three-plane/CI wiring | P1 | IMPL_READY (NON_BLOCKING) | implementation landed (`FIX-025`), pass-through closure landed (`FIX-026`), independent audit replay pending |
+| ASB-RQ-070 | default work layer must be `instance`, and protocol escalation must be trigger-auditable with deterministic sample regression gate | `default_work_layer_contract_v1` + `protocol_trigger_contract_v1` + `layer_consistency_gate` in resolver/validators (render + first-line + coherence + send-time + layer-intent regression samples) | P0 | GATE_READY | implementation landed (`FIX-027`), independent audit replay pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1651,6 +1677,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-067 | `SPEC_READY -> GATE_READY (P0)` | execution/reply coherence validator + strict fail-closed semantics + six-surface wiring landed (`FIX-021`); replay closure pending |
 | ASB-RQ-068 | `SPEC_READY -> GATE_READY (P0)` | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan visibility landed (`FIX-024`); replay closure pending |
 | ASB-RQ-069 | `SPEC_READY -> IMPL_READY (P1)` | layer-intent resolver + validator landed (`FIX-025`) and pass-through closure landed (`FIX-026`); replay closure pending |
+| ASB-RQ-070 | `SPEC_READY -> GATE_READY (P0)` | default fallback switched to `instance`; protocol escalation now requires trigger evidence; regression samples (`instance/protocol/ambiguous`) are machine-validated in layer-intent gate (`FIX-027`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
