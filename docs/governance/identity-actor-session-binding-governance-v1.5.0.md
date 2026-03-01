@@ -1183,6 +1183,47 @@ Mandatory semantics:
    - `ambiguous-intent -> instance`
 6. `source_layer` remains source-lane metadata only and must not be used as work-layer escalation substitute.
 
+#### 5.8.15 `actor_session_multibinding_concurrency_contract_v1` (P0)
+
+Goal:
+
+1. Eliminate same-actor implicit rebind overwrite ("line-grab") under concurrent or interleaved activation sessions.
+2. Upgrade actor binding storage from single-record overwrite semantics to deterministic multi-binding semantics.
+3. Keep strict protocol lanes fail-closed when write conflict, missing receipt, or non-activation mutation is detected.
+
+Mandatory semantics:
+
+1. Canonical actor binding storage must support multi-binding entries keyed by runtime work key:
+   - required key tuple: `actor_id + session_id` (or equivalent deterministic work-unit key declared by contract),
+   - `session/actors/<actor>.json` may remain the carrier file, but payload must be multi-entry (`bindings[]` or equivalent keyed map),
+   - single-object last-write-wins payload is forbidden for strict lanes.
+2. Actor-binding write path must enforce CAS-style precondition:
+   - required field: `binding_version` (monotonic) or equivalent compare token,
+   - write must fail-closed on stale compare token (no silent overwrite).
+3. Only activation lane may mutate canonical actor binding:
+   - `activate` is mutable,
+   - `validate` / `scan` / `readiness` / `three-plane` / `full-scan` must be read-only for canonical actor binding unless explicit governance override receipt exists.
+4. Every rebind mutation must emit append-only receipt (no in-place loss):
+   - `from_binding_ref`
+   - `to_binding_ref`
+   - `actor_id`
+   - `session_id`
+   - `run_id`
+   - `switch_reason`
+   - `approved_by` (when manual override)
+   - `applied_at`
+5. Same-actor multi-session coexistence must be machine-checkable:
+   - adding or updating one `session_id` entry must not drop peer active entries for same `actor_id`.
+6. Required failure codes (fail-closed in strict lanes):
+   - `IP-ASB-MB-001`: single-record overwrite shape detected.
+   - `IP-ASB-MB-002`: CAS/compare token missing.
+   - `IP-ASB-MB-003`: CAS conflict (stale token).
+   - `IP-ASB-MB-004`: non-activation mutation attempt on canonical binding.
+   - `IP-ASB-MB-005`: rebind receipt missing or incomplete.
+   - `IP-ASB-MB-006`: same-actor peer-session entry dropped after mutation.
+7. Protocol layer remains business-data neutral:
+   - contract fields must use generic governance terms only; no tenant or business constants.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1395,6 +1436,7 @@ Mandatory semantics:
 32. discovery requiredization state writer surfaces (`requiredization_triggered`, trigger classes, required-state transitions)
 33. CI required-validator set synchronizer for requiredized discovery contracts
 34. required-contract coverage engine extension for discovery-subset hard threshold (`min_discovery_required_coverage`)
+35. actor-session multibinding storage serializer + CAS write precondition + append-only rebind receipt writer surfaces
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -1432,6 +1474,7 @@ Mandatory semantics:
 32. `build_capability_fit_matrix` (tool surface)
 33. `validate_discovery_requiredization`
 34. `validate_required_contract_coverage` (discovery-subset threshold mode)
+35. `validate_actor_session_multibinding_concurrency`
 
 ### 6.3 Gate wiring surfaces
 
@@ -1507,6 +1550,14 @@ Discovery requiredization bridge (P0) must be wired in the same surfaces through
 3. CI required validator set synchronization for requiredized discovery trio.
 4. discovery-subset coverage threshold enforcement (`min_discovery_required_coverage`) in release/readiness closure surfaces.
 
+Actor-session multibinding concurrency closure (P0) must be wired in the same surfaces through:
+
+1. canonical actor binding multi-entry schema validation (`actor_id + session_id` uniqueness and peer-entry preservation).
+2. CAS compare token validation before canonical binding mutation.
+3. non-activation mutation denial checks in strict operation lanes.
+4. append-only rebind receipt emission + linkage visibility in three-plane/full-scan outputs.
+5. required-gates fail-closed on `IP-ASB-MB-*` under strict/release lanes.
+
 Capability-fit self-drive optimization enhancement (P1) should be wired in the same surfaces through:
 
 1. periodic capability inventory snapshot and fit-matrix generation.
@@ -1528,7 +1579,7 @@ Kernel extension requirement:
 ### 6.3A P0 mandatory confirmation matrix (multi-agent x multi-identity)
 
 This subsection is a no-ambiguity lock for architect and auditor communication.
-The seven items below are mandatory protocol targets and must be treated as one closure set.
+The ten items below are mandatory protocol targets and must be treated as one closure set.
 
 | Confirm item | Mandatory protocol statement | Acceptance signal (must be explicit) | Current baseline interpretation |
 | --- | --- | --- | --- |
@@ -1541,12 +1592,13 @@ The seven items below are mandatory protocol targets and must be treated as one 
 | C7 | Path governance must be canonical and mixed-source safe across catalog/runtime/report surfaces. | Canonical path gates pass and no relative or cross-domain ambiguous path tuple appears in closure evidence. | Canonical path governance gates are audit-passed (`ASB-RQ-028/029/030/031`, review `FIX-002~FIX-007`). |
 | C8 | Governance-boundary lane must be machine-enforced (`base-repo mutation boundary` + `feedback SSOT archival` + `readiness scope arbitration` + `reply-stamp missing-turn counter`). | required gates are wired and replay evidence proves docs-only pass, protocol/code mutation fail, mirror-only fail, no-scope ambiguity fail, and zero missing-stamp turns for closure claim. | Closure replayed and audit-passed (`ASB-RQ-037/038/039/040`, `HOTFIX-P0-004/005/006/007`, review `16.6.8` + `16.7.17` + `16.7.18`). |
 | C9 | Strict execution and reply channels must share one coherent identity tuple in dual-catalog lanes (no command/reply drift). | command-target identity/catalog tuple and reply identity stamp tuple are machine-compared; mismatch is fail-closed with blocker receipt. | validator + six-surface wiring landed (`ASB-RQ-067`, `IP-ASB-CTX-*`); replay closure pending audit verdict. |
+| C10 | Same-actor binding writes must be multi-session safe and conflict-controlled (no single-record overwrite semantics). | canonical actor binding write path is `actor_id + session_id` keyed with CAS precondition and append-only receipt; non-activation write attempts fail-closed. | docs-level contract declared (`5.8.15`, `ASB-RQ-071..074`); implementation + replay pending audit verdict. |
 
 Hard interpretation rules:
 
-1. C1~C9 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
+1. C1~C10 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
 2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
-3. C1~C9 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
+3. C1~C10 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
 
 ### 6.3B Status synchronization note (2026-03-01, anti-drift)
 
@@ -1646,6 +1698,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-068 | send-time unified reply outlet gate must enforce first-line Identity-Context fail-closed semantics and emit machine-readable telemetry in three-plane/full-scan | `validate_send_time_reply_gate.py` + creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | GATE_READY | send-time validator + six-surface wiring landed (`FIX-024`), audit replay pending |
 | ASB-RQ-069 | layer intent resolution must auto-resolve `work_layer/source_layer` with confidence + fallback telemetry and keep strict tuple fail-closed semantics | `resolve_layer_intent` + `validate_layer_intent_resolution.py` + render/readiness/e2e/full-scan/three-plane/CI wiring | P1 | IMPL_READY (NON_BLOCKING) | implementation landed (`FIX-025`), pass-through closure landed (`FIX-026`), independent audit replay pending |
 | ASB-RQ-070 | default work layer must be `instance`, and protocol escalation must be trigger-auditable with deterministic sample regression gate | `default_work_layer_contract_v1` + `protocol_trigger_contract_v1` + `layer_consistency_gate` in resolver/validators (render + first-line + coherence + send-time + layer-intent regression samples) | P0 | GATE_READY | implementation landed (`FIX-027`), independent audit replay pending |
+| ASB-RQ-071 | canonical actor binding payload must be multi-entry and key-safe for same-actor concurrent sessions (`actor_id + session_id`), forbidding single-record overwrite semantics in strict lanes | actor binding serializer/reader + migration shims (`session/actors/<actor>.json`) | P0 | SPEC_READY | contract declared in `5.8.15`; implementation pending |
+| ASB-RQ-072 | actor binding mutation must enforce CAS-style precondition and fail-closed on stale compare token | activation binding writer + validator | P0 | SPEC_READY | `IP-ASB-MB-002/003` semantics declared; implementation pending |
+| ASB-RQ-073 | canonical actor binding mutation must be activation-only and append-only rebind receipt must be mandatory | creator/readiness/scan mutation boundary + receipt writer surfaces | P0 | SPEC_READY | `IP-ASB-MB-004/005` semantics declared; implementation pending |
+| ASB-RQ-074 | required gate `validate_actor_session_multibinding_concurrency.py` must be wired across creator/e2e/readiness/full-scan/three-plane/CI and expose machine-readable conflict telemetry | six-surface + CI required-gates wiring | P0 | SPEC_READY | validator/tool row declared; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1678,6 +1734,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-068 | `SPEC_READY -> GATE_READY (P0)` | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan visibility landed (`FIX-024`); replay closure pending |
 | ASB-RQ-069 | `SPEC_READY -> IMPL_READY (P1)` | layer-intent resolver + validator landed (`FIX-025`) and pass-through closure landed (`FIX-026`); replay closure pending |
 | ASB-RQ-070 | `SPEC_READY -> GATE_READY (P0)` | default fallback switched to `instance`; protocol escalation now requires trigger evidence; regression samples (`instance/protocol/ambiguous`) are machine-validated in layer-intent gate (`FIX-027`) |
+| ASB-RQ-071 / ASB-RQ-072 / ASB-RQ-073 / ASB-RQ-074 | `NEW (SPEC_READY, P0)` | same-actor multi-session rebind overwrite closure contract declared (`5.8.15`), review intake + cross-validated evidence pending implementation replay (`16.8.14`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

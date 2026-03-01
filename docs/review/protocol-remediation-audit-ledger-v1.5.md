@@ -140,6 +140,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PENDING_REPLAY |
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
+| FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure intake (`ASB-RQ-071..074`, docs-only; architect implementation pending) | `TBD` | INTAKE | SPEC_READY |
 
 ---
 
@@ -3895,6 +3896,94 @@ Acceptance replay template (post-implementation):
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
+#### 16.8.14 Roundtable intake: same-actor multi-session binding overwrite closure (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated):
+
+1. Canonical actor session payload is currently actor-file single-object shape, which is effectively one active binding per actor at write time.
+2. Same actor can run interleaved activations for different identities; latest write can overwrite previous actor binding tuple, creating perceived hard-switch / lane grab under multi-window operation.
+3. Existing actor-scoped model closed cross-actor implicit switch class, but same-actor multi-session conflict remains under-documented and non-gated.
+
+Local evidence anchors:
+
+1. Canonical actor file currently stores one object:
+   - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+2. Path and payload model in protocol scripts:
+   - `scripts/actor_session_common.py:22`
+   - `scripts/actor_session_common.py:33`
+   - `scripts/actor_session_common.py:45`
+   - `scripts/actor_session_common.py:55`
+3. Activation write chain calls sync writer with actor-level target:
+   - `scripts/identity_creator.py:245`
+   - `scripts/identity_creator.py:374`
+4. Same-actor interleaved activation reports (different identities, same actor):
+   - `/tmp/identity-activation-reports/identity-activation-switch-system-requirements-analyst-1772400240.json`
+   - `/tmp/identity-activation-reports/identity-activation-switch-base-repo-architect-1772400310.json`
+
+Vendor + official + context7 cross-check (inference noted):
+
+1. OpenAI conversation-state guidance shows persistent conversation objects and response chaining (`previous_response_id` / durable conversation id), supporting explicit session-scoped state keys rather than implicit overwrite.
+2. Anthropic messages guidance states interactions are stateless unless context is explicitly provided each turn; this supports explicit session keying and no hidden global authority.
+3. Google Gemini chat guidance uses explicit chat history/session objects; this aligns with multi-session isolation as a first-class key.
+4. etcd transactions/compare semantics provide primary-source precedent for CAS-style conflict prevention on shared state writes.
+5. context7 reinforcement:
+   - Python docs (file lock + atomic replace primitives) support deterministic write/replace semantics.
+   - SQLite transaction/locking model supports append-safe, conflict-controlled state mutation patterns.
+
+Official source links:
+
+1. `https://developers.openai.com/api/docs/guides/conversation-state/`
+2. `https://developers.openai.com/api/docs/guides/migrate-to-responses/`
+3. `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
+4. `https://docs.anthropic.com/en/api/messages-examples`
+5. `https://ai.google.dev/gemini-api/docs/text-generation`
+6. `https://ai.google.dev/gemini-api/docs/prompting-strategies`
+7. `https://etcd.io/docs/v3.5/learning/api_guarantees/`
+8. `https://etcd.io/docs/v3.5/dev-guide/api_reference_v3/`
+
+Governance delta (this batch, docs-only):
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - added `5.8.15` `actor_session_multibinding_concurrency_contract_v1` (P0).
+   - added requirement rows `ASB-RQ-071..074` (`P0`, `SPEC_READY`).
+   - updated matrix `C10` as mandatory closure condition.
+
+Architect implementation package (next execution batch):
+
+1. Add required gate:
+   - `scripts/validate_actor_session_multibinding_concurrency.py`
+2. Enforce canonical payload key model:
+   - `actor_id + session_id` multi-entry semantics in actor session canonical store.
+3. Enforce mutation precondition:
+   - CAS/compare token (`binding_version` or equivalent) on canonical binding write.
+4. Enforce mutation boundary:
+   - non-activation lanes are read-only for canonical actor binding.
+5. Enforce append-only receipts for rebind:
+   - `from_binding_ref`, `to_binding_ref`, `actor_id`, `session_id`, `run_id`, `switch_reason`, `approved_by`, `applied_at`.
+6. Wire required gate to six surfaces + CI:
+   - creator / readiness / e2e / full-scan / three-plane / required-gates workflow.
+7. Error code family:
+   - `IP-ASB-MB-001..006`.
+
+Acceptance replay template (post-implementation):
+
+1. negative: single-object overwrite payload shape -> `FAIL_REQUIRED` (`IP-ASB-MB-001`)
+2. negative: missing compare token on write -> `FAIL_REQUIRED` (`IP-ASB-MB-002`)
+3. negative: stale compare token conflict -> `FAIL_REQUIRED` (`IP-ASB-MB-003`)
+4. negative: non-activation lane tries canonical mutation -> `FAIL_REQUIRED` (`IP-ASB-MB-004`)
+5. negative: rebind receipt missing/incomplete -> `FAIL_REQUIRED` (`IP-ASB-MB-005`)
+6. negative: same-actor peer session entry dropped after write -> `FAIL_REQUIRED` (`IP-ASB-MB-006`)
+7. positive: same actor, two sessions, peer entry preserved + CAS increment + receipt linked -> `PASS_REQUIRED`
+8. docs/ssot checks:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+Layer declaration:
+
+1. protocol-only; no business scenario constants introduced.
+
 #### 16.8.12 FIX-027 implementation lane: default instance layer + protocol-trigger escalation gate (P0, protocol-only)
 
 Status: `DONE / PENDING_REPLAY` (implementation landed, independent audit replay pending).
@@ -4262,7 +4351,7 @@ Residual risk:
 1. strict validate/readiness/e2e lanes remain lock-bound; non-`LOCK_MATCH` is expected hard-fail and not a regression.
 2. Audit replay still required to flip `PENDING_REPLAY` -> `PASS`.
 
-#### 16.8.9 FIX-024 implementation replay: send-time unified reply outlet gate (2026-03-01)
+#### 16.8.13 FIX-024 implementation replay: send-time unified reply outlet gate (2026-03-01)
 
 Status: `DONE / PENDING_REPLAY` (protocol code landed, independent audit replay pending).
 
