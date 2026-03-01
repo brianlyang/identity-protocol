@@ -134,7 +134,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
 | FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PASS |
 | FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering pins disclosure-level `standard` to keep tuple-coherence checks deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PENDING_REPLAY |
-| FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6` | DONE | PENDING_REPLAY |
+| FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PENDING_REPLAY |
 
 ---
 
