@@ -272,6 +272,9 @@ for ID in $IDS; do
   echo "[23.428/30][$ID] validate external source trust-chain contract (P0-E)"
   python3 scripts/validate_external_source_trust_chain.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
+  echo "[23.429/30][$ID] validate protocol data sanitization boundary contract (P0-F)"
+  python3 scripts/validate_protocol_data_sanitization_boundary.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
+
   echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 

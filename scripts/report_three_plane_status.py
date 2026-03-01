@@ -643,6 +643,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_source_trust != 0 or source_trust_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_sanitization, out_sanitization, err_sanitization = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_data_sanitization_boundary.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    sanitization_payload = _parse_json_payload(out_sanitization) or {}
+    validators["protocol_data_sanitization_boundary"] = {
+        "rc": rc_sanitization,
+        "ok": rc_sanitization == 0,
+        "out": out_sanitization,
+        "err": err_sanitization,
+    }
+    sanitization_status = (
+        str(sanitization_payload.get("protocol_data_sanitization_boundary_status", "")).strip().upper()
+    )
+    if rc_sanitization != 0 or sanitization_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -919,6 +945,19 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "missing_trace_refs": source_trust_payload.get("missing_trace_refs", []),
             "unknown_candidate_without_downgrade": source_trust_payload.get("unknown_candidate_without_downgrade", []),
             "stale_reasons": source_trust_payload.get("stale_reasons", []),
+        },
+        "protocol_data_sanitization_boundary": {
+            "protocol_data_sanitization_boundary_status": sanitization_payload.get(
+                "protocol_data_sanitization_boundary_status"
+            ),
+            "error_code": sanitization_payload.get("error_code", ""),
+            "required_contract": sanitization_payload.get("required_contract"),
+            "auto_required_signal": sanitization_payload.get("auto_required_signal"),
+            "feedback_batch_path": sanitization_payload.get("feedback_batch_path"),
+            "forbidden_key_hits": sanitization_payload.get("forbidden_key_hits", []),
+            "sensitive_pattern_hits": sanitization_payload.get("sensitive_pattern_hits", []),
+            "violation_count": sanitization_payload.get("violation_count"),
+            "stale_reasons": sanitization_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),

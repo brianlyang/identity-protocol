@@ -133,6 +133,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "semantic_routing_guard",
             "protocol_vendor_semantic_isolation",
             "external_source_trust_chain",
+            "protocol_data_sanitization_boundary",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -515,6 +516,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "protocol_data_sanitization_boundary": [
+                    "python3",
+                    "scripts/validate_protocol_data_sanitization_boundary.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -807,6 +819,21 @@ def main() -> int:
                     ):
                         if k in src_doc:
                             check_payload[k] = src_doc.get(k)
+                if name == "protocol_data_sanitization_boundary":
+                    dsn_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_data_sanitization_boundary_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "feedback_batch_path",
+                        "forbidden_key_hits",
+                        "sensitive_pattern_hits",
+                        "violation_count",
+                        "stale_reasons",
+                    ):
+                        if k in dsn_doc:
+                            check_payload[k] = dsn_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

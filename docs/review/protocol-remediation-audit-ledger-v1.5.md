@@ -2641,3 +2641,106 @@ Status: `PATCHED_PENDING_AUDIT`
 5. Scope note:
    - protocol-layer only (contracts/validators/gates wiring),
    - no business data constants were introduced.
+
+#### 16.6.3 P0-F progress update (2026-03-01, local replay)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+1. Added new validator:
+   - `scripts/validate_protocol_data_sanitization_boundary.py`
+2. Wired main gate surfaces:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Initial replay snapshot (local):
+   - direct validator run (scan/json-only): rc=`0`, status=`SKIPPED_NOT_REQUIRED` (contract-not-required path preserved)
+   - `report_three_plane_status.py` includes `instance_plane_detail.protocol_data_sanitization_boundary.*`
+   - `full_identity_protocol_scan.py` includes `checks.protocol_data_sanitization_boundary.*`
+4. Error-code alignment:
+   - validator emits `IP-DSN-001` (business/tenant leakage) and `IP-DSN-002` (sensitive constant leakage).
+5. Scope note:
+   - protocol-layer only (contracts/validators/gates wiring),
+   - no business data constants were introduced.
+
+#### 16.6.3 P0-E audit replay verdict (2026-03-01, cross-validated)
+
+Status: `PASS` (scope: validator implementation + six-surface wiring integrity)
+
+1. Commit under replay:
+   - `3c9008ccf5a9a39178e16d7d1fbca325a9289736`
+2. Static checks:
+   - `python3 -m py_compile ... && bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+3. Direct validator replay:
+   - `python3 scripts/validate_external_source_trust_chain.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - result: `rc=0`
+   - key fields: `external_source_trust_chain_status=SKIPPED_NOT_REQUIRED`, `stale_reasons=["contract_not_required"]`
+4. Full-scan wiring replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p0e-audit.json`
+   - result: `rc=0`
+   - key extract:
+     - project: `checks.external_source_trust_chain.rc=0`, `status=SKIPPED_NOT_REQUIRED`
+     - global: `checks.external_source_trust_chain.rc=0`, `status=SKIPPED_NOT_REQUIRED`
+5. Three-plane wiring replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-p0e-audit.json`
+   - result: `rc=0`
+   - key extract:
+     - `instance_plane_detail.external_source_trust_chain.external_source_trust_chain_status=SKIPPED_NOT_REQUIRED`
+     - `instance_plane_detail.hard_boundary=false`
+6. Docs and SSOT boundary checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+7. Residual risks:
+   - contract is currently not required for tested identity, so replay validates wiring and semantics but not strict blocking path.
+   - `--baseline-policy strict` may still fail on `IP-PBL-001`; unrelated to P0-E patch scope.
+8. Audit decision:
+   - mark `P0-E` as ready to proceed to next lane (`P0-F`) with no regression found in this replay.
+
+#### 16.6.4 HOTFIX-P0-004 execution escalation (2026-03-01, live reply-channel gap)
+
+Status: `OPEN_BLOCKING` (release-blocking until closure replay is PASS)
+
+Incident summary:
+
+1. Live audit conversation observed missing first-line `Identity-Context` in assistant replies.
+2. Runtime binding was stable during incident (no actual identity hard-switch in session pointers).
+
+Evidence:
+
+1. `/Users/yangxi/.codex/identity/session/active_identity.json`
+2. `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+3. `/tmp/identity-stamp-runtime-check-20260301.json`
+
+Gap statement:
+
+1. Existing stamp validators can validate rendered/sample payloads, but reply-channel first-line enforcement is not hard-gated for live session output.
+
+Required implementation package for architect (separate hotfix lane, do not merge into normal FIX narrative):
+
+1. Add validator:
+   - `scripts/validate_reply_identity_context_first_line.py`
+   - fail code: `IP-ASB-STAMP-SESSION-001`
+   - contract: every user-visible reply must start with `Identity-Context:`
+2. Wire required gates:
+   - `scripts/identity_creator.py` (validate path)
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Add machine-readable fields:
+   - `reply_first_line_status`
+   - `reply_first_line_missing_count`
+   - `reply_first_line_missing_refs`
+4. Replay closure criteria:
+   - missing first-line stamp sample -> `rc=1`, explicit blocker receipt
+   - compliant sample -> `rc=0`
+   - full-scan and three-plane expose machine-readable status fields
+   - docs/ssot checks remain `rc=0`
+
+Audit note:
+
+1. This hotfix addresses perceived identity drift risk in live dialogue channel and remains mandatory for multi-agent and multi-identity release confidence.
