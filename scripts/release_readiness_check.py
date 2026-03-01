@@ -419,6 +419,8 @@ def main() -> int:
             stamp_artifact,
             "--force-check",
             "--enforce-user-visible-gate",
+            "--operation",
+            "readiness",
             "--blocker-receipt-out",
             stamp_blocker_receipt,
         ],

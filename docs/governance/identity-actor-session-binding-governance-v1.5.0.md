@@ -1349,6 +1349,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-051 | capability fit matrix requires single selected plan with fallback/rollback refs | fit-matrix builder + optimization validators | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
 | ASB-RQ-052 | optimization review freshness is machine-visible and stale state is non-closed | health/readiness/full-scan/three-plane status surfaces | P1 | SPEC_READY | Spec defined in 5.10.3; implementation pending |
 | ASB-RQ-053 | optimization decisions affecting routing/discovery/architecture require roundtable fact/inference mapping | roundtable evidence writer + optimization validators | P1 | SPEC_READY | Spec defined in 5.10.4; implementation pending |
+| ASB-RQ-054 | user-visible identity stamp hard gate must fail-closed when actor/session lock is not `LOCK_MATCH` in strict operations (prevent perceived hard-switch under dual-catalog drift) | `validate_identity_response_stamp.py`, `validate_reply_identity_context_first_line.py`, creator/readiness/e2e wiring | P0 | GATE_READY | Spec defined in 14.6; implementation landed, audit replay pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1365,10 +1366,13 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-034 / ASB-RQ-035 / ASB-RQ-036 | `SPEC_READY -> GATE_READY` | Track-B routing/namespace + sidecar escalation (`FIX-012`, `FIX-013`) |
 | ASB-RQ-037 / ASB-RQ-038 / ASB-RQ-039 | `SPEC_READY -> VERIFIED` | governance-boundary hotfix lane replayed and audit-passed (`HOTFIX-P0-005/006/007`) |
 | ASB-RQ-010 | `SPEC_READY -> IMPL_READY (pending final commit/replay)` | multi-active migration patch set in local workspace (`identity_creator/installer/state/session/compile/no_implicit_switch`) |
-| ASB-RQ-040 | `SPEC_READY -> GATE_READY (P0 incident closure pending)` | reply stamp missing counter is wired, but user-visible channel zero-miss closure (`HOTFIX-P0-004`) still pending audit pass |
-| ASB-RQ-041 / ASB-RQ-042 / ASB-RQ-043 | `NEW (SPEC_READY)` | strengthening package from 2026-03-01 cross-validation (scope-health passthrough, baseline policy stratification, unified version-alignment tuple) |
-| ASB-RQ-044 / ASB-RQ-045 / ASB-RQ-046 / ASB-RQ-047 / ASB-RQ-048 | `NEW (SPEC_READY)` | 2026-03-01 official-research/source-trust/optimization intake package (semantic isolation, trust chain, sanitization boundary, discovery trigger, feeding pack) |
-| ASB-RQ-049 / ASB-RQ-050 / ASB-RQ-051 / ASB-RQ-052 / ASB-RQ-053 | `NEW (SPEC_READY)` | 2026-03-01 capability-fit self-drive package (inventory-first, compose-before-discover, fit-matrix selection, stale-review visibility, roundtable fact/inference mapping) |
+| ASB-RQ-040 | `SPEC_READY -> GATE_READY` | reply first-line `Identity-Context` hard gate closure audit-passed (`HOTFIX-P0-004`, review ledger `16.6.8`) |
+| ASB-RQ-041 / ASB-RQ-042 | `SPEC_READY -> GATE_READY` | readiness health-branch scope passthrough + baseline-policy stratification audit-passed (`FIX-017`, `FIX-018`, review ledger `16.7.5~16.7.7`) |
+| ASB-RQ-043 | `SPEC_READY -> GATE_READY` | unified protocol version alignment contract validator + six-surface wiring audit-passed (`FIX-019`, review ledger `16.7.8`) |
+| ASB-RQ-044 / ASB-RQ-045 / ASB-RQ-046 | `SPEC_READY -> GATE_READY` | protocol validators + six-surface wiring audit-passed (`P0-D/E/F`, review ledger `16.6.1~16.6.3`) |
+| ASB-RQ-047 / ASB-RQ-048 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | trigger/builder surfaces audit-passed under non-required contracts (`P1-D/E`, review ledger `16.7.1~16.7.2`) |
+| ASB-RQ-049 / ASB-RQ-050 / ASB-RQ-051 / ASB-RQ-052 / ASB-RQ-053 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | capability-fit validator/roundtable/trigger/matrix surfaces audit-passed under non-required contracts (`P1-F/G/H`, review ledger `16.7.3~16.7.4A`) |
+| ASB-RQ-054 | `SPEC_READY -> GATE_READY` | lock-bound user-visible stamp guard for strict operations (`IP-ASB-STAMP-005` + `IP-ASB-STAMP-SESSION-001` lock clause), review ledger HOTFIX-P0-008 |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -1844,4 +1848,50 @@ python3 scripts/full_identity_protocol_scan.py --scan-mode full --out /tmp/full-
 
 # optional residue discovery probe (non-normative helper)
 rg -n "single[-_ ]active|active_identity.json|multiple active identities|session pointer consistency" scripts docs README.md
+```
+
+### 14.6 Dual-catalog hard-switch perception guard (P0, actor/session lock-bound stamp policy)
+
+Incident class:
+
+1. Under dual-catalog execution lanes, actor binding can remain on identity `A` while a canonical mirror pointer is switched by another actor replay to identity `B`.
+2. This is legal under actor-scoped multi-active semantics, but it can produce perceived “identity hard-switch” if user-visible reply channels do not fail-closed on lock mismatch.
+
+Normative rule:
+
+1. For strict operations (`activate`, `update`, `mutation`, `readiness`, `e2e`, `validate`), user-visible identity context gates MUST require `LOCK_MATCH`.
+2. If resolved stamp context lock is not `LOCK_MATCH`, validators must fail-closed and emit blocker receipt.
+3. Non-strict inspection operations (`scan`, `three-plane`, `inspection`, `ci`) remain visibility-first and must not force lock-bound closure.
+
+Error-code contract:
+
+1. `IP-ASB-STAMP-005`: response stamp lock-bound gate failed (`validate_identity_response_stamp.py`).
+2. `IP-ASB-STAMP-SESSION-001`: first-line identity-context lock clause failed (`validate_reply_identity_context_first_line.py`).
+
+Machine-readable requirements:
+
+1. Validators must expose:
+   - `operation`
+   - `lock_boundary_enforced`
+   - `expected_lock_state`
+   - parsed lock state field (`parsed_lock_state` / `reply_first_line_lock_state`)
+2. Fail path must emit blocker receipt with actionable next action:
+   - `activate_identity_for_actor_then_retry` (or equivalent lock-recovery action).
+
+Acceptance commands (minimal):
+
+```bash
+# mismatch lane (strict op) must fail-closed
+python3 scripts/validate_identity_response_stamp.py \
+  --identity-id <id> --catalog <project_or_conflict_catalog> --repo-catalog identity/catalog/identities.yaml \
+  --stamp-json <stamp_json> --force-check --enforce-user-visible-gate --operation validate --json-only
+
+python3 scripts/validate_reply_identity_context_first_line.py \
+  --identity-id <id> --catalog <project_or_conflict_catalog> --repo-catalog identity/catalog/identities.yaml \
+  --stamp-json <stamp_json> --force-check --enforce-first-line-gate --operation validate --json-only
+
+# inspection op remains non-blocking visibility mode
+python3 scripts/validate_identity_response_stamp.py \
+  --identity-id <id> --catalog <project_or_conflict_catalog> --repo-catalog identity/catalog/identities.yaml \
+  --stamp-json <stamp_json> --force-check --enforce-user-visible-gate --operation scan --json-only
 ```

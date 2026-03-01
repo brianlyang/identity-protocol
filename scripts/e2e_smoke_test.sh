@@ -198,7 +198,7 @@ for ID in $IDS; do
   python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --out "$STAMP_JSON" --json-only
 
   echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"
-  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
+  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.4/30][$ID] validate response stamp blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"

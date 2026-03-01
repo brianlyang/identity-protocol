@@ -45,6 +45,7 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-005 | 2026-03-01 | protocol | instance-to-base-repo write boundary gate missing (docs-allow/code-deny not codified) | DONE | PASS |
 | HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
 | HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
+| HOTFIX-P0-008 | 2026-03-01 | protocol | strict user-visible reply gates allowed `LOCK_MISMATCH` to pass, masking actor/catalog lane drift as perceived identity hard-switch | DONE | PENDING_REVIEW |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -96,6 +97,7 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PASS |
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
 | FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
+| FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `ef1735a` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -3380,3 +3382,65 @@ Status: `PASS` (scope: protocol-layer behavior + command-path passthrough)
 7. Docs/SSOT checks:
    - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
    - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+
+
+#### 16.7.11 HOTFIX-P0-008 / FIX-020 execution note (2026-03-01, lock-bound reply stamp closure)
+
+Layer declaration: `protocol` only.
+
+Source refs:
+
+1. L1 SSOT: `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`ASB-RQ-054`, section `14.6`).
+2. Incident class: dual-catalog actor lane drift (`user:yangxi` bound identity != strict target identity) produced perceived hard-switch risk in user-visible channel.
+
+Problem statement:
+
+1. Existing user-visible stamp validators enforced structural stamp correctness but could still pass when lock field was `LOCK_MISMATCH`.
+2. In strict operations this allowed reply gates to look green while actor/session tuple was not lock-bound to requested identity.
+
+Implementation (architect patch scope):
+
+1. `scripts/validate_identity_response_stamp.py`
+   - add `--operation` context.
+   - add strict lock-bound enforcement for operations: `activate/update/mutation/readiness/e2e/validate`.
+   - new error code: `IP-ASB-STAMP-005`.
+   - add machine fields: `operation`, `lock_boundary_enforced`, `parsed_lock_state`.
+2. `scripts/validate_reply_identity_context_first_line.py`
+   - strict lock clause for same strict operations.
+   - machine fields: `lock_boundary_enforced`, `expected_lock_state`, `reply_first_line_lock_state`.
+3. Surface wiring updates:
+   - `identity_creator.py` (`--operation validate`)
+   - `release_readiness_check.py` (`--operation readiness`)
+   - `e2e_smoke_test.sh` (`--operation e2e`)
+   - `full_identity_protocol_scan.py` (`--operation scan`)
+   - `report_three_plane_status.py` (`--operation three-plane`)
+   - `.github/workflows/_identity-required-gates.yml` (`--operation ci`)
+
+Replay evidence (architect local):
+
+1. Compile/static:
+   - `python3 -m py_compile ...` (modified python scripts) => `rc=0`
+   - `bash -n scripts/e2e_smoke_test.sh` => `rc=0`
+2. Mismatch lane strict block (`project catalog`, actor binding mismatch):
+   - `validate_identity_response_stamp.py ... --operation validate --json-only` => `rc=1`
+   - key: `error_code=IP-ASB-STAMP-005`, `stale_reasons=["actor_binding_lock_not_match"]`, `lock_boundary_enforced=true`.
+3. Same mismatch lane inspection mode:
+   - `validate_identity_response_stamp.py ... --operation scan --json-only` => `rc=0`
+   - key: `stamp_status=PASS`, `lock_boundary_enforced=false`.
+4. First-line validator strict block:
+   - `validate_reply_identity_context_first_line.py ... --operation validate --json-only` => `rc=1`
+   - key: `error_code=IP-ASB-STAMP-SESSION-001`, `stale_reasons=["actor_binding_lock_not_match"]`, `lock_boundary_enforced=true`.
+5. First-line validator inspection mode:
+   - `validate_reply_identity_context_first_line.py ... --operation scan --json-only` => `rc=0`
+6. Readiness regression guard:
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772376696.json --execution-report-policy strict --baseline-policy strict --capability-activation-policy route-any-ready` => `rc=0`.
+
+Residual risks:
+
+1. This patch guards strict reply-channel closure semantics; it does not auto-reconcile actor bindings across global/project lanes.
+2. Tuple reconciliation remains instance/governance operation (`activate` with explicit catalog+actor tuple) and should be audited separately.
+
+Next milestone:
+
+1. audit replay on HOTFIX-P0-008 / FIX-020;
+2. then promote row status from `PENDING_REVIEW` to `PASS` with commit anchor.

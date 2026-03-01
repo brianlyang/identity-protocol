@@ -18,8 +18,10 @@ ERR_STAMP_MISMATCH = "IP-ASB-STAMP-001"
 ERR_STAMP_SOURCE = "IP-ASB-STAMP-002"
 ERR_STAMP_HARDCODED = "IP-ASB-STAMP-003"
 ERR_STAMP_HARD_GATE = "IP-ASB-STAMP-004"
+ERR_STAMP_SESSION_BINDING = "IP-ASB-STAMP-005"
 ALLOWED_SOURCES = {"project", "global", "auto", "env"}
 PLACEHOLDER_RE = re.compile(r"<[^>]+>")
+STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -207,6 +209,12 @@ def main() -> int:
     ap.add_argument("--require-redacted-external", action="store_true")
     ap.add_argument("--require-lock-match", action="store_true")
     ap.add_argument(
+        "--operation",
+        choices=["activate", "update", "mutation", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
+        default="validate",
+        help="operation context for lock-bound session semantics",
+    )
+    ap.add_argument(
         "--enforce-user-visible-gate",
         action="store_true",
         help="hard gate for user-visible reply channel; disables contract-not-required skip path",
@@ -366,6 +374,15 @@ def main() -> int:
             stale_reasons.append("lock_state_mismatch")
             error_code = ERR_STAMP_MISMATCH
 
+    lock_boundary_enforced = bool(args.enforce_user_visible_gate and args.operation in STRICT_LOCK_OPERATIONS)
+    if not error_code and lock_boundary_enforced:
+        if ctx.lock_state != "LOCK_MATCH":
+            stale_reasons.append("actor_binding_lock_not_match")
+            error_code = ERR_STAMP_SESSION_BINDING
+        elif parsed.get("lock", "") != "LOCK_MATCH":
+            stale_reasons.append("stamp_lock_not_match")
+            error_code = ERR_STAMP_SESSION_BINDING
+
     ok = error_code == ""
     receipt_path = (
         Path(args.blocker_receipt_out).expanduser().resolve()
@@ -385,6 +402,9 @@ def main() -> int:
             "catalog_ref": ctx.catalog_ref,
             "pack_ref": ctx.pack_ref,
         },
+        "operation": args.operation,
+        "lock_boundary_enforced": lock_boundary_enforced,
+        "parsed_lock_state": parsed.get("lock", ""),
         "stamp_status": "PASS" if ok else "FAIL",
         "error_code": error_code,
         "stale_reasons": stale_reasons,
@@ -402,7 +422,11 @@ def main() -> int:
             actual_identity_id=actual_identity_for_receipt,
             source_domain=source or ctx.source_domain,
             resolver_ref=f"{catalog_path.parent}/session/active_identity.json",
-            next_action="refresh_identity_binding_then_retry",
+            next_action=(
+                "activate_identity_for_actor_then_retry"
+                if error_code == ERR_STAMP_SESSION_BINDING
+                else "refresh_identity_binding_then_retry"
+            ),
         )
         _emit_blocker(receipt_path, receipt)
         payload["blocker_receipt"] = receipt

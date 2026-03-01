@@ -14,6 +14,7 @@ STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_REPLY_FIRST_LINE = "IP-ASB-STAMP-SESSION-001"
+STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -191,7 +192,7 @@ def main() -> int:
     ap.add_argument("--blocker-receipt-out", default="")
     ap.add_argument(
         "--operation",
-        choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
+        choices=["activate", "update", "mutation", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
         default="validate",
     )
     ap.add_argument("--json-only", action="store_true")
@@ -308,6 +309,18 @@ def main() -> int:
             stale_reasons.append("reply_first_line_identity_mismatch")
             error_code = ERR_REPLY_FIRST_LINE
 
+    lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
+    parsed_lock_state = ""
+    if not error_code and first_lines:
+        parsed_lock_state = str(_parse_stamp_line(first_lines[0]).get("lock", "")).strip()
+    if not error_code and lock_boundary_enforced:
+        if ctx.lock_state != "LOCK_MATCH":
+            stale_reasons.append("actor_binding_lock_not_match")
+            error_code = ERR_REPLY_FIRST_LINE
+        elif parsed_lock_state and parsed_lock_state != "LOCK_MATCH":
+            stale_reasons.append("reply_first_line_lock_not_match")
+            error_code = ERR_REPLY_FIRST_LINE
+
     ok = error_code == ""
     receipt_path = (
         Path(args.blocker_receipt_out).expanduser().resolve()
@@ -322,6 +335,9 @@ def main() -> int:
         "required_contract": bool(force_required or contract_required(contract)),
         "reply_first_line_status": STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED,
         "error_code": error_code,
+        "lock_boundary_enforced": lock_boundary_enforced,
+        "expected_lock_state": ctx.lock_state,
+        "reply_first_line_lock_state": parsed_lock_state,
         "reply_first_line_missing_count": len(missing_refs),
         "reply_first_line_missing_refs": missing_refs,
         "reply_sample_count": len(first_lines),

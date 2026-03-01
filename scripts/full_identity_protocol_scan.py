@@ -455,6 +455,8 @@ def main() -> int:
                     stamp_artifact,
                     "--force-check",
                     "--enforce-user-visible-gate",
+                    "--operation",
+                    "scan",
                     "--blocker-receipt-out",
                     stamp_blocker_receipt,
                     "--json-only",

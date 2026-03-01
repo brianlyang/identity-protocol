@@ -424,6 +424,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             stamp_artifact,
             "--force-check",
             "--enforce-user-visible-gate",
+            "--operation",
+            "three-plane",
             "--blocker-receipt-out",
             stamp_blocker_receipt,
             "--json-only",
