@@ -932,6 +932,53 @@ Mandatory semantics:
    - `full_identity_protocol_scan.py`
 3. Release closure window requires `reply_stamp_missing_count=0` for governed response channels.
 
+#### 5.8.5 `readiness_scope_health_passthrough_contract_v1`
+
+Goal:
+
+1. Ensure explicit scope arbitration is preserved through readiness health branch, not only through preflight guards.
+
+Mandatory semantics:
+
+1. When `release_readiness_check.py` receives `--scope`, the same `scope` must be propagated to health collection calls that execute scope validators.
+2. No-scope dual-catalog ambiguity must still fail-closed with `IP-ENV-002`.
+3. Scoped readiness must not regress into scope false-fail due to omitted passthrough in downstream checks.
+
+#### 5.8.6 `baseline_policy_stratification_contract_v1`
+
+Goal:
+
+1. Keep baseline freshness policy strict where release/mutation decisions are made.
+2. Preserve observability surfaces for drift visibility without blocking exploratory scans.
+
+Mandatory semantics:
+
+1. `strict` baseline policy is required for release/mutation decision paths (readiness closure, e2e release gate, mutation/activation closure).
+2. `warn` baseline policy is allowed only for observability/reporting surfaces (scan/three-plane/health observe mode).
+3. Any path that can claim release/mutation closure must not downgrade baseline mismatch (`IP-PBL-001`) to non-blocking.
+
+#### 5.8.7 `protocol_version_alignment_contract_v1`
+
+Goal:
+
+1. Unify protocol version consistency checks into one deterministic closure contract.
+
+Mandatory tuple:
+
+1. `execution_report.protocol_commit_sha`
+2. `execution_report.identity_prompt_sha256`
+3. `execution_report.identity_prompt_path`
+4. `execution_report.identity_id`
+5. `execution_report.catalog_path`
+6. `execution_report.resolved_pack_path`
+7. current runtime `CURRENT_TASK` + prompt + binding tuple resolved context
+
+Mandatory semantics:
+
+1. Closure paths must validate this tuple as one alignment unit.
+2. Mismatch in any required tuple field is fail-closed on release/mutation closure surfaces.
+3. Alignment output must remain machine-readable and replayable.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -1130,6 +1177,9 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-038 | protocol-feedback outputs must be SSOT-archived before mirror publication | `validate_protocol_feedback_ssot_archival` (new), outbox/evidence-index writer surfaces | P0 | VERIFIED | replayed and audit-confirmed in HOTFIX-P0-006 lane |
 | ASB-RQ-039 | readiness dual-catalog arbitration must be explicit via `--scope` and deterministic fail-closed on ambiguity | `release_readiness_check.py` + runtime mode/scope validators (`validate_identity_runtime_mode_guard`) | P0 | VERIFIED | no-scope fail-closed + scoped passthrough replayed and confirmed in HOTFIX-P0-007 lane |
 | ASB-RQ-040 | user-facing reply stamp presence must be machine-counted in replay outputs (`reply_stamp_missing_count`) | `validate_identity_response_stamp` (coverage mode), three-plane/full-scan replay surfaces | P0 | GATE_READY | counter fields are wired; user-visible zero-miss closure (HOTFIX-P0-004) still pending |
+| ASB-RQ-041 | readiness explicit scope must propagate into health branch validators (`collect_identity_health_report` path) | `release_readiness_check.py`, `collect_identity_health_report.py` | P0 | SPEC_READY | Spec defined in 5.8.5; implementation pending |
+| ASB-RQ-042 | baseline policy must be stratified (`strict` for release/mutation, `warn` for observability-only paths) | readiness/e2e/creator/scan/three-plane baseline policy wiring | P0 | SPEC_READY | Spec defined in 5.8.6; implementation pending |
+| ASB-RQ-043 | protocol version alignment must be validated as unified tuple across report/prompt/task/binding context | baseline/prompt/binding validators + closure surfaces | P0 | SPEC_READY | Spec defined in 5.8.7; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1147,6 +1197,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-037 / ASB-RQ-038 / ASB-RQ-039 | `SPEC_READY -> VERIFIED` | governance-boundary hotfix lane replayed and audit-passed (`HOTFIX-P0-005/006/007`) |
 | ASB-RQ-010 | `SPEC_READY -> IMPL_READY (pending final commit/replay)` | multi-active migration patch set in local workspace (`identity_creator/installer/state/session/compile/no_implicit_switch`) |
 | ASB-RQ-040 | `SPEC_READY -> GATE_READY (P0 incident closure pending)` | reply stamp missing counter is wired, but user-visible channel zero-miss closure (`HOTFIX-P0-004`) still pending audit pass |
+| ASB-RQ-041 / ASB-RQ-042 / ASB-RQ-043 | `NEW (SPEC_READY)` | strengthening package from 2026-03-01 cross-validation (scope-health passthrough, baseline policy stratification, unified version-alignment tuple) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

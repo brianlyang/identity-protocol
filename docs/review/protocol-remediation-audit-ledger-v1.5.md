@@ -2427,3 +2427,65 @@ Replay evidence (escalated context, `~/.codex` writable):
 4. `e2e_smoke_test.sh` currently fails on changelog freshness in `HEAD~1..HEAD` range:
    - `validate_changelog_updated.py` fails while range includes protocol script changes without changelog update.
    - this is a release hygiene blocker and should be closed in same architect batch as FIX-015 commit.
+
+---
+
+## 15) Latest strengthening package routing decision (2026-03-01)
+
+Decision (final, anti-drift):
+
+1. Governance semantics go to L1 document (`docs/governance/identity-actor-session-binding-governance-v1.5.0.md`).
+2. Replay evidence and architect execution tasks go to this L3 review ledger.
+3. Do not merge this package into old FIX narrative rows; keep as strengthening follow-up under explicit P0/P1 buckets.
+
+### 15.1 P0 strengthening items to execute next
+
+1. `P0-A` readiness scope passthrough completion (health branch):
+   - finding: `release_readiness_check.py` forwards `--scope` into runtime/scope guards, but `collect_identity_health_report.py` call in readiness sequence omits `--scope`.
+   - evidence anchors:
+     - `scripts/release_readiness_check.py:365`
+     - `scripts/collect_identity_health_report.py:170`
+     - `scripts/collect_identity_health_report.py:193`
+   - replay evidence:
+     - `release_readiness_check ... --scope USER` still fails downstream health scope checks (`rc=2`) for `system-requirements-analyst`.
+     - direct `collect_identity_health_report --scope USER --enforce-pass` returns `rc=0` (`overall_status=WARN`, baseline-only warning).
+   - acceptance target:
+     - with explicit `--scope`, readiness health branch must not fail on scope-resolution/isolation/persistence for same tuple.
+
+2. `P0-B` baseline policy stratification hardening:
+   - finding: baseline policy handling is mixed (`warn` hardcoded in several mutation/validate paths), enabling stale-baseline continuation on non-observability paths.
+   - evidence anchors:
+     - `scripts/release_readiness_check.py:149`
+     - `scripts/identity_creator.py:1061`
+     - `scripts/identity_creator.py:1217`
+     - `scripts/identity_creator.py:1391`
+     - `scripts/e2e_smoke_test.sh:104`
+   - acceptance target:
+     - release/mutation paths default to `strict` baseline enforcement (`IP-PBL-001` fail-closed),
+     - observability-only paths may keep `warn` but must emit machine-readable drift payload.
+
+3. `P0-C` protocol version alignment contract unification:
+   - finding: alignment checks exist but are fragmented across multiple validators.
+   - objective: unify into one deterministic closure contract for `CURRENT_TASK + IDENTITY_PROMPT + execution_report.protocol_commit_sha + binding tuple`.
+   - evidence anchors:
+     - `scripts/validate_identity_protocol_baseline_freshness.py`
+     - `scripts/validate_identity_prompt_activation.py`
+     - `scripts/validate_identity_binding_tuple.py`
+   - acceptance target:
+     - one report-level machine-readable alignment payload and one decisive error code family for mismatch closure.
+
+### 15.2 P1 strengthening items (post-P0)
+
+1. add optimization-gap trigger path (`platform_optimization_gap`) to capability orchestration.
+2. add platform-specific capability contract gate (example: `aistudio_build_optimizer_contract`).
+3. add periodic capability delta scan task and SSOT archival output (`protocol-feedback/outbox + evidence-index`).
+
+### 15.3 Architect handoff rule for this package
+
+1. apply in dedicated strengthening lane (do not rewrite historical FIX verdicts).
+2. return with standard audit packet:
+   - commit list
+   - changed files
+   - replay commands with `rc + key fields`
+   - residual risks
+   - layer declaration.
