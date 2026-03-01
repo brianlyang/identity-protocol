@@ -3770,7 +3770,7 @@ Cross-validation evidence:
 6. Readiness scope/baseline chain recheck:
    - command: `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --baseline-policy warn --execution-report-policy warn`
    - logs confirm scope and baseline policy passthrough into session/baseline/version branches.
-   - final `rc=2` is driven by `IP-CAP-003` capability/auth readiness (`github_auth_invalid`, missing `wechat-shop-hot-picks`), not protocol gate regression.
+   - final `rc=2` is driven by `IP-CAP-003` capability/auth readiness (`github_auth_invalid`, missing required skill package), not protocol gate regression.
 7. Docs/SSOT checks:
    - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
    - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
@@ -3781,3 +3781,74 @@ Consolidated audit decision:
 2. Remaining blockers are explicitly outside protocol correctness:
    - environment/auth readiness (`IP-CAP-003`);
    - instance freshness and evidence hygiene (`IP-PBL-*`, sample/live replacement backlog).
+
+#### 16.8.1 Roundtable intake: instance/protocol split governance hardening (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Intake source:
+
+1. `cqsw/governance/protocol-issue-reports/identity-instance-protocol-split-roundtable-crosscheck-2026-03-02.md`
+
+Problem statement (cross-validated):
+
+1. Teams still rely on oral reminders to distinguish `instance execution` vs `protocol governance` work lanes.
+2. Missing machine-readable split receipts causes replay ambiguity and weak owner routing.
+3. Mixed lane writing (business execution + governance proposal in one section) increases false attribution risk.
+
+Cross-validation anchors:
+
+1. Local protocol chain already enforces related governance boundaries:
+   - response stamp gate (`scripts/release_readiness_check.py:421`)
+   - scope passthrough into health branch (`scripts/release_readiness_check.py:684`)
+   - namespace separation (`scripts/release_readiness_check.py:605`)
+   - base-repo write boundary (`scripts/release_readiness_check.py:931`)
+   - protocol-feedback SSOT archival (`scripts/release_readiness_check.py:947`)
+2. Vendor guidance alignment (inference from official docs):
+   - OpenAI prompt authority layering + Responses typed items:
+     - `https://platform.openai.com/docs/guides/prompt-engineering`
+     - `https://platform.openai.com/docs/guides/responses-vs-chat-completions`
+   - Google explicit instructions + system instruction + structured/tool controls:
+     - `https://ai.google.dev/gemini-api/docs/ai-studio-quickstart`
+     - `https://ai.google.dev/gemini-api/docs/prompting-strategies`
+     - `https://ai.google.dev/api/generate-content`
+   - Anthropic explicit instructions + XML structure + context management:
+     - `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
+     - `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/use-xml-tags`
+     - `https://docs.anthropic.com/en/docs/build-with-claude/context-windows`
+   - Moonshot official platform/docs entry validation:
+     - `https://platform.moonshot.cn/`
+     - `https://platform.moonshot.cn/docs/overview`
+
+Governance delta added in this batch:
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`:
+   - `5.8.8` `instance_protocol_split_receipt_contract_v1`
+   - `5.8.9` `protocol_feedback_trigger_hard_condition_contract_v1`
+   - requirement rows `ASB-RQ-055..058` (`SPEC_READY`)
+2. Business-scene contamination control remains hard requirement:
+   - protocol lane must use generic placeholders only (no tenant/customer/business constants in contract fields).
+
+Architect implementation package (next execution batch):
+
+1. Add validator: `scripts/validate_instance_protocol_split_receipt.py`
+2. Wire required checks to:
+   - `identity_creator.py`
+   - `release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `full_identity_protocol_scan.py`
+   - `report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Enforce failure codes:
+   - `IP-SPLIT-001`..`IP-SPLIT-005`
+4. Extend sanitization parser to detect mixed-lane section contamination and business-scene constants in protocol receipt payload.
+
+Acceptance replay template (post-implementation):
+
+1. negative: missing split reminder -> `FAIL_REQUIRED` (`IP-SPLIT-001`)
+2. negative: `trigger=yes` with no SSOT outbox/index path -> `FAIL_REQUIRED` (`IP-SPLIT-003`)
+3. negative: mixed lane in same section -> `FAIL_REQUIRED` (`IP-SPLIT-004`)
+4. negative: protocol receipt carries business-scene constants -> `FAIL_REQUIRED` (`IP-SPLIT-005`)
+5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
+
+This section is docs-only intake; no protocol script behavior changed in this batch.

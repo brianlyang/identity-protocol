@@ -979,6 +979,90 @@ Mandatory semantics:
 2. Mismatch in any required tuple field is fail-closed on release/mutation closure surfaces.
 3. Alignment output must remain machine-readable and replayable.
 
+#### 5.8.8 `instance_protocol_split_receipt_contract_v1`
+
+Goal:
+
+1. Eliminate repeated oral reminders by making lane split (`instance execution` vs `protocol governance feedback`) machine-enforced.
+2. Keep business execution content and protocol governance content isolated in user-visible replies and replay artifacts.
+3. Ensure split evidence is auditable and linked to protocol-feedback SSOT when governance feedback is triggered.
+
+Mandatory semantics:
+
+1. Every governed user-visible round must emit a split receipt with required fields:
+   - `split_notice`
+   - `instance_actions`
+   - `protocol_actions`
+   - `feedback_triggered`
+   - `evidence_index`
+2. Backward-compatible aliases are temporarily accepted with warning:
+   - `split_reminder` -> `split_notice`
+   - `instance_action_receipt` -> `instance_actions`
+   - `protocol_action_receipt` -> `protocol_actions`
+   - `protocol_feedback_triggered` -> `feedback_triggered`
+   - `evidence_index_receipt` -> `evidence_index`
+3. `split_notice` must include machine-readable lane declaration:
+   - `instance_lane=business_execution`
+   - `protocol_lane=governance_feedback`
+4. `feedback_triggered` must be explicit `true|false`.
+5. When `feedback_triggered=true`, `protocol_actions` must include `feedback_paths` with SSOT path(s) under:
+   - `runtime/protocol-feedback/outbox-to-protocol/`
+   - `runtime/protocol-feedback/evidence-index/`
+6. When `feedback_triggered=false`, `protocol_actions` must be explicit `none` (silence is invalid).
+7. Business execution statements and protocol governance proposals must not be merged in one paragraph/section.
+8. Split receipt payloads must remain protocol-sanitized:
+   - no tenant identifiers
+   - no customer identifiers
+   - no business-scene constants in protocol contract fields
+9. Failure code family (`IP-SPLIT-*`):
+   - `IP-SPLIT-001`: split reminder missing
+   - `IP-SPLIT-002`: trigger field missing/invalid
+   - `IP-SPLIT-003`: trigger=yes but SSOT path missing
+   - `IP-SPLIT-004`: mixed lane content in same section
+   - `IP-SPLIT-005`: protocol payload contains business-scene constants
+
+#### 5.8.9 `protocol_feedback_trigger_hard_condition_contract_v1`
+
+Goal:
+
+1. Replace subjective escalation decisions with deterministic, auditable trigger conditions.
+2. Preserve dual-track execution: instance lane executes now, protocol lane is fed into governance gates.
+
+Hard trigger conditions (`protocol_feedback_triggered=yes` when any true):
+
+1. Same governance issue class recurs `>=2` rounds in audit window.
+2. Any required gate exhibits false-green or false-red behavior.
+3. Runtime evidence required by closure chain is missing, stale, or unlinked.
+4. Lane contamination detected (`instance` and `protocol` semantics mixed in one execution section).
+
+Dual-track enforcement:
+
+1. Instance lane remains action-first (delivery/execution is not blocked by drafting protocol proposals).
+2. Protocol lane is governed through SSOT archival and required gate replay.
+3. Closure claims are valid only when both lanes have verifiable receipts.
+
+#### 5.8.10 `cwd_invariant_execution_contract_v1`
+
+Goal:
+
+1. Remove current-working-directory sensitivity from protocol validators and orchestration scripts.
+2. Prevent false failures caused by relative path interpretation drift.
+
+Mandatory semantics:
+
+1. Relative sample/evidence patterns in identity contracts must resolve against identity pack root (`CURRENT_TASK.json` parent), not process CWD.
+2. Handoff self-test sample roots must resolve against identity pack root for positive/negative fixtures.
+3. Orchestration scripts that invoke validator subprocesses must resolve script paths from protocol root (`Path(__file__).resolve().parent`) or explicit `--protocol-root`, never from shell CWD assumption.
+4. Default repo catalog path resolution must be protocol-root deterministic; missing path must return actionable hint with explicit `--repo-catalog`.
+5. `three-plane` and sibling orchestration surfaces must produce identical outcomes when invoked from non-repo CWD.
+
+Failure code family (`IP-CWD-*`):
+
+1. `IP-CWD-001`: relative pattern resolved against CWD instead of pack root.
+2. `IP-CWD-002`: self-test sample root not pack-root anchored.
+3. `IP-CWD-003`: subprocess validator path CWD-dependent.
+4. `IP-CWD-004`: repo catalog default resolution CWD-sensitive.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1354,6 +1438,13 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-052 | optimization review freshness is machine-visible and stale state is non-closed | health/readiness/full-scan/three-plane status surfaces | P1 | IMPL_READY (NON_BLOCKING) | freshness validator implemented and replay-visible (`P1-F`) |
 | ASB-RQ-053 | optimization decisions affecting routing/discovery/architecture require roundtable fact/inference mapping | roundtable evidence writer + optimization validators | P1 | IMPL_READY (NON_BLOCKING) | roundtable validator implemented and replay-visible (`P1-G`) |
 | ASB-RQ-054 | user-visible identity stamp hard gate must fail-closed when actor/session lock is not `LOCK_MATCH` in strict operations (prevent perceived hard-switch under dual-catalog drift) | `validate_identity_response_stamp.py`, `validate_reply_identity_context_first_line.py`, creator/readiness/e2e wiring | P0 | VERIFIED | implementation + strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`) |
+| ASB-RQ-055 | per-round instance/protocol split receipt is mandatory and machine-readable (`split_notice`, `instance_actions`, `protocol_actions`, `feedback_triggered`, `evidence_index`) | runtime reply receipt schema + replay parsers + three-plane/full-scan visibility | P0 | SPEC_READY | promoted to mandatory split-governance baseline from roundtable cross-check; implementation pending |
+| ASB-RQ-056 | required gate `validate_instance_protocol_split_receipt.py` enforces split fields + trigger semantics + SSOT path linkage | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | validator + six-surface wiring pending |
+| ASB-RQ-057 | protocol-feedback trigger must follow hard conditions (recurrence, false-green/red, evidence missing, lane contamination) | trigger classifier + receipt validator + protocol-feedback archival bridge | P0 | SPEC_READY | trigger codification pending |
+| ASB-RQ-058 | dual-track section isolation (`instance` vs `protocol`) must be enforced and protocol lane must remain business-data sanitized | receipt parser + `validate_protocol_data_sanitization_boundary.py` extension | P0 | SPEC_READY | anti-mixed/anti-contamination enforcement pending |
+| ASB-RQ-059 | trigger-regression sample report path patterns must resolve against identity pack root, never process CWD | `validate_identity_trigger_regression.py` path resolver + replay fixtures | P0 | SPEC_READY | addresses CWD-sensitive false failure anchor (`scripts/validate_identity_trigger_regression.py:146,151,152`) |
+| ASB-RQ-060 | handoff self-test sample roots must be pack-root anchored for positive/negative fixture discovery | `validate_agent_handoff_contract.py` self-test sample root resolver | P0 | SPEC_READY | addresses CWD-sensitive false failure anchor (`scripts/validate_agent_handoff_contract.py:253,371,372`) |
+| ASB-RQ-061 | orchestration subprocess and repo-catalog resolution must be protocol-root deterministic across invocation directories | `report_three_plane_status.py` subprocess launcher + repo-catalog resolver (`--protocol-root` aware) | P0 | SPEC_READY | addresses CWD-sensitive false blocker anchors (`scripts/report_three_plane_status.py:186,1085,1110,1542,1566`) |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1378,6 +1469,8 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-047 / ASB-RQ-048 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | trigger/builder surfaces audit-passed under non-required contracts (`P1-D/E`, review ledger `16.7.1~16.7.2`) |
 | ASB-RQ-049 / ASB-RQ-050 / ASB-RQ-051 / ASB-RQ-052 / ASB-RQ-053 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | capability-fit validator/roundtable/trigger/matrix surfaces audit-passed under non-required contracts (`P1-F/G/H`, review ledger `16.7.3~16.7.4A`) |
 | ASB-RQ-054 | `SPEC_READY -> VERIFIED` | lock-bound user-visible stamp guard strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`, review `16.7.17` + `16.7.18`) |
+| ASB-RQ-055 / ASB-RQ-056 / ASB-RQ-057 / ASB-RQ-058 | `NEW -> SPEC_READY (P0)` | split-receipt + hard-trigger + dual-track anti-mixed lane introduced from roundtable cross-check (`2026-03-02` intake), promoted to mandatory P0 governance lane |
+| ASB-RQ-059 / ASB-RQ-060 / ASB-RQ-061 | `NEW -> SPEC_READY (P0)` | CWD-invariant execution intake added from cross-validation anchors (`trigger_regression`, `agent_handoff_contract`, `three-plane` path resolution) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
