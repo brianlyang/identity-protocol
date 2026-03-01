@@ -158,27 +158,13 @@ def _single_active_precheck(catalog_path: Path, target_identity_id: str, auto_co
     actives = [x for x in actives if x]
     if len(actives) <= 1:
         return 0
-    if not auto_converge:
+    if auto_converge:
         print(
-            "[FAIL] catalog has multiple active identities: "
-            f"{actives}. Use --auto-converge-active to normalize or run activate transaction explicitly."
+            "[WARN] --auto-converge-active is deprecated under multi-active model; "
+            f"preserving existing active identities: {actives}"
         )
-        return 2
-    changed = False
-    for row in identities:
-        iid = str(row.get("id", "")).strip()
-        if not iid:
-            continue
-        desired = "active" if iid == target_identity_id else "inactive"
-        if str(row.get("status", "")).strip().lower() != desired:
-            row["status"] = desired
-            changed = True
-    if changed:
-        _dump_yaml(catalog_path, data)
-    print(
-        "[OK] converged single-active catalog state: "
-        f"target={target_identity_id} previous_active={actives} catalog={catalog_path}"
-    )
+    else:
+        print(f"[INFO] multi-active catalog detected (allowed): active_identities={actives}")
     return 0
 
 
@@ -295,7 +281,7 @@ def _activate_identity(
         print(f"[FAIL] identity not found in catalog: {identity_id}")
         return 1
 
-    previously_active = [
+    preexisting_active = [
         str(x.get("id", "")).strip()
         for x in identities
         if isinstance(x, dict)
@@ -303,31 +289,12 @@ def _activate_identity(
         and str(x.get("id", "")).strip()
         and str(x.get("id", "")).strip() != identity_id
     ]
-    cross_actor_conflicts = _cross_actor_conflicts(local_catalog, previously_active, actor_id_resolved)
+    # Multi-active runtime model: activation should not demote other active identities.
+    # Keep cross-actor receipt fields for backward-compatible audit payload shape.
+    cross_actor_conflicts: list[dict] = []
     cross_actor_receipt_payload: dict = {}
     cross_actor_receipt_path = ""
     cross_actor_receipt_errors: list[str] = []
-    if cross_actor_conflicts:
-        if not allow_cross_actor_switch:
-            conflict_ids = [f"{x.get('actor_id')}->{x.get('identity_id')}" for x in cross_actor_conflicts]
-            print(
-                "[FAIL] cross-actor demotion blocked by default: "
-                f"target={identity_id} actor={actor_id_resolved} conflicts={conflict_ids}. "
-                "Use --allow-cross-actor-switch with audited --cross-actor-receipt to proceed."
-            )
-            return 1
-        cross_actor_receipt_payload, cross_actor_receipt_errors, cross_actor_receipt_path = _load_cross_actor_receipt(
-            cross_actor_receipt
-        )
-        receipt_actor = str(cross_actor_receipt_payload.get("actor_id", "")).strip()
-        receipt_run = str(cross_actor_receipt_payload.get("run_id", "")).strip()
-        if receipt_actor and receipt_actor != actor_id_resolved:
-            cross_actor_receipt_errors.append("cross_actor_override_receipt_actor_mismatch")
-        if receipt_run and receipt_run != run_id_resolved:
-            cross_actor_receipt_errors.append("cross_actor_override_receipt_run_id_mismatch")
-        if cross_actor_receipt_errors:
-            print(f"[FAIL] cross-actor override receipt invalid: {cross_actor_receipt_errors}")
-            return 1
 
     created_evidence: list[Path] = []
     meta_backups: dict[Path, str | None] = {}
@@ -344,26 +311,14 @@ def _activate_identity(
                 note="activation transaction promoted identity to active",
             )
         )
-        for old_id in previously_active:
-            created_evidence.append(
-                _write_binding_evidence(
-                    data,
-                    old_id,
-                    "BOUND_READY",
-                    note=(
-                        f"demoted by single-active switch to {identity_id}; "
-                        f"actor_id={actor_id_resolved}; run_id={run_id_resolved}; reason={switch_reason_resolved}"
-                    ),
-                )
-            )
-
         for item in identities:
             if not isinstance(item, dict):
                 continue
             iid = str(item.get("id", "")).strip()
             if not iid:
                 continue
-            item["status"] = "active" if iid == identity_id else "inactive"
+            if iid == identity_id:
+                item["status"] = "active"
 
         meta_backups = _sync_meta_statuses(data)
         _dump_yaml(local_catalog, data)
@@ -382,9 +337,10 @@ def _activate_identity(
             "switch_id": switch_report.stem,
             "generated_at": ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "target_identity_id": identity_id,
-            "demoted_identities": previously_active,
-            "single_active_enforced": True,
-            "activation_model": "single_active_catalog_with_actor_scoped_session_binding",
+            "preexisting_active_identities": preexisting_active,
+            "demoted_identities": [],
+            "single_active_enforced": False,
+            "activation_model": "actor_scoped_catalog_with_multi_active",
             "actor_id": actor_id_resolved,
             "run_id": run_id_resolved,
             "entrypoint_pid": str(os.getpid()),
@@ -465,7 +421,7 @@ def _activate_identity(
         )
         if rc != 0:
             raise RuntimeError("session pointer consistency validation failed")
-        print(f"[OK] activated identity in catalog (single-active): {identity_id}")
+        print(f"[OK] activated identity in catalog (actor-scoped multi-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
     except Exception as e:
@@ -1324,9 +1280,6 @@ def main() -> int:
         if rc_boundary != 0:
             print("[FAIL] fixture/runtime boundary validation failed; activate blocked")
             return rc_boundary
-        rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
-        if rc != 0:
-            return rc
         return _activate_identity(
             Path(args.repo_catalog),
             Path(args.catalog),
@@ -1384,9 +1337,6 @@ def main() -> int:
         if rc_fixture != 0:
             print("[FAIL] fixture/runtime boundary validation failed; update blocked")
             return rc_fixture
-        rc = _single_active_precheck(Path(args.catalog), args.identity_id, auto_converge=bool(args.auto_converge_active))
-        if rc != 0:
-            return rc
         try:
             resolved = resolve_identity(
                 args.identity_id,

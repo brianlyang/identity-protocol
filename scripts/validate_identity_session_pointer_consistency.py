@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from actor_session_common import load_actor_binding, resolve_actor_id
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -80,9 +82,12 @@ def _validate_pointer(
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate session pointer consistency with catalog single-active identity.")
+    ap = argparse.ArgumentParser(
+        description="Validate session pointer consistency under actor-scoped binding (multi-active aware)."
+    )
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", default="", help="optional: require this identity to be current active")
+    ap.add_argument("--actor-id", default="", help="optional actor id for actor-scoped expected identity resolution")
     ap.add_argument(
         "--canonical-out",
         default="",
@@ -119,26 +124,38 @@ def main() -> int:
     data = _load_yaml(catalog_path)
     rows = [x for x in (data.get("identities") or []) if isinstance(x, dict)]
     active_rows = [x for x in rows if str(x.get("status", "")).strip().lower() == "active"]
-    if len(active_rows) != 1:
+    active_ids = [str(x.get("id", "")).strip() for x in active_rows if str(x.get("id", "")).strip()]
+    actor_id = resolve_actor_id(args.actor_id)
+    actor_binding = load_actor_binding(catalog_path, actor_id)
+    bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
+    expected_identity_id = str(args.identity_id or "").strip()
+    if not expected_identity_id:
+        if bound_identity_id:
+            expected_identity_id = bound_identity_id
+        elif len(active_rows) == 1:
+            expected_identity_id = str(active_rows[0].get("id", "")).strip()
+    if not expected_identity_id:
         print(
-            "[FAIL] catalog single-active violation: "
-            f"active_count={len(active_rows)} catalog={catalog_path}"
+            "[FAIL] expected identity is ambiguous under multi-active catalog; "
+            f"active_identities={active_ids}. Pass --identity-id or --actor-id with actor binding."
         )
         return 1
 
-    active = active_rows[0]
-    active_identity_id = str(active.get("id", "")).strip()
-    active_pack_path = str(active.get("pack_path", "")).strip()
-    if not active_identity_id:
-        print("[FAIL] active identity row missing id")
+    expected_row = next((x for x in rows if str(x.get("id", "")).strip() == expected_identity_id), None)
+    if not expected_row:
+        print(f"[FAIL] expected identity not found in catalog: {expected_identity_id}")
         return 1
+    expected_status = str(expected_row.get("status", "")).strip().lower()
+    if expected_status != "active":
+        print(f"[FAIL] expected identity is not active: identity={expected_identity_id} status={expected_status}")
+        return 1
+    expected_pack_path = str(expected_row.get("pack_path", "")).strip()
 
-    if args.identity_id.strip() and args.identity_id.strip() != active_identity_id:
+    if args.identity_id.strip() and bound_identity_id and bound_identity_id != expected_identity_id:
         print(
-            "[FAIL] active identity mismatch: "
-            f"expected={args.identity_id.strip()} active={active_identity_id}"
+            "[WARN] actor binding targets a different identity than requested identity: "
+            f"actor={actor_id} bound={bound_identity_id} requested={expected_identity_id}"
         )
-        return 1
 
     canonical_out = (
         Path(args.canonical_out).expanduser().resolve()
@@ -149,12 +166,16 @@ def main() -> int:
         pointer_path=canonical_out,
         pointer_name="canonical",
         catalog_path=catalog_path,
-        active_identity_id=active_identity_id,
-        active_pack_path=active_pack_path,
+        active_identity_id=expected_identity_id,
+        active_pack_path=expected_pack_path,
     )
     if not ok:
-        print(f"[FAIL] {reason}")
-        return 1
+        allow_multi_active_identity_mismatch = len(active_rows) > 1 and reason.startswith("canonical_identity_mismatch:")
+        if allow_multi_active_identity_mismatch:
+            print(f"[WARN] {reason} (allowed under actor-scoped multi-active model)")
+        else:
+            print(f"[FAIL] {reason}")
+            return 1
 
     mirror_targets: list[Path] = []
     mirror_raw = args.mirror_out.strip()
@@ -182,10 +203,16 @@ def main() -> int:
                 pointer_path=mirror_out,
                 pointer_name=pointer_name,
                 catalog_path=catalog_path,
-                active_identity_id=active_identity_id,
-                active_pack_path=active_pack_path,
+                active_identity_id=expected_identity_id,
+                active_pack_path=expected_pack_path,
             )
             if not ok:
+                allow_multi_active_identity_mismatch = len(active_rows) > 1 and reason.startswith(
+                    f"{pointer_name}_identity_mismatch:"
+                )
+                if allow_multi_active_identity_mismatch and not args.require_mirror:
+                    print(f"[WARN] {reason} (allowed under actor-scoped multi-active model)")
+                    continue
                 if args.require_mirror:
                     print(f"[FAIL] {reason}")
                     return 1
@@ -200,7 +227,8 @@ def main() -> int:
 
     print(
         "[OK] session pointer consistency validated: "
-        f"active_identity={active_identity_id} catalog={catalog_path} canonical={canonical_out}"
+        f"expected_identity={expected_identity_id} actor={actor_id} "
+        f"active_count={len(active_rows)} catalog={catalog_path} canonical={canonical_out}"
     )
     return 0
 

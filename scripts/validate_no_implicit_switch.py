@@ -9,6 +9,10 @@ from typing import Any
 ERR_NO_IMPLICIT_SWITCH = "IP-ASB-202"
 STRICT_OPS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPS = {"scan", "three-plane", "inspection"}
+ACTIVATION_AUDIT_SCHEMAS = {
+    "single_active_catalog_with_actor_scoped_session_binding",
+    "actor_scoped_catalog_with_multi_active",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -71,7 +75,7 @@ def main() -> int:
         status = "FAIL_REQUIRED"
     else:
         activation_model = str(report.get("activation_model", "")).strip()
-        is_hotfix_schema = activation_model == "single_active_catalog_with_actor_scoped_session_binding"
+        is_hotfix_schema = activation_model in ACTIVATION_AUDIT_SCHEMAS
         required = ("actor_id", "run_id", "entrypoint_pid", "switch_reason")
         for key in required:
             if not str(report.get(key, "")).strip():

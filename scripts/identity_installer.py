@@ -260,24 +260,13 @@ def _single_active_precheck(catalog_path: Path, target_identity_id: str, auto_co
     actives = [x for x in actives if x]
     if len(actives) <= 1:
         return 0
-    if not auto_converge:
+    if auto_converge:
         print(
-            "[FAIL] catalog has multiple active identities: "
-            f"{actives}. Use --auto-converge-active to normalize before install/update."
+            "[WARN] --auto-converge-active is deprecated under multi-active model; "
+            f"preserving active identities: {actives}"
         )
-        return 2
-    changed = False
-    for row in identities:
-        iid = str(row.get("id", "")).strip()
-        if not iid:
-            continue
-        desired = "active" if iid == target_identity_id else "inactive"
-        if str(row.get("status", "")).strip().lower() != desired:
-            row["status"] = desired
-            changed = True
-    if changed:
-        _dump_yaml(catalog_path, data)
-    print(f"[OK] converged single-active state: target={target_identity_id} previous_active={actives}")
+    else:
+        print(f"[INFO] multi-active catalog detected (allowed): active_identities={actives}")
     return 0
 
 
