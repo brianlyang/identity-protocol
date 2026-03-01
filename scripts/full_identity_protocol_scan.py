@@ -132,6 +132,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "post_execution_mandatory",
             "semantic_routing_guard",
             "protocol_vendor_semantic_isolation",
+            "external_source_trust_chain",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -503,6 +504,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "external_source_trust_chain": [
+                    "python3",
+                    "scripts/validate_external_source_trust_chain.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -774,6 +786,27 @@ def main() -> int:
                     ):
                         if k in semantic_iso_doc:
                             check_payload[k] = semantic_iso_doc.get(k)
+                if name == "external_source_trust_chain":
+                    src_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "external_source_trust_chain_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "feedback_batch_path",
+                        "allowed_trust_tiers",
+                        "conclusion_required_tiers",
+                        "source_row_count",
+                        "conclusion_source_count",
+                        "candidate_source_count",
+                        "unknown_in_conclusion_refs",
+                        "missing_tier_refs",
+                        "missing_trace_refs",
+                        "unknown_candidate_without_downgrade",
+                        "stale_reasons",
+                    ):
+                        if k in src_doc:
+                            check_payload[k] = src_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

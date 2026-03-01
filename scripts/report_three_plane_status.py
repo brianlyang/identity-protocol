@@ -619,6 +619,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_semantic_iso != 0 or semantic_iso_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_source_trust, out_source_trust, err_source_trust = _run(
+        [
+            "python3",
+            "scripts/validate_external_source_trust_chain.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    source_trust_payload = _parse_json_payload(out_source_trust) or {}
+    validators["external_source_trust_chain"] = {
+        "rc": rc_source_trust,
+        "ok": rc_source_trust == 0,
+        "out": out_source_trust,
+        "err": err_source_trust,
+    }
+    source_trust_status = str(source_trust_payload.get("external_source_trust_chain_status", "")).strip().upper()
+    if rc_source_trust != 0 or source_trust_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -878,6 +902,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "protocol_vendor_refs": semantic_iso_payload.get("protocol_vendor_refs", []),
             "business_partner_refs": semantic_iso_payload.get("business_partner_refs", []),
             "stale_reasons": semantic_iso_payload.get("stale_reasons", []),
+        },
+        "external_source_trust_chain": {
+            "external_source_trust_chain_status": source_trust_payload.get("external_source_trust_chain_status"),
+            "error_code": source_trust_payload.get("error_code", ""),
+            "required_contract": source_trust_payload.get("required_contract"),
+            "auto_required_signal": source_trust_payload.get("auto_required_signal"),
+            "feedback_batch_path": source_trust_payload.get("feedback_batch_path"),
+            "allowed_trust_tiers": source_trust_payload.get("allowed_trust_tiers", []),
+            "conclusion_required_tiers": source_trust_payload.get("conclusion_required_tiers", []),
+            "source_row_count": source_trust_payload.get("source_row_count"),
+            "conclusion_source_count": source_trust_payload.get("conclusion_source_count"),
+            "candidate_source_count": source_trust_payload.get("candidate_source_count"),
+            "unknown_in_conclusion_refs": source_trust_payload.get("unknown_in_conclusion_refs", []),
+            "missing_tier_refs": source_trust_payload.get("missing_tier_refs", []),
+            "missing_trace_refs": source_trust_payload.get("missing_trace_refs", []),
+            "unknown_candidate_without_downgrade": source_trust_payload.get("unknown_candidate_without_downgrade", []),
+            "stale_reasons": source_trust_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),

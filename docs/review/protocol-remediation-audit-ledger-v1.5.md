@@ -2618,3 +2618,26 @@ Status: `PATCHED_PENDING_AUDIT`
 4. Scope note:
    - this patch is protocol-layer only (contracts/validators/gates wiring),
    - no business data constants were introduced.
+
+#### 16.6.2 P0-E progress update (2026-03-01, local replay)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+1. Added new validator:
+   - `scripts/validate_external_source_trust_chain.py`
+2. Wired main gate surfaces:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Initial replay snapshot (local):
+   - direct validator run (scan/json-only): rc=`0`, status=`SKIPPED_NOT_REQUIRED` (contract-not-required path preserved)
+   - `report_three_plane_status.py` includes `instance_plane_detail.external_source_trust_chain.*`
+   - `full_identity_protocol_scan.py` includes `checks.external_source_trust_chain.*`
+4. Error-code alignment:
+   - validator enforces `IP-SRC-001/002/003` semantics defined in governance section 8.
+5. Scope note:
+   - protocol-layer only (contracts/validators/gates wiring),
+   - no business data constants were introduced.

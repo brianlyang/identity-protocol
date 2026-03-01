@@ -1146,6 +1146,16 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_external_source_trust_chain.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+            ],
+            [
+                "python3",
                 "scripts/validate_vendor_namespace_separation.py",
                 "--catalog",
                 args.catalog,
