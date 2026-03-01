@@ -3444,3 +3444,70 @@ Next milestone:
 
 1. audit replay on HOTFIX-P0-008 / FIX-020;
 2. then promote row status from `PENDING_REVIEW` to `PASS` with commit anchor.
+
+
+#### 16.7.12 HOTFIX-P0-008 / FIX-020 replay package refresh (2026-03-01)
+
+Status: `READY_FOR_AUDIT_REPLAY`
+
+Layer declaration:
+
+1. `protocol` (gate semantics + wiring replay only).
+
+Execution context split (explicit):
+
+1. `sandbox`: static checks + validator replays.
+2. `escalated`: actor identity rebinding under `~/.codex` (required for context restoration).
+
+Replay commands and results:
+
+1. `python3 -m py_compile ...` (modified scripts) -> `rc=0`
+2. `bash -n scripts/e2e_smoke_test.sh` -> `rc=0`
+3. strict mismatch lane (`project` catalog, `base-repo-audit-expert-v3`):
+   - `validate_identity_response_stamp.py ... --operation validate --json-only` -> `rc=1`
+   - key: `error_code=IP-ASB-STAMP-005`, `stale_reasons=["actor_binding_lock_not_match"]`, `lock_boundary_enforced=true`.
+4. strict mismatch lane first-line gate:
+   - `validate_reply_identity_context_first_line.py ... --operation validate --json-only` -> `rc=1`
+   - key: `error_code=IP-ASB-STAMP-SESSION-001`, `reply_first_line_status=FAIL_REQUIRED`.
+5. inspection visibility mode (same mismatch lane):
+   - `validate_identity_response_stamp.py ... --operation scan --json-only` -> `rc=0`, `stamp_status=PASS`, `lock_boundary_enforced=false`.
+   - `validate_reply_identity_context_first_line.py ... --operation scan --json-only` -> `rc=0`, `reply_first_line_status=PASS_REQUIRED`.
+6. strict pass lane (`global` catalog, `base-repo-architect`):
+   - `validate_identity_response_stamp.py ... --operation validate --json-only` -> `rc=0`, `stamp_status=PASS`, `lock=LOCK_MATCH`.
+   - `validate_reply_identity_context_first_line.py ... --operation validate --json-only` -> `rc=0`, `reply_first_line_status=PASS_REQUIRED`.
+
+Note:
+
+1. readiness replay on `base-repo-architect` with historical report `1772296255` returns `IP-PBL-001` (baseline stale); this is baseline freshness policy behavior, not HOTFIX-P0-008 regression.
+
+---
+
+#### 16.7.13 FIX-015 replay refresh (2026-03-01, pending audit closure)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Execution context split:
+
+1. `escalated`: actor `user:auditor` activation replay on project catalog.
+2. `sandbox`: validator/readiness replay.
+
+Replay delta (new evidence):
+
+1. activation replay:
+   - `python3 scripts/identity_creator.py activate --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id fix015-replay-20260301 --switch-reason fix015_concurrency_replay`
+   - `rc=0`
+   - switch report: `/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772379086.json`
+2. validator set replay:
+   - `validate_identity_state_consistency.py` -> `rc=0`, `active_count=2`
+   - `validate_actor_session_binding.py` (`user:yangxi`->custom) -> `rc=0`, `PASS_REQUIRED`
+   - `validate_actor_session_binding.py` (`user:auditor`->base-repo-audit-expert-v3) -> `rc=0`, `PASS_REQUIRED`
+   - `validate_cross_actor_isolation.py --operation validate` -> `rc=0`, `PASS_REQUIRED`
+   - `validate_no_implicit_switch.py --switch-report ...1772379086.json --operation validate` -> `rc=0`, `PASS_REQUIRED`
+   - pointer consistency checks (`user:yangxi/custom`, `user:auditor/base-repo-audit-expert-v3`) -> both `rc=0`
+3. readiness replay:
+   - `release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --execution-report ...1772375882.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - `rc=0`, tail: `[OK] release readiness checks PASSED`.
+
+Residual risk (unchanged):
+
+1. project-catalog e2e can still be blocked by sample hygiene (`trigger-regression` evidence), treated as instance/release hygiene dependency rather than FIX-015 actor semantics regression.
