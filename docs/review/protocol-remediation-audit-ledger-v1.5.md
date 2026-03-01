@@ -3853,7 +3853,163 @@ Acceptance replay template (post-implementation):
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
-#### 16.8.2 Roundtable intake: CWD-invariant execution hardening (2026-03-02, docs-only)
+#### 16.8.4 Implementation replay: split-receipt + CWD-invariant + discovery requiredization bridge (2026-03-01)
+
+Status: `GATE_READY` (protocol code landed, pending independent auditor replay sign-off).
+
+Commit set (protocol layer only):
+
+1. `8778bdf` — `feat(protocol): wire split-receipt gate and cwd-invariant validators`
+2. `295daf7` — `feat(protocol): add discovery requiredization gate and coverage subgate`
+3. `3baa355` — `feat(protocol): apply discovery requiredization during update preflight`
+
+Changed file surface (aggregated):
+
+1. `.github/workflows/_identity-required-gates.yml`
+2. `scripts/e2e_smoke_test.sh`
+3. `scripts/full_identity_protocol_scan.py`
+4. `scripts/identity_creator.py`
+5. `scripts/release_readiness_check.py`
+6. `scripts/report_three_plane_status.py`
+7. `scripts/validate_agent_handoff_contract.py`
+8. `scripts/validate_identity_trigger_regression.py`
+9. `scripts/validate_instance_protocol_split_receipt.py`
+10. `scripts/validate_required_contract_coverage.py`
+11. `scripts/validate_discovery_requiredization.py`
+
+Closure summary by requirement:
+
+1. `ASB-RQ-055..058`:
+   - `validate_instance_protocol_split_receipt.py` landed with `IP-SPLIT-001..005`.
+   - creator/readiness/e2e/full-scan/three-plane/CI surfaces wired.
+2. `ASB-RQ-059..061`:
+   - trigger-regression/handoff/three-plane CWD-invariant path resolution landed.
+   - non-protocol-root replay from `/tmp` confirmed deterministic behavior.
+3. `ASB-RQ-062..064`:
+   - `validate_discovery_requiredization.py` landed with `IP-DREQ-001..004`.
+   - update preflight apply mode landed (`--apply-requiredization`):
+     - promote discovery trio contracts to `required=true`,
+     - sync CI required validators,
+     - write requiredization receipt,
+     - append evidence-index linkage.
+4. `ASB-RQ-066`:
+   - `validate_required_contract_coverage.py` extended with discovery subset counters and
+     `--min-discovery-required-coverage` threshold.
+5. `ASB-RQ-065`:
+   - non-blocking expiry evaluator landed in `validate_discovery_requiredization.py` with
+     `IP-DREQ-005` fail-closed escalation when warning lanes age beyond configured window.
+
+Replay evidence snapshot (sandbox):
+
+1. Static gates:
+   - `python3 -m py_compile ...` -> `rc=0`
+   - `bash -n scripts/e2e_smoke_test.sh` -> `rc=0`
+2. Split receipt gate:
+   - `python3 scripts/validate_instance_protocol_split_receipt.py --identity-id system-requirements-analyst --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `rc=0`, `instance_protocol_split_status=SKIPPED_NOT_REQUIRED`
+3. Discovery requiredization gate:
+   - `python3 scripts/validate_discovery_requiredization.py --identity-id system-requirements-analyst --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `rc=0`, `discovery_requiredization_status=SKIPPED_NOT_REQUIRED`
+4. Coverage subgate:
+   - `python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --json-only`
+   - `rc=0`, includes `discovery_required_total/pass/rate` fields.
+5. Full scan replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog identity/catalog/identities.yaml --out /tmp/scan-sra-dreq2.json`
+   - `rc=0`, summary `{"total_identities":1,"p0":0,"p1":0,"ok":1}`, and `checks.discovery_requiredization` present.
+6. Three-plane replay from non-protocol CWD:
+   - `/tmp$ python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/report_three_plane_status.py --identity-id system-requirements-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract`
+   - `rc=0`, `instance_plane_detail.discovery_requiredization.discovery_requiredization_status=SKIPPED_NOT_REQUIRED`.
+
+Focused negative-path replay (fixture-backed):
+
+1. `IP-DREQ-001`: trigger met but discovery trio still optional -> deterministic fail.
+2. `IP-DREQ-002`: requiredization receipt missing/invalid -> deterministic fail.
+3. `IP-DREQ-003`: receipt not linked in evidence-index -> deterministic fail.
+4. `IP-DREQ-004`: CI required validator set misses discovery trio -> deterministic fail.
+5. positive with `--apply-requiredization`: deterministic pass (`PASS_REQUIRED`) and writeback artifacts generated.
+
+Layer declaration:
+
+1. Protocol only. No business-scene constants were introduced into protocol contracts or validator logic.
+
+#### 16.8.2 Roundtable intake: discovery requiredization hardening (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated):
+
+1. Discovery validators are wired but frequently return `contract_not_required -> skipped`, so discovery lane can remain semi-soft under repeated risk signals.
+2. Base identity pack template defaults discovery trio contracts to `required=false`, which is valid for bootstrap but insufficient for repeated risk windows.
+3. P1 optimization surfaces are intentionally non-blocking; without requiredization and expiry policy they can remain unresolved indefinitely.
+
+Cross-validation anchors:
+
+1. Readiness invokes discovery trio:
+   - `scripts/release_readiness_check.py:476`
+2. Discovery validators skip when contract is not required:
+   - `scripts/validate_identity_tool_installation.py:64`
+   - `scripts/validate_identity_vendor_api_discovery.py:67`
+   - `scripts/validate_identity_vendor_api_solution.py:61`
+3. Identity pack template defaults discovery trio to optional:
+   - `scripts/create_identity_pack.py:259`
+   - `scripts/create_identity_pack.py:281`
+   - `scripts/create_identity_pack.py:308`
+4. E2E marks optimization trigger/build/fit chain as non-blocking lane:
+   - `scripts/e2e_smoke_test.sh:288`
+   - `scripts/e2e_smoke_test.sh:291`
+   - `scripts/e2e_smoke_test.sh:303`
+5. Trigger/build/fit scripts expose non-blocking or skipped statuses by design:
+   - `scripts/trigger_platform_optimization_discovery.py:15`
+   - `scripts/trigger_platform_optimization_discovery.py:269`
+   - `scripts/build_vibe_coding_feeding_pack.py:14`
+   - `scripts/validate_identity_capability_fit_optimization.py:16`
+6. Current CI validator set snapshot does not include discovery trio required validators:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/CURRENT_TASK.json:652`
+7. Coverage gate currently summarizes required/optional globally; discovery-subset threshold is not yet enforced:
+   - `scripts/validate_required_contract_coverage.py:338`
+
+Governance delta added in this batch:
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`:
+   - `5.10.5` `discovery_requiredization_contract_v1`
+   - `5.10.6` `discovery_required_coverage_subgate_contract_v1`
+   - requirement rows `ASB-RQ-062..066` (`SPEC_READY`; `062/063/064/066` are `P0`, `065` is `P1`)
+2. Protocol layer remains business-data sanitized:
+   - contract language uses generic platform-class and capability-gap semantics only (no tenant/customer constants).
+
+Architect implementation package (next execution batch):
+
+1. Add validator: `scripts/validate_discovery_requiredization.py`
+2. Implement requiredization state transition and receipt writeback:
+   - evaluate trigger conditions,
+   - promote discovery trio contracts to `required=true`,
+   - emit deterministic receipt payload,
+   - archive to protocol-feedback outbox + evidence-index.
+3. Wire gate surfaces:
+   - `identity_creator.py`
+   - `release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `full_identity_protocol_scan.py`
+   - `report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+4. Extend CI validator synchronization:
+   - requiredized discovery trio must be present in `ci_enforcement_contract.required_validators`.
+5. Extend `validate_required_contract_coverage.py` with discovery subset threshold:
+   - `min_discovery_required_coverage`
+   - `discovery_required_total/discovery_required_passed/discovery_required_coverage_rate/discovery_required_gate_failed`.
+
+Acceptance replay template (post-implementation):
+
+1. negative: trigger conditions met but contracts remain optional -> `FAIL_REQUIRED` (`IP-DREQ-001`).
+2. negative: requiredization applied but receipt missing or incomplete -> `FAIL_REQUIRED` (`IP-DREQ-002`).
+3. negative: requiredization receipt not linked in SSOT evidence-index -> `FAIL_REQUIRED` (`IP-DREQ-003`).
+4. negative: requiredization active but CI required validator set misses discovery trio -> `FAIL_REQUIRED` (`IP-DREQ-004`).
+5. negative: requiredization active with discovery coverage below threshold -> `FAIL_REQUIRED`.
+6. positive: requiredization applied + receipts linked + CI validator sync + discovery coverage threshold satisfied -> `PASS_REQUIRED`.
+
+This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.3 Roundtable intake: CWD-invariant execution hardening (2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
 

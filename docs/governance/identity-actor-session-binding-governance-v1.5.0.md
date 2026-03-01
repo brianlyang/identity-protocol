@@ -1107,7 +1107,7 @@ Mandatory semantics:
 3. Business-instance details are allowed only in instance-level runtime artifacts and must not be promoted into protocol SSOT contract language.
 4. Violation of sanitization boundary in protocol closure payloads is `FAIL_REQUIRED`.
 
-### 5.10 `platform_optimization_discovery_and_feeding_contract_v1` (P1)
+### 5.10 `platform_optimization_discovery_and_feeding_contract_v1` (P1 with P0 requiredization bridge)
 
 Goal:
 
@@ -1182,6 +1182,61 @@ Mandatory semantics:
 4. Source priority for fit decisions is fixed:
    - official vendor docs / official protocol specs > standard organization specs > community mirrors/wrappers.
 
+#### 5.10.5 `discovery_requiredization_contract_v1`
+
+Goal:
+
+1. Prevent permanent "soft-pass" behavior for discovery contracts once repeated risk signals are observed.
+2. Upgrade discovery checks from `not required` to `required` deterministically when trigger conditions are met.
+
+Requiredization scope:
+
+1. `tool_installation_contract`
+2. `vendor_api_discovery_contract`
+3. `vendor_api_solution_contract`
+
+Mandatory semantics:
+
+1. Requiredization trigger must be machine-evaluated from replay evidence and protocol-feedback records.
+2. Trigger conditions (`any true -> requiredization_triggered=true`):
+   - same platform-class optimization intent repeats in `>=2` consecutive rounds;
+   - "usable but quality-not-sufficient" feedback repeats in `>=2` rounds in the same audit window;
+   - at least `1` closure failure is explicitly attributed to capability/tooling gap.
+3. When triggered, contracts in requiredization scope must be flipped from `required=false` to `required=true` with deterministic writeback.
+4. Requiredization writeback must emit a machine-readable receipt including:
+   - `requiredization_triggered`
+   - `trigger_classes`
+   - `window_rounds`
+   - `evidence_refs`
+   - `previous_required_state`
+   - `new_required_state`
+   - `requiredized_at`
+5. Requiredization receipt must be archived in protocol-feedback SSOT:
+   - outbox batch
+   - evidence-index linkage
+6. Requiredization gate errors (`IP-DREQ-*`):
+   - `IP-DREQ-001`: trigger condition met but requiredization not applied
+   - `IP-DREQ-002`: requiredization applied but receipt missing/incomplete
+   - `IP-DREQ-003`: requiredization receipt not linked in protocol-feedback SSOT index
+   - `IP-DREQ-004`: requiredized discovery validators missing from CI required validator set
+7. Non-blocking expiry rule:
+   - discovery-related non-blocking warnings may exist during exploration window;
+   - if unresolved beyond configured expiry days, status must auto-escalate to `FAIL_REQUIRED`.
+
+#### 5.10.6 `discovery_required_coverage_subgate_contract_v1`
+
+Mandatory semantics:
+
+1. `validate_required_contract_coverage.py` must expose discovery-subset metrics for requiredized contracts:
+   - `discovery_required_total`
+   - `discovery_required_passed`
+   - `discovery_required_coverage_rate`
+   - `discovery_required_gate_failed`
+2. Optional discovery contracts may remain `SKIPPED_NOT_REQUIRED` before requiredization; after requiredization they must count toward required coverage.
+3. Release/readiness closure surfaces must support a dedicated threshold:
+   - `min_discovery_required_coverage`
+4. If discovery requiredization is active and discovery coverage is below threshold, closure must fail-closed.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -1217,6 +1272,9 @@ Mandatory semantics:
 29. compose-before-discover arbitration surfaces in capability orchestration
 30. optimization review freshness status writer surfaces (`next_review_at` + stale warnings)
 31. roundtable fact/inference evidence mapping writer surfaces for optimization decisions
+32. discovery requiredization state writer surfaces (`requiredization_triggered`, trigger classes, required-state transitions)
+33. CI required-validator set synchronizer for requiredized discovery contracts
+34. required-contract coverage engine extension for discovery-subset hard threshold (`min_discovery_required_coverage`)
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -1252,6 +1310,8 @@ Mandatory semantics:
 30. `validate_capability_fit_review_freshness`
 31. `trigger_capability_fit_review` (tool/trigger surface)
 32. `build_capability_fit_matrix` (tool surface)
+33. `validate_discovery_requiredization`
+34. `validate_required_contract_coverage` (discovery-subset threshold mode)
 
 ### 6.3 Gate wiring surfaces
 
@@ -1319,6 +1379,13 @@ Platform optimization discovery + feeding-pack enhancement (P1) should be wired 
 1. optimization-intent trigger evaluation in `identity_creator` and scan/report surfaces.
 2. machine-readable discovery receipts in protocol-feedback outbox/evidence-index.
 3. deterministic `vibe_coding_feeding_pack_contract_v1` artifact generation (`PROMPT_MAIN`, `INPUT_FILES`, `RUN_ORDER`, `REVIEW_REQUEST`).
+
+Discovery requiredization bridge (P0) must be wired in the same surfaces through:
+
+1. trigger classifier -> contract `required` state transition writeback.
+2. requiredization receipt archival to protocol-feedback outbox + evidence-index.
+3. CI required validator set synchronization for requiredized discovery trio.
+4. discovery-subset coverage threshold enforcement (`min_discovery_required_coverage`) in release/readiness closure surfaces.
 
 Capability-fit self-drive optimization enhancement (P1) should be wired in the same surfaces through:
 
@@ -1438,13 +1505,18 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-052 | optimization review freshness is machine-visible and stale state is non-closed | health/readiness/full-scan/three-plane status surfaces | P1 | IMPL_READY (NON_BLOCKING) | freshness validator implemented and replay-visible (`P1-F`) |
 | ASB-RQ-053 | optimization decisions affecting routing/discovery/architecture require roundtable fact/inference mapping | roundtable evidence writer + optimization validators | P1 | IMPL_READY (NON_BLOCKING) | roundtable validator implemented and replay-visible (`P1-G`) |
 | ASB-RQ-054 | user-visible identity stamp hard gate must fail-closed when actor/session lock is not `LOCK_MATCH` in strict operations (prevent perceived hard-switch under dual-catalog drift) | `validate_identity_response_stamp.py`, `validate_reply_identity_context_first_line.py`, creator/readiness/e2e wiring | P0 | VERIFIED | implementation + strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`) |
-| ASB-RQ-055 | per-round instance/protocol split receipt is mandatory and machine-readable (`split_notice`, `instance_actions`, `protocol_actions`, `feedback_triggered`, `evidence_index`) | runtime reply receipt schema + replay parsers + three-plane/full-scan visibility | P0 | SPEC_READY | promoted to mandatory split-governance baseline from roundtable cross-check; implementation pending |
-| ASB-RQ-056 | required gate `validate_instance_protocol_split_receipt.py` enforces split fields + trigger semantics + SSOT path linkage | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | validator + six-surface wiring pending |
-| ASB-RQ-057 | protocol-feedback trigger must follow hard conditions (recurrence, false-green/red, evidence missing, lane contamination) | trigger classifier + receipt validator + protocol-feedback archival bridge | P0 | SPEC_READY | trigger codification pending |
-| ASB-RQ-058 | dual-track section isolation (`instance` vs `protocol`) must be enforced and protocol lane must remain business-data sanitized | receipt parser + `validate_protocol_data_sanitization_boundary.py` extension | P0 | SPEC_READY | anti-mixed/anti-contamination enforcement pending |
-| ASB-RQ-059 | trigger-regression sample report path patterns must resolve against identity pack root, never process CWD | `validate_identity_trigger_regression.py` path resolver + replay fixtures | P0 | SPEC_READY | addresses CWD-sensitive false failure anchor (`scripts/validate_identity_trigger_regression.py:146,151,152`) |
-| ASB-RQ-060 | handoff self-test sample roots must be pack-root anchored for positive/negative fixture discovery | `validate_agent_handoff_contract.py` self-test sample root resolver | P0 | SPEC_READY | addresses CWD-sensitive false failure anchor (`scripts/validate_agent_handoff_contract.py:253,371,372`) |
-| ASB-RQ-061 | orchestration subprocess and repo-catalog resolution must be protocol-root deterministic across invocation directories | `report_three_plane_status.py` subprocess launcher + repo-catalog resolver (`--protocol-root` aware) | P0 | SPEC_READY | addresses CWD-sensitive false blocker anchors (`scripts/report_three_plane_status.py:186,1085,1110,1542,1566`) |
+| ASB-RQ-055 | per-round instance/protocol split receipt is mandatory and machine-readable (`split_notice`, `instance_actions`, `protocol_actions`, `feedback_triggered`, `evidence_index`) | runtime reply receipt schema + replay parsers + three-plane/full-scan visibility | P0 | GATE_READY | implemented via `validate_instance_protocol_split_receipt.py` + replay payload mapping (`8778bdf`) |
+| ASB-RQ-056 | required gate `validate_instance_protocol_split_receipt.py` enforces split fields + trigger semantics + SSOT path linkage | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | GATE_READY | six-surface wiring landed (`8778bdf`) |
+| ASB-RQ-057 | protocol-feedback trigger must follow hard conditions (recurrence, false-green/red, evidence missing, lane contamination) | trigger classifier + receipt validator + protocol-feedback archival bridge | P0 | GATE_READY | hard-condition classifier + IP-SPLIT failure paths landed (`8778bdf`) |
+| ASB-RQ-058 | dual-track section isolation (`instance` vs `protocol`) must be enforced and protocol lane must remain business-data sanitized | receipt parser + `validate_protocol_data_sanitization_boundary.py` extension | P0 | GATE_READY | anti-mixed-lane + sanitization checks landed in split-receipt validator (`8778bdf`) |
+| ASB-RQ-059 | trigger-regression sample report path patterns must resolve against identity pack root, never process CWD | `validate_identity_trigger_regression.py` path resolver + replay fixtures | P0 | GATE_READY | CWD-invariant resolution landed and replayed from `/tmp` (`8778bdf`) |
+| ASB-RQ-060 | handoff self-test sample roots must be pack-root anchored for positive/negative fixture discovery | `validate_agent_handoff_contract.py` self-test sample root resolver | P0 | GATE_READY | pack/protocol-root deterministic fallback landed (`8778bdf`) |
+| ASB-RQ-061 | orchestration subprocess and repo-catalog resolution must be protocol-root deterministic across invocation directories | `report_three_plane_status.py` subprocess launcher + repo-catalog resolver (`--protocol-root` aware) | P0 | GATE_READY | protocol-root deterministic launch + IP-CWD-004 error semantics landed (`8778bdf`) |
+| ASB-RQ-062 | discovery requiredization trigger classifier must deterministically promote discovery contracts from optional to required when risk conditions are met | requiredization state evaluator + CURRENT_TASK contract writeback surfaces | P0 | GATE_READY | `validate_discovery_requiredization.py` + update preflight apply path landed (`295daf7`,`3baa355`) |
+| ASB-RQ-063 | `validate_discovery_requiredization.py` must fail-closed when trigger met but requiredization/writeback/SSOT linkage is missing | validator + creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | GATE_READY | IP-DREQ-001..004 fail-closed + six-surface wiring landed (`295daf7`,`3baa355`) |
+| ASB-RQ-064 | CI required validator set must auto-include discovery trio when requiredization is active | `ci_enforcement_contract.required_validators` synchronizer + CI required-gates adapter | P0 | GATE_READY | apply-requiredization path auto-syncs CI required validators (`3baa355`) |
+| ASB-RQ-065 | non-blocking discovery warnings must auto-escalate to fail-closed after configured expiry window | trigger/builder/fit status lifecycle + expiry evaluator surfaces | P1 | GATE_READY (NON_BLOCKING) | expiry evaluator + `IP-DREQ-005` auto escalation landed (`3baa355`) |
+| ASB-RQ-066 | required-contract coverage must expose discovery-subset hard threshold for requiredized contracts | `validate_required_contract_coverage.py` discovery subset counters + `min_discovery_required_coverage` gate | P0 | GATE_READY | discovery subset counters + threshold gate landed (`295daf7`) |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1469,8 +1541,10 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-047 / ASB-RQ-048 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | trigger/builder surfaces audit-passed under non-required contracts (`P1-D/E`, review ledger `16.7.1~16.7.2`) |
 | ASB-RQ-049 / ASB-RQ-050 / ASB-RQ-051 / ASB-RQ-052 / ASB-RQ-053 | `SPEC_READY -> IMPL_READY (NON_BLOCKING)` | capability-fit validator/roundtable/trigger/matrix surfaces audit-passed under non-required contracts (`P1-F/G/H`, review ledger `16.7.3~16.7.4A`) |
 | ASB-RQ-054 | `SPEC_READY -> VERIFIED` | lock-bound user-visible stamp guard strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`, review `16.7.17` + `16.7.18`) |
-| ASB-RQ-055 / ASB-RQ-056 / ASB-RQ-057 / ASB-RQ-058 | `NEW -> SPEC_READY (P0)` | split-receipt + hard-trigger + dual-track anti-mixed lane introduced from roundtable cross-check (`2026-03-02` intake), promoted to mandatory P0 governance lane |
-| ASB-RQ-059 / ASB-RQ-060 / ASB-RQ-061 | `NEW -> SPEC_READY (P0)` | CWD-invariant execution intake added from cross-validation anchors (`trigger_regression`, `agent_handoff_contract`, `three-plane` path resolution) |
+| ASB-RQ-055 / ASB-RQ-056 / ASB-RQ-057 / ASB-RQ-058 | `SPEC_READY -> GATE_READY (P0)` | split-receipt validator + fail-closed semantics + six-surface wiring landed (`8778bdf`) |
+| ASB-RQ-059 / ASB-RQ-060 / ASB-RQ-061 | `SPEC_READY -> GATE_READY (P0)` | CWD-invariant validator/orchestrator path resolution landed and non-repo-CWD replayed (`8778bdf`) |
+| ASB-RQ-062 / ASB-RQ-063 / ASB-RQ-064 / ASB-RQ-066 | `SPEC_READY -> GATE_READY (P0)` | discovery requiredization gate + writeback apply path + CI sync + discovery coverage subgate landed (`295daf7`,`3baa355`) |
+| ASB-RQ-065 | `SPEC_READY -> GATE_READY (P1)` | non-blocking expiry evaluator and `IP-DREQ-005` auto escalation landed (`3baa355`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
