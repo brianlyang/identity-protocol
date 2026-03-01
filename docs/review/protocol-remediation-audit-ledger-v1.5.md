@@ -138,6 +138,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-023 | 2026-03-01 | protocol | layer-tail hard-gate requiredization (`work_layer/source_layer` machine-readable, fail-closed in strict lanes) | `8a97afc` | DONE | PENDING_REPLAY |
 | FIX-024 | 2026-03-01 | protocol | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan machine-readable telemetry (`IP-ASB-STAMP-SESSION-001`) | `b1cbe1f` | DONE | PENDING_REPLAY |
 | FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PENDING_REPLAY |
+| FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 
 ---
 
@@ -3892,6 +3893,71 @@ Acceptance replay template (post-implementation):
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.11 FIX-026 implementation lane: layer-intent pass-through closure (P1, protocol-only)
+
+Status: `DONE / PENDING_REPLAY` (implementation landed, independent audit replay pending).
+
+Scope (protocol-only):
+
+1. Close pass-through gap where instance-layer intent was resolvable at render/validator level but not consistently propagated by orchestrator surfaces.
+2. Keep strict fail-closed semantics unchanged (`IP-ASB-STAMP-SESSION-001` and existing strict tuple checks remain authoritative).
+3. Ensure send-time gate can infer expected layer tuple from stamp payload when explicit expected args are absent.
+
+Changed surfaces:
+
+1. `scripts/validate_send_time_reply_gate.py`
+2. `scripts/release_readiness_check.py`
+3. `scripts/identity_creator.py`
+4. `scripts/full_identity_protocol_scan.py`
+5. `scripts/report_three_plane_status.py`
+6. `scripts/e2e_smoke_test.sh`
+
+Implementation highlights:
+
+1. New passthrough args:
+   - `--layer-intent-text`
+   - `--expected-work-layer`
+   - `--expected-source-layer`
+2. Surface propagation wired in:
+   - readiness sequence preflight/gates
+   - creator validate flow
+   - e2e checks block
+   - full-scan check set
+   - three-plane instance-plane checks
+3. Send-time gate inference:
+   - when explicit expected tuple is absent, infer from `stamp_json` payload (`resolved_work_layer` / `resolved_source_layer`) before invoking first-line gate.
+
+Replay evidence snapshot (architect local replay):
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_send_time_reply_gate.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. send-time inference replay:
+   - `validate_send_time_reply_gate.py` with `--stamp-json` only (no explicit expected tuple) returns:
+     - `expected_work_layer=instance`
+     - `expected_source_layer=global`
+     - `send_time_gate_status=PASS_REQUIRED`
+3. full-scan replay with intent passthrough:
+   - `response_stamp_render.work_layer=instance`
+   - `reply_first_line_status=PASS_REQUIRED`
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `execution_reply_identity_coherence=PASS_REQUIRED`
+4. three-plane replay with intent passthrough:
+   - `instance_plane_status=CLOSED`
+   - `layer_intent_resolution_status=PASS_REQUIRED`
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `reply_coherence_status=PASS_REQUIRED`
+
+Residual risk:
+
+1. This item is P1 enhancement closure and does not override independent P0 release gates.
+2. Independent audit replay still required before status can move from `PENDING_REPLAY` to `PASS`.
+
+Layer declaration:
+
+1. protocol-only; no business-scene constants introduced.
 
 #### 16.8.10 FIX-025 implementation lane: layer-intent auto resolution (P1, protocol-only)
 

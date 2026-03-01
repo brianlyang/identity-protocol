@@ -1619,7 +1619,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-066 | required-contract coverage must expose discovery-subset hard threshold for requiredized contracts | `validate_required_contract_coverage.py` discovery subset counters + `min_discovery_required_coverage` gate | P0 | GATE_READY | discovery subset counters + threshold gate landed (`295daf7`) |
 | ASB-RQ-067 | strict operations must enforce execution-to-reply identity tuple coherence under dual-catalog lanes | `execution_reply_identity_coherence_contract_v1` + coherence validator/wiring across creator/readiness/e2e/full-scan/three-plane/CI | P0 | GATE_READY | implementation landed via `validate_execution_reply_identity_coherence.py` + six-surface wiring (`FIX-021`), audit replay pending |
 | ASB-RQ-068 | send-time unified reply outlet gate must enforce first-line Identity-Context fail-closed semantics and emit machine-readable telemetry in three-plane/full-scan | `validate_send_time_reply_gate.py` + creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | GATE_READY | send-time validator + six-surface wiring landed (`FIX-024`), audit replay pending |
-| ASB-RQ-069 | layer intent resolution must auto-resolve `work_layer/source_layer` with confidence + fallback telemetry and keep strict tuple fail-closed semantics | `resolve_layer_intent` + `validate_layer_intent_resolution.py` + render/readiness/e2e/full-scan/three-plane/CI wiring | P1 | IMPL_READY (NON_BLOCKING) | implementation landed (`FIX-025`), independent audit replay pending |
+| ASB-RQ-069 | layer intent resolution must auto-resolve `work_layer/source_layer` with confidence + fallback telemetry and keep strict tuple fail-closed semantics | `resolve_layer_intent` + `validate_layer_intent_resolution.py` + render/readiness/e2e/full-scan/three-plane/CI wiring | P1 | IMPL_READY (NON_BLOCKING) | implementation landed (`FIX-025`), pass-through closure landed (`FIX-026`), independent audit replay pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1650,7 +1650,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-065 | `SPEC_READY -> GATE_READY (P1)` | non-blocking expiry evaluator and `IP-DREQ-005` auto escalation landed (`3baa355`) |
 | ASB-RQ-067 | `SPEC_READY -> GATE_READY (P0)` | execution/reply coherence validator + strict fail-closed semantics + six-surface wiring landed (`FIX-021`); replay closure pending |
 | ASB-RQ-068 | `SPEC_READY -> GATE_READY (P0)` | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan visibility landed (`FIX-024`); replay closure pending |
-| ASB-RQ-069 | `SPEC_READY -> IMPL_READY (P1)` | layer-intent resolver + validator + six-surface telemetry wiring landed (`FIX-025`); replay closure pending |
+| ASB-RQ-069 | `SPEC_READY -> IMPL_READY (P1)` | layer-intent resolver + validator landed (`FIX-025`) and pass-through closure landed (`FIX-026`); replay closure pending |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
