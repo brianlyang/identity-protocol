@@ -136,6 +136,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "external_source_trust_chain",
             "protocol_data_sanitization_boundary",
             "platform_optimization_discovery_trigger",
+            "vibe_coding_feeding_pack",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -560,6 +561,19 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "vibe_coding_feeding_pack": [
+                    "python3",
+                    "scripts/build_vibe_coding_feeding_pack.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--out-root",
+                    "/tmp/vibe-coding-feeding-packs",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -885,6 +899,26 @@ def main() -> int:
                     ):
                         if k in opt_doc:
                             check_payload[k] = opt_doc.get(k)
+                if name == "vibe_coding_feeding_pack":
+                    pack_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "vibe_coding_feeding_pack_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "pack_root",
+                        "pack_id",
+                        "pack_files",
+                        "feedback_batch_path",
+                        "feedback_batch_sha256",
+                        "evidence_index_path",
+                        "evidence_index_linked",
+                        "deterministic_manifest_sha256",
+                        "sanitization_check_passed",
+                        "stale_reasons",
+                    ):
+                        if k in pack_doc:
+                            check_payload[k] = pack_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

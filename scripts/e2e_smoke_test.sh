@@ -285,6 +285,9 @@ for ID in $IDS; do
   echo "[23.4295/30][$ID] trigger platform optimization discovery (P1-D non-blocking)"
   python3 scripts/trigger_platform_optimization_discovery.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
+  echo "[23.4297/30][$ID] build vibe-coding feeding pack (P1-E non-blocking)"
+  python3 scripts/build_vibe_coding_feeding_pack.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root /tmp/vibe-coding-feeding-packs
+
   echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 

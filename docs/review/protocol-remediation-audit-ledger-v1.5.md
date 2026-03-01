@@ -2854,6 +2854,33 @@ Status: `PATCHED_PENDING_AUDIT`
    - this lane returns machine-readable `NOT_TRIGGERED/WARN_NON_BLOCKING/TRIGGERED_NON_BLOCKING`
    - does not force release blocking unless governance explicitly promotes P1 to required hard gate.
 
+#### 16.7.2 P1-E progress update (2026-03-01, non-blocking enhancement lane)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+1. Added new builder surface:
+   - `scripts/build_vibe_coding_feeding_pack.py`
+2. Wired six surfaces (non-blocking semantics):
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Contract outputs covered:
+   - `PROMPT_MAIN.txt`
+   - `INPUT_FILES/` (including `EVIDENCE_REF.json`, `CONSTRAINTS.json`)
+   - `RUN_ORDER.txt`
+   - `REVIEW_REQUEST.txt`
+   - deterministic `MANIFEST.json` for machine-readable traceability
+4. Replay snapshot (local):
+   - direct run (scan/json-only): `rc=0`, `vibe_coding_feeding_pack_status=SKIPPED_NOT_REQUIRED` when contract is not required
+   - full-scan: project/global both expose `checks.vibe_coding_feeding_pack.*` with `rc=0`
+   - three-plane: `instance_plane_detail.vibe_coding_feeding_pack.*` visible, `hard_boundary` unchanged
+5. Non-blocking policy:
+   - returns `PASS_NON_BLOCKING/WARN_NON_BLOCKING/SKIPPED_NOT_REQUIRED`
+   - does not force release blocking unless governance explicitly promotes P1 to required hard gate.
+
 #### 16.6.8 HOTFIX-P0-004 audit replay verdict (2026-03-01, cross-validated)
 
 Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)

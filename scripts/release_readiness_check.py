@@ -526,6 +526,18 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/build_vibe_coding_feeding_pack.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--out-root",
+            "/tmp/vibe-coding-feeding-packs",
+        ],
+        [
+            "python3",
             "scripts/validate_vendor_namespace_separation.py",
             "--catalog",
             catalog,

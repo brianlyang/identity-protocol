@@ -727,6 +727,29 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_opt_trigger,
     }
 
+    rc_vibe_pack, out_vibe_pack, err_vibe_pack = _run(
+        [
+            "python3",
+            "scripts/build_vibe_coding_feeding_pack.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--out-root",
+            "/tmp/vibe-coding-feeding-packs",
+            "--json-only",
+        ]
+    )
+    vibe_pack_payload = _parse_json_payload(out_vibe_pack) or {}
+    validators["vibe_coding_feeding_pack"] = {
+        "rc": rc_vibe_pack,
+        "ok": rc_vibe_pack == 0,
+        "out": out_vibe_pack,
+        "err": err_vibe_pack,
+    }
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -1030,6 +1053,22 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "upgrade_proposal_ref": opt_trigger_payload.get("upgrade_proposal_ref", ""),
             "feedback_batches": opt_trigger_payload.get("feedback_batches", []),
             "stale_reasons": opt_trigger_payload.get("stale_reasons", []),
+        },
+        "vibe_coding_feeding_pack": {
+            "vibe_coding_feeding_pack_status": vibe_pack_payload.get("vibe_coding_feeding_pack_status"),
+            "error_code": vibe_pack_payload.get("error_code", ""),
+            "required_contract": vibe_pack_payload.get("required_contract"),
+            "auto_required_signal": vibe_pack_payload.get("auto_required_signal"),
+            "pack_root": vibe_pack_payload.get("pack_root", ""),
+            "pack_id": vibe_pack_payload.get("pack_id", ""),
+            "pack_files": vibe_pack_payload.get("pack_files", []),
+            "feedback_batch_path": vibe_pack_payload.get("feedback_batch_path", ""),
+            "feedback_batch_sha256": vibe_pack_payload.get("feedback_batch_sha256", ""),
+            "evidence_index_path": vibe_pack_payload.get("evidence_index_path", ""),
+            "evidence_index_linked": vibe_pack_payload.get("evidence_index_linked", False),
+            "deterministic_manifest_sha256": vibe_pack_payload.get("deterministic_manifest_sha256", ""),
+            "sanitization_check_passed": vibe_pack_payload.get("sanitization_check_passed", True),
+            "stale_reasons": vibe_pack_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),
