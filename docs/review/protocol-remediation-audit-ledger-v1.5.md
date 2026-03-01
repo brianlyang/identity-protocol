@@ -2421,7 +2421,7 @@ Replay evidence (escalated context, `~/.codex` writable):
 1. `HOTFIX-P0-004` remains open:
    - enforce zero-miss first-line `Identity-Context` on user-visible reply channel and keep blocker-receipt fail-closed semantics.
 2. `FIX-015` needs commit + packaged acceptance replay:
-   - current changes are validated in local workspace but still uncommitted.
+   - runtime semantic patch already committed (`6fbf999`); packaged acceptance replay and final audit closure are still pending.
 3. `IP-PBL-001` baseline freshness remains recurring:
    - requires refreshed execution reports on current protocol head for release-closure claims.
 4. `e2e_smoke_test.sh` currently fails on changelog freshness in `HEAD~1..HEAD` range:
