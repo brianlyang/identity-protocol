@@ -6,7 +6,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from response_stamp_common import blocker_receipt, resolve_stamp_context
+from response_stamp_common import (
+    ALLOWED_SOURCE_LAYERS,
+    ALLOWED_WORK_LAYERS,
+    blocker_receipt,
+    infer_disclosure_level_from_stamp_fields,
+    parse_identity_context_stamp,
+    resolve_stamp_context,
+)
 from tool_vendor_governance_common import contract_required, load_json
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -153,21 +160,6 @@ def _first_nonempty_line(text: str) -> str:
     return ""
 
 
-def _parse_stamp_line(stamp_line: str) -> dict[str, str]:
-    raw = (stamp_line or "").strip()
-    if not raw.startswith("Identity-Context:"):
-        return {}
-    body = raw.split(":", 1)[1].strip()
-    pairs = [x.strip() for x in body.split(";") if x.strip()]
-    out: dict[str, str] = {}
-    for pair in pairs:
-        if "=" not in pair:
-            continue
-        k, v = pair.split("=", 1)
-        out[k.strip()] = v.strip()
-    return out
-
-
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -196,6 +188,7 @@ def main() -> int:
     ap.add_argument("--reply-text", default="")
     ap.add_argument("--stamp-line", default="")
     ap.add_argument("--stamp-json", default="")
+    ap.add_argument("--expected-work-layer", choices=sorted(ALLOWED_WORK_LAYERS), default="protocol")
     ap.add_argument("--force-check", action="store_true")
     ap.add_argument("--enforce-coherence-gate", action="store_true")
     ap.add_argument("--blocker-receipt-out", default="")
@@ -296,10 +289,11 @@ def main() -> int:
     first_line = ""
     if reply_samples:
         first_line = _first_nonempty_line(reply_samples[0])
-    parsed = _parse_stamp_line(first_line)
+    parsed = parse_identity_context_stamp(first_line)
 
     strict_operation = args.operation in STRICT_OPERATIONS
     lock_boundary_enforced = bool(args.enforce_coherence_gate and strict_operation)
+    strict_format_enforced = strict_operation
 
     mismatch_fields: list[str] = []
     stale_reasons: list[str] = []
@@ -315,19 +309,43 @@ def main() -> int:
         stale_reasons.append("reply_first_line_not_identity_context")
         error_code = ERR_REPLY_TUPLE_MISSING
     else:
+        reply_source_layer = str(parsed.get("source_layer", "")).strip()
+        reply_work_layer = str(parsed.get("work_layer", "")).strip()
+        disclosure_level = infer_disclosure_level_from_stamp_fields(parsed)
+        require_ref_tuple = disclosure_level in {"standard", "verbose", "audit"}
         checks = {
             "identity_id": (str(parsed.get("identity_id", "")).strip(), ctx.identity_id),
             "actor_id": (str(parsed.get("actor_id", "")).strip(), ctx.actor_id),
-            "catalog_ref": (str(parsed.get("catalog_ref", "")).strip(), ctx.catalog_ref),
-            "pack_ref": (str(parsed.get("pack_ref", "")).strip(), ctx.pack_ref),
             "scope": (str(parsed.get("scope", "")).strip(), ctx.resolved_scope),
             "source": (str(parsed.get("source", "")).strip(), ctx.source_domain),
+            "source_layer": (reply_source_layer, ctx.source_domain),
+            "work_layer": (reply_work_layer, args.expected_work_layer),
         }
+        if require_ref_tuple or str(parsed.get("catalog_ref", "")).strip():
+            checks["catalog_ref"] = (str(parsed.get("catalog_ref", "")).strip(), ctx.catalog_ref)
+        if require_ref_tuple or str(parsed.get("pack_ref", "")).strip():
+            checks["pack_ref"] = (str(parsed.get("pack_ref", "")).strip(), ctx.pack_ref)
         for field, (actual, expected) in checks.items():
             if actual != expected:
                 mismatch_fields.append(field)
-        required_tuple_fields = ("identity_id", "actor_id", "catalog_ref", "pack_ref", "source")
+        required_tuple_fields = ["identity_id", "actor_id", "source", "work_layer", "source_layer"]
+        if require_ref_tuple:
+            required_tuple_fields.extend(["catalog_ref", "pack_ref"])
         missing_tuple_fields = [field for field in required_tuple_fields if not str(parsed.get(field, "")).strip()]
+        if not bool(parsed.get("_has_layer_context", False)):
+            stale_reasons.append("layer_context_tail_missing")
+            if "work_layer" not in missing_tuple_fields:
+                missing_tuple_fields.append("work_layer")
+            if "source_layer" not in missing_tuple_fields:
+                missing_tuple_fields.append("source_layer")
+        if reply_work_layer and reply_work_layer not in ALLOWED_WORK_LAYERS:
+            stale_reasons.append("work_layer_invalid")
+            if "work_layer" not in mismatch_fields:
+                mismatch_fields.append("work_layer")
+        if reply_source_layer and reply_source_layer not in ALLOWED_SOURCE_LAYERS:
+            stale_reasons.append("source_layer_invalid")
+            if "source_layer" not in mismatch_fields:
+                mismatch_fields.append("source_layer")
         if mismatch_fields:
             coherence_decision = "MISMATCH"
             stale_reasons.append("tuple_mismatch:" + ",".join(mismatch_fields))
@@ -375,6 +393,7 @@ def main() -> int:
         "error_code": error_code,
         "coherence_decision": coherence_decision,
         "strict_operation": strict_operation,
+        "strict_format_enforced": strict_format_enforced,
         "lock_boundary_enforced": lock_boundary_enforced,
         "expected_lock_state": ctx.lock_state,
         "reply_lock_state": reply_lock_state,
@@ -392,6 +411,11 @@ def main() -> int:
         "reply_pack_ref": str(parsed.get("pack_ref", "")).strip() if parsed else "",
         "command_source": ctx.source_domain,
         "reply_source": str(parsed.get("source", "")).strip() if parsed else "",
+        "command_work_layer": args.expected_work_layer,
+        "reply_work_layer": str(parsed.get("work_layer", "")).strip() if parsed else "",
+        "command_source_layer": ctx.source_domain,
+        "reply_source_layer": str(parsed.get("source_layer", "")).strip() if parsed else "",
+        "reply_layer_context_present": bool(parsed.get("_has_layer_context", False)) if parsed else False,
         "reply_evidence_ref": evidence_ref,
         "reply_first_line": first_line,
         "mismatch_fields": mismatch_fields,

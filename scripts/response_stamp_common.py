@@ -31,6 +31,8 @@ class StampContext:
 
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
 DEFAULT_DISCLOSURE_LEVEL = "minimal"
+ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
+ALLOWED_SOURCE_LAYERS = {"project", "global", "env", "auto"}
 
 
 def _detect_repo_root(start: Path | None = None) -> Path:
@@ -355,7 +357,23 @@ def resolve_disclosure_level(
 
 
 def render_external_stamp(ctx: StampContext, *, disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL) -> str:
+    return render_external_stamp_with_layer_context(ctx, disclosure_level=disclosure_level)
+
+
+def render_external_stamp_with_layer_context(
+    ctx: StampContext,
+    *,
+    disclosure_level: str = DEFAULT_DISCLOSURE_LEVEL,
+    work_layer: str = "protocol",
+    source_layer: str = "",
+) -> str:
     level = normalize_disclosure_level(disclosure_level)
+    wl = str(work_layer or "").strip().lower() or "protocol"
+    if wl not in ALLOWED_WORK_LAYERS:
+        wl = "protocol"
+    sl = str(source_layer or "").strip().lower() or ctx.source_domain
+    if sl not in ALLOWED_SOURCE_LAYERS:
+        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
     parts = [
         f"actor_id={ctx.actor_id}",
         f"identity_id={ctx.identity_id}",
@@ -367,13 +385,16 @@ def render_external_stamp(ctx: StampContext, *, disclosure_level: str = DEFAULT_
         [
             f"scope={ctx.resolved_scope}",
             f"lock={ctx.lock_state}",
-            f"source_layer={ctx.source_domain}",
             f"source={ctx.source_domain}",
         ]
     )
     if level in {"verbose", "audit"}:
         parts.append(f"lease={lease_id_short(ctx.lease_id)}")
-    return "Identity-Context: " + "; ".join(parts)
+    return (
+        "Identity-Context: "
+        + "; ".join(parts)
+        + f" | Layer-Context: work_layer={wl}; source_layer={sl}"
+    )
 
 
 def render_internal_stamp(ctx: StampContext) -> str:
@@ -390,7 +411,18 @@ def render_internal_stamp(ctx: StampContext) -> str:
     )
 
 
-def render_structured_context(ctx: StampContext) -> dict[str, Any]:
+def render_structured_context(
+    ctx: StampContext,
+    *,
+    work_layer: str = "protocol",
+    source_layer: str = "",
+) -> dict[str, Any]:
+    wl = str(work_layer or "").strip().lower() or "protocol"
+    if wl not in ALLOWED_WORK_LAYERS:
+        wl = "protocol"
+    sl = str(source_layer or "").strip().lower() or ctx.source_domain
+    if sl not in ALLOWED_SOURCE_LAYERS:
+        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
     return {
         "actor_id": ctx.actor_id,
         "identity_id": ctx.identity_id,
@@ -402,8 +434,51 @@ def render_structured_context(ctx: StampContext) -> dict[str, Any]:
         "lock_state": ctx.lock_state,
         "lease_id": ctx.lease_id,
         "lease_id_short": lease_id_short(ctx.lease_id),
+        "work_layer": wl,
+        "source_layer": sl,
         "source_domain": ctx.source_domain,
     }
+
+
+def _parse_kv_pairs(fragment: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    pairs = [x.strip() for x in str(fragment or "").split(";") if x.strip()]
+    for pair in pairs:
+        if "=" not in pair:
+            continue
+        k, v = pair.split("=", 1)
+        out[k.strip()] = v.strip()
+    return out
+
+
+def parse_identity_context_stamp(stamp_line: str) -> dict[str, Any]:
+    raw = str(stamp_line or "").strip()
+    if not raw.startswith("Identity-Context:"):
+        return {}
+
+    tail_marker = "| Layer-Context:"
+    identity_segment = raw
+    layer_segment = ""
+    has_layer_context = False
+    if tail_marker in raw:
+        identity_segment, layer_segment = raw.split(tail_marker, 1)
+        has_layer_context = True
+
+    identity_body = identity_segment.split(":", 1)[1].strip()
+    fields = _parse_kv_pairs(identity_body)
+    layer_fields = _parse_kv_pairs(layer_segment.strip()) if layer_segment else {}
+    fields.update(layer_fields)
+
+    # Legacy compatibility: old stamps may only carry source_layer in the main block.
+    if not str(fields.get("source", "")).strip() and str(fields.get("source_layer", "")).strip():
+        fields["source"] = str(fields.get("source_layer", "")).strip()
+    if not str(fields.get("source_layer", "")).strip() and str(fields.get("source", "")).strip():
+        fields["source_layer"] = str(fields.get("source", "")).strip()
+
+    fields["_has_layer_context"] = has_layer_context
+    fields["_raw_identity_segment"] = identity_segment.strip()
+    fields["_raw_layer_segment"] = layer_segment.strip()
+    return fields
 
 
 def blocker_receipt(

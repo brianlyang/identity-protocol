@@ -6,7 +6,9 @@ import json
 from pathlib import Path
 
 from response_stamp_common import (
-    render_external_stamp,
+    ALLOWED_SOURCE_LAYERS,
+    ALLOWED_WORK_LAYERS,
+    render_external_stamp_with_layer_context,
     render_internal_stamp,
     render_structured_context,
     resolve_disclosure_level,
@@ -22,6 +24,8 @@ def main() -> int:
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
     ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="")
+    ap.add_argument("--work-layer", choices=sorted(ALLOWED_WORK_LAYERS), default="protocol")
+    ap.add_argument("--source-layer", choices=sorted(ALLOWED_SOURCE_LAYERS), default="")
     ap.add_argument("--trigger-text", default="", help="optional natural-language stamp level trigger")
     ap.add_argument("--trigger-scope", choices=["once", "session"], default="")
     ap.add_argument(
@@ -68,7 +72,13 @@ def main() -> int:
         persist_session_trigger=persist_session_trigger,
     )
     disclosure_level = str(disclosure.get("disclosure_level", "minimal")).strip() or "minimal"
-    external = render_external_stamp(ctx, disclosure_level=disclosure_level)
+    source_layer = str(args.source_layer or "").strip().lower() or ctx.source_domain
+    external = render_external_stamp_with_layer_context(
+        ctx,
+        disclosure_level=disclosure_level,
+        work_layer=args.work_layer,
+        source_layer=source_layer,
+    )
     internal = render_internal_stamp(ctx)
     payload = {
         "identity_id": ctx.identity_id,
@@ -82,9 +92,15 @@ def main() -> int:
         "trigger_text": disclosure.get("trigger_text", ""),
         "trigger_confidence": disclosure.get("trigger_confidence", 0.0),
         "session_profile_path": disclosure.get("session_profile_path", ""),
+        "work_layer": args.work_layer,
+        "source_layer": source_layer,
         "external_stamp": external,
         "internal_stamp": internal,
-        "identity_context": render_structured_context(ctx),
+        "identity_context": render_structured_context(
+            ctx,
+            work_layer=args.work_layer,
+            source_layer=source_layer,
+        ),
     }
 
     if args.out.strip():

@@ -8,9 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from response_stamp_common import (
+    ALLOWED_SOURCE_LAYERS,
+    ALLOWED_WORK_LAYERS,
     blocker_receipt,
     infer_disclosure_level_from_stamp_fields,
     normalize_disclosure_level,
+    parse_identity_context_stamp,
     render_external_stamp,
     resolve_stamp_context,
 )
@@ -61,21 +64,6 @@ def _resolve_pack_and_task(catalog_path: Path, identity_id: str) -> tuple[Path, 
     if not task.exists():
         raise FileNotFoundError(f"CURRENT_TASK.json not found: {task}")
     return pack, task
-
-
-def _parse_stamp_line(stamp_line: str) -> dict[str, str]:
-    raw = (stamp_line or "").strip()
-    if not raw.startswith("Identity-Context:"):
-        return {}
-    body = raw.split(":", 1)[1].strip()
-    pairs = [x.strip() for x in body.split(";") if x.strip()]
-    out: dict[str, str] = {}
-    for pair in pairs:
-        if "=" not in pair:
-            continue
-        k, v = pair.split("=", 1)
-        out[k.strip()] = v.strip()
-    return out
 
 
 def _looks_redacted(token: str) -> bool:
@@ -333,12 +321,8 @@ def main() -> int:
     if not stamp_line and sample_first_lines:
         stamp_line = sample_first_lines[0]
 
-    parsed = _parse_stamp_line(stamp_line)
-    # Compatibility alias: source_layer is accepted as source-domain signal.
-    if not str(parsed.get("source", "")).strip() and str(parsed.get("source_layer", "")).strip():
-        parsed["source"] = str(parsed.get("source_layer", "")).strip()
-    if not str(parsed.get("source_layer", "")).strip() and str(parsed.get("source", "")).strip():
-        parsed["source_layer"] = str(parsed.get("source", "")).strip()
+    parsed = parse_identity_context_stamp(stamp_line)
+    has_layer_context = bool(parsed.get("_has_layer_context", False))
     stale_reasons: list[str] = []
     error_code = ""
 
@@ -393,6 +377,9 @@ def main() -> int:
                 error_code = ERR_STAMP_HARDCODED
 
     source = parsed.get("source", "")
+    source_layer = str(parsed.get("source_layer", "")).strip()
+    work_layer = str(parsed.get("work_layer", "")).strip()
+    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
     if not error_code:
         if source not in ALLOWED_SOURCES:
             stale_reasons.append("source_domain_invalid")
@@ -400,6 +387,32 @@ def main() -> int:
         elif source != ctx.source_domain:
             stale_reasons.append("source_domain_mismatch")
             error_code = ERR_STAMP_SOURCE
+    if not error_code:
+        if not has_layer_context:
+            if strict_format_enforced:
+                stale_reasons.append("layer_context_tail_missing")
+                error_code = ERR_STAMP_HARD_GATE
+            else:
+                stale_reasons.append("layer_context_tail_missing_non_blocking")
+        else:
+            if work_layer not in ALLOWED_WORK_LAYERS:
+                if strict_format_enforced:
+                    stale_reasons.append("work_layer_invalid")
+                    error_code = ERR_STAMP_HARD_GATE
+                else:
+                    stale_reasons.append("work_layer_invalid_non_blocking")
+            if source_layer not in ALLOWED_SOURCE_LAYERS:
+                if strict_format_enforced and not error_code:
+                    stale_reasons.append("source_layer_invalid")
+                    error_code = ERR_STAMP_HARD_GATE
+                elif not strict_format_enforced:
+                    stale_reasons.append("source_layer_invalid_non_blocking")
+            elif source_layer != ctx.source_domain:
+                if strict_format_enforced and not error_code:
+                    stale_reasons.append("source_layer_mismatch")
+                    error_code = ERR_STAMP_SOURCE
+                elif not strict_format_enforced:
+                    stale_reasons.append("source_layer_mismatch_non_blocking")
 
     if not error_code and require_lock_match:
         if parsed.get("lock", "") != ctx.lock_state:
@@ -438,7 +451,11 @@ def main() -> int:
         },
         "operation": args.operation,
         "lock_boundary_enforced": lock_boundary_enforced,
+        "layer_context_enforced": strict_format_enforced,
+        "layer_context_present": has_layer_context,
         "parsed_lock_state": parsed.get("lock", ""),
+        "parsed_work_layer": work_layer,
+        "parsed_source_layer": source_layer,
         "stamp_status": "PASS" if ok else "FAIL",
         "error_code": error_code,
         "stale_reasons": stale_reasons,

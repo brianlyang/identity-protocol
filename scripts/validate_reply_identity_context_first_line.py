@@ -6,7 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from response_stamp_common import blocker_receipt, resolve_stamp_context
+from response_stamp_common import (
+    ALLOWED_SOURCE_LAYERS,
+    ALLOWED_WORK_LAYERS,
+    blocker_receipt,
+    parse_identity_context_stamp,
+    resolve_stamp_context,
+)
 from tool_vendor_governance_common import contract_required, load_json
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -150,21 +156,6 @@ def _first_nonempty_line(text: str) -> str:
     return ""
 
 
-def _parse_stamp_line(stamp_line: str) -> dict[str, str]:
-    raw = (stamp_line or "").strip()
-    if not raw.startswith("Identity-Context:"):
-        return {}
-    body = raw.split(":", 1)[1].strip()
-    pairs = [x.strip() for x in body.split(";") if x.strip()]
-    out: dict[str, str] = {}
-    for pair in pairs:
-        if "=" not in pair:
-            continue
-        k, v = pair.split("=", 1)
-        out[k.strip()] = v.strip()
-    return out
-
-
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -187,6 +178,7 @@ def main() -> int:
     ap.add_argument("--reply-file", default="", help="single reply text file")
     ap.add_argument("--reply-text", default="", help="inline single reply text")
     ap.add_argument("--stamp-json", default="", help="optional rendered stamp payload json (external_stamp field)")
+    ap.add_argument("--expected-work-layer", choices=sorted(ALLOWED_WORK_LAYERS), default="protocol")
     ap.add_argument("--force-check", action="store_true")
     ap.add_argument("--enforce-first-line-gate", action="store_true")
     ap.add_argument("--blocker-receipt-out", default="")
@@ -301,18 +293,57 @@ def main() -> int:
         if not error_code:
             error_code = ERR_REPLY_FIRST_LINE
 
+    parsed_first: dict[str, Any] = parse_identity_context_stamp(first_lines[0]) if first_lines else {}
+    expected_source_layer = ctx.source_domain
+
     # Optional identity mismatch signal if first line exists and parsable.
     if not error_code and first_lines:
-        parsed = _parse_stamp_line(first_lines[0])
-        actual_identity = str(parsed.get("identity_id", "")).strip()
+        actual_identity = str(parsed_first.get("identity_id", "")).strip()
         if actual_identity and actual_identity != ctx.identity_id:
             stale_reasons.append("reply_first_line_identity_mismatch")
             error_code = ERR_REPLY_FIRST_LINE
 
+    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
+    has_layer_context = bool(parsed_first.get("_has_layer_context", False)) if first_lines else False
+    parsed_work_layer = str(parsed_first.get("work_layer", "")).strip() if parsed_first else ""
+    parsed_source_layer = str(parsed_first.get("source_layer", "")).strip() if parsed_first else ""
+    if not error_code and first_lines:
+        if not has_layer_context:
+            if strict_format_enforced:
+                stale_reasons.append("reply_first_line_layer_context_tail_missing")
+                error_code = ERR_REPLY_FIRST_LINE
+            else:
+                stale_reasons.append("reply_first_line_layer_context_tail_missing_non_blocking")
+        else:
+            if parsed_work_layer not in ALLOWED_WORK_LAYERS:
+                if strict_format_enforced:
+                    stale_reasons.append("reply_first_line_work_layer_invalid")
+                    error_code = ERR_REPLY_FIRST_LINE
+                else:
+                    stale_reasons.append("reply_first_line_work_layer_invalid_non_blocking")
+            elif parsed_work_layer != args.expected_work_layer:
+                if strict_format_enforced:
+                    stale_reasons.append("reply_first_line_work_layer_mismatch")
+                    error_code = ERR_REPLY_FIRST_LINE
+                else:
+                    stale_reasons.append("reply_first_line_work_layer_mismatch_non_blocking")
+            if parsed_source_layer not in ALLOWED_SOURCE_LAYERS:
+                if strict_format_enforced and not error_code:
+                    stale_reasons.append("reply_first_line_source_layer_invalid")
+                    error_code = ERR_REPLY_FIRST_LINE
+                elif not strict_format_enforced:
+                    stale_reasons.append("reply_first_line_source_layer_invalid_non_blocking")
+            elif parsed_source_layer != expected_source_layer:
+                if strict_format_enforced and not error_code:
+                    stale_reasons.append("reply_first_line_source_layer_mismatch")
+                    error_code = ERR_REPLY_FIRST_LINE
+                elif not strict_format_enforced:
+                    stale_reasons.append("reply_first_line_source_layer_mismatch_non_blocking")
+
     lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
     parsed_lock_state = ""
     if not error_code and first_lines:
-        parsed_lock_state = str(_parse_stamp_line(first_lines[0]).get("lock", "")).strip()
+        parsed_lock_state = str(parsed_first.get("lock", "")).strip()
     if not error_code and lock_boundary_enforced:
         if ctx.lock_state != "LOCK_MATCH":
             stale_reasons.append("actor_binding_lock_not_match")
@@ -335,6 +366,12 @@ def main() -> int:
         "required_contract": bool(force_required or contract_required(contract)),
         "reply_first_line_status": STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED,
         "error_code": error_code,
+        "layer_context_enforced": strict_format_enforced,
+        "layer_context_present": has_layer_context,
+        "expected_work_layer": args.expected_work_layer,
+        "reply_first_line_work_layer": parsed_work_layer,
+        "expected_source_layer": expected_source_layer,
+        "reply_first_line_source_layer": parsed_source_layer,
         "lock_boundary_enforced": lock_boundary_enforced,
         "expected_lock_state": ctx.lock_state,
         "reply_first_line_lock_state": parsed_lock_state,
@@ -350,8 +387,7 @@ def main() -> int:
     if not ok:
         first_line_identity = ""
         if first_lines:
-            parsed = _parse_stamp_line(first_lines[0])
-            first_line_identity = str(parsed.get("identity_id", "")).strip()
+            first_line_identity = str(parsed_first.get("identity_id", "")).strip()
         receipt = blocker_receipt(
             error_code=ERR_REPLY_FIRST_LINE,
             expected_identity_id=ctx.identity_id,
