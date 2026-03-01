@@ -1015,9 +1015,9 @@ Mandatory semantics:
    - no customer identifiers
    - no business-scene constants in protocol contract fields
 9. Failure code family (`IP-SPLIT-*`):
-   - `IP-SPLIT-001`: split reminder missing
+   - `IP-SPLIT-001`: `split_notice` missing
    - `IP-SPLIT-002`: trigger field missing/invalid
-   - `IP-SPLIT-003`: trigger=yes but SSOT path missing
+   - `IP-SPLIT-003`: `feedback_triggered=true` but SSOT path missing
    - `IP-SPLIT-004`: mixed lane content in same section
    - `IP-SPLIT-005`: protocol payload contains business-scene constants
 
@@ -1028,7 +1028,7 @@ Goal:
 1. Replace subjective escalation decisions with deterministic, auditable trigger conditions.
 2. Preserve dual-track execution: instance lane executes now, protocol lane is fed into governance gates.
 
-Hard trigger conditions (`protocol_feedback_triggered=yes` when any true):
+Hard trigger conditions (`feedback_triggered=true` when any true):
 
 1. Same governance issue class recurs `>=2` rounds in audit window.
 2. Any required gate exhibits false-green or false-red behavior.
