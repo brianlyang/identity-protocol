@@ -20,6 +20,7 @@ ERR_TRIGGER_NOT_APPLIED = "IP-DREQ-001"
 ERR_RECEIPT_MISSING = "IP-DREQ-002"
 ERR_RECEIPT_NOT_LINKED = "IP-DREQ-003"
 ERR_CI_VALIDATOR_MISSING = "IP-DREQ-004"
+ERR_NON_BLOCKING_EXPIRED = "IP-DREQ-005"
 
 DISCOVERY_CONTRACT_KEYS = (
     "tool_installation_contract",
@@ -127,6 +128,43 @@ CAPABILITY_GAP_HINTS = (
     "能力缺口",
     "工具缺口",
     "能力不足",
+)
+
+NON_BLOCKING_WARNING_STATUSES = {"WARN_NON_BLOCKING", "TRIGGERED_NON_BLOCKING"}
+
+EXPIRY_CHECKS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "scripts/trigger_platform_optimization_discovery.py",
+        ("--operation", "<operation>", "--json-only"),
+    ),
+    (
+        "scripts/build_vibe_coding_feeding_pack.py",
+        ("--operation", "<operation>", "--out-root", "/tmp/vibe-coding-feeding-packs", "--json-only"),
+    ),
+    (
+        "scripts/validate_identity_capability_fit_optimization.py",
+        ("--operation", "<operation>", "--json-only"),
+    ),
+    (
+        "scripts/validate_capability_composition_before_discovery.py",
+        ("--operation", "<operation>", "--json-only"),
+    ),
+    (
+        "scripts/validate_capability_fit_review_freshness.py",
+        ("--operation", "<operation>", "--json-only"),
+    ),
+    (
+        "scripts/validate_capability_fit_roundtable_evidence.py",
+        ("--operation", "<operation>", "--json-only"),
+    ),
+    (
+        "scripts/trigger_capability_fit_review.py",
+        ("--operation", "<operation>", "--json-only"),
+    ),
+    (
+        "scripts/build_capability_fit_matrix.py",
+        ("--operation", "<operation>", "--out-root", "/tmp/capability-fit-matrices", "--json-only"),
+    ),
 )
 
 
@@ -332,6 +370,115 @@ def _run_discovery_validator(script: str, catalog: Path, identity_id: str) -> tu
     return p.returncode, (err[-1] if err else "")
 
 
+def _parse_iso_datetime(raw: str) -> datetime | None:
+    txt = str(raw or "").strip()
+    if not txt:
+        return None
+    try:
+        if txt.endswith("Z"):
+            txt = txt[:-1] + "+00:00"
+        return datetime.fromisoformat(txt)
+    except Exception:
+        return None
+
+
+def _payload_status(payload: dict[str, Any]) -> str:
+    for k, v in payload.items():
+        if k.endswith("_status") and isinstance(v, str):
+            return v.strip().upper()
+    return ""
+
+
+def _collect_candidate_paths(payload: dict[str, Any]) -> list[Path]:
+    refs: list[str] = []
+    for key in (
+        "feedback_batch_path",
+        "fit_matrix_path",
+        "matrix_path",
+        "roundtable_evidence_path",
+    ):
+        token = str(payload.get(key, "")).strip()
+        if token:
+            refs.append(token)
+    batches = payload.get("feedback_batches")
+    if isinstance(batches, list):
+        for x in batches:
+            token = str(x).strip()
+            if token:
+                refs.append(token)
+    out: list[Path] = []
+    for token in refs:
+        p = Path(token).expanduser()
+        if p.exists():
+            out.append(p.resolve())
+    return out
+
+
+def _warning_age_days(payload: dict[str, Any]) -> float | None:
+    overdue = payload.get("overdue_by_days")
+    if isinstance(overdue, (int, float)) and overdue >= 0:
+        return float(overdue)
+    next_review = _parse_iso_datetime(str(payload.get("next_review_at", "")).strip())
+    if next_review is not None:
+        now = datetime.now(timezone.utc)
+        if next_review.tzinfo is None:
+            next_review = next_review.replace(tzinfo=timezone.utc)
+        delta = (now - next_review).total_seconds() / 86400.0
+        return max(0.0, round(delta, 3))
+    paths = _collect_candidate_paths(payload)
+    if not paths:
+        return None
+    now = datetime.now(timezone.utc).timestamp()
+    ages = []
+    for p in paths:
+        try:
+            ages.append((now - p.stat().st_mtime) / 86400.0)
+        except Exception:
+            continue
+    if not ages:
+        return None
+    return round(max(ages), 3)
+
+
+def _run_expiry_checks(*, catalog: Path, identity_id: str, operation: str) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    warning_rows: list[dict[str, Any]] = []
+    for script, suffix_tpl in EXPIRY_CHECKS:
+        suffix: list[str] = []
+        for token in suffix_tpl:
+            if token == "<operation>":
+                suffix.append(operation)
+            else:
+                suffix.append(token)
+        cmd = ["python3", script, "--catalog", str(catalog), "--identity-id", identity_id, *suffix]
+        p = subprocess.run(cmd, capture_output=True, text=True)
+        raw = (p.stdout or "").strip()
+        payload: dict[str, Any] = {}
+        try:
+            obj = json.loads(raw) if raw else {}
+            if isinstance(obj, dict):
+                payload = obj
+        except Exception:
+            payload = {}
+        status = _payload_status(payload)
+        age_days = _warning_age_days(payload) if status in NON_BLOCKING_WARNING_STATUSES else None
+        row = {
+            "script": script,
+            "rc": p.returncode,
+            "status": status,
+            "warning_age_days": age_days,
+            "tail": (raw.splitlines()[-1] if raw else ((p.stderr or "").strip().splitlines()[-1] if (p.stderr or "").strip() else "")),
+        }
+        rows.append(row)
+        if status in NON_BLOCKING_WARNING_STATUSES:
+            warning_rows.append(row)
+    return {
+        "checks": rows,
+        "warnings": warning_rows,
+        "warning_count": len(warning_rows),
+    }
+
+
 def _iso_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -384,6 +531,9 @@ def main() -> int:
     parsed_batches = [_parse_feedback_batch(p) for p in batches]
     trigger_flags, trigger_classes = _trigger_flags(parsed_batches)
     requiredization_triggered = len(trigger_classes) > 0
+    non_blocking_expiry_days = int(contract.get("non_blocking_expiry_days", 7) or 7) if isinstance(contract, dict) else 7
+    if non_blocking_expiry_days < 0:
+        non_blocking_expiry_days = 0
 
     required_state = _required_flags(task)
     requiredized_all = all(required_state.values())
@@ -441,11 +591,40 @@ def main() -> int:
         "discovery_required_passed": discovery_required_passed,
         "discovery_required_coverage_rate": discovery_required_coverage_rate,
         "discovery_validator_results": discovery_results,
+        "non_blocking_expiry_days": non_blocking_expiry_days,
+        "non_blocking_warnings": [],
+        "non_blocking_warning_count": 0,
+        "non_blocking_expired": False,
         "checked_at": _iso_now(),
         "stale_reasons": [],
     }
 
+    expiry_eval = _run_expiry_checks(
+        catalog=catalog_path,
+        identity_id=args.identity_id,
+        operation=args.operation,
+    )
+    warnings = expiry_eval.get("warnings", [])
+    payload["non_blocking_warnings"] = warnings
+    payload["non_blocking_warning_count"] = int(expiry_eval.get("warning_count", 0) or 0)
+    expired_warning_rows = [
+        row
+        for row in warnings
+        if isinstance(row.get("warning_age_days"), (int, float))
+        and float(row.get("warning_age_days", 0.0)) > float(non_blocking_expiry_days)
+    ]
+    payload["non_blocking_expired"] = len(expired_warning_rows) > 0
+
     if not required_effective:
+        if payload["non_blocking_expired"]:
+            payload["discovery_requiredization_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_NON_BLOCKING_EXPIRED
+            payload["stale_reasons"] = [
+                "non_blocking_discovery_warning_expired",
+                f"expiry_days={non_blocking_expiry_days}",
+            ]
+            _emit(payload, json_only=args.json_only)
+            return 1
         payload["stale_reasons"] = ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0
@@ -642,6 +821,15 @@ def main() -> int:
 
     payload["discovery_requiredization_status"] = STATUS_PASS_REQUIRED
     payload["error_code"] = ""
+    if payload["non_blocking_expired"]:
+        payload["discovery_requiredization_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_NON_BLOCKING_EXPIRED
+        payload["stale_reasons"] = [
+            "non_blocking_discovery_warning_expired",
+            f"expiry_days={non_blocking_expiry_days}",
+        ]
+        _emit(payload, json_only=args.json_only)
+        return 1
     payload["stale_reasons"] = []
     _emit(payload, json_only=args.json_only)
     return 0
