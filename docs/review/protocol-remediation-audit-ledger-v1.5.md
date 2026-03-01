@@ -95,7 +95,7 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `5016816` | DONE | PASS |
 | FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PASS |
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
-| FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
+| FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -3195,7 +3195,7 @@ Residual risks:
 1. On stale baseline, default `strict` policy now blocks generic `identity_creator update` unless explicit override is supplied (expected under P0-B hardening).
 2. Wave/batch apply path keeps explicit `warn` override by design to allow stale-instance remediation; audit replay should confirm this override is accepted as controlled exception.
 
-#### 16.7.7 FIX-019 progress update (2026-03-01, P0-C protocol version alignment contract unification)
+#### 16.7.8 FIX-019 progress update (2026-03-01, P0-C protocol version alignment contract unification)
 
 Status: `PATCHED_PENDING_AUDIT`
 
@@ -3203,6 +3203,10 @@ Source ref (L1 governance SSOT + intake action list):
 
 1. review intake section `15.1 P0-C` (fragmented alignment checks across baseline/prompt/binding validators).
 2. `ASB-RQ-043` + section `5.8.7 protocol_version_alignment_contract_v1`.
+
+Commit under replay:
+
+1. `3c259da` — `feat(protocol): add unified protocol version alignment contract gate`
 
 Implemented package (protocol-only):
 
