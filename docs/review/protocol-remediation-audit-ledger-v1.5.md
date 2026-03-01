@@ -91,11 +91,11 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PASS |
 | FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PASS |
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
-| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
+| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `6fbf999` | DONE | PENDING_REVIEW |
 | FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `5016816` | DONE | PASS |
 | FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PASS |
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
-| FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PENDING_REVIEW |
+| FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
 
 ---
 
@@ -2927,6 +2927,76 @@ Status: `PASS` (scope: live reply first-line gate contract + six-surface wiring)
 7. Docs/SSOT checks:
    - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
    - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+
+#### 16.7.10 FIX-015 progress refresh (2026-03-01, concurrent actor x identity activation verifier)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Source ref:
+
+1. section `7` in this ledger (`FIX-015` release-blocking verifier scope and acceptance template).
+2. L1 governance refs:
+   - `DRC-1`, `DRC-4`
+   - `ASB-RQ-009`, `ASB-RQ-010`
+   - `ASB-RC-001~006`
+
+Commit under replay:
+
+1. `6fbf999` — `fix(fix-015): enable actor-scoped multi-active runtime semantics`
+
+Replay context:
+
+1. project runtime catalog replay:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+2. execution context:
+   - `sandbox`: static validators and scan replay.
+   - `escalated`: activation/readiness/e2e that writes runtime artifacts.
+
+Replay evidence summary:
+
+1. Multi-active activation + actor binding creation (escalated):
+   - `python3 scripts/identity_creator.py activate --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:auditor --run-id fix015-concurrency-auditor --switch-reason fix015_concurrency_replay`
+   - `rc=0`
+   - key fields:
+     - `active_identities=['base-repo-audit-expert-v3','custom-creative-ecom-analyst']`
+     - actor session path: `session/actors/user_auditor.json`
+     - switch report: `/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772375550.json`
+2. Actor-scoped validator replay (sandbox):
+   - `python3 scripts/validate_identity_state_consistency.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+     - `rc=0`, `active_count=2`
+   - `python3 scripts/validate_actor_session_binding.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --actor-id user:yangxi --operation validate --json-only`
+     - `rc=0`, `actor_binding_status=PASS_REQUIRED`
+   - `python3 scripts/validate_actor_session_binding.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --actor-id user:auditor --operation validate --json-only`
+     - `rc=0`, `actor_binding_status=PASS_REQUIRED`
+   - `python3 scripts/validate_cross_actor_isolation.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation validate --json-only`
+     - `rc=0`, `cross_actor_isolation_status=PASS_REQUIRED`, `actor_binding_count=2`
+   - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --switch-report /tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772375550.json --operation validate --json-only`
+     - `rc=0`, `implicit_switch_status=PASS_REQUIRED`, `cross_actor_demotion_detected=false`
+3. Session pointer consistency replay (sandbox):
+   - `python3 scripts/validate_identity_session_pointer_consistency.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --actor-id user:yangxi --identity-id custom-creative-ecom-analyst`
+     - `rc=0` (canonical/mirror mismatch warning is allowed under multi-active tuple semantics)
+   - `python3 scripts/validate_identity_session_pointer_consistency.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --actor-id user:auditor --identity-id base-repo-audit-expert-v3`
+     - `rc=0`
+4. Main-chain readiness replay with explicit report (escalated):
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772375882.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+   - `rc=0`
+   - key tail:
+     - `execution report freshness preflight: status=PASS`
+     - `protocol baseline freshness preflight: status=PASS`
+     - `protocol version alignment preflight: status=PASS_REQUIRED`
+     - actor gates in readiness chain are invoked with `--operation readiness`
+     - `[OK] release readiness checks PASSED`
+5. Full-scan / three-plane visibility:
+   - `full_identity_protocol_scan.py --scan-mode target --identity-ids \"base-repo-audit-expert-v3 custom-creative-ecom-analyst\" --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/full-scan-fix015-current.json`
+   - `report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-fix015-custom-creative-ecom-analyst.json`
+   - actor binding / implicit switch / cross actor fields remain machine-readable.
+
+Residual blockers / risks:
+
+1. `e2e_smoke_test.sh` replay on project catalog currently fails at trigger-regression sample requirement:
+   - `missing trigger regression report: identity/runtime/examples/custom-creative-ecom-analyst-trigger-regression-sample.json`
+   - this is treated as a separate release hygiene dependency, not FIX-015 actor-concurrency semantic regression.
+2. three-plane default actor context (`user:yangxi`) can show `actor_session_binding=FAIL_REQUIRED` for non-bound identity tuple; this is expected unless tuple-consistent actor context is used.
 8. Audit decision:
    - close `HOTFIX-P0-004` as `DONE/PASS` for protocol-layer gate closure.
 9. Residual risk (non-blocking enhancement lane):
@@ -3197,7 +3267,7 @@ Residual risks:
 
 #### 16.7.8 FIX-019 progress update (2026-03-01, P0-C protocol version alignment contract unification)
 
-Status: `PATCHED_PENDING_AUDIT`
+Status: `PASS` (audit replayed on current head, cross-validated)
 
 Source ref (L1 governance SSOT + intake action list):
 
@@ -3241,13 +3311,36 @@ Replay evidence (local static + targeted runtime replay):
    - result: `rc=0`
 2. Direct validator replay (`custom-creative-ecom-analyst`, scan/warn):
    - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation scan --alignment-policy warn --json-only`
-   - expected: `rc=0`, payload contains `protocol_version_alignment_status` + `tuple_checks`.
+   - result: `rc=0`
+   - key fields:
+     - `protocol_version_alignment_status=WARN_NON_BLOCKING`
+     - `error_code=IP-PVA-002`
+     - `tuple_checks.execution_report_freshness=true`
+     - `tuple_checks.protocol_baseline_freshness=false`
+     - `tuple_checks.prompt_activation=true`
+     - `tuple_checks.binding_tuple=true`
 3. Readiness preflight wiring proof:
+   - command:
+     - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772370980.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER --base fa60caa --head fa60caa`
+   - result: `rc=0`
    - readiness log includes:
      - `[INFO] protocol version alignment preflight: status=<...> error_code=<...> report=<...>`
+     - `[OK] release readiness checks PASSED`
 4. Full-scan/three-plane visibility:
-   - full-scan exposes `checks.protocol_version_alignment.*`.
-   - three-plane exposes `instance_plane_detail.protocol_version_alignment.*`.
+   - full-scan replay:
+     - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/fix019-scan.json`
+     - `rc=0`, project/global both expose `checks.protocol_version_alignment.protocol_version_alignment_status=WARN_NON_BLOCKING`, `error_code=IP-PVA-002`.
+   - three-plane replay:
+     - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/fix019-three-plane.json`
+     - `rc=0`, exposes `instance_plane_detail.protocol_version_alignment.protocol_version_alignment_status=WARN_NON_BLOCKING`, `error_code=IP-PVA-002`, and keeps `hard_boundary=false`.
+5. Strict fail-closed sample (CI semantics):
+   - `python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --execution-report /Users/yangxi/.codex/identity/instances/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772370980.json --operation ci --alignment-policy strict --json-only`
+   - result: `rc=1`, `protocol_version_alignment_status=FAIL_REQUIRED`, `error_code=IP-PVA-002`.
+6. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+7. Audit decision:
+   - close `FIX-019` as `DONE/PASS` for protocol-layer gate closure.
 
 Residual risks:
 
