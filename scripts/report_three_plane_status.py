@@ -822,6 +822,74 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_fit_fresh != 0 or fit_fresh_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_fit_roundtable, out_fit_roundtable, err_fit_roundtable = _run(
+        [
+            "python3",
+            "scripts/validate_capability_fit_roundtable_evidence.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fit_roundtable_payload = _parse_json_payload(out_fit_roundtable) or {}
+    validators["capability_fit_roundtable_evidence"] = {
+        "rc": rc_fit_roundtable,
+        "ok": rc_fit_roundtable == 0,
+        "out": out_fit_roundtable,
+        "err": err_fit_roundtable,
+    }
+    fit_roundtable_status = str(fit_roundtable_payload.get("capability_fit_roundtable_status", "")).strip().upper()
+    if rc_fit_roundtable != 0 or fit_roundtable_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_fit_trigger, out_fit_trigger, err_fit_trigger = _run(
+        [
+            "python3",
+            "scripts/trigger_capability_fit_review.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fit_trigger_payload = _parse_json_payload(out_fit_trigger) or {}
+    validators["capability_fit_review_trigger"] = {
+        "rc": rc_fit_trigger,
+        "ok": rc_fit_trigger == 0,
+        "out": out_fit_trigger,
+        "err": err_fit_trigger,
+    }
+
+    rc_fit_builder, out_fit_builder, err_fit_builder = _run(
+        [
+            "python3",
+            "scripts/build_capability_fit_matrix.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--out-root",
+            "/tmp/capability-fit-matrices",
+            "--json-only",
+        ]
+    )
+    fit_builder_payload = _parse_json_payload(out_fit_builder) or {}
+    validators["capability_fit_matrix_builder"] = {
+        "rc": rc_fit_builder,
+        "ok": rc_fit_builder == 0,
+        "out": out_fit_builder,
+        "err": err_fit_builder,
+    }
+
     rc_namespace, out_namespace, err_namespace = _run(
         [
             "python3",
@@ -1179,6 +1247,47 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "review_freshness_status": fit_fresh_payload.get("review_freshness_status", ""),
             "overdue_by_days": fit_fresh_payload.get("overdue_by_days"),
             "stale_reasons": fit_fresh_payload.get("stale_reasons", []),
+        },
+        "capability_fit_roundtable_evidence": {
+            "capability_fit_roundtable_status": fit_roundtable_payload.get("capability_fit_roundtable_status"),
+            "error_code": fit_roundtable_payload.get("error_code", ""),
+            "required_contract": fit_roundtable_payload.get("required_contract"),
+            "fit_matrix_path": fit_roundtable_payload.get("fit_matrix_path", ""),
+            "roundtable_evidence_path": fit_roundtable_payload.get("roundtable_evidence_path", ""),
+            "selected_candidate_id": fit_roundtable_payload.get("selected_candidate_id", ""),
+            "selected_candidate_type": fit_roundtable_payload.get("selected_candidate_type", ""),
+            "roundtable_required": fit_roundtable_payload.get("roundtable_required", False),
+            "facts_count": fit_roundtable_payload.get("facts_count"),
+            "inferences_count": fit_roundtable_payload.get("inferences_count"),
+            "selected_fact_refs": fit_roundtable_payload.get("selected_fact_refs", []),
+            "stale_reasons": fit_roundtable_payload.get("stale_reasons", []),
+        },
+        "capability_fit_review_trigger": {
+            "capability_fit_review_trigger_status": fit_trigger_payload.get("capability_fit_review_trigger_status"),
+            "error_code": fit_trigger_payload.get("error_code", ""),
+            "required_contract": fit_trigger_payload.get("required_contract"),
+            "triggered": fit_trigger_payload.get("triggered", False),
+            "trigger_reason": fit_trigger_payload.get("trigger_reason", ""),
+            "fit_matrix_path": fit_trigger_payload.get("fit_matrix_path", ""),
+            "selected_candidate_id": fit_trigger_payload.get("selected_candidate_id", ""),
+            "selected_candidate_type": fit_trigger_payload.get("selected_candidate_type", ""),
+            "review_freshness_status": fit_trigger_payload.get("review_freshness_status", ""),
+            "roundtable_required": fit_trigger_payload.get("roundtable_required", False),
+            "roundtable_evidence_path": fit_trigger_payload.get("roundtable_evidence_path", ""),
+            "stale_reasons": fit_trigger_payload.get("stale_reasons", []),
+        },
+        "capability_fit_matrix_builder": {
+            "capability_fit_matrix_builder_status": fit_builder_payload.get("capability_fit_matrix_builder_status"),
+            "error_code": fit_builder_payload.get("error_code", ""),
+            "required_contract": fit_builder_payload.get("required_contract"),
+            "matrix_path": fit_builder_payload.get("matrix_path", ""),
+            "matrix_candidate_count": fit_builder_payload.get("matrix_candidate_count"),
+            "selected_candidate_count": fit_builder_payload.get("selected_candidate_count"),
+            "selected_candidate_id": fit_builder_payload.get("selected_candidate_id", ""),
+            "selected_candidate_type": fit_builder_payload.get("selected_candidate_type", ""),
+            "inventory_snapshot_path": fit_builder_payload.get("inventory_snapshot_path", ""),
+            "external_candidate_source_path": fit_builder_payload.get("external_candidate_source_path", ""),
+            "stale_reasons": fit_builder_payload.get("stale_reasons", []),
         },
         "vendor_namespace_separation": {
             "vendor_namespace_status": namespace_payload.get("vendor_namespace_status"),

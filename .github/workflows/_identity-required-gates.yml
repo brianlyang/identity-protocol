@@ -198,6 +198,9 @@ jobs:
             python3 scripts/validate_identity_capability_fit_optimization.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_composition_before_discovery.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_fit_review_freshness.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/trigger_capability_fit_review.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root /tmp/capability-fit-matrices --json-only
             python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"

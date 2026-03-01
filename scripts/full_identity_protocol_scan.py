@@ -140,6 +140,9 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "capability_fit_optimization",
             "capability_composition_before_discovery",
             "capability_fit_review_freshness",
+            "capability_fit_roundtable_evidence",
+            "capability_fit_review_trigger",
+            "capability_fit_matrix_builder",
             "vendor_namespace_separation",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
@@ -174,6 +177,12 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     fit_review_issue = fit_review_status == "WARN_NON_BLOCKING" or (
         str(fit_review.get("review_freshness_status", "")).upper() == "WARN_STALE_OPTIMIZATION_REVIEW"
     )
+    fit_trigger = checks.get("capability_fit_review_trigger") or {}
+    fit_trigger_status = str(fit_trigger.get("capability_fit_review_trigger_status", "")).upper()
+    fit_trigger_issue = fit_trigger_status in {"WARN_NON_BLOCKING", "TRIGGERED_NON_BLOCKING"}
+    fit_builder = checks.get("capability_fit_matrix_builder") or {}
+    fit_builder_status = str(fit_builder.get("capability_fit_matrix_builder_status", "")).upper()
+    fit_builder_issue = fit_builder_status == "WARN_NON_BLOCKING"
     freshness = checks.get("execution_report_freshness") or {}
     freshness_fail = (not freshness.get("ok", True)) or str(freshness.get("freshness_status", "")).upper() == "FAIL"
     cap_preflight = checks.get("capability_activation_preflight") or {}
@@ -191,7 +200,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         return "P0"
     if active and capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
         return "P1"
-    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue or fit_review_issue:
+    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue or fit_review_issue or fit_trigger_issue or fit_builder_issue:
         return "P1"
     return "OK"
 
@@ -615,6 +624,41 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "capability_fit_roundtable_evidence": [
+                    "python3",
+                    "scripts/validate_capability_fit_roundtable_evidence.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "capability_fit_review_trigger": [
+                    "python3",
+                    "scripts/trigger_capability_fit_review.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "capability_fit_matrix_builder": [
+                    "python3",
+                    "scripts/build_capability_fit_matrix.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--out-root",
+                    "/tmp/capability-fit-matrices",
+                    "--json-only",
+                ],
                 "vendor_namespace_separation": [
                     "python3",
                     "scripts/validate_vendor_namespace_separation.py",
@@ -1010,6 +1054,59 @@ def main() -> int:
                     ):
                         if k in fresh_doc:
                             check_payload[k] = fresh_doc.get(k)
+                if name == "capability_fit_roundtable_evidence":
+                    round_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_fit_roundtable_status",
+                        "error_code",
+                        "required_contract",
+                        "fit_matrix_path",
+                        "roundtable_evidence_path",
+                        "selected_candidate_id",
+                        "selected_candidate_type",
+                        "roundtable_required",
+                        "facts_count",
+                        "inferences_count",
+                        "selected_fact_refs",
+                        "stale_reasons",
+                    ):
+                        if k in round_doc:
+                            check_payload[k] = round_doc.get(k)
+                if name == "capability_fit_review_trigger":
+                    trig_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_fit_review_trigger_status",
+                        "error_code",
+                        "required_contract",
+                        "triggered",
+                        "trigger_reason",
+                        "fit_matrix_path",
+                        "selected_candidate_id",
+                        "selected_candidate_type",
+                        "review_freshness_status",
+                        "roundtable_required",
+                        "roundtable_evidence_path",
+                        "stale_reasons",
+                    ):
+                        if k in trig_doc:
+                            check_payload[k] = trig_doc.get(k)
+                if name == "capability_fit_matrix_builder":
+                    builder_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_fit_matrix_builder_status",
+                        "error_code",
+                        "required_contract",
+                        "matrix_path",
+                        "matrix_candidate_count",
+                        "selected_candidate_count",
+                        "selected_candidate_id",
+                        "selected_candidate_type",
+                        "inventory_snapshot_path",
+                        "external_candidate_source_path",
+                        "stale_reasons",
+                    ):
+                        if k in builder_doc:
+                            check_payload[k] = builder_doc.get(k)
                 if name == "vendor_namespace_separation":
                     namespace_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

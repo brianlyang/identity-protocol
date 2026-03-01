@@ -92,6 +92,7 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PASS |
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
+| FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -2991,5 +2992,70 @@ Replay snapshot (local):
 Residual risks / next lane:
 
 1. `ASB-RQ-053` roundtable `fact/inference` evidence mapping validator is not included in this patch set.
-2. `P1-H` trigger/tool surfaces (`trigger_capability_fit_review`, `build_capability_fit_matrix`) remain pending.
+2. `P1-H` trigger/tool surfaces (`trigger_capability_fit_review`, `build_capability_fit_matrix`) are implemented in section `16.7.4` and moved to audit replay queue.
 3. readiness escalated replay may still fail due unrelated runtime update chain issues (`identity_creator update` path), so P1-F acceptance in this batch is scoped to validator semantics + six-surface wiring visibility.
+
+#### 16.7.4 P1-G/P1-H progress update (2026-03-01, capability-fit roundtable + trigger/builder surfaces)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Source ref (L1 governance SSOT):
+
+1. `ASB-RQ-053` (roundtable fact/inference evidence mapping for optimization decisions)
+2. `ASB-RQ-049..052` (fit-cycle orchestration context reused by review trigger + matrix builder)
+
+Implemented package (protocol-only):
+
+1. Added validator/trigger/tool scripts:
+   - `scripts/validate_capability_fit_roundtable_evidence.py` (P1-G)
+   - `scripts/trigger_capability_fit_review.py` (P1-H trigger surface)
+   - `scripts/build_capability_fit_matrix.py` (P1-H tool surface)
+2. Six-surface wiring completed:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Machine-readable visibility fields added:
+   - `capability_fit_roundtable_status`
+   - `capability_fit_review_trigger_status`
+   - `capability_fit_matrix_builder_status`
+   - `triggered` / `trigger_reason`
+   - `roundtable_required` / `selected_fact_refs`
+   - `matrix_path` / `selected_candidate_id`
+
+Replay snapshot (local):
+
+1. Static checks:
+   - `python3 -m py_compile scripts/validate_capability_fit_roundtable_evidence.py scripts/trigger_capability_fit_review.py scripts/build_capability_fit_matrix.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+2. Direct validator/trigger/tool replay (`custom-creative-ecom-analyst`, global runtime catalog):
+   - `python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/trigger_capability_fit_review.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - `python3 scripts/build_capability_fit_matrix.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --out-root /tmp/capability-fit-matrices --json-only`
+   - result: `rc=0` for all three; statuses are `SKIPPED_NOT_REQUIRED` on non-required contract path.
+3. Full-scan wiring replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p1gh-local.json`
+   - result: `rc=0`
+   - key extract:
+     - project/global both expose:
+       - `checks.capability_fit_roundtable_evidence.rc=0` + `capability_fit_roundtable_status`
+       - `checks.capability_fit_review_trigger.rc=0` + `capability_fit_review_trigger_status`
+       - `checks.capability_fit_matrix_builder.rc=0` + `capability_fit_matrix_builder_status`
+4. Three-plane wiring replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract --out /tmp/three-plane-p1gh-local.json`
+   - result: `rc=0`
+   - key extract:
+     - `instance_plane_detail.capability_fit_roundtable_evidence.*` visible
+     - `instance_plane_detail.capability_fit_review_trigger.*` visible
+     - `instance_plane_detail.capability_fit_matrix_builder.*` visible
+5. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+
+Residual risks / next lane:
+
+1. This patch validates P1-G/P1-H wiring and machine-readable visibility on non-required contract path; strict required-path replay still depends on contract enablement + sample evidence population.
+2. readiness escalated replay may still hit unrelated runtime update chain outcomes; not part of this P1 wiring scope.
