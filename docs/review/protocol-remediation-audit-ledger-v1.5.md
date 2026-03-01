@@ -3921,6 +3921,7 @@ Architect replay snippets (local):
 1. strict mismatch replay (`operation=validate`) -> fail-closed:
    - `validate_execution_reply_identity_coherence.py ... --operation validate ...` => `rc=1`
    - payload includes `coherence_status=FAIL_REQUIRED` and `error_code=IP-ASB-CTX-003` (dual-domain mismatch case) or `IP-ASB-CTX-001` (same-domain tuple mismatch case).
+   - when strict replay receives minimal disclosure stamp missing tuple refs, payload is deterministic `error_code=IP-ASB-CTX-002` (`reply_tuple_fields_missing:*`).
 2. strict coherent replay:
    - render with pinned standard disclosure then validate => `rc=0`, `coherence_status=PASS_REQUIRED`.
 3. inspection replay (`operation=scan`) on mismatch:

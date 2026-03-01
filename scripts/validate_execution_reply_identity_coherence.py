@@ -326,10 +326,15 @@ def main() -> int:
         for field, (actual, expected) in checks.items():
             if actual != expected:
                 mismatch_fields.append(field)
+        required_tuple_fields = ("identity_id", "actor_id", "catalog_ref", "pack_ref", "source")
+        missing_tuple_fields = [field for field in required_tuple_fields if not str(parsed.get(field, "")).strip()]
         if mismatch_fields:
             coherence_decision = "MISMATCH"
             stale_reasons.append("tuple_mismatch:" + ",".join(mismatch_fields))
-            if _lane_ambiguity(ctx.source_domain, str(parsed.get("source", "")).strip()):
+            if missing_tuple_fields:
+                stale_reasons.append("reply_tuple_fields_missing:" + ",".join(missing_tuple_fields))
+                error_code = ERR_REPLY_TUPLE_MISSING
+            elif _lane_ambiguity(ctx.source_domain, str(parsed.get("source", "")).strip()):
                 error_code = ERR_DUAL_CATALOG_AMBIGUITY
             else:
                 error_code = ERR_TUPLE_MISMATCH
