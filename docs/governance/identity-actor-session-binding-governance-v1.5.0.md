@@ -58,8 +58,8 @@ Hard rule:
 
 As-of baseline:
 
-1. `as_of_utc`: `2026-02-28`
-2. `protocol_repo_head`: `2762c67`
+1. `as_of_utc`: `2026-03-01`
+2. `protocol_repo_head`: `baed7ba`
 3. `topic_status`: governance specification substantially complete; runtime implementation not closed.
 
 Normative interpretation:
@@ -78,15 +78,19 @@ Hard evidence (repository-local):
    - `scripts/validate_identity_state_consistency.py:44`
    - `scripts/validate_identity_session_pointer_consistency.py:124`
    - `scripts/sync_session_identity.py:21`
-3. Required actor scripts declared but not yet landed:
-   - `validate_actor_session_binding`
-   - `validate_no_implicit_switch`
-   - `validate_cross_actor_isolation`
-   - `render_identity_response_stamp`
-   - `validate_identity_response_stamp`
-   - `refresh_identity_session_status`
-   - `validate_identity_response_stamp_blocker_receipt`
-   - `validate_identity_session_refresh_status`
+3. Landed-vs-gap script state (as-of this snapshot):
+   - landed:
+     - `validate_actor_session_binding`
+     - `validate_no_implicit_switch`
+     - `validate_cross_actor_isolation`
+     - `render_identity_response_stamp`
+     - `validate_identity_response_stamp`
+     - `refresh_identity_session_status`
+     - `validate_identity_response_stamp_blocker_receipt`
+     - `validate_identity_session_refresh_status`
+   - remaining P0 governance gaps from latest roundtable intake:
+     - `validate_instance_base_repo_write_boundary`
+     - `validate_protocol_feedback_ssot_archival`
 
 ### 0.6 Baseline snapshot refresh policy (anti-stale)
 
@@ -186,6 +190,7 @@ Alignment points:
 | 5. Self-check + refresh anytime | Add actor session refresh and status snapshot | refresh command + three-plane visibility |
 | 6. Vendor/API discovery + solution governance | Enforce non-hardcoded example semantics and shot-mode policy | discovery/solution/coverage evidence + manual-review fallback |
 | 7. Protocol-kernel capability evolution | Promote shot-mode + evidence chain from vendor-only to protocol-kernel model | unified capability lifecycle contract + cross-capability coverage semantics |
+| 8. Governance-boundary hardening lane | Codify base-repo write boundary + protocol-feedback SSOT archival + scope arbitration + reply stamp replay counter | new contracts (`5.8`) + required gates + release-blocking replay metrics |
 
 ## 5) Protocol Contract Additions (Mandatory)
 
@@ -854,6 +859,79 @@ Failure code family (`IP-SEM-*`):
 2. Escalation to blocking is allowed only for governance-boundary P0 violations.
 3. Track-A and Track-B validators MUST emit deterministic machine-readable outputs so that sidecar escalation is auditable.
 
+### 5.8 `protocol_governance_boundary_contract_v1` (P0 hotfix lane)
+
+This section codifies roundtable-intake P0 governance gaps discovered after initial v1.5 actor/path/Track-A/Track-B landing.
+
+#### 5.8.1 `instance_base_repo_mutation_policy_v1`
+
+Goal:
+
+1. Prevent identity instances from mutating protocol/code assets in base repo while still allowing documentation collaboration.
+2. Make governance enforcement independent from runtime sandbox/profile differences.
+
+Mandatory semantics:
+
+1. Allowlist default: `docs/**` (including `docs/governance/**` and `docs/review/**`).
+2. Denylist default: protocol/code assets (for example `scripts/**`, workflow yaml, protocol runtime/config files).
+3. Mixed change set rule: if any denylist path is changed, result is `FAIL_REQUIRED` (docs changes cannot mask code/protocol mutation).
+4. Override is exceptional and requires auditable receipt fields:
+   - `approved_by`
+   - `ticket_id`
+   - `purpose`
+   - `scope_paths`
+   - `expiry`
+5. Missing/expired/over-scope receipt must remain `FAIL_REQUIRED`.
+
+#### 5.8.2 `protocol_feedback_ssot_archival_contract_v1`
+
+Goal:
+
+1. Ensure protocol-feedback outputs are archived in identity protocol SSOT channels before any mirror publication.
+2. Prevent mirror-only reporting drift.
+
+Mandatory semantics:
+
+1. Required archival targets:
+   - `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md`
+   - `runtime/protocol-feedback/evidence-index/INDEX.md`
+2. Trigger condition: protocol-upgrade/governance/gate feedback semantics are present in task scope or output labels.
+3. Mirror channels (for example project-level issue reports) are evidence copies only and cannot replace SSOT archival.
+4. Fail-closed behavior:
+   - required outbox missing => `FAIL_REQUIRED`
+   - evidence-index link missing => `FAIL_REQUIRED`
+   - mirror-only without SSOT archival => `FAIL_REQUIRED`
+
+#### 5.8.3 `scope_arbitration_contract_v1` (dual-catalog deterministic rule)
+
+Goal:
+
+1. Remove ambiguity when same `identity_id` exists in multiple catalogs/domains.
+2. Make readiness/runtime arbitration explicit and replayable.
+
+Mandatory semantics:
+
+1. `release_readiness_check.py` must accept explicit `--scope`.
+2. Allowed scope enum: `REPO | USER | ADMIN | SYSTEM`.
+3. `--scope` must be forwarded to runtime-mode/scope validators and resolver preflight commands.
+4. Ambiguous no-scope resolution under multi-catalog conflict must fail-closed with actionable hint.
+
+#### 5.8.4 `response_stamp_reply_channel_observability_contract_v1`
+
+Goal:
+
+1. Turn "stamp required on every user-facing reply" into machine-counted replay evidence.
+2. Prevent long-thread or compaction windows from hiding missing-stamp turns.
+
+Mandatory semantics:
+
+1. Replay surfaces must expose `reply_stamp_missing_count`.
+2. Required visibility targets:
+   - audit replay output
+   - `report_three_plane_status.py`
+   - `full_identity_protocol_scan.py`
+3. Release closure window requires `reply_stamp_missing_count=0` for governed response channels.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -875,6 +953,10 @@ Failure code family (`IP-SEM-*`):
 15. protocol-feedback outbox writer and feedback-batch serializer surfaces
 16. vendor/biz retrieval router surfaces used by protocol-feedback sidecar
 17. gate/report surfaces persisting `intent_domain` / `intent_confidence` / `classifier_reason`
+18. `validate_instance_base_repo_write_boundary` (new validator surface)
+19. `validate_protocol_feedback_ssot_archival` (new validator surface)
+20. readiness scope passthrough chain in `scripts/release_readiness_check.py` (`--scope` forwarding to runtime-mode/scope guards)
+21. replay/scan visibility surfaces exposing `reply_stamp_missing_count`
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -897,6 +979,9 @@ Failure code family (`IP-SEM-*`):
 17. `validate_semantic_routing_guard`
 18. `validate_vendor_namespace_separation`
 19. `validate_protocol_feedback_sidecar_contract`
+20. `validate_instance_base_repo_write_boundary`
+21. `validate_protocol_feedback_ssot_archival`
+22. `validate_identity_response_stamp` (reply-channel coverage mode, emits `reply_stamp_missing_count`)
 
 ### 6.3 Gate wiring surfaces
 
@@ -945,6 +1030,13 @@ Semantic-routing closure (Track-B) must be wired in the same surfaces through:
 2. required-gates fail-closed on `IP-SEM-*`.
 3. sidecar escalation only when semantic violation crosses governance boundary (`P0-blocking`).
 
+Governance-boundary hotfix lane closure must be wired in the same surfaces through:
+
+1. `validate_instance_base_repo_write_boundary` (`docs allow` + `protocol/code deny`, fail-closed).
+2. `validate_protocol_feedback_ssot_archival` (outbox + evidence-index SSOT archival required, mirror-only fail-closed).
+3. readiness explicit `--scope` passthrough to runtime mode/scope guards under dual-catalog arbitration.
+4. reply-channel stamp observability output (`reply_stamp_missing_count`) in replay/three-plane/full-scan surfaces.
+
 Vendor/API chain must be wired in the same surfaces through:
 
 1. `scripts/validate_identity_vendor_api_discovery.py`
@@ -970,12 +1062,29 @@ The seven items below are mandatory protocol targets and must be treated as one 
 | C5 | Three new validators are mandatory: `validate_actor_session_binding`, `validate_no_implicit_switch`, `validate_cross_actor_isolation`. | Scripts exist, produce stable machine-readable outputs, and are referenced by acceptance gates. | P0 target; currently tracked by ASB-RQ-003/004/005 and pending implementation. |
 | C6 | Gate wiring must cover `identity_creator`, `e2e_smoke_test.sh`, `release_readiness_check.py`, `full_identity_protocol_scan.py`, `report_three_plane_status.py`, and CI required-gates workflow. | Wire-up evidence exists in code and acceptance output across all listed surfaces. | P0 target; currently tracked by ASB-RQ-009 and pending implementation. |
 | C7 | Path governance must be canonical and mixed-source safe across catalog/runtime/report surfaces. | Canonical path gates pass and no relative or cross-domain ambiguous path tuple appears in closure evidence. | P0 target; currently tracked by ASB-RQ-028/029/030/031 and pending implementation. |
+| C8 | Governance-boundary lane must be machine-enforced (`base-repo mutation boundary` + `feedback SSOT archival` + `readiness scope arbitration` + `reply-stamp missing-turn counter`). | required gates are wired and replay evidence proves docs-only pass, protocol/code mutation fail, mirror-only fail, no-scope ambiguity fail, and zero missing-stamp turns for closure claim. | P0 target; tracked by ASB-RQ-037/038/039/040. |
 
 Hard interpretation rules:
 
-1. C1~C7 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
+1. C1~C8 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
 2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
-3. Until C1~C7 are all `DONE`, this topic is governance-ready (`SPEC_READY`) but runtime-not-closed.
+3. Until C1~C8 are all `DONE`, this topic is governance-ready (`SPEC_READY`) but runtime-not-closed.
+
+### 6.3B Status synchronization note (2026-03-01, anti-drift)
+
+This subsection prevents ambiguity between the baseline rows above and current replay evidence.
+
+1. `IP-ENV-002` remains a required fail-closed gate (not a false-positive class by itself).
+2. The required upgrade objective is:
+   - keep `IP-ENV-002` fail-closed behavior for ambiguous dual-catalog resolution, and
+   - ensure explicit `--scope` passthrough lets readiness proceed deterministically.
+3. Governance-boundary hotfix lane (`ASB-RQ-037/038/039`) is implementation-closed with replay evidence in review ledger:
+   - `validate_instance_base_repo_write_boundary`
+   - `validate_protocol_feedback_ssot_archival`
+   - readiness `--scope` passthrough chain.
+4. Concurrent activation model migration (`ASB-RQ-010`, `ASB-RC-001~005`) is in-progress:
+   - actor-scoped multi-active behavior is validated in local replay evidence,
+   - final closure still requires committed patch set + audit replay package.
 
 ### 6.4 Requirement ledger (canonical tracker for `v1.5` unlock)
 
@@ -990,7 +1099,7 @@ Hard interpretation rules:
 | ASB-RQ-007 | response stamp validator + CI enforcement | `validate_identity_response_stamp` (new), required-gates | P0 | SPEC_READY | Validator/gate pending |
 | ASB-RQ-008 | refresh command for live actor binding status | `refresh_identity_session_status` (new) | P1 | SPEC_READY | three-plane visibility binding pending |
 | ASB-RQ-009 | mandatory gate wiring across creator/e2e/readiness/full-scan/three-plane/CI | multiple surfaces listed in 6.3 | P0 | SPEC_READY | Wiring pending |
-| ASB-RQ-010 | single-active removal from activation/consistency path | `identity_creator.py`, `identity_installer.py`, `validate_identity_state_consistency.py`, `validate_identity_session_pointer_consistency.py`, `compile_identity_runtime.py` | P0 | SPEC_READY | Current repo still has single-active checks |
+| ASB-RQ-010 | single-active removal from activation/consistency path | `identity_creator.py`, `identity_installer.py`, `validate_identity_state_consistency.py`, `validate_identity_session_pointer_consistency.py`, `compile_identity_runtime.py` | P0 | IMPL_READY | multi-active patch set is in local workspace; commit + final replay package pending |
 | ASB-RQ-011 | vendor discovery/solution baseline gates (legacy chain) remain wired and compatible | `validate_identity_vendor_api_discovery.py`, `validate_identity_vendor_api_solution.py`, `validate_required_contract_coverage.py` | P1 | GATE_READY | Existing chain already wired in protocol gates |
 | ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
 | ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
@@ -1017,6 +1126,27 @@ Hard interpretation rules:
 | ASB-RQ-034 | semantic routing guard contract enforces intent-domain pre-classification before retrieval | `validate_semantic_routing_guard` (new), protocol-feedback router surfaces | P0 | SPEC_READY | Spec defined in 5.7.2; implementation pending |
 | ASB-RQ-035 | protocol-vendor and business-partner namespace separation is validator-enforced | `validate_vendor_namespace_separation` (new), feedback artifact writers/readers | P0 | SPEC_READY | Spec defined in 5.7.2; implementation pending |
 | ASB-RQ-036 | protocol-feedback sidecar escalation remains auditable and non-blocking-by-default | `validate_protocol_feedback_sidecar_contract` (new), required-gates escalation logic | P0 | SPEC_READY | Spec defined in 5.7.3; implementation pending |
+| ASB-RQ-037 | instance-to-base-repo mutation boundary is codified as docs-allow/protocol-code-deny and fail-closed | `validate_instance_base_repo_write_boundary` (new), readiness/e2e/CI change-range surfaces | P0 | VERIFIED | replayed and audit-confirmed in HOTFIX-P0-005 lane |
+| ASB-RQ-038 | protocol-feedback outputs must be SSOT-archived before mirror publication | `validate_protocol_feedback_ssot_archival` (new), outbox/evidence-index writer surfaces | P0 | VERIFIED | replayed and audit-confirmed in HOTFIX-P0-006 lane |
+| ASB-RQ-039 | readiness dual-catalog arbitration must be explicit via `--scope` and deterministic fail-closed on ambiguity | `release_readiness_check.py` + runtime mode/scope validators (`validate_identity_runtime_mode_guard`) | P0 | VERIFIED | no-scope fail-closed + scoped passthrough replayed and confirmed in HOTFIX-P0-007 lane |
+| ASB-RQ-040 | user-facing reply stamp presence must be machine-counted in replay outputs (`reply_stamp_missing_count`) | `validate_identity_response_stamp` (coverage mode), three-plane/full-scan replay surfaces | P0 | GATE_READY | counter fields are wired; user-visible zero-miss closure (HOTFIX-P0-004) still pending |
+
+### 6.4A Requirement status delta snapshot (2026-03-01)
+
+The table in 6.4 is baseline-oriented and may lag active remediation windows.
+This delta snapshot is the authoritative synchronization bridge until the next full ledger rewrite.
+
+| Requirement ID | Status delta | Evidence pointer |
+| --- | --- | --- |
+| ASB-RQ-003 / ASB-RQ-004 / ASB-RQ-005 | `SPEC_READY -> GATE_READY` | validator scripts landed + creator/readiness/e2e/full-scan/three-plane/CI wiring replayed in review ledger (`FIX-008~FIX-010`, `HOTFIX-P0-002`) |
+| ASB-RQ-006 / ASB-RQ-007 / ASB-RQ-018 / ASB-RQ-019 / ASB-RQ-020 / ASB-RQ-021 | `SPEC_READY -> GATE_READY` | dynamic stamp render/validate + blocker receipt + replay counters (`FIX-004`, `HOTFIX-P0-001`, `HOTFIX-P0-003`) |
+| ASB-RQ-025 / ASB-RQ-026 / ASB-RQ-027 | `SPEC_READY -> GATE_READY` | refresh command + refresh validator + three-plane/full-scan visibility (`HOTFIX-P0-007 prerequisite chain`) |
+| ASB-RQ-028 / ASB-RQ-029 / ASB-RQ-030 / ASB-RQ-031 | `SPEC_READY -> GATE_READY` | path-governance fix chain (`FIX-002~FIX-007`) |
+| ASB-RQ-032 / ASB-RQ-033 | `SPEC_READY -> GATE_READY` | Track-A writeback/post-execution gates (`FIX-011`) |
+| ASB-RQ-034 / ASB-RQ-035 / ASB-RQ-036 | `SPEC_READY -> GATE_READY` | Track-B routing/namespace + sidecar escalation (`FIX-012`, `FIX-013`) |
+| ASB-RQ-037 / ASB-RQ-038 / ASB-RQ-039 | `SPEC_READY -> VERIFIED` | governance-boundary hotfix lane replayed and audit-passed (`HOTFIX-P0-005/006/007`) |
+| ASB-RQ-010 | `SPEC_READY -> IMPL_READY (pending final commit/replay)` | multi-active migration patch set in local workspace (`identity_creator/installer/state/session/compile/no_implicit_switch`) |
+| ASB-RQ-040 | `SPEC_READY -> GATE_READY (P0 incident closure pending)` | reply stamp missing counter is wired, but user-visible channel zero-miss closure (`HOTFIX-P0-004`) still pending audit pass |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -1111,6 +1241,17 @@ Semantic-routing codes (aligned with section 5.7.2):
 3. `IP-SEM-003` namespace violation (fail-closed for protocol-feedback track).
 4. `IP-SEM-004` domain whitelist violation (fail-closed).
 
+Governance-boundary hotfix lane codes (aligned with section 5.8):
+
+1. `IP-GOV-BASE-001` base-repo mutation boundary violation (`docs allow`/`protocol-code deny` contract breach, fail-closed).
+2. `IP-GOV-FEEDBACK-001` required protocol-feedback SSOT outbox artifact missing (fail-closed).
+3. `IP-GOV-FEEDBACK-002` evidence-index linkage missing/incomplete for required feedback batch (fail-closed).
+4. `IP-GOV-FEEDBACK-003` mirror-only feedback report without SSOT archival evidence (fail-closed).
+
+Environment arbitration code (cross-linked to section 5.8.3):
+
+1. `IP-ENV-002` dual-catalog ambiguity without explicit scope arbitration (`--scope` required, fail-closed).
+
 Hard rule:
 
 1. Recoverable actor-binding failures must not be silently promoted to hard-fail unless they cross hard-boundary conditions.
@@ -1174,9 +1315,14 @@ python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids
 python3 scripts/docs_command_contract_check.py
 ```
 
+Governance-boundary hotfix lane command note:
+
+1. `ASB-RQ-037/038/039/040` are target-state required commands and become runnable command rows when corresponding scripts/flags land.
+2. Until then, closure is tracked by requirement rows + replay evidence in review ledger; no implicit PASS is allowed.
+
 ### 9.1 P0 deep-remediation closure checklist (no-ambiguity lock)
 
-This checklist is the protocol-level closure contract for "deep remediation + cross-validation" and must be read together with section 6.3A (C1~C7) and section 6.4 (`ASB-RQ-*`).
+This checklist is the protocol-level closure contract for "deep remediation + cross-validation" and must be read together with section 6.3A (C1~C8) and section 6.4 (`ASB-RQ-*`).
 
 | Closure item | Mandatory statement | Evidence requirement | Tracker linkage |
 | --- | --- | --- | --- |
@@ -1192,12 +1338,14 @@ This checklist is the protocol-level closure contract for "deep remediation + cr
 | DRC-10 | Path-governance closure is canonical, aligned, and boundary-safe across catalog/runtime/report surfaces. | path gates pass; report path contract rejects relative path values; home/catalog alignment enforced; fixture/runtime boundary is auditable and enforced. | `ASB-RQ-028/029/030/031` |
 | DRC-11 | Track-A writeback continuity closure prevents frozen runtime state. | `STRICT_WRITEBACK/DEGRADED_WRITEBACK` semantics are enforced; post-execution mandatory validation passes; no closure report with missing writeback. | `ASB-RQ-032/033` |
 | DRC-12 | Track-B semantic routing closure prevents vendor/business domain retrigger drift. | pre-classification fields are present; namespace split is enforced; `IP-SEM-*` violations are deterministically caught by required-gates. | `ASB-RQ-034/035/036` |
+| DRC-13 | Governance-boundary hotfix lane is codified and machine-enforced (base-repo write boundary + feedback SSOT archival + explicit scope arbitration + reply-stamp missing-turn counter). | docs-only change can pass while protocol/code mutation fails; mirror-only feedback fails; readiness ambiguity fails without `--scope`; replay window reports `reply_stamp_missing_count=0` for closure claim. | `ASB-RQ-037/038/039/040` |
 
 Hard closure rule:
 
 1. Any one of `DRC-1..DRC-10` not reaching `DONE` means runtime milestone is not closed.
 2. `DRC-11` and `DRC-12` are P0 closures for protocol-feedback robustness and must be `DONE` before declaring v1.5 runtime closure.
-3. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
+3. `DRC-13` is release-blocking for multi-agent governance safety and must be `DONE` before declaring v1.5 runtime closure.
+4. Narrative "cross-validated" claim without evidence on all mandatory surfaces and closure items is invalid.
 
 Post-implementation command contract (must be enabled in same PR as script landing):
 
@@ -1220,6 +1368,10 @@ Post-implementation command contract (must be enabled in same PR as script landi
 17. `validate_protocol_feedback_sidecar_contract` command + sidecar escalation contract.
 18. `validate_identity_home_catalog_alignment` command + home/catalog alignment contract.
 19. `validate_fixture_runtime_boundary` command + fixture/runtime boundary contract.
+20. `validate_instance_base_repo_write_boundary` command + docs-allow/protocol-code-deny boundary contract.
+21. `validate_protocol_feedback_ssot_archival` command + outbox/evidence-index mandatory archival contract.
+22. `release_readiness_check.py --scope` passthrough contract + dual-catalog fail-closed behavior.
+23. `validate_identity_response_stamp` reply-channel counter contract (`reply_stamp_missing_count`).
 
 ## 10) Definition of Done (Split to Avoid False Closure)
 
@@ -1233,6 +1385,7 @@ All conditions must be true:
 4. Non-hardcoded vendor/API rule is explicit and testable.
 5. Required acceptance commands are runnable and documented.
 6. Shot-mode and evidence-chain semantics are defined as protocol-kernel rules, not domain-only policy.
+7. Governance-boundary hotfix lane contracts (`5.8`) are included in requirement/gate/acceptance sections.
 
 ### 10.2 Runtime close (v1.5.x implementation close)
 
@@ -1251,6 +1404,10 @@ All conditions must be true:
 11. Path governance chain is validator-enforced and replay-stable (`pack_path` + report `resolved_pack_path` + home/catalog alignment + fixture/runtime boundary).
 12. Track-A writeback continuity is validator-enforced (`STRICT_WRITEBACK` / `DEGRADED_WRITEBACK` + `post_execution_mandatory`).
 13. Track-B semantic routing boundary is validator-enforced (`intent_domain` pre-classification + namespace separation + deterministic `IP-SEM-*` gates).
+14. Base-repo mutation boundary is validator-enforced (`docs/**` allowlist, protocol/code denylist, fail-closed).
+15. Protocol-feedback SSOT archival is validator-enforced (outbox + evidence-index mandatory; mirror-only blocked).
+16. Readiness dual-catalog ambiguity is scope-arbitrated (`--scope`) and fails closed when omitted.
+17. Reply-channel stamp observability shows `reply_stamp_missing_count=0` in release replay window.
 
 ### 10.3 Milestone assertion guard (mandatory wording)
 

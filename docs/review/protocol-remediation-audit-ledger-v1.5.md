@@ -42,9 +42,9 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-002 | 2026-02-28 | protocol | explicit activate caused cross-identity hard switch/demotion | DONE | PASS |
 | HOTFIX-P0-003 | 2026-02-28 | protocol | stamp blocker receipt lifecycle mismatch causes nondeterministic validate result | DONE | PASS |
 | HOTFIX-P0-004 | 2026-02-28 | protocol | user-visible reply channel allowed missing `Identity-Context` prefix in live audit session | OPEN | PENDING_REVIEW |
-| HOTFIX-P0-005 | 2026-03-01 | protocol | instance-to-base-repo write boundary gate missing (docs-allow/code-deny not codified) | OPEN | PENDING_REVIEW |
-| HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | OPEN | PENDING_REVIEW |
-| HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | OPEN | PENDING_REVIEW |
+| HOTFIX-P0-005 | 2026-03-01 | protocol | instance-to-base-repo write boundary gate missing (docs-allow/code-deny not codified) | DONE | PASS |
+| HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
+| HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -91,7 +91,7 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-012 | 2026-02-28 | protocol | Track-B semantic routing guard + vendor namespace separation gates landing | `a8e2671` | DONE | PASS |
 | FIX-013 | 2026-02-28 | protocol | sidecar escalation contract validator + A/B coexistence wiring (ASB-RQ-036) | `457935e` | DONE | PASS |
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
-| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `TBD` | PLANNED | PENDING_REVIEW |
+| FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
 
 ---
 
@@ -2224,9 +2224,9 @@ Replay evidence (architect local):
 
 ### 12.5 status
 
-1. HOTFIX-P0-005: `PENDING_REVIEW` (architect replay completed).
-2. HOTFIX-P0-006: `PENDING_REVIEW` (architect replay completed).
-3. HOTFIX-P0-007: `PENDING_REVIEW` (architect replay completed).
+1. HOTFIX-P0-005: `PASS` (architect replay cross-validated by audit replay).
+2. HOTFIX-P0-006: `PASS` (architect replay cross-validated by audit replay).
+3. HOTFIX-P0-007: `PASS` (architect replay cross-validated by audit replay).
 4. Non-merge release constraint unchanged: v1.5 remains blocked until auditor replay signs off.
 
 
@@ -2254,3 +2254,176 @@ Replay evidence (escalated context, `~/.codex` writable):
 4. readiness replay (bounded compare window to exclude changelog noise):
    - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
    - `rc=0`, tail contains `[OK] release readiness checks PASSED`.
+
+---
+
+## 13) Cross-validation matrix (2026-03-01, audit replay against latest feedback claims)
+
+- Date (UTC): 2026-03-01
+- Layer declaration: `protocol` (with instance evidence replay)
+- Execution context:
+  - `sandbox`: validator replay, full-scan, code anchor checks
+  - `escalated`: readiness replay that writes `~/.codex` runtime reports
+- Scope:
+  - verify latest `custom-creative-ecom-analyst` and `system-requirements-analyst` feedback claims
+  - verify HOTFIX-P0-005/006/007 required-gate wiring is real (not doc-only claim)
+
+### 13.1 Claim vs replay verdicts
+
+1. Claim: `system-requirements-analyst` protocol-feedback files are in SSOT channel and traceable.
+   - Verdict: `CONFIRMED`
+   - Evidence:
+     - outbox batch exists: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-01_003.md`
+     - evidence index exists: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+     - validator replay:
+       - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+       - `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`.
+
+2. Claim: semantic routing + vendor namespace separation passed for `system-requirements-analyst`.
+   - Verdict: `CONFIRMED`
+   - Evidence:
+     - `python3 scripts/validate_semantic_routing_guard.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+       - `rc=0`, `semantic_routing_status=PASS_REQUIRED`.
+     - `python3 scripts/validate_vendor_namespace_separation.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+       - `rc=0`, `vendor_namespace_status=PASS_REQUIRED`.
+
+3. Claim: `custom-creative-ecom-analyst` validate full chain is `rc=0`.
+   - Verdict: `REJECT (stale claim under current HEAD)`
+   - Evidence:
+     - `python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER`
+     - replay result: `rc=1` at `validate_writeback_continuity.py` with `error_code=IP-WRB-001` and `writeback_continuity_status=FAIL_REQUIRED`.
+
+4. Claim: `IP-PBL-001` baseline mismatch still appears in active scans.
+   - Verdict: `CONFIRMED`
+   - Evidence:
+     - full scan replay output `/tmp/full-scan-cross-verify-20260301.json` shows:
+       - `custom-creative-ecom-analyst` (project layer): `baseline_error=IP-PBL-001` (severity `P0`)
+       - `system-requirements-analyst` (global layer): `baseline_error=IP-PBL-001` (severity `P1`).
+
+5. Claim: readiness `--scope` passthrough not fully wired; `IP-ENV-002` still reproducible in this path.
+   - Verdict: `PARTIAL (scope passthrough wired; no-scope fail remains by design)`
+   - Evidence:
+     - code wiring exists:
+       - `scripts/release_readiness_check.py` exposes `--scope` and forwards into scope/runtime validators.
+       - `scripts/identity_creator.py` update/validate chain also carries `--scope`.
+     - escalated replay A (`system-requirements-analyst`, fixed execution report, **no scope**):
+       - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+       - `rc=2`, deterministic `IP-ENV-002 ... Pass --scope to arbitrate explicitly.`
+     - escalated replay B (same command + `--scope USER`):
+       - runtime mode/scope preflight passes; no `IP-ENV-002` branch.
+       - chain proceeds to later health gate and fails at `collect_identity_health_report.py --enforce-pass` (`rc=2`), which is downstream and not scope-routing regression.
+   - Audit note:
+     - `IP-ENV-002` remains an intentional fail-closed branch for ambiguous dual-catalog contexts.
+     - current P0 is not “remove IP-ENV-002”; it is “preserve fail-closed + ensure explicit scope can arbitrate and continue”.
+
+6. Claim: base-repo write-boundary gate and protocol-feedback SSOT gate are not required in base repo.
+   - Verdict: `REJECT`
+   - Evidence:
+     - required-gates wiring exists in `.github/workflows/_identity-required-gates.yml`:
+       - `validate_instance_base_repo_write_boundary.py` (ci)
+       - `validate_protocol_feedback_ssot_archival.py` (ci)
+     - hard-fail behavior reproduced:
+       - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --check-git-diff --base 7b5f621 --head 7b191e5 --operation ci --json-only`
+       - `rc=1`, `error_code=IP-GOV-BASE-001`, `blocked_paths=["scripts/execute_identity_upgrade.py","scripts/identity_installer.py"]`.
+
+7. Incident: user-visible identity stamp in assistant replies showed abrupt identity drift (`base-repo-audit-expert-v3` -> `base-repo-architect`) during this audit window.
+   - Verdict: `CONFIRMED P0 INCIDENT (runtime switch + reply-channel observability gap)`
+   - Evidence:
+     - activation switch report:
+       - `/tmp/identity-activation-reports/identity-activation-switch-office-ops-expert-1772361081.json`
+       - fields: `switch_reason=explicit_activate`, `target_identity_id=office-ops-expert`, `actor_id=user:yangxi`, `generated_at=2026-03-01T10:31:21Z`.
+     - actor session pointer was changed to `office-ops-expert` before manual recovery:
+       - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json`
+     - recovery switch replay:
+       - `python3 scripts/identity_creator.py activate --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --actor-id user:yangxi --run-id p0-hotfix-identity-hard-switch-20260301 --switch-reason restore_audit_identity_after_hard_switch`
+       - `rc=0`, switch report: `/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772361801.json`
+       - active identity after recovery: `base-repo-audit-expert-v3`.
+   - Audit note:
+     - this confirms a concrete script-triggered switch (`explicit_activate`) rather than random degradation.
+     - reply-channel must enforce dynamic runtime-derived `Identity-Context` consistency to fail-closed on stamp/session mismatch (`HOTFIX-P0-004` scope).
+
+### 13.2 Release-blocking status after this cross-validation
+
+1. `FIX-015` moved to `IN_PROGRESS` (local workspace changes completed; commit/replay package still pending).
+2. `HOTFIX-P0-004` remains `OPEN/PENDING_REVIEW` (user-visible reply-channel stamp zero-miss replay still needed).
+3. `HOTFIX-P0-005/006/007` are now `DONE + PASS` after replay.
+4. Current runtime closure blocker for `custom-creative-ecom-analyst` is `IP-WRB-001` in validate path (not scope passthrough).
+5. P0 incident replay confirms actor session can be explicitly switched by activation command; release path still needs user-visible reply-channel hard enforcement to prevent silent perceived identity drift (`HOTFIX-P0-004`).
+
+---
+
+## 14) Fast git-scan + cross-validation replay snapshot (2026-03-01, audit expert)
+
+- Date (UTC): 2026-03-01
+- Layer declaration: `protocol`
+- Execution context:
+  - `sandbox`: git diff scan, validator replay, full-scan + three-plane parse
+  - `escalated`: readiness replay (writes health/runtime artifacts under `~/.codex`)
+- Purpose:
+  - give architect a deterministic "what is fixed / what is still blocking" package without narrative drift
+
+### 14.1 Multi-active runtime proof (FIX-015 worktree replay)
+
+1. Active identity set is now multi-active:
+   - `active_identities=['base-repo-audit-expert-v3','base-repo-architect']`, `active_count=2`
+   - source: `python3 scripts/validate_identity_state_consistency.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+2. Actor binding truth remains stable for current actor:
+   - `/Users/yangxi/.codex/identity/session/actors/user_yangxi.json` -> `identity_id=base-repo-audit-expert-v3`
+3. Latest switch report shows multi-active activation model and zero demotion:
+   - `/tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772362504.json`
+   - `activation_model=actor_scoped_catalog_with_multi_active`
+   - `single_active_enforced=false`
+   - `demoted_identities=[]`
+4. No-implicit-switch validator passes with new schema:
+   - `python3 scripts/validate_no_implicit_switch.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --switch-report /tmp/identity-activation-reports/identity-activation-switch-base-repo-audit-expert-v3-1772362504.json --operation three-plane --json-only`
+   - `rc=0`, `implicit_switch_status=PASS_REQUIRED`
+5. Session pointer consistency remains pass under multi-active:
+   - `python3 scripts/validate_identity_session_pointer_consistency.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --actor-id user:yangxi --identity-id base-repo-audit-expert-v3`
+   - `rc=0`, `active_count=2`, canonical+mirror checks pass
+
+### 14.2 Governance-boundary hotfix replay closure
+
+1. HOTFIX-P0-005 (`validate_instance_base_repo_write_boundary`) replay:
+   - command:
+     - `python3 scripts/validate_instance_base_repo_write_boundary.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --check-git-diff --base 7b5f621 --head 7b191e5 --operation ci --json-only`
+   - result: `rc=1`, `base_repo_write_boundary_status=FAIL_REQUIRED`, `error_code=IP-GOV-BASE-001`, blocked `scripts/*` changes confirmed
+2. HOTFIX-P0-006 (`validate_protocol_feedback_ssot_archival`) replay:
+   - command:
+     - `python3 scripts/validate_protocol_feedback_ssot_archival.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - result: `rc=0`, `feedback_ssot_archival_status=PASS_REQUIRED`, outbox+index linked batches present
+3. HOTFIX-P0-007 (`--scope` arbitration chain) replay:
+   - no-scope replay:
+     - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready`
+     - `rc=2`, deterministic `IP-ENV-002` with explicit "`Pass --scope`" hint
+   - scoped replay:
+     - same command + `--scope USER`
+     - scope preflight passes and chain proceeds beyond `IP-ENV-002`; later `collect_identity_health_report --enforce-pass` fails on downstream health checks (expected independent gate)
+
+### 14.3 Release-path replay summary
+
+1. Readiness replay for self audit identity passes under bounded compare window:
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --execution-report /Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772302614.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --base 7b5f621 --head 7b5f621`
+   - `rc=0`, tail: `[OK] release readiness checks PASSED`
+2. `report_three_plane_status` shows actor/session + stamp all PASS while baseline freshness remains WARN:
+   - artifact: `/tmp/three-plane-fix015-multi-active-audit.json`
+   - key fields:
+     - `actor_session_binding.actor_binding_status=PASS_REQUIRED`
+     - `no_implicit_switch.implicit_switch_status=PASS_REQUIRED`
+     - `cross_actor_isolation.cross_actor_isolation_status=PASS_REQUIRED`
+     - `response_identity_stamp.stamp_status=PASS`, `reply_stamp_missing_count=0`
+     - `protocol_baseline_freshness.baseline_error_code=IP-PBL-001`
+3. `full_identity_protocol_scan` remains `p1` due baseline freshness (not due actor-isolation regression):
+   - artifact: `/tmp/full-scan-fix015-multi-active-audit.json`
+   - summary: `{'total_identities': 2, 'p0': 0, 'p1': 2, 'ok': 0}`
+
+### 14.4 Remaining release blockers (architect action list)
+
+1. `HOTFIX-P0-004` remains open:
+   - enforce zero-miss first-line `Identity-Context` on user-visible reply channel and keep blocker-receipt fail-closed semantics.
+2. `FIX-015` needs commit + packaged acceptance replay:
+   - current changes are validated in local workspace but still uncommitted.
+3. `IP-PBL-001` baseline freshness remains recurring:
+   - requires refreshed execution reports on current protocol head for release-closure claims.
+4. `e2e_smoke_test.sh` currently fails on changelog freshness in `HEAD~1..HEAD` range:
+   - `validate_changelog_updated.py` fails while range includes protocol script changes without changelog update.
+   - this is a release hygiene blocker and should be closed in same architect batch as FIX-015 commit.
