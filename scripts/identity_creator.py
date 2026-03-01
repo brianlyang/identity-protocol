@@ -990,6 +990,9 @@ def main() -> int:
         reply_first_line_blocker_receipt = (
             f"/tmp/identity-reply-first-line-blocker-receipt-{args.identity_id}.json"
         )
+        send_time_reply_gate_blocker_receipt = (
+            f"/tmp/identity-send-time-reply-gate-blocker-receipt-{args.identity_id}.json"
+        )
         execution_reply_coherence_blocker_receipt = (
             f"/tmp/identity-execution-reply-coherence-blocker-receipt-{args.identity_id}.json"
         )
@@ -1144,6 +1147,37 @@ def main() -> int:
                 "validate",
                 "--blocker-receipt-out",
                 reply_first_line_blocker_receipt,
+            ],
+            [
+                "python3",
+                "scripts/validate_send_time_reply_gate.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--stamp-json",
+                stamp_artifact,
+                "--force-check",
+                "--enforce-send-time-gate",
+                "--operation",
+                "validate",
+                "--blocker-receipt-out",
+                send_time_reply_gate_blocker_receipt,
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_response_stamp_blocker_receipt.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--force-check",
+                "--receipt",
+                send_time_reply_gate_blocker_receipt,
             ],
             [
                 "python3",

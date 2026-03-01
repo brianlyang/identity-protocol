@@ -193,6 +193,8 @@ for ID in $IDS; do
   STAMP_JSON="/tmp/identity-response-stamp-${ID}.json"
   STAMP_BLOCKER_RECEIPT="/tmp/identity-stamp-blocker-receipt-${ID}.json"
   REPLY_FIRST_LINE_BLOCKER_RECEIPT="/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
+  SEND_TIME_REPLY_FILE="/tmp/identity-send-time-reply-${ID}.txt"
+  SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
   EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
@@ -209,6 +211,26 @@ for ID in $IDS; do
 
   echo "[12.46/30][$ID] validate reply first-line blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
+
+  echo "[12.465/30][$ID] build send-time reply sample (real dialogue outlet replay)"
+  python3 - <<'PY' "$STAMP_JSON" "$SEND_TIME_REPLY_FILE"
+import json
+import pathlib
+import sys
+
+stamp_json = pathlib.Path(sys.argv[1]).resolve()
+reply_file = pathlib.Path(sys.argv[2]).resolve()
+doc = json.loads(stamp_json.read_text(encoding="utf-8"))
+stamp_line = str(doc.get("external_stamp", "")).strip()
+reply_file.write_text(f"{stamp_line}\nE2E_SEND_TIME_REPLY_BODY\n", encoding="utf-8")
+print(f"[OK] send-time reply sample emitted: {reply_file}")
+PY
+
+  echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
+  python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
+
+  echo "[12.467/30][$ID] validate send-time reply gate blocker receipt schema"
+  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
   python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT"

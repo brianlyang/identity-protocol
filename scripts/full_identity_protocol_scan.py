@@ -129,6 +129,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
             "reply_identity_context_first_line",
+            "send_time_reply_gate",
             "execution_reply_identity_coherence",
             "writeback_continuity",
             "post_execution_mandatory",
@@ -311,6 +312,9 @@ def main() -> int:
             stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
             stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
             reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-scan-{iid}.json"
+            send_time_reply_gate_blocker_receipt = (
+                f"/tmp/identity-send-time-reply-gate-blocker-receipt-scan-{iid}.json"
+            )
             execution_reply_coherence_blocker_receipt = (
                 f"/tmp/identity-execution-reply-coherence-blocker-receipt-scan-{iid}.json"
             )
@@ -500,6 +504,25 @@ def main() -> int:
                     "scan",
                     "--blocker-receipt-out",
                     reply_first_line_blocker_receipt,
+                    "--json-only",
+                ],
+                "send_time_reply_gate": [
+                    "python3",
+                    "scripts/validate_send_time_reply_gate.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--stamp-json",
+                    stamp_artifact,
+                    "--force-check",
+                    "--enforce-send-time-gate",
+                    "--operation",
+                    "scan",
+                    "--blocker-receipt-out",
+                    send_time_reply_gate_blocker_receipt,
                     "--json-only",
                 ],
                 "execution_reply_identity_coherence": [
@@ -1493,6 +1516,21 @@ def main() -> int:
                     ):
                         if k in reply_doc:
                             check_payload[k] = reply_doc.get(k)
+                if name == "send_time_reply_gate":
+                    send_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "send_time_gate_status",
+                        "error_code",
+                        "reply_evidence_mode",
+                        "reply_evidence_ref",
+                        "reply_sample_count",
+                        "reply_first_line_missing_count",
+                        "reply_first_line_missing_refs",
+                        "blocker_receipt_path",
+                        "stale_reasons",
+                    ):
+                        if k in send_doc:
+                            check_payload[k] = send_doc.get(k)
                 if name == "execution_reply_identity_coherence":
                     coherence_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

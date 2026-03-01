@@ -185,6 +185,9 @@ def main() -> int:
     stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
     stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
     reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-{identity_id}.json"
+    send_time_reply_gate_blocker_receipt = (
+        f"/tmp/identity-send-time-reply-gate-blocker-receipt-{identity_id}.json"
+    )
     execution_reply_coherence_blocker_receipt = (
         f"/tmp/identity-execution-reply-coherence-blocker-receipt-{identity_id}.json"
     )
@@ -468,6 +471,39 @@ def main() -> int:
             "readiness",
             "--blocker-receipt-out",
             reply_first_line_blocker_receipt,
+        ],
+        [
+            "python3",
+            "scripts/validate_send_time_reply_gate.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-send-time-gate",
+            "--operation",
+            "readiness",
+            "--blocker-receipt-out",
+            send_time_reply_gate_blocker_receipt,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_response_stamp_blocker_receipt.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--force-check",
+            "--receipt",
+            send_time_reply_gate_blocker_receipt,
+            "--json-only",
         ],
         [
             "python3",

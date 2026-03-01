@@ -386,6 +386,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     reply_first_line_blocker_receipt = (
         f"/tmp/identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}.json"
     )
+    send_time_reply_gate_blocker_receipt = (
+        f"/tmp/identity-send-time-reply-gate-blocker-receipt-three-plane-{args.identity_id}.json"
+    )
     execution_reply_coherence_blocker_receipt = (
         f"/tmp/identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}.json"
     )
@@ -502,6 +505,38 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     reply_first_line_status = str(reply_first_line_payload.get("reply_first_line_status", "")).strip().upper()
     if rc_reply_first_line != 0 or reply_first_line_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_send_time_gate, out_send_time_gate, err_send_time_gate = _run(
+        [
+            "python3",
+            "scripts/validate_send_time_reply_gate.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-send-time-gate",
+            "--operation",
+            "three-plane",
+            "--blocker-receipt-out",
+            send_time_reply_gate_blocker_receipt,
+            "--json-only",
+        ]
+    )
+    send_time_gate_payload = _parse_json_payload(out_send_time_gate) or {}
+    validators["send_time_reply_gate"] = {
+        "rc": rc_send_time_gate,
+        "ok": rc_send_time_gate == 0,
+        "out": out_send_time_gate,
+        "err": err_send_time_gate,
+    }
+    send_time_gate_status = str(send_time_gate_payload.get("send_time_gate_status", "")).strip().upper()
+    if rc_send_time_gate != 0 or send_time_gate_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     rc_reply_coherence, out_reply_coherence, err_reply_coherence = _run(
@@ -1608,6 +1643,14 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "reply_first_line_missing_count": reply_first_line_payload.get("reply_first_line_missing_count", 0),
             "reply_first_line_missing_refs": reply_first_line_payload.get("reply_first_line_missing_refs", []),
             "reply_first_line_blocker_receipt_path": reply_first_line_payload.get("blocker_receipt_path", ""),
+            "send_time_gate_status": send_time_gate_payload.get("send_time_gate_status"),
+            "send_time_gate_error_code": send_time_gate_payload.get("error_code", ""),
+            "send_time_reply_evidence_mode": send_time_gate_payload.get("reply_evidence_mode", ""),
+            "send_time_reply_evidence_ref": send_time_gate_payload.get("reply_evidence_ref", ""),
+            "send_time_reply_sample_count": send_time_gate_payload.get("reply_sample_count", 0),
+            "send_time_reply_missing_count": send_time_gate_payload.get("reply_first_line_missing_count", 0),
+            "send_time_reply_missing_refs": send_time_gate_payload.get("reply_first_line_missing_refs", []),
+            "send_time_blocker_receipt_path": send_time_gate_payload.get("blocker_receipt_path", ""),
             "reply_coherence_status": reply_coherence_payload.get("coherence_status"),
             "reply_coherence_error_code": reply_coherence_payload.get("error_code", ""),
             "reply_coherence_decision": reply_coherence_payload.get("coherence_decision", ""),
@@ -1619,6 +1662,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "external_stamp": stamp_render_payload.get("external_stamp"),
             "stale_reasons": stamp_payload.get("stale_reasons", []),
             "first_line_stale_reasons": reply_first_line_payload.get("stale_reasons", []),
+            "send_time_stale_reasons": send_time_gate_payload.get("stale_reasons", []),
             "coherence_stale_reasons": reply_coherence_payload.get("stale_reasons", []),
         },
         "execution_report_freshness": {
