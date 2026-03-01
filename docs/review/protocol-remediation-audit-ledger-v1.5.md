@@ -2665,7 +2665,7 @@ Status: `PATCHED_PENDING_AUDIT`
    - protocol-layer only (contracts/validators/gates wiring),
    - no business data constants were introduced.
 
-#### 16.6.3 P0-E audit replay verdict (2026-03-01, cross-validated)
+#### 16.6.4 P0-E audit replay verdict (2026-03-01, cross-validated)
 
 Status: `PASS` (scope: validator implementation + six-surface wiring integrity)
 
@@ -2699,7 +2699,45 @@ Status: `PASS` (scope: validator implementation + six-surface wiring integrity)
 8. Audit decision:
    - mark `P0-E` as ready to proceed to next lane (`P0-F`) with no regression found in this replay.
 
-#### 16.6.4 HOTFIX-P0-004 execution escalation (2026-03-01, live reply-channel gap)
+#### 16.6.5 P0-F audit replay verdict (2026-03-01, cross-validated)
+
+Status: `PASS` (scope: validator implementation + six-surface wiring integrity)
+
+1. Commit under replay:
+   - `21063394dd64c94b484bd1afc304997473a4c145`
+2. Static checks:
+   - `python3 -m py_compile ... && bash -n scripts/e2e_smoke_test.sh`
+   - result: `rc=0`
+3. Direct validator replay:
+   - `python3 scripts/validate_protocol_data_sanitization_boundary.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+   - result: `rc=0`
+   - key fields:
+     - `protocol_data_sanitization_boundary_status=SKIPPED_NOT_REQUIRED`
+     - `violation_count=0`
+     - `stale_reasons=["contract_not_required"]`
+4. Full-scan wiring replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-p0f-audit.json`
+   - result: `rc=0`
+   - key extract:
+     - project: `checks.protocol_data_sanitization_boundary.rc=0`, `status=SKIPPED_NOT_REQUIRED`, `violation_count=0`
+     - global: `checks.protocol_data_sanitization_boundary.rc=0`, `status=SKIPPED_NOT_REQUIRED`, `violation_count=0`
+5. Three-plane wiring replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --scope USER --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/three-plane-p0f-audit.json`
+   - result: `rc=0`
+   - key extract:
+     - `instance_plane_detail.protocol_data_sanitization_boundary.protocol_data_sanitization_boundary_status=SKIPPED_NOT_REQUIRED`
+     - `instance_plane_detail.protocol_data_sanitization_boundary.violation_count=0`
+     - `instance_plane_detail.hard_boundary=false`
+6. Docs and SSOT boundary checks:
+   - `python3 scripts/docs_command_contract_check.py` -> `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `rc=0`
+7. Residual risks:
+   - contract is currently not required for tested identity, so replay validates wiring and semantics but not strict blocking path.
+   - `--baseline-policy strict` may still fail on `IP-PBL-001`; unrelated to P0-F patch scope.
+8. Audit decision:
+   - mark `P0-F` as `PASS` for protocol wiring quality; next blocking lane remains `HOTFIX-P0-004`.
+
+#### 16.6.6 HOTFIX-P0-004 execution escalation (2026-03-01, live reply-channel gap)
 
 Status: `OPEN_BLOCKING` (release-blocking until closure replay is PASS)
 
@@ -2744,3 +2782,49 @@ Required implementation package for architect (separate hotfix lane, do not merg
 Audit note:
 
 1. This hotfix addresses perceived identity drift risk in live dialogue channel and remains mandatory for multi-agent and multi-identity release confidence.
+
+#### 16.6.7 HOTFIX-P0-004 implementation replay (2026-03-01, protocol-only)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Implemented package:
+
+1. New validator:
+   - `scripts/validate_reply_identity_context_first_line.py`
+   - hard error code: `IP-ASB-STAMP-SESSION-001`
+2. Six-surface gate wiring completed:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+3. Machine-readable fields exposed:
+   - `reply_first_line_status`
+   - `reply_first_line_missing_count`
+   - `reply_first_line_missing_refs`
+
+Replay evidence snapshot:
+
+1. negative sample (missing first-line stamp):
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --reply-file /tmp/reply-missing-stamp.txt --force-check --enforce-first-line-gate --json-only`
+   - result: `rc=1`
+   - key fields: `reply_first_line_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`, `reply_first_line_missing_count=1`
+2. positive sample (compliant first-line stamp):
+   - `python3 scripts/render_identity_response_stamp.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --view external --out /tmp/reply-stamp-pass.json --json-only`
+   - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json /tmp/reply-stamp-pass.json --force-check --enforce-first-line-gate --json-only`
+   - result: `rc=0`
+   - key fields: `reply_first_line_status=PASS_REQUIRED`, `reply_first_line_missing_count=0`
+3. full-scan field visibility:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --out /tmp/scan-hotfix-p0-004.json`
+   - result: `rc=0`
+   - key extract:
+     - project/global both expose `checks.reply_identity_context_first_line`
+     - `reply_first_line_status=PASS_REQUIRED`
+4. three-plane field visibility:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --with-docs-contract`
+   - result: `rc=0`
+   - key extract:
+     - `instance_plane_detail.response_identity_stamp.reply_first_line_status=PASS_REQUIRED`
+     - `reply_first_line_missing_count=0`
+     - `reply_first_line_missing_refs=[]`

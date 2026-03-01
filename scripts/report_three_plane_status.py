@@ -381,6 +381,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
 
     stamp_artifact = f"/tmp/identity-response-stamp-three-plane-{args.identity_id}.json"
     stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-three-plane-{args.identity_id}.json"
+    reply_first_line_blocker_receipt = (
+        f"/tmp/identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}.json"
+    )
 
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(
         [
@@ -457,6 +460,40 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "out": out_receipt,
         "err": err_receipt,
     }
+    if rc_stamp != 0 or rc_receipt != 0:
+        hard_boundary = True
+
+    rc_reply_first_line, out_reply_first_line, err_reply_first_line = _run(
+        [
+            "python3",
+            "scripts/validate_reply_identity_context_first_line.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-first-line-gate",
+            "--operation",
+            "three-plane",
+            "--blocker-receipt-out",
+            reply_first_line_blocker_receipt,
+            "--json-only",
+        ]
+    )
+    reply_first_line_payload = _parse_json_payload(out_reply_first_line) or {}
+    validators["reply_identity_context_first_line"] = {
+        "rc": rc_reply_first_line,
+        "ok": rc_reply_first_line == 0,
+        "out": out_reply_first_line,
+        "err": err_reply_first_line,
+    }
+    reply_first_line_status = str(reply_first_line_payload.get("reply_first_line_status", "")).strip().upper()
+    if rc_reply_first_line != 0 or reply_first_line_status == "FAIL_REQUIRED":
+        hard_boundary = True
 
     rc_prompt, out_prompt, err_prompt = _run(
         [
@@ -1110,8 +1147,14 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "reply_sample_count": stamp_payload.get("reply_sample_count", 0),
             "reply_stamp_missing_count": stamp_payload.get("reply_stamp_missing_count", 0),
             "reply_stamp_missing_refs": stamp_payload.get("reply_stamp_missing_refs", []),
+            "reply_first_line_status": reply_first_line_payload.get("reply_first_line_status"),
+            "reply_first_line_error_code": reply_first_line_payload.get("error_code", ""),
+            "reply_first_line_missing_count": reply_first_line_payload.get("reply_first_line_missing_count", 0),
+            "reply_first_line_missing_refs": reply_first_line_payload.get("reply_first_line_missing_refs", []),
+            "reply_first_line_blocker_receipt_path": reply_first_line_payload.get("blocker_receipt_path", ""),
             "external_stamp": stamp_render_payload.get("external_stamp"),
             "stale_reasons": stamp_payload.get("stale_reasons", []),
+            "first_line_stale_reasons": reply_first_line_payload.get("stale_reasons", []),
         },
         "execution_report_freshness": {
             "freshness_status": freshness_payload.get("freshness_status"),

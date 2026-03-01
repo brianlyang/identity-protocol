@@ -128,6 +128,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "session_refresh_status",
             "response_stamp_validation",
             "response_stamp_blocker_receipt",
+            "reply_identity_context_first_line",
             "writeback_continuity",
             "post_execution_mandatory",
             "semantic_routing_guard",
@@ -286,6 +287,7 @@ def main() -> int:
             is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
             stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
             stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
+            reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-scan-{iid}.json"
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -449,6 +451,25 @@ def main() -> int:
                     "--force-check",
                     "--receipt",
                     stamp_blocker_receipt,
+                    "--json-only",
+                ],
+                "reply_identity_context_first_line": [
+                    "python3",
+                    "scripts/validate_reply_identity_context_first_line.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--stamp-json",
+                    stamp_artifact,
+                    "--force-check",
+                    "--enforce-first-line-gate",
+                    "--operation",
+                    "scan",
+                    "--blocker-receipt-out",
+                    reply_first_line_blocker_receipt,
                     "--json-only",
                 ],
                 "tool_installation": [
@@ -1071,6 +1092,20 @@ def main() -> int:
                     ):
                         if k in receipt_doc:
                             check_payload[k] = receipt_doc.get(k)
+                if name == "reply_identity_context_first_line":
+                    reply_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "reply_first_line_status",
+                        "error_code",
+                        "reply_first_line_missing_count",
+                        "reply_first_line_missing_refs",
+                        "reply_sample_count",
+                        "reply_evidence_ref",
+                        "blocker_receipt_path",
+                        "stale_reasons",
+                    ):
+                        if k in reply_doc:
+                            check_payload[k] = reply_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()

@@ -175,6 +175,7 @@ def main() -> int:
     catalog = explicit_catalog or env_catalog
     stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
     stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
+    reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-{identity_id}.json"
     if not catalog:
         print("[FAIL] catalog is required (implicit fallback disabled).")
         print("       pass --catalog <path> or set IDENTITY_CATALOG after mode selection.")
@@ -433,6 +434,37 @@ def main() -> int:
             "--force-check",
             "--receipt",
             stamp_blocker_receipt,
+        ],
+        [
+            "python3",
+            "scripts/validate_reply_identity_context_first_line.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-first-line-gate",
+            "--operation",
+            "readiness",
+            "--blocker-receipt-out",
+            reply_first_line_blocker_receipt,
+        ],
+        [
+            "python3",
+            "scripts/validate_identity_response_stamp_blocker_receipt.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--force-check",
+            "--receipt",
+            reply_first_line_blocker_receipt,
         ],
         # scope must come from bound runtime/catalog resolution (single source of truth).
         ["python3", "scripts/validate_identity_prompt_quality.py", "--catalog", catalog, "--identity-id", identity_id],

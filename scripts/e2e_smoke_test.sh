@@ -192,6 +192,7 @@ for ID in $IDS; do
 
   STAMP_JSON="/tmp/identity-response-stamp-${ID}.json"
   STAMP_BLOCKER_RECEIPT="/tmp/identity-stamp-blocker-receipt-${ID}.json"
+  REPLY_FIRST_LINE_BLOCKER_RECEIPT="/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
   python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --out "$STAMP_JSON" --json-only
@@ -201,6 +202,12 @@ for ID in $IDS; do
 
   echo "[12.4/30][$ID] validate response stamp blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"
+
+  echo "[12.45/30][$ID] validate reply first-line Identity-Context hard gate (HOTFIX-P0-004)"
+  python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
+
+  echo "[12.46/30][$ID] validate reply first-line blocker receipt schema"
+  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
   echo "[12.5/30][$ID] validate identity prompt quality"
   # scope is resolved from bound catalog/runtime context; avoid hard-coded scope injection drift.

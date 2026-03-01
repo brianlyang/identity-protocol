@@ -975,6 +975,9 @@ def main() -> int:
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
         stamp_artifact = f"/tmp/identity-response-stamp-{args.identity_id}.json"
         stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json"
+        reply_first_line_blocker_receipt = (
+            f"/tmp/identity-reply-first-line-blocker-receipt-{args.identity_id}.json"
+        )
         try:
             _ = resolve_identity(
                 args.identity_id,
@@ -1104,6 +1107,37 @@ def main() -> int:
                 "--force-check",
                 "--receipt",
                 stamp_blocker_receipt,
+            ],
+            [
+                "python3",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--stamp-json",
+                stamp_artifact,
+                "--force-check",
+                "--enforce-first-line-gate",
+                "--operation",
+                "validate",
+                "--blocker-receipt-out",
+                reply_first_line_blocker_receipt,
+            ],
+            [
+                "python3",
+                "scripts/validate_identity_response_stamp_blocker_receipt.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--force-check",
+                "--receipt",
+                reply_first_line_blocker_receipt,
             ],
             ["python3", "scripts/validate_identity_upgrade_prereq.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_update_lifecycle.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
