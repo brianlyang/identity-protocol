@@ -507,6 +507,36 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_reply_first_line != 0 or reply_first_line_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_layer_intent, out_layer_intent, err_layer_intent = _run(
+        [
+            "python3",
+            "scripts/validate_layer_intent_resolution.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--stamp-json",
+            stamp_artifact,
+            "--force-check",
+            "--enforce-layer-intent-gate",
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    layer_intent_payload = _parse_json_payload(out_layer_intent) or {}
+    validators["layer_intent_resolution"] = {
+        "rc": rc_layer_intent,
+        "ok": rc_layer_intent == 0,
+        "out": out_layer_intent,
+        "err": err_layer_intent,
+    }
+    layer_intent_status = str(layer_intent_payload.get("layer_intent_resolution_status", "")).strip().upper()
+    if rc_layer_intent != 0 or layer_intent_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_send_time_gate, out_send_time_gate, err_send_time_gate = _run(
         [
             "python3",
@@ -1643,6 +1673,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "reply_first_line_missing_count": reply_first_line_payload.get("reply_first_line_missing_count", 0),
             "reply_first_line_missing_refs": reply_first_line_payload.get("reply_first_line_missing_refs", []),
             "reply_first_line_blocker_receipt_path": reply_first_line_payload.get("blocker_receipt_path", ""),
+            "layer_intent_resolution_status": layer_intent_payload.get("layer_intent_resolution_status", ""),
+            "layer_intent_error_code": layer_intent_payload.get("error_code", ""),
+            "resolved_work_layer": layer_intent_payload.get("resolved_work_layer", ""),
+            "resolved_source_layer": layer_intent_payload.get("resolved_source_layer", ""),
+            "layer_intent_confidence": layer_intent_payload.get("intent_confidence"),
+            "layer_intent_source": layer_intent_payload.get("intent_source", ""),
+            "layer_intent_fallback_reason": layer_intent_payload.get("fallback_reason", ""),
             "send_time_gate_status": send_time_gate_payload.get("send_time_gate_status"),
             "send_time_gate_error_code": send_time_gate_payload.get("error_code", ""),
             "send_time_reply_evidence_mode": send_time_gate_payload.get("reply_evidence_mode", ""),
@@ -1662,6 +1699,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "external_stamp": stamp_render_payload.get("external_stamp"),
             "stale_reasons": stamp_payload.get("stale_reasons", []),
             "first_line_stale_reasons": reply_first_line_payload.get("stale_reasons", []),
+            "layer_intent_stale_reasons": layer_intent_payload.get("stale_reasons", []),
             "send_time_stale_reasons": send_time_gate_payload.get("stale_reasons", []),
             "coherence_stale_reasons": reply_coherence_payload.get("stale_reasons", []),
         },

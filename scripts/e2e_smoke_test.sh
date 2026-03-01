@@ -209,6 +209,9 @@ for ID in $IDS; do
   echo "[12.45/30][$ID] validate reply first-line Identity-Context hard gate (HOTFIX-P0-004)"
   python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
+  echo "[12.455/30][$ID] validate layer intent auto-resolution gate (P1)"
+  python3 scripts/validate_layer_intent_resolution.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-layer-intent-gate --operation e2e --json-only
+
   echo "[12.46/30][$ID] validate reply first-line blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 

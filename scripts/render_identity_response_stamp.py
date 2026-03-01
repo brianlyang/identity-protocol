@@ -11,6 +11,7 @@ from response_stamp_common import (
     render_external_stamp_with_layer_context,
     render_internal_stamp,
     render_structured_context,
+    resolve_layer_intent,
     resolve_disclosure_level,
     resolve_stamp_context,
 )
@@ -24,8 +25,13 @@ def main() -> int:
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
     ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="")
-    ap.add_argument("--work-layer", choices=sorted(ALLOWED_WORK_LAYERS), default="protocol")
-    ap.add_argument("--source-layer", choices=sorted(ALLOWED_SOURCE_LAYERS), default="")
+    ap.add_argument("--work-layer", default="", help="explicit work layer override (protocol|instance|dual)")
+    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global|env|auto)")
+    ap.add_argument(
+        "--layer-intent-text",
+        default="",
+        help="optional natural-language intent used for auto work/source layer resolution",
+    )
     ap.add_argument("--trigger-text", default="", help="optional natural-language stamp level trigger")
     ap.add_argument("--trigger-scope", choices=["once", "session"], default="")
     ap.add_argument(
@@ -72,11 +78,21 @@ def main() -> int:
         persist_session_trigger=persist_session_trigger,
     )
     disclosure_level = str(disclosure.get("disclosure_level", "standard")).strip() or "standard"
-    source_layer = str(args.source_layer or "").strip().lower() or ctx.source_domain
+    intent = resolve_layer_intent(
+        explicit_work_layer=str(args.work_layer or "").strip(),
+        explicit_source_layer=str(args.source_layer or "").strip(),
+        intent_text=str(args.layer_intent_text or "").strip(),
+        default_work_layer="protocol",
+        default_source_layer=ctx.source_domain,
+    )
+    work_layer = str(intent.get("resolved_work_layer", "")).strip().lower() or "protocol"
+    source_layer = str(intent.get("resolved_source_layer", "")).strip().lower() or ctx.source_domain
+    if work_layer not in ALLOWED_WORK_LAYERS:
+        work_layer = "protocol"
     external = render_external_stamp_with_layer_context(
         ctx,
         disclosure_level=disclosure_level,
-        work_layer=args.work_layer,
+        work_layer=work_layer,
         source_layer=source_layer,
     )
     internal = render_internal_stamp(ctx)
@@ -92,13 +108,22 @@ def main() -> int:
         "trigger_text": disclosure.get("trigger_text", ""),
         "trigger_confidence": disclosure.get("trigger_confidence", 0.0),
         "session_profile_path": disclosure.get("session_profile_path", ""),
-        "work_layer": args.work_layer,
+        "work_layer": work_layer,
         "source_layer": source_layer,
+        "layer_intent_resolution_status": "PASS_REQUIRED"
+        if work_layer in ALLOWED_WORK_LAYERS and source_layer in ALLOWED_SOURCE_LAYERS
+        else "FAIL_REQUIRED",
+        "resolved_work_layer": work_layer,
+        "resolved_source_layer": source_layer,
+        "intent_confidence": intent.get("intent_confidence", 0.0),
+        "intent_source": intent.get("intent_source", "default_fallback"),
+        "fallback_reason": intent.get("fallback_reason", ""),
+        "layer_intent_text": str(args.layer_intent_text or "").strip(),
         "external_stamp": external,
         "internal_stamp": internal,
         "identity_context": render_structured_context(
             ctx,
-            work_layer=args.work_layer,
+            work_layer=work_layer,
             source_layer=source_layer,
         ),
     }

@@ -11,6 +11,7 @@ from response_stamp_common import (
     ALLOWED_WORK_LAYERS,
     blocker_receipt,
     parse_identity_context_stamp,
+    resolve_layer_intent,
     resolve_stamp_context,
 )
 from tool_vendor_governance_common import contract_required, load_json
@@ -178,7 +179,9 @@ def main() -> int:
     ap.add_argument("--reply-file", default="", help="single reply text file")
     ap.add_argument("--reply-text", default="", help="inline single reply text")
     ap.add_argument("--stamp-json", default="", help="optional rendered stamp payload json (external_stamp field)")
-    ap.add_argument("--expected-work-layer", choices=sorted(ALLOWED_WORK_LAYERS), default="protocol")
+    ap.add_argument("--expected-work-layer", default="")
+    ap.add_argument("--expected-source-layer", default="")
+    ap.add_argument("--layer-intent-text", default="", help="optional natural-language intent text for layer auto-resolution")
     ap.add_argument("--force-check", action="store_true")
     ap.add_argument("--enforce-first-line-gate", action="store_true")
     ap.add_argument("--blocker-receipt-out", default="")
@@ -239,6 +242,7 @@ def main() -> int:
 
     reply_samples: list[str] = []
     evidence_ref = ""
+    stamp_doc: dict[str, Any] = {}
     if args.reply_log.strip():
         p = Path(args.reply_log).expanduser().resolve()
         if not p.exists():
@@ -269,6 +273,7 @@ def main() -> int:
         if not isinstance(doc, dict):
             print(f"[FAIL] stamp json payload must be object: {p}")
             return 1
+        stamp_doc = doc
         stamp_line = str(doc.get("external_stamp", "")).strip()
         reply_samples = [stamp_line] if stamp_line else []
         evidence_ref = str(p)
@@ -294,7 +299,22 @@ def main() -> int:
             error_code = ERR_REPLY_FIRST_LINE
 
     parsed_first: dict[str, Any] = parse_identity_context_stamp(first_lines[0]) if first_lines else {}
-    expected_source_layer = ctx.source_domain
+    layer_intent = resolve_layer_intent(
+        explicit_work_layer=str(args.expected_work_layer or "").strip()
+        or str(stamp_doc.get("resolved_work_layer", "")).strip(),
+        explicit_source_layer=str(args.expected_source_layer or "").strip()
+        or str(stamp_doc.get("resolved_source_layer", "")).strip(),
+        intent_text=str(args.layer_intent_text or "").strip()
+        or str(stamp_doc.get("layer_intent_text", "")).strip(),
+        default_work_layer="protocol",
+        default_source_layer=ctx.source_domain,
+    )
+    expected_work_layer = str(layer_intent.get("resolved_work_layer", "")).strip().lower() or "protocol"
+    expected_source_layer = str(layer_intent.get("resolved_source_layer", "")).strip().lower() or ctx.source_domain
+    if expected_work_layer not in ALLOWED_WORK_LAYERS:
+        expected_work_layer = "protocol"
+    if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
+        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
 
     # Optional identity mismatch signal if first line exists and parsable.
     if not error_code and first_lines:
@@ -321,7 +341,7 @@ def main() -> int:
                     error_code = ERR_REPLY_FIRST_LINE
                 else:
                     stale_reasons.append("reply_first_line_work_layer_invalid_non_blocking")
-            elif parsed_work_layer != args.expected_work_layer:
+            elif parsed_work_layer != expected_work_layer:
                 if strict_format_enforced:
                     stale_reasons.append("reply_first_line_work_layer_mismatch")
                     error_code = ERR_REPLY_FIRST_LINE
@@ -366,9 +386,15 @@ def main() -> int:
         "required_contract": bool(force_required or contract_required(contract)),
         "reply_first_line_status": STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED,
         "error_code": error_code,
+        "layer_intent_resolution_status": STATUS_PASS_REQUIRED if not error_code else STATUS_FAIL_REQUIRED,
+        "resolved_work_layer": expected_work_layer,
+        "resolved_source_layer": expected_source_layer,
+        "intent_confidence": layer_intent.get("intent_confidence", 0.0),
+        "intent_source": layer_intent.get("intent_source", "default_fallback"),
+        "fallback_reason": layer_intent.get("fallback_reason", ""),
         "layer_context_enforced": strict_format_enforced,
         "layer_context_present": has_layer_context,
-        "expected_work_layer": args.expected_work_layer,
+        "expected_work_layer": expected_work_layer,
         "reply_first_line_work_layer": parsed_work_layer,
         "expected_source_layer": expected_source_layer,
         "reply_first_line_source_layer": parsed_source_layer,

@@ -193,6 +193,12 @@ def main() -> int:
         "expected_identity_id": validator_payload.get("expected_identity_id", ""),
         "reply_first_line_work_layer": validator_payload.get("reply_first_line_work_layer", ""),
         "reply_first_line_source_layer": validator_payload.get("reply_first_line_source_layer", ""),
+        "layer_intent_resolution_status": validator_payload.get("layer_intent_resolution_status", ""),
+        "resolved_work_layer": validator_payload.get("resolved_work_layer", ""),
+        "resolved_source_layer": validator_payload.get("resolved_source_layer", ""),
+        "intent_confidence": validator_payload.get("intent_confidence"),
+        "intent_source": validator_payload.get("intent_source", ""),
+        "fallback_reason": validator_payload.get("fallback_reason", ""),
         "blocker_receipt_path": validator_payload.get("blocker_receipt_path", ""),
         "stale_reasons": validator_payload.get("stale_reasons", []),
         "upstream_validator_rc": p.returncode,
@@ -206,4 +212,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
