@@ -2489,3 +2489,72 @@ Decision (final, anti-drift):
    - replay commands with `rc + key fields`
    - residual risks
    - layer declaration.
+
+---
+
+## 16) New strengthening intake (P0+P1, 2026-03-01 official-research package)
+
+- Intake source (evidence-only references):
+  - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-protocol-p0-p1-official-research-discovery-and-source-trust-2026-03-01.md`
+  - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-01_005.md`
+  - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+- Intake interpretation:
+  - preserve existing protocol stability/layering controls,
+  - add missing P0 semantic/trust safeguards,
+  - add P1 proactive optimization trigger and standardized feeding-pack output.
+
+### 16.1 Audit verdict on intake direction
+
+1. Direction accepted (`ACCEPTED_WITH_STRUCTURING`).
+2. P0 part is release-relevant and must be wired into required gates.
+3. P1 part is enhancement lane and must remain non-blocking until explicitly promoted.
+4. Data-sanitization boundary is mandatory:
+   - protocol-layer artifacts must stay business-neutral,
+   - no tenant-specific scenario/constants in governance or protocol contracts.
+
+### 16.2 Execution split (what goes where)
+
+1. Governance SSOT (L1) receives:
+   - contract semantics and requirement IDs (`ASB-RQ-044..048`).
+2. Review ledger (L3) receives:
+   - replay plan,
+   - acceptance commands,
+   - status transitions and residual risks.
+3. Instance runtime feedback keeps detailed business context:
+   - protocol layer consumes only sanitized abstractions.
+
+### 16.3 New P0 lane tasks (required-gate candidates)
+
+1. `P0-D` implement `validate_protocol_vendor_semantic_isolation.py`
+   - objective: block cross-domain semantic pollution between `protocol_vendor` and `business_partner` in conclusion layer.
+   - acceptance:
+     - cross-domain write without explicit switch receipt => fail-closed.
+2. `P0-E` implement `validate_external_source_trust_chain.py`
+   - objective: only `official/primary` trusted evidence may enter conclusion layer.
+   - acceptance:
+     - `unknown` source in conclusion evidence => fail-closed.
+3. `P0-F` implement `validate_protocol_data_sanitization_boundary.py`
+   - objective: prevent business scenario contamination in protocol/governance outputs.
+   - acceptance:
+     - protocol-layer sensitive/business-specific identifiers in contract text => fail-closed.
+
+### 16.4 New P1 enhancement lane tasks
+
+1. `P1-D` implement `platform_optimization_discovery_trigger_v1`.
+2. `P1-E` implement `vibe_coding_feeding_pack_contract_v1` output builder.
+3. required pack outputs:
+   - `PROMPT_MAIN.txt`
+   - `INPUT_FILES/`
+   - `RUN_ORDER.txt`
+   - `REVIEW_REQUEST.txt`
+
+### 16.5 Suggested acceptance metrics for architect replay
+
+1. semantic isolation regression:
+   - `protocol_vendor` task triggers `business_partner` retrieval by mistake => target `0`.
+2. source trust regression:
+   - conclusion-layer payload includes `unknown` source => target `0`.
+3. optimization trigger hit-rate:
+   - repeated platform optimization intent (2 rounds) triggers deep-discovery action => target `>=95%`.
+4. feeding-pack execution success:
+   - single-directory pack upload/consume success => target `>=95%`.

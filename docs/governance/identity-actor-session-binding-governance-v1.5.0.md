@@ -979,6 +979,84 @@ Mandatory semantics:
 2. Mismatch in any required tuple field is fail-closed on release/mutation closure surfaces.
 3. Alignment output must remain machine-readable and replayable.
 
+### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
+
+Goal:
+
+1. Prevent protocol-layer semantic pollution between `protocol_vendor` and `business_partner` domains.
+2. Ensure conclusion-layer evidence is built from trusted sources only.
+3. Keep protocol layer free of concrete business scenario contamination.
+
+#### 5.9.1 `protocol_vendor_semantic_isolation_contract_v1`
+
+Mandatory semantics:
+
+1. `protocol_vendor` tasks must not route into `business_partner` retrieval without explicit, auditable domain switch.
+2. `business_partner` tasks must not write protocol-vendor API intelligence into conclusion-layer protocol outputs.
+3. Domain switch requires machine-readable receipt fields:
+   - `trigger_text`
+   - `intent_domain_before`
+   - `intent_domain_after`
+   - `intent_confidence`
+   - `approved_by` (if manual override)
+4. Missing switch receipt under mixed-domain behavior is `FAIL_REQUIRED`.
+
+#### 5.9.2 `external_source_trust_chain_contract_v1`
+
+Mandatory semantics:
+
+1. Every external source consumed by protocol-upgrade conclusions must carry trust tier:
+   - `official`
+   - `primary`
+   - `secondary`
+   - `unknown`
+2. `unknown` tier is forbidden in conclusion-layer evidence.
+3. `unknown` tier may only appear in candidate lead sections with explicit downgrade note and follow-up retrieval requirement.
+4. Conclusion-layer statements require traceable `official/primary` references.
+
+#### 5.9.3 `protocol_data_sanitization_boundary_v1`
+
+Mandatory semantics:
+
+1. Protocol-layer artifacts (contracts/validators/gates/review/governance) must not include tenant-specific business scenarios, customer identifiers, or sensitive business constants.
+2. Protocol examples must use neutral placeholders and generic domain descriptors.
+3. Business-instance details are allowed only in instance-level runtime artifacts and must not be promoted into protocol SSOT contract language.
+4. Violation of sanitization boundary in protocol closure payloads is `FAIL_REQUIRED`.
+
+### 5.10 `platform_optimization_discovery_and_feeding_contract_v1` (P1)
+
+Goal:
+
+1. Upgrade protocol from passive fault prevention to active optimization discovery for high-frequency platform requests.
+2. Standardize one-shot executable feeding packages for vibe-coding style workflows.
+
+#### 5.10.1 `platform_optimization_discovery_trigger_v1`
+
+Mandatory semantics:
+
+1. Trigger when optimization-intent signal repeats across two consecutive rounds for same platform class.
+2. Trigger when user signals repeated "flow not closed" outcomes under platform optimization context.
+3. Trigger output must include:
+   - discovery scope
+   - official-doc retrieval set
+   - cross-validation summary
+   - upgrade proposal link in protocol-feedback outbox.
+
+#### 5.10.2 `vibe_coding_feeding_pack_contract_v1`
+
+Standard output pack (single-directory upload ready):
+
+1. `PROMPT_MAIN.txt`
+2. `INPUT_FILES/`
+3. `RUN_ORDER.txt`
+4. `REVIEW_REQUEST.txt`
+
+Mandatory semantics:
+
+1. Pack output must be deterministic and reproducible from protocol-feedback evidence chain.
+2. Pack must remain business-data sanitized at protocol layer (no tenant-sensitive constants in template text).
+3. Pack generation outcome must be machine-readable and traceable in evidence index.
+
 ## 6) Required Protocol Changes
 
 ### 6.1 Core script change surface
@@ -1004,6 +1082,12 @@ Mandatory semantics:
 19. `validate_protocol_feedback_ssot_archival` (new validator surface)
 20. readiness scope passthrough chain in `scripts/release_readiness_check.py` (`--scope` forwarding to runtime-mode/scope guards)
 21. replay/scan visibility surfaces exposing `reply_stamp_missing_count`
+22. `validate_protocol_vendor_semantic_isolation` (new validator surface)
+23. `validate_external_source_trust_chain` (new validator surface)
+24. protocol-feedback source tier tagging + conclusion-layer evidence writer surfaces
+25. protocol-layer sanitization guard surfaces for governance/review outputs
+26. platform optimization discovery trigger orchestration and report writer surfaces
+27. vibe-coding feeding pack builder surfaces (`PROMPT_MAIN/INPUT_FILES/RUN_ORDER/REVIEW_REQUEST`)
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -1029,6 +1113,11 @@ Mandatory semantics:
 20. `validate_instance_base_repo_write_boundary`
 21. `validate_protocol_feedback_ssot_archival`
 22. `validate_identity_response_stamp` (reply-channel coverage mode, emits `reply_stamp_missing_count`)
+23. `validate_protocol_vendor_semantic_isolation`
+24. `validate_external_source_trust_chain`
+25. `validate_protocol_data_sanitization_boundary`
+26. `trigger_platform_optimization_discovery` (tool/trigger surface)
+27. `build_vibe_coding_feeding_pack` (tool surface)
 
 ### 6.3 Gate wiring surfaces
 
@@ -1083,6 +1172,19 @@ Governance-boundary hotfix lane closure must be wired in the same surfaces throu
 2. `validate_protocol_feedback_ssot_archival` (outbox + evidence-index SSOT archival required, mirror-only fail-closed).
 3. readiness explicit `--scope` passthrough to runtime mode/scope guards under dual-catalog arbitration.
 4. reply-channel stamp observability output (`reply_stamp_missing_count`) in replay/three-plane/full-scan surfaces.
+
+Semantic isolation + source trust closure must be wired in the same surfaces through:
+
+1. `validate_protocol_vendor_semantic_isolation` before conclusion-layer protocol-feedback output emission.
+2. `validate_external_source_trust_chain` on external references included in upgrade conclusions.
+3. required-gates fail-closed on semantic/source/sanitization violations (`IP-SEM-*`, `IP-SRC-*`, `IP-DSN-*`).
+4. protocol-layer sanitization boundary checks to prevent tenant/business scenario leakage into governance contracts.
+
+Platform optimization discovery + feeding-pack enhancement (P1) should be wired in the same surfaces through:
+
+1. optimization-intent trigger evaluation in `identity_creator` and scan/report surfaces.
+2. machine-readable discovery receipts in protocol-feedback outbox/evidence-index.
+3. deterministic `vibe_coding_feeding_pack_contract_v1` artifact generation (`PROMPT_MAIN`, `INPUT_FILES`, `RUN_ORDER`, `REVIEW_REQUEST`).
 
 Vendor/API chain must be wired in the same surfaces through:
 
@@ -1180,6 +1282,11 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-041 | readiness explicit scope must propagate into health branch validators (`collect_identity_health_report` path) | `release_readiness_check.py`, `collect_identity_health_report.py` | P0 | SPEC_READY | Spec defined in 5.8.5; implementation pending |
 | ASB-RQ-042 | baseline policy must be stratified (`strict` for release/mutation, `warn` for observability-only paths) | readiness/e2e/creator/scan/three-plane baseline policy wiring | P0 | SPEC_READY | Spec defined in 5.8.6; implementation pending |
 | ASB-RQ-043 | protocol version alignment must be validated as unified tuple across report/prompt/task/binding context | baseline/prompt/binding validators + closure surfaces | P0 | SPEC_READY | Spec defined in 5.8.7; implementation pending |
+| ASB-RQ-044 | protocol-vendor semantic isolation validator blocks cross-domain pollution in conclusion layer | `validate_protocol_vendor_semantic_isolation` (new), protocol-feedback conclusion writer surfaces | P0 | SPEC_READY | Spec defined in 5.9.1; implementation pending |
+| ASB-RQ-045 | external source trust chain validator enforces trusted source tiers for conclusion-layer evidence | `validate_external_source_trust_chain` (new), external retrieval/evidence aggregation surfaces | P0 | SPEC_READY | Spec defined in 5.9.2; implementation pending |
+| ASB-RQ-046 | protocol data sanitization boundary prevents tenant/business scenario leakage into protocol SSOT layer | `validate_protocol_data_sanitization_boundary` (new), governance/review document checks | P0 | SPEC_READY | Spec defined in 5.9.3; implementation pending |
+| ASB-RQ-047 | platform optimization discovery trigger emits auditable deep-discovery tasks under repeated optimization signals | trigger/routing surfaces + protocol-feedback outbox receipts | P1 | SPEC_READY | Spec defined in 5.10.1; implementation pending |
+| ASB-RQ-048 | vibe-coding feeding pack contract produces deterministic single-directory upload bundle | pack builder surface + evidence-index linkage | P1 | SPEC_READY | Spec defined in 5.10.2; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1198,6 +1305,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-010 | `SPEC_READY -> IMPL_READY (pending final commit/replay)` | multi-active migration patch set in local workspace (`identity_creator/installer/state/session/compile/no_implicit_switch`) |
 | ASB-RQ-040 | `SPEC_READY -> GATE_READY (P0 incident closure pending)` | reply stamp missing counter is wired, but user-visible channel zero-miss closure (`HOTFIX-P0-004`) still pending audit pass |
 | ASB-RQ-041 / ASB-RQ-042 / ASB-RQ-043 | `NEW (SPEC_READY)` | strengthening package from 2026-03-01 cross-validation (scope-health passthrough, baseline policy stratification, unified version-alignment tuple) |
+| ASB-RQ-044 / ASB-RQ-045 / ASB-RQ-046 / ASB-RQ-047 / ASB-RQ-048 | `NEW (SPEC_READY)` | 2026-03-01 official-research/source-trust/optimization intake package (semantic isolation, trust chain, sanitization boundary, discovery trigger, feeding pack) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -1291,6 +1399,18 @@ Semantic-routing codes (aligned with section 5.7.2):
 2. `IP-SEM-002` mixed-domain output without split (fail-closed for protocol-feedback track).
 3. `IP-SEM-003` namespace violation (fail-closed for protocol-feedback track).
 4. `IP-SEM-004` domain whitelist violation (fail-closed).
+5. `IP-SEM-005` protocol-vendor semantic isolation breach in conclusion layer (fail-closed).
+
+External source trust-chain codes (aligned with section 5.9.2):
+
+1. `IP-SRC-001` conclusion-layer evidence includes `unknown` source tier (fail-closed).
+2. `IP-SRC-002` required official/primary trace for conclusion statement missing (fail-closed).
+3. `IP-SRC-003` source tier metadata missing/incomplete on external evidence rows (fail-closed on closure paths).
+
+Protocol-layer sanitization boundary codes (aligned with section 5.9.3):
+
+1. `IP-DSN-001` tenant/business scenario data leaked into protocol-layer contract/governance text (fail-closed).
+2. `IP-DSN-002` protocol-layer examples include unredacted business identifiers or sensitive constants (fail-closed).
 
 Governance-boundary hotfix lane codes (aligned with section 5.8):
 
