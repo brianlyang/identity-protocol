@@ -4005,7 +4005,44 @@ Residual risk:
 
 1. `session` scope persistence writes actor-scoped profile under identity home; sandboxed CI lanes may require escalated permissions for this optional path.
 2. Strict-operation lock-bound failures remain expected when actor/session lock is `LOCK_MISMATCH`; this patch does not relax that gate.
-3. As-of current audit replay, script baseline constant remains `DEFAULT_DISCLOSURE_LEVEL=\"minimal\"` in `scripts/response_stamp_common.py`; governance now defines `standard` as default baseline, so protocol-layer code alignment patch is still required before `DONE / PASS` closure.
+3. Baseline alignment gap closed by `39b2892`: `DEFAULT_DISCLOSURE_LEVEL` and renderer fallback now default to `standard`; prior docs/code drift no longer present.
+
+#### 16.8.9 FIX-023 supplemental replay: default disclosure baseline alignment (2026-03-02)
+
+Status: `DONE / PASS` (independent audit replay completed).
+
+Patch commit:
+
+1. `39b2892` — `fix(protocol): default response stamp disclosure to standard`
+
+Patched files:
+
+1. `scripts/response_stamp_common.py` (`DEFAULT_DISCLOSURE_LEVEL: minimal -> standard`)
+2. `scripts/render_identity_response_stamp.py` (fallback disclosure default: `minimal -> standard`)
+
+Independent audit replay (this turn):
+
+1. Commit/diff verification:
+   - `git show --name-only --oneline 39b2892` confirms only two patched files above.
+2. A. default render (no `--disclosure-level`):
+   - `render_identity_response_stamp.py` => `rc=0`
+   - key fields: `disclosure_level=standard`, `catalog_ref`/`pack_ref` present, first-line tail contains `Layer-Context`.
+3. B/C strict gates under `LOCK_MATCH` tuple:
+   - target identity `base-repo-architect` (current actor-bound active identity)
+   - `validate_identity_response_stamp.py --operation validate` => `rc=0`, `stamp_status=PASS`
+   - `validate_reply_identity_context_first_line.py --operation validate` => `rc=0`, `reply_first_line_status=PASS_REQUIRED`
+4. Negative sanity (expected, non-regression):
+   - under `LOCK_MISMATCH` tuple (`system-requirements-analyst` in current actor context), strict gates fail-closed:
+     - stamp gate `rc=1` (`IP-ASB-STAMP-005`)
+     - first-line gate `rc=1` (`IP-ASB-STAMP-SESSION-001`)
+5. Docs/SSOT checks:
+   - `python3 scripts/docs_command_contract_check.py` => `rc=0`
+   - `python3 scripts/validate_protocol_ssot_source.py` => `rc=0`
+
+Closure note:
+
+1. `FIX-023` replay closure requires lock-consistent tuple (`LOCK_MATCH`) for strict-operation PASS assertions.
+2. `LOCK_MISMATCH` strict failure remains expected governance behavior and is not a patch regression.
 
 #### 16.8.8 FIX-023 implementation replay: identity/layer split-tail hard gate requiredization (2026-03-01)
 
