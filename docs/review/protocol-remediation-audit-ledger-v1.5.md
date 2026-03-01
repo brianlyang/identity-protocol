@@ -137,6 +137,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PENDING_REPLAY |
 | FIX-023 | 2026-03-01 | protocol | layer-tail hard-gate requiredization (`work_layer/source_layer` machine-readable, fail-closed in strict lanes) | `8a97afc` | DONE | PENDING_REPLAY |
 | FIX-024 | 2026-03-01 | protocol | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan machine-readable telemetry (`IP-ASB-STAMP-SESSION-001`) | `b1cbe1f` | DONE | PENDING_REPLAY |
+| FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PENDING_REPLAY |
 
 ---
 
@@ -3891,6 +3892,56 @@ Acceptance replay template (post-implementation):
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.10 FIX-025 implementation lane: layer-intent auto resolution (P1, protocol-only)
+
+Status: `DONE / PENDING_REPLAY` (implementation landed, independent audit replay pending).
+
+Scope (protocol-only):
+
+1. Add deterministic layer-intent resolver output (`resolved_work_layer`, `resolved_source_layer`) with confidence/fallback metadata.
+2. Keep strict fail-closed tuple semantics unchanged (reuse strict gate family in strict operations).
+3. Expose layer-intent telemetry in three-plane/full-scan for machine-readable audit visibility.
+
+Changed surfaces:
+
+1. `scripts/response_stamp_common.py`
+2. `scripts/render_identity_response_stamp.py`
+3. `scripts/validate_layer_intent_resolution.py` (new)
+4. `scripts/validate_reply_identity_context_first_line.py`
+5. `scripts/validate_execution_reply_identity_coherence.py`
+6. `scripts/validate_send_time_reply_gate.py`
+7. `scripts/release_readiness_check.py`
+8. `scripts/e2e_smoke_test.sh`
+9. `scripts/full_identity_protocol_scan.py`
+10. `scripts/report_three_plane_status.py`
+11. `scripts/identity_creator.py`
+12. `.github/workflows/_identity-required-gates.yml`
+13. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+
+Expected machine-readable fields:
+
+1. `layer_intent_resolution_status`
+2. `resolved_work_layer`
+3. `resolved_source_layer`
+4. `intent_confidence`
+5. `intent_source`
+6. `fallback_reason`
+
+Replay checklist (to be attached by architect after command run):
+
+1. Positive: explicit/clear business intent -> auto `work_layer=instance`, strict replay `PASS_REQUIRED`.
+2. Negative: ambiguous intent -> safe fallback `work_layer=protocol` with non-empty `fallback_reason`.
+3. Negative: strict mismatch (`expected-work-layer` vs reply tuple) -> deterministic fail-closed in strict lane.
+4. Observability: `three-plane` and `full-scan` expose `layer_intent_resolution_*` fields.
+
+Source refs:
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`5.8.13`, `ASB-RQ-069`)
+
+Layer declaration:
+
+1. protocol-only; no business scenario constants introduced.
 
 #### 16.8.6 HOTFIX-P0-009 / HOTFIX-P0-010 implementation landing (2026-03-01, architect self-replay)
 
