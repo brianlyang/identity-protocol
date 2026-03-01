@@ -93,6 +93,7 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-014 | 2026-02-28 | protocol | required-contract coverage extends to Track-B + sidecar with operation-aware semantics | `a3eddaa` | DONE | PASS |
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
 | FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
+| FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `TBD(see latest commit in architect packet)` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -3059,3 +3060,38 @@ Residual risks / next lane:
 
 1. This patch validates P1-G/P1-H wiring and machine-readable visibility on non-required contract path; strict required-path replay still depends on contract enablement + sample evidence population.
 2. readiness escalated replay may still hit unrelated runtime update chain outcomes; not part of this P1 wiring scope.
+
+#### 16.7.5 FIX-017 progress update (2026-03-01, P0-A readiness scope passthrough hardening)
+
+Status: `PATCHED_PENDING_AUDIT`
+
+Source ref (L1 governance SSOT + intake action list):
+
+1. `ASB-RQ-039` readiness scope arbitration chain (`--scope` explicit passthrough)
+2. review intake section `15.1 P0-A` (health-branch scope forwarding gap)
+
+Implemented package:
+
+1. Patched `scripts/release_readiness_check.py`:
+   - when readiness is invoked with explicit `--scope`, the health-report branch now forwards it to:
+     - `scripts/collect_identity_health_report.py --scope <SCOPE>`
+2. No semantic changes to fail-closed behavior:
+   - no-scope ambiguous context still expected to fail with `IP-ENV-002`;
+   - this patch only removes downstream scope drift in the explicit-scope path.
+
+Replay evidence:
+
+1. Static check:
+   - `python3 -m py_compile scripts/release_readiness_check.py`
+   - result: `rc=0`
+2. Readiness replay (explicit scope, system sample):
+   - `python3 scripts/release_readiness_check.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --execution-report /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772295915.json --execution-report-policy warn --baseline-policy warn --capability-activation-policy route-any-ready --scope USER`
+   - result: `rc=2` (downstream health failure, expected in this sample)
+   - key proof:
+     - run log now contains:
+       - `python3 scripts/collect_identity_health_report.py ... --enforce-pass --scope USER`
+     - confirms scope passthrough reaches health-report branch deterministically.
+
+Residual risks:
+
+1. This patch closes scope forwarding gap only; it does not alter health strictness (`--enforce-pass`) or semantic gate outcomes for identities with failing checks.

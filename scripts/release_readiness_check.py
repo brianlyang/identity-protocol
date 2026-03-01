@@ -679,6 +679,7 @@ def main() -> int:
                 "scripts/validate_identity_scope_resolution.py",
                 "scripts/validate_identity_scope_isolation.py",
                 "scripts/validate_identity_scope_persistence.py",
+                "scripts/collect_identity_health_report.py",
             }:
                 cmd.extend(["--scope", scope])
     if args.min_required_contract_coverage >= 0.0:
