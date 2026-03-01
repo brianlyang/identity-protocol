@@ -1638,6 +1638,25 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] capability activation preflight failed; update blocked")
             return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_discovery_requiredization.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--apply-requiredization",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] discovery requiredization validation failed; update blocked")
+            return rc
         cmd = [
             "python3",
             "scripts/execute_identity_upgrade.py",
