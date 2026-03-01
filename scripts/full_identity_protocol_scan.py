@@ -137,6 +137,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "external_source_trust_chain",
             "protocol_data_sanitization_boundary",
             "platform_optimization_discovery_trigger",
+            "discovery_requiredization",
             "vibe_coding_feeding_pack",
             "capability_fit_optimization",
             "capability_composition_before_discovery",
@@ -595,6 +596,19 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "discovery_requiredization": [
+                    "python3",
+                    "scripts/validate_discovery_requiredization.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "vibe_coding_feeding_pack": [
                     "python3",
                     "scripts/build_vibe_coding_feeding_pack.py",
@@ -919,6 +933,10 @@ def main() -> int:
                         "required_contract_total",
                         "required_contract_passed",
                         "required_contract_coverage_rate",
+                        "discovery_required_total",
+                        "discovery_required_passed",
+                        "discovery_required_coverage_rate",
+                        "discovery_required_gate_failed",
                         "skipped_contract_count",
                         "failed_required_contract_count",
                         "failed_optional_contract_count",
@@ -961,6 +979,32 @@ def main() -> int:
                     ):
                         if k in split_doc:
                             check_payload[k] = split_doc.get(k)
+                if name == "discovery_requiredization":
+                    dreq_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "discovery_requiredization_status",
+                        "error_code",
+                        "required_contract",
+                        "required_contract_declared",
+                        "auto_required_signal",
+                        "requiredization_triggered",
+                        "trigger_classes",
+                        "window_rounds",
+                        "feedback_batches",
+                        "trigger_condition_flags",
+                        "discovery_contract_required_state",
+                        "requiredized_all_discovery_contracts",
+                        "requiredization_receipt_path",
+                        "requiredization_receipt_linked",
+                        "evidence_index_path",
+                        "ci_required_validators_missing",
+                        "discovery_required_total",
+                        "discovery_required_passed",
+                        "discovery_required_coverage_rate",
+                        "stale_reasons",
+                    ):
+                        if k in dreq_doc:
+                            check_payload[k] = dreq_doc.get(k)
                 if name == "protocol_vendor_semantic_isolation":
                     semantic_iso_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

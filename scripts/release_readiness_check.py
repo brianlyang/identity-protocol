@@ -164,6 +164,15 @@ def main() -> int:
             "default disabled."
         ),
     )
+    ap.add_argument(
+        "--min-discovery-required-coverage",
+        type=float,
+        default=-1.0,
+        help=(
+            "optional minimum required-contract coverage percentage (0-100) for discovery subset "
+            "(tool_installation/vendor_api_discovery/vendor_api_solution). default disabled."
+        ),
+    )
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
@@ -540,6 +549,19 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_discovery_requiredization.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/build_vibe_coding_feeding_pack.py",
             "--catalog",
             catalog,
@@ -700,6 +722,11 @@ def main() -> int:
         for cmd in seq:
             if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
                 cmd.extend(["--min-required-contract-coverage", str(args.min_required_contract_coverage)])
+                break
+    if args.min_discovery_required_coverage >= 0.0:
+        for cmd in seq:
+            if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
+                cmd.extend(["--min-discovery-required-coverage", str(args.min_discovery_required_coverage)])
                 break
 
     execution_report = args.execution_report.strip()

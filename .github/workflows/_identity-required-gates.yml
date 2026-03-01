@@ -195,6 +195,7 @@ jobs:
             python3 scripts/validate_external_source_trust_chain.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_protocol_data_sanitization_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/trigger_platform_optimization_discovery.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
+            python3 scripts/validate_discovery_requiredization.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/build_vibe_coding_feeding_pack.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root /tmp/vibe-coding-feeding-packs
             python3 scripts/validate_identity_capability_fit_optimization.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_composition_before_discovery.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only

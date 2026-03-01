@@ -757,6 +757,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_opt_trigger,
     }
 
+    rc_dreq, out_dreq, err_dreq = _run(
+        [
+            "python3",
+            "scripts/validate_discovery_requiredization.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    dreq_payload = _parse_json_payload(out_dreq) or {}
+    validators["discovery_requiredization"] = {
+        "rc": rc_dreq,
+        "ok": rc_dreq == 0,
+        "out": out_dreq,
+        "err": err_dreq,
+    }
+    dreq_status = str(dreq_payload.get("discovery_requiredization_status", "")).strip().upper()
+    if rc_dreq != 0 or dreq_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_vibe_pack, out_vibe_pack, err_vibe_pack = _run(
         [
             "python3",
@@ -1177,6 +1203,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "required_contract_total": coverage_payload.get("required_contract_total"),
             "required_contract_passed": coverage_payload.get("required_contract_passed"),
             "required_contract_coverage_rate": coverage_payload.get("required_contract_coverage_rate"),
+            "discovery_required_total": coverage_payload.get("discovery_required_total"),
+            "discovery_required_passed": coverage_payload.get("discovery_required_passed"),
+            "discovery_required_coverage_rate": coverage_payload.get("discovery_required_coverage_rate"),
+            "discovery_required_gate_failed": coverage_payload.get("discovery_required_gate_failed"),
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
@@ -1267,6 +1297,28 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "upgrade_proposal_ref": opt_trigger_payload.get("upgrade_proposal_ref", ""),
             "feedback_batches": opt_trigger_payload.get("feedback_batches", []),
             "stale_reasons": opt_trigger_payload.get("stale_reasons", []),
+        },
+        "discovery_requiredization": {
+            "discovery_requiredization_status": dreq_payload.get("discovery_requiredization_status"),
+            "error_code": dreq_payload.get("error_code", ""),
+            "required_contract": dreq_payload.get("required_contract"),
+            "required_contract_declared": dreq_payload.get("required_contract_declared"),
+            "auto_required_signal": dreq_payload.get("auto_required_signal"),
+            "requiredization_triggered": dreq_payload.get("requiredization_triggered"),
+            "trigger_classes": dreq_payload.get("trigger_classes", []),
+            "window_rounds": dreq_payload.get("window_rounds"),
+            "feedback_batches": dreq_payload.get("feedback_batches", []),
+            "trigger_condition_flags": dreq_payload.get("trigger_condition_flags", {}),
+            "discovery_contract_required_state": dreq_payload.get("discovery_contract_required_state", {}),
+            "requiredized_all_discovery_contracts": dreq_payload.get("requiredized_all_discovery_contracts"),
+            "requiredization_receipt_path": dreq_payload.get("requiredization_receipt_path", ""),
+            "requiredization_receipt_linked": dreq_payload.get("requiredization_receipt_linked"),
+            "evidence_index_path": dreq_payload.get("evidence_index_path", ""),
+            "ci_required_validators_missing": dreq_payload.get("ci_required_validators_missing", []),
+            "discovery_required_total": dreq_payload.get("discovery_required_total"),
+            "discovery_required_passed": dreq_payload.get("discovery_required_passed"),
+            "discovery_required_coverage_rate": dreq_payload.get("discovery_required_coverage_rate"),
+            "stale_reasons": dreq_payload.get("stale_reasons", []),
         },
         "vibe_coding_feeding_pack": {
             "vibe_coding_feeding_pack_status": vibe_pack_payload.get("vibe_coding_feeding_pack_status"),

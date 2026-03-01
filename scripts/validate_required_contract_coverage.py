@@ -27,6 +27,11 @@ REASON_SKIPPED = "IP-COV-001"
 REASON_FAIL = "IP-COV-999"
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+DISCOVERY_TARGET_NAMES = {
+    "tool_installation",
+    "vendor_api_discovery",
+    "vendor_api_solution",
+}
 STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_semantic_routing_guard.py": "semantic_routing_status",
     "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
@@ -196,6 +201,15 @@ def main() -> int:
         help="optional minimum required-contract coverage rate (0-100). default disabled",
     )
     ap.add_argument(
+        "--min-discovery-required-coverage",
+        type=float,
+        default=-1.0,
+        help=(
+            "optional minimum required-contract coverage rate (0-100) for discovery subset "
+            "(tool_installation/vendor_api_discovery/vendor_api_solution). default disabled"
+        ),
+    )
+    ap.add_argument(
         "--json-only",
         action="store_true",
         help="emit payload JSON only",
@@ -227,6 +241,8 @@ def main() -> int:
     skipped_count = 0
     failed_required = 0
     failed_optional = 0
+    discovery_required_total = 0
+    discovery_required_passed = 0
 
     for target in TARGETS:
         contract: dict[str, Any] = {}
@@ -285,6 +301,11 @@ def main() -> int:
         elif validator_status == STATUS_FAIL_OPTIONAL:
             failed_optional += 1
 
+        if target.name in DISCOVERY_TARGET_NAMES and required_effective:
+            discovery_required_total += 1
+            if validator_status == STATUS_PASS_REQUIRED:
+                discovery_required_passed += 1
+
         rows.append(
             {
                 "name": target.name,
@@ -303,6 +324,7 @@ def main() -> int:
         )
 
     coverage_rate = _coverage_rate(required_passed, required_total)
+    discovery_coverage_rate = _coverage_rate(discovery_required_passed, discovery_required_total)
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
@@ -312,6 +334,9 @@ def main() -> int:
         "required_contract_total": required_total,
         "required_contract_passed": required_passed,
         "required_contract_coverage_rate": coverage_rate,
+        "discovery_required_total": discovery_required_total,
+        "discovery_required_passed": discovery_required_passed,
+        "discovery_required_coverage_rate": discovery_coverage_rate,
         "skipped_contract_count": skipped_count,
         "failed_required_contract_count": failed_required,
         "failed_optional_contract_count": failed_optional,
@@ -323,6 +348,17 @@ def main() -> int:
     if coverage_gate_enabled:
         payload["min_required_contract_coverage"] = min_cov
         payload["coverage_gate_failed"] = coverage_gate_failed
+
+    min_discovery_cov = args.min_discovery_required_coverage
+    discovery_gate_enabled = min_discovery_cov >= 0.0
+    discovery_gate_failed = (
+        discovery_gate_enabled
+        and discovery_required_total > 0
+        and discovery_coverage_rate < min_discovery_cov
+    )
+    if discovery_gate_enabled:
+        payload["min_discovery_required_coverage"] = min_discovery_cov
+        payload["discovery_required_gate_failed"] = discovery_gate_failed
 
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -338,6 +374,9 @@ def main() -> int:
             f"required_contract_total={required_total} "
             f"required_contract_passed={required_passed} "
             f"required_contract_coverage_rate={coverage_rate} "
+            f"discovery_required_total={discovery_required_total} "
+            f"discovery_required_passed={discovery_required_passed} "
+            f"discovery_required_coverage_rate={discovery_coverage_rate} "
             f"skipped_contract_count={skipped_count} "
             f"failed_required_contract_count={failed_required} "
             f"failed_optional_contract_count={failed_optional}"
@@ -347,6 +386,8 @@ def main() -> int:
     if failed_required > 0:
         return 1
     if coverage_gate_failed:
+        return 1
+    if discovery_gate_failed:
         return 1
     return 0
 
