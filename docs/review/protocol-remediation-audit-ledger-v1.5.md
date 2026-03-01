@@ -94,7 +94,7 @@ HOTFIX-P0-004 incident note (2026-02-28, discovered during live audit replay):
 | FIX-015 | 2026-02-28 | protocol | concurrent actor x identity activation regression gate (release-blocking verifier) | `WIP(local workspace)` | IN_PROGRESS | PENDING_REVIEW |
 | FIX-016 | 2026-03-01 | protocol | capability-fit P1-G/P1-H closure (roundtable evidence + review trigger + matrix builder) | `5016816` | DONE | PASS |
 | FIX-017 | 2026-03-01 | protocol | readiness scope passthrough into health-report branch (`P0-A` hardening) | `0dd074e` | DONE | PENDING_REVIEW |
-| FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `2df2b0b` | DONE | PENDING_REVIEW |
+| FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PENDING_REVIEW |
 
 ---
 
@@ -3152,7 +3152,7 @@ Source ref (L1 governance SSOT + intake action list):
 
 Commit under replay:
 
-1. `2df2b0b` — `fix(protocol): harden baseline policy stratification for release/mutation paths`
+1. `b0c1483` — `fix(protocol): harden baseline policy stratification for release/mutation paths`
 
 Implemented package (protocol-only):
 
