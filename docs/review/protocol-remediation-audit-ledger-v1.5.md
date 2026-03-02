@@ -3959,7 +3959,7 @@ Acceptance profile (release-blocking once implementation lands):
 Boundary notes:
 
 1. FIX-033 is lane-routing and boundary hardening; it does not replace FIX-029..032 protocol-entry closure fixes.
-2. FIX-029..032 remain `REJECT` baseline until independent replay closes section `16.8.21` findings.
+2. Historical intake note: FIX-029..032 were `REJECT` baseline at this snapshot time; current rolling status is `PENDING_REAUDIT` per section `16.8.28` and summary rows.
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
@@ -4812,7 +4812,7 @@ Layer declaration:
 
 #### 16.8.22 Architect self-check snapshot after FIX-029..032 implementation (2026-03-02, protocol-only)
 
-Status: `SELF_CHECK_RECORDED / WAITING_REAUDIT` (authoritative audit verdict remains `16.8.21 = REJECT`).
+Status: `SELF_CHECK_RECORDED / WAITING_REAUDIT` (historical reject point-in-time is archived in `16.8.21`; current-state replay baseline is `16.8.28` with summary status `PENDING_REAUDIT`).
 
 Commit anchor:
 
@@ -4889,7 +4889,7 @@ Audit note:
 
 #### 16.8.23 Architect remediation patch for `16.8.21` P0 findings (2026-03-02, protocol-only)
 
-Status: `PATCH_APPLIED / PENDING_REAUDIT` (authoritative audit verdict remains `16.8.21 = REJECT` until independent replay closes all four findings).
+Status: `PATCH_APPLIED / PENDING_REAUDIT` (historical reject point-in-time is archived in `16.8.21`; current-state judgment follows `16.8.28` and rolling summary rows).
 
 Commit anchor:
 
@@ -4958,8 +4958,8 @@ Replay evidence snapshot (architect-side, protocol boundary only):
 
 Next gate decision:
 
-1. Keep FIX-029..032 audit status as `REJECT` in summary table until independent auditor replay updates verdict.
-2. This subsection is remediation evidence only and does not supersede `16.8.21` by itself.
+1. Keep FIX-029..032 audit status as `PENDING_REAUDIT` in summary table until independent auditor sign-off command pack updates verdict.
+2. This subsection is remediation evidence only and does not supersede current-state replay judgment in `16.8.28`.
 
 #### 16.8.19 Roundtable intake: protocol inquiry follow-up chain (2026-03-02, docs-only)
 
