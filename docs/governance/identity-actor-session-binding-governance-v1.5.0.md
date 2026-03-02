@@ -430,10 +430,13 @@ Tail-block hard rules (governed user-facing first line):
 2. `work_layer` and `source_layer` are mandatory machine-readable fields.
 3. `source` and `source_layer` must be semantically consistent.
 4. `source` and `source_layer` are intentionally non-identical provenance fields:
-   - `source` tracks identity resolution provenance (`global` / `local` / `env`).
+   - `source` tracks identity resolution provenance (`project` / `global` / `env` / `auto`).
    - `source_layer` tracks layer-intent provenance for `work_layer` resolution (`project` / `global` / `env` / `auto`).
-5. Equal token values across `source` and `source_layer` are allowed but must not be treated as semantic equivalence without explicit mapper evidence.
-6. Missing tail block or invalid layer enum is fail-closed under strict operations.
+5. Legacy alias handling:
+   - historical replay inputs may contain `source=local`; mapper must normalize it to `project`,
+   - new outputs must not emit `source=local`.
+6. Equal token values across `source` and `source_layer` are allowed but must not be treated as semantic equivalence without explicit mapper evidence.
+7. Missing tail block or invalid layer enum is fail-closed under strict operations.
 
 Cross-instance replay requirement:
 
@@ -1471,37 +1474,42 @@ Mandatory semantics:
 2. Gate-set routing rule:
    - `work_layer=instance` -> run `instance_required_checks` only,
    - `work_layer=protocol` -> run `protocol_required_checks` only.
-3. Instance-lane non-blocking protocol publish boundary:
+3. `work_layer=dual` boundary:
+   - `dual` is not a routable closure lane for strict operations (`update/readiness/e2e/ci`),
+   - strict operations must fail-closed and require explicit rerun in one deterministic lane (`instance` or `protocol`).
+4. Instance-lane non-blocking protocol publish boundary:
    - in `work_layer=instance`, protocol publish gates (including changelog/release-metadata protocol publish checks) must not block self-drive closure,
    - when protocol-relevant diff is detected in instance lane, emit deterministic protocol-feedback pending receipt instead of blocking.
-4. Protocol-lane strict boundary:
+5. Protocol-lane strict boundary:
    - in `work_layer=protocol`, protocol publish gates are mandatory and fail-closed on missing required publish artifacts.
-5. Canonical protocol-feedback closure (protocol lane):
+6. Canonical protocol-feedback closure (protocol lane):
    - protocol conclusions must archive to canonical SSOT roots:
      - `runtime/protocol-feedback/outbox-to-protocol/`
      - `runtime/protocol-feedback/evidence-index/`
      - `runtime/protocol-feedback/upgrade-proposals/`
-6. Lane consistency gate:
+7. Lane consistency gate:
    - strict operations must fail-closed when `work_layer` and `applied_gate_set` mismatch.
-7. Required machine-readable telemetry per governed round:
+8. Required machine-readable telemetry per governed round:
    - `work_layer`
    - `applied_gate_set`
    - `protocol_feedback_triggered`
    - `protocol_feedback_paths`
    - `lane_transition_reason`
-8. send-time first-line stamp remains mandatory:
+9. send-time first-line stamp remains mandatory:
    - tail block must continue to expose `Layer-Context` and must stay consistent with applied gate set.
-9. Mixed-lane prohibition remains mandatory:
+10. Mixed-lane prohibition remains mandatory:
    - same execution section cannot mix instance business closure and protocol governance proposal payload.
-10. Suggested failure code family (`IP-LAYER-GATE-*`):
+11. Suggested failure code family (`IP-LAYER-GATE-*`):
    - `IP-LAYER-GATE-001`: lane/gate-set mismatch in strict operations,
    - `IP-LAYER-GATE-002`: instance lane blocked by protocol publish gate,
    - `IP-LAYER-GATE-003`: protocol lane missing required publish gate replay,
-   - `IP-LAYER-GATE-004`: protocol lane conclusion without canonical protocol-feedback closure evidence.
-11. Deterministic acceptance profile (must pass before closure claim):
+   - `IP-LAYER-GATE-004`: protocol lane conclusion without canonical protocol-feedback closure evidence,
+   - `IP-LAYER-GATE-005`: `work_layer=dual` used in strict closure operations.
+12. Deterministic acceptance profile (must pass before closure claim):
    - sample A (`work_layer=instance`, protocol files changed, no changelog update): instance lane must not be blocked; protocol-feedback pending receipt required,
    - sample B (`work_layer=protocol`, protocol files changed, no changelog update): strict fail-closed required,
-   - sample C (multi-round replay): each round must expose lane telemetry fields and protocol-feedback trigger/path evidence when applicable.
+   - sample C (multi-round replay): each round must expose lane telemetry fields and protocol-feedback trigger/path evidence when applicable,
+   - sample D (`work_layer=dual` in strict closure operation): deterministic fail-closed with rerun hint to `instance` or `protocol`.
 
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 

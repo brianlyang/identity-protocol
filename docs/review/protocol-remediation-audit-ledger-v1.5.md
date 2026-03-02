@@ -3930,6 +3930,7 @@ Requirement scope locked for FIX-033 (`ASB-RQ-090..093`):
 1. `work_layer` must route to lane-specific required gate sets:
    - `instance_required_checks` for `work_layer=instance`
    - `protocol_required_checks` for `work_layer=protocol`
+   - `work_layer=dual` is not allowed for strict closure operations and must fail-closed with explicit rerun lane.
 2. In `work_layer=instance`, protocol publish gates must not hard-block self-drive closure:
    - protocol-related changes produce protocol-feedback pending receipt, not immediate instance-lane failure.
 3. In `work_layer=protocol`, protocol publish gates remain strict fail-closed and require canonical protocol-feedback closure.
@@ -3951,6 +3952,9 @@ Acceptance profile (release-blocking once implementation lands):
 3. sample C:
    - input: multi-round replay
    - expected: each round exposes `work_layer + applied_gate_set + protocol_feedback_triggered + protocol_feedback_paths`
+4. sample D:
+   - input: strict closure operation with `work_layer=dual`
+   - expected: deterministic fail-closed (`IP-LAYER-GATE-005`) with rerun hint to `instance` or `protocol`
 
 Boundary notes:
 
@@ -5038,7 +5042,7 @@ Expected machine-readable fields:
 Replay checklist (to be attached by architect after command run):
 
 1. Positive: explicit/clear business intent -> auto `work_layer=instance`, strict replay `PASS_REQUIRED`.
-2. Negative: ambiguous intent -> safe fallback `work_layer=protocol` with non-empty `fallback_reason`.
+2. Negative: ambiguous intent -> safe fallback `work_layer=instance` with non-empty `fallback_reason`.
 3. Negative: strict mismatch (`expected-work-layer` vs reply tuple) -> deterministic fail-closed in strict lane.
 4. Observability: `three-plane` and `full-scan` expose `layer_intent_resolution_*` fields.
 
