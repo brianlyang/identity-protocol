@@ -181,6 +181,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "instance_base_repo_write_boundary",
             "protocol_feedback_ssot_archival",
             "protocol_version_alignment",
+            "e2e_hermetic_runtime_import",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -995,6 +996,15 @@ def main() -> int:
                     "warn",
                     "--json-only",
                 ],
+                "e2e_hermetic_runtime_import": [
+                    "python3",
+                    "scripts/validate_e2e_hermetic_runtime_import.py",
+                    "--operation",
+                    "scan",
+                    "--pythonpath-bootstrap-mode",
+                    "internal_bootstrap",
+                    "--json-only",
+                ],
             }
             if layer_intent_text:
                 for key in (
@@ -1215,10 +1225,19 @@ def main() -> int:
                         "work_layer",
                         "source_layer",
                         "applied_gate_set",
+                        "protocol_context_detected",
+                        "protocol_context_reasons",
+                        "session_lane_lock",
+                        "session_lane_lock_source",
+                        "session_lane_lock_receipt",
+                        "lane_resolution_decision",
+                        "lane_resolution_blocked",
+                        "lane_resolution_error_code",
                         "lane_transition_reason",
                         "protocol_feedback_triggered",
                         "protocol_feedback_paths",
                         "pending_receipt_path",
+                        "lane_lock_receipt_path",
                         "protocol_relevant_diff_detected",
                         "protocol_relevant_files",
                         "stale_reasons",
@@ -1576,7 +1595,10 @@ def main() -> int:
                         "report_selected_path",
                         "report_protocol_root",
                         "report_protocol_commit_sha",
+                        "protocol_head_sha_at_run_start",
+                        "baseline_reference_mode",
                         "current_protocol_head_sha",
+                        "head_drift_detected",
                         "lag_commits",
                         "stale_reasons",
                     ):
@@ -1596,6 +1618,18 @@ def main() -> int:
                     ):
                         if k in align_doc:
                             check_payload[k] = align_doc.get(k)
+                if name == "e2e_hermetic_runtime_import":
+                    herm_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "e2e_hermetic_runtime_status",
+                        "pythonpath_bootstrap_mode",
+                        "import_preflight_status",
+                        "import_preflight_error_code",
+                        "missing_modules",
+                        "stale_reasons",
+                    ):
+                        if k in herm_doc:
+                            check_payload[k] = herm_doc.get(k)
                 if name == "identity_home_catalog_alignment":
                     home_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -1687,7 +1721,10 @@ def main() -> int:
                         "baseline_status",
                         "baseline_error_code",
                         "report_protocol_commit_sha",
+                        "protocol_head_sha_at_run_start",
+                        "baseline_reference_mode",
                         "current_protocol_head_sha",
+                        "head_drift_detected",
                         "lag_commits",
                         "report_selected_path",
                         "stale_reasons",

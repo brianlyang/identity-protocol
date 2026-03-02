@@ -30,7 +30,10 @@ REQUIRED_FIELDS = (
     "risk_flags",
     "next_action",
     "report_protocol_commit_sha",
+    "protocol_head_sha_at_run_start",
+    "baseline_reference_mode",
     "current_protocol_head_sha",
+    "head_drift_detected",
     "baseline_status",
     "baseline_error_code",
     "lag_commits",
@@ -159,7 +162,10 @@ def main() -> int:
         "baseline_status": "",
         "baseline_error_code": "",
         "report_protocol_commit_sha": "",
+        "protocol_head_sha_at_run_start": "",
+        "baseline_reference_mode": "",
         "current_protocol_head_sha": "",
+        "head_drift_detected": False,
         "lag_commits": None,
         "report_selected_path": "",
         "required_contract": True,
@@ -182,7 +188,10 @@ def main() -> int:
                 "baseline_status": str(refresh_payload.get("baseline_status", "")).strip().upper(),
                 "baseline_error_code": str(refresh_payload.get("baseline_error_code", "")).strip(),
                 "report_protocol_commit_sha": str(refresh_payload.get("report_protocol_commit_sha", "")).strip(),
+                "protocol_head_sha_at_run_start": str(refresh_payload.get("protocol_head_sha_at_run_start", "")).strip(),
+                "baseline_reference_mode": str(refresh_payload.get("baseline_reference_mode", "")).strip(),
                 "current_protocol_head_sha": str(refresh_payload.get("current_protocol_head_sha", "")).strip(),
+                "head_drift_detected": bool(refresh_payload.get("head_drift_detected", False)),
                 "lag_commits": refresh_payload.get("lag_commits"),
                 "report_selected_path": str(refresh_payload.get("report_selected_path", "")).strip(),
             }
@@ -211,6 +220,9 @@ def main() -> int:
         stale_reasons.append("pointer_consistency_invalid")
     if baseline_status and baseline_status not in allowed_baseline:
         stale_reasons.append("baseline_status_invalid")
+    baseline_reference_mode = str(payload.get("baseline_reference_mode", "")).strip().lower()
+    if baseline_reference_mode and baseline_reference_mode not in {"run_pinned", "live_head"}:
+        stale_reasons.append("baseline_reference_mode_invalid")
 
     if not isinstance(payload.get("risk_flags", []), list):
         stale_reasons.append("risk_flags_not_array")
@@ -240,6 +252,17 @@ def main() -> int:
     if not error_code and baseline_status == "FAIL":
         error_code = ERR_REFRESH_BASELINE
         status = STATUS_WARN_NON_BLOCKING if inspection_mode else STATUS_FAIL_REQUIRED
+
+    if (
+        not error_code
+        and not inspection_mode
+        and baseline_reference_mode
+        and baseline_reference_mode != "run_pinned"
+        and operation in STRICT_OPERATIONS
+    ):
+        error_code = ERR_REFRESH_BASELINE
+        status = STATUS_FAIL_REQUIRED
+        stale_reasons.append("baseline_reference_mode_not_run_pinned_under_strict")
 
     if not error_code and baseline_status == "" and not inspection_mode:
         error_code = ERR_REFRESH_BASELINE

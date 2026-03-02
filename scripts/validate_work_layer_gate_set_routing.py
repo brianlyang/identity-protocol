@@ -4,9 +4,11 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import load_actor_binding, resolve_actor_id
 from protocol_feedback_contract_common import (
     canonical_dirs,
     ensure_index_linkage,
@@ -29,6 +31,8 @@ ERR_INSTANCE_BLOCKED_BY_PROTOCOL_PUBLISH = "IP-LAYER-GATE-002"
 ERR_PROTOCOL_PUBLISH_MISSING = "IP-LAYER-GATE-003"
 ERR_PROTOCOL_FEEDBACK_CLOSURE_MISSING = "IP-LAYER-GATE-004"
 ERR_DUAL_STRICT = "IP-LAYER-GATE-005"
+ERR_PROTOCOL_CONTEXT_FALLBACK = "IP-LAYER-GATE-006"
+ERR_PROTOCOL_CONTEXT_CONFIRMATION_MISSING = "IP-LAYER-GATE-007"
 
 DEFAULT_PROTOCOL_PUBLISH_CHECKS = [
     "scripts/validate_changelog_updated.py",
@@ -53,6 +57,8 @@ EXEMPT_PREFIXES = (
 )
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
+LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
+LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -110,6 +116,62 @@ def _normalize_applied_gate_set(token: str) -> str:
     return ""
 
 
+def _safe_json(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _latest_lane_lock_receipt(
+    *,
+    outbox_dir: Path,
+    prefix: str,
+    identity_id: str,
+) -> Path | None:
+    if not outbox_dir.exists():
+        return None
+    rows = sorted(outbox_dir.glob(f"{prefix}*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in rows:
+        doc = _safe_json(p)
+        rid = str(doc.get("identity_id", "")).strip()
+        if rid and rid != identity_id:
+            continue
+        return p.resolve()
+    return None
+
+
+def _resolve_session_lane_lock(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    feedback_root: Path,
+) -> tuple[str, str, str]:
+    binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
+    for key in ("session_lane_lock", "lane_lock", "work_layer_lock"):
+        token = str(binding.get(key, "")).strip().lower()
+        if token in {"protocol", "instance", "dual"}:
+            return token, "actor_binding", str(binding.get("actor_session_path", "")).strip()
+
+    outbox_dir = (feedback_root / "outbox-to-protocol").resolve()
+    lock_protocol = _latest_lane_lock_receipt(outbox_dir=outbox_dir, prefix=LOCK_PROTOCOL_PREFIX, identity_id=identity_id)
+    lock_exit = _latest_lane_lock_receipt(outbox_dir=outbox_dir, prefix=LOCK_EXIT_PREFIX, identity_id=identity_id)
+    if lock_protocol is None:
+        return "", "", ""
+
+    protocol_mtime = lock_protocol.stat().st_mtime
+    exit_mtime = lock_exit.stat().st_mtime if lock_exit is not None else -1.0
+    if exit_mtime > protocol_mtime:
+        return "", "", ""
+    return "protocol", "receipt", str(lock_protocol)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _make_pending_receipt(
     *,
     identity_id: str,
@@ -147,6 +209,38 @@ def _make_pending_receipt(
     return str(receipt_path), [receipt_ref]
 
 
+def _write_lane_lock_protocol_receipt(
+    *,
+    identity_id: str,
+    actor_id: str,
+    feedback_root: Path,
+    source_layer: str,
+    lane_transition_reason: str,
+    protocol_context_reasons: list[str],
+) -> tuple[str, list[str]]:
+    d = canonical_dirs(feedback_root)
+    outbox = d["outbox_dir"]
+    index_path = d["index_path"]
+    outbox.mkdir(parents=True, exist_ok=True)
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    ts = utc_now_z().replace("-", "").replace(":", "")
+    receipt_path = (outbox / f"{LOCK_PROTOCOL_PREFIX}{ts}.json").resolve()
+    payload = {
+        "event": "session_lane_lock_protocol_acquired",
+        "identity_id": identity_id,
+        "actor_id": actor_id,
+        "session_lane_lock": "protocol",
+        "source_layer": source_layer,
+        "lane_transition_reason": lane_transition_reason,
+        "protocol_context_reasons": protocol_context_reasons,
+        "generated_at": _now_iso(),
+    }
+    write_json(receipt_path, payload)
+    receipt_ref = rel_to_feedback_root(receipt_path, feedback_root)
+    ensure_index_linkage(index_path, [receipt_ref], section_title="Lane lock receipts")
+    return str(receipt_path), [receipt_ref]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate work-layer gate-set routing contract (FIX-033).")
     ap.add_argument("--catalog", required=True)
@@ -161,6 +255,8 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--source-layer", default="")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-lane-lock-receipt", default="")
     ap.add_argument("--base", default="")
     ap.add_argument("--head", default="")
     ap.add_argument("--applied-gate-set", default="")
@@ -198,6 +294,7 @@ def main() -> int:
     fallback_reason = str(intent.get("fallback_reason", "")).strip()
     protocol_triggered = bool(intent.get("protocol_triggered", False))
     protocol_trigger_reasons = list(intent.get("protocol_trigger_reasons") or [])
+    intent_confidence = float(intent.get("intent_confidence", 0.0) or 0.0)
 
     applied_gate_set = (
         "instance_required_checks"
@@ -239,9 +336,46 @@ def main() -> int:
     protocol_feedback_triggered = bool(work_layer == "protocol")
     protocol_feedback_paths: list[str] = []
     pending_receipt_path = ""
+    lane_lock_receipt_path = ""
 
     stale_reasons: list[str] = []
     error_code = ""
+
+    actor_id = resolve_actor_id(args.actor_id)
+    session_lane_lock, session_lane_lock_source, session_lane_lock_receipt = _resolve_session_lane_lock(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        actor_id=actor_id,
+        feedback_root=feedback_root,
+    )
+    if str(args.session_lane_lock_receipt or "").strip():
+        receipt_path = Path(str(args.session_lane_lock_receipt).strip()).expanduser().resolve()
+        if receipt_path.exists():
+            doc = _safe_json(receipt_path)
+            if str(doc.get("session_lane_lock", "")).strip().lower() == "protocol":
+                session_lane_lock = "protocol"
+                session_lane_lock_source = "explicit_receipt"
+                session_lane_lock_receipt = str(receipt_path)
+    protocol_context_reasons: list[str] = []
+    explicit_work_layer = str(args.expected_work_layer or "").strip().lower()
+    explicit_protocol = explicit_work_layer == "protocol"
+    if explicit_protocol:
+        protocol_context_reasons.append("explicit_work_layer_protocol")
+    if session_lane_lock == "protocol":
+        protocol_context_reasons.append("session_lane_lock_protocol")
+    if protocol_triggered and intent_confidence >= 0.75:
+        protocol_context_reasons.append("protocol_classifier_high_confidence")
+    protocol_context_detected = bool(protocol_context_reasons)
+
+    lane_resolution_decision = (
+        "PROTOCOL_SELECTED"
+        if work_layer == "protocol"
+        else "DUAL_UNROUTABLE"
+        if work_layer == "dual"
+        else "INSTANCE_DEFAULT"
+    )
+    lane_resolution_blocked = False
+    lane_resolution_error_code = ""
 
     if not required_contract:
         payload = {
@@ -254,6 +388,13 @@ def main() -> int:
             "work_layer": work_layer,
             "source_layer": source_layer,
             "applied_gate_set": applied_gate_set,
+            "protocol_context_detected": protocol_context_detected,
+            "session_lane_lock": session_lane_lock,
+            "session_lane_lock_source": session_lane_lock_source,
+            "session_lane_lock_receipt": session_lane_lock_receipt,
+            "lane_resolution_decision": lane_resolution_decision,
+            "lane_resolution_blocked": lane_resolution_blocked,
+            "lane_resolution_error_code": lane_resolution_error_code,
             "protocol_feedback_triggered": protocol_feedback_triggered,
             "protocol_feedback_paths": protocol_feedback_paths,
             "lane_transition_reason": lane_transition_reason,
@@ -265,6 +406,16 @@ def main() -> int:
     if strict and work_layer == "dual":
         stale_reasons.append("strict_operation_dual_lane_not_allowed")
         error_code = ERR_DUAL_STRICT
+
+    if protocol_context_detected and work_layer != "protocol" and not error_code:
+        lane_resolution_decision = "INSTANCE_FALLBACK_BLOCKED"
+        lane_resolution_blocked = True
+        if intent_source == "default_fallback":
+            stale_reasons.append("protocol_context_detected_with_default_fallback")
+            error_code = ERR_PROTOCOL_CONTEXT_FALLBACK
+        else:
+            stale_reasons.append("protocol_context_requires_explicit_confirmation")
+            error_code = ERR_PROTOCOL_CONTEXT_CONFIRMATION_MISSING
 
     if requested_applied_gate_set and requested_applied_gate_set != applied_gate_set and not error_code:
         stale_reasons.append("applied_gate_set_mismatch")
@@ -308,9 +459,33 @@ def main() -> int:
             "evidence-index/INDEX.md",
             "upgrade-proposals/",
         ]
+        lane_resolution_decision = "PROTOCOL_SELECTED"
+        if strict and not session_lane_lock:
+            try:
+                lane_lock_receipt_path, lane_lock_refs = _write_lane_lock_protocol_receipt(
+                    identity_id=args.identity_id,
+                    actor_id=actor_id,
+                    feedback_root=feedback_root,
+                    source_layer=source_layer,
+                    lane_transition_reason=lane_transition_reason,
+                    protocol_context_reasons=protocol_context_reasons or ["protocol_lane_selected"],
+                )
+                protocol_feedback_paths.extend(lane_lock_refs)
+                session_lane_lock = "protocol"
+                session_lane_lock_source = "receipt"
+                session_lane_lock_receipt = lane_lock_receipt_path
+            except Exception as exc:
+                if not error_code:
+                    lane_resolution_decision = "PROTOCOL_LOCK_RECEIPT_MISSING"
+                    stale_reasons.append("protocol_lane_lock_receipt_write_failed")
+                    stale_reasons.append(str(exc))
+                    error_code = ERR_PROTOCOL_CONTEXT_CONFIRMATION_MISSING
         if missing_protocol_feedback_dirs and strict and not error_code:
             stale_reasons.append("protocol_feedback_canonical_roots_missing")
             error_code = ERR_PROTOCOL_FEEDBACK_CLOSURE_MISSING
+
+    if error_code:
+        lane_resolution_error_code = error_code
 
     if error_code and strict:
         status = STATUS_FAIL_REQUIRED
@@ -333,9 +508,17 @@ def main() -> int:
         "work_layer": work_layer,
         "source_layer": source_layer,
         "intent_source": intent_source,
-        "intent_confidence": intent.get("intent_confidence"),
+        "intent_confidence": intent_confidence,
         "protocol_triggered": protocol_triggered,
         "protocol_trigger_reasons": protocol_trigger_reasons,
+        "protocol_context_detected": protocol_context_detected,
+        "protocol_context_reasons": protocol_context_reasons,
+        "session_lane_lock": session_lane_lock,
+        "session_lane_lock_source": session_lane_lock_source,
+        "session_lane_lock_receipt": session_lane_lock_receipt,
+        "lane_resolution_decision": lane_resolution_decision,
+        "lane_resolution_blocked": lane_resolution_blocked,
+        "lane_resolution_error_code": lane_resolution_error_code,
         "lane_transition_reason": lane_transition_reason,
         "applied_gate_set": applied_gate_set,
         "requested_applied_gate_set": requested_applied_gate_set,
@@ -348,6 +531,7 @@ def main() -> int:
         "protocol_feedback_triggered": protocol_feedback_triggered,
         "protocol_feedback_paths": protocol_feedback_paths,
         "pending_receipt_path": pending_receipt_path,
+        "lane_lock_receipt_path": lane_lock_receipt_path,
         "missing_protocol_feedback_dirs": missing_protocol_feedback_dirs,
         "stale_reasons": stale_reasons,
     }

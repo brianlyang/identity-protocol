@@ -253,7 +253,10 @@ def main() -> int:
             "report_selected_path": baseline_payload.get("report_selected_path", ""),
             "report_protocol_root": baseline_payload.get("report_protocol_root", ""),
             "report_protocol_commit_sha": baseline_payload.get("report_protocol_commit_sha", ""),
+            "protocol_head_sha_at_run_start": baseline_payload.get("protocol_head_sha_at_run_start", ""),
+            "baseline_reference_mode": baseline_payload.get("baseline_reference_mode", ""),
             "current_protocol_head_sha": baseline_payload.get("current_protocol_head_sha", ""),
+            "head_drift_detected": baseline_payload.get("head_drift_detected", False),
             "lag_commits": baseline_payload.get("lag_commits"),
             "stale_reasons": baseline_payload.get("stale_reasons", []),
         },
@@ -290,4 +293,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

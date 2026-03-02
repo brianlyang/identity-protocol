@@ -145,6 +145,12 @@ def _resolve_prompt_contract(
         pack = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve()
     prompt_path = pack / "IDENTITY_PROMPT.md"
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    runtime_state_path = (pack / "runtime" / "state" / "prompt_contract.json").resolve()
+    runtime_state_doc: dict[str, Any] = {}
+    runtime_state_hash = ""
+    runtime_state_binding_status = "MISSING"
+    runtime_state_externalization_status = "MISSING"
+    runtime_state_error_code = ""
     contract = {
         "identity_prompt_path": str(prompt_path),
         "identity_prompt_sha256": "",
@@ -153,14 +159,44 @@ def _resolve_prompt_contract(
         "identity_prompt_source_layer": source_layer,
         "identity_prompt_scope": scope,
         "identity_prompt_status": "MISSING",
+        "runtime_state_artifact_path": str(runtime_state_path),
+        "runtime_state_artifact_hash": "",
+        "prompt_runtime_state_binding_status": runtime_state_binding_status,
+        "prompt_runtime_state_externalization_status": runtime_state_externalization_status,
+        "prompt_runtime_state_externalization_error_code": runtime_state_error_code,
     }
     if prompt_path.exists():
         try:
             contract["identity_prompt_sha256"] = _sha256_file(prompt_path)
             contract["identity_prompt_bytes"] = int(prompt_path.stat().st_size)
             contract["identity_prompt_status"] = "ACTIVATED"
+            prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore")
+            if "<!-- IDENTITY_PROMPT_RUNTIME_CONTRACT:BEGIN -->" in prompt_text:
+                runtime_state_externalization_status = "FAIL_REQUIRED"
+                runtime_state_error_code = "IP-PROMPT-STATE-001"
+            else:
+                runtime_state_externalization_status = "PASS_REQUIRED"
         except Exception:
             contract["identity_prompt_status"] = "ERROR"
+            runtime_state_externalization_status = "FAIL_REQUIRED"
+            runtime_state_error_code = "IP-PROMPT-STATE-001"
+    if runtime_state_path.exists():
+        try:
+            runtime_state_doc = _load_json(runtime_state_path)
+            runtime_state_hash = _sha256_file(runtime_state_path)
+        except Exception:
+            runtime_state_doc = {}
+            runtime_state_hash = ""
+    if runtime_state_doc:
+        bound_hash = str(runtime_state_doc.get("prompt_policy_hash", "")).strip()
+        if bound_hash and bound_hash == str(contract.get("identity_prompt_sha256", "")).strip():
+            runtime_state_binding_status = "PASS_REQUIRED"
+        else:
+            runtime_state_binding_status = "FAIL_REQUIRED"
+    contract["runtime_state_artifact_hash"] = runtime_state_hash
+    contract["prompt_runtime_state_binding_status"] = runtime_state_binding_status
+    contract["prompt_runtime_state_externalization_status"] = runtime_state_externalization_status
+    contract["prompt_runtime_state_externalization_error_code"] = runtime_state_error_code
     return contract
 
 
@@ -170,39 +206,49 @@ def _apply_prompt_contract_update(
     run_id: str,
     mode: str,
     trigger_reasons: list[str],
-) -> tuple[bool, str, str, str]:
+) -> tuple[bool, str, str, str, str, str]:
     """
-    Apply deterministic runtime-contract metadata block to IDENTITY_PROMPT.md.
-    Returns: (applied, note, hash_before, hash_after)
+    Write deterministic runtime-contract metadata to runtime/state artifact.
+    Returns: (applied, note, hash_before, hash_after, runtime_state_path, runtime_state_hash)
     """
     if not prompt_path.exists():
         raise FileNotFoundError(f"identity prompt missing: {prompt_path}")
-    text = prompt_path.read_text(encoding="utf-8")
     hash_before = _sha256_file(prompt_path)
+    hash_after = hash_before
+    legacy_removed = False
+    text = prompt_path.read_text(encoding="utf-8", errors="ignore")
     begin = "<!-- IDENTITY_PROMPT_RUNTIME_CONTRACT:BEGIN -->"
     end = "<!-- IDENTITY_PROMPT_RUNTIME_CONTRACT:END -->"
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    body = (
-        f"{begin}\n"
-        f"last_upgrade_run_id: {run_id}\n"
-        f"last_upgrade_mode: {mode}\n"
-        f"last_upgrade_at: {now}\n"
-        f"last_trigger_reasons: {'; '.join(trigger_reasons) if trigger_reasons else 'none'}\n"
-        f"{end}"
-    )
     if begin in text and end in text:
         s = text.index(begin)
         e = text.index(end) + len(end)
-        new_text = text[:s].rstrip() + "\n\n" + body + "\n"
+        prefix = text[:s].rstrip()
+        suffix = text[e:].lstrip("\n")
+        merged = "\n\n".join([x for x in [prefix, suffix] if x]).rstrip() + "\n"
+        if merged != text:
+            prompt_path.write_text(merged, encoding="utf-8")
+            legacy_removed = True
+            hash_after = _sha256_file(prompt_path)
     else:
-        suffix = "\n" if text.endswith("\n") else "\n\n"
-        new_text = text + suffix + body + "\n"
-    if new_text != text:
-        prompt_path.write_text(new_text, encoding="utf-8")
-        hash_after = _sha256_file(prompt_path)
-        return True, "runtime_contract_block_updated", hash_before, hash_after
-    hash_after = _sha256_file(prompt_path)
-    return False, "runtime_contract_block_unchanged", hash_before, hash_after
+        hash_after = hash_before
+    runtime_state_path = (prompt_path.parent / "runtime" / "state" / "prompt_contract.json").resolve()
+    runtime_state_path.parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = {
+        "schema": "prompt_runtime_state_v1",
+        "identity_prompt_path": str(prompt_path),
+        "prompt_policy_hash": hash_after,
+        "last_upgrade_run_id": run_id,
+        "last_upgrade_mode": mode,
+        "last_upgrade_at": now,
+        "last_trigger_reasons": trigger_reasons or [],
+    }
+    _write_json(runtime_state_path, payload)
+    runtime_state_hash = _sha256_file(runtime_state_path)
+    note = "runtime_state_artifact_updated"
+    if legacy_removed:
+        note = "runtime_state_artifact_updated;legacy_runtime_block_removed"
+    return True, note, hash_before, hash_after, str(runtime_state_path), runtime_state_hash
 
 
 def _sha256_file(path: Path) -> str:
@@ -245,6 +291,43 @@ def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int) -> dict[str, Any]
         "log_path": str(log_path),
         "sha256": log_sha256,
     }
+
+
+def _extract_baseline_signal(
+    checks: list[dict[str, Any]],
+    *,
+    protocol_head_sha_at_run_start: str,
+) -> dict[str, Any]:
+    default = {
+        "protocol_head_sha_at_run_start": str(protocol_head_sha_at_run_start or "").strip(),
+        "baseline_reference_mode": "run_pinned",
+        "current_protocol_head_sha": "",
+        "head_drift_detected": False,
+        "baseline_status": "UNKNOWN",
+        "baseline_error_code": "",
+    }
+    for row in checks:
+        cmd = str(row.get("cmd", "")).strip()
+        if "validate_identity_protocol_baseline_freshness.py" not in cmd:
+            continue
+        payload = _parse_json_payload(str(row.get("stdout", "")).strip()) or {}
+        if not isinstance(payload, dict):
+            return default
+        out = dict(default)
+        for key in (
+            "protocol_head_sha_at_run_start",
+            "baseline_reference_mode",
+            "current_protocol_head_sha",
+            "head_drift_detected",
+            "baseline_status",
+            "baseline_error_code",
+        ):
+            if key in payload:
+                out[key] = payload.get(key)
+        if not str(out.get("protocol_head_sha_at_run_start", "")).strip():
+            out["protocol_head_sha_at_run_start"] = str(protocol_head_sha_at_run_start or "").strip()
+        return out
+    return default
 
 
 def _build_skipped_check_results(
@@ -459,6 +542,10 @@ def _base_report(
     protocol_feedback_paths: list[str] | None = None,
     lane_routing_status: str = "",
     lane_routing_error_code: str = "",
+    phase_a_refresh_applied: bool = False,
+    phase_b_strict_revalidate_status: str = "NOT_APPLICABLE",
+    phase_transition_reason: str = "",
+    phase_transition_error_code: str = "",
 ) -> dict[str, Any]:
     """
     Build a report skeleton with mandatory closure fields always present.
@@ -497,6 +584,10 @@ def _base_report(
         "protocol_feedback_paths": list(protocol_feedback_paths),
         "lane_routing_status": str(lane_routing_status or ""),
         "lane_routing_error_code": str(lane_routing_error_code or ""),
+        "phase_a_refresh_applied": bool(phase_a_refresh_applied),
+        "phase_b_strict_revalidate_status": str(phase_b_strict_revalidate_status or "NOT_APPLICABLE"),
+        "phase_transition_reason": str(phase_transition_reason or ""),
+        "phase_transition_error_code": str(phase_transition_error_code or ""),
         "actions_taken": [],
         "checks": [],
         "check_results": [],
@@ -542,6 +633,14 @@ def _base_report(
         "protocol_mode": protocol["protocol_mode"],
         "protocol_root": protocol["protocol_root"],
         "protocol_commit_sha": protocol["protocol_commit_sha"],
+        "protocol_head_sha_at_run_start": str(
+            protocol.get("protocol_head_sha_at_run_start") or protocol.get("protocol_commit_sha") or ""
+        ),
+        "baseline_reference_mode": str(protocol.get("baseline_reference_mode") or "run_pinned"),
+        "current_protocol_head_sha": "",
+        "head_drift_detected": False,
+        "baseline_status": "UNKNOWN",
+        "baseline_error_code": "",
         "protocol_ref": protocol["protocol_ref"],
         "identity_home": str(default_identity_home()),
         "catalog_path": str(Path(catalog_path).expanduser().resolve()),
@@ -552,6 +651,7 @@ def _base_report(
         "identity_prompt_hash_before": str(prompt_contract.get("identity_prompt_sha256", "")),
         "identity_prompt_hash_after": str(prompt_contract.get("identity_prompt_sha256", "")),
         "identity_prompt_change_note": "",
+        "prompt_policy_hash": str(prompt_contract.get("identity_prompt_sha256", "")),
         **prompt_contract,
     }
 
@@ -757,6 +857,10 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override")
+    ap.add_argument("--phase-a-refresh-applied", action="store_true")
+    ap.add_argument("--phase-b-strict-revalidate-status", default="NOT_APPLICABLE")
+    ap.add_argument("--phase-transition-reason", default="")
+    ap.add_argument("--phase-transition-error-code", default="")
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -783,6 +887,7 @@ def main() -> int:
         resolved_pack_path=report_pack_path,
     )
     prompt_path = Path(str(prompt_contract.get("identity_prompt_path", ""))).expanduser().resolve()
+    runtime_state_target = (prompt_path.parent / "runtime" / "state" / "prompt_contract.json").resolve()
     out_dir = Path(args.out_dir)
     if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
         out_dir = runtime_output_root / "reports"
@@ -857,32 +962,61 @@ def main() -> int:
             if (lane_routing_proc.stderr or "").strip()
             else "",
         }
-        report = {
-            "run_id": run_id,
-            "identity_id": args.identity_id,
-            "generated_at": now,
-            "mode": args.mode,
-            "required_checks": required_checks,
-            "required_checks_raw": required_checks_raw,
-            "skipped_protocol_publish_checks": skipped_protocol_publish_checks,
-            "checks": checks,
-            "check_results": checks,
-            "all_ok": False,
-            "next_action": "rerun_with_deterministic_lane_instance_or_protocol",
-            "failure_reason": reason,
-            "work_layer": work_layer,
-            "source_layer": source_layer,
-            "applied_gate_set": applied_gate_set,
-            "lane_transition_reason": lane_transition_reason,
-            "protocol_feedback_triggered": bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
-            "protocol_feedback_paths": list(lane_routing_payload.get("protocol_feedback_paths") or []),
-            "lane_routing_status": str(lane_routing_payload.get("work_layer_gate_set_routing_status", "FAIL_REQUIRED")),
-            "lane_routing_error_code": str(lane_routing_payload.get("error_code", "IP-LAYER-GATE-001")),
-            "artifacts": artifacts,
-            "protocol_mode": protocol["protocol_mode"],
-            "protocol_root": protocol["protocol_root"],
-            "protocol_commit_sha": protocol["protocol_commit_sha"],
-        }
+        fallback_metrics_path = (
+            str(Path(args.metrics_path).expanduser().resolve())
+            if str(args.metrics_path or "").strip()
+            else str((runtime_output_root / "metrics" / f"{args.identity_id}-route-quality.json").resolve())
+        )
+        report = _base_report(
+            run_id=run_id,
+            identity_id=args.identity_id,
+            now=now,
+            mode=args.mode,
+            protocol=protocol,
+            catalog_path=args.catalog,
+            resolved_scope=str(args.resolved_scope or ""),
+            resolved_pack_path=report_pack_path,
+            runtime_output_root=str(runtime_output_root),
+            metrics_path=fallback_metrics_path,
+            prompt_contract=prompt_contract,
+            capability_contract={
+                "capability_activation_status": "NOT_EVALUATED",
+                "capability_activation_error_code": "",
+                "capability_activation_notes": ["lane_routing_failed_before_capability_preflight"],
+                "capability_contract_required": True,
+            },
+            required_checks=required_checks,
+            required_checks_raw=required_checks_raw,
+            skipped_protocol_publish_checks=skipped_protocol_publish_checks,
+            work_layer=work_layer,
+            source_layer=source_layer,
+            applied_gate_set=applied_gate_set,
+            lane_transition_reason=lane_transition_reason,
+            protocol_feedback_triggered=bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
+            protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
+            lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "FAIL_REQUIRED")),
+            lane_routing_error_code=str(lane_routing_payload.get("error_code", "IP-LAYER-GATE-001")),
+            phase_a_refresh_applied=bool(args.phase_a_refresh_applied),
+            phase_b_strict_revalidate_status=str(args.phase_b_strict_revalidate_status or "NOT_APPLICABLE"),
+            phase_transition_reason=str(args.phase_transition_reason or ""),
+            phase_transition_error_code=str(args.phase_transition_error_code or ""),
+        )
+        report.update(
+            {
+                "checks": checks,
+                "check_results": checks,
+                "all_ok": False,
+                "next_action": "rerun_with_deterministic_lane_instance_or_protocol",
+                "failure_reason": reason,
+                "upgrade_required": False,
+                "writeback_mode": "DEGRADED_WRITEBACK",
+                "writeback_status": "DEFERRED_VALIDATION_FAILED",
+                "degrade_reason": "validator_failure_before_writeback",
+                "risk_level": "medium",
+                "next_recovery_action": "rerun_with_deterministic_lane_instance_or_protocol",
+                "artifacts": artifacts,
+            }
+        )
         report_path = out_dir / f"{run_id}.json"
         _write_json(report_path, report)
         print(f"report={report_path}")
@@ -1131,7 +1265,7 @@ def main() -> int:
     touched_paths = [
         str(pack / "RULEBOOK.jsonl"),
         str(pack / "TASK_HISTORY.md"),
-        str(prompt_path),
+        str(runtime_state_target),
         str(runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json"),
     ]
     if args.mode == "safe-auto":
@@ -1139,7 +1273,7 @@ def main() -> int:
     else:
         patch_surface = [
             str(current_task_path),
-            str(pack / "IDENTITY_PROMPT.md"),
+            str(runtime_state_target),
             str(pack / "RULEBOOK.jsonl"),
             str(pack / "TASK_HISTORY.md"),
         ]
@@ -1195,7 +1329,7 @@ def main() -> int:
         "history_contains_run_id": False,
         "notes": "",
     }
-    writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md"), str(prompt_path)]
+    writeback_paths = [str(pack / "RULEBOOK.jsonl"), str(pack / "TASK_HISTORY.md"), str(runtime_state_target)]
     precheck = {
         "rulebook_path": str(pack / "RULEBOOK.jsonl"),
         "task_history_path": str(pack / "TASK_HISTORY.md"),
@@ -1203,7 +1337,7 @@ def main() -> int:
         "all_writable": True,
     }
     if upgrade_required:
-        for target in [pack / "RULEBOOK.jsonl", pack / "TASK_HISTORY.md", prompt_path]:
+        for target in [pack / "RULEBOOK.jsonl", pack / "TASK_HISTORY.md", runtime_state_target]:
             ok, reason = _writable_precheck(target)
             precheck["results"].append({"path": str(target), "ok": ok, "reason": reason})
             if not ok:
@@ -1230,6 +1364,15 @@ def main() -> int:
     prompt_change_note = ""
     prompt_hash_before = str(prompt_contract.get("identity_prompt_sha256", ""))
     prompt_hash_after = str(prompt_contract.get("identity_prompt_sha256", ""))
+    runtime_state_artifact_path = str(prompt_contract.get("runtime_state_artifact_path", ""))
+    runtime_state_artifact_hash = str(prompt_contract.get("runtime_state_artifact_hash", ""))
+    prompt_runtime_state_binding_status = str(prompt_contract.get("prompt_runtime_state_binding_status", "MISSING"))
+    prompt_runtime_state_externalization_status = str(
+        prompt_contract.get("prompt_runtime_state_externalization_status", "MISSING")
+    )
+    prompt_runtime_state_externalization_error_code = str(
+        prompt_contract.get("prompt_runtime_state_externalization_error_code", "")
+    )
 
     if upgrade_required and args.mode == "safe-auto" and precheck.get("all_writable", True):
         if safe_auto.get("enforce_path_policy") is True:
@@ -1404,6 +1547,12 @@ def main() -> int:
 
     # Run required validators + replay-equivalent gate checks
     checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
+    baseline_signal = _extract_baseline_signal(
+        checks,
+        protocol_head_sha_at_run_start=str(
+            protocol.get("protocol_head_sha_at_run_start") or protocol.get("protocol_commit_sha") or ""
+        ),
+    )
 
     all_ok = all(c["ok"] for c in checks)
     if upgrade_required and args.mode == "review-required" and all_ok and precheck.get("all_writable", True):
@@ -1509,7 +1658,7 @@ def main() -> int:
     if prompt_change_required and precheck.get("all_writable", True):
         if all_ok:
             try:
-                applied, note, h_before, h_after = _apply_prompt_contract_update(
+                applied, note, h_before, h_after, state_path, state_hash = _apply_prompt_contract_update(
                     prompt_path=prompt_path,
                     run_id=run_id,
                     mode=args.mode,
@@ -1519,16 +1668,27 @@ def main() -> int:
                 prompt_change_note = note
                 prompt_hash_before = h_before
                 prompt_hash_after = h_after
+                runtime_state_artifact_path = state_path
+                runtime_state_artifact_hash = state_hash
+                prompt_runtime_state_binding_status = "PASS_REQUIRED"
+                prompt_runtime_state_externalization_status = "PASS_REQUIRED"
+                prompt_runtime_state_externalization_error_code = ""
                 actions_taken.append("identity_prompt_contract_updated")
-                artifacts.append(str(prompt_path))
+                artifacts.append(state_path)
             except PermissionError:
                 permission_state = "ESCALATION_DENIED"
                 permission_error_code = "IP-PERM-002"
                 escalation_required = True
                 prompt_change_note = "prompt_update_permission_denied"
+                prompt_runtime_state_binding_status = "FAIL_REQUIRED"
+                prompt_runtime_state_externalization_status = "FAIL_REQUIRED"
+                prompt_runtime_state_externalization_error_code = "IP-PROMPT-STATE-001"
                 all_ok = False
             except Exception as exc:
                 prompt_change_note = f"prompt_update_failed:{exc}"
+                prompt_runtime_state_binding_status = "FAIL_REQUIRED"
+                prompt_runtime_state_externalization_status = "FAIL_REQUIRED"
+                prompt_runtime_state_externalization_error_code = "IP-PROMPT-STATE-001"
                 all_ok = False
         else:
             prompt_change_note = "prompt_change_deferred_due_to_failed_validators"
@@ -1614,6 +1774,10 @@ def main() -> int:
         "protocol_feedback_paths": list(lane_routing_payload.get("protocol_feedback_paths") or []),
         "lane_routing_status": str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
         "lane_routing_error_code": str(lane_routing_payload.get("error_code", "")),
+        "phase_a_refresh_applied": bool(args.phase_a_refresh_applied),
+        "phase_b_strict_revalidate_status": str(args.phase_b_strict_revalidate_status or "NOT_APPLICABLE"),
+        "phase_transition_reason": str(args.phase_transition_reason or ""),
+        "phase_transition_error_code": str(args.phase_transition_error_code or ""),
     }
     report.update(
         _derive_writeback_continuity_fields(
@@ -1630,6 +1794,17 @@ def main() -> int:
             "protocol_mode": protocol["protocol_mode"],
             "protocol_root": protocol["protocol_root"],
             "protocol_commit_sha": protocol["protocol_commit_sha"],
+            "protocol_head_sha_at_run_start": str(
+                baseline_signal.get("protocol_head_sha_at_run_start")
+                or protocol.get("protocol_head_sha_at_run_start")
+                or protocol.get("protocol_commit_sha")
+                or ""
+            ),
+            "baseline_reference_mode": str(baseline_signal.get("baseline_reference_mode") or "run_pinned"),
+            "current_protocol_head_sha": str(baseline_signal.get("current_protocol_head_sha") or ""),
+            "head_drift_detected": bool(baseline_signal.get("head_drift_detected", False)),
+            "baseline_status": str(baseline_signal.get("baseline_status") or "UNKNOWN"),
+            "baseline_error_code": str(baseline_signal.get("baseline_error_code") or ""),
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
@@ -1640,6 +1815,12 @@ def main() -> int:
             "identity_prompt_hash_before": prompt_hash_before,
             "identity_prompt_hash_after": prompt_hash_after,
             "identity_prompt_change_note": prompt_change_note,
+            "prompt_policy_hash": prompt_hash_after or prompt_hash_before,
+            "runtime_state_artifact_path": runtime_state_artifact_path,
+            "runtime_state_artifact_hash": runtime_state_artifact_hash,
+            "prompt_runtime_state_binding_status": prompt_runtime_state_binding_status,
+            "prompt_runtime_state_externalization_status": prompt_runtime_state_externalization_status,
+            "prompt_runtime_state_externalization_error_code": prompt_runtime_state_externalization_error_code,
             **prompt_contract_final,
         }
     )

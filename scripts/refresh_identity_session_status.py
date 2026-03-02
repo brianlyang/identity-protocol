@@ -200,7 +200,10 @@ def _baseline_visibility(
 
     data = {
         "report_protocol_commit_sha": str(payload.get("report_protocol_commit_sha", "")).strip(),
+        "protocol_head_sha_at_run_start": str(payload.get("protocol_head_sha_at_run_start", "")).strip(),
+        "baseline_reference_mode": str(payload.get("baseline_reference_mode", "")).strip(),
         "current_protocol_head_sha": str(payload.get("current_protocol_head_sha", "")).strip(),
+        "head_drift_detected": bool(payload.get("head_drift_detected", False)),
         "baseline_status": baseline_status,
         "baseline_error_code": baseline_error_code,
         "lag_commits": payload.get("lag_commits"),
@@ -298,7 +301,10 @@ def main() -> int:
         "risk_flags": risk_flags,
         "next_action": _next_action(pointer_consistency, lease_status, str(baseline.get("baseline_status", "")), risk_flags),
         "report_protocol_commit_sha": baseline.get("report_protocol_commit_sha", ""),
+        "protocol_head_sha_at_run_start": baseline.get("protocol_head_sha_at_run_start", ""),
+        "baseline_reference_mode": baseline.get("baseline_reference_mode", ""),
         "current_protocol_head_sha": baseline.get("current_protocol_head_sha", ""),
+        "head_drift_detected": baseline.get("head_drift_detected", False),
         "baseline_status": baseline.get("baseline_status", "WARN"),
         "baseline_error_code": baseline.get("baseline_error_code", ""),
         "lag_commits": baseline.get("lag_commits"),

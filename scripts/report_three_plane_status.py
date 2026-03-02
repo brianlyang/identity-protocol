@@ -784,6 +784,28 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_cov,
     }
 
+    rc_herm, out_herm, err_herm = _run(
+        [
+            "python3",
+            "scripts/validate_e2e_hermetic_runtime_import.py",
+            "--operation",
+            "three-plane",
+            "--pythonpath-bootstrap-mode",
+            "internal_bootstrap",
+            "--json-only",
+        ]
+    )
+    herm_payload = _parse_json_payload(out_herm) or {}
+    validators["e2e_hermetic_runtime_import"] = {
+        "rc": rc_herm,
+        "ok": rc_herm == 0,
+        "out": out_herm,
+        "err": err_herm,
+    }
+    herm_status = str(herm_payload.get("e2e_hermetic_runtime_status", "")).strip().upper()
+    if rc_herm != 0 or herm_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_semantic, out_semantic, err_semantic = _run(
         [
             "python3",
@@ -1527,6 +1549,14 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "error_code": err_code,
         "mandatory_fields_complete": bool(mandatory),
         "hard_boundary": hard_boundary,
+        "prompt_runtime_state_externalization": {
+            "prompt_policy_hash": data.get("prompt_policy_hash", ""),
+            "runtime_state_artifact_path": data.get("runtime_state_artifact_path", ""),
+            "runtime_state_artifact_hash": data.get("runtime_state_artifact_hash", ""),
+            "prompt_runtime_state_binding_status": data.get("prompt_runtime_state_binding_status", ""),
+            "prompt_runtime_state_externalization_status": data.get("prompt_runtime_state_externalization_status", ""),
+            "prompt_runtime_state_externalization_error_code": data.get("prompt_runtime_state_externalization_error_code", ""),
+        },
         "required_contract_coverage": {
             "required_contract_total": coverage_payload.get("required_contract_total"),
             "required_contract_passed": coverage_payload.get("required_contract_passed"),
@@ -1538,6 +1568,14 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "e2e_hermetic_runtime_import": {
+            "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),
+            "pythonpath_bootstrap_mode": herm_payload.get("pythonpath_bootstrap_mode", ""),
+            "import_preflight_status": herm_payload.get("import_preflight_status", ""),
+            "import_preflight_error_code": herm_payload.get("import_preflight_error_code", ""),
+            "missing_modules": herm_payload.get("missing_modules", []),
+            "stale_reasons": herm_payload.get("stale_reasons", []),
         },
         "semantic_routing_guard": {
             "semantic_routing_status": semantic_payload.get("semantic_routing_status"),
@@ -1571,10 +1609,19 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "work_layer": lane_payload.get("work_layer", ""),
             "source_layer": lane_payload.get("source_layer", ""),
             "applied_gate_set": lane_payload.get("applied_gate_set", ""),
+            "protocol_context_detected": lane_payload.get("protocol_context_detected"),
+            "protocol_context_reasons": lane_payload.get("protocol_context_reasons", []),
+            "session_lane_lock": lane_payload.get("session_lane_lock", ""),
+            "session_lane_lock_source": lane_payload.get("session_lane_lock_source", ""),
+            "session_lane_lock_receipt": lane_payload.get("session_lane_lock_receipt", ""),
+            "lane_resolution_decision": lane_payload.get("lane_resolution_decision", ""),
+            "lane_resolution_blocked": lane_payload.get("lane_resolution_blocked"),
+            "lane_resolution_error_code": lane_payload.get("lane_resolution_error_code", ""),
             "lane_transition_reason": lane_payload.get("lane_transition_reason", ""),
             "protocol_feedback_triggered": lane_payload.get("protocol_feedback_triggered"),
             "protocol_feedback_paths": lane_payload.get("protocol_feedback_paths", []),
             "pending_receipt_path": lane_payload.get("pending_receipt_path", ""),
+            "lane_lock_receipt_path": lane_payload.get("lane_lock_receipt_path", ""),
             "protocol_relevant_diff_detected": lane_payload.get("protocol_relevant_diff_detected"),
             "protocol_relevant_files": lane_payload.get("protocol_relevant_files", []),
             "stale_reasons": lane_payload.get("stale_reasons", []),
@@ -1970,7 +2017,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "baseline_status": refresh_payload.get("baseline_status", ""),
             "baseline_error_code": refresh_payload.get("baseline_error_code", ""),
             "report_protocol_commit_sha": refresh_payload.get("report_protocol_commit_sha", ""),
+            "protocol_head_sha_at_run_start": refresh_payload.get("protocol_head_sha_at_run_start", ""),
+            "baseline_reference_mode": refresh_payload.get("baseline_reference_mode", ""),
             "current_protocol_head_sha": refresh_payload.get("current_protocol_head_sha", ""),
+            "head_drift_detected": refresh_payload.get("head_drift_detected", False),
             "lag_commits": refresh_payload.get("lag_commits"),
             "report_selected_path": refresh_payload.get("report_selected_path", ""),
             "stale_reasons": refresh_payload.get("stale_reasons", []),
@@ -2032,7 +2082,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "report_selected_path": baseline_payload.get("report_selected_path"),
             "report_protocol_root": baseline_payload.get("report_protocol_root"),
             "report_protocol_commit_sha": baseline_payload.get("report_protocol_commit_sha"),
+            "protocol_head_sha_at_run_start": baseline_payload.get("protocol_head_sha_at_run_start"),
+            "baseline_reference_mode": baseline_payload.get("baseline_reference_mode"),
             "current_protocol_head_sha": baseline_payload.get("current_protocol_head_sha"),
+            "head_drift_detected": baseline_payload.get("head_drift_detected", False),
             "lag_commits": baseline_payload.get("lag_commits"),
             "stale_reasons": baseline_payload.get("stale_reasons", []),
         },

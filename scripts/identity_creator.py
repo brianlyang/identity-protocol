@@ -38,6 +38,44 @@ def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
     return p.returncode, p.stdout or "", p.stderr or ""
 
 
+def _parse_json_payload(raw: str) -> dict | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    try:
+        data = json.loads(text)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        data = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _emit_two_phase_trace(
+    *,
+    identity_id: str,
+    phase_a_refresh_applied: bool,
+    phase_b_strict_revalidate_status: str,
+    phase_transition_reason: str,
+    phase_transition_error_code: str,
+) -> None:
+    payload = {
+        "identity_id": identity_id,
+        "phase_a_refresh_applied": bool(phase_a_refresh_applied),
+        "phase_b_strict_revalidate_status": str(phase_b_strict_revalidate_status or ""),
+        "phase_transition_reason": str(phase_transition_reason or ""),
+        "phase_transition_error_code": str(phase_transition_error_code or ""),
+    }
+    print(json.dumps(payload, ensure_ascii=False))
+
+
 def _runtime_mode_guard(identity_id: str, catalog: str, repo_catalog: str, scope: str = "") -> int:
     cmd = [
         "python3",
@@ -1833,25 +1871,99 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] instance isolation validation failed; update blocked")
             return rc
-        rc = _run(
-            [
-                "python3",
-                "scripts/validate_identity_session_refresh_status.py",
-                "--catalog",
-                args.catalog,
-                "--repo-catalog",
-                args.repo_catalog,
-                "--identity-id",
-                args.identity_id,
-                "--operation",
-                "update",
-                "--baseline-policy",
-                args.baseline_policy,
-            ]
-        )
-        if rc != 0:
-            print("[FAIL] session refresh status validation failed; update blocked")
-            return rc
+        phase_a_refresh_applied = False
+        phase_b_strict_revalidate_status = "NOT_APPLICABLE"
+        phase_transition_reason = ""
+        phase_transition_error_code = ""
+
+        refresh_validate_cmd = [
+            "python3",
+            "scripts/validate_identity_session_refresh_status.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "update",
+            "--baseline-policy",
+            args.baseline_policy,
+            "--json-only",
+        ]
+        rc_refresh, out_refresh, _ = _run_capture(refresh_validate_cmd)
+        refresh_payload = _parse_json_payload(out_refresh) or {}
+        if rc_refresh != 0:
+            stale_reasons = refresh_payload.get("stale_reasons", [])
+            if not isinstance(stale_reasons, list):
+                stale_reasons = []
+            refresh_error = str(refresh_payload.get("error_code", "")).strip()
+            baseline_status = str(refresh_payload.get("baseline_status", "")).strip().upper()
+            lease_status = str(refresh_payload.get("lease_status", "")).strip().upper()
+            pointer_consistency = str(refresh_payload.get("pointer_consistency", "")).strip().upper()
+            stale_only = (
+                str(args.baseline_policy).strip().lower() == "strict"
+                and refresh_error == "IP-ASB-RFS-004"
+                and baseline_status == "FAIL"
+                and lease_status in {"", "ACTIVE"}
+                and pointer_consistency in {"", "PASS", "WARN"}
+                and all(
+                    str(x).startswith("baseline_")
+                    or str(x).startswith("report_protocol")
+                    or str(x) in {"protocol_baseline_non_pass", "live_head_drift_non_blocking"}
+                    for x in stale_reasons
+                )
+            )
+            if stale_only:
+                phase_a_refresh_applied = True
+                phase_transition_reason = "stale_baseline_only_detected"
+                refresh_cmd = [
+                    "python3",
+                    "scripts/refresh_identity_session_status.py",
+                    "--catalog",
+                    args.catalog,
+                    "--repo-catalog",
+                    args.repo_catalog,
+                    "--identity-id",
+                    args.identity_id,
+                    "--baseline-policy",
+                    "warn",
+                    "--json-only",
+                ]
+                rc_phase_a, _, _ = _run_capture(refresh_cmd)
+                if rc_phase_a != 0:
+                    phase_b_strict_revalidate_status = "FAIL_REQUIRED"
+                    phase_transition_error_code = "IP-UPG-BASE-001"
+                    _emit_two_phase_trace(
+                        identity_id=args.identity_id,
+                        phase_a_refresh_applied=phase_a_refresh_applied,
+                        phase_b_strict_revalidate_status=phase_b_strict_revalidate_status,
+                        phase_transition_reason=phase_transition_reason,
+                        phase_transition_error_code=phase_transition_error_code,
+                    )
+                    print("[FAIL] strict two-phase refresh unavailable; baseline refresh phase-A failed")
+                    return 1
+                rc_phase_b, out_phase_b, _ = _run_capture(refresh_validate_cmd)
+                phase_b_payload = _parse_json_payload(out_phase_b) or {}
+                phase_b_status = str(phase_b_payload.get("session_refresh_status", "")).strip().upper()
+                phase_b_strict_revalidate_status = phase_b_status or ("PASS_REQUIRED" if rc_phase_b == 0 else "FAIL_REQUIRED")
+                if rc_phase_b != 0:
+                    phase_transition_error_code = "IP-UPG-BASE-001"
+                    _emit_two_phase_trace(
+                        identity_id=args.identity_id,
+                        phase_a_refresh_applied=phase_a_refresh_applied,
+                        phase_b_strict_revalidate_status=phase_b_strict_revalidate_status,
+                        phase_transition_reason=phase_transition_reason,
+                        phase_transition_error_code=phase_transition_error_code,
+                    )
+                    print("[FAIL] strict two-phase refresh phase-B revalidate failed; update blocked")
+                    return rc_phase_b
+            else:
+                phase_b_strict_revalidate_status = "FAIL_REQUIRED"
+                print("[FAIL] session refresh status validation failed; update blocked")
+                return rc_refresh
+        else:
+            phase_b_strict_revalidate_status = "PASS_REQUIRED"
         rc = _run(
             [
                 "python3",
@@ -1940,6 +2052,21 @@ def main() -> int:
             cmd.extend(["--expected-work-layer", args.expected_work_layer.strip()])
         if args.expected_source_layer.strip():
             cmd.extend(["--expected-source-layer", args.expected_source_layer.strip()])
+        if phase_a_refresh_applied:
+            cmd.append("--phase-a-refresh-applied")
+        if phase_b_strict_revalidate_status:
+            cmd.extend(["--phase-b-strict-revalidate-status", phase_b_strict_revalidate_status])
+        if phase_transition_reason:
+            cmd.extend(["--phase-transition-reason", phase_transition_reason])
+        if phase_transition_error_code:
+            cmd.extend(["--phase-transition-error-code", phase_transition_error_code])
+        _emit_two_phase_trace(
+            identity_id=args.identity_id,
+            phase_a_refresh_applied=phase_a_refresh_applied,
+            phase_b_strict_revalidate_status=phase_b_strict_revalidate_status,
+            phase_transition_reason=phase_transition_reason,
+            phase_transition_error_code=phase_transition_error_code,
+        )
         if args.allow_protocol_root_pack:
             cmd.append("--allow-protocol-root-pack")
         return _run(cmd)

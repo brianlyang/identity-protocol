@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "$REPO_ROOT"
+
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH="${SCRIPT_DIR}:${REPO_ROOT}:${PYTHONPATH}"
+else
+  export PYTHONPATH="${SCRIPT_DIR}:${REPO_ROOT}"
+fi
+
+PYTHONPATH_BOOTSTRAP_MODE="internal_bootstrap"
+
+if ! HERMETIC_PAYLOAD="$(python3 scripts/validate_e2e_hermetic_runtime_import.py --operation e2e --pythonpath-bootstrap-mode "$PYTHONPATH_BOOTSTRAP_MODE" --json-only)"; then
+  echo "$HERMETIC_PAYLOAD"
+  echo "[FAIL] IP-E2E-HERM-001 hermetic import preflight failed"
+  exit 1
+fi
+echo "$HERMETIC_PAYLOAD"
+echo "[INFO] hermetic runtime import preflight PASS"
+
 CATALOG_PATH=${IDENTITY_CATALOG:-}
 if [ -z "$CATALOG_PATH" ]; then
   echo "[FAIL] IDENTITY_CATALOG is required (implicit catalog fallback is disabled)."

@@ -28,6 +28,10 @@ MANDATORY_REPORT_FIELDS = (
     "capability_activation_status",
     "capability_activation_error_code",
     "writeback_mode",
+    "phase_a_refresh_applied",
+    "phase_b_strict_revalidate_status",
+    "phase_transition_reason",
+    "phase_transition_error_code",
 )
 
 
@@ -162,6 +166,10 @@ def main() -> int:
         "writeback_status": "",
         "next_action": "",
         "next_recovery_action": "",
+        "phase_a_refresh_applied": False,
+        "phase_b_strict_revalidate_status": "",
+        "phase_transition_reason": "",
+        "phase_transition_error_code": "",
         "stale_reasons": [],
     }
 
@@ -216,6 +224,10 @@ def main() -> int:
             "writeback_status": writeback_status,
             "next_action": next_action,
             "next_recovery_action": next_recovery_action,
+            "phase_a_refresh_applied": bool(report.get("phase_a_refresh_applied", False)),
+            "phase_b_strict_revalidate_status": str(report.get("phase_b_strict_revalidate_status", "")).strip(),
+            "phase_transition_reason": str(report.get("phase_transition_reason", "")).strip(),
+            "phase_transition_error_code": str(report.get("phase_transition_error_code", "")).strip(),
         }
     )
 
@@ -227,6 +239,11 @@ def main() -> int:
         stale_reasons.append("next_action_missing")
     elif next_action.strip().lower() in {"pending", "intake"}:
         stale_reasons.append("next_action_not_advanced")
+
+    if payload.get("phase_a_refresh_applied"):
+        phase_b = str(payload.get("phase_b_strict_revalidate_status", "")).strip()
+        if not phase_b or phase_b in {"NOT_APPLICABLE", "UNKNOWN"}:
+            stale_reasons.append("phase_b_strict_revalidate_status_missing_after_phase_a")
 
     if upgrade_required and all_ok and writeback_status == "WRITTEN":
         rc_ew, out_ew, err_ew = _run_experience_writeback_validator(

@@ -186,6 +186,8 @@ def collect_protocol_evidence(protocol_root: str | None = None, protocol_mode: s
         "protocol_mode": str(protocol_mode or "").strip() or "mode_a_shared",
         "protocol_root": str(root),
         "protocol_commit_sha": commit,
+        "protocol_head_sha_at_run_start": commit,
+        "baseline_reference_mode": "run_pinned",
         "protocol_ref": ref,
     }
 

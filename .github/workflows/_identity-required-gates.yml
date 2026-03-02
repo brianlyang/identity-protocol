@@ -167,6 +167,7 @@ jobs:
             python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_session_refresh_status.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --baseline-policy warn
+            python3 scripts/validate_e2e_hermetic_runtime_import.py --operation ci --pythonpath-bootstrap-mode internal_bootstrap --json-only
             python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --view external --disclosure-level standard --out "/tmp/identity-response-stamp-${ID}.json" --json-only
             python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "/tmp/identity-response-stamp-${ID}.json" --force-check --enforce-user-visible-gate --operation ci --blocker-receipt-out "/tmp/identity-stamp-blocker-receipt-${ID}.json"
             python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "/tmp/identity-stamp-blocker-receipt-${ID}.json"
