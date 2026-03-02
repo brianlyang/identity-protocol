@@ -145,7 +145,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | REJECT |
-| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12` | SPEC_READY | PENDING_IMPL |
+| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -3962,6 +3962,86 @@ Boundary notes:
 2. FIX-029..032 remain `REJECT` baseline until independent replay closes section `16.8.21` findings.
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.25 Architect patch: FIX-033 lane routing implementation landed (2026-03-02, protocol-only)
+
+Status: `PATCH_APPLIED / PENDING_REAUDIT` (authoritative status stays pending until independent audit replay).
+
+Commit anchor:
+
+1. `0d7ebc7` — `fix(protocol): implement FIX-033 work-layer gate-set routing`
+
+Changed files:
+
+1. `scripts/validate_work_layer_gate_set_routing.py` (new required validator for `ASB-RQ-090..093`)
+2. `scripts/execute_identity_upgrade.py` (lane context resolution + required-check routing + pending protocol-feedback telemetry in report)
+3. `scripts/identity_creator.py` (FIX-033 validator wiring + lane args passthrough to upgrade executor)
+4. `scripts/release_readiness_check.py` (lane-set routing + protocol publish gate filtering in instance lane)
+5. `scripts/e2e_smoke_test.sh` (lane-aware protocol publish gate execution + FIX-033 validator replay)
+6. `scripts/full_identity_protocol_scan.py` (FIX-033 validator wiring + machine-readable field projection)
+7. `scripts/report_three_plane_status.py` (FIX-033 validator wiring + instance-plane telemetry projection)
+8. `.github/workflows/_identity-required-gates.yml` (CI required-gate wiring + update lane pin to `instance`)
+
+Implementation deltas (P0 closure targets):
+
+1. `ASB-RQ-090` (`work_layer_gate_set_routing_contract_v1`)
+   - deterministic lane resolution (`instance/protocol/dual`) now emits machine-readable gate-set tuple:
+     - `work_layer`
+     - `source_layer`
+     - `applied_gate_set`
+     - `lane_transition_reason`
+2. `ASB-RQ-091` (instance lane non-blocking protocol publish boundary)
+   - `execute_identity_upgrade.py` now filters protocol publish checks from required check-set when `work_layer=instance`.
+   - when protocol-relevant diff exists in instance lane, `validate_work_layer_gate_set_routing.py` writes canonical pending receipt with `next_action=protocol_feedback_required`.
+3. `ASB-RQ-092` (protocol lane strict boundary)
+   - `work_layer=protocol` requires canonical protocol-feedback roots; missing roots fail strict with `IP-LAYER-GATE-004`.
+4. `ASB-RQ-093` (replay observability)
+   - new fields wired into scan/three-plane payload surfaces:
+     - `work_layer_gate_set_routing_status`
+     - `work_layer`
+     - `source_layer`
+     - `applied_gate_set`
+     - `protocol_feedback_triggered`
+     - `protocol_feedback_paths`
+     - `lane_transition_reason`
+
+Acceptance replay snapshot (architect local):
+
+1. static:
+   - `python3 -m py_compile scripts/validate_work_layer_gate_set_routing.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/execute_identity_upgrade.py scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+2. sample A (`instance`, protocol diff present, no changelog link):
+   - command:
+     - `python3 scripts/validate_work_layer_gate_set_routing.py --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --identity-id system-requirements-analyst --operation validate --expected-work-layer instance --source-layer global --base $(git rev-parse 560f710~1) --head $(git rev-parse 560f710) --applied-gate-set instance_required_checks --force-check --json-only`
+   - rc: `0`
+   - key fields:
+     - `work_layer_gate_set_routing_status=PASS_REQUIRED`
+     - `protocol_relevant_diff_detected=true`
+     - `protocol_feedback_triggered=true`
+     - `protocol_feedback_paths` contains `outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_*.json`
+3. sample B (`protocol`, same diff range):
+   - rc: `1`
+   - key fields:
+     - `work_layer_gate_set_routing_status=FAIL_REQUIRED`
+     - `error_code=IP-LAYER-GATE-004`
+4. sample D (`dual` in strict operation):
+   - rc: `1`
+   - key fields:
+     - `work_layer_gate_set_routing_status=FAIL_REQUIRED`
+     - `error_code=IP-LAYER-GATE-005`
+5. three-plane visibility:
+   - `python3 scripts/report_three_plane_status.py --identity-id system-requirements-analyst --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --layer-intent-text "实例自驱升级" --expected-work-layer instance --expected-source-layer global --out /tmp/fix033_three_plane.json`
+   - rc: `0`
+   - payload evidence:
+     - `instance_plane_detail.work_layer_gate_set_routing.work_layer_gate_set_routing_status=PASS_REQUIRED`
+     - `instance_plane_detail.work_layer_gate_set_routing.work_layer=instance`
+     - `instance_plane_detail.work_layer_gate_set_routing.applied_gate_set=instance_required_checks`
+
+Audit boundary:
+
+1. This section records implementation + local replay only.
+2. Independent auditor replay remains required before changing FIX-033 from `PENDING_REAUDIT` to `PASS`.
 
 #### 16.8.21 Auditor replay verdict: FIX-029..032 implementation review (2026-03-02)
 
