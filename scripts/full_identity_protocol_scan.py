@@ -112,6 +112,11 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     profile = str(row.get("profile", "")).lower()
     runtime_mode = str(row.get("runtime_mode", "")).lower()
     is_fixture = profile == "fixture" or runtime_mode == "demo_only"
+    # Fixture/demo identities and inactive rows are visibility-only in scan output.
+    # Keep their detailed check payloads for audit, but do not let them block
+    # release readiness summary (prevents false non-green caused by demo lanes).
+    if (not active) or is_fixture:
+        return "OK"
     checks = row.get("checks", {})
     core_fail = any(
         not checks.get(name, {}).get("ok", False)
