@@ -1,5 +1,39 @@
 # Identity Protocol v1.4.10 (draft)
 
+## Normative source map (v1.5 governance execution)
+
+This file is kept as protocol overview/baseline context.  
+For active governance execution in v1.5 lanes, normative sources are:
+
+1. Topic-level canonical contract (SSOT):
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+2. Execution/replay/audit ledger:
+   - `docs/review/protocol-remediation-audit-ledger-v1.5.md`
+3. Global protocol handoff baseline:
+   - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+
+Governance rule:
+
+1. Script updates under `scripts/` are implementation surfaces only.
+2. Any P0/P1 contract change must first land in governance/review docs, then code/wiring/replay.
+3. Script-only semantic changes without governance/review delta are non-compliant.
+
+## Governance execution stack (how work is controlled)
+
+1. **Contract layer** (`docs/governance/...v1.5.0.md`)
+   - fields, enums, error-codes, fail-closed semantics, acceptance commands.
+2. **Review layer** (`docs/review/...v1.5.md`)
+   - intake, replay verdict, non-merge stage status, residual risks.
+3. **Implementation layer** (`scripts/*.py`, `scripts/*.sh`)
+   - validators/writers/parsers and strict gate logic.
+4. **Wiring layer** (creator/readiness/e2e/full-scan/three-plane/CI)
+   - six-surface + required-gates wiring.
+5. **Replay evidence layer** (reports + machine-readable payloads)
+   - deterministic pass/fail with error-code families.
+
+Status transitions are controlled by governance/review, not by script commit alone:
+`SPEC_READY -> IMPL_READY -> GATE_READY -> VERIFIED -> DONE`.
+
 ## Goal
 
 Define identity as a first-class control-plane protocol, parallel to skills and MCP.
