@@ -3948,7 +3948,7 @@ Acceptance profile (release-blocking once implementation lands):
    - expected: instance lane not blocked; protocol-feedback pending receipt emitted
 2. sample B:
    - input: `work_layer=protocol`, protocol files changed, changelog not updated
-   - expected: strict fail-closed
+   - expected: strict fail-closed when canonical protocol-feedback closure roots are incomplete (fixture/state-bound sample)
 3. sample C:
    - input: multi-round replay
    - expected: each round exposes `work_layer + applied_gate_set + protocol_feedback_triggered + protocol_feedback_paths`
@@ -4021,7 +4021,7 @@ Acceptance replay snapshot (architect local):
      - `protocol_feedback_triggered=true`
      - `protocol_feedback_paths` contains `outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_*.json`
 3. sample B (`protocol`, same diff range):
-   - rc: `1`
+   - rc: `1` (state-bound fixture: canonical protocol-feedback closure root incomplete)
    - key fields:
      - `work_layer_gate_set_routing_status=FAIL_REQUIRED`
      - `error_code=IP-LAYER-GATE-004`
@@ -4042,6 +4042,58 @@ Audit boundary:
 
 1. This section records implementation + local replay only.
 2. Independent auditor replay remains required before changing FIX-033 from `PENDING_REAUDIT` to `PASS`.
+
+#### 16.8.26 Architect patch: FIX-033 lane applied-gate-set propagation for full-scan/three-plane (2026-03-02)
+
+Status: `PATCH_APPLIED / PENDING_REAUDIT` (closes auditor P0 mismatch path pending independent replay).
+
+Commit anchor:
+
+1. `913973a` — `fix(protocol): route lane applied gate-set in scan and three-plane`
+
+Changed files:
+
+1. `scripts/full_identity_protocol_scan.py`
+2. `scripts/report_three_plane_status.py`
+3. `docs/review/protocol-remediation-audit-ledger-v1.5.md`
+
+Implementation delta:
+
+1. Added lane-aware gate-set resolver to both scan and three-plane surfaces:
+   - `resolve_layer_intent(...)` + `DEFAULT_WORK_LAYER` are now used to compute `lane_applied_gate_set`.
+2. Replaced hardcoded `--applied-gate-set instance_required_checks` with computed lane result:
+   - `protocol_required_checks` for `work_layer=protocol`
+   - `instance_required_checks` for `work_layer=instance`
+   - `dual_unroutable` fallback for unresolved/dual lane.
+3. This aligns FIX-033 telemetry tuple with routed lane intent and removes self-contradictory audit outputs under protocol replay.
+
+Replay evidence snapshot (architect local):
+
+1. static checks:
+   - `python3 -m py_compile scripts/full_identity_protocol_scan.py scripts/report_three_plane_status.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+2. full-scan protocol lane replay:
+   - command:
+     `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --expected-work-layer protocol --expected-source-layer global --layer-intent-text "protocol lane replay for FIX-033" --out /tmp/fix033_fullscan_protocol.json`
+   - rc: `0`
+   - key fields (`project/global`): `work_layer_gate_set_routing_status=PASS_REQUIRED`, `applied_gate_set=protocol_required_checks`, `requested_applied_gate_set=protocol_required_checks`
+   - grep replay result: no `IP-LAYER-GATE-001`, no `applied_gate_set_mismatch`.
+3. three-plane protocol lane replay:
+   - command:
+     `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expected-work-layer protocol --expected-source-layer global --layer-intent-text "protocol lane replay for FIX-033" --out /tmp/fix033_threeplane_protocol.json`
+   - rc: `0`
+   - key fields: `instance_plane_detail.work_layer_gate_set_routing.work_layer_gate_set_routing_status=PASS_REQUIRED`, `applied_gate_set=protocol_required_checks`, nested payload includes `requested_applied_gate_set=protocol_required_checks`
+   - grep replay result: no `IP-LAYER-GATE-001`, no `applied_gate_set_mismatch`.
+4. docs/ssot:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+   - rc: `0`
+
+Residual risks (not introduced by this patch):
+
+1. Global identity runtime still contains existing non-lane blockers (`IP-SEM-001`, `IP-SPLIT-001`, `IP-SID-001`) in independent scans.
+2. FIX-033 remains `PENDING_REAUDIT` until external auditor replays the same protocol-lane commands and validates tuple consistency.
 
 #### 16.8.21 Auditor replay verdict: FIX-029..032 implementation review (2026-03-02)
 
