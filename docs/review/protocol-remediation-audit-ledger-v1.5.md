@@ -141,10 +141,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
-| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2 / 560f710` | DONE | REJECT |
-| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | REJECT |
-| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | REJECT |
-| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | REJECT |
+| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
+| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
 | FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7 / 913973a / 9d830d8` | DONE | PASS |
 
 ---
@@ -4116,9 +4116,39 @@ Bookkeeping update:
 1. FIX-033 rolling summary anchor updated to include `913973a / 9d830d8`.
 2. Result promoted from `PENDING_REAUDIT` -> `PASS` for this issue scope.
 
-#### 16.8.21 Auditor replay verdict: FIX-029..032 implementation review (2026-03-02)
+#### 16.8.28 Auditor delta replay intake: FIX-029..032 de-ambiguation refresh (2026-03-02, review-only)
 
-Status: `REJECT` (implementation landed in `a95f5a2`, but strict-lane correctness gaps remain).
+Status: `DELTA_REPLAY_RECORDED` (historical `16.8.21` remains archived as prior snapshot; latest replay does not reproduce earlier CWD/split contradictions under aligned intent fixtures).
+
+Scope and fixture normalization:
+
+1. Same identity + same catalog + same layer-intent text are used for root and `/tmp` replay.
+2. This eliminates prior false positives caused by mixed semantic fixtures (different `layer-intent-text` across CWDs).
+3. Replay outcome is evidence for status refresh from `REJECT` -> `PENDING_REAUDIT` in rolling summary rows (`FIX-029..032`); final PASS still requires the full sign-off command pack.
+
+Replay delta summary (auditor + architect aligned):
+
+1. `validate_protocol_feedback_reply_channel.py` (root vs `/tmp`):
+   - `protocol_feedback_reply_channel_status=PASS_REQUIRED`
+   - `split_receipt_status=PASS_REQUIRED`
+   - `split_receipt_payload_rc=0`
+2. `validate_protocol_inquiry_followup_chain.py` with same intent text (root vs `/tmp`):
+   - `protocol_inquiry_followup_chain_status=PASS_REQUIRED`
+   - `candidate_decision=PROTOCOL_CANDIDATE`
+   - `inquiry_state=READY_FOR_PROTOCOL_FEEDBACK`
+3. `validate_protocol_feedback_bootstrap_ready.py` (root vs `/tmp`):
+   - `protocol_feedback_bootstrap_status=PASS_REQUIRED`
+4. Interpretation:
+   - earlier contradictory evidence in `16.8.21` is retained as historical context but no longer represents current replay state.
+
+#### 16.8.21 Auditor replay verdict: FIX-029..032 implementation review (2026-03-02, historical snapshot superseded by 16.8.28)
+
+Status: `HISTORICAL_SNAPSHOT` (superseded by `16.8.28` for current-state replay judgment).
+
+Usage note:
+
+1. Keep this section as immutable historical evidence for the 2026-03-02 reject point-in-time.
+2. Do **not** use this section alone as current blocking evidence after the normalized replay set in `16.8.28`.
 
 Replay refresh (2026-03-02, local re-audit delta):
 
