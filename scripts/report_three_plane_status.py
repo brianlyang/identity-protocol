@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
@@ -34,6 +35,22 @@ def _bool(v: Any) -> bool:
     if v is None:
         return False
     return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: str, expected_source_layer: str) -> str:
+    resolved = resolve_layer_intent(
+        explicit_work_layer=str(expected_work_layer or "").strip(),
+        explicit_source_layer=str(expected_source_layer or "").strip(),
+        intent_text=str(layer_intent_text or "").strip(),
+        default_work_layer=DEFAULT_WORK_LAYER,
+        default_source_layer="global",
+    )
+    work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+    if work_layer == "protocol":
+        return "protocol_required_checks"
+    if work_layer == "instance":
+        return "instance_required_checks"
+    return "dual_unroutable"
 
 
 def _load_json(path: str) -> dict[str, Any]:
@@ -187,6 +204,11 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     layer_intent_text = str(getattr(args, "layer_intent_text", "") or "").strip()
     expected_work_layer = str(getattr(args, "expected_work_layer", "") or "").strip().lower()
     expected_source_layer = str(getattr(args, "expected_source_layer", "") or "").strip().lower()
+    lane_applied_gate_set = _resolve_applied_gate_set(
+        layer_intent_text=layer_intent_text,
+        expected_work_layer=expected_work_layer,
+        expected_source_layer=expected_source_layer,
+    )
     # Always validate tuple and writeback linkage to keep evidence machine-checkable.
     rc_tuple, out_tuple, err_tuple = _run(
         ["python3", "scripts/validate_identity_binding_tuple.py", "--identity-id", args.identity_id, "--report", str(report_path)]
@@ -824,7 +846,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--operation",
         "three-plane",
         "--applied-gate-set",
-        "instance_required_checks",
+        lane_applied_gate_set,
         "--force-check",
         "--json-only",
     ]
