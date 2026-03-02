@@ -145,7 +145,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | REJECT |
-| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7` | DONE | PENDING_REAUDIT |
+| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7 / 913973a / 9d830d8` | DONE | PASS |
 
 ---
 
@@ -4093,7 +4093,28 @@ Replay evidence snapshot (architect local):
 Residual risks (not introduced by this patch):
 
 1. Global identity runtime still contains existing non-lane blockers (`IP-SEM-001`, `IP-SPLIT-001`, `IP-SID-001`) in independent scans.
-2. FIX-033 remains `PENDING_REAUDIT` until external auditor replays the same protocol-lane commands and validates tuple consistency.
+2. Historical note: this section was recorded as `PENDING_REAUDIT` at patch time; closure verdict is tracked in `16.8.27`.
+
+#### 16.8.27 Auditor closure intake: FIX-033 promoted to PASS for lane mismatch gap (2026-03-02)
+
+Status: `PASS` (scope-limited closure for prior P0: applied-gate-set hardcoding -> `IP-LAYER-GATE-001` mismatch path).
+
+Independent replay summary (auditor-provided):
+
+1. `913973a + 9d830d8` independently reproduced without `IP-LAYER-GATE-001`.
+2. `full_identity_protocol_scan.py` protocol lane replay (`project/global`) now reports:
+   - `work_layer_gate_set_routing_status=PASS_REQUIRED`
+   - `requested_applied_gate_set=protocol_required_checks`
+   - `applied_gate_set=protocol_required_checks`
+3. `report_three_plane_status.py` protocol lane replay now reports:
+   - `instance_plane_detail.work_layer_gate_set_routing.work_layer_gate_set_routing_status=PASS_REQUIRED`
+   - no `IP-LAYER-GATE-001`
+4. `/tmp` CWD replay also consistent for this patch scope (no new CWD drift introduced).
+
+Bookkeeping update:
+
+1. FIX-033 rolling summary anchor updated to include `913973a / 9d830d8`.
+2. Result promoted from `PENDING_REAUDIT` -> `PASS` for this issue scope.
 
 #### 16.8.21 Auditor replay verdict: FIX-029..032 implementation review (2026-03-02)
 
