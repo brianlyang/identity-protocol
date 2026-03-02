@@ -1388,11 +1388,11 @@ Mandatory semantics:
    - `protocol_feedback_seed_ref`
    - `protocol_feedback_index_ref`
 
-#### 5.8.19 `protocol_feedback_entry_unified_closure_bundle_v1` (P0 orchestration profile)
+#### 5.8.19 `protocol_feedback_entry_component_orchestration_contract_v1` (P0 orchestration profile)
 
 Goal:
 
-1. Treat `FIX-029..FIX-032` as one dependency-controlled closure system while keeping audit non-merge boundaries.
+1. Keep one protocol system with component-level dependency control for `FIX-029..FIX-032` while preserving audit non-merge boundaries.
 2. Eliminate implementation drift where later protocol-entry logic lands before canonical channel/requiredization foundations are closed.
 3. Keep strict-lane fail-closed semantics deterministic across channel/bootstrap/candidate/inquiry stages.
 

@@ -4374,13 +4374,13 @@ Layer declaration:
 
 1. protocol-only; no business scenario constants introduced.
 
-#### 16.8.20 Unified roundtable closure profile: FIX-029..032 as one system (2026-03-02, docs-only)
+#### 16.8.20 Unified roundtable closure profile: FIX-029..032 as linked components in one protocol system (2026-03-02, docs-only)
 
 Status: `READY_FOR_PATCH` (system-level pre-code cross-validation complete; code not started in this subsection).
 
 Unified boundary statement:
 
-1. FIX-029..032 are one dependency-controlled protocol-entry closure system.
+1. FIX-029..032 are linked components inside one protocol-entry closure system (component-level contracts, not a merged single-fix stream).
 2. Audit non-merge rule remains mandatory:
    - each fix keeps independent replay + verdict package,
    - any single PASS cannot replace missing PASS in other fixes.
