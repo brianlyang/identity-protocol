@@ -836,54 +836,6 @@ def main() -> int:
             if len(cmd) >= 2 and cmd[1] == "scripts/validate_required_contract_coverage.py":
                 cmd.extend(["--min-discovery-required-coverage", str(args.min_discovery_required_coverage)])
                 break
-    if layer_intent_text:
-        for cmd in seq:
-            if len(cmd) < 2:
-                continue
-            script = cmd[1]
-            if script in {
-                "scripts/render_identity_response_stamp.py",
-                "scripts/validate_layer_intent_resolution.py",
-                "scripts/validate_reply_identity_context_first_line.py",
-                "scripts/validate_send_time_reply_gate.py",
-                "scripts/validate_execution_reply_identity_coherence.py",
-                "scripts/validate_protocol_feedback_bootstrap_ready.py",
-                "scripts/validate_protocol_entry_candidate_bridge.py",
-                "scripts/validate_protocol_inquiry_followup_chain.py",
-            }:
-                cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        for cmd in seq:
-            if len(cmd) < 2:
-                continue
-            if cmd[1] in {
-                "scripts/validate_layer_intent_resolution.py",
-                "scripts/validate_reply_identity_context_first_line.py",
-                "scripts/validate_send_time_reply_gate.py",
-                "scripts/validate_execution_reply_identity_coherence.py",
-                "scripts/validate_protocol_feedback_bootstrap_ready.py",
-                "scripts/validate_protocol_entry_candidate_bridge.py",
-                "scripts/validate_protocol_inquiry_followup_chain.py",
-            }:
-                cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        for cmd in seq:
-            if len(cmd) < 2:
-                continue
-            if cmd[1] in {
-                "scripts/validate_layer_intent_resolution.py",
-                "scripts/validate_reply_identity_context_first_line.py",
-                "scripts/validate_send_time_reply_gate.py",
-                "scripts/validate_execution_reply_identity_coherence.py",
-            }:
-                cmd.extend(["--expected-source-layer", expected_source_layer])
-            if cmd[1] in {
-                "scripts/validate_protocol_feedback_bootstrap_ready.py",
-                "scripts/validate_protocol_entry_candidate_bridge.py",
-                "scripts/validate_protocol_inquiry_followup_chain.py",
-            }:
-                cmd.extend(["--source-layer", expected_source_layer])
-
     execution_report = args.execution_report.strip()
     if not execution_report:
         gen_cmd = [
@@ -1320,6 +1272,54 @@ def main() -> int:
             execution_report,
         ]
     )
+
+    if layer_intent_text:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            script = cmd[1]
+            if script in {
+                "scripts/render_identity_response_stamp.py",
+                "scripts/validate_layer_intent_resolution.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+                "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                "scripts/validate_protocol_entry_candidate_bridge.py",
+                "scripts/validate_protocol_inquiry_followup_chain.py",
+            } and "--layer-intent-text" not in cmd:
+                cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            if cmd[1] in {
+                "scripts/validate_layer_intent_resolution.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+                "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                "scripts/validate_protocol_entry_candidate_bridge.py",
+                "scripts/validate_protocol_inquiry_followup_chain.py",
+            } and "--expected-work-layer" not in cmd:
+                cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        for cmd in seq:
+            if len(cmd) < 2:
+                continue
+            if cmd[1] in {
+                "scripts/validate_layer_intent_resolution.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+            } and "--expected-source-layer" not in cmd:
+                cmd.extend(["--expected-source-layer", expected_source_layer])
+            if cmd[1] in {
+                "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                "scripts/validate_protocol_entry_candidate_bridge.py",
+                "scripts/validate_protocol_inquiry_followup_chain.py",
+            } and "--source-layer" not in cmd:
+                cmd.extend(["--source-layer", expected_source_layer])
 
     for cmd in seq:
         rc = _run(cmd)

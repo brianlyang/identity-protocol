@@ -65,6 +65,8 @@ BUSINESS_KEYWORDS = (
     "商家",
 )
 
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
+
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -113,10 +115,42 @@ def _latest_files(dir_path: Path, pattern: str) -> list[Path]:
     return sorted([p.resolve() for p in dir_path.glob(pattern) if p.is_file()], key=lambda p: p.stat().st_mtime)
 
 
+def _safe_read_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return ""
+
+
+def _linked_feedback_batches(feedback_batches: list[Path], linkage_tokens: list[str]) -> list[Path]:
+    tokens = [str(x).strip().lower() for x in linkage_tokens if str(x).strip()]
+    if not tokens:
+        return []
+    linked: list[Path] = []
+    for p in feedback_batches:
+        text = _safe_read_text(p).lower()
+        if any(tok in text for tok in tokens):
+            linked.append(p)
+    return linked
+
+
+def _normalize_feedback_ref(raw: str, feedback_root: Path) -> str:
+    token = str(raw or "").strip()
+    if not token:
+        return ""
+    p = Path(token).expanduser()
+    if p.exists():
+        return rel_to_feedback_root(p.resolve(), feedback_root)
+    if token.startswith("outbox-to-protocol/") or token.startswith("evidence-index/") or token.startswith("upgrade-proposals/"):
+        return token
+    return token
+
+
 def _run_candidate_validator(args: argparse.Namespace, catalog_path: Path, repo_catalog: Path) -> dict[str, Any]:
+    candidate_script = (PROTOCOL_ROOT / "scripts" / "validate_protocol_entry_candidate_bridge.py").resolve()
     cmd = [
         "python3",
-        "scripts/validate_protocol_entry_candidate_bridge.py",
+        str(candidate_script),
         "--catalog",
         str(catalog_path),
         "--repo-catalog",
@@ -136,7 +170,7 @@ def _run_candidate_validator(args: argparse.Namespace, catalog_path: Path, repo_
         cmd.extend(["--expected-work-layer", str(args.expected_work_layer).strip()])
     if str(args.source_layer or "").strip():
         cmd.extend(["--source-layer", str(args.source_layer).strip()])
-    cp = subprocess.run(cmd, capture_output=True, text=True)
+    cp = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     payload = _parse_json_payload(cp.stdout) or {}
     payload["_rc"] = cp.returncode
     return payload
@@ -208,10 +242,12 @@ def main() -> int:
         evidence_ttl_hours = 24
 
     candidate_payload = _run_candidate_validator(args, catalog_path, repo_catalog_path)
+    candidate_rc = int(candidate_payload.get("_rc", 0) or 0)
     candidate_decision = str(candidate_payload.get("protocol_entry_decision", "")).strip() or "INSTANCE_DEFAULT"
     candidate_status = str(candidate_payload.get("protocol_entry_candidate_status", "")).strip().upper()
+    candidate_runtime_failed = bool(candidate_rc != 0 or not candidate_status)
     followup_question_set = list(QUESTION_SET)
-    inquiry_required = candidate_decision == "PROTOCOL_CANDIDATE"
+    inquiry_required = candidate_decision == "PROTOCOL_CANDIDATE" or candidate_runtime_failed
 
     intent_text = str(args.layer_intent_text or "").strip()
     signal_origin = _classify_signal_origin(intent_text)
@@ -224,9 +260,12 @@ def main() -> int:
 
     seed_ref = str(candidate_payload.get("candidate_seed_outbox_ref", "")).strip()
     seed_index_ref = str(candidate_payload.get("candidate_seed_index_ref", "")).strip()
+    candidate_receipt_ref = _normalize_feedback_ref(str(candidate_payload.get("candidate_receipt_path", "")).strip(), feedback_root)
     has_seed_linkage = bool(seed_ref and seed_index_ref and Path(seed_index_ref).exists())
     feedback_batches = _latest_files(outbox_dir, "FEEDBACK_BATCH_*.md")
-    feedback_emitted = len(feedback_batches) > 0
+    feedback_linkage_refs: list[str] = [seed_ref, candidate_receipt_ref]
+    linked_feedback_batches = _linked_feedback_batches(feedback_batches, feedback_linkage_refs)
+    feedback_emitted = len(linked_feedback_batches) > 0
 
     inquiry_receipts = _latest_files(outbox_dir, "INQUIRY_RECEIPT_*.json")
     round_count = len(inquiry_receipts)
@@ -271,6 +310,7 @@ def main() -> int:
     if inquiry_required:
         ts = utc_now_z().replace("-", "").replace(":", "")
         inquiry_receipt_path = (outbox_dir / f"INQUIRY_RECEIPT_{ts}.json").resolve()
+        inquiry_receipt_ref = rel_to_feedback_root(inquiry_receipt_path, feedback_root)
         write_json(
             inquiry_receipt_path,
             {
@@ -280,19 +320,28 @@ def main() -> int:
                 "inquiry_state": inquiry_state,
                 "followup_question_set": followup_question_set,
                 "signal_origin": signal_origin,
+                "candidate_receipt_ref": candidate_receipt_ref,
                 "protocol_feedback_seed_ref": seed_ref,
                 "protocol_feedback_index_ref": seed_index_ref,
                 "generated_at": utc_now_z(),
             },
         )
-        receipt_ref = rel_to_feedback_root(inquiry_receipt_path, feedback_root)
-        ensure_index_linkage(index_path, [receipt_ref], section_title="Inquiry follow-up receipts")
+        ensure_index_linkage(index_path, [inquiry_receipt_ref], section_title="Inquiry follow-up receipts")
         inquiry_receipts = _latest_files(outbox_dir, "INQUIRY_RECEIPT_*.json")
         round_count = len(inquiry_receipts)
         latest_age_hours = _hours_since(inquiry_receipts[-1]) if inquiry_receipts else 0.0
+        feedback_linkage_refs.append(inquiry_receipt_ref)
+        linked_feedback_batches = _linked_feedback_batches(feedback_batches, feedback_linkage_refs)
+        feedback_emitted = len(linked_feedback_batches) > 0
+        if feedback_emitted:
+            inquiry_state = "FEEDBACK_EMITTED"
 
     stale_reasons: list[str] = []
     error_code = ""
+
+    if candidate_runtime_failed:
+        stale_reasons.append("candidate_validator_runtime_failed")
+        error_code = ERR_INQ_FOLLOWUP
 
     if inquiry_required and not followup_question_set:
         stale_reasons.append("deterministic_followup_question_set_missing")
@@ -355,12 +404,18 @@ def main() -> int:
         "protocol_inquiry_followup_chain_status": status,
         "candidate_decision": candidate_decision,
         "candidate_status": candidate_status,
+        "candidate_validator_rc": candidate_rc,
+        "candidate_runtime_failed": candidate_runtime_failed,
         "inquiry_state": inquiry_state,
         "followup_question_set": followup_question_set if inquiry_required else [],
         "signal_origin": signal_origin,
         "sanitization_paraphrase_ref": sanitization_ref,
         "protocol_feedback_seed_ref": seed_ref,
         "protocol_feedback_index_ref": seed_index_ref,
+        "candidate_receipt_ref": candidate_receipt_ref,
+        "feedback_batch_count": len(feedback_batches),
+        "feedback_linked_batch_count": len(linked_feedback_batches),
+        "feedback_linked_batch_refs": [rel_to_feedback_root(p, feedback_root) for p in linked_feedback_batches],
         "followup_round_count": round_count,
         "max_followup_rounds": max_followup_rounds,
         "latest_evidence_age_hours": round(latest_age_hours, 3),

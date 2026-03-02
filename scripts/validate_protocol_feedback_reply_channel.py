@@ -39,6 +39,8 @@ ALLOWED_FEEDBACK_DIRS = {
     "review-notes",
 }
 
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
+
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -71,9 +73,10 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
 
 
 def _run_split_validator(*, identity_id: str, catalog: Path, repo_catalog: Path, operation: str) -> dict[str, Any]:
+    split_script = (PROTOCOL_ROOT / "scripts" / "validate_instance_protocol_split_receipt.py").resolve()
     cmd = [
         "python3",
-        "scripts/validate_instance_protocol_split_receipt.py",
+        str(split_script),
         "--catalog",
         str(catalog),
         "--repo-catalog",
@@ -84,7 +87,7 @@ def _run_split_validator(*, identity_id: str, catalog: Path, repo_catalog: Path,
         operation,
         "--json-only",
     ]
-    cp = subprocess.run(cmd, capture_output=True, text=True)
+    cp = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     payload = _parse_json_payload(cp.stdout) or {}
     payload["_rc"] = cp.returncode
     return payload
@@ -170,6 +173,8 @@ def main() -> int:
         repo_catalog=repo_catalog_path,
         operation=args.operation,
     )
+    split_payload_rc = int(split_payload.get("_rc", 0) or 0)
+    split_error_code = str(split_payload.get("error_code", "")).strip()
     split_status = str(split_payload.get("instance_protocol_split_status", "")).strip().upper()
     split_requiredized = split_status not in {"", STATUS_SKIPPED_NOT_REQUIRED}
 
@@ -211,6 +216,15 @@ def main() -> int:
     if activity_detected and split_status == STATUS_SKIPPED_NOT_REQUIRED and not error_code:
         stale_reasons.append("split_receipt_requiredization_missing_under_activity")
         error_code = ERR_SPLIT_REQUIREDIZATION
+    if split_payload_rc != 0 and not error_code:
+        stale_reasons.append("split_receipt_validator_nonzero_rc")
+        error_code = split_error_code or ERR_SPLIT_REQUIREDIZATION
+    if split_status == STATUS_FAIL_REQUIRED and not error_code:
+        stale_reasons.append("split_receipt_fail_required")
+        error_code = split_error_code or ERR_SPLIT_REQUIREDIZATION
+    if strict and split_status == STATUS_WARN_NON_BLOCKING and not error_code:
+        stale_reasons.append("split_receipt_warn_non_blocking_not_allowed_in_strict")
+        error_code = split_error_code or ERR_SPLIT_REQUIREDIZATION
 
     if error_code and strict:
         status = STATUS_FAIL_REQUIRED
@@ -239,8 +253,8 @@ def main() -> int:
         "mirror_reference_refs": sorted(set(mirror_reference_refs)),
         "split_receipt_requiredized": split_requiredized,
         "split_receipt_status": split_status,
-        "split_receipt_error_code": str(split_payload.get("error_code", "")).strip(),
-        "split_receipt_payload_rc": split_payload.get("_rc"),
+        "split_receipt_error_code": split_error_code,
+        "split_receipt_payload_rc": split_payload_rc,
         "stale_reasons": stale_reasons,
     }
     _emit(payload, json_only=args.json_only)
