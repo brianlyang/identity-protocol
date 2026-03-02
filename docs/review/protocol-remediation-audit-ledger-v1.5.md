@@ -141,10 +141,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
-| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2` | DONE | REJECT |
-| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2` | DONE | REJECT |
-| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2` | DONE | REJECT |
-| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2` | DONE | REJECT |
+| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2 / 560f710` | DONE | REJECT |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | REJECT |
+| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | REJECT |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | REJECT |
 
 ---
 
@@ -4640,6 +4640,80 @@ Audit note:
 
 1. This subsection is architect-side evidence only; it does not override section `16.8.21` audit verdict.
 2. Final `PASS/REJECT` remains owned by independent audit replay package.
+
+#### 16.8.23 Architect remediation patch for `16.8.21` P0 findings (2026-03-02, protocol-only)
+
+Status: `PATCH_APPLIED / PENDING_REAUDIT` (authoritative audit verdict remains `16.8.21 = REJECT` until independent replay closes all four findings).
+
+Commit anchor:
+
+1. `560f710` — `fix(protocol): close FIX-029..032 p0 audit findings`
+
+Changed files:
+
+1. `scripts/validate_protocol_feedback_reply_channel.py`
+2. `scripts/validate_protocol_inquiry_followup_chain.py`
+3. `scripts/release_readiness_check.py`
+
+P0 finding-to-patch mapping:
+
+1. P0-1 (`reply-channel contradictory PASS`) is closed by strict fail-closed coupling:
+   - `split_receipt_payload_rc != 0` now raises strict failure path.
+   - `split_receipt_status == FAIL_REQUIRED` now raises strict failure path.
+   - strict lane rejects `WARN_NON_BLOCKING` split state.
+2. P0-2 (`CWD-sensitive subprocess invocation`) is closed by protocol-root deterministic invocation:
+   - split validator now runs via absolute script path + `cwd=PROTOCOL_ROOT`.
+   - candidate validator now runs via absolute script path + `cwd=PROTOCOL_ROOT`.
+3. P0-3 (`readiness layer passthrough ordering`) is closed by final-stage injection:
+   - layer/source/expected-work args now inject after final `seq.append(...)` construction, with duplicate-arg guard.
+   - FIX-029..032 validators now receive the same layer tuple in readiness lane.
+4. P0-4 (`historical FEEDBACK_BATCH short-circuit`) is closed by current-chain linkage requirement:
+   - `FEEDBACK_EMITTED` now requires linked batch evidence to current chain refs (`seed_ref`, `candidate_receipt_ref`, `inquiry_receipt_ref`) instead of raw historical count.
+   - inquiry payload now exposes `feedback_linked_batch_count` + `feedback_linked_batch_refs` for machine replay.
+
+Replay evidence snapshot (architect-side, protocol boundary only):
+
+1. Static:
+   - `python3 -m py_compile scripts/validate_protocol_feedback_reply_channel.py scripts/validate_protocol_inquiry_followup_chain.py scripts/release_readiness_check.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - rc: `0`
+2. Reply-channel strict fail-closed replay (protocol-root):
+   - command:
+     - `python3 scripts/validate_protocol_feedback_reply_channel.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --repo-catalog identity/catalog/identities.yaml --operation validate --force-check --json-only`
+   - rc: `1`
+   - key fields:
+     - `protocol_feedback_reply_channel_status=FAIL_REQUIRED`
+     - `split_receipt_status=FAIL_REQUIRED`
+     - `split_receipt_payload_rc=1`
+3. Reply-channel CWD invariance replay (`/tmp`):
+   - command:
+     - `python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_feedback_reply_channel.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --json-only`
+   - rc: `1`
+   - key fields (same as protocol-root replay):
+     - `protocol_feedback_reply_channel_status=FAIL_REQUIRED`
+     - `split_receipt_status=FAIL_REQUIRED`
+     - `split_receipt_payload_rc=1`
+4. Inquiry-chain emission correlation + CWD invariance replay:
+   - protocol-root command output: `/tmp/fix032-root.json`
+   - `/tmp` command output: `/tmp/fix032-tmp.json`
+   - both rc: `1`
+   - aligned key fields:
+     - `protocol_inquiry_followup_chain_status=FAIL_REQUIRED`
+     - `candidate_decision=INSTANCE_DEFAULT`
+     - `candidate_runtime_failed=true`
+     - `inquiry_state=EVIDENCE_PENDING`
+     - `feedback_batch_count=0`
+     - `feedback_linked_batch_count=0`
+5. Readiness lane patch anchor (code-level replay target):
+   - `release_readiness_check.py` now injects layer tuple at final orchestration loop (`for cmd in seq`) so newly appended FIX-029..032 validators receive:
+     - `--layer-intent-text`
+     - `--expected-work-layer`
+     - `--source-layer` / `--expected-source-layer`
+
+Next gate decision:
+
+1. Keep FIX-029..032 audit status as `REJECT` in summary table until independent auditor replay updates verdict.
+2. This subsection is remediation evidence only and does not supersede `16.8.21` by itself.
 
 #### 16.8.19 Roundtable intake: protocol inquiry follow-up chain (2026-03-02, docs-only)
 
