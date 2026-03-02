@@ -145,7 +145,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | REJECT |
-| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `UNCOMMITTED` | SPEC_READY | PENDING_IMPL |
+| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12` | SPEC_READY | PENDING_IMPL |
 
 ---
 
