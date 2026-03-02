@@ -141,7 +141,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
-| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | INTAKE | SPEC_READY |
+| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | INTAKE | SPEC_READY |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | INTAKE | SPEC_READY |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification) | `TBD` | INTAKE | SPEC_READY |
@@ -4142,6 +4142,64 @@ Acceptance replay template (post-implementation):
 Layer declaration:
 
 1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.15A Roundtable pre-code cross-validation closure (FIX-029, 2026-03-02)
+
+Status: `READY_FOR_PATCH` (docs+evidence cross-check completed; code not started in this subsection).
+
+Cross-validation scope (protocol-only):
+
+1. Verify declared contracts (`ASB-RQ-075..078`) are not already silently implemented with inconsistent semantics.
+2. Verify strict-lane escalation chain currently lacks deterministic `IP-PFB-*` blocking.
+3. Verify split-receipt requiredization bridge currently lacks activity-driven auto-promotion in strict lanes.
+4. Produce pre-code deterministic implementation checklist (single source, non-merge with `FIX-030` bootstrap lane).
+
+Observed current-state evidence (local repo):
+
+1. Canonical reply-channel validator is not yet implemented:
+   - `scripts/validate_protocol_feedback_reply_channel.py` absent.
+2. Sidecar default blocking prefixes do not include `IP-PFB-*`:
+   - `scripts/validate_protocol_feedback_sidecar_contract.py:29`
+   - current value: `DEFAULT_BLOCKING_PREFIXES = ("IP-WRB-", "IP-SEM-")`
+3. Split requiredization auto-signal currently depends on split receipt presence, not protocol-feedback activity:
+   - `scripts/validate_instance_protocol_split_receipt.py:186`
+   - current condition: `if not required and (args.receipt.strip() or _split_artifacts_present(pack_path))`
+4. Six-surface wiring gap for FIX-029 validator set:
+   - no `validate_protocol_feedback_reply_channel.py` / `validate_protocol_feedback_bootstrap_ready.py` references in:
+     - `scripts/identity_creator.py`
+     - `scripts/release_readiness_check.py`
+     - `scripts/e2e_smoke_test.sh`
+     - `scripts/full_identity_protocol_scan.py`
+     - `scripts/report_three_plane_status.py`
+     - `.github/workflows/_identity-required-gates.yml`
+
+Roundtable decision (implementation guardrail):
+
+1. Keep strict non-merge boundary:
+   - FIX-029 only lands `ASB-RQ-075..078`.
+   - FIX-030 continues to own `ASB-RQ-079..081`.
+2. Add deterministic strict-lane error for RQ-078 gap:
+   - `IP-PFB-CH-006` (`split_receipt_requiredization_missing_under_activity`).
+3. Activity detector becomes mandatory machine-readable input for FIX-029:
+   - `protocol_feedback_activity_detected`
+   - `protocol_feedback_activity_refs`
+4. Pre-code acceptance gate for entering implementation:
+   - docs contract check passes,
+   - SSOT source check passes,
+   - current-state evidence anchors are reproducible.
+
+Pre-code replay commands (must remain reproducible before patch):
+
+1. `python3 scripts/docs_command_contract_check.py`
+2. `python3 scripts/validate_protocol_ssot_source.py`
+3. `python3 scripts/validate_instance_protocol_split_receipt.py --identity-id <id> --catalog <catalog> --operation readiness --json-only`
+4. `python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id <id> --catalog <catalog> --operation readiness --json-only`
+
+Expected pre-code interpretation:
+
+1. If split receipt contract is skipped under feedback activity, FIX-029 remains open (no closure claim).
+2. If sidecar lacks `IP-PFB-*` deterministic escalation path, FIX-029 remains open.
+3. No implementation or replay pass claim is allowed until required validators/wiring are landed.
 
 #### 16.8.17 Roundtable intake: protocol-layer entry bootstrap-readiness hardening (2026-03-02, docs-only)
 

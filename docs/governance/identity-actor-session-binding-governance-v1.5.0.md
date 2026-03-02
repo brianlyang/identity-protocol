@@ -1277,6 +1277,8 @@ Mandatory semantics:
    - `non_standard_primary_refs`
    - `mirror_reference_refs`
    - `split_receipt_requiredized`
+   - `protocol_feedback_activity_detected`
+   - `protocol_feedback_activity_refs`
 9. Protocol layer remains business-data neutral:
    - channel contract fields must remain generic and must not include tenant/business constants.
 10. Protocol-entry bootstrap readiness is mandatory when protocol lane is selected:
@@ -1290,6 +1292,17 @@ Mandatory semantics:
    - `protocol_feedback_bootstrap_mode` (`preexisting` / `auto_created` / `failed`)
    - `bootstrap_created_paths`
    - `bootstrap_receipt_path`
+13. Protocol-feedback activity detector is mandatory for split-receipt requiredization bridge:
+   - activity signal is true when any canonical root has evidences:
+     - `runtime/protocol-feedback/outbox-to-protocol/*`
+     - `runtime/protocol-feedback/evidence-index/*`
+     - `runtime/protocol-feedback/upgrade-proposals/*`
+   - detector output must be machine-readable (`protocol_feedback_activity_detected`, `protocol_feedback_activity_refs`).
+14. Strict operations must fail-closed if protocol-feedback activity exists but split-receipt remains `SKIPPED_NOT_REQUIRED`:
+   - `IP-PFB-CH-006`: `split_receipt_requiredization_missing_under_activity`
+15. FIX boundary (non-merge rule):
+   - `FIX-029` covers `ASB-RQ-075..078` (canonical reply channel + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge),
+   - bootstrap readiness (`ASB-RQ-079..081`) remains in `FIX-030` and must be audited independently.
 
 #### 5.8.17 `protocol_entry_candidate_clarification_bridge_contract_v1` (P0)
 
@@ -1885,7 +1898,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-075 | protocol-layer feedback must use canonical reply-channel root and whitelist subpaths; non-standard primary channel is forbidden in strict operations | protocol-feedback reply writer/reader + channel classifier surfaces | P0 | SPEC_READY | contract declared in `5.8.16`; implementation pending |
 | ASB-RQ-076 | required gate `validate_protocol_feedback_reply_channel.py` must enforce canonical primary channel + mirror-reference constraints across creator/e2e/readiness/full-scan/three-plane/CI | six-surface + CI required-gates wiring | P0 | SPEC_READY | `IP-PFB-CH-001..003` semantics declared; implementation pending |
 | ASB-RQ-077 | sidecar escalation blocking prefixes must include `IP-PFB-*` in strict operations so protocol-feedback channel violations become fail-closed | `validate_protocol_feedback_sidecar_contract.py` + readiness/CI sidecar adapter surfaces | P0 | SPEC_READY | blocking-prefix extension declared in `5.8.16`; implementation pending |
-| ASB-RQ-078 | split-receipt requiredization bridge must auto-promote split contract to required when protocol-feedback activity exists; strict operations must not return `SKIPPED_NOT_REQUIRED` in this case | split-receipt validator + requiredization bridge + strict lane orchestration surfaces | P0 | SPEC_READY | bridge semantics declared in `5.8.16`; implementation pending |
+| ASB-RQ-078 | split-receipt requiredization bridge must auto-promote split contract to required when protocol-feedback activity exists; strict operations must not return `SKIPPED_NOT_REQUIRED` in this case | split-receipt validator + requiredization bridge + strict lane orchestration surfaces | P0 | SPEC_READY | bridge semantics declared in `5.8.16` (activity detector + `IP-PFB-CH-006` fail-closed); implementation pending |
 | ASB-RQ-079 | protocol-lane entry must be trigger-auditable and bootstrap-ready: when `work_layer=protocol` / `protocol_triggered=true`, canonical protocol-feedback roots must be ready before protocol conclusions are emitted | layer-intent/send-time/reply bridge + bootstrap readiness classifier surfaces | P0 | SPEC_READY | bootstrap-readiness semantics declared in `5.8.16`; implementation pending |
 | ASB-RQ-080 | required gate `validate_protocol_feedback_bootstrap_ready.py` must enforce canonical root readiness (`outbox-to-protocol`, `evidence-index`, `upgrade-proposals`) and emit machine-readable bootstrap telemetry | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | gate/wiring contract declared in `5.8.16`; implementation pending |
 | ASB-RQ-081 | strict operations must fail-closed (`IP-PFB-CH-004/005`) when protocol lane is selected but bootstrap readiness or SSOT linkage is missing | strict-lane adapters + blocker-receipt integration + scan/report telemetry surfaces | P0 | SPEC_READY | fail-closed + telemetry semantics declared in `5.8.16`; implementation pending |
