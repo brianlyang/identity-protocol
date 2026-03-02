@@ -3904,6 +3904,27 @@ This section is docs-only intake; no protocol script behavior changed in this ba
 
 Status: `REJECT` (implementation landed in `a95f5a2`, but strict-lane correctness gaps remain).
 
+Replay refresh (2026-03-02, local re-audit delta):
+
+1. Replayed `validate_protocol_feedback_reply_channel.py` from protocol root and `/tmp`.
+2. Observed verdict unchanged:
+   - protocol root still allows contradictory pass:
+     - `protocol_feedback_reply_channel_status=PASS_REQUIRED`
+     - `split_receipt_status=FAIL_REQUIRED`
+     - `split_receipt_error_code=IP-PFB-CH-006`
+   - `/tmp` invocation still shows child-runtime escape:
+     - `protocol_feedback_reply_channel_status=PASS_REQUIRED`
+     - `split_receipt_status=""`
+     - `split_receipt_payload_rc=2`
+3. Replayed `validate_protocol_inquiry_followup_chain.py` from protocol root and `/tmp`.
+4. Observed CWD-dependent divergence unchanged:
+   - protocol root:
+     - `candidate_decision=PROTOCOL_CANDIDATE`
+     - `inquiry_state=FEEDBACK_EMITTED`
+   - `/tmp`:
+     - `candidate_decision=INSTANCE_DEFAULT`
+     - `protocol_inquiry_followup_chain_status=SKIPPED_NOT_REQUIRED`
+
 Scope:
 
 1. `FIX-029..032` post-implementation audit replay under protocol-only boundary.
