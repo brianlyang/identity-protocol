@@ -142,7 +142,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | READY_FOR_PATCH | SPEC_READY |
-| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | READY_FOR_PATCH | SPEC_READY |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 
@@ -4281,6 +4281,15 @@ Acceptance replay template (post-implementation):
 6. docs/ssot checks:
    - `python3 scripts/docs_command_contract_check.py`
    - `python3 scripts/validate_protocol_ssot_source.py`
+
+Deadlock clarification (must hold in FIX-030 implementation):
+
+1. If protocol lane is selected and canonical protocol-feedback roots are missing, validator must enter deterministic bootstrap constructor flow first (create missing roots + emit receipt + link index).
+2. Missing directory itself is not enough to fail strict gate; strict fail-closed is only valid when constructor flow is unavailable/disabled or constructor proof is incomplete.
+3. Therefore `FIX-030` is explicitly "bootstrap-ready with constructor", not a "check-only exists()" gate.
+4. Required failure mapping:
+   - constructor unavailable/disabled or roots still not ready after attempt -> `IP-PFB-CH-004`
+   - constructor executed but receipt/index linkage incomplete -> `IP-PFB-CH-005`
 
 Layer declaration:
 
