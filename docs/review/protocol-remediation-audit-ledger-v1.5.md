@@ -149,12 +149,13 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-034 | 2026-03-02 | protocol | protocol-context lane-lock hardening (`ASB-RQ-094`; protocol-topic sessions must not silently fallback to instance on empty intent) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-035 | 2026-03-02 | protocol | run-pinned strict baseline freshness contract (`ASB-RQ-095`; avoid moving-HEAD nondeterministic strict failures) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-037 | 2026-03-02 | protocol | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-037 | 2026-03-02 | ecosystem | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | TRANSFERRED_ECOSYSTEM_TRACK |
 | FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 
 ---
 
@@ -4161,7 +4162,7 @@ Usage note:
 
 #### 16.8.29 Roundtrip intake: office-ops protocol determinism gaps (`FIX-034..038`, 2026-03-02, docs-only)
 
-Status: `SPEC_READY` (docs-first intake; no protocol code changes in this batch).
+Status: `SPEC_READY` (historical intake snapshot; P1 attribution refined by `16.8.31`; no protocol code changes in this batch).
 
 Source handoff package (authoring identity `office-ops-expert`):
 
@@ -4297,6 +4298,57 @@ Boundary:
 
 1. This section is docs-only attribution refinement.
 2. No script/workflow/runtime code changes are included in this commit.
+
+#### 16.8.31 Office-ops re-attribution delta + Scenario A minimal decision intake (`FIX-043`, 2026-03-02, docs-only)
+
+Status: `SPEC_READY` (docs-first refinement; no protocol code changes in this batch).
+
+Primary source package:
+
+1. Updated raw memo:
+   - `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-expert-roundtrip-v2026-03-02.md`
+2. Updated sanitized outbound memo:
+   - `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-expert-roundtrip-v2026-03-02-sanitized.md`
+3. Scenario A real-run report:
+   - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-protocol-scenarioA-autonomous-upgrade-real-run-feedback-2026-03-02.md`
+4. Scenario A outbox batch:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-02_012.md`
+5. Scenario A pending receipt:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_20260302T100613Z.json`
+
+Cross-validated attribution decision:
+
+1. Office-ops protocol-core count is refined to `5` (`P0=3`, `P1=2`):
+   - `P0`: `FIX-034`, `FIX-035`, `FIX-036`.
+   - `P1`: `FIX-038`, `FIX-043` (new intake in this section).
+2. `FIX-037` is explicitly transferred to ecosystem-lane tracking (skill packaging/drift), not protocol-core patch queue.
+3. Protocol-core + ecosystem + instance boundaries remain explicit and machine-auditable (no mixed ownership in this update).
+
+New protocol-core intake (`FIX-043`, `P1`):
+
+1. mutable lifecycle state is currently embedded into `IDENTITY_PROMPT.md` body (`last_upgrade_run_id`, `last_upgrade_at`, `last_trigger_reasons` class fields), creating prompt-policy churn.
+2. required protocol direction:
+   - immutable prompt policy remains in `IDENTITY_PROMPT.md`,
+   - mutable runtime lifecycle state moves to dedicated runtime state artifact with hash-bound linkage.
+
+Scenario A minimal decision package (intake-only, no new FIX opened in this commit):
+
+1. `P0-1` preheat wrapper request:
+   - classify as implementation-shaping decision for `FIX-038` (stale-baseline + tuple readiness deterministic preflight path).
+2. `P0-2` strict tuple output request:
+   - classify as implementation-shaping decision under existing alignment contract branch (`ASB-RQ-043`) to guarantee report tuple emit completeness.
+3. `P1-3` protocol-relevant diff semantics clarity:
+   - classify as docs/governance clarification request for lane routing classifier scope (no strict semantics downgrade).
+
+Data sanitization check for this intake:
+
+1. Raw memo contains local paths and runtime identifiers only; no customer/order/SKU business payloads detected.
+2. Sanitized memo replaces local paths/log paths with redacted placeholders and is suitable for outbound dispatch.
+
+Boundary:
+
+1. This section is docs-only attribution/delta intake.
+2. No protocol script/CI/runtime mutation is included in this commit.
 
 #### 16.8.21-A Historical detail payload (archived verbatim, superseded by 16.8.28)
 

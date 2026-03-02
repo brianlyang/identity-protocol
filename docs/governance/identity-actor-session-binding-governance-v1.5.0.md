@@ -1712,6 +1712,29 @@ Mandatory semantics:
 5. Suggested error code:
    - `IP-COV-LANE-001`: lane-aware coverage policy missing or mismatched with resolved work layer.
 
+#### 5.8.30 `prompt_runtime_state_externalization_contract_v1` (P1, FIX-043)
+
+Goal:
+
+1. Keep immutable prompt policy text separate from mutable runtime lifecycle state.
+2. Eliminate prompt-file churn that can blur governance semantics and create unnecessary alignment drift.
+
+Mandatory semantics:
+
+1. Runtime lifecycle fields (`last_upgrade_run_id`, `last_upgrade_at`, `last_trigger_reasons` or equivalent mutable traces) must be written to dedicated runtime state artifact, not embedded into `IDENTITY_PROMPT.md` body.
+2. `IDENTITY_PROMPT.md` remains policy/role/instruction contract and should change only when policy intent changes.
+3. Prompt lifecycle validator must verify:
+   - prompt hash / prompt version integrity, and
+   - runtime lifecycle state artifact integrity (including binding with the active prompt hash/version).
+4. Required telemetry fields:
+   - `prompt_runtime_state_externalization_status`
+   - `prompt_policy_hash`
+   - `runtime_state_artifact_path`
+   - `runtime_state_artifact_hash`
+   - `prompt_runtime_state_binding_status`
+5. Suggested error code:
+   - `IP-PROMPT-STATE-001`: mutable runtime lifecycle state embedded in prompt policy file under strict lifecycle governance.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2241,12 +2264,13 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-094 | protocol-topic sessions must not silently downgrade to `work_layer=instance` on empty intent fallback; strict operations require explicit protocol lane confirmation or session lane lock evidence | lane-intent resolver + readiness/e2e/creator strict gate routing + session-lane lock receipt surfaces | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-034` pending |
 | ASB-RQ-095 | strict baseline freshness must evaluate against run-pinned protocol SHA to avoid in-run nondeterministic failures caused by moving HEAD | baseline/session-refresh validators + run context pin writer + readiness/e2e preflight adapters | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-035` pending |
 | ASB-RQ-096 | e2e runner must be hermetic and pass without external `PYTHONPATH` preparation | `e2e_smoke_test.sh` import-path bootstrap + hermetic preflight validator + CI replay adapter | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-036` pending |
-| ASB-RQ-097 | required skill contracts must remain executable-as-documented; missing command targets must be machine-detectable | skill contract integrity validator + required-skill CI check + creator/readiness visibility surfaces | P1 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-037` pending |
+| ASB-RQ-097 | required skill contracts must remain executable-as-documented; missing command targets must be machine-detectable | skill contract integrity validator + required-skill CI check + creator/readiness visibility surfaces | P1 | SPEC_READY | re-attributed to ecosystem lane (non protocol-core blocker) in review `16.8.31`; protocol SSOT keeps compatibility note only |
 | ASB-RQ-098 | strict self-repair must support two-phase stale-baseline refresh (refresh + strict revalidate) to avoid self-lock in stale-only cases | identity_creator update flow + baseline preflight adapter + machine-readable phase trace receipts | P1 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-038` pending |
 | ASB-RQ-099 | protocol governance requiredization must be lane-scoped to current-round protocol linkage and must not harden instance lane by historical artifact presence alone | semantic/split/vendor/sidecar validators + required coverage adapter + lane correlation evaluator | P0 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-039` pending |
 | ASB-RQ-100 | split-receipt activity detection must enforce current-round correlation before strict `IP-PFB-CH-006` fail-closed path | split receipt validator activity detector + correlation receipt linkage + windowed stale filter | P0 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-040` pending |
 | ASB-RQ-101 | invalid `expected-source-layer` input must not be silently downgraded in strict operations; caller intent must remain auditable | stamp/common resolver + first-line/send-time validators source-layer input validator | P1 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-041` pending |
 | ASB-RQ-102 | required-contract coverage aggregator must be lane-aware (`instance_targets/protocol_targets`) and avoid protocol-governance hard-fails in pure instance lane without current-round protocol linkage | `validate_required_contract_coverage.py` lane partition policy + orchestration mapping | P1 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-042` pending |
+| ASB-RQ-103 | runtime lifecycle state must be externalized from `IDENTITY_PROMPT.md`; prompt policy text remains immutable across non-policy upgrade runs | `execute_identity_upgrade.py` prompt-state writer split + prompt lifecycle validator/state artifact binder + readiness/scan telemetry surfaces | P1 | SPEC_READY | office-ops re-attribution delta (`2026-03-02`) recorded in review `16.8.31`; implementation batch `FIX-043` pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2286,9 +2310,11 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-086 / ASB-RQ-087 / ASB-RQ-088 / ASB-RQ-089 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-032` landed (`a95f5a2`) and inquiry emission-correlation rework landed (`560f710`), but independent replay verdict is still pending; baseline reject anchor remains `review 16.8.21` until re-audit closes |
 | ASB-RQ-090 / ASB-RQ-091 / ASB-RQ-092 / ASB-RQ-093 | `SPEC_READY -> GATE_READY (P0)` | `FIX-033` implementation (`0d7ebc7`) + lane propagation patch (`913973a`) + replay/doc closure (`9d830d8`, review `16.8.27`) closed prior `IP-LAYER-GATE-001` mismatch path |
 | ASB-RQ-094 / ASB-RQ-095 / ASB-RQ-096 | `NEW -> SPEC_READY (P0)` | office-ops roundtrip replay highlighted protocol-layer determinism gaps (lane fallback, moving-head baseline drift, non-hermetic e2e import path); docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-034..036`) |
-| ASB-RQ-097 / ASB-RQ-098 | `NEW -> SPEC_READY (P1)` | skill contract executable drift and strict stale-baseline self-lock identified in office-ops roundtrip replay; docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-037..038`) |
+| ASB-RQ-097 | `NEW -> SPEC_READY (P1, ecosystem-lane note)` | office-ops replay reported skill command drift, later re-attributed as ecosystem/non protocol-core in review `16.8.31`; protocol SSOT keeps compatibility note |
+| ASB-RQ-098 | `NEW -> SPEC_READY (P1)` | strict stale-baseline self-lock identified in office-ops roundtrip replay; docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-038`) |
 | ASB-RQ-099 / ASB-RQ-100 | `NEW -> SPEC_READY (P0)` | audit re-attribution replay identified requiredization scope leakage + uncorrelated split-activity strict blocking in instance lane; docs-first intake recorded in review `16.8.30`, implementation pending (`FIX-039..040`) |
 | ASB-RQ-101 / ASB-RQ-102 | `NEW -> SPEC_READY (P1)` | audit re-attribution replay identified silent invalid-source-layer downgrade + lane-unaware coverage aggregation noise; docs-first intake recorded in review `16.8.30`, implementation pending (`FIX-041..042`) |
+| ASB-RQ-103 | `NEW -> SPEC_READY (P1)` | office-ops re-attribution delta identified mutable runtime lifecycle state embedded into prompt policy body; docs-first intake recorded in review `16.8.31`, implementation pending (`FIX-043`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
