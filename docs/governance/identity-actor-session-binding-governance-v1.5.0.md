@@ -1392,6 +1392,27 @@ Mandatory semantics:
    - `sanitization_paraphrase_ref`
    - `protocol_feedback_seed_ref`
    - `protocol_feedback_index_ref`
+10. Canonical inquiry receipt schema is mandatory (machine-readable, append-only):
+   - `inquiry_id`
+   - `inquiry_state`
+   - `followup_question_set`
+   - `signal_origin`
+   - `sanitization_paraphrase_ref`
+   - `protocol_feedback_seed_ref`
+   - `protocol_feedback_index_ref`
+   - `next_transition`
+   - `updated_at`
+11. Deterministic transition guards are mandatory:
+   - `QUESTION_REQUIRED -> EVIDENCE_PENDING` requires complete deterministic follow-up set,
+   - `EVIDENCE_PENDING -> READY_FOR_PROTOCOL_FEEDBACK` requires canonical seed + evidence-index linkage,
+   - `READY_FOR_PROTOCOL_FEEDBACK -> FEEDBACK_EMITTED` requires protocol-feedback emission receipt.
+12. Anti-starvation convergence policy is mandatory:
+   - each inquiry chain must carry `followup_round_count`, `max_followup_rounds`, `evidence_ttl_hours`,
+   - if rounds/TTL exceed without valid transition, strict lanes must fail-closed as stale inquiry evidence (`IP-LAYER-INQ-002`) and persist unresolved inquiry receipt.
+13. Inquiry-to-requiredization bridge is mandatory:
+   - unresolved inquiry chain (`rounds>=2` or TTL exceeded) must emit requiredization trigger class `inquiry_chain_unresolved`,
+   - trigger receipt must be archived in canonical protocol-feedback outbox + evidence-index,
+   - strict lanes must not remain warn-only after this trigger.
 
 #### 5.8.19 `protocol_feedback_entry_component_orchestration_contract_v1` (P0 orchestration profile)
 
@@ -1953,10 +1974,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-083 | required gate `validate_protocol_entry_candidate_bridge.py` must enforce candidate clarification receipt completeness and deterministic question set (`which_gate_or_stage_failed`, `latest_replay_or_evidence_path`, `expected_protocol_optimization_target`) | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | candidate clarification gate semantics declared in `5.8.17`; implementation pending |
 | ASB-RQ-084 | candidate protocol-entry flow must seed canonical protocol-feedback outbox/index before final protocol conclusion; missing seed/index linkage is strict fail-closed (`IP-LAYER-CAND-003/004`) | candidate seed writer + SSOT archival bridge + strict-lane adapters | P0 | SPEC_READY | seed-to-SSOT semantics declared in `5.8.17`; implementation pending |
 | ASB-RQ-085 | strict operations must fail-closed on silent candidate downgrade without clarification evidence (`IP-LAYER-CAND-001`) and expose candidate promotion telemetry in three-plane/full-scan | strict-lane adapters + scan/report telemetry surfaces | P0 | SPEC_READY | anti-silent-downgrade semantics declared in `5.8.17`; implementation pending |
-| ASB-RQ-086 | weak protocol concerns must enter deterministic inquiry follow-up states (`QUESTION_REQUIRED -> EVIDENCE_PENDING -> READY_FOR_PROTOCOL_FEEDBACK`) instead of silent downgrade/drop | layer-intent classifier + candidate/inquiry adapters + inquiry receipt writer surfaces | P0 | SPEC_READY | inquiry-chain semantics declared in `5.8.18`; implementation pending |
-| ASB-RQ-087 | inquiry receipts must classify `signal_origin` and require sanitized paraphrase before promoting business-origin statements into protocol conclusions | inquiry classifier + sanitization receipt writer + protocol conclusion adapters | P0 | SPEC_READY | business-to-governance sanitization semantics declared in `5.8.18`; implementation pending |
+| ASB-RQ-086 | weak protocol concerns must enter deterministic inquiry follow-up states (`QUESTION_REQUIRED -> EVIDENCE_PENDING -> READY_FOR_PROTOCOL_FEEDBACK`) instead of silent downgrade/drop | layer-intent classifier + candidate/inquiry adapters + inquiry receipt writer surfaces | P0 | SPEC_READY | inquiry-chain semantics declared in `5.8.18` (state machine + transition guards + anti-starvation policy); implementation pending |
+| ASB-RQ-087 | inquiry receipts must classify `signal_origin` and require sanitized paraphrase before promoting business-origin statements into protocol conclusions | inquiry classifier + sanitization receipt writer + protocol conclusion adapters | P0 | SPEC_READY | business-to-governance sanitization + canonical inquiry receipt schema declared in `5.8.18`; implementation pending |
 | ASB-RQ-088 | `source` (identity provenance) and `source_layer` (layer-intent provenance) must remain machine-distinct and mapper-auditable; ambiguity must not silently alter `work_layer` | stamp parser/coherence validator + layer-intent resolver + telemetry surfaces | P0 | SPEC_READY | semantic-separation clarification declared in `5.2D` and `5.8.18`; implementation pending |
-| ASB-RQ-089 | required gate `validate_protocol_inquiry_followup_chain.py` must fail-closed on missing follow-up receipts, missing protocol-feedback linkage, or unsanitized promotion (`IP-LAYER-INQ-001..004`) across creator/readiness/e2e/full-scan/three-plane/CI | six-surface + required-gates workflow wiring | P0 | SPEC_READY | required gate/wiring semantics declared in `5.8.18`; implementation pending |
+| ASB-RQ-089 | required gate `validate_protocol_inquiry_followup_chain.py` must fail-closed on missing follow-up receipts, missing protocol-feedback linkage, unsanitized promotion, and stale/expired inquiry chains (`IP-LAYER-INQ-001..004`) across creator/readiness/e2e/full-scan/three-plane/CI | six-surface + required-gates workflow wiring + requiredization trigger bridge | P0 | SPEC_READY | required gate/wiring + inquiry-to-requiredization bridge semantics declared in `5.8.18`; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 

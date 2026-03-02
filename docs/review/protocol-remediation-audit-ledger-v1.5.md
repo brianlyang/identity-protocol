@@ -144,7 +144,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | READY_FOR_PATCH | SPEC_READY |
-| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification) | `TBD` | READY_FOR_PATCH | SPEC_READY |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 
 ---
 
@@ -4543,6 +4543,36 @@ Acceptance replay template (post-implementation):
 Layer declaration:
 
 1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.19A Pre-code hardening addendum: inquiry anti-starvation + requiredization bridge (2026-03-02, docs-only)
+
+Status: `READY_FOR_PATCH` (contract clarified; implementation not landed yet).
+
+Clarified closure requirements (machine-checkable):
+
+1. Canonical inquiry receipt schema is mandatory (`inquiry_id`, `inquiry_state`, `followup_question_set`, `signal_origin`, `sanitization_paraphrase_ref`, `protocol_feedback_seed_ref`, `protocol_feedback_index_ref`, `next_transition`, `updated_at`).
+2. Transition guards must be deterministic:
+   - `QUESTION_REQUIRED -> EVIDENCE_PENDING` requires complete deterministic follow-up set,
+   - `EVIDENCE_PENDING -> READY_FOR_PROTOCOL_FEEDBACK` requires canonical seed/index linkage,
+   - `READY_FOR_PROTOCOL_FEEDBACK -> FEEDBACK_EMITTED` requires protocol-feedback emission receipt.
+3. Anti-starvation policy must be explicit and replayable:
+   - expose `followup_round_count`, `max_followup_rounds`, `evidence_ttl_hours`,
+   - rounds/TTL exceed without valid transition -> strict fail-closed (`IP-LAYER-INQ-002`) and unresolved inquiry receipt must persist.
+4. Inquiry-to-requiredization bridge is mandatory:
+   - unresolved inquiry (`rounds>=2` or TTL exceeded) must emit trigger class `inquiry_chain_unresolved`,
+   - trigger receipt must be archived to canonical protocol-feedback outbox + evidence-index,
+   - strict lanes must not remain warn-only after trigger activation.
+
+Acceptance replay additions (post-implementation):
+
+1. negative: inquiry rounds exceed `max_followup_rounds` without transition -> `FAIL_REQUIRED` (`IP-LAYER-INQ-002`) + unresolved receipt present.
+2. negative: inquiry TTL exceeded and no requiredization trigger receipt -> `FAIL_REQUIRED`.
+3. positive: unresolved inquiry triggers `inquiry_chain_unresolved` and requiredization receipt is SSOT-linked -> `PASS_REQUIRED` (bridge active).
+4. telemetry check: three-plane/full-scan expose `followup_round_count`, `max_followup_rounds`, `evidence_ttl_hours`, `inquiry_requiredization_triggered`.
+
+Layer declaration:
+
+1. protocol-only; no business constants introduced.
 
 #### 16.8.12 FIX-027 implementation lane: default instance layer + protocol-trigger escalation gate (P0, protocol-only)
 
