@@ -1461,6 +1461,20 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_work_layer_gate_set_routing.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
                 "scripts/validate_writeback_continuity.py",
                 "--catalog",
                 args.catalog,
@@ -1625,6 +1639,7 @@ def main() -> int:
                     "scripts/validate_reply_identity_context_first_line.py",
                     "scripts/validate_send_time_reply_gate.py",
                     "scripts/validate_execution_reply_identity_coherence.py",
+                    "scripts/validate_work_layer_gate_set_routing.py",
                     "scripts/validate_protocol_feedback_bootstrap_ready.py",
                     "scripts/validate_protocol_entry_candidate_bridge.py",
                     "scripts/validate_protocol_inquiry_followup_chain.py",
@@ -1639,6 +1654,7 @@ def main() -> int:
                     "scripts/validate_reply_identity_context_first_line.py",
                     "scripts/validate_send_time_reply_gate.py",
                     "scripts/validate_execution_reply_identity_coherence.py",
+                    "scripts/validate_work_layer_gate_set_routing.py",
                     "scripts/validate_protocol_feedback_bootstrap_ready.py",
                     "scripts/validate_protocol_entry_candidate_bridge.py",
                     "scripts/validate_protocol_inquiry_followup_chain.py",
@@ -1659,6 +1675,10 @@ def main() -> int:
                     "scripts/validate_protocol_feedback_bootstrap_ready.py",
                     "scripts/validate_protocol_entry_candidate_bridge.py",
                     "scripts/validate_protocol_inquiry_followup_chain.py",
+                }:
+                    cmd.extend(["--source-layer", expected_source_layer])
+                if cmd[1] in {
+                    "scripts/validate_work_layer_gate_set_routing.py",
                 }:
                     cmd.extend(["--source-layer", expected_source_layer])
         for cmd in checks:
@@ -1914,6 +1934,12 @@ def main() -> int:
             "--capability-activation-policy",
             args.capability_activation_policy,
         ]
+        if args.layer_intent_text.strip():
+            cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
+        if args.expected_work_layer.strip():
+            cmd.extend(["--expected-work-layer", args.expected_work_layer.strip()])
+        if args.expected_source_layer.strip():
+            cmd.extend(["--expected-source-layer", args.expected_source_layer.strip()])
         if args.allow_protocol_root_pack:
             cmd.append("--allow-protocol-root-pack")
         return _run(cmd)

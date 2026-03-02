@@ -14,7 +14,79 @@ from typing import Any
 
 import yaml
 
+from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
+
+PROTOCOL_PUBLISH_CHECKS = {
+    "scripts/validate_changelog_updated.py",
+    "scripts/validate_protocol_handoff_coupling.py",
+    "scripts/validate_release_metadata_sync.py",
+    "scripts/validate_release_freeze_boundary.py",
+}
+
+
+def _parse_json_payload(raw: str) -> dict[str, Any] | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        parsed = json.loads(text[start : end + 1])
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def _lane_context(layer_intent_text: str, expected_work_layer: str, expected_source_layer: str) -> dict[str, Any]:
+    resolved = resolve_layer_intent(
+        explicit_work_layer=str(expected_work_layer or "").strip(),
+        explicit_source_layer=str(expected_source_layer or "").strip(),
+        intent_text=str(layer_intent_text or "").strip(),
+        default_work_layer=DEFAULT_WORK_LAYER,
+        default_source_layer="global",
+    )
+    work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+    source_layer = str(resolved.get("resolved_source_layer", "global")).strip().lower() or "global"
+    if work_layer == "instance":
+        applied_gate_set = "instance_required_checks"
+    elif work_layer == "protocol":
+        applied_gate_set = "protocol_required_checks"
+    else:
+        applied_gate_set = "dual_unroutable"
+    lane_transition_reason = (
+        "explicit_work_layer_override"
+        if str(resolved.get("intent_source", "")).strip() == "explicit_arg"
+        else str(resolved.get("fallback_reason", "")).strip()
+        or ("protocol_trigger_detected" if bool(resolved.get("protocol_triggered", False)) else "instance_default_fallback")
+    )
+    return {
+        "work_layer": work_layer,
+        "source_layer": source_layer,
+        "applied_gate_set": applied_gate_set,
+        "lane_transition_reason": lane_transition_reason,
+    }
+
+
+def _filter_required_checks_for_lane(required_checks: list[str], work_layer: str) -> tuple[list[str], list[str]]:
+    if work_layer != "instance":
+        return list(required_checks), []
+    filtered: list[str] = []
+    skipped: list[str] = []
+    for chk in required_checks:
+        token = str(chk or "").strip()
+        if token in PROTOCOL_PUBLISH_CHECKS:
+            skipped.append(token)
+            continue
+        filtered.append(token)
+    return filtered, skipped
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -377,6 +449,16 @@ def _base_report(
     prompt_contract: dict[str, Any],
     capability_contract: dict[str, Any] | None = None,
     required_checks: list[str] | None = None,
+    required_checks_raw: list[str] | None = None,
+    skipped_protocol_publish_checks: list[str] | None = None,
+    work_layer: str = "",
+    source_layer: str = "",
+    applied_gate_set: str = "",
+    lane_transition_reason: str = "",
+    protocol_feedback_triggered: bool = False,
+    protocol_feedback_paths: list[str] | None = None,
+    lane_routing_status: str = "",
+    lane_routing_error_code: str = "",
 ) -> dict[str, Any]:
     """
     Build a report skeleton with mandatory closure fields always present.
@@ -384,6 +466,9 @@ def _base_report(
     """
     capability_contract = capability_contract or {}
     required_checks = required_checks or []
+    required_checks_raw = required_checks_raw or []
+    skipped_protocol_publish_checks = skipped_protocol_publish_checks or []
+    protocol_feedback_paths = protocol_feedback_paths or []
     return {
         "run_id": run_id,
         "identity_id": identity_id,
@@ -402,6 +487,16 @@ def _base_report(
             "github_sha": os.environ.get("GITHUB_SHA", ""),
         },
         "required_checks": list(required_checks),
+        "required_checks_raw": list(required_checks_raw),
+        "skipped_protocol_publish_checks": list(skipped_protocol_publish_checks),
+        "work_layer": str(work_layer or ""),
+        "source_layer": str(source_layer or ""),
+        "applied_gate_set": str(applied_gate_set or ""),
+        "lane_transition_reason": str(lane_transition_reason or ""),
+        "protocol_feedback_triggered": bool(protocol_feedback_triggered),
+        "protocol_feedback_paths": list(protocol_feedback_paths),
+        "lane_routing_status": str(lane_routing_status or ""),
+        "lane_routing_error_code": str(lane_routing_error_code or ""),
         "actions_taken": [],
         "checks": [],
         "check_results": [],
@@ -659,6 +754,9 @@ def main() -> int:
         action="store_true",
         help="allow executing upgrade for identities whose pack_path is inside protocol root (fixture/debug only)",
     )
+    ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
+    ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override")
+    ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override")
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -691,20 +789,107 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)
-    required_checks = (
+    required_checks_raw = (
         task.get("identity_update_lifecycle_contract", {})
         .get("validation_contract", {})
         .get("required_checks", [])
     )
-    if not isinstance(required_checks, list) or not required_checks:
-        required_checks = [
+    if not isinstance(required_checks_raw, list) or not required_checks_raw:
+        required_checks_raw = [
             "scripts/validate_identity_upgrade_prereq.py",
             "scripts/validate_identity_runtime_contract.py",
             "scripts/validate_identity_update_lifecycle.py",
             "scripts/validate_identity_capability_arbitration.py",
         ]
+    lane_ctx = _lane_context(args.layer_intent_text, args.expected_work_layer, args.expected_source_layer)
+    work_layer = str(lane_ctx.get("work_layer", DEFAULT_WORK_LAYER))
+    source_layer = str(lane_ctx.get("source_layer", "global"))
+    applied_gate_set = str(lane_ctx.get("applied_gate_set", "instance_required_checks"))
+    lane_transition_reason = str(lane_ctx.get("lane_transition_reason", "instance_default_fallback"))
+
+    required_checks, skipped_protocol_publish_checks = _filter_required_checks_for_lane(required_checks_raw, work_layer)
     check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
     log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
+
+    base_sha, head_sha = _resolve_git_range()
+    lane_routing_cmd = [
+        "python3",
+        "scripts/validate_work_layer_gate_set_routing.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--operation",
+        "update",
+        "--base",
+        base_sha,
+        "--head",
+        head_sha,
+        "--applied-gate-set",
+        applied_gate_set,
+        "--force-check",
+        "--json-only",
+    ]
+    if args.layer_intent_text.strip():
+        lane_routing_cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
+    if args.expected_work_layer.strip():
+        lane_routing_cmd.extend(["--expected-work-layer", args.expected_work_layer.strip()])
+    if args.expected_source_layer.strip():
+        lane_routing_cmd.extend(["--source-layer", args.expected_source_layer.strip()])
+    lane_routing_proc = subprocess.run(lane_routing_cmd, capture_output=True, text=True)
+    lane_routing_payload = _parse_json_payload(lane_routing_proc.stdout) or {}
+    if lane_routing_proc.returncode != 0:
+        reason = "lane_gate_set_routing_failed"
+        checks = _build_skipped_check_results(check_cmds=check_cmds, log_dir=log_dir, run_id=run_id, reason=reason, exit_code=97)
+        protocol["check_results"] = checks
+        now_fail = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        artifacts = {
+            "patch_plan": "",
+            "pr": "",
+            "report_path": "",
+            "failed_at": now_fail,
+            "lane_routing_stdout_tail": (lane_routing_proc.stdout or "").strip().splitlines()[-1]
+            if (lane_routing_proc.stdout or "").strip()
+            else "",
+            "lane_routing_stderr_tail": (lane_routing_proc.stderr or "").strip().splitlines()[-1]
+            if (lane_routing_proc.stderr or "").strip()
+            else "",
+        }
+        report = {
+            "run_id": run_id,
+            "identity_id": args.identity_id,
+            "generated_at": now,
+            "mode": args.mode,
+            "required_checks": required_checks,
+            "required_checks_raw": required_checks_raw,
+            "skipped_protocol_publish_checks": skipped_protocol_publish_checks,
+            "checks": checks,
+            "check_results": checks,
+            "all_ok": False,
+            "next_action": "rerun_with_deterministic_lane_instance_or_protocol",
+            "failure_reason": reason,
+            "work_layer": work_layer,
+            "source_layer": source_layer,
+            "applied_gate_set": applied_gate_set,
+            "lane_transition_reason": lane_transition_reason,
+            "protocol_feedback_triggered": bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
+            "protocol_feedback_paths": list(lane_routing_payload.get("protocol_feedback_paths") or []),
+            "lane_routing_status": str(lane_routing_payload.get("work_layer_gate_set_routing_status", "FAIL_REQUIRED")),
+            "lane_routing_error_code": str(lane_routing_payload.get("error_code", "IP-LAYER-GATE-001")),
+            "artifacts": artifacts,
+            "protocol_mode": protocol["protocol_mode"],
+            "protocol_root": protocol["protocol_root"],
+            "protocol_commit_sha": protocol["protocol_commit_sha"],
+        }
+        report_path = out_dir / f"{run_id}.json"
+        _write_json(report_path, report)
+        print(f"report={report_path}")
+        print("upgrade_required=False")
+        print("all_ok=False")
+        print("next_action=rerun_with_deterministic_lane_instance_or_protocol")
+        return 1
 
     capability_contract = _resolve_capability_contract(
         identity_id=args.identity_id,
@@ -776,6 +961,16 @@ def main() -> int:
             prompt_contract=prompt_contract,
             capability_contract=capability_contract,
             required_checks=required_checks,
+            required_checks_raw=required_checks_raw,
+            skipped_protocol_publish_checks=skipped_protocol_publish_checks,
+            work_layer=work_layer,
+            source_layer=source_layer,
+            applied_gate_set=applied_gate_set,
+            lane_transition_reason=lane_transition_reason,
+            protocol_feedback_triggered=bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
+            protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
+            lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
+            lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
         )
         report.update(
             {
@@ -871,6 +1066,16 @@ def main() -> int:
             prompt_contract=prompt_contract,
             capability_contract=capability_contract,
             required_checks=required_checks,
+            required_checks_raw=required_checks_raw,
+            skipped_protocol_publish_checks=skipped_protocol_publish_checks,
+            work_layer=work_layer,
+            source_layer=source_layer,
+            applied_gate_set=applied_gate_set,
+            lane_transition_reason=lane_transition_reason,
+            protocol_feedback_triggered=bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
+            protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
+            lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
+            lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
         )
         report.update(
             {
@@ -1058,6 +1263,16 @@ def main() -> int:
                         prompt_contract=prompt_contract,
                         capability_contract=capability_contract,
                         required_checks=required_checks,
+                        required_checks_raw=required_checks_raw,
+                        skipped_protocol_publish_checks=skipped_protocol_publish_checks,
+                        work_layer=work_layer,
+                        source_layer=source_layer,
+                        applied_gate_set=applied_gate_set,
+                        lane_transition_reason=lane_transition_reason,
+                        protocol_feedback_triggered=bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
+                        protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
+                        lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
+                        lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
                     ),
                     "upgrade_required": upgrade_required,
                     "trigger_reasons": reasons,
@@ -1357,6 +1572,8 @@ def main() -> int:
             "github_sha": os.environ.get("GITHUB_SHA", ""),
         },
         "required_checks": required_checks,
+        "required_checks_raw": required_checks_raw,
+        "skipped_protocol_publish_checks": skipped_protocol_publish_checks,
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
         "actions_taken": actions_taken,
@@ -1389,6 +1606,14 @@ def main() -> int:
         "capability_activation_report_path": str(capability_contract.get("capability_activation_report_path", "")),
         "next_action": next_action,
         "failure_reason": "" if all_ok else "one_or_more_checks_failed_or_writeback_not_written",
+        "work_layer": work_layer,
+        "source_layer": source_layer,
+        "applied_gate_set": applied_gate_set,
+        "lane_transition_reason": lane_transition_reason,
+        "protocol_feedback_triggered": bool(lane_routing_payload.get("protocol_feedback_triggered", False)),
+        "protocol_feedback_paths": list(lane_routing_payload.get("protocol_feedback_paths") or []),
+        "lane_routing_status": str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
+        "lane_routing_error_code": str(lane_routing_payload.get("error_code", "")),
     }
     report.update(
         _derive_writeback_continuity_fields(

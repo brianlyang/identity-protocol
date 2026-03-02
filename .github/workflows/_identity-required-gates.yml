@@ -197,6 +197,7 @@ jobs:
             python3 scripts/validate_identity_vendor_api_solution.py --identity-id "$ID"
             python3 scripts/validate_semantic_routing_guard.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_instance_protocol_split_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_work_layer_gate_set_routing.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --base "${BASE_SHA}" --head "${HEAD_SHA}" --applied-gate-set instance_required_checks --force-check --json-only
             python3 scripts/validate_protocol_feedback_reply_channel.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --force-check --json-only
             python3 scripts/validate_protocol_feedback_bootstrap_ready.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --force-check --json-only
             python3 scripts/validate_protocol_entry_candidate_bridge.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --force-check --json-only
@@ -217,7 +218,7 @@ jobs:
             python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
-            PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports
+            PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports --expected-work-layer instance
             UPGRADE_REPORT=$(ls -1t /tmp/identity-upgrade-reports/identity-upgrade-exec-"$ID"-*.json | head -n 1)
             python3 scripts/validate_writeback_continuity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --report "$UPGRADE_REPORT" --operation ci
             python3 scripts/validate_post_execution_mandatory.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --report "$UPGRADE_REPORT" --operation ci

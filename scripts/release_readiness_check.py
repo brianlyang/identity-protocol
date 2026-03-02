@@ -13,6 +13,15 @@ from typing import Any
 
 import yaml
 
+from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
+
+PROTOCOL_PUBLISH_SCRIPTS = {
+    "scripts/validate_changelog_updated.py",
+    "scripts/validate_protocol_handoff_coupling.py",
+    "scripts/validate_release_metadata_sync.py",
+    "scripts/validate_release_freeze_boundary.py",
+}
+
 
 def _run(cmd: list[str]) -> int:
     print(f"[RUN] {' '.join(cmd)}")
@@ -107,6 +116,43 @@ def _resolve_pack_path(catalog_path: str, identity_id: str) -> Path | None:
     return pack if pack.exists() else None
 
 
+def _resolve_lane_context(*, layer_intent_text: str, expected_work_layer: str, expected_source_layer: str) -> dict[str, str]:
+    resolved = resolve_layer_intent(
+        explicit_work_layer=str(expected_work_layer or "").strip(),
+        explicit_source_layer=str(expected_source_layer or "").strip(),
+        intent_text=str(layer_intent_text or "").strip(),
+        default_work_layer=DEFAULT_WORK_LAYER,
+        default_source_layer="global",
+    )
+    work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+    source_layer = str(resolved.get("resolved_source_layer", "global")).strip().lower() or "global"
+    if work_layer == "instance":
+        applied_gate_set = "instance_required_checks"
+    elif work_layer == "protocol":
+        applied_gate_set = "protocol_required_checks"
+    else:
+        applied_gate_set = "dual_unroutable"
+    return {
+        "work_layer": work_layer,
+        "source_layer": source_layer,
+        "applied_gate_set": applied_gate_set,
+    }
+
+
+def _route_release_seq_for_lane(seq: list[list[str]], *, work_layer: str) -> tuple[list[list[str]], list[str]]:
+    if work_layer != "instance":
+        return seq, []
+    filtered: list[list[str]] = []
+    skipped: list[str] = []
+    for cmd in seq:
+        script = cmd[1] if len(cmd) >= 2 else ""
+        if script in PROTOCOL_PUBLISH_SCRIPTS:
+            skipped.append(script)
+            continue
+        filtered.append(cmd)
+    return filtered, skipped
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Run release-readiness validators in a deterministic order.")
     ap.add_argument("--identity-id", required=True)
@@ -185,6 +231,20 @@ def main() -> int:
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
+    lane_ctx = _resolve_lane_context(
+        layer_intent_text=layer_intent_text,
+        expected_work_layer=expected_work_layer,
+        expected_source_layer=expected_source_layer,
+    )
+    routed_work_layer = str(lane_ctx.get("work_layer", DEFAULT_WORK_LAYER))
+    routed_source_layer = str(lane_ctx.get("source_layer", "global"))
+    routed_applied_gate_set = str(lane_ctx.get("applied_gate_set", "instance_required_checks"))
+    if not expected_source_layer:
+        expected_source_layer = routed_source_layer
+    print(
+        f"[INFO] lane routing: work_layer={routed_work_layer} "
+        f"source_layer={routed_source_layer} applied_gate_set={routed_applied_gate_set}"
+    )
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog = explicit_catalog or env_catalog
@@ -614,6 +674,26 @@ def main() -> int:
             identity_id,
             "--operation",
             "readiness",
+        ],
+        [
+            "python3",
+            "scripts/validate_work_layer_gate_set_routing.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--base",
+            base,
+            "--head",
+            head,
+            "--applied-gate-set",
+            routed_applied_gate_set,
+            "--force-check",
+            "--json-only",
         ],
         [
             "python3",
@@ -1273,6 +1353,13 @@ def main() -> int:
         ]
     )
 
+    seq, skipped_protocol_publish_checks = _route_release_seq_for_lane(seq, work_layer=routed_work_layer)
+    if skipped_protocol_publish_checks:
+        print(
+            "[INFO] instance lane active; skipped protocol publish gates: "
+            + ", ".join(skipped_protocol_publish_checks)
+        )
+
     if layer_intent_text:
         for cmd in seq:
             if len(cmd) < 2:
@@ -1284,6 +1371,7 @@ def main() -> int:
                 "scripts/validate_reply_identity_context_first_line.py",
                 "scripts/validate_send_time_reply_gate.py",
                 "scripts/validate_execution_reply_identity_coherence.py",
+                "scripts/validate_work_layer_gate_set_routing.py",
                 "scripts/validate_protocol_feedback_bootstrap_ready.py",
                 "scripts/validate_protocol_entry_candidate_bridge.py",
                 "scripts/validate_protocol_inquiry_followup_chain.py",
@@ -1298,6 +1386,7 @@ def main() -> int:
                 "scripts/validate_reply_identity_context_first_line.py",
                 "scripts/validate_send_time_reply_gate.py",
                 "scripts/validate_execution_reply_identity_coherence.py",
+                "scripts/validate_work_layer_gate_set_routing.py",
                 "scripts/validate_protocol_feedback_bootstrap_ready.py",
                 "scripts/validate_protocol_entry_candidate_bridge.py",
                 "scripts/validate_protocol_inquiry_followup_chain.py",
@@ -1318,6 +1407,7 @@ def main() -> int:
                 "scripts/validate_protocol_feedback_bootstrap_ready.py",
                 "scripts/validate_protocol_entry_candidate_bridge.py",
                 "scripts/validate_protocol_inquiry_followup_chain.py",
+                "scripts/validate_work_layer_gate_set_routing.py",
             } and "--source-layer" not in cmd:
                 cmd.extend(["--source-layer", expected_source_layer])
 

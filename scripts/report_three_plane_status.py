@@ -812,6 +812,40 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_split != 0 or split_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    lane_cmd = [
+        "python3",
+        "scripts/validate_work_layer_gate_set_routing.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--applied-gate-set",
+        "instance_required_checks",
+        "--force-check",
+        "--json-only",
+    ]
+    if layer_intent_text:
+        lane_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        lane_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        lane_cmd.extend(["--source-layer", expected_source_layer])
+    rc_lane, out_lane, err_lane = _run(lane_cmd)
+    lane_payload = _parse_json_payload(out_lane) or {}
+    validators["work_layer_gate_set_routing"] = {
+        "rc": rc_lane,
+        "ok": rc_lane == 0,
+        "out": out_lane,
+        "err": err_lane,
+    }
+    lane_status = str(lane_payload.get("work_layer_gate_set_routing_status", "")).strip().upper()
+    if rc_lane != 0 or lane_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     reply_channel_cmd = [
         "python3",
         "scripts/validate_protocol_feedback_reply_channel.py",
@@ -1508,6 +1542,20 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "protocol_actions_ref": split_payload.get("protocol_actions_ref", ""),
             "evidence_index_ref": split_payload.get("evidence_index_ref", ""),
             "stale_reasons": split_payload.get("stale_reasons", []),
+        },
+        "work_layer_gate_set_routing": {
+            "work_layer_gate_set_routing_status": lane_payload.get("work_layer_gate_set_routing_status"),
+            "error_code": lane_payload.get("error_code", ""),
+            "work_layer": lane_payload.get("work_layer", ""),
+            "source_layer": lane_payload.get("source_layer", ""),
+            "applied_gate_set": lane_payload.get("applied_gate_set", ""),
+            "lane_transition_reason": lane_payload.get("lane_transition_reason", ""),
+            "protocol_feedback_triggered": lane_payload.get("protocol_feedback_triggered"),
+            "protocol_feedback_paths": lane_payload.get("protocol_feedback_paths", []),
+            "pending_receipt_path": lane_payload.get("pending_receipt_path", ""),
+            "protocol_relevant_diff_detected": lane_payload.get("protocol_relevant_diff_detected"),
+            "protocol_relevant_files": lane_payload.get("protocol_relevant_files", []),
+            "stale_reasons": lane_payload.get("stale_reasons", []),
         },
         "protocol_feedback_reply_channel": {
             "protocol_feedback_reply_channel_status": reply_channel_payload.get("protocol_feedback_reply_channel_status"),

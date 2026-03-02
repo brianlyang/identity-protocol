@@ -23,6 +23,30 @@ PY
 
 INSTANCE_PLANE_STATUS="NOT_STARTED"
 RELEASE_PLANE_STATUS="NOT_STARTED"
+LAYER_INTENT_TEXT="${LAYER_INTENT_TEXT:-}"
+EXPECTED_WORK_LAYER="${EXPECTED_WORK_LAYER:-}"
+EXPECTED_SOURCE_LAYER="${EXPECTED_SOURCE_LAYER:-}"
+if [ -n "$EXPECTED_WORK_LAYER" ]; then
+  E2E_WORK_LAYER="$EXPECTED_WORK_LAYER"
+else
+  E2E_WORK_LAYER="$(python3 - "$LAYER_INTENT_TEXT" "$EXPECTED_SOURCE_LAYER" <<'PY'
+import sys
+from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
+intent = resolve_layer_intent(
+    intent_text=str(sys.argv[1] or "").strip(),
+    explicit_source_layer=str(sys.argv[2] or "").strip(),
+    default_work_layer=DEFAULT_WORK_LAYER,
+    default_source_layer="global",
+)
+print(str(intent.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER)
+PY
+)"
+fi
+if [ -z "$E2E_WORK_LAYER" ]; then
+  E2E_WORK_LAYER="instance"
+fi
+BASE_SHA_GLOBAL="$(git rev-parse HEAD~1)"
+HEAD_SHA_GLOBAL="$(git rev-parse HEAD)"
 
 echo "[1/30] validate protocol"
 python3 scripts/validate_identity_protocol.py
@@ -45,19 +69,21 @@ python3 scripts/validate_audit_snapshot_index.py
 echo "[3.2/30] validate protocol SSOT source boundary"
 python3 scripts/validate_protocol_ssot_source.py
 
-echo "[4/30] validate changelog freshness linkage"
-python3 scripts/validate_changelog_updated.py
+if [ "$E2E_WORK_LAYER" = "protocol" ]; then
+  echo "[4/30] validate changelog freshness linkage (protocol lane)"
+  python3 scripts/validate_changelog_updated.py
 
-echo "[4.2/30] validate protocol handoff coupling (core changes require handoff update)"
-python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
+  echo "[4.2/30] validate protocol handoff coupling (core changes require handoff update)"
+  python3 scripts/validate_protocol_handoff_coupling.py --base HEAD~1 --head HEAD
 
-echo "[5/30] validate release metadata synchronization"
-python3 scripts/validate_release_metadata_sync.py
+  echo "[5/30] validate release metadata synchronization"
+  python3 scripts/validate_release_metadata_sync.py
 
-echo "[6/30] validate release freeze boundary"
-BASE_SHA_GLOBAL="$(git rev-parse HEAD~1)"
-HEAD_SHA_GLOBAL="$(git rev-parse HEAD)"
-python3 scripts/validate_release_freeze_boundary.py --base "${BASE_SHA_GLOBAL}" --head "${HEAD_SHA_GLOBAL}"
+  echo "[6/30] validate release freeze boundary"
+  python3 scripts/validate_release_freeze_boundary.py --base "${BASE_SHA_GLOBAL}" --head "${HEAD_SHA_GLOBAL}"
+else
+  echo "[4/30] skip protocol publish gates in instance lane (E2E_WORK_LAYER=${E2E_WORK_LAYER})"
+fi
 
 echo "[6.5/30] validate release workspace cleanliness"
 python3 scripts/validate_release_workspace_cleanliness.py
@@ -71,10 +97,6 @@ if [ -z "$IDS" ]; then
   echo "       example: IDENTITY_IDS=office-ops-expert bash scripts/e2e_smoke_test.sh"
   exit 1
 fi
-
-LAYER_INTENT_TEXT="${LAYER_INTENT_TEXT:-}"
-EXPECTED_WORK_LAYER="${EXPECTED_WORK_LAYER:-}"
-EXPECTED_SOURCE_LAYER="${EXPECTED_SOURCE_LAYER:-}"
 
 echo "[10.15/30] validate runtime mode/catalog binding guard (for each target identity)"
 for ID in $IDS; do
@@ -107,6 +129,22 @@ for ID in $IDS; do
     --repo-catalog identity/catalog/identities.yaml \
     --operation e2e \
     --baseline-policy strict
+done
+
+echo "[10.195/30] validate work-layer gate-set routing contract (FIX-033, for each target identity)"
+for ID in $IDS; do
+  lane_cmd=(python3 scripts/validate_work_layer_gate_set_routing.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --base "${BASE_SHA_GLOBAL}" --head "${HEAD_SHA_GLOBAL}" --force-check --json-only)
+  lane_cmd+=(--applied-gate-set "${E2E_WORK_LAYER}")
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    lane_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    lane_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    lane_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${lane_cmd[@]}"
 done
 
 if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then

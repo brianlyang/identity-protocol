@@ -155,6 +155,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "capability_fit_review_trigger",
             "capability_fit_matrix_builder",
             "vendor_namespace_separation",
+            "work_layer_gate_set_routing",
             "protocol_feedback_reply_channel",
             "protocol_feedback_bootstrap_ready",
             "protocol_entry_candidate_bridge",
@@ -794,6 +795,22 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "work_layer_gate_set_routing": [
+                    "python3",
+                    "scripts/validate_work_layer_gate_set_routing.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--applied-gate-set",
+                    "instance_required_checks",
+                    "--force-check",
+                    "--json-only",
+                ],
                 "protocol_feedback_reply_channel": [
                     "python3",
                     "scripts/validate_protocol_feedback_reply_channel.py",
@@ -967,6 +984,7 @@ def main() -> int:
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
                     "protocol_inquiry_followup_chain",
+                    "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--layer-intent-text", layer_intent_text])
             if expected_work_layer:
@@ -978,6 +996,7 @@ def main() -> int:
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
                     "protocol_inquiry_followup_chain",
+                    "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--expected-work-layer", expected_work_layer])
             if expected_source_layer:
@@ -992,6 +1011,7 @@ def main() -> int:
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
                     "protocol_inquiry_followup_chain",
+                    "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--source-layer", expected_source_layer])
             if not is_fixture:
@@ -1165,6 +1185,24 @@ def main() -> int:
                     ):
                         if k in split_doc:
                             check_payload[k] = split_doc.get(k)
+                if name == "work_layer_gate_set_routing":
+                    lane_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "work_layer_gate_set_routing_status",
+                        "error_code",
+                        "work_layer",
+                        "source_layer",
+                        "applied_gate_set",
+                        "lane_transition_reason",
+                        "protocol_feedback_triggered",
+                        "protocol_feedback_paths",
+                        "pending_receipt_path",
+                        "protocol_relevant_diff_detected",
+                        "protocol_relevant_files",
+                        "stale_reasons",
+                    ):
+                        if k in lane_doc:
+                            check_payload[k] = lane_doc.get(k)
                 if name == "discovery_requiredization":
                     dreq_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
