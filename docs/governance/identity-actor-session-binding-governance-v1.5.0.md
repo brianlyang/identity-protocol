@@ -1456,6 +1456,53 @@ Mandatory semantics:
 7. Release lock rule:
    - `FIX-029..FIX-032` must all be `DONE + PASS` before protocol-entry closure can be marked release-ready.
 
+#### 5.8.20 `work_layer_gate_set_split_contract_v1` (P0, FIX-033)
+
+Goal:
+
+1. Eliminate cross-lane hard blocking where instance self-drive execution is stopped by protocol publish gates.
+2. Preserve strict protocol governance by enforcing protocol publish gates only when protocol lane is selected.
+3. Keep lane routing auditable and machine-checkable in send-time and replay surfaces.
+
+Mandatory semantics:
+
+1. Lane-default rule:
+   - if no explicit override is provided, `work_layer=instance` is default.
+2. Gate-set routing rule:
+   - `work_layer=instance` -> run `instance_required_checks` only,
+   - `work_layer=protocol` -> run `protocol_required_checks` only.
+3. Instance-lane non-blocking protocol publish boundary:
+   - in `work_layer=instance`, protocol publish gates (including changelog/release-metadata protocol publish checks) must not block self-drive closure,
+   - when protocol-relevant diff is detected in instance lane, emit deterministic protocol-feedback pending receipt instead of blocking.
+4. Protocol-lane strict boundary:
+   - in `work_layer=protocol`, protocol publish gates are mandatory and fail-closed on missing required publish artifacts.
+5. Canonical protocol-feedback closure (protocol lane):
+   - protocol conclusions must archive to canonical SSOT roots:
+     - `runtime/protocol-feedback/outbox-to-protocol/`
+     - `runtime/protocol-feedback/evidence-index/`
+     - `runtime/protocol-feedback/upgrade-proposals/`
+6. Lane consistency gate:
+   - strict operations must fail-closed when `work_layer` and `applied_gate_set` mismatch.
+7. Required machine-readable telemetry per governed round:
+   - `work_layer`
+   - `applied_gate_set`
+   - `protocol_feedback_triggered`
+   - `protocol_feedback_paths`
+   - `lane_transition_reason`
+8. send-time first-line stamp remains mandatory:
+   - tail block must continue to expose `Layer-Context` and must stay consistent with applied gate set.
+9. Mixed-lane prohibition remains mandatory:
+   - same execution section cannot mix instance business closure and protocol governance proposal payload.
+10. Suggested failure code family (`IP-LAYER-GATE-*`):
+   - `IP-LAYER-GATE-001`: lane/gate-set mismatch in strict operations,
+   - `IP-LAYER-GATE-002`: instance lane blocked by protocol publish gate,
+   - `IP-LAYER-GATE-003`: protocol lane missing required publish gate replay,
+   - `IP-LAYER-GATE-004`: protocol lane conclusion without canonical protocol-feedback closure evidence.
+11. Deterministic acceptance profile (must pass before closure claim):
+   - sample A (`work_layer=instance`, protocol files changed, no changelog update): instance lane must not be blocked; protocol-feedback pending receipt required,
+   - sample B (`work_layer=protocol`, protocol files changed, no changelog update): strict fail-closed required,
+   - sample C (multi-round replay): each round must expose lane telemetry fields and protocol-feedback trigger/path evidence when applicable.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1978,6 +2025,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-087 | inquiry receipts must classify `signal_origin` and require sanitized paraphrase before promoting business-origin statements into protocol conclusions | inquiry classifier + sanitization receipt writer + protocol conclusion adapters | P0 | GATE_READY | signal-origin classification + sanitization receipt enforcement landed in `FIX-032` (`a95f5a2`); independent replay audit pending |
 | ASB-RQ-088 | `source` (identity provenance) and `source_layer` (layer-intent provenance) must remain machine-distinct and mapper-auditable; ambiguity must not silently alter `work_layer` | stamp parser/coherence validator + layer-intent resolver + telemetry surfaces | P0 | GATE_READY | semantic distinction is now carried through FIX-032 telemetry path (`a95f5a2`); independent replay audit pending |
 | ASB-RQ-089 | required gate `validate_protocol_inquiry_followup_chain.py` must fail-closed on missing follow-up receipts, missing protocol-feedback linkage, unsanitized promotion, and stale/expired inquiry chains (`IP-LAYER-INQ-001..004`) across creator/readiness/e2e/full-scan/three-plane/CI | six-surface + required-gates workflow wiring + requiredization trigger bridge | P0 | GATE_READY | required gate + six-surface/CI wiring + requiredization trigger bridge landed in `FIX-032` (`a95f5a2`); independent replay audit pending |
+| ASB-RQ-090 | work-layer must deterministically route to lane-specific required gate set (`instance_required_checks` vs `protocol_required_checks`) with strict mismatch fail-closed semantics | readiness/e2e/creator/full-scan/three-plane gate orchestration routers + lane tuple receipts | P0 | SPEC_READY | `FIX-033` intake: docs-only requirement hardening for lane split execution routing (implementation pending) |
+| ASB-RQ-091 | `work_layer=instance` self-drive upgrades must not be hard-blocked by protocol publish gates (e.g., changelog/release metadata); protocol diffs emit side-channel protocol-feedback receipt instead of blocking | readiness/e2e/creator lane filter + protocol-feedback pending receipt writer | P0 | SPEC_READY | `FIX-033` intake: remove cross-lane hard blocking while preserving protocol backlog visibility |
+| ASB-RQ-092 | `work_layer=protocol` must enforce protocol publish governance gates and canonical protocol-feedback closure (`runtime/protocol-feedback/...`) as fail-closed boundaries | protocol lane required gate set + canonical outbox/index/upgrade proposal validators + strict blocker receipts | P0 | SPEC_READY | `FIX-033` intake: protocol lane remains strict and release-governed |
+| ASB-RQ-093 | send-time/replay telemetry must expose lane execution proof (`work_layer`, `applied_gate_set`, `protocol_feedback_triggered`, `protocol_feedback_paths`, `lane_transition_reason`) for each governed round | response-stamp tail + first-line/send-time validators + full-scan/three-plane payload mapping | P0 | SPEC_READY | `FIX-033` intake: machine-readable dual-lane traceability contract (implementation pending) |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2015,6 +2066,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-079 / ASB-RQ-080 / ASB-RQ-081 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-030` landed (`a95f5a2`) and readiness/layer passthrough rework landed (`560f710`), but independent replay verdict is still pending; baseline reject anchor remains `review 16.8.21` until re-audit closes |
 | ASB-RQ-082 / ASB-RQ-083 / ASB-RQ-084 / ASB-RQ-085 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-031` landed (`a95f5a2`) and CWD-deterministic candidate-chain rework landed (`560f710`), but independent replay verdict is still pending; baseline reject anchor remains `review 16.8.21` until re-audit closes |
 | ASB-RQ-086 / ASB-RQ-087 / ASB-RQ-088 / ASB-RQ-089 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-032` landed (`a95f5a2`) and inquiry emission-correlation rework landed (`560f710`), but independent replay verdict is still pending; baseline reject anchor remains `review 16.8.21` until re-audit closes |
+| ASB-RQ-090 / ASB-RQ-091 / ASB-RQ-092 / ASB-RQ-093 | `SPEC_READY -> SPEC_READY (INTAKE_LOCKED, P0)` | `FIX-033` requirements locked in governance + review docs; implementation intentionally deferred to protocol-base architect for lane-set routing and replay closure |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

@@ -145,6 +145,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | REJECT |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | REJECT |
+| FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `UNCOMMITTED` | SPEC_READY | PENDING_IMPL |
 
 ---
 
@@ -3897,6 +3898,64 @@ Acceptance replay template (post-implementation):
 3. negative: mixed lane in same section -> `FAIL_REQUIRED` (`IP-SPLIT-004`)
 4. negative: protocol receipt carries business-scene constants -> `FAIL_REQUIRED` (`IP-SPLIT-005`)
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
+
+This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated):
+
+1. Dual-lane governance semantics are documented, but readiness/e2e execution still runs protocol publish gates in instance self-drive lane.
+2. This causes cross-lane hard blocking: instance self-drive upgrades can fail on protocol release checks (for example changelog publish linkage), which violates lane split intent.
+3. Protocol strictness must be preserved, but only in `work_layer=protocol` lane with canonical protocol-feedback closure requirements.
+
+Cross-validation anchors:
+
+1. Global readiness sequence includes changelog publish gate regardless of lane:
+   - `scripts/release_readiness_check.py:418`
+2. E2E global sequence includes changelog publish gate regardless of lane:
+   - `scripts/e2e_smoke_test.sh:49`
+3. Creator validate sequence currently mixes protocol lane validators into one shared list without lane-set split:
+   - `scripts/identity_creator.py:1323`
+4. Governance already codifies default instance lane and trigger-auditable protocol lane:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:1166`
+5. Governance already codifies split receipt and canonical protocol-feedback channel:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:1011`
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:1244`
+
+Requirement scope locked for FIX-033 (`ASB-RQ-090..093`):
+
+1. `work_layer` must route to lane-specific required gate sets:
+   - `instance_required_checks` for `work_layer=instance`
+   - `protocol_required_checks` for `work_layer=protocol`
+2. In `work_layer=instance`, protocol publish gates must not hard-block self-drive closure:
+   - protocol-related changes produce protocol-feedback pending receipt, not immediate instance-lane failure.
+3. In `work_layer=protocol`, protocol publish gates remain strict fail-closed and require canonical protocol-feedback closure.
+4. Send-time/replay outputs must expose lane execution telemetry:
+   - `work_layer`
+   - `applied_gate_set`
+   - `protocol_feedback_triggered`
+   - `protocol_feedback_paths`
+   - `lane_transition_reason`
+
+Acceptance profile (release-blocking once implementation lands):
+
+1. sample A:
+   - input: `work_layer=instance`, protocol files changed, changelog not updated
+   - expected: instance lane not blocked; protocol-feedback pending receipt emitted
+2. sample B:
+   - input: `work_layer=protocol`, protocol files changed, changelog not updated
+   - expected: strict fail-closed
+3. sample C:
+   - input: multi-round replay
+   - expected: each round exposes `work_layer + applied_gate_set + protocol_feedback_triggered + protocol_feedback_paths`
+
+Boundary notes:
+
+1. FIX-033 is lane-routing and boundary hardening; it does not replace FIX-029..032 protocol-entry closure fixes.
+2. FIX-029..032 remain `REJECT` baseline until independent replay closes section `16.8.21` findings.
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
