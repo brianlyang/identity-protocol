@@ -254,7 +254,7 @@ def main() -> int:
 
     actor_id = resolve_actor_id(args.actor_id)
     actor_session_file = actor_session_path(catalog_path, actor_id)
-    actor_binding = load_actor_binding(catalog_path, actor_id)
+    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=args.identity_id)
 
     resolved_pack = Path(str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")).expanduser().resolve()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper() or "UNKNOWN"

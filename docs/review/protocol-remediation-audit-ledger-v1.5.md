@@ -140,8 +140,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PENDING_REPLAY |
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
-| FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure intake (`ASB-RQ-071..074`, docs-only; architect implementation pending) | `TBD` | INTAKE | SPEC_READY |
+| FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | INTAKE | SPEC_READY |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | INTAKE | SPEC_READY |
 
 ---
 
@@ -3998,6 +3999,68 @@ Layer declaration:
 
 1. protocol-only; no business scenario constants introduced.
 
+#### 16.8.16 FIX-028 implementation lane: same-actor multi-session binding overwrite closure (2026-03-02, protocol-only)
+
+Status: `DONE / PENDING_REPLAY` (implementation landed; independent audit replay pending).
+
+Implementation scope (landed):
+
+1. Canonical actor binding storage upgraded to multibinding schema (`actor_id + session_id`) with legacy-read shim and strict write normalization:
+   - `scripts/actor_session_common.py`
+2. Activation writer upgraded to CAS + mutation-boundary + append-only rebind receipt contract:
+   - `scripts/sync_session_identity.py`
+   - `scripts/identity_creator.py` (activation chain now passes `session_id` + `compare_token` and validates multibinding gate post-write)
+3. New required validator landed:
+   - `scripts/validate_actor_session_multibinding_concurrency.py`
+   - emits machine-readable fields:
+     - `actor_session_multibinding_status`
+     - `error_code`
+     - `binding_key_mode`
+     - `session_entry_count`
+     - `cas_checked`
+     - `cas_conflict_detected`
+     - `non_activation_mutation_detected`
+     - `rebind_receipt_status`
+     - `dropped_peer_session_count`
+     - `stale_reasons`
+4. Six-surface + CI wiring landed:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+5. Multi-entry read safety propagation landed for existing consumer validators:
+   - `scripts/validate_actor_session_binding.py`
+   - `scripts/validate_cross_actor_isolation.py`
+   - `scripts/refresh_identity_session_status.py`
+   - `scripts/validate_identity_session_pointer_consistency.py`
+   - `scripts/response_stamp_common.py`
+
+Local replay snapshot (architect local):
+
+1. static:
+   - `python3 -m py_compile ...` -> `rc=0` (all touched scripts)
+   - `bash -n scripts/e2e_smoke_test.sh` -> `rc=0`
+2. positive sample (same actor, dual session preserved):
+   - `sync_session_identity.py` with CAS tokens `0 -> 1 -> 2` -> `rc=0`
+   - `validate_actor_session_multibinding_concurrency.py --operation validate` -> `PASS_REQUIRED`, `session_entry_count=2`, `cas_conflict_detected=false`, `dropped_peer_session_count=0`
+3. negative samples (contract replay):
+   - single-object shape -> `IP-ASB-MB-001`
+   - missing compare token -> `IP-ASB-MB-002`
+   - stale compare token conflict (`--expected-compare-token`) -> `IP-ASB-MB-003`
+   - non-activation mutation without override -> `IP-ASB-MB-004`
+   - missing/incomplete receipt -> `IP-ASB-MB-005`
+   - dropped peer session marker -> `IP-ASB-MB-006`
+4. wiring visibility snapshot:
+   - `report_three_plane_status.py` output includes `instance_plane_detail.actor_session_multibinding_concurrency.*`
+   - `full_identity_protocol_scan.py` output includes `checks.actor_session_multibinding_concurrency.*`
+
+Pending audit package:
+
+1. replay on project/global real catalogs for strict lanes (`readiness/e2e/ci`) with independent reviewer confirmation.
+2. commit SHA backfill for this lane after code commit.
+
 #### 16.8.15 Roundtable intake: protocol-feedback canonical reply channel hardening (2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
@@ -4070,6 +4133,91 @@ Acceptance replay template (post-implementation):
 3. negative: mirror reference without canonical SSOT primary -> `FAIL_REQUIRED` (`IP-PFB-CH-003`)
 4. negative: protocol-feedback activity exists but split-receipt still skipped -> `FAIL_REQUIRED`
 5. positive: canonical channel + sidecar `IP-PFB-*` blocking + split-receipt requiredization all pass -> `PASS_REQUIRED`
+6. docs/ssot checks:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+Layer declaration:
+
+1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.17 Roundtable intake: protocol-layer entry bootstrap-readiness hardening (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated, no scope expansion):
+
+1. Protocol-layer entry gating exists (`protocol` lane requires trigger evidence), but trigger satisfaction alone does not guarantee canonical protocol-feedback roots are bootstrap-ready at first entry.
+2. Existing strict readiness chain validates sidecar/SSOT archival classes, but does not currently provide a dedicated bootstrap-readiness hard gate for protocol entry.
+3. Identity pack bootstrap paths currently emphasize generic runtime feedback/handoff logs, not canonical `runtime/protocol-feedback/...` root readiness as a first-entry invariant.
+4. Without deterministic bootstrap-readiness proof, communication can still rely on oral reminder to create protocol-feedback structures, creating hidden-gate risk.
+
+Local evidence anchors:
+
+1. protocol entry must be trigger-backed:
+   - `scripts/response_stamp_common.py:549` (`protocol-only signal` branch requires trigger conditions).
+   - `scripts/validate_layer_intent_resolution.py:250` (`resolved_work_layer=protocol` without trigger -> stale/fail path).
+2. readiness currently invokes sidecar + SSOT archival validators, but no dedicated bootstrap-ready gate:
+   - `scripts/release_readiness_check.py:1102`
+   - `scripts/release_readiness_check.py:1135`
+3. pack bootstrap defaults emphasize generic feedback logs, not protocol-feedback root bootstrap:
+   - `scripts/create_identity_pack.py:502`
+   - `scripts/create_identity_pack.py:683`
+4. split-receipt auto-requiredization relies on existing artifacts but is not a root bootstrap constructor:
+   - `scripts/validate_instance_protocol_split_receipt.py:186`
+
+Vendor + official + context7 cross-check (inference noted):
+
+1. OpenAI/Anthropic/Gemini official guidance consistently favors explicit state/channel provisioning over implicit ambient context for reliable multi-turn governance.
+2. CAS/transactional consistency references (etcd + context7 transaction patterns) support fail-closed governance when required channel state is missing.
+3. Therefore, protocol entry should include explicit bootstrap-readiness proof, not inferred availability.
+
+Official source links:
+
+1. `https://developers.openai.com/api/docs/guides/conversation-state/`
+2. `https://developers.openai.com/api/docs/guides/migrate-to-responses/`
+3. `https://docs.anthropic.com/en/api/messages-examples`
+4. `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
+5. `https://ai.google.dev/gemini-api/docs/prompting-strategies`
+6. `https://etcd.io/docs/v3.5/learning/api_guarantees/`
+7. `https://etcd.io/docs/v3.5/dev-guide/api_reference_v3/`
+
+Governance delta (this batch, docs-only):
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - extended `5.8.16` with bootstrap-readiness semantics (`IP-PFB-CH-004/005` + machine-readable bootstrap telemetry).
+   - added requirement rows `ASB-RQ-079..081` (`P0`, `SPEC_READY`).
+   - updated matrix `C11` to include protocol-entry bootstrap-readiness as mandatory closure element.
+
+Architect implementation package (next execution batch):
+
+1. Add required gate:
+   - `scripts/validate_protocol_feedback_bootstrap_ready.py`
+2. Enforce protocol-entry bootstrap-readiness in strict lanes:
+   - protocol lane selected (`work_layer=protocol` or `protocol_triggered=true`) requires canonical roots ready:
+     - `runtime/protocol-feedback/outbox-to-protocol/`
+     - `runtime/protocol-feedback/evidence-index/`
+     - `runtime/protocol-feedback/upgrade-proposals/`
+3. Add strict failure codes:
+   - `IP-PFB-CH-004` (`protocol_layer_without_bootstrap_readiness`)
+   - `IP-PFB-CH-005` (`bootstrap_receipt_missing_or_unlinked`)
+4. Add deterministic bootstrap receipt contract when auto-create is used:
+   - receipt must be under canonical outbox and linked in canonical evidence index.
+5. Wire across six surfaces + CI:
+   - creator / readiness / e2e / full-scan / three-plane / required-gates workflow.
+6. Surface machine-readable fields in scan/report outputs:
+   - `protocol_feedback_bootstrap_status`
+   - `protocol_feedback_bootstrap_mode`
+   - `bootstrap_created_paths`
+   - `bootstrap_receipt_path`
+
+Acceptance replay template (post-implementation):
+
+1. negative: protocol lane selected, canonical roots missing, no bootstrap receipt -> `FAIL_REQUIRED` (`IP-PFB-CH-004`)
+2. negative: auto-bootstrap performed but receipt not SSOT-linked -> `FAIL_REQUIRED` (`IP-PFB-CH-005`)
+3. positive: protocol lane selected, canonical roots preexisting -> `PASS_REQUIRED`
+4. positive: protocol lane selected, roots auto-created with canonical outbox+index linkage -> `PASS_REQUIRED`
+5. boundary: instance lane selected (`work_layer=instance`) -> bootstrap gate remains non-blocking/skip as contract allows
 6. docs/ssot checks:
    - `python3 scripts/docs_command_contract_check.py`
    - `python3 scripts/validate_protocol_ssot_source.py`

@@ -163,6 +163,7 @@ jobs:
             python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --identity-home "$CATALOG_PARENT"
             python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
+            python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_session_refresh_status.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --baseline-policy warn

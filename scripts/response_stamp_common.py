@@ -139,8 +139,8 @@ def _session_pointer_path(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "active_identity.json").resolve()
 
 
-def _session_data(catalog_path: Path, actor_id: str) -> dict[str, Any]:
-    actor_binding = load_actor_binding(catalog_path, actor_id)
+def _session_data(catalog_path: Path, actor_id: str, identity_id: str) -> dict[str, Any]:
+    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
     if actor_binding:
         payload = dict(actor_binding)
         payload["session_pointer_source"] = "actor"
@@ -199,7 +199,7 @@ def resolve_stamp_context(
     )
     pack_path = Path(str(resolved.get("pack_path", "")).strip()).expanduser().resolve()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper() or "UNKNOWN"
-    pointer = _session_data(catalog_path, actor)
+    pointer = _session_data(catalog_path, actor, identity_id)
     lock_state = _lock_state(identity_id, pointer)
     lease_id = _lease_id(pointer)
     source = _source_domain(catalog_path, explicit_catalog=explicit_catalog)

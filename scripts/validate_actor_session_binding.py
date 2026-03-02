@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import actor_session_path, load_actor_binding, resolve_actor_id
+from actor_session_common import actor_session_path, load_actor_binding, load_actor_binding_store, resolve_actor_id
 
 ERR_ACTOR_BINDING = "IP-ASB-201"
 STRICT_OPS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
@@ -39,6 +39,7 @@ def main() -> int:
         default="validate",
         help="strict operations fail on missing actor binding; inspection operations can skip",
     )
+    ap.add_argument("--session-id", default="", help="optional explicit session binding selector")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -69,7 +70,13 @@ def main() -> int:
 
     actor_id = resolve_actor_id(args.actor_id)
     actor_path = actor_session_path(catalog_path, actor_id)
-    actor_binding = load_actor_binding(catalog_path, actor_id)
+    actor_store = load_actor_binding_store(catalog_path, actor_id)
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=args.identity_id,
+        session_id=args.session_id,
+    )
     status = str(row.get("status", "")).strip().lower() or "inactive"
     operation = str(args.operation or "validate").strip().lower()
     inspection_mode = operation in INSPECTION_OPS
@@ -77,8 +84,11 @@ def main() -> int:
     error_code = ""
     actor_binding_status = "PASS_REQUIRED"
     bound_identity = str(actor_binding.get("identity_id", "")).strip()
+    session_entry_count = int(actor_store.get("session_entry_count", 0) or 0)
+    binding_key_mode = str(actor_store.get("binding_key_mode", "")).strip()
+    store_stale = [str(x).strip() for x in (actor_store.get("stale_reasons") or []) if str(x).strip()]
 
-    if not actor_binding:
+    if session_entry_count <= 0:
         stale_reasons.append("actor_session_binding_missing")
         if inspection_mode:
             actor_binding_status = "SKIPPED_NOT_REQUIRED"
@@ -86,6 +96,16 @@ def main() -> int:
         else:
             error_code = ERR_ACTOR_BINDING
             actor_binding_status = "FAIL_REQUIRED"
+    elif not actor_binding:
+        stale_reasons.append("target_identity_binding_missing_for_actor")
+        if status == "active":
+            if inspection_mode:
+                actor_binding_status = "SKIPPED_NOT_REQUIRED"
+            else:
+                actor_binding_status = "FAIL_REQUIRED"
+                error_code = ERR_ACTOR_BINDING
+        else:
+            actor_binding_status = "SKIPPED_NOT_REQUIRED"
     else:
         if str(actor_binding.get("actor_id", "")).strip() != actor_id:
             stale_reasons.append("actor_id_mismatch")
@@ -111,10 +131,13 @@ def main() -> int:
         "operation": operation,
         "actor_session_path": str(actor_path),
         "bound_identity_id": bound_identity,
+        "bound_session_id": str(actor_binding.get("session_id", "")).strip(),
+        "binding_key_mode": binding_key_mode,
+        "session_entry_count": session_entry_count,
         "catalog_identity_status": status,
         "actor_binding_status": actor_binding_status,
         "error_code": error_code,
-        "stale_reasons": stale_reasons,
+        "stale_reasons": sorted(set([*stale_reasons, *store_stale])),
     }
 
     if args.json_only:

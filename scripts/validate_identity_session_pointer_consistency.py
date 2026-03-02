@@ -126,13 +126,18 @@ def main() -> int:
     active_rows = [x for x in rows if str(x.get("status", "")).strip().lower() == "active"]
     active_ids = [str(x.get("id", "")).strip() for x in active_rows if str(x.get("id", "")).strip()]
     actor_id = resolve_actor_id(args.actor_id)
-    actor_binding = load_actor_binding(catalog_path, actor_id)
-    bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
     expected_identity_id = str(args.identity_id or "").strip()
+    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=expected_identity_id)
+    bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
     if not expected_identity_id:
         if bound_identity_id:
             expected_identity_id = bound_identity_id
-        elif len(active_rows) == 1:
+        else:
+            fallback_binding = load_actor_binding(catalog_path, actor_id)
+            bound_identity_id = str(fallback_binding.get("identity_id", "")).strip()
+            if bound_identity_id:
+                expected_identity_id = bound_identity_id
+        if not expected_identity_id and len(active_rows) == 1:
             expected_identity_id = str(active_rows[0].get("id", "")).strip()
     if not expected_identity_id:
         print(

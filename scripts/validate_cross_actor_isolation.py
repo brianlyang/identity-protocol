@@ -96,6 +96,9 @@ def main() -> int:
             {
                 "actor_id": str(b.get("actor_id", "")).strip(),
                 "identity_id": str(b.get("identity_id", "")).strip(),
+                "session_id": str(b.get("session_id", "")).strip(),
+                "binding_key_mode": str(b.get("binding_key_mode", "")).strip(),
+                "session_entry_count": int(b.get("session_entry_count", 0) or 0),
                 "actor_session_path": str(b.get("actor_session_path", "")),
             }
             for b in bindings

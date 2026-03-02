@@ -96,6 +96,7 @@ for ID in $IDS; do
   python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
+  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e --json-only
 done
 
 echo "[10.19/30] validate anytime session refresh status contract (for each target identity)"

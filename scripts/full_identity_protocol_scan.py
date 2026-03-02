@@ -123,6 +123,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "identity_home_catalog_alignment",
             "fixture_runtime_boundary",
             "actor_session_binding",
+            "actor_session_multibinding_concurrency",
             "no_implicit_switch",
             "cross_actor_isolation",
             "session_refresh_status",
@@ -399,6 +400,17 @@ def main() -> int:
                 "actor_session_binding": [
                     "python3",
                     "scripts/validate_actor_session_binding.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "actor_session_multibinding_concurrency": [
+                    "python3",
+                    "scripts/validate_actor_session_multibinding_concurrency.py",
                     "--catalog",
                     str(catalog),
                     "--identity-id",
@@ -1484,6 +1496,22 @@ def main() -> int:
                     ):
                         if k in actor_doc:
                             check_payload[k] = actor_doc.get(k)
+                if name == "actor_session_multibinding_concurrency":
+                    mb_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "actor_session_multibinding_status",
+                        "error_code",
+                        "binding_key_mode",
+                        "session_entry_count",
+                        "cas_checked",
+                        "cas_conflict_detected",
+                        "non_activation_mutation_detected",
+                        "rebind_receipt_status",
+                        "dropped_peer_session_count",
+                        "stale_reasons",
+                    ):
+                        if k in mb_doc:
+                            check_payload[k] = mb_doc.get(k)
                 if name == "no_implicit_switch":
                     implicit_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

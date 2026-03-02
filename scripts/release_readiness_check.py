@@ -370,6 +370,17 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_actor_session_multibinding_concurrency.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_identity_session_refresh_status.py",
             "--catalog",
             catalog,

@@ -308,6 +308,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_actor_binding != 0 or actor_binding_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_actor_mb, out_actor_mb, err_actor_mb = _run(
+        [
+            "python3",
+            "scripts/validate_actor_session_multibinding_concurrency.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    actor_mb_payload = _parse_json_payload(out_actor_mb) or {}
+    validators["actor_session_multibinding_concurrency"] = {
+        "rc": rc_actor_mb,
+        "ok": rc_actor_mb == 0,
+        "out": out_actor_mb,
+        "err": err_actor_mb,
+    }
+    actor_mb_status = str(actor_mb_payload.get("actor_session_multibinding_status", "")).strip().upper()
+    if rc_actor_mb != 0 or actor_mb_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_no_implicit, out_no_implicit, err_no_implicit = _run(
         [
             "python3",
@@ -1649,6 +1673,18 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "bound_identity_id": actor_binding_payload.get("bound_identity_id", ""),
             "catalog_identity_status": actor_binding_payload.get("catalog_identity_status", ""),
             "stale_reasons": actor_binding_payload.get("stale_reasons", []),
+        },
+        "actor_session_multibinding_concurrency": {
+            "actor_session_multibinding_status": actor_mb_payload.get("actor_session_multibinding_status"),
+            "error_code": actor_mb_payload.get("error_code", ""),
+            "binding_key_mode": actor_mb_payload.get("binding_key_mode", ""),
+            "session_entry_count": actor_mb_payload.get("session_entry_count"),
+            "cas_checked": actor_mb_payload.get("cas_checked"),
+            "cas_conflict_detected": actor_mb_payload.get("cas_conflict_detected"),
+            "non_activation_mutation_detected": actor_mb_payload.get("non_activation_mutation_detected"),
+            "rebind_receipt_status": actor_mb_payload.get("rebind_receipt_status", ""),
+            "dropped_peer_session_count": actor_mb_payload.get("dropped_peer_session_count"),
+            "stale_reasons": actor_mb_payload.get("stale_reasons", []),
         },
         "no_implicit_switch": {
             "implicit_switch_status": no_implicit_payload.get("implicit_switch_status"),

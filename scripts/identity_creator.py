@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from actor_session_common import list_actor_bindings, resolve_actor_id
+from actor_session_common import list_actor_bindings, load_actor_binding_store, resolve_actor_id
 from resolve_identity_context import (
     collect_protocol_evidence,
     default_identity_home,
@@ -371,6 +371,9 @@ def _activate_identity(
             }
         )
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        actor_store = load_actor_binding_store(local_catalog, actor_id_resolved)
+        compare_token = str(actor_store.get("compare_token", "")).strip() or str(actor_store.get("binding_version", 0))
+        session_id = f"run:{run_id_resolved}"
         sync = subprocess.run(
             [
                 "python3",
@@ -387,6 +390,12 @@ def _activate_identity(
                 actor_id_resolved,
                 "--run-id",
                 run_id_resolved,
+                "--session-id",
+                session_id,
+                "--compare-token",
+                compare_token,
+                "--mutation-lane",
+                "activate",
                 "--switch-reason",
                 switch_reason_resolved,
                 "--entrypoint-pid",
@@ -421,6 +430,21 @@ def _activate_identity(
         )
         if rc != 0:
             raise RuntimeError("session pointer consistency validation failed")
+        rc = _run(
+            [
+                "python3",
+                "scripts/validate_actor_session_multibinding_concurrency.py",
+                "--catalog",
+                str(local_catalog),
+                "--identity-id",
+                identity_id,
+                "--operation",
+                "activate",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            raise RuntimeError("actor session multibinding concurrency validation failed")
         print(f"[OK] activated identity in catalog (actor-scoped multi-active): {identity_id}")
         print(f"[OK] switch report: {switch_report}")
         return 0
@@ -1073,6 +1097,17 @@ def main() -> int:
                 args.identity_id,
                 "--operation",
                 "validate",
+            ],
+            [
+                "python3",
+                "scripts/validate_actor_session_multibinding_concurrency.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
             ],
             [
                 "python3",
