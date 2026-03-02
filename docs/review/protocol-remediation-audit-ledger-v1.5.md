@@ -141,6 +141,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure intake (`ASB-RQ-071..074`, docs-only; architect implementation pending) | `TBD` | INTAKE | SPEC_READY |
+| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | INTAKE | SPEC_READY |
 
 ---
 
@@ -3990,6 +3991,86 @@ Acceptance replay template (post-implementation):
 6. negative: same-actor peer session entry dropped after write -> `FAIL_REQUIRED` (`IP-ASB-MB-006`)
 7. positive: same actor, two sessions, peer entry preserved + CAS increment + receipt linked -> `PASS_REQUIRED`
 8. docs/ssot checks:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+Layer declaration:
+
+1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.15 Roundtable intake: protocol-feedback canonical reply channel hardening (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated):
+
+1. Protocol-feedback files are now mostly routed to `runtime/protocol-feedback/...`, but strict operations still allow hidden-gate pass paths where channel semantics are not machine-enforced.
+2. `split-receipt` can still return `SKIPPED_NOT_REQUIRED` under strict operations for identities with protocol-feedback activity, leaving governance split enforcement non-deterministic.
+3. Sidecar blocking prefix set currently does not include `IP-PFB-*`, so newly introduced protocol-feedback channel violations cannot be deterministically escalated to strict fail-closed.
+
+Local evidence anchors:
+
+1. split-receipt strict readiness replay still skips:
+   - `python3 scripts/validate_instance_protocol_split_receipt.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only`
+   - result: `required_contract=false`, `instance_protocol_split_status=SKIPPED_NOT_REQUIRED`, `stale_reasons=[\"contract_not_required\"]`
+2. sidecar default blocking prefixes:
+   - `scripts/validate_protocol_feedback_sidecar_contract.py:29` (`DEFAULT_BLOCKING_PREFIXES = ("IP-WRB-", "IP-SEM-")`)
+3. canonical channel hardening proposal already exists in protocol-feedback SSOT:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/protocol-feedback/upgrade-proposals/HIDDEN_GATE_PROTOCOL_REMEDIATION_20260302_FINAL.md:175`
+4. proposal outbox + index linkage exists:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260302T035929Z_hidden_gate_protocol_remediation_final.md`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/protocol-feedback/evidence-index/INDEX.md:6`
+
+Vendor + official + context7 cross-check (inference noted):
+
+1. OpenAI conversation-state guidance requires explicit state objects and channel continuity semantics for durable multi-turn governance.
+2. Anthropic Messages guidance keeps runtime stateless unless context channel is explicitly provided, reinforcing explicit channel contract design.
+3. Gemini official guidance similarly relies on explicit history/state passing, not implicit ambient channel assumptions.
+4. etcd transaction compare-and-swap semantics reinforce deterministic fail-closed behavior for governance-critical state transitions.
+5. context7 references (Python locking/atomic replace, SQLite transactional commit) align with deterministic channel-state update requirements.
+
+Official source links:
+
+1. `https://developers.openai.com/api/docs/guides/conversation-state/`
+2. `https://developers.openai.com/api/docs/guides/migrate-to-responses/`
+3. `https://docs.anthropic.com/en/api/messages-examples`
+4. `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
+5. `https://ai.google.dev/gemini-api/docs/prompting-strategies`
+6. `https://etcd.io/docs/v3.5/learning/api_guarantees/`
+7. `https://etcd.io/docs/v3.5/dev-guide/api_reference_v3/`
+
+Governance delta (this batch, docs-only):
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - added `5.8.16` `protocol_feedback_canonical_reply_channel_contract_v1` (P0).
+   - added requirement rows `ASB-RQ-075..078` (`P0`, `SPEC_READY`).
+   - updated matrix `C11` as mandatory closure condition.
+
+Architect implementation package (next execution batch):
+
+1. Add required gate:
+   - `scripts/validate_protocol_feedback_reply_channel.py`
+2. Enforce canonical reply channel in strict lanes:
+   - canonical root + whitelist subdirs as primary evidence only.
+   - non-standard paths allowed only as `mirror_reference`.
+3. Add strict failure codes:
+   - `IP-PFB-CH-001/002/003`.
+4. Extend sidecar blocking prefixes:
+   - include `IP-PFB-*` in strict operations.
+5. Enforce split-receipt requiredization bridge:
+   - protocol-feedback activity -> split receipt auto-required.
+   - strict operations must not produce `SKIPPED_NOT_REQUIRED`.
+6. Wire across six surfaces + CI:
+   - creator / readiness / e2e / full-scan / three-plane / required-gates workflow.
+
+Acceptance replay template (post-implementation):
+
+1. negative: missing canonical primary channel -> `FAIL_REQUIRED` (`IP-PFB-CH-001`)
+2. negative: non-standard channel as primary -> `FAIL_REQUIRED` (`IP-PFB-CH-002`)
+3. negative: mirror reference without canonical SSOT primary -> `FAIL_REQUIRED` (`IP-PFB-CH-003`)
+4. negative: protocol-feedback activity exists but split-receipt still skipped -> `FAIL_REQUIRED`
+5. positive: canonical channel + sidecar `IP-PFB-*` blocking + split-receipt requiredization all pass -> `PASS_REQUIRED`
+6. docs/ssot checks:
    - `python3 scripts/docs_command_contract_check.py`
    - `python3 scripts/validate_protocol_ssot_source.py`
 

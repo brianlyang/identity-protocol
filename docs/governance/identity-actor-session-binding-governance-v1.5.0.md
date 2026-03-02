@@ -1236,6 +1236,45 @@ Mandatory semantics:
 11. Write atomicity requirement:
    - canonical write and rebind receipt append must be atomic from gate perspective (no "binding updated / receipt missing" split-commit state in strict lanes).
 
+#### 5.8.16 `protocol_feedback_canonical_reply_channel_contract_v1` (P0)
+
+Goal:
+
+1. Eliminate hidden-gate behavior where protocol-feedback appears complete but strict operations can still pass with missing canonical reply-channel evidence.
+2. Force one canonical protocol-feedback reply channel and prevent non-standard path promotion to primary evidence.
+3. Ensure split-receipt contract cannot silently remain `SKIPPED_NOT_REQUIRED` when protocol-feedback activity is present.
+
+Mandatory semantics:
+
+1. Protocol-layer feedback (`work_layer=protocol`) must use canonical root only:
+   - `<resolved_pack_path>/runtime/protocol-feedback/`
+2. Canonical primary reply-channel directories are mandatory:
+   - `runtime/protocol-feedback/outbox-to-protocol/`
+   - `runtime/protocol-feedback/evidence-index/`
+   - `runtime/protocol-feedback/upgrade-proposals/`
+3. Non-standard paths may be referenced only as `mirror_reference` and must never be primary evidence channel in strict operations.
+4. Strict operations (`update/readiness/e2e/ci/validate/mutation`) must fail-closed if:
+   - canonical primary channel missing,
+   - non-standard channel used as primary,
+   - mirror reference is provided without canonical SSOT primary linkage.
+5. Failure code family (`IP-PFB-CH-*`):
+   - `IP-PFB-CH-001`: `missing_protocol_feedback_standard_channel`
+   - `IP-PFB-CH-002`: `non_standard_channel_as_primary`
+   - `IP-PFB-CH-003`: `mirror_reference_without_ssot_primary`
+6. Sidecar governance escalation must treat `IP-PFB-*` as blocking prefixes in strict operations (same blocking class as P0 governance boundaries).
+7. Split-receipt requiredization bridge:
+   - if protocol-feedback activity exists (outbox/index/upgrade proposal evidence present), split-receipt contract is auto-required,
+   - strict operations must not return `SKIPPED_NOT_REQUIRED` for split-receipt in this case.
+8. three-plane/full-scan must expose channel compliance telemetry:
+   - `protocol_feedback_reply_channel_status`
+   - `error_code`
+   - `primary_channel_root`
+   - `non_standard_primary_refs`
+   - `mirror_reference_refs`
+   - `split_receipt_requiredized`
+9. Protocol layer remains business-data neutral:
+   - channel contract fields must remain generic and must not include tenant/business constants.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1449,6 +1488,9 @@ Mandatory semantics:
 33. CI required-validator set synchronizer for requiredized discovery contracts
 34. required-contract coverage engine extension for discovery-subset hard threshold (`min_discovery_required_coverage`)
 35. actor-session multibinding storage serializer + CAS write precondition + append-only rebind receipt writer surfaces
+36. protocol-feedback canonical reply-channel validator + primary/mirror channel classifier surfaces
+37. sidecar blocking-prefix synchronizer surfaces (`IP-PFB-*` inclusion in strict lanes)
+38. split-receipt requiredization bridge when protocol-feedback activity is detected in strict operations
 
 ### 6.2 New validators/tools (validator id and tool id)
 
@@ -1487,6 +1529,7 @@ Mandatory semantics:
 33. `validate_discovery_requiredization`
 34. `validate_required_contract_coverage` (discovery-subset threshold mode)
 35. `validate_actor_session_multibinding_concurrency`
+36. `validate_protocol_feedback_reply_channel`
 
 ### 6.3 Gate wiring surfaces
 
@@ -1570,6 +1613,14 @@ Actor-session multibinding concurrency closure (P0) must be wired in the same su
 4. append-only rebind receipt emission + linkage visibility in three-plane/full-scan outputs.
 5. required-gates fail-closed on `IP-ASB-MB-*` under strict/release lanes.
 
+Protocol-feedback canonical reply-channel closure (P0) must be wired in the same surfaces through:
+
+1. canonical path validation for protocol-feedback primary reply channel.
+2. fail-closed strict-lane guard when non-standard path is promoted as primary.
+3. sidecar blocking-prefix extension to include `IP-PFB-*`.
+4. split-receipt requiredization bridge when protocol-feedback activity evidence exists.
+5. machine-readable channel compliance fields in three-plane/full-scan surfaces.
+
 Capability-fit self-drive optimization enhancement (P1) should be wired in the same surfaces through:
 
 1. periodic capability inventory snapshot and fit-matrix generation.
@@ -1591,7 +1642,7 @@ Kernel extension requirement:
 ### 6.3A P0 mandatory confirmation matrix (multi-agent x multi-identity)
 
 This subsection is a no-ambiguity lock for architect and auditor communication.
-The ten items below are mandatory protocol targets and must be treated as one closure set.
+The eleven items below are mandatory protocol targets and must be treated as one closure set.
 
 | Confirm item | Mandatory protocol statement | Acceptance signal (must be explicit) | Current baseline interpretation |
 | --- | --- | --- | --- |
@@ -1605,12 +1656,13 @@ The ten items below are mandatory protocol targets and must be treated as one cl
 | C8 | Governance-boundary lane must be machine-enforced (`base-repo mutation boundary` + `feedback SSOT archival` + `readiness scope arbitration` + `reply-stamp missing-turn counter`). | required gates are wired and replay evidence proves docs-only pass, protocol/code mutation fail, mirror-only fail, no-scope ambiguity fail, and zero missing-stamp turns for closure claim. | Closure replayed and audit-passed (`ASB-RQ-037/038/039/040`, `HOTFIX-P0-004/005/006/007`, review `16.6.8` + `16.7.17` + `16.7.18`). |
 | C9 | Strict execution and reply channels must share one coherent identity tuple in dual-catalog lanes (no command/reply drift). | command-target identity/catalog tuple and reply identity stamp tuple are machine-compared; mismatch is fail-closed with blocker receipt. | validator + six-surface wiring landed (`ASB-RQ-067`, `IP-ASB-CTX-*`); replay closure pending audit verdict. |
 | C10 | Same-actor binding writes must be multi-session safe and conflict-controlled (no single-record overwrite semantics). | canonical actor binding write path is `actor_id + session_id` keyed with CAS precondition and append-only receipt; non-activation write attempts fail-closed. | docs-level contract declared (`5.8.15`, `ASB-RQ-071..074`); implementation + replay pending audit verdict. |
+| C11 | Protocol-feedback reply channel must be canonical and strict-lane fail-closed; split-receipt cannot silently skip under feedback activity. | canonical reply-channel gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge are all wired and replayed in strict operations. | docs-level contract declared (`5.8.16`, `ASB-RQ-075..078`); implementation + replay pending audit verdict. |
 
 Hard interpretation rules:
 
-1. C1~C10 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
+1. C1~C11 are jointly mandatory for P0 closure; partial completion cannot be labeled as implementation complete.
 2. Narrative claims cannot override section 6.4 ledger states and section 6.5 unlock formula.
-3. C1~C10 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
+3. C1~C11 must all be `DONE` before this topic can be declared runtime-closed; authoritative closure state is tracked in section `6.4A` + review ledger latest audit verdicts.
 
 ### 6.3B Status synchronization note (2026-03-01, anti-drift)
 
@@ -1714,6 +1766,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-072 | actor binding mutation must enforce CAS-style precondition and fail-closed on stale compare token | activation binding writer + validator | P0 | SPEC_READY | `IP-ASB-MB-002/003` semantics declared; implementation pending |
 | ASB-RQ-073 | canonical actor binding mutation must be activation-only and append-only rebind receipt must be mandatory | creator/readiness/scan mutation boundary + receipt writer surfaces | P0 | SPEC_READY | `IP-ASB-MB-004/005` semantics declared; implementation pending |
 | ASB-RQ-074 | required gate `validate_actor_session_multibinding_concurrency.py` must be wired across creator/e2e/readiness/full-scan/three-plane/CI and expose machine-readable conflict telemetry | six-surface + CI required-gates wiring | P0 | SPEC_READY | validator/tool row declared; implementation pending |
+| ASB-RQ-075 | protocol-layer feedback must use canonical reply-channel root and whitelist subpaths; non-standard primary channel is forbidden in strict operations | protocol-feedback reply writer/reader + channel classifier surfaces | P0 | SPEC_READY | contract declared in `5.8.16`; implementation pending |
+| ASB-RQ-076 | required gate `validate_protocol_feedback_reply_channel.py` must enforce canonical primary channel + mirror-reference constraints across creator/e2e/readiness/full-scan/three-plane/CI | six-surface + CI required-gates wiring | P0 | SPEC_READY | `IP-PFB-CH-001..003` semantics declared; implementation pending |
+| ASB-RQ-077 | sidecar escalation blocking prefixes must include `IP-PFB-*` in strict operations so protocol-feedback channel violations become fail-closed | `validate_protocol_feedback_sidecar_contract.py` + readiness/CI sidecar adapter surfaces | P0 | SPEC_READY | blocking-prefix extension declared in `5.8.16`; implementation pending |
+| ASB-RQ-078 | split-receipt requiredization bridge must auto-promote split contract to required when protocol-feedback activity exists; strict operations must not return `SKIPPED_NOT_REQUIRED` in this case | split-receipt validator + requiredization bridge + strict lane orchestration surfaces | P0 | SPEC_READY | bridge semantics declared in `5.8.16`; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1747,6 +1803,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-069 | `SPEC_READY -> IMPL_READY (P1)` | layer-intent resolver + validator landed (`FIX-025`) and pass-through closure landed (`FIX-026`); replay closure pending |
 | ASB-RQ-070 | `SPEC_READY -> GATE_READY (P0)` | default fallback switched to `instance`; protocol escalation now requires trigger evidence; regression samples (`instance/protocol/ambiguous`) are machine-validated in layer-intent gate (`FIX-027`) |
 | ASB-RQ-071 / ASB-RQ-072 / ASB-RQ-073 / ASB-RQ-074 | `NEW (SPEC_READY, P0)` | same-actor multi-session rebind overwrite closure contract declared (`5.8.15`), review intake + cross-validated evidence pending implementation replay (`16.8.14`) |
+| ASB-RQ-075 / ASB-RQ-076 / ASB-RQ-077 / ASB-RQ-078 | `NEW (SPEC_READY, P0)` | protocol-feedback canonical reply-channel + sidecar prefix extension + split-receipt requiredization bridge declared (`5.8.16`), review intake + replay pending (`16.8.15`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
