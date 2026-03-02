@@ -4543,9 +4543,9 @@ Layer declaration:
 
 1. protocol-only; no business constants introduced.
 
-#### 16.8.21 FIX-029..FIX-032 implementation lane (2026-03-02, protocol-only)
+#### 16.8.22 Architect self-check snapshot after FIX-029..032 implementation (2026-03-02, protocol-only)
 
-Status: `DONE / PENDING_REPLAY` (code landed; independent audit replay pending).
+Status: `SELF_CHECK_RECORDED / WAITING_REAUDIT` (authoritative audit verdict remains `16.8.21 = REJECT`).
 
 Commit anchor:
 
@@ -4617,7 +4617,7 @@ Evidence artifacts:
 
 Audit note:
 
-1. This subsection only upgrades architect implementation state to `DONE / PENDING_REPLAY`.
+1. This subsection is architect-side evidence only; it does not override section `16.8.21` audit verdict.
 2. Final `PASS/REJECT` remains owned by independent audit replay package.
 
 #### 16.8.19 Roundtable intake: protocol inquiry follow-up chain (2026-03-02, docs-only)
