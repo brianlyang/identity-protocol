@@ -497,6 +497,54 @@ PY
     --report "$UPGRADE_REPORT" \
     --operation e2e
 
+  echo "[26.32/30][$ID] validate protocol-feedback canonical reply channel gate (FIX-029)"
+  python3 scripts/validate_protocol_feedback_reply_channel.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --operation e2e \
+    --force-check \
+    --json-only
+
+  echo "[26.33/30][$ID] validate protocol-feedback bootstrap readiness gate (FIX-030)"
+  bootstrap_cmd=(python3 scripts/validate_protocol_feedback_bootstrap_ready.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --force-check --json-only)
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    bootstrap_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    bootstrap_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    bootstrap_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${bootstrap_cmd[@]}"
+
+  echo "[26.34/30][$ID] validate protocol-entry candidate bridge gate (FIX-031)"
+  candidate_cmd=(python3 scripts/validate_protocol_entry_candidate_bridge.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --force-check --json-only)
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    candidate_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    candidate_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    candidate_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${candidate_cmd[@]}"
+
+  echo "[26.345/30][$ID] validate protocol inquiry follow-up chain gate (FIX-032)"
+  inquiry_cmd=(python3 scripts/validate_protocol_inquiry_followup_chain.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --force-check --json-only)
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    inquiry_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    inquiry_cmd+=(--expected-work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    inquiry_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${inquiry_cmd[@]}"
+
   echo "[26.35/30][$ID] validate protocol-feedback sidecar escalation contract (A/B coexistence)"
   python3 scripts/validate_protocol_feedback_sidecar_contract.py \
     --identity-id "$ID" \

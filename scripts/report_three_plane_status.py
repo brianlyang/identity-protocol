@@ -812,6 +812,128 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_split != 0 or split_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    reply_channel_cmd = [
+        "python3",
+        "scripts/validate_protocol_feedback_reply_channel.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--force-check",
+        "--json-only",
+    ]
+    rc_reply_channel, out_reply_channel, err_reply_channel = _run(reply_channel_cmd)
+    reply_channel_payload = _parse_json_payload(out_reply_channel) or {}
+    validators["protocol_feedback_reply_channel"] = {
+        "rc": rc_reply_channel,
+        "ok": rc_reply_channel == 0,
+        "out": out_reply_channel,
+        "err": err_reply_channel,
+    }
+    reply_channel_status = str(reply_channel_payload.get("protocol_feedback_reply_channel_status", "")).strip().upper()
+    if rc_reply_channel != 0 or reply_channel_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    bootstrap_cmd = [
+        "python3",
+        "scripts/validate_protocol_feedback_bootstrap_ready.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--force-check",
+        "--json-only",
+    ]
+    if layer_intent_text:
+        bootstrap_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        bootstrap_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        bootstrap_cmd.extend(["--source-layer", expected_source_layer])
+    rc_bootstrap, out_bootstrap, err_bootstrap = _run(bootstrap_cmd)
+    bootstrap_payload = _parse_json_payload(out_bootstrap) or {}
+    validators["protocol_feedback_bootstrap_ready"] = {
+        "rc": rc_bootstrap,
+        "ok": rc_bootstrap == 0,
+        "out": out_bootstrap,
+        "err": err_bootstrap,
+    }
+    bootstrap_status = str(bootstrap_payload.get("protocol_feedback_bootstrap_status", "")).strip().upper()
+    if rc_bootstrap != 0 or bootstrap_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    candidate_cmd = [
+        "python3",
+        "scripts/validate_protocol_entry_candidate_bridge.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--force-check",
+        "--json-only",
+    ]
+    if layer_intent_text:
+        candidate_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        candidate_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        candidate_cmd.extend(["--source-layer", expected_source_layer])
+    rc_candidate, out_candidate, err_candidate = _run(candidate_cmd)
+    candidate_payload = _parse_json_payload(out_candidate) or {}
+    validators["protocol_entry_candidate_bridge"] = {
+        "rc": rc_candidate,
+        "ok": rc_candidate == 0,
+        "out": out_candidate,
+        "err": err_candidate,
+    }
+    candidate_status = str(candidate_payload.get("protocol_entry_candidate_status", "")).strip().upper()
+    if rc_candidate != 0 or candidate_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    inquiry_cmd = [
+        "python3",
+        "scripts/validate_protocol_inquiry_followup_chain.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        "three-plane",
+        "--force-check",
+        "--json-only",
+    ]
+    if layer_intent_text:
+        inquiry_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        inquiry_cmd.extend(["--expected-work-layer", expected_work_layer])
+    if expected_source_layer:
+        inquiry_cmd.extend(["--source-layer", expected_source_layer])
+    rc_inquiry, out_inquiry, err_inquiry = _run(inquiry_cmd)
+    inquiry_payload = _parse_json_payload(out_inquiry) or {}
+    validators["protocol_inquiry_followup_chain"] = {
+        "rc": rc_inquiry,
+        "ok": rc_inquiry == 0,
+        "out": out_inquiry,
+        "err": err_inquiry,
+    }
+    inquiry_status = str(inquiry_payload.get("protocol_inquiry_followup_chain_status", "")).strip().upper()
+    if rc_inquiry != 0 or inquiry_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_semantic_iso, out_semantic_iso, err_semantic_iso = _run(
         [
             "python3",
@@ -1386,6 +1508,70 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "protocol_actions_ref": split_payload.get("protocol_actions_ref", ""),
             "evidence_index_ref": split_payload.get("evidence_index_ref", ""),
             "stale_reasons": split_payload.get("stale_reasons", []),
+        },
+        "protocol_feedback_reply_channel": {
+            "protocol_feedback_reply_channel_status": reply_channel_payload.get("protocol_feedback_reply_channel_status"),
+            "error_code": reply_channel_payload.get("error_code", ""),
+            "required_contract": reply_channel_payload.get("required_contract"),
+            "auto_required_signal": reply_channel_payload.get("auto_required_signal"),
+            "primary_channel_root": reply_channel_payload.get("primary_channel_root", ""),
+            "protocol_feedback_activity_detected": reply_channel_payload.get("protocol_feedback_activity_detected"),
+            "protocol_feedback_activity_refs": reply_channel_payload.get("protocol_feedback_activity_refs", []),
+            "non_standard_primary_refs": reply_channel_payload.get("non_standard_primary_refs", []),
+            "mirror_reference_refs": reply_channel_payload.get("mirror_reference_refs", []),
+            "split_receipt_requiredized": reply_channel_payload.get("split_receipt_requiredized"),
+            "split_receipt_status": reply_channel_payload.get("split_receipt_status", ""),
+            "split_receipt_error_code": reply_channel_payload.get("split_receipt_error_code", ""),
+            "stale_reasons": reply_channel_payload.get("stale_reasons", []),
+        },
+        "protocol_feedback_bootstrap_ready": {
+            "protocol_feedback_bootstrap_status": bootstrap_payload.get("protocol_feedback_bootstrap_status"),
+            "protocol_feedback_bootstrap_mode": bootstrap_payload.get("protocol_feedback_bootstrap_mode", ""),
+            "error_code": bootstrap_payload.get("error_code", ""),
+            "required_contract": bootstrap_payload.get("required_contract"),
+            "auto_required_signal": bootstrap_payload.get("auto_required_signal"),
+            "resolved_work_layer": bootstrap_payload.get("resolved_work_layer", ""),
+            "protocol_triggered": bootstrap_payload.get("protocol_triggered"),
+            "protocol_lane_selected": bootstrap_payload.get("protocol_lane_selected"),
+            "bootstrap_created_paths": bootstrap_payload.get("bootstrap_created_paths", []),
+            "bootstrap_receipt_path": bootstrap_payload.get("bootstrap_receipt_path", ""),
+            "feedback_root": bootstrap_payload.get("feedback_root", ""),
+            "missing_required_dirs": bootstrap_payload.get("missing_required_dirs", []),
+            "stale_reasons": bootstrap_payload.get("stale_reasons", []),
+        },
+        "protocol_entry_candidate_bridge": {
+            "protocol_entry_candidate_status": candidate_payload.get("protocol_entry_candidate_status"),
+            "protocol_entry_decision": candidate_payload.get("protocol_entry_decision", ""),
+            "candidate_reason": candidate_payload.get("candidate_reason", ""),
+            "candidate_confidence": candidate_payload.get("candidate_confidence"),
+            "clarification_required": candidate_payload.get("clarification_required"),
+            "clarification_questions": candidate_payload.get("clarification_questions", []),
+            "candidate_seed_outbox_ref": candidate_payload.get("candidate_seed_outbox_ref", ""),
+            "candidate_seed_index_ref": candidate_payload.get("candidate_seed_index_ref", ""),
+            "candidate_receipt_path": candidate_payload.get("candidate_receipt_path", ""),
+            "candidate_seed_path": candidate_payload.get("candidate_seed_path", ""),
+            "candidate_promotion_status": candidate_payload.get("candidate_promotion_status", ""),
+            "error_code": candidate_payload.get("error_code", ""),
+            "stale_reasons": candidate_payload.get("stale_reasons", []),
+        },
+        "protocol_inquiry_followup_chain": {
+            "protocol_inquiry_followup_chain_status": inquiry_payload.get("protocol_inquiry_followup_chain_status"),
+            "candidate_decision": inquiry_payload.get("candidate_decision", ""),
+            "candidate_status": inquiry_payload.get("candidate_status", ""),
+            "inquiry_state": inquiry_payload.get("inquiry_state", ""),
+            "followup_question_set": inquiry_payload.get("followup_question_set", []),
+            "signal_origin": inquiry_payload.get("signal_origin", ""),
+            "sanitization_paraphrase_ref": inquiry_payload.get("sanitization_paraphrase_ref", ""),
+            "protocol_feedback_seed_ref": inquiry_payload.get("protocol_feedback_seed_ref", ""),
+            "protocol_feedback_index_ref": inquiry_payload.get("protocol_feedback_index_ref", ""),
+            "followup_round_count": inquiry_payload.get("followup_round_count"),
+            "max_followup_rounds": inquiry_payload.get("max_followup_rounds"),
+            "latest_evidence_age_hours": inquiry_payload.get("latest_evidence_age_hours"),
+            "evidence_ttl_hours": inquiry_payload.get("evidence_ttl_hours"),
+            "inquiry_requiredization_triggered": inquiry_payload.get("inquiry_requiredization_triggered"),
+            "inquiry_requiredization_receipt_path": inquiry_payload.get("inquiry_requiredization_receipt_path", ""),
+            "error_code": inquiry_payload.get("error_code", ""),
+            "stale_reasons": inquiry_payload.get("stale_reasons", []),
         },
         "protocol_vendor_semantic_isolation": {
             "protocol_vendor_semantic_isolation_status": semantic_iso_payload.get("protocol_vendor_semantic_isolation_status"),

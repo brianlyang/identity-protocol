@@ -18,6 +18,7 @@ ERR_TRIGGER_FIELD_INVALID = "IP-SPLIT-002"
 ERR_SSOT_PATH_MISSING = "IP-SPLIT-003"
 ERR_MIXED_LANE = "IP-SPLIT-004"
 ERR_PROTOCOL_SANITIZATION = "IP-SPLIT-005"
+ERR_REQUIREDIZATION_MISSING_UNDER_ACTIVITY = "IP-PFB-CH-006"
 
 LANE_INSTANCE_DECL = "instance_lane=business_execution"
 LANE_PROTOCOL_DECL = "protocol_lane=governance_feedback"
@@ -50,6 +51,8 @@ INSTANCE_LANE_HINTS = (
 SENSITIVE_RE = re.compile(
     r"(?i)(tenant[_-]?id|customer[_-]?id|client[_-]?id|merchant[_-]?id|sku[_-]?id|product[_-]?id|shop[_-]?id|order[_-]?id)"
 )
+
+STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -86,6 +89,25 @@ def _split_artifacts_present(pack_root: Path) -> bool:
     if not outbox.exists():
         return False
     return any(p.is_file() for p in outbox.glob("SPLIT_RECEIPT_*"))
+
+
+def _protocol_feedback_activity(pack_root: Path) -> list[str]:
+    root = (pack_root / "runtime" / "protocol-feedback").resolve()
+    if not root.exists():
+        return []
+    refs: list[str] = []
+    for sub in ("outbox-to-protocol", "evidence-index", "upgrade-proposals"):
+        d = (root / sub).resolve()
+        if not d.exists():
+            continue
+        for p in sorted(d.rglob("*")):
+            if not p.is_file():
+                continue
+            try:
+                refs.append(p.relative_to(root).as_posix())
+            except Exception:
+                refs.append(str(p))
+    return refs
 
 
 def _coerce_bool(v: Any) -> bool | None:
@@ -183,7 +205,9 @@ def main() -> int:
     trigger_contract = _select_trigger_contract(task)
     required = contract_required(split_contract) if split_contract else False
     auto_required_signal = False
-    if not required and (args.receipt.strip() or _split_artifacts_present(pack_path)):
+    protocol_feedback_activity_refs = _protocol_feedback_activity(pack_path)
+    protocol_feedback_activity_detected = bool(protocol_feedback_activity_refs)
+    if not required and (args.receipt.strip() or _split_artifacts_present(pack_path) or protocol_feedback_activity_detected):
         required = True
         auto_required_signal = True
 
@@ -194,6 +218,9 @@ def main() -> int:
         "operation": args.operation,
         "required_contract": required,
         "auto_required_signal": auto_required_signal,
+        "protocol_feedback_activity_detected": protocol_feedback_activity_detected,
+        "protocol_feedback_activity_refs": protocol_feedback_activity_refs,
+        "split_receipt_requiredized": required,
         "instance_protocol_split_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "receipt_path": "",
@@ -224,6 +251,12 @@ def main() -> int:
         pattern = "runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_*.json"
     receipt_path = resolve_report_path(report=args.receipt, pattern=pattern, pack_root=pack_path)
     if receipt_path is None:
+        if protocol_feedback_activity_detected and args.operation in STRICT_OPERATIONS:
+            payload["instance_protocol_split_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_REQUIREDIZATION_MISSING_UNDER_ACTIVITY
+            payload["stale_reasons"] = ["split_receipt_requiredization_missing_under_activity"]
+            _emit(payload, json_only=args.json_only)
+            return 1
         payload["instance_protocol_split_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_SPLIT_NOTICE_MISSING
         payload["stale_reasons"] = ["split_receipt_not_found"]
@@ -371,4 +404,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

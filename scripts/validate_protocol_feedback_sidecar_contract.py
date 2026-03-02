@@ -26,7 +26,7 @@ REQ_CONTRACT_KEYS = (
     "blocking_error_prefixes",
     "escalation_policy",
 )
-DEFAULT_BLOCKING_PREFIXES = ("IP-WRB-", "IP-SEM-")
+DEFAULT_BLOCKING_PREFIXES = ("IP-WRB-", "IP-SEM-", "IP-PFB-")
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 
@@ -269,6 +269,25 @@ def main() -> int:
     ns_result, ns_payload = _validator_payload(cmd=ns_cmd, status_key="vendor_namespace_status", default_status=STATUS_FAIL_REQUIRED)
     wb_result, wb_payload = _validator_payload(cmd=wb_cmd, status_key="writeback_continuity_status", default_status=STATUS_FAIL_REQUIRED)
     post_result, post_payload = _validator_payload(cmd=post_cmd, status_key="post_execution_mandatory_status", default_status=STATUS_FAIL_REQUIRED)
+    reply_channel_cmd = [
+        "python3",
+        "scripts/validate_protocol_feedback_reply_channel.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        args.repo_catalog,
+        "--operation",
+        args.operation,
+        "--force-check",
+        "--json-only",
+    ]
+    reply_channel_result, reply_channel_payload = _validator_payload(
+        cmd=reply_channel_cmd,
+        status_key="protocol_feedback_reply_channel_status",
+        default_status=STATUS_FAIL_REQUIRED,
+    )
 
     payload["track_a"] = {
         "writeback_continuity_status": wb_result["status"],
@@ -285,10 +304,14 @@ def main() -> int:
         "semantic_error_code": sem_result["error_code"],
         "vendor_namespace_status": ns_result["status"],
         "vendor_namespace_error_code": ns_result["error_code"],
+        "protocol_feedback_reply_channel_status": reply_channel_result["status"],
+        "protocol_feedback_reply_channel_error_code": reply_channel_result["error_code"],
         "semantic_required_contract": sem_payload.get("required_contract"),
         "namespace_required_contract": ns_payload.get("required_contract"),
+        "reply_channel_required_contract": reply_channel_payload.get("required_contract"),
         "semantic_auto_required_signal": sem_payload.get("auto_required_signal"),
         "namespace_auto_required_signal": ns_payload.get("auto_required_signal"),
+        "reply_channel_auto_required_signal": reply_channel_payload.get("auto_required_signal"),
     }
 
     p0_violations: list[dict[str, Any]] = []
@@ -315,6 +338,7 @@ def main() -> int:
     _append("track_a", "validate_post_execution_mandatory", post_result)
     _append("track_b", "validate_semantic_routing_guard", sem_result)
     _append("track_b", "validate_vendor_namespace_separation", ns_result)
+    _append("track_b", "validate_protocol_feedback_reply_channel", reply_channel_result)
 
     payload["p0_violations"] = p0_violations
     blocking_codes = sorted({str(v.get("error_code", "")).strip() for v in p0_violations if str(v.get("error_code", "")).strip()})

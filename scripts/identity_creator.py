@@ -1485,6 +1485,62 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_protocol_feedback_reply_channel.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_entry_candidate_bridge.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_inquiry_followup_chain.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--force-check",
+                "--json-only",
+            ],
+            [
+                "python3",
                 "scripts/validate_protocol_feedback_sidecar_contract.py",
                 "--catalog",
                 args.catalog,
@@ -1569,6 +1625,9 @@ def main() -> int:
                     "scripts/validate_reply_identity_context_first_line.py",
                     "scripts/validate_send_time_reply_gate.py",
                     "scripts/validate_execution_reply_identity_coherence.py",
+                    "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                    "scripts/validate_protocol_entry_candidate_bridge.py",
+                    "scripts/validate_protocol_inquiry_followup_chain.py",
                 }:
                     cmd.extend(["--layer-intent-text", layer_intent_text])
         if expected_work_layer:
@@ -1580,6 +1639,9 @@ def main() -> int:
                     "scripts/validate_reply_identity_context_first_line.py",
                     "scripts/validate_send_time_reply_gate.py",
                     "scripts/validate_execution_reply_identity_coherence.py",
+                    "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                    "scripts/validate_protocol_entry_candidate_bridge.py",
+                    "scripts/validate_protocol_inquiry_followup_chain.py",
                 }:
                     cmd.extend(["--expected-work-layer", expected_work_layer])
         if expected_source_layer:
@@ -1593,6 +1655,12 @@ def main() -> int:
                     "scripts/validate_execution_reply_identity_coherence.py",
                 }:
                     cmd.extend(["--expected-source-layer", expected_source_layer])
+                if cmd[1] in {
+                    "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                    "scripts/validate_protocol_entry_candidate_bridge.py",
+                    "scripts/validate_protocol_inquiry_followup_chain.py",
+                }:
+                    cmd.extend(["--source-layer", expected_source_layer])
         for cmd in checks:
             rc = _run(cmd)
             if rc != 0:

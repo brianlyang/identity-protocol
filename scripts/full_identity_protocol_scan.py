@@ -155,6 +155,10 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "capability_fit_review_trigger",
             "capability_fit_matrix_builder",
             "vendor_namespace_separation",
+            "protocol_feedback_reply_channel",
+            "protocol_feedback_bootstrap_ready",
+            "protocol_entry_candidate_bridge",
+            "protocol_inquiry_followup_chain",
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
             "protocol_feedback_ssot_archival",
@@ -790,6 +794,62 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "protocol_feedback_reply_channel": [
+                    "python3",
+                    "scripts/validate_protocol_feedback_reply_channel.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--force-check",
+                    "--json-only",
+                ],
+                "protocol_feedback_bootstrap_ready": [
+                    "python3",
+                    "scripts/validate_protocol_feedback_bootstrap_ready.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--force-check",
+                    "--json-only",
+                ],
+                "protocol_entry_candidate_bridge": [
+                    "python3",
+                    "scripts/validate_protocol_entry_candidate_bridge.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--force-check",
+                    "--json-only",
+                ],
+                "protocol_inquiry_followup_chain": [
+                    "python3",
+                    "scripts/validate_protocol_inquiry_followup_chain.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--force-check",
+                    "--json-only",
+                ],
                 "protocol_feedback_sidecar": [
                     "python3",
                     "scripts/validate_protocol_feedback_sidecar_contract.py",
@@ -904,6 +964,9 @@ def main() -> int:
                     "reply_identity_context_first_line",
                     "send_time_reply_gate",
                     "execution_reply_identity_coherence",
+                    "protocol_feedback_bootstrap_ready",
+                    "protocol_entry_candidate_bridge",
+                    "protocol_inquiry_followup_chain",
                 ):
                     checks[key].extend(["--layer-intent-text", layer_intent_text])
             if expected_work_layer:
@@ -912,6 +975,9 @@ def main() -> int:
                     "reply_identity_context_first_line",
                     "send_time_reply_gate",
                     "execution_reply_identity_coherence",
+                    "protocol_feedback_bootstrap_ready",
+                    "protocol_entry_candidate_bridge",
+                    "protocol_inquiry_followup_chain",
                 ):
                     checks[key].extend(["--expected-work-layer", expected_work_layer])
             if expected_source_layer:
@@ -922,6 +988,12 @@ def main() -> int:
                     "execution_reply_identity_coherence",
                 ):
                     checks[key].extend(["--expected-source-layer", expected_source_layer])
+                for key in (
+                    "protocol_feedback_bootstrap_ready",
+                    "protocol_entry_candidate_bridge",
+                    "protocol_inquiry_followup_chain",
+                ):
+                    checks[key].extend(["--source-layer", expected_source_layer])
             if not is_fixture:
                 checks["prompt_quality"] = [
                     "python3",
@@ -1635,6 +1707,75 @@ def main() -> int:
                     ):
                         if k in coherence_doc:
                             check_payload[k] = coherence_doc.get(k)
+                if name == "protocol_feedback_reply_channel":
+                    channel_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_feedback_reply_channel_status",
+                        "error_code",
+                        "primary_channel_root",
+                        "protocol_feedback_activity_detected",
+                        "protocol_feedback_activity_refs",
+                        "non_standard_primary_refs",
+                        "mirror_reference_refs",
+                        "split_receipt_requiredized",
+                        "split_receipt_status",
+                        "split_receipt_error_code",
+                        "stale_reasons",
+                    ):
+                        if k in channel_doc:
+                            check_payload[k] = channel_doc.get(k)
+                if name == "protocol_feedback_bootstrap_ready":
+                    boot_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_feedback_bootstrap_status",
+                        "protocol_feedback_bootstrap_mode",
+                        "bootstrap_created_paths",
+                        "bootstrap_receipt_path",
+                        "resolved_work_layer",
+                        "protocol_triggered",
+                        "protocol_lane_selected",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in boot_doc:
+                            check_payload[k] = boot_doc.get(k)
+                if name == "protocol_entry_candidate_bridge":
+                    candidate_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_entry_candidate_status",
+                        "protocol_entry_decision",
+                        "candidate_reason",
+                        "candidate_confidence",
+                        "clarification_required",
+                        "clarification_questions",
+                        "candidate_seed_outbox_ref",
+                        "candidate_seed_index_ref",
+                        "candidate_promotion_status",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in candidate_doc:
+                            check_payload[k] = candidate_doc.get(k)
+                if name == "protocol_inquiry_followup_chain":
+                    inquiry_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_inquiry_followup_chain_status",
+                        "inquiry_state",
+                        "followup_question_set",
+                        "signal_origin",
+                        "sanitization_paraphrase_ref",
+                        "protocol_feedback_seed_ref",
+                        "protocol_feedback_index_ref",
+                        "followup_round_count",
+                        "max_followup_rounds",
+                        "evidence_ttl_hours",
+                        "inquiry_requiredization_triggered",
+                        "inquiry_requiredization_receipt_path",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in inquiry_doc:
+                            check_payload[k] = inquiry_doc.get(k)
                 item["checks"][name] = check_payload
 
             env = os.environ.copy()
@@ -1647,6 +1788,9 @@ def main() -> int:
                     iid,
                     "--scope",
                     scan_scope_hint,
+                    *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
+                    *(["--expected-work-layer", expected_work_layer] if expected_work_layer else []),
+                    *(["--expected-source-layer", expected_source_layer] if expected_source_layer else []),
                     *(["--with-docs-contract"] if args.with_docs_contract else []),
                 ],
                 cwd=repo_root,
