@@ -21,6 +21,7 @@ STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_REPLY_FIRST_LINE = "IP-ASB-STAMP-SESSION-001"
+ERR_INVALID_EXPECTED_SOURCE_LAYER = "IP-SOURCE-LAYER-001"
 STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
 
 
@@ -299,6 +300,26 @@ def main() -> int:
             error_code = ERR_REPLY_FIRST_LINE
 
     parsed_first: dict[str, Any] = parse_identity_context_stamp(first_lines[0]) if first_lines else {}
+    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
+    expected_source_layer_input = str(args.expected_source_layer or "").strip().lower()
+    expected_source_layer_input_invalid = bool(
+        expected_source_layer_input and expected_source_layer_input not in ALLOWED_SOURCE_LAYERS
+    )
+    expected_source_layer_validation_status = STATUS_PASS_REQUIRED
+    expected_source_layer_validation_error_code = ""
+    source_layer_downgrade_applied = False
+    if expected_source_layer_input_invalid:
+        if strict_format_enforced:
+            stale_reasons.append("expected_source_layer_invalid_input")
+            if not error_code:
+                error_code = ERR_INVALID_EXPECTED_SOURCE_LAYER
+            expected_source_layer_validation_status = STATUS_FAIL_REQUIRED
+            expected_source_layer_validation_error_code = ERR_INVALID_EXPECTED_SOURCE_LAYER
+        else:
+            expected_source_layer_validation_status = "WARN_NON_BLOCKING"
+            expected_source_layer_validation_error_code = ERR_INVALID_EXPECTED_SOURCE_LAYER
+            source_layer_downgrade_applied = True
+
     layer_intent = resolve_layer_intent(
         explicit_work_layer=str(args.expected_work_layer or "").strip()
         or str(stamp_doc.get("resolved_work_layer", "")).strip(),
@@ -315,6 +336,8 @@ def main() -> int:
         expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
         expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+    if expected_source_layer_input_invalid and expected_source_layer != expected_source_layer_input:
+        source_layer_downgrade_applied = True
 
     # Optional identity mismatch signal if first line exists and parsable.
     if not error_code and first_lines:
@@ -323,7 +346,6 @@ def main() -> int:
             stale_reasons.append("reply_first_line_identity_mismatch")
             error_code = ERR_REPLY_FIRST_LINE
 
-    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
     protocol_triggered = bool(layer_intent.get("protocol_triggered", False))
     protocol_trigger_reasons = list(layer_intent.get("protocol_trigger_reasons") or [])
     has_layer_context = bool(parsed_first.get("_has_layer_context", False)) if first_lines else False
@@ -406,7 +428,12 @@ def main() -> int:
         "layer_context_present": has_layer_context,
         "expected_work_layer": expected_work_layer,
         "reply_first_line_work_layer": parsed_work_layer,
+        "expected_source_layer_input": expected_source_layer_input,
         "expected_source_layer": expected_source_layer,
+        "expected_source_layer_effective": expected_source_layer,
+        "expected_source_layer_validation_status": expected_source_layer_validation_status,
+        "expected_source_layer_validation_error_code": expected_source_layer_validation_error_code,
+        "source_layer_downgrade_applied": source_layer_downgrade_applied,
         "reply_first_line_source_layer": parsed_source_layer,
         "lock_boundary_enforced": lock_boundary_enforced,
         "expected_lock_state": ctx.lock_state,
@@ -424,13 +451,16 @@ def main() -> int:
         first_line_identity = ""
         if first_lines:
             first_line_identity = str(parsed_first.get("identity_id", "")).strip()
+        next_action = "emit_identity_context_first_line_then_retry"
+        if error_code == ERR_INVALID_EXPECTED_SOURCE_LAYER:
+            next_action = "use_valid_expected_source_layer(project|global|env|auto)_then_retry"
         receipt = blocker_receipt(
-            error_code=ERR_REPLY_FIRST_LINE,
+            error_code=error_code or ERR_REPLY_FIRST_LINE,
             expected_identity_id=ctx.identity_id,
             actual_identity_id=first_line_identity or "MISSING_STAMP",
             source_domain=ctx.source_domain,
             resolver_ref=f"{catalog_path.parent}/session/actors",
-            next_action="emit_identity_context_first_line_then_retry",
+            next_action=next_action,
         )
         _emit_blocker(receipt_path, receipt)
         payload["blocker_receipt"] = receipt

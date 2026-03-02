@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
     load_json,
@@ -37,6 +38,12 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
     "scripts/validate_vendor_namespace_separation.py": "vendor_namespace_status",
     "scripts/validate_protocol_feedback_sidecar_contract.py": "sidecar_contract_status",
+}
+PROTOCOL_GOVERNANCE_TARGET_NAMES = {
+    "semantic_routing_guard",
+    "instance_protocol_split_receipt",
+    "vendor_namespace_separation",
+    "protocol_feedback_sidecar",
 }
 
 
@@ -135,7 +142,7 @@ def _classify_from_payload(
     if validator_status == STATUS_SKIPPED_NOT_REQUIRED:
         return STATUS_SKIPPED_NOT_REQUIRED, REASON_SKIPPED
     if validator_status == STATUS_FAIL_REQUIRED:
-        return STATUS_FAIL_REQUIRED, REASON_FAIL
+        return (STATUS_FAIL_REQUIRED if required else STATUS_FAIL_OPTIONAL), REASON_FAIL
     if validator_status == "WARN_NON_BLOCKING":
         return (STATUS_FAIL_REQUIRED if required else STATUS_FAIL_OPTIONAL), REASON_FAIL
     return _classify(required, fallback_rc)
@@ -148,6 +155,10 @@ def _run_validator(
     *,
     repo_catalog: str,
     operation: str,
+    expected_work_layer: str,
+    expected_source_layer: str,
+    layer_intent_text: str,
+    run_id: str,
     extra_args: tuple[str, ...],
 ) -> tuple[int, str, str]:
     cmd = ["python3", script, "--catalog", catalog, "--identity-id", identity_id]
@@ -160,6 +171,20 @@ def _run_validator(
         cmd += ["--operation", operation, "--repo-catalog", repo_catalog]
     if script == "scripts/validate_protocol_feedback_sidecar_contract.py":
         cmd += ["--repo-catalog", repo_catalog, "--operation", operation]
+    if script in {
+        "scripts/validate_semantic_routing_guard.py",
+        "scripts/validate_instance_protocol_split_receipt.py",
+        "scripts/validate_vendor_namespace_separation.py",
+        "scripts/validate_protocol_feedback_sidecar_contract.py",
+    }:
+        if expected_work_layer:
+            cmd += ["--expected-work-layer", expected_work_layer]
+        if expected_source_layer:
+            cmd += ["--expected-source-layer", expected_source_layer]
+        if layer_intent_text:
+            cmd += ["--layer-intent-text", layer_intent_text]
+        if run_id:
+            cmd += ["--run-id", run_id]
     cmd += list(extra_args)
     p = subprocess.run(
         cmd,
@@ -215,6 +240,10 @@ def main() -> int:
         help="emit payload JSON only",
     )
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--expected-work-layer", default="")
+    ap.add_argument("--expected-source-layer", default="")
+    ap.add_argument("--layer-intent-text", default="")
+    ap.add_argument("--run-id", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -243,6 +272,25 @@ def main() -> int:
     failed_optional = 0
     discovery_required_total = 0
     discovery_required_passed = 0
+    protocol_targets_included: list[str] = []
+    protocol_targets_blocking: list[str] = []
+
+    layer_intent = resolve_layer_intent(
+        explicit_work_layer=str(args.expected_work_layer or "").strip(),
+        explicit_source_layer=str(args.expected_source_layer or "").strip(),
+        intent_text=str(args.layer_intent_text or "").strip(),
+        default_work_layer="instance",
+        default_source_layer="auto",
+    )
+    coverage_lane = str(layer_intent.get("resolved_work_layer", "instance")).strip().lower() or "instance"
+    if coverage_lane not in {"protocol", "instance", "dual"}:
+        coverage_lane = "instance"
+    if coverage_lane == "protocol":
+        coverage_target_set = "protocol_targets"
+    elif coverage_lane == "dual":
+        coverage_target_set = "shared_targets"
+    else:
+        coverage_target_set = "instance_targets"
 
     for target in TARGETS:
         contract: dict[str, Any] = {}
@@ -267,14 +315,29 @@ def main() -> int:
             args.identity_id,
             repo_catalog=args.repo_catalog,
             operation=args.operation,
+            expected_work_layer=str(args.expected_work_layer or "").strip(),
+            expected_source_layer=str(args.expected_source_layer or "").strip(),
+            layer_intent_text=str(args.layer_intent_text or "").strip(),
+            run_id=str(args.run_id or "").strip(),
             extra_args=target.validator_args,
         )
         payload = _parse_json_payload(out) if target.validator_args else None
         required_effective = required
+        lane_target_included = True
+        requiredization_current_round_linked = False
         if isinstance(payload, dict):
             payload_required = payload.get("required_contract")
             if isinstance(payload_required, bool):
                 required_effective = payload_required
+            requiredization_current_round_linked = bool(payload.get("requiredization_current_round_linked", False))
+            if not requiredization_current_round_linked and str(payload.get("activity_correlation_status", "")).strip().upper() == "CORRELATED_CURRENT_ROUND":
+                requiredization_current_round_linked = True
+
+        if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and coverage_lane == "instance" and not requiredization_current_round_linked:
+            required_effective = False
+            lane_target_included = False
+        if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
+            protocol_targets_included.append(target.name)
         required_total += 1 if required_effective else 0
 
         if isinstance(payload, dict):
@@ -298,6 +361,8 @@ def main() -> int:
             skipped_count += 1
         elif validator_status == STATUS_FAIL_REQUIRED:
             failed_required += 1
+            if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
+                protocol_targets_blocking.append(target.name)
         elif validator_status == STATUS_FAIL_OPTIONAL:
             failed_optional += 1
 
@@ -314,6 +379,10 @@ def main() -> int:
                 "validator_status": validator_status,
                 "required_contract_declared": required,
                 "required_contract": required_effective,
+                "coverage_lane": coverage_lane,
+                "coverage_target_set": coverage_target_set,
+                "lane_target_included": lane_target_included,
+                "requiredization_current_round_linked": requiredization_current_round_linked,
                 "auto_required_signal": (payload.get("auto_required_signal") if isinstance(payload, dict) else False),
                 "reason_code": reason_code,
                 "evidence_ref": evidence_ref,
@@ -330,6 +399,17 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_path),
         "operation": args.operation,
+        "coverage_lane": coverage_lane,
+        "coverage_target_set": coverage_target_set,
+        "resolved_work_layer": str(layer_intent.get("resolved_work_layer", "")),
+        "resolved_source_layer": str(layer_intent.get("resolved_source_layer", "")),
+        "intent_source": str(layer_intent.get("intent_source", "")),
+        "intent_confidence": layer_intent.get("intent_confidence"),
+        "fallback_reason": str(layer_intent.get("fallback_reason", "")),
+        "protocol_triggered": bool(layer_intent.get("protocol_triggered", False)),
+        "protocol_trigger_reasons": list(layer_intent.get("protocol_trigger_reasons") or []),
+        "coverage_protocol_targets_included": sorted(set(protocol_targets_included)),
+        "coverage_protocol_targets_blocking": sorted(set(protocol_targets_blocking)),
         "contracts": rows,
         "required_contract_total": required_total,
         "required_contract_passed": required_passed,
