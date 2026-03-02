@@ -151,6 +151,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-037 | 2026-03-02 | protocol | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 
 ---
 
@@ -4226,6 +4230,73 @@ Boundary:
 
 1. This section is docs-only intake.
 2. No changes to protocol scripts, CI workflows, or runtime executors are included in this commit.
+
+#### 16.8.30 Re-attribution intake: protocol vs ecosystem vs instance split refinement (`FIX-039..042`, 2026-03-02, docs-only)
+
+Status: `SPEC_READY` (docs-first attribution refinement; no protocol code changes in this batch).
+
+Primary source package:
+
+1. Raw roundtrip memo:
+   - `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-expert-roundtrip-v2026-03-02.md`
+2. Sanitized outbound memo:
+   - `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-expert-roundtrip-v2026-03-02-sanitized.md`
+3. Additional audit replay context:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-audit-expert-v3/runtime/reports/identity-upgrade-exec-base-repo-audit-expert-v3-1772450247.json`
+
+Attribution decision (cross-validated, non-brainstorm):
+
+1. Protocol-core must patch now: `2 x P0 + 2 x P1` (`FIX-039..042`).
+2. Ecosystem-only (not protocol core): `1 x P1` (skill package command drift).
+3. Instance data-plane failures are excluded from protocol patch list when replay shows lane routing and protocol publish skip behavior are already correct for instance lane.
+
+Protocol-core findings and replay evidence:
+
+1. `FIX-039` / `P0` requiredization scope leakage into instance lane:
+   - replay (`operation=update`) currently yields `required_contract_declared=false` but `required_contract=true` + `auto_required_signal=true` for protocol governance contracts and then `FAIL_REQUIRED`.
+   - evidence commands (local replay):
+     - `validate_semantic_routing_guard.py` -> `rc=1`, `IP-SEM-001`, `required_contract=true`, `auto_required_signal=true`
+     - `validate_instance_protocol_split_receipt.py` -> `rc=1`, `IP-PFB-CH-006`, `required_contract=true`, `auto_required_signal=true`
+     - `validate_vendor_namespace_separation.py` -> `rc=1`, `IP-SEM-004`, `required_contract=true`, `auto_required_signal=true`
+     - `validate_protocol_feedback_sidecar_contract.py` -> `rc=1`, `IP-SID-001`, `required_contract=true`, `auto_required_signal=true`
+     - `validate_required_contract_coverage.py` -> `rc=1`, failed required count includes all above with declared=false/effective=true.
+2. `FIX-040` / `P0` split-activity detector lacks current-round correlation:
+   - `validate_instance_protocol_split_receipt.py` currently scans all files under
+     `runtime/protocol-feedback/{outbox-to-protocol,evidence-index,upgrade-proposals}` as activity.
+   - strict path can emit `IP-PFB-CH-006` when split receipt missing even if activity is historical/non-correlated.
+3. `FIX-041` / `P1` invalid `expected-source-layer` is silently downgraded:
+   - replay:
+     - `validate_reply_identity_context_first_line.py ... --expected-source-layer intent --operation validate --enforce-first-line-gate --json-only`
+     - result: `rc=0`, `reply_first_line_status=PASS_REQUIRED`, `expected_source_layer=env`.
+   - indicates invalid input normalization without explicit non-pass signal.
+4. `FIX-042` / `P1` required coverage aggregation is lane-unaware:
+   - `validate_required_contract_coverage.py` target set always includes protocol governance validators.
+   - required-effective accounting uses payload-upgraded required state regardless of lane partition, increasing instance-lane noise.
+
+Explicit exclusions from protocol-core patch stream:
+
+1. Ecosystem-only (`P1`, not protocol-core):
+   - `office-ops-regression-self-drive` skill command target drift (`run_office_ops_regression.sh` resolution issue in runtime context).
+2. Instance-data-plane failures (do not open protocol-core patch by themselves):
+   - `validate_identity_trigger_regression.py`
+   - `validate_agent_handoff_contract.py`
+   - `validate_identity_collab_trigger.py`
+   - `validate_identity_experience_feedback_governance.py`
+3. Instance lane split evidence remains valid (from report `1772450247`):
+   - `work_layer=instance`
+   - `applied_gate_set=instance_required_checks`
+   - `skipped_protocol_publish_checks` includes `validate_changelog_updated.py` and `validate_release_metadata_sync.py`.
+
+Data sanitization check for this intake:
+
+1. No business-scene payload keywords were found in referenced docs/logs.
+2. No high-risk credential patterns were detected.
+3. Absolute local paths and runtime IDs are retained only for maintainer-side evidence and must be redacted for external dispatch.
+
+Boundary:
+
+1. This section is docs-only attribution refinement.
+2. No script/workflow/runtime code changes are included in this commit.
 
 #### 16.8.21-A Historical detail payload (archived verbatim, superseded by 16.8.28)
 

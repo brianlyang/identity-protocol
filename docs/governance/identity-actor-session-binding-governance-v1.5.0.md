@@ -1623,6 +1623,95 @@ Mandatory semantics:
 4. Suggested error code:
    - `IP-UPG-BASE-001`: strict self-repair two-phase refresh unavailable when stale-baseline-only scenario detected.
 
+#### 5.8.26 `requiredization_lane_scope_contract_v1` (P0, FIX-039)
+
+Goal:
+
+1. Prevent protocol governance requiredization from leaking into instance lane via historical artifact presence alone.
+2. Preserve FIX-033 lane split intent (`instance` lane self-drive not blocked by unrelated protocol-history noise).
+
+Mandatory semantics:
+
+1. Auto-required promotion for protocol governance contracts (`semantic_routing_guard`, `split_receipt`, `vendor_namespace`, `sidecar`) must be scoped to current round linkage, not mere directory existence.
+2. Requiredization effective trigger in strict operations must satisfy at least one current-round condition:
+   - `resolved_work_layer=protocol`, or
+   - `protocol_triggered=true` for this round, or
+   - current-round receipt/batch linkage (`run_id` / `candidate_receipt_ref` / `inquiry_receipt_ref` / equivalent deterministic correlation key).
+3. Historical activity without current-round linkage must remain non-blocking evidence in instance lane.
+4. Required telemetry fields:
+   - `requiredization_scope_decision`
+   - `requiredization_scope_reason`
+   - `requiredization_current_round_linked`
+   - `requiredization_historical_activity_detected`
+5. Suggested error code:
+   - `IP-SPLIT-006`: requiredization scope leak detected (history-only activity promoted to strict required in instance lane).
+
+#### 5.8.27 `split_receipt_activity_correlation_contract_v1` (P0, FIX-040)
+
+Goal:
+
+1. Ensure protocol-feedback activity detector is correlation-aware and does not treat stale/historical outbox files as current protocol intent.
+2. Eliminate false strict failures (`IP-PFB-CH-006`) when current round did not enter protocol lane.
+
+Mandatory semantics:
+
+1. `_protocol_feedback_activity` style detectors must enforce current-round correlation:
+   - bind evidence to at least one deterministic key (`run_id`, `seed_ref`, `candidate_receipt_ref`, `inquiry_receipt_ref`, or explicit linkage receipt).
+2. Activity detectors must support bounded time window for stale evidence filtering.
+3. Strict `split_receipt` fail-closed under activity (`IP-PFB-CH-006`) is allowed only when correlated current-round protocol activity is proven.
+4. Required telemetry fields:
+   - `activity_correlation_status`
+   - `activity_correlation_key`
+   - `activity_window_hours`
+   - `activity_correlated_refs`
+   - `activity_unscoped_refs`
+5. Suggested error code:
+   - `IP-PFB-CH-007`: protocol-feedback activity detected but current-round correlation missing.
+
+#### 5.8.28 `expected_source_layer_validation_contract_v1` (P1, FIX-041)
+
+Goal:
+
+1. Prevent silent semantic downgrade of invalid `--expected-source-layer` input.
+2. Keep strict lane caller intent machine-checkable and auditable.
+
+Mandatory semantics:
+
+1. Invalid `expected_source_layer` input must not be silently normalized in strict operations.
+2. Strict operations must fail-closed (or emit explicit non-pass status) when invalid source layer enum is provided.
+3. Non-strict operations may fallback, but must emit explicit downgrade telemetry.
+4. Required telemetry fields:
+   - `expected_source_layer_input`
+   - `expected_source_layer_effective`
+   - `expected_source_layer_validation_status`
+   - `expected_source_layer_validation_error_code`
+   - `source_layer_downgrade_applied`
+5. Suggested error code:
+   - `IP-SOURCE-LAYER-001`: invalid expected-source-layer input in strict operation.
+
+#### 5.8.29 `required_contract_coverage_lane_partition_contract_v1` (P1, FIX-042)
+
+Goal:
+
+1. Reduce instance-lane noise and responsibility mixing in coverage aggregation.
+2. Ensure protocol governance contracts are evaluated in correct lane policy.
+
+Mandatory semantics:
+
+1. Required coverage aggregator must support lane-aware target sets:
+   - `instance_targets`
+   - `protocol_targets`
+   - optional `shared_targets`.
+2. In `work_layer=instance`, protocol governance targets must not be hard-failed unless current-round protocol-entry correlation is present.
+3. In `work_layer=protocol`, protocol governance targets remain required and fail-closed.
+4. Required telemetry fields:
+   - `coverage_lane`
+   - `coverage_target_set`
+   - `coverage_protocol_targets_included`
+   - `coverage_protocol_targets_blocking`
+5. Suggested error code:
+   - `IP-COV-LANE-001`: lane-aware coverage policy missing or mismatched with resolved work layer.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2154,6 +2243,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-096 | e2e runner must be hermetic and pass without external `PYTHONPATH` preparation | `e2e_smoke_test.sh` import-path bootstrap + hermetic preflight validator + CI replay adapter | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-036` pending |
 | ASB-RQ-097 | required skill contracts must remain executable-as-documented; missing command targets must be machine-detectable | skill contract integrity validator + required-skill CI check + creator/readiness visibility surfaces | P1 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-037` pending |
 | ASB-RQ-098 | strict self-repair must support two-phase stale-baseline refresh (refresh + strict revalidate) to avoid self-lock in stale-only cases | identity_creator update flow + baseline preflight adapter + machine-readable phase trace receipts | P1 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-038` pending |
+| ASB-RQ-099 | protocol governance requiredization must be lane-scoped to current-round protocol linkage and must not harden instance lane by historical artifact presence alone | semantic/split/vendor/sidecar validators + required coverage adapter + lane correlation evaluator | P0 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-039` pending |
+| ASB-RQ-100 | split-receipt activity detection must enforce current-round correlation before strict `IP-PFB-CH-006` fail-closed path | split receipt validator activity detector + correlation receipt linkage + windowed stale filter | P0 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-040` pending |
+| ASB-RQ-101 | invalid `expected-source-layer` input must not be silently downgraded in strict operations; caller intent must remain auditable | stamp/common resolver + first-line/send-time validators source-layer input validator | P1 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-041` pending |
+| ASB-RQ-102 | required-contract coverage aggregator must be lane-aware (`instance_targets/protocol_targets`) and avoid protocol-governance hard-fails in pure instance lane without current-round protocol linkage | `validate_required_contract_coverage.py` lane partition policy + orchestration mapping | P1 | SPEC_READY | audit roundtrip re-attribution intake (`base-repo-audit-expert-v3`) recorded in review `16.8.30`; implementation batch `FIX-042` pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2194,6 +2287,8 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-090 / ASB-RQ-091 / ASB-RQ-092 / ASB-RQ-093 | `SPEC_READY -> GATE_READY (P0)` | `FIX-033` implementation (`0d7ebc7`) + lane propagation patch (`913973a`) + replay/doc closure (`9d830d8`, review `16.8.27`) closed prior `IP-LAYER-GATE-001` mismatch path |
 | ASB-RQ-094 / ASB-RQ-095 / ASB-RQ-096 | `NEW -> SPEC_READY (P0)` | office-ops roundtrip replay highlighted protocol-layer determinism gaps (lane fallback, moving-head baseline drift, non-hermetic e2e import path); docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-034..036`) |
 | ASB-RQ-097 / ASB-RQ-098 | `NEW -> SPEC_READY (P1)` | skill contract executable drift and strict stale-baseline self-lock identified in office-ops roundtrip replay; docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-037..038`) |
+| ASB-RQ-099 / ASB-RQ-100 | `NEW -> SPEC_READY (P0)` | audit re-attribution replay identified requiredization scope leakage + uncorrelated split-activity strict blocking in instance lane; docs-first intake recorded in review `16.8.30`, implementation pending (`FIX-039..040`) |
+| ASB-RQ-101 / ASB-RQ-102 | `NEW -> SPEC_READY (P1)` | audit re-attribution replay identified silent invalid-source-layer downgrade + lane-unaware coverage aggregation noise; docs-first intake recorded in review `16.8.30`, implementation pending (`FIX-041..042`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
