@@ -141,10 +141,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
-| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | READY_FOR_PATCH | SPEC_READY |
-| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `TBD` | READY_FOR_PATCH | SPEC_READY |
-| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | READY_FOR_PATCH | SPEC_READY |
-| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `TBD` | READY_FOR_PATCH | SPEC_READY |
+| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2` | DONE | REJECT |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2` | DONE | REJECT |
+| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2` | DONE | REJECT |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2` | DONE | REJECT |
 
 ---
 
@@ -3900,6 +3900,92 @@ Acceptance replay template (post-implementation):
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
+#### 16.8.21 Auditor replay verdict: FIX-029..032 implementation review (2026-03-02)
+
+Status: `REJECT` (implementation landed in `a95f5a2`, but strict-lane correctness gaps remain).
+
+Scope:
+
+1. `FIX-029..032` post-implementation audit replay under protocol-only boundary.
+2. Focus dimensions:
+   - layer-intent pass-through integrity in readiness lane,
+   - CWD invariance for new validators,
+   - strict fail-closed correctness for split-receipt and inquiry-chain state machine.
+
+Independent replay evidence (local):
+
+1. `validate_protocol_feedback_reply_channel.py` from protocol root:
+   - command:
+     `python3 scripts/validate_protocol_feedback_reply_channel.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --json-only`
+   - observed payload:
+     - `protocol_feedback_reply_channel_status=PASS_REQUIRED`
+     - `split_receipt_status=FAIL_REQUIRED`
+     - `split_receipt_error_code=IP-PFB-CH-006`
+2. `validate_protocol_feedback_reply_channel.py` from `/tmp`:
+   - command:
+     `python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_feedback_reply_channel.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --json-only`
+   - observed payload:
+     - `protocol_feedback_reply_channel_status=PASS_REQUIRED`
+     - `split_receipt_status=""`
+     - `split_receipt_payload_rc=2`
+3. `validate_protocol_inquiry_followup_chain.py` from protocol root:
+   - command:
+     `python3 scripts/validate_protocol_inquiry_followup_chain.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --layer-intent-text "semantic mismatch observed" --json-only`
+   - observed payload:
+     - `candidate_decision=PROTOCOL_CANDIDATE`
+     - `inquiry_state=FEEDBACK_EMITTED`
+4. `validate_protocol_inquiry_followup_chain.py` from `/tmp`:
+   - command:
+     `python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_protocol_inquiry_followup_chain.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml --operation validate --force-check --layer-intent-text "I think protocol governance gate still weak and needs optimization" --json-only`
+   - observed payload:
+     - `protocol_inquiry_followup_chain_status=SKIPPED_NOT_REQUIRED`
+     - `candidate_status=""`
+5. static path review for readiness passthrough:
+   - `scripts/release_readiness_check.py:839`
+   - `scripts/release_readiness_check.py:1111`
+   - `scripts/release_readiness_check.py:1174`
+
+Blocking findings (ordered by severity):
+
+1. `P0` strict fail-closed violation in reply-channel gate:
+   - file: `scripts/validate_protocol_feedback_reply_channel.py:211`
+   - issue:
+     - split-receipt escalation only blocks `SKIPPED_NOT_REQUIRED`, but does not block `FAIL_REQUIRED` or child runtime failure (`split_receipt_payload_rc != 0`).
+     - observed contradictory pass (`reply-channel=PASS_REQUIRED` while `split_receipt_status=FAIL_REQUIRED`).
+2. `P0` CWD-sensitive subprocess in new reply/inquiry validators:
+   - files:
+     - `scripts/validate_protocol_feedback_reply_channel.py:73`
+     - `scripts/validate_protocol_inquiry_followup_chain.py:116`
+   - issue:
+     - child validators invoked via relative `python3 scripts/...` without protocol-root anchoring.
+     - non-root invocation (`/tmp`) can produce empty payload/rc errors that are not hard-blocked.
+3. `P0` readiness lane misses layer-intent/source-layer passthrough for newly appended FIX-029..032 checks:
+   - file: `scripts/release_readiness_check.py:839` and `scripts/release_readiness_check.py:1111`
+   - issue:
+     - layer argument augmentation executes before FIX-029..032 commands are appended to `seq`, so those checks do not receive `--layer-intent-text`, `--expected-work-layer`, `--source-layer`.
+4. `P0` inquiry state machine can advance to `FEEDBACK_EMITTED` from unrelated historical batches:
+   - file: `scripts/validate_protocol_inquiry_followup_chain.py:228`
+   - issue:
+     - any existing `FEEDBACK_BATCH_*.md` under outbox marks `feedback_emitted=true` without correlation to current candidate/inquiry receipt chain.
+     - this can mask missing follow-up progression for current inquiry.
+
+Required remediation before closure:
+
+1. Reply-channel gate must fail-closed when split validator returns:
+   - non-zero rc, or
+   - `split_receipt_status in {FAIL_REQUIRED, WARN_NON_BLOCKING}` in strict operations.
+2. New validators must execute child scripts with protocol-root deterministic path strategy:
+   - `Path(__file__)` anchored absolute script path, or
+   - `subprocess.run(..., cwd=protocol_root)` with guarded absolute target.
+3. Readiness must inject layer args after final `seq` construction, or inject inline at append-time for each FIX-029..032 command.
+4. Inquiry `FEEDBACK_EMITTED` transition must require current-chain linkage proof:
+   - correlation to current candidate seed/receipt reference or inquiry receipt id,
+   - reject unrelated historical batch files as emission proof.
+
+Release posture:
+
+1. `FIX-029..032` must remain release-blocking bundle with status `REJECT` until all four `P0` findings are closed and independently replayed.
+
 #### 16.8.14 Roundtable intake: same-actor multi-session binding overwrite closure (2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
@@ -4065,7 +4151,7 @@ Pending audit package:
 
 #### 16.8.15 Roundtable intake: protocol-feedback canonical reply channel hardening (2026-03-02, docs-only)
 
-Status: `SPEC_READY` (implementation not landed yet).
+Status: `SUPERSEDED_BY_16.8.21` (pre-code intake retained for traceability; implementation landed in `a95f5a2`, audit replay pending).
 
 Problem statement (cross-validated):
 
@@ -4145,7 +4231,7 @@ Layer declaration:
 
 #### 16.8.15A Roundtable pre-code cross-validation closure (FIX-029, 2026-03-02)
 
-Status: `READY_FOR_PATCH` (docs+evidence cross-check completed; code not started in this subsection).
+Status: `SUPERSEDED_BY_16.8.21` (pre-code cross-check retained; code landed in `a95f5a2`, audit replay pending).
 
 Cross-validation scope (protocol-only):
 
@@ -4203,7 +4289,7 @@ Expected pre-code interpretation:
 
 #### 16.8.17 Roundtable intake: protocol-layer entry bootstrap-readiness hardening (2026-03-02, docs-only)
 
-Status: `SPEC_READY` (implementation not landed yet).
+Status: `SUPERSEDED_BY_16.8.21` (pre-code intake retained for traceability; implementation landed in `a95f5a2`, audit replay pending).
 
 Problem statement (cross-validated, no scope expansion):
 
@@ -4297,7 +4383,7 @@ Layer declaration:
 
 #### 16.8.18 Roundtable intake: protocol-entry candidate clarification bridge (2026-03-02, docs-only)
 
-Status: `SPEC_READY` (implementation not landed yet).
+Status: `SUPERSEDED_BY_16.8.21` (pre-code intake retained for traceability; implementation landed in `a95f5a2`, audit replay pending).
 
 Problem statement (cross-validated, no scope expansion):
 
@@ -4385,7 +4471,7 @@ Layer declaration:
 
 #### 16.8.20 Unified roundtable closure profile: FIX-029..032 as linked components in one protocol system (2026-03-02, docs-only)
 
-Status: `READY_FOR_PATCH` (system-level pre-code cross-validation complete; code not started in this subsection).
+Status: `SUPERSEDED_BY_16.8.21` (system-level pre-code model retained; implementation landed in `a95f5a2`, audit replay pending).
 
 Unified boundary statement:
 
@@ -4457,9 +4543,86 @@ Layer declaration:
 
 1. protocol-only; no business constants introduced.
 
+#### 16.8.21 FIX-029..FIX-032 implementation lane (2026-03-02, protocol-only)
+
+Status: `DONE / PENDING_REPLAY` (code landed; independent audit replay pending).
+
+Commit anchor:
+
+1. `a95f5a2` — `fix(protocol): close FIX-029..032 validator and gate wiring`
+
+Changed file set (protocol implementation):
+
+1. `.github/workflows/_identity-required-gates.yml`
+2. `scripts/protocol_feedback_contract_common.py`
+3. `scripts/validate_protocol_feedback_reply_channel.py`
+4. `scripts/validate_protocol_feedback_bootstrap_ready.py`
+5. `scripts/validate_protocol_entry_candidate_bridge.py`
+6. `scripts/validate_protocol_inquiry_followup_chain.py`
+7. `scripts/validate_protocol_feedback_sidecar_contract.py`
+8. `scripts/validate_instance_protocol_split_receipt.py`
+9. `scripts/identity_creator.py`
+10. `scripts/release_readiness_check.py`
+11. `scripts/e2e_smoke_test.sh`
+12. `scripts/full_identity_protocol_scan.py`
+13. `scripts/report_three_plane_status.py`
+
+Implementation closure summary (FIX-029..032):
+
+1. FIX-029 (`ASB-RQ-075..078`)
+   - canonical reply-channel validator landed;
+   - sidecar strict blocking prefix includes `IP-PFB-*`;
+   - split-receipt requiredization bridge is activity-aware and strict-lane fail-closed (`IP-PFB-CH-006` path).
+2. FIX-030 (`ASB-RQ-079..081`)
+   - bootstrap-ready validator landed;
+   - protocol-lane constructor path creates canonical roots + bootstrap receipt + index linkage;
+   - strict fail-closed semantics preserved (`IP-PFB-CH-004/005`).
+3. FIX-031 (`ASB-RQ-082..085`)
+   - candidate bridge validator landed;
+   - deterministic clarification set + canonical candidate seed/receipt linkage landed;
+   - anti-silent-downgrade strict semantics exposed (`IP-LAYER-CAND-*`).
+4. FIX-032 (`ASB-RQ-086..089`)
+   - inquiry follow-up chain validator landed;
+   - inquiry state machine + signal-origin sanitization + requiredization-trigger bridge landed;
+   - strict fail-closed semantics exposed (`IP-LAYER-INQ-*`).
+
+Replay snapshot (architect local, machine-readable):
+
+1. static checks:
+   - `python3 -m py_compile <touched scripts>` -> `rc=0`
+   - `bash -n scripts/e2e_smoke_test.sh` -> `rc=0`
+2. docs/ssot:
+   - `python3 scripts/docs_command_contract_check.py` -> `PASS`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `OK`
+3. representative functional replay:
+   - bootstrap positive (`validate_protocol_feedback_bootstrap_ready ... --expected-work-layer protocol`) -> `rc=0`, `protocol_feedback_bootstrap_status=PASS_REQUIRED`
+   - candidate bridge (`validate_protocol_entry_candidate_bridge ... --expected-work-layer instance`) -> `rc=0`, `protocol_entry_candidate_status=PASS_REQUIRED`, `protocol_entry_decision=PROTOCOL_CANDIDATE`
+   - inquiry follow-up (`validate_protocol_inquiry_followup_chain ... --expected-work-layer instance`) -> `rc=0`, `protocol_inquiry_followup_chain_status=PASS_REQUIRED`
+4. six-surface visibility:
+   - `full_identity_protocol_scan.py` output includes:
+     - `checks.protocol_feedback_reply_channel`
+     - `checks.protocol_feedback_bootstrap_ready`
+     - `checks.protocol_entry_candidate_bridge`
+     - `checks.protocol_inquiry_followup_chain`
+   - `report_three_plane_status.py` output includes:
+     - `instance_plane_detail.protocol_feedback_reply_channel`
+     - `instance_plane_detail.protocol_feedback_bootstrap_ready`
+     - `instance_plane_detail.protocol_entry_candidate_bridge`
+     - `instance_plane_detail.protocol_inquiry_followup_chain`
+
+Evidence artifacts:
+
+1. `/tmp/fix029_scan.json`
+2. `/tmp/fix029_three_plane.json`
+
+Audit note:
+
+1. This subsection only upgrades architect implementation state to `DONE / PENDING_REPLAY`.
+2. Final `PASS/REJECT` remains owned by independent audit replay package.
+
 #### 16.8.19 Roundtable intake: protocol inquiry follow-up chain (2026-03-02, docs-only)
 
-Status: `SPEC_READY` (implementation not landed yet).
+Status: `SUPERSEDED_BY_16.8.21` (pre-code intake retained for traceability; implementation landed in `a95f5a2`, audit replay pending).
 
 Problem statement (cross-validated, no scope expansion):
 
