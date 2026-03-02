@@ -1286,6 +1286,52 @@ Mandatory semantics:
    - `bootstrap_created_paths`
    - `bootstrap_receipt_path`
 
+#### 5.8.17 `protocol_entry_candidate_clarification_bridge_contract_v1` (P0)
+
+Goal:
+
+1. Prevent protocol-lane deadlock where weak governance concern signals cannot enter protocol workflow unless explicit `work_layer=protocol` is provided.
+2. Convert weak protocol concern statements into deterministic clarification and evidence-seeding flow, rather than silent fallback.
+3. Keep dual-lane stability by allowing instance execution continuity while protocol evidence chain is being built.
+
+Mandatory semantics:
+
+1. Layer resolution must classify protocol-entry decisions into machine-readable states:
+   - `INSTANCE_DEFAULT`
+   - `PROTOCOL_DIRECT`
+   - `PROTOCOL_CANDIDATE`
+2. `PROTOCOL_CANDIDATE` must be emitted when protocol concern signal is present but direct strict trigger evidence is insufficient.
+3. `PROTOCOL_CANDIDATE` must not silently downgrade to `INSTANCE_DEFAULT` without clarification workflow evidence.
+4. Candidate clarification workflow is mandatory and must emit:
+   - `clarification_required=true`
+   - `clarification_questions` (deterministic set)
+   - `candidate_reason`
+   - `candidate_confidence`
+5. Clarification question set must include at least:
+   - `which_gate_or_stage_failed`
+   - `latest_replay_or_evidence_path`
+   - `expected_protocol_optimization_target`
+6. Candidate flow must seed protocol-feedback SSOT artifacts even before final protocol conclusion:
+   - canonical outbox seed under `runtime/protocol-feedback/outbox-to-protocol/`
+   - canonical evidence linkage under `runtime/protocol-feedback/evidence-index/`
+7. Candidate seed artifacts must remain protocol-sanitized (no tenant/customer/business constants).
+8. Promotion and fallback transitions must be explicit:
+   - candidate + sufficient evidence -> `PROTOCOL_DIRECT`
+   - candidate + unresolved/timeout -> `INSTANCE_DEFAULT` with unresolved candidate receipt retained
+9. Strict operations must fail-closed when candidate governance flow is violated:
+   - `IP-LAYER-CAND-001`: candidate silently downgraded without clarification receipt
+   - `IP-LAYER-CAND-002`: candidate clarification questions missing/incomplete
+   - `IP-LAYER-CAND-003`: candidate seed not archived to canonical protocol-feedback path
+   - `IP-LAYER-CAND-004`: candidate seed exists but evidence-index linkage missing
+10. three-plane/full-scan must expose candidate bridge telemetry:
+   - `protocol_entry_decision`
+   - `candidate_reason`
+   - `clarification_required`
+   - `clarification_questions`
+   - `candidate_seed_outbox_ref`
+   - `candidate_seed_index_ref`
+   - `candidate_promotion_status`
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1633,6 +1679,14 @@ Protocol-feedback canonical reply-channel closure (P0) must be wired in the same
 5. machine-readable channel compliance fields in three-plane/full-scan surfaces.
 6. protocol-entry bootstrap readiness gate before protocol conclusion emission (strict fail-closed if readiness evidence is missing).
 
+Protocol-entry candidate clarification bridge (P0) must be wired in the same surfaces through:
+
+1. layer-intent classifier emits `PROTOCOL_CANDIDATE` decision state when weak protocol concern exists.
+2. candidate clarification question generator emits deterministic question set and machine-readable candidate receipt.
+3. candidate seed writer archives to canonical protocol-feedback outbox + evidence-index before protocol conclusion.
+4. strict-lane fail-closed checks for silent candidate downgrade or missing candidate seed linkage.
+5. three-plane/full-scan telemetry exposure for candidate decision and promotion status.
+
 Capability-fit self-drive optimization enhancement (P1) should be wired in the same surfaces through:
 
 1. periodic capability inventory snapshot and fit-matrix generation.
@@ -1785,6 +1839,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-079 | protocol-lane entry must be trigger-auditable and bootstrap-ready: when `work_layer=protocol` / `protocol_triggered=true`, canonical protocol-feedback roots must be ready before protocol conclusions are emitted | layer-intent/send-time/reply bridge + bootstrap readiness classifier surfaces | P0 | SPEC_READY | bootstrap-readiness semantics declared in `5.8.16`; implementation pending |
 | ASB-RQ-080 | required gate `validate_protocol_feedback_bootstrap_ready.py` must enforce canonical root readiness (`outbox-to-protocol`, `evidence-index`, `upgrade-proposals`) and emit machine-readable bootstrap telemetry | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | gate/wiring contract declared in `5.8.16`; implementation pending |
 | ASB-RQ-081 | strict operations must fail-closed (`IP-PFB-CH-004/005`) when protocol lane is selected but bootstrap readiness or SSOT linkage is missing | strict-lane adapters + blocker-receipt integration + scan/report telemetry surfaces | P0 | SPEC_READY | fail-closed + telemetry semantics declared in `5.8.16`; implementation pending |
+| ASB-RQ-082 | layer-intent resolver must expose `PROTOCOL_CANDIDATE` decision state so weak protocol concern can enter governed clarification flow instead of silent instance fallback | layer-intent classifier + reply/send-time bridge surfaces | P0 | SPEC_READY | candidate decision-state semantics declared in `5.8.17`; implementation pending |
+| ASB-RQ-083 | required gate `validate_protocol_entry_candidate_bridge.py` must enforce candidate clarification receipt completeness and deterministic question set (`which_gate_or_stage_failed`, `latest_replay_or_evidence_path`, `expected_protocol_optimization_target`) | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | candidate clarification gate semantics declared in `5.8.17`; implementation pending |
+| ASB-RQ-084 | candidate protocol-entry flow must seed canonical protocol-feedback outbox/index before final protocol conclusion; missing seed/index linkage is strict fail-closed (`IP-LAYER-CAND-003/004`) | candidate seed writer + SSOT archival bridge + strict-lane adapters | P0 | SPEC_READY | seed-to-SSOT semantics declared in `5.8.17`; implementation pending |
+| ASB-RQ-085 | strict operations must fail-closed on silent candidate downgrade without clarification evidence (`IP-LAYER-CAND-001`) and expose candidate promotion telemetry in three-plane/full-scan | strict-lane adapters + scan/report telemetry surfaces | P0 | SPEC_READY | anti-silent-downgrade semantics declared in `5.8.17`; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1820,6 +1878,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-071 / ASB-RQ-072 / ASB-RQ-073 / ASB-RQ-074 | `SPEC_READY -> GATE_READY (P0)` | `FIX-028` landed: multibinding store/CAS/mutation-boundary/rebind-receipt contract + required validator wired into creator/readiness/e2e/full-scan/three-plane/CI; independent replay audit pending (`16.8.14`) |
 | ASB-RQ-075 / ASB-RQ-076 / ASB-RQ-077 / ASB-RQ-078 | `NEW (SPEC_READY, P0)` | protocol-feedback canonical reply-channel + sidecar prefix extension + split-receipt requiredization bridge declared (`5.8.16`), review intake + replay pending (`16.8.15`) |
 | ASB-RQ-079 / ASB-RQ-080 / ASB-RQ-081 | `NEW (SPEC_READY, P0)` | protocol-layer entry bootstrap-readiness hardening (`5.8.16` extension): trigger-to-channel bootstrap bridge + strict fail-closed semantics + machine-readable telemetry declared; review intake + replay pending (`16.8.16`) |
+| ASB-RQ-082 / ASB-RQ-083 / ASB-RQ-084 / ASB-RQ-085 | `NEW (SPEC_READY, P0)` | protocol-entry candidate clarification bridge (`5.8.17`): weak-signal protocol entry + deterministic clarification + canonical candidate seed + anti-silent-downgrade fail-closed semantics declared; review intake + replay pending (`16.8.18`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

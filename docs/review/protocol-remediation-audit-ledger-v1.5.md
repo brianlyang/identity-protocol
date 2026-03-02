@@ -143,6 +143,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | INTAKE | SPEC_READY |
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | INTAKE | SPEC_READY |
+| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | INTAKE | SPEC_READY |
 
 ---
 
@@ -4219,6 +4220,94 @@ Acceptance replay template (post-implementation):
 4. positive: protocol lane selected, roots auto-created with canonical outbox+index linkage -> `PASS_REQUIRED`
 5. boundary: instance lane selected (`work_layer=instance`) -> bootstrap gate remains non-blocking/skip as contract allows
 6. docs/ssot checks:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+Layer declaration:
+
+1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.18 Roundtable intake: protocol-entry candidate clarification bridge (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated, no scope expansion):
+
+1. Current layer resolver already supports automatic protocol entry under strong signals, but weak governance concern statements can still silently fallback to `instance`, creating protocol-lane deadlock risk.
+2. Silent fallback loses early governance signal and delays protocol-feedback evidence chain construction.
+3. Existing contracts enforce canonical protocol-feedback channel and bootstrap readiness, but do not yet enforce candidate-stage clarification and seed-archival behavior.
+4. User-side communication naturally starts from weak concern language; protocol layer needs deterministic follow-up questioning to convert concern -> evidence -> governed feedback.
+
+Local evidence anchors:
+
+1. default fallback remains `instance`:
+   - `scripts/response_stamp_common.py:37`
+   - `scripts/response_stamp_common.py:519`
+2. strong protocol signals can auto-enter protocol lane:
+   - `scripts/response_stamp_common.py:285`
+   - `scripts/response_stamp_common.py:549`
+   - `scripts/response_stamp_common.py:565`
+3. strict guard already fail-closes `protocol` without trigger:
+   - `scripts/validate_layer_intent_resolution.py:250`
+4. local replay snapshot (2026-03-02):
+   - `resolve_layer_intent(\"请做protocol governance gate修复并接线回放\") -> resolved_work_layer=protocol`
+   - `resolve_layer_intent(\"我感觉当前协议能力还不够强\") -> resolved_work_layer=instance` (weak-signal fallback path; candidate bridge currently missing)
+
+Vendor + official + skill-protocol cross-check (inference noted):
+
+1. OpenAI conversation-state guidance emphasizes explicit stateful context transitions, supporting deterministic candidate-state capture instead of silent drop.
+2. OpenAI Responses reference documents instruction hierarchy (developer/system precedence) and structured tool/state control, aligning with explicit candidate clarification flow.
+3. Anthropic best-practice guidance for Claude Code skills emphasizes metadata-driven routing and progressive disclosure, matching candidate-stage “minimal required questions before heavy protocol flow.”
+4. Anthropic prompt engineering guidance recommends explicit structure/tags for disambiguation; this aligns with deterministic clarification question schema.
+5. Gemini prompting guidance highlights precise instructions and structured outputs for reliable behavior, supporting machine-readable candidate receipts.
+6. MCP architecture/lifecycle guidance emphasizes explicit capability declaration and deterministic request lifecycles, supporting candidate-state -> promoted-state transition contracts.
+7. Local skill protocol (`/Users/yangxi/.codex/skills/.system/skill-creator/SKILL.md`) confirms trigger metadata + progressive disclosure design, which maps directly to candidate clarification bridge semantics.
+
+Official source links:
+
+1. `https://platform.openai.com/docs/guides/conversation-state`
+2. `https://developers.openai.com/api/reference/resources/responses/`
+3. `https://www.anthropic.com/engineering/writing-tools-for-agents`
+4. `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview`
+5. `https://ai.google.dev/gemini-api/docs/prompting-strategies`
+6. `https://modelcontextprotocol.io/docs/learn/architecture`
+7. `https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle`
+
+Governance delta (this batch, docs-only):
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - added `5.8.17` `protocol_entry_candidate_clarification_bridge_contract_v1` (P0).
+   - added requirement rows `ASB-RQ-082..085` (`P0`, `SPEC_READY`).
+   - updated six-surface closure section with candidate clarification bridge wiring requirements.
+
+Architect implementation package (next execution batch):
+
+1. Add required gate:
+   - `scripts/validate_protocol_entry_candidate_bridge.py`
+2. Extend layer-intent decision output:
+   - `protocol_entry_decision` (`INSTANCE_DEFAULT` / `PROTOCOL_DIRECT` / `PROTOCOL_CANDIDATE`)
+   - `candidate_reason`, `candidate_confidence`
+3. Enforce deterministic clarification set for candidate state:
+   - `which_gate_or_stage_failed`
+   - `latest_replay_or_evidence_path`
+   - `expected_protocol_optimization_target`
+4. Enforce canonical candidate seed archival:
+   - outbox seed under `runtime/protocol-feedback/outbox-to-protocol/`
+   - evidence index linkage under `runtime/protocol-feedback/evidence-index/`
+5. Strict fail-closed errors:
+   - `IP-LAYER-CAND-001..004`
+6. Wire across six surfaces + CI:
+   - creator / readiness / e2e / full-scan / three-plane / required-gates workflow.
+
+Acceptance replay template (post-implementation):
+
+1. negative: weak protocol concern resolved to `INSTANCE_DEFAULT` without candidate receipt -> `FAIL_REQUIRED` (`IP-LAYER-CAND-001`)
+2. negative: candidate emitted but clarification question set incomplete -> `FAIL_REQUIRED` (`IP-LAYER-CAND-002`)
+3. negative: candidate emitted but no canonical outbox seed -> `FAIL_REQUIRED` (`IP-LAYER-CAND-003`)
+4. negative: candidate seed exists but evidence-index unlinked -> `FAIL_REQUIRED` (`IP-LAYER-CAND-004`)
+5. positive: weak concern -> `PROTOCOL_CANDIDATE` + clarification receipt + canonical seed/index linkage -> `PASS_REQUIRED`
+6. positive: strong protocol signal -> `PROTOCOL_DIRECT` and normal strict protocol chain
+7. docs/ssot checks:
    - `python3 scripts/docs_command_contract_check.py`
    - `python3 scripts/validate_protocol_ssot_source.py`
 
