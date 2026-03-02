@@ -1388,6 +1388,48 @@ Mandatory semantics:
    - `protocol_feedback_seed_ref`
    - `protocol_feedback_index_ref`
 
+#### 5.8.19 `protocol_feedback_entry_unified_closure_bundle_v1` (P0 orchestration profile)
+
+Goal:
+
+1. Treat `FIX-029..FIX-032` as one dependency-controlled closure system while keeping audit non-merge boundaries.
+2. Eliminate implementation drift where later protocol-entry logic lands before canonical channel/requiredization foundations are closed.
+3. Keep strict-lane fail-closed semantics deterministic across channel/bootstrap/candidate/inquiry stages.
+
+Mandatory semantics:
+
+1. Stage dependency order is mandatory:
+   - Stage-A (`FIX-029`, `ASB-RQ-075..078`): canonical channel + sidecar `IP-PFB-*` blocking + split requiredization bridge.
+   - Stage-B (`FIX-030`, `ASB-RQ-079..081`): protocol bootstrap readiness gate.
+   - Stage-C (`FIX-031`, `ASB-RQ-082..085`): candidate clarification bridge + canonical candidate seed linkage.
+   - Stage-D (`FIX-032`, `ASB-RQ-086..089`): inquiry follow-up state machine + sanitization promotion boundary.
+2. Cross-stage fail-closed propagation:
+   - if Stage-A is open, Stage-B/C/D may not be labeled closure-ready,
+   - if Stage-B is open, Stage-C/D may not claim protocol-entry closure,
+   - if Stage-C is open, Stage-D may not claim inquiry-driven promotion closure.
+3. Non-merge audit rule remains mandatory:
+   - each stage keeps independent required gate verdict and replay package,
+   - pass of one stage cannot substitute another stage.
+4. Shared machine-readable telemetry contract (must be visible in three-plane/full-scan):
+   - `protocol_feedback_reply_channel_status`
+   - `protocol_feedback_activity_detected`
+   - `protocol_feedback_activity_refs`
+   - `split_receipt_requiredized`
+   - `protocol_feedback_bootstrap_status`
+   - `protocol_entry_decision`
+   - `candidate_promotion_status`
+   - `inquiry_state`
+5. Unified strict-lane blocking error families:
+   - channel/bootstrap: `IP-PFB-CH-*`
+   - candidate bridge: `IP-LAYER-CAND-*`
+   - inquiry chain: `IP-LAYER-INQ-*`
+   - strict operations must treat all above families as fail-closed boundaries.
+6. Unified implementation acceptance profile:
+   - patch order must follow Stage-A -> Stage-B -> Stage-C -> Stage-D,
+   - each stage must replay negative/positive samples before next stage merge.
+7. Release lock rule:
+   - `FIX-029..FIX-032` must all be `DONE + PASS` before protocol-entry closure can be marked release-ready.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:

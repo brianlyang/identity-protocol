@@ -142,9 +142,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | READY_FOR_PATCH | SPEC_READY |
-| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | INTAKE | SPEC_READY |
-| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | INTAKE | SPEC_READY |
-| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification) | `TBD` | INTAKE | SPEC_READY |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | READY_FOR_PATCH | SPEC_READY |
+| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | READY_FOR_PATCH | SPEC_READY |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification) | `TBD` | READY_FOR_PATCH | SPEC_READY |
 
 ---
 
@@ -4373,6 +4373,80 @@ Acceptance replay template (post-implementation):
 Layer declaration:
 
 1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.20 Unified roundtable closure profile: FIX-029..032 as one system (2026-03-02, docs-only)
+
+Status: `READY_FOR_PATCH` (system-level pre-code cross-validation complete; code not started in this subsection).
+
+Unified boundary statement:
+
+1. FIX-029..032 are one dependency-controlled protocol-entry closure system.
+2. Audit non-merge rule remains mandatory:
+   - each fix keeps independent replay + verdict package,
+   - any single PASS cannot replace missing PASS in other fixes.
+
+Dependency DAG (must be respected in patch order):
+
+1. Stage-A = FIX-029 (`ASB-RQ-075..078`)
+2. Stage-B = FIX-030 (`ASB-RQ-079..081`) depends on Stage-A
+3. Stage-C = FIX-031 (`ASB-RQ-082..085`) depends on Stage-A + Stage-B
+4. Stage-D = FIX-032 (`ASB-RQ-086..089`) depends on Stage-A + Stage-B + Stage-C
+
+Local code-state cross-check anchors (current gaps, reproducible):
+
+1. validator absence (not yet landed):
+   - `scripts/validate_protocol_feedback_reply_channel.py` (missing)
+   - `scripts/validate_protocol_feedback_bootstrap_ready.py` (missing)
+   - `scripts/validate_protocol_entry_candidate_bridge.py` (missing)
+   - `scripts/validate_protocol_inquiry_followup_chain.py` (missing)
+2. sidecar strict blocking prefix gap (needs Stage-A patch):
+   - `scripts/validate_protocol_feedback_sidecar_contract.py:29`
+   - current default: `(\"IP-WRB-\", \"IP-SEM-\")` (no `IP-PFB-*`)
+3. split requiredization trigger gap (needs Stage-A patch):
+   - `scripts/validate_instance_protocol_split_receipt.py:186`
+   - current auto-requiredization condition is receipt-oriented, not protocol-feedback-activity-oriented.
+4. six-surface wiring gap (A/B/C/D validators currently not referenced) in:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `.github/workflows/_identity-required-gates.yml`
+
+Unified machine-readable telemetry target set (cross-fix):
+
+1. `protocol_feedback_reply_channel_status`
+2. `protocol_feedback_activity_detected`
+3. `protocol_feedback_activity_refs`
+4. `split_receipt_requiredized`
+5. `protocol_feedback_bootstrap_status`
+6. `protocol_entry_decision`
+7. `candidate_promotion_status`
+8. `inquiry_state`
+
+Unified implementation batch discipline:
+
+1. Batch-1 (FIX-029 only): channel + sidecar + split requiredization bridge.
+2. Batch-2 (FIX-030 only): bootstrap-readiness gate + telemetry.
+3. Batch-3 (FIX-031 only): candidate clarification bridge + seed/index linkage.
+4. Batch-4 (FIX-032 only): inquiry follow-up chain + sanitization boundary gate.
+5. Each batch must complete:
+   - static checks
+   - strict-lane negative samples
+   - strict-lane positive samples
+   - three-plane/full-scan telemetry visibility replay
+   before opening the next batch.
+
+Unified release interpretation:
+
+1. FIX-029..032 remain release-blocking as a bundle for protocol-entry closure.
+2. Bundle closure condition:
+   - all four fixes `DONE + PASS`,
+   - no open `IP-PFB-CH-*`, `IP-LAYER-CAND-*`, `IP-LAYER-INQ-*` required failures in strict lanes.
+
+Layer declaration:
+
+1. protocol-only; no business constants introduced.
 
 #### 16.8.19 Roundtable intake: protocol inquiry follow-up chain (2026-03-02, docs-only)
 
