@@ -146,6 +146,11 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
 | FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7 / 913973a / 9d830d8` | DONE | PASS |
+| FIX-034 | 2026-03-02 | protocol | protocol-context lane-lock hardening (`ASB-RQ-094`; protocol-topic sessions must not silently fallback to instance on empty intent) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-035 | 2026-03-02 | protocol | run-pinned strict baseline freshness contract (`ASB-RQ-095`; avoid moving-HEAD nondeterministic strict failures) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-037 | 2026-03-02 | protocol | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 
 ---
 
@@ -4149,6 +4154,80 @@ Usage note:
 
 1. Keep this section as immutable historical evidence for the 2026-03-02 reject point-in-time.
 2. Do **not** use this section alone as current blocking evidence after the normalized replay set in `16.8.28`.
+
+#### 16.8.29 Roundtrip intake: office-ops protocol determinism gaps (`FIX-034..038`, 2026-03-02, docs-only)
+
+Status: `SPEC_READY` (docs-first intake; no protocol code changes in this batch).
+
+Source handoff package (authoring identity `office-ops-expert`):
+
+1. `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-expert-roundtrip-v2026-03-02.md`
+2. supporting logs:
+   - `/tmp/office_release.log`
+   - `/tmp/office_e2e.log`
+   - `/tmp/office_selfdrive_update.log`
+   - `/tmp/office_selfdrive_release.log`
+   - `/tmp/office_selfdrive_e2e.log`
+   - `/tmp/office_e2e_no_pythonpath.log`
+
+Data-sanitization cross-check (intake scope):
+
+1. No customer/order/SKU/price business payloads were found in source doc/logs.
+2. No high-risk credential patterns were found (`api_key`/`secret`/`bearer`/private-key/JWT class patterns).
+3. Source contains local runtime metadata (absolute paths, actor/session IDs, run IDs), which is acceptable for protocol debugging but should be redacted when exporting outside trusted maintainer scope.
+
+Intake findings mapped to new FIX stream:
+
+1. `FIX-034` / `ASB-RQ-094` (`P0`):
+   - protocol-topic troubleshooting can resolve to `work_layer=instance` under `intent_text_missing` fallback, causing protocol lane checks to be skipped.
+   - replay evidence:
+     - `/tmp/office_selfdrive_release.log` and `/tmp/office_selfdrive_e2e.log` contain:
+       - `intent_source=default_fallback`
+       - `fallback_reason=intent_text_missing`
+       - `work_layer=instance`
+2. `FIX-035` / `ASB-RQ-095` (`P0`):
+   - strict baseline/session-refresh checks can fail on moving protocol HEAD within one run window (`IP-PBL-001`, `IP-ASB-RFS-004`, `lag_commits=1`), creating timing-sensitive outcomes.
+   - replay evidence:
+     - `/tmp/office_release.log` and `/tmp/office_e2e.log` show strict failure with `lag_commits=1`.
+     - `/tmp/office_selfdrive_update.log` shows same mismatch becoming recoverable only after head catches up.
+3. `FIX-036` / `ASB-RQ-096` (`P0`):
+   - e2e import path is not fully hermetic; no-PYTHONPATH invocation can fail with:
+     - `ModuleNotFoundError: No module named 'response_stamp_common'`.
+   - replay evidence:
+     - `/tmp/office_e2e_no_pythonpath.log`.
+4. `FIX-037` / `ASB-RQ-097` (`P1`):
+   - skill contract execution integrity drift: skill instructions can point to missing/non-executable command targets in active repo context.
+   - requires machine-checkable skill-command existence validation and CI guard.
+5. `FIX-038` / `ASB-RQ-098` (`P1`):
+   - strict self-repair can self-lock in stale-baseline-only scenarios and require manual policy downgrade; two-phase refresh+strict-revalidate path is required for deterministic one-command recovery.
+
+Required implementation package (next protocol batch):
+
+1. `FIX-034`:
+   - add protocol-context lane-lock validator/receipt path and strict fail-closed downgrade prevention.
+2. `FIX-035`:
+   - add run-start pinned SHA context and evaluate strict baseline freshness against pinned anchor.
+3. `FIX-036`:
+   - make e2e runner import bootstrap hermetic (internal path bootstrap + deterministic preflight error code).
+4. `FIX-037`:
+   - add skill-contract integrity validator + required-skill CI command existence check.
+5. `FIX-038`:
+   - add strict two-phase stale-baseline refresh path with machine-readable phase receipts.
+
+Acceptance template (post-implementation):
+
+1. protocol-topic empty intent under strict mode must fail-closed (no silent instance fallback).
+2. long-run strict replay with in-run HEAD drift must remain deterministic via run-pinned baseline anchor.
+3. `bash scripts/e2e_smoke_test.sh` must pass without external `PYTHONPATH` patch.
+4. required skill contract must fail deterministically when command target is missing.
+5. strict update in stale-only scenario must complete via two-phase refresh+revalidate or fail for non-baseline root cause.
+
+Boundary:
+
+1. This section is docs-only intake.
+2. No changes to protocol scripts, CI workflows, or runtime executors are included in this commit.
+
+#### 16.8.21-A Historical detail payload (archived verbatim, superseded by 16.8.28)
 
 Replay refresh (2026-03-02, local re-audit delta):
 

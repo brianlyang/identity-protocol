@@ -1511,6 +1511,118 @@ Mandatory semantics:
    - sample C (multi-round replay): each round must expose lane telemetry fields and protocol-feedback trigger/path evidence when applicable,
    - sample D (`work_layer=dual` in strict closure operation): deterministic fail-closed with rerun hint to `instance` or `protocol`.
 
+#### 5.8.21 `protocol_context_lane_lock_contract_v1` (P0, FIX-034)
+
+Goal:
+
+1. Prevent protocol-governance sessions from silently falling back to `work_layer=instance` when intent text is missing.
+2. Eliminate false-green closure where protocol diagnostics are reported while protocol lane gates were never active.
+
+Mandatory semantics:
+
+1. Protocol-context trigger must be explicit and machine-checkable:
+   - explicit `work_layer=protocol`,
+   - or active protocol session lane lock (`session_lane_lock=protocol`),
+   - or protocol-governance intent classifier confidence above strict threshold.
+2. In protocol-context sessions, empty/ambiguous intent must not silently downgrade to instance:
+   - strict operations must fail-closed with explicit remediation hint (`provide --expected-work-layer protocol` or protocol lane lock receipt).
+3. Session lane lock contract:
+   - protocol lane lock must persist for current governed round until explicit exit receipt is written.
+4. Required telemetry fields:
+   - `protocol_context_detected`
+   - `session_lane_lock`
+   - `lane_resolution_decision`
+   - `lane_resolution_blocked`
+   - `lane_resolution_error_code`
+5. Suggested error codes:
+   - `IP-LAYER-GATE-006`: protocol context detected but lane resolution attempted default fallback.
+   - `IP-LAYER-GATE-007`: protocol context requires explicit lane confirmation but no confirmation evidence provided.
+
+#### 5.8.22 `run_pinned_protocol_baseline_freshness_contract_v1` (P0, FIX-035)
+
+Goal:
+
+1. Remove non-deterministic strict failures caused by protocol HEAD movement during a single long-running governed run.
+2. Keep baseline freshness strict but evaluated against run-start immutable baseline anchor.
+
+Mandatory semantics:
+
+1. Every governed run (`update/readiness/e2e`) must persist:
+   - `protocol_head_sha_at_run_start`
+   - `baseline_reference_mode` (`run_pinned` / `live_head`).
+2. Strict freshness checks inside the same run must compare execution report SHA against pinned run-start SHA, not moving live HEAD.
+3. Live HEAD drift after run start must be surfaced as warning evidence and next-run action, not immediate in-run hard failure.
+4. Required telemetry fields:
+   - `protocol_head_sha_at_run_start`
+   - `current_protocol_head_sha`
+   - `head_drift_detected`
+   - `baseline_status`
+   - `baseline_error_code`
+5. Suggested error/warning codes:
+   - `IP-PBL-005`: run-pinned baseline anchor missing in strict operation.
+   - `IP-PBL-006`: in-run baseline check attempted against live head while run-pinned mode required.
+
+#### 5.8.23 `e2e_hermetic_runtime_import_contract_v1` (P0, FIX-036)
+
+Goal:
+
+1. Ensure e2e gate behavior is hermetic and independent of caller shell environment.
+2. Remove `PYTHONPATH` external dependency drift between CI and local replay.
+
+Mandatory semantics:
+
+1. `scripts/e2e_smoke_test.sh` must bootstrap Python import path internally (or call package entrypoint that does so).
+2. Direct invocation without external env preparation must pass import preflight:
+   - `IDENTITY_CATALOG=... IDENTITY_IDS=... bash scripts/e2e_smoke_test.sh`.
+3. Missing hermetic import path must fail with deterministic error code and actionable hint.
+4. Required telemetry fields:
+   - `e2e_hermetic_runtime_status`
+   - `pythonpath_bootstrap_mode`
+   - `import_preflight_status`
+   - `import_preflight_error_code`
+5. Suggested error code:
+   - `IP-E2E-HERM-001`: hermetic import path preflight failed (e.g., `response_stamp_common` import unavailable).
+
+#### 5.8.24 `skill_contract_execution_integrity_contract_v1` (P1, FIX-037)
+
+Goal:
+
+1. Keep skill protocol contracts executable-as-documented.
+2. Prevent skill/runtime drift where documented command path is missing in repository.
+
+Mandatory semantics:
+
+1. Skill contract verification must check executable command existence for required skills referenced by protocol identities.
+2. If command path is missing, strict mutation/release operations must emit warning/receipt and block only when skill is required by active profile policy.
+3. Required telemetry fields:
+   - `skill_contract_integrity_status`
+   - `missing_skill_command_refs`
+   - `required_skill_blocking`
+   - `skill_contract_error_code`
+4. Suggested error code:
+   - `IP-SKILL-001`: required skill command target missing or non-executable.
+
+#### 5.8.25 `strict_self_repair_two_phase_refresh_contract_v1` (P1-high, FIX-038)
+
+Goal:
+
+1. Avoid strict self-update self-lock for pure stale-baseline cases.
+2. Keep strict guarantee while enabling one-command deterministic recovery.
+
+Mandatory semantics:
+
+1. When strict preflight fails solely due to stale baseline (`IP-PBL-001`-class) and no other P0 blockers exist:
+   - phase A: run controlled baseline refresh substep,
+   - phase B: re-run strict validation in same command context.
+2. If non-baseline blockers coexist, command remains strict fail-closed (no hidden downgrade).
+3. Two-phase path must emit machine-readable execution trace:
+   - `phase_a_refresh_applied`
+   - `phase_b_strict_revalidate_status`
+   - `phase_transition_reason`
+   - `phase_transition_error_code`
+4. Suggested error code:
+   - `IP-UPG-BASE-001`: strict self-repair two-phase refresh unavailable when stale-baseline-only scenario detected.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2037,6 +2149,11 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-091 | `work_layer=instance` self-drive upgrades must not be hard-blocked by protocol publish gates (e.g., changelog/release metadata); protocol diffs emit side-channel protocol-feedback receipt instead of blocking | readiness/e2e/creator lane filter + protocol-feedback pending receipt writer | P0 | GATE_READY | `FIX-033` implementation landed (`0d7ebc7`) + re-audit docs closure (`9d830d8`); independent replay closed in review (`16.8.27`) |
 | ASB-RQ-092 | `work_layer=protocol` must enforce protocol publish governance gates and canonical protocol-feedback closure (`runtime/protocol-feedback/...`) as fail-closed boundaries | protocol lane required gate set + canonical outbox/index/upgrade proposal validators + strict blocker receipts | P0 | GATE_READY | `FIX-033` implementation landed (`0d7ebc7`) + lane applied-gate-set replay closure (`913973a`,`9d830d8`); independent replay closed in review (`16.8.27`) |
 | ASB-RQ-093 | send-time/replay telemetry must expose lane execution proof (`work_layer`, `applied_gate_set`, `protocol_feedback_triggered`, `protocol_feedback_paths`, `lane_transition_reason`) for each governed round | response-stamp tail + first-line/send-time validators + full-scan/three-plane payload mapping | P0 | GATE_READY | telemetry closure verified by independent replay after patch (`913973a`,`9d830d8`), review record `16.8.27` |
+| ASB-RQ-094 | protocol-topic sessions must not silently downgrade to `work_layer=instance` on empty intent fallback; strict operations require explicit protocol lane confirmation or session lane lock evidence | lane-intent resolver + readiness/e2e/creator strict gate routing + session-lane lock receipt surfaces | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-034` pending |
+| ASB-RQ-095 | strict baseline freshness must evaluate against run-pinned protocol SHA to avoid in-run nondeterministic failures caused by moving HEAD | baseline/session-refresh validators + run context pin writer + readiness/e2e preflight adapters | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-035` pending |
+| ASB-RQ-096 | e2e runner must be hermetic and pass without external `PYTHONPATH` preparation | `e2e_smoke_test.sh` import-path bootstrap + hermetic preflight validator + CI replay adapter | P0 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-036` pending |
+| ASB-RQ-097 | required skill contracts must remain executable-as-documented; missing command targets must be machine-detectable | skill contract integrity validator + required-skill CI check + creator/readiness visibility surfaces | P1 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-037` pending |
+| ASB-RQ-098 | strict self-repair must support two-phase stale-baseline refresh (refresh + strict revalidate) to avoid self-lock in stale-only cases | identity_creator update flow + baseline preflight adapter + machine-readable phase trace receipts | P1 | SPEC_READY | docs-first intake from office-ops roundtrip feedback; implementation batch `FIX-038` pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2075,6 +2192,8 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-082 / ASB-RQ-083 / ASB-RQ-084 / ASB-RQ-085 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-031` landed (`a95f5a2`) and CWD-deterministic candidate-chain rework landed (`560f710`), but independent replay verdict is still pending; baseline reject anchor remains `review 16.8.21` until re-audit closes |
 | ASB-RQ-086 / ASB-RQ-087 / ASB-RQ-088 / ASB-RQ-089 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-032` landed (`a95f5a2`) and inquiry emission-correlation rework landed (`560f710`), but independent replay verdict is still pending; baseline reject anchor remains `review 16.8.21` until re-audit closes |
 | ASB-RQ-090 / ASB-RQ-091 / ASB-RQ-092 / ASB-RQ-093 | `SPEC_READY -> GATE_READY (P0)` | `FIX-033` implementation (`0d7ebc7`) + lane propagation patch (`913973a`) + replay/doc closure (`9d830d8`, review `16.8.27`) closed prior `IP-LAYER-GATE-001` mismatch path |
+| ASB-RQ-094 / ASB-RQ-095 / ASB-RQ-096 | `NEW -> SPEC_READY (P0)` | office-ops roundtrip replay highlighted protocol-layer determinism gaps (lane fallback, moving-head baseline drift, non-hermetic e2e import path); docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-034..036`) |
+| ASB-RQ-097 / ASB-RQ-098 | `NEW -> SPEC_READY (P1)` | skill contract executable drift and strict stale-baseline self-lock identified in office-ops roundtrip replay; docs-first intake recorded in review `16.8.29`, implementation pending (`FIX-037..038`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
