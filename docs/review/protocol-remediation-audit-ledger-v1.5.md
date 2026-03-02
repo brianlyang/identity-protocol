@@ -151,10 +151,10 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 | FIX-037 | 2026-03-02 | ecosystem | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | TRANSFERRED_ECOSYSTEM_TRACK |
 | FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `83e5a03` | DONE | PENDING_REAUDIT |
+| FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `83e5a03` | DONE | PENDING_REAUDIT |
+| FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `83e5a03` | DONE | PENDING_REAUDIT |
+| FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
 
 ---
@@ -4349,6 +4349,64 @@ Boundary:
 
 1. This section is docs-only attribution/delta intake.
 2. No protocol script/CI/runtime mutation is included in this commit.
+
+#### 16.8.32 FIX-039..042 implementation landing replay (`83e5a03`, 2026-03-02, protocol)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` for independent replay closure.
+
+Implementation scope:
+
+1. New helper:
+   - `scripts/protocol_feedback_lane_common.py`
+2. Lane-scoped requiredization + correlation-aware activity rollout:
+   - `scripts/validate_instance_protocol_split_receipt.py`
+   - `scripts/validate_semantic_routing_guard.py`
+   - `scripts/validate_vendor_namespace_separation.py`
+   - `scripts/validate_protocol_feedback_sidecar_contract.py`
+   - `scripts/validate_protocol_feedback_reply_channel.py`
+3. Coverage lane partition + source-layer strict input validation:
+   - `scripts/validate_required_contract_coverage.py`
+   - `scripts/validate_reply_identity_context_first_line.py`
+   - `scripts/validate_send_time_reply_gate.py`
+
+Replay highlights (local):
+
+1. `FIX-039` (`ASB-RQ-099`) baseline replay:
+   - command:
+     `python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation update --json-only`
+   - result:
+     - `rc=0`
+     - `coverage_lane=instance`
+     - protocol governance targets show `required_contract=false`, `auto_required_signal=false`, `requiredization_scope_decision=AUTO_REQUIRED_BLOCKED`.
+2. `FIX-040` (`ASB-RQ-100`) correlation gate behavior:
+   - history-only activity:
+     - `validate_instance_protocol_split_receipt.py ... --operation update --json-only`
+     - `instance_protocol_split_status=SKIPPED_NOT_REQUIRED`, `activity_correlation_status=ACTIVITY_UNSCOPED`.
+   - correlated activity (forced correlation key):
+     - `... --correlation-key LAYER_GATE_PROTOCOL_PENDING_20260302T095608Z.json`
+     - `rc=1`, `error_code=IP-PFB-CH-006`, `activity_correlation_status=CORRELATED_CURRENT_ROUND`.
+3. `FIX-041` (`ASB-RQ-101`) strict invalid source-layer input:
+   - `validate_reply_identity_context_first_line.py ... --expected-source-layer intent --operation validate --enforce-first-line-gate --json-only`
+   - result:
+     - `rc=1`
+     - `error_code=IP-SOURCE-LAYER-001`
+     - `expected_source_layer_validation_status=FAIL_REQUIRED`.
+4. `FIX-042` (`ASB-RQ-102`) lane-aware coverage partition:
+   - protocol lane replay:
+     - `validate_required_contract_coverage.py ... --expected-work-layer protocol --operation update --json-only`
+   - result:
+     - `rc=1`
+     - `coverage_lane=protocol`
+     - `coverage_protocol_targets_included` contains semantic/split/vendor/sidecar targets.
+
+Static check:
+
+1. `python3 -m py_compile` for changed scripts returned `rc=0`.
+
+Boundary:
+
+1. This section records implementation landing evidence only.
+2. Final PASS promotion for `FIX-039..042` is pending independent re-audit.
 
 #### 16.8.21-A Historical detail payload (archived verbatim, superseded by 16.8.28)
 
