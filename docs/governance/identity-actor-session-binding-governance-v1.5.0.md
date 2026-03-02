@@ -399,7 +399,8 @@ Natural-language explicit trigger parsing contract:
    - `work_layer in {protocol, instance, dual}`
    - `source_layer in {project, global, env, auto}`
 7. Ambiguous layer intent must not be silently applied:
-   - require clarification or fallback to `work_layer=protocol` with explicit notice.
+   - require clarification and enter `PROTOCOL_CANDIDATE` when candidate bridge is enabled.
+   - if candidate bridge is unavailable, fallback must remain `work_layer=instance` with explicit `fallback_reason`.
 
 ### 5.2D Dynamic disclosure rendering profile (cross-instance replay alignment)
 
@@ -428,7 +429,11 @@ Tail-block hard rules (governed user-facing first line):
 1. `Layer-Context` must be appended at line tail after `Identity-Context`.
 2. `work_layer` and `source_layer` are mandatory machine-readable fields.
 3. `source` and `source_layer` must be semantically consistent.
-4. Missing tail block or invalid layer enum is fail-closed under strict operations.
+4. `source` and `source_layer` are intentionally non-identical provenance fields:
+   - `source` tracks identity resolution provenance (`global` / `local` / `env`).
+   - `source_layer` tracks layer-intent provenance for `work_layer` resolution (`project` / `global` / `env` / `auto`).
+5. Equal token values across `source` and `source_layer` are allowed but must not be treated as semantic equivalence without explicit mapper evidence.
+6. Missing tail block or invalid layer enum is fail-closed under strict operations.
 
 Cross-instance replay requirement:
 
@@ -1332,6 +1337,44 @@ Mandatory semantics:
    - `candidate_seed_index_ref`
    - `candidate_promotion_status`
 
+#### 5.8.18 `protocol_inquiry_followup_chain_contract_v1` (P0)
+
+Goal:
+
+1. Convert weak protocol concerns into deterministic analysis + follow-up flow instead of pass/block deadlock.
+2. Ensure protocol conclusions are emitted only after canonical protocol-feedback seed/index linkage is established.
+3. Prevent business-scene statements from contaminating protocol-layer governance evidence.
+
+Mandatory semantics:
+
+1. Inquiry state machine is mandatory when protocol concern exists but evidence is incomplete:
+   - `QUESTION_REQUIRED`
+   - `EVIDENCE_PENDING`
+   - `READY_FOR_PROTOCOL_FEEDBACK`
+   - `FEEDBACK_EMITTED`
+2. Inquiry state must emit deterministic follow-up question set at minimum:
+   - `which_gate_or_stage_failed`
+   - `latest_replay_or_evidence_path`
+   - `expected_protocol_optimization_target`
+3. Inquiry receipts must classify signal origin:
+   - `signal_origin in {governance_statement, business_statement, mixed_statement}`
+4. `business_statement` or `mixed_statement` inputs must produce a protocol-sanitized paraphrase receipt before protocol conclusion promotion.
+5. Raw customer/tenant/business constants from inquiry text must not be copied into governance/review protocol conclusions.
+6. Transition to `READY_FOR_PROTOCOL_FEEDBACK` requires canonical protocol-feedback seed + index linkage evidence.
+7. Protocol conclusion emission requires `FEEDBACK_EMITTED`; otherwise strict fail-closed.
+8. Strict fail-closed errors:
+   - `IP-LAYER-INQ-001`: inquiry required but deterministic follow-up set missing
+   - `IP-LAYER-INQ-002`: inquiry evidence missing/stale for declared protocol conclusion
+   - `IP-LAYER-INQ-003`: canonical protocol-feedback seed/index linkage missing before conclusion
+   - `IP-LAYER-INQ-004`: unsanitized business statement promoted into protocol conclusion
+9. three-plane/full-scan telemetry must expose:
+   - `inquiry_state`
+   - `followup_question_set`
+   - `signal_origin`
+   - `sanitization_paraphrase_ref`
+   - `protocol_feedback_seed_ref`
+   - `protocol_feedback_index_ref`
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -1687,6 +1730,13 @@ Protocol-entry candidate clarification bridge (P0) must be wired in the same sur
 4. strict-lane fail-closed checks for silent candidate downgrade or missing candidate seed linkage.
 5. three-plane/full-scan telemetry exposure for candidate decision and promotion status.
 
+Protocol inquiry follow-up chain (P0) must be wired in the same surfaces through:
+
+1. layer-intent and candidate bridge adapters emit inquiry states and deterministic follow-up receipts.
+2. inquiry classifier emits `signal_origin` and sanitization paraphrase receipts for non-governance-native inputs.
+3. strict-lane adapters block protocol conclusion until canonical protocol-feedback seed/index linkage is ready.
+4. three-plane/full-scan/readiness/e2e/CI surfaces expose inquiry telemetry and `IP-LAYER-INQ-*` fail-closed errors.
+
 Capability-fit self-drive optimization enhancement (P1) should be wired in the same surfaces through:
 
 1. periodic capability inventory snapshot and fit-matrix generation.
@@ -1843,6 +1893,10 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-083 | required gate `validate_protocol_entry_candidate_bridge.py` must enforce candidate clarification receipt completeness and deterministic question set (`which_gate_or_stage_failed`, `latest_replay_or_evidence_path`, `expected_protocol_optimization_target`) | creator/readiness/e2e/full-scan/three-plane/CI wiring | P0 | SPEC_READY | candidate clarification gate semantics declared in `5.8.17`; implementation pending |
 | ASB-RQ-084 | candidate protocol-entry flow must seed canonical protocol-feedback outbox/index before final protocol conclusion; missing seed/index linkage is strict fail-closed (`IP-LAYER-CAND-003/004`) | candidate seed writer + SSOT archival bridge + strict-lane adapters | P0 | SPEC_READY | seed-to-SSOT semantics declared in `5.8.17`; implementation pending |
 | ASB-RQ-085 | strict operations must fail-closed on silent candidate downgrade without clarification evidence (`IP-LAYER-CAND-001`) and expose candidate promotion telemetry in three-plane/full-scan | strict-lane adapters + scan/report telemetry surfaces | P0 | SPEC_READY | anti-silent-downgrade semantics declared in `5.8.17`; implementation pending |
+| ASB-RQ-086 | weak protocol concerns must enter deterministic inquiry follow-up states (`QUESTION_REQUIRED -> EVIDENCE_PENDING -> READY_FOR_PROTOCOL_FEEDBACK`) instead of silent downgrade/drop | layer-intent classifier + candidate/inquiry adapters + inquiry receipt writer surfaces | P0 | SPEC_READY | inquiry-chain semantics declared in `5.8.18`; implementation pending |
+| ASB-RQ-087 | inquiry receipts must classify `signal_origin` and require sanitized paraphrase before promoting business-origin statements into protocol conclusions | inquiry classifier + sanitization receipt writer + protocol conclusion adapters | P0 | SPEC_READY | business-to-governance sanitization semantics declared in `5.8.18`; implementation pending |
+| ASB-RQ-088 | `source` (identity provenance) and `source_layer` (layer-intent provenance) must remain machine-distinct and mapper-auditable; ambiguity must not silently alter `work_layer` | stamp parser/coherence validator + layer-intent resolver + telemetry surfaces | P0 | SPEC_READY | semantic-separation clarification declared in `5.2D` and `5.8.18`; implementation pending |
+| ASB-RQ-089 | required gate `validate_protocol_inquiry_followup_chain.py` must fail-closed on missing follow-up receipts, missing protocol-feedback linkage, or unsanitized promotion (`IP-LAYER-INQ-001..004`) across creator/readiness/e2e/full-scan/three-plane/CI | six-surface + required-gates workflow wiring | P0 | SPEC_READY | required gate/wiring semantics declared in `5.8.18`; implementation pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -1879,6 +1933,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-075 / ASB-RQ-076 / ASB-RQ-077 / ASB-RQ-078 | `NEW (SPEC_READY, P0)` | protocol-feedback canonical reply-channel + sidecar prefix extension + split-receipt requiredization bridge declared (`5.8.16`), review intake + replay pending (`16.8.15`) |
 | ASB-RQ-079 / ASB-RQ-080 / ASB-RQ-081 | `NEW (SPEC_READY, P0)` | protocol-layer entry bootstrap-readiness hardening (`5.8.16` extension): trigger-to-channel bootstrap bridge + strict fail-closed semantics + machine-readable telemetry declared; review intake + replay pending (`16.8.16`) |
 | ASB-RQ-082 / ASB-RQ-083 / ASB-RQ-084 / ASB-RQ-085 | `NEW (SPEC_READY, P0)` | protocol-entry candidate clarification bridge (`5.8.17`): weak-signal protocol entry + deterministic clarification + canonical candidate seed + anti-silent-downgrade fail-closed semantics declared; review intake + replay pending (`16.8.18`) |
+| ASB-RQ-086 / ASB-RQ-087 / ASB-RQ-088 / ASB-RQ-089 | `NEW (SPEC_READY, P0)` | protocol inquiry follow-up chain (`5.8.18`): deterministic inquiry states + business-signal sanitization paraphrase + `source/source_layer` semantic separation + strict fail-closed gate semantics declared; review intake + replay pending (`16.8.19`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

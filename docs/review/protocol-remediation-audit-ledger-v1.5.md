@@ -144,6 +144,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge intake (`ASB-RQ-075..078`, docs-only) | `TBD` | INTAKE | SPEC_READY |
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening intake (`ASB-RQ-079..081`, docs-only; trigger-to-feedback forced path chain) | `TBD` | INTAKE | SPEC_READY |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge intake (`ASB-RQ-082..085`, docs-only; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `TBD` | INTAKE | SPEC_READY |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain intake (`ASB-RQ-086..089`, docs-only; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification) | `TBD` | INTAKE | SPEC_READY |
 
 ---
 
@@ -4307,6 +4308,93 @@ Acceptance replay template (post-implementation):
 4. negative: candidate seed exists but evidence-index unlinked -> `FAIL_REQUIRED` (`IP-LAYER-CAND-004`)
 5. positive: weak concern -> `PROTOCOL_CANDIDATE` + clarification receipt + canonical seed/index linkage -> `PASS_REQUIRED`
 6. positive: strong protocol signal -> `PROTOCOL_DIRECT` and normal strict protocol chain
+7. docs/ssot checks:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+Layer declaration:
+
+1. protocol-only; no business scenario constants introduced.
+
+#### 16.8.19 Roundtable intake: protocol inquiry follow-up chain (2026-03-02, docs-only)
+
+Status: `SPEC_READY` (implementation not landed yet).
+
+Problem statement (cross-validated, no scope expansion):
+
+1. Candidate bridge solves weak-signal entry deadlock, but current protocol baseline still lacks a strict inquiry state machine for "analyzable feedback + deterministic follow-up questioning."
+2. Weak governance concerns can carry business-language fragments; without explicit sanitization receipts this can contaminate protocol-layer conclusions.
+3. `source` and `source_layer` semantics are parseable today but still easy to misread as identical, causing governance communication ambiguity.
+4. Protocol conclusions should be blocked until canonical protocol-feedback seed/index linkage exists, even in inquiry-driven promotion paths.
+
+Local evidence anchors:
+
+1. default work-layer fallback is `instance`:
+   - `scripts/response_stamp_common.py:37`
+2. strong signals can enter protocol directly, weak concerns still need governed bridge:
+   - `scripts/response_stamp_common.py:285`
+   - `scripts/response_stamp_common.py:549`
+   - `scripts/response_stamp_common.py:565`
+3. strict guard already fails on protocol-without-trigger:
+   - `scripts/validate_layer_intent_resolution.py:250`
+4. disclosure/tail contract already enforces `work_layer/source_layer` machine readability:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:359`
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:429`
+
+Vendor + official + skill-protocol cross-check (inference noted):
+
+1. OpenAI Responses + conversation-state guidance supports explicit state transitions and stateful context capture, matching inquiry-state requirements.
+2. OpenAI role hierarchy references support deterministic precedence when follow-up questioning must stay governance-first.
+3. Anthropic prompt guidance and system-prompt structuring support deterministic clarification templates and non-ambiguous escalation paths.
+4. Gemini prompting strategy guidance supports precise structured prompts for stable machine-readable receipts.
+5. MCP lifecycle guidance supports explicit lifecycle transitions and capability-state negotiation, aligning with inquiry-state promotion/fallback contracts.
+6. Local skill protocol (`skill-creator`) emphasizes progressive disclosure and deterministic trigger metadata, matching inquiry-first design.
+
+Official source links:
+
+1. `https://platform.openai.com/docs/guides/conversation-state`
+2. `https://developers.openai.com/api/reference/resources/responses/`
+3. `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview`
+4. `https://ai.google.dev/gemini-api/docs/prompting-strategies`
+5. `https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle`
+6. `https://modelcontextprotocol.io/docs/learn/architecture`
+
+Governance delta (this batch, docs-only):
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+   - added `5.8.18` `protocol_inquiry_followup_chain_contract_v1` (P0).
+   - added requirement rows `ASB-RQ-086..089` (`P0`, `SPEC_READY`).
+   - clarified `source` vs `source_layer` semantic non-equivalence and ambiguous-intent fallback wording in disclosure contract.
+
+Architect implementation package (next execution batch):
+
+1. Add required gate:
+   - `scripts/validate_protocol_inquiry_followup_chain.py`
+2. Extend layer/candidate outputs with inquiry telemetry:
+   - `inquiry_state`
+   - `followup_question_set`
+   - `signal_origin`
+   - `sanitization_paraphrase_ref`
+3. Enforce deterministic follow-up set:
+   - `which_gate_or_stage_failed`
+   - `latest_replay_or_evidence_path`
+   - `expected_protocol_optimization_target`
+4. Enforce protocol-feedback readiness before protocol conclusion:
+   - canonical outbox seed
+   - canonical evidence-index linkage
+5. Strict fail-closed errors:
+   - `IP-LAYER-INQ-001..004`
+6. Wire across six surfaces + CI:
+   - creator / readiness / e2e / full-scan / three-plane / required-gates workflow.
+
+Acceptance replay template (post-implementation):
+
+1. negative: inquiry required but deterministic follow-up set missing -> `FAIL_REQUIRED` (`IP-LAYER-INQ-001`)
+2. negative: protocol conclusion emitted with missing/stale inquiry evidence -> `FAIL_REQUIRED` (`IP-LAYER-INQ-002`)
+3. negative: protocol conclusion emitted before canonical seed/index linkage -> `FAIL_REQUIRED` (`IP-LAYER-INQ-003`)
+4. negative: business-origin text promoted without sanitization paraphrase receipt -> `FAIL_REQUIRED` (`IP-LAYER-INQ-004`)
+5. positive: weak concern -> inquiry states emitted + deterministic follow-up + canonical seed/index linkage -> `PASS_REQUIRED`
+6. positive: strong protocol concern -> direct protocol path with intact strict chain + inquiry telemetry explicitly `NOT_REQUIRED`
 7. docs/ssot checks:
    - `python3 scripts/docs_command_contract_check.py`
    - `python3 scripts/validate_protocol_ssot_source.py`
