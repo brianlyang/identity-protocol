@@ -4772,7 +4772,7 @@ Static/doc contract checks:
 Decision boundary:
 
 1. `FIX-051` and `FIX-052` are moved to implementation-complete status (`DONE`) with `PENDING_REAUDIT`.
-2. `FIX-053` remains `SPEC_READY / PENDING_REPLAY` (coverage normalization patch not included in `e62deab`).
+2. Historical note (timepoint `16.8.44`): `FIX-053` was still `SPEC_READY / PENDING_REPLAY` because coverage normalization patch was not part of `e62deab`; superseded by implementation intake `16.8.46` (`ddb1529`).
 3. This intake is scope-limited and does not claim all pending remediation batches are closed.
 
 #### 16.8.45 Implementation replay intake: outbound reply headstamp recurrence guard (`FIX-054`, 2026-03-03, scope-limited)
