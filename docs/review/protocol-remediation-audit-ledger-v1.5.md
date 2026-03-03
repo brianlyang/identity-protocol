@@ -161,13 +161,13 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
 | FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PASS |
 | FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PASS |
-| FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
-| FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `f5363e5` | DONE | PENDING_REAUDIT |
+| FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `f5363e5` | DONE | PENDING_REAUDIT |
 | FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab / ddb1529 / 6430852` | DONE | PASS |
 | FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PASS |
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
-| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6` | DONE | PENDING_REAUDIT |
+| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -4453,7 +4453,7 @@ Decision boundary for this section:
 
 1. This replay confirms `FIX-048` code landed and behavior is reproducible.
 2. Promotion is limited to `IMPL_READY (BLOCKED_BY_AUDIT)` in governance/review status bridge.
-3. `FIX-049/050` status is unaffected by this section and remains on implementation-pending track.
+3. `FIX-049/050` status was unaffected at this timepoint and remained on implementation-pending track (historical note; superseded by `16.8.54`).
 
 #### 16.8.40 Roundtable intake: live reply first-line gate recurrence root cause (`FIX-049`, 2026-03-03, docs-only)
 
@@ -4517,7 +4517,7 @@ Acceptance DoD (post-implementation):
 Boundary:
 
 1. This section is docs-only intake and does not change runtime behavior.
-2. `FIX-049` remains `SPEC_READY / PENDING_REPLAY` until architect implementation and independent replay closure.
+2. Historical state at this timepoint: `FIX-049` remained `SPEC_READY / PENDING_REPLAY` before implementation (superseded by `16.8.54`).
 
 #### 16.8.41 Cross-project evidence intake: fqsh header-first recurrence + scaffold pollution (`FIX-050`, 2026-03-03, docs-only)
 
@@ -4591,7 +4591,7 @@ Acceptance DoD:
 Boundary:
 
 1. This section is docs-only intake and planning.
-2. `FIX-050` remains `SPEC_READY / PENDING_REPLAY` until architect implementation and independent replay closure.
+2. Historical state at this timepoint: `FIX-050` remained `SPEC_READY / PENDING_REPLAY` before implementation (superseded by `16.8.54`).
 
 #### 16.8.42 Supplemental cross-verification: `system-requirements-analyst` instance Full Go intake (2026-03-03, scope-limited)
 
@@ -5125,15 +5125,67 @@ Promotion decision (this section):
    - `FIX-026`
    - `FIX-027`
    - `FIX-028` (commit backfilled to `48e5445`)
-2. Keep pending:
-   - `FIX-049` (`PENDING_REPLAY`): synthetic evidence path still passes strict gate (`/tmp/reaudit2_fix049_synthetic_check.json`, `reply_evidence_mode=stamp_json_composed_reply`)
-   - `FIX-050` (`PENDING_REPLAY`): implementation markers not present in `scripts/` (`header_first_gate_status`, `scaffold_consent_gate_status`, `mutation_plan_disclosed`, `IP-ASB-STAMP-SESSION-002`)
-   - `FIX-055` (`PENDING_REAUDIT`): latest project-only full scan remains `p0=1` with `capability_activation_report` failure (`/tmp/reaudit2_fix055_fullscan_project_only_after_update.json`)
+2. Keep pending at this historical checkpoint only (superseded by `16.8.54`):
+   - `FIX-049` (`PENDING_REPLAY` at `16.8.53` timepoint): synthetic evidence path still passed strict gate (`/tmp/reaudit2_fix049_synthetic_check.json`, `reply_evidence_mode=stamp_json_composed_reply`).
+   - `FIX-050` (`PENDING_REPLAY` at `16.8.53` timepoint): implementation markers were not yet present in `scripts/`.
+   - `FIX-055` (`PENDING_REAUDIT` at `16.8.53` timepoint): project-only full scan still held `p0=1` in that replay window.
 
 Decision boundary:
 
 1. This section supersedes `PENDING_REPLAY` wording in historical implementation lanes for `FIX-021..028`.
 2. `v1.5` release status remains `NO_GO`; this promotion is protocol re-audit closure only and does not waive release-plane gates.
+
+#### 16.8.54 Implementation intake: close pending code gaps from `16.8.53` (`FIX-049/050/055`, 2026-03-03)
+
+Status: `DONE / PENDING_REAUDIT` (implementation landed; independent auditor replay promotion still required).
+
+Commit anchor:
+
+1. `f5363e5` — `fix(protocol): harden send-time evidence and pre-mutation execution gates`
+
+Scope:
+
+1. Convert `FIX-049` and `FIX-050` from docs-only/spec intake to code implementation with replay artifacts.
+2. Add `FIX-055` follow-up hardening in scan path (`capability_activation_report` strict requirement only when report is closure-grade).
+3. This section supersedes the `FIX-049/050/055` pending-only statements recorded in `16.8.53`.
+
+Cross-verified replay evidence (this round):
+
+1. `FIX-049` strict send-time evidence boundary:
+   - synthetic strict evidence is now fail-closed:
+     - `/tmp/fix049_synthetic_after.json` -> `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-002`, `reply_evidence_mode=stamp_json_composed_reply`.
+   - missing outlet guard is now fail-closed:
+     - `/tmp/fix049_no_guard_after.json` -> `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-003`, `reply_evidence_mode=reply_file`.
+   - real reply + outlet guard passes:
+     - `/tmp/fix049_live_guard_after.json` -> `send_time_gate_status=PASS_REQUIRED`, `reply_outlet_guard_applied=true`, `reply_evidence_mode=reply_file`.
+   - compose adapter emits guard telemetry and validates exact outbound payload:
+     - `/tmp/fix049_compose.json` -> `send_time_gate_status=PASS_REQUIRED`, `reply_outlet_guard_applied=true`, `reply_transport_ref` non-empty.
+2. `FIX-050` pre-mutation execution-order hard gate:
+   - init without scaffold consent token now blocks before write:
+     - `/tmp/fix050_init_no_consent.log` -> `init pre-mutation gate failed: IP-EXEC-ORDER-002`.
+     - receipt: `/tmp/identity-pre-mutation-gate-init-fix050-no-consent-1772540651.json` (`status=FAIL_REQUIRED`).
+   - init with consent token passes and writes scaffold:
+     - `/tmp/fix050_init_with_consent.log` -> pack created.
+     - receipt: `/tmp/identity-pre-mutation-gate-init-fix050-with-consent-1772540651.json` (`status=PASS_REQUIRED`).
+   - update pre-mutation gate receipt is emitted with disclosure tuple:
+     - `/tmp/identity-pre-mutation-gate-update-custom-creative-ecom-analyst-identity-upgrade-exec-custom-creative-ecom-analyst-1772540586.json`
+       (`header_first_gate_status=PASS_REQUIRED`, `mutation_plan_disclosed=true`).
+   - execution report schema now contains required fields:
+     - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772540070.json`
+       includes `header_first_gate_status`, `scaffold_consent_gate_status`, `mutation_plan_disclosed`, `planned_files`, `pre_mutation_gate_ts`, `pre_mutation_gate_receipt`, `why_now`.
+3. `FIX-055` scan-path closure refinement:
+   - escalated full-scan live recheck confirms capability preflight fallback is now machine-visible and non-blocking by itself:
+     - `/tmp/full_scan_custom_20260303T123549Z_live_recheck_escalated.json`
+     - key fields: `capability_activation_status=ACTIVATED`, `capability_activation_fallback_attempted=true`,
+       `capability_activation_policy_effective=route-any-ready`.
+   - same replay window keeps non-capability blockers separately visible (`summary.p0=1`) and no longer attributes that residual `P0`
+     to capability preflight overreach.
+
+Decision boundary:
+
+1. `FIX-049/050` are now implementation-complete (`DONE`) but remain `PENDING_REAUDIT` until independent replay promotion.
+2. `FIX-055` follow-up in this commit closes scan-path capability-report overreach; overall project replay can still be `P0` due unrelated validators (for example `post_execution_mandatory`/`prompt_lifecycle`) and this section does not claim full release closure.
+3. `v1.5` release posture remains governed by unlock formula and release-plane conditions (`NO_GO` unless all release-lock predicates are satisfied).
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
