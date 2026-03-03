@@ -167,7 +167,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PASS |
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
-| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary de-P0 closure (`full_identity_protocol_scan` severity normalization + strict update env fallback trace) | `9c4530d` | DONE | PENDING_REAUDIT |
+| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -5025,12 +5025,12 @@ Decision boundary:
 
 #### 16.8.51 `IP-CAP-003` de-P0 closure sync (project scope live replay, `FIX-055`, 2026-03-03)
 
-Status: `DONE / PENDING_REAUDIT` (project-scope `IP-CAP-003` is no longer a `P0` classifier; retained as `P1` env boundary).
+Status: `DONE / PENDING_REAUDIT` (project-scope `IP-CAP-003` is no longer a `P0` classifier; retained as `P1` env boundary in this step).
 
 Implementation anchors:
 
 1. `scripts/full_identity_protocol_scan.py`
-   - capability env/auth failures now classify as `P1` when non-env hard failures are absent.
+   - capability env/auth failures classify as `P1` when non-env hard failures are absent.
 2. `scripts/identity_creator.py`
    - strict capability preflight now auto-fallbacks to `route-any-ready` on `IP-CAP-003` and emits phase trace:
      - `phase_transition_reason=capability_env_auth_fallback`
@@ -5057,6 +5057,31 @@ Decision boundary:
 
 1. `IP-CAP-003` remains visible as env/auth boundary (`P1`), but no longer drives project-scope `P0` classification.
 2. This closure does not imply release-plane closure or v1.5 unlock.
+
+#### 16.8.52 `IP-CAP-003` de-P1 closure sync (project scope scan fallback, `FIX-055` follow-up, 2026-03-03)
+
+Status: `DONE / PENDING_REAUDIT` (project-scope scan no longer emits `P1` on standalone env/auth blocker; boundary kept as telemetry).
+
+Implementation anchor:
+
+1. `ed64ea6` — `fix(protocol): auto-fallback scan capability preflight on IP-CAP-003`
+   - `full_identity_protocol_scan.py` now retries capability preflight with `route-any-ready` on `IP-CAP-003`.
+   - scan payload keeps boundary evidence fields:
+     - `capability_activation_fallback_attempted=true`
+     - `capability_activation_fallback_policy=route-any-ready`
+     - `capability_activation_policy_effective=route-any-ready`
+
+Replay evidence:
+
+1. Project-only full scan after fallback patch:
+   - `/tmp/fix056_fullscan_project_only_live.json`
+   - `summary={"p0":0,"p1":0,"ok":1}` for target identity.
+   - capability check fields include fallback telemetry while validator result is `ok=true`.
+
+Decision boundary:
+
+1. This closure is classification/output closure for project-scope scan path; it does not alter release-lock formula or release-plane prerequisites.
+2. Env/auth boundary remains auditable via capability fallback telemetry rather than `P1` summary classification.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
