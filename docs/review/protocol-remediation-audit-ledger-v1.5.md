@@ -4550,6 +4550,46 @@ Boundary:
 1. This section is docs-only intake and planning.
 2. `FIX-050` remains `SPEC_READY / PENDING_REPLAY` until architect implementation and independent replay closure.
 
+#### 16.8.42 Supplemental cross-verification: `system-requirements-analyst` instance Full Go intake (2026-03-03, scope-limited)
+
+Status: `FULL_GO (INSTANCE_OPERATIONAL)` with `NON_BLOCKING_P1_BACKLOG`.
+
+Scope boundary:
+
+1. This intake records a scope-limited instance-lane acceptance replay.
+2. It does not auto-promote unresolved protocol remediation rows in the summary table.
+
+Cross-validated evidence (this round):
+
+1. End-to-end upgrade pass:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772520264.json`
+   - key fields: `all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `work_layer=instance`, `applied_gate_set=instance_required_checks`.
+2. Semantic routing + sidecar governance pass snapshot:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-03_014.md`
+   - section states update-lane replay moved to `P0 已闭环`, while keeping explicit P1 hardening notes.
+3. Strong blocker fail-close negative sample:
+   - `/private/tmp/send-time-bad-final-receipt.json`
+   - key field: `error_code=IP-ASB-STAMP-SESSION-001` (missing first-line stamp path still fail-closed).
+4. Protocol lane lock closure chain:
+   - lock receipt: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260303T080218Z.json`
+   - exit receipt: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260303T080442Z.json`
+   - index linkage: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`.
+5. Governance mirror roundtable document exists and is index-referenced:
+   - `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-instance-capability-roundtable-audit-2026-03-03.md`.
+
+Residual non-blocking items (keep visible):
+
+1. `activity_correlation_status=ACTIVITY_UNSCOPED` still appears in semantic/sidecar telemetry (P1 correlation hardening).
+2. `required_contract_coverage` requiredized coverage remains low for this profile (P1 governance requiredization hardening).
+
+Decision impact:
+
+1. Operational verdict for this identity replay window: `Full Go`.
+2. Protocol remediation summary rows remain unchanged by this intake:
+   - `FIX-029..032`: `PENDING_REAUDIT`
+   - `FIX-034..044`: unchanged current states in summary table.
+3. Architect next priority should stay on P1 closure for correlation strictness and requiredized coverage uplift.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
