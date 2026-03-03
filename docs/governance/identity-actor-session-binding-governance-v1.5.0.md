@@ -1928,12 +1928,14 @@ Mandatory semantics:
    - subprocess `cwd` fixed to protocol-root (or passed explicitly).
 3. Prompt lifecycle runtime state artifact path must be canonicalized with same anchor semantics as writeback paths.
 4. Strict operations must fail-closed only on semantic writeback violation, not path-resolution ambiguity.
-5. Required telemetry fields:
+5. Cross-directory invocation runbook rule:
+   - when caller CWD is not protocol-root, pass `--repo-catalog` as absolute path to avoid default relative-path ambiguity.
+6. Required telemetry fields:
    - `writeback_path_resolution_mode`
    - `writeback_path_anchor`
    - `subvalidator_invocation_mode`
    - `subvalidator_script_ref`
-6. Suggested error codes:
+7. Suggested error codes:
    - `IP-WRB-004`: unresolved relative writeback path anchor.
    - `IP-WRB-005`: subvalidator invocation is CWD-sensitive / unresolved script path.
 

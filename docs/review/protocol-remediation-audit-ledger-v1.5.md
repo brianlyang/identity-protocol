@@ -4888,6 +4888,11 @@ Replay evidence (scope-limited):
 2. Sidecar passthrough + CWD invariance:
    - `/tmp/fix_sid_sidecar_repo_after.json` -> `sidecar_contract_status=PASS_REQUIRED`
    - `/tmp/fix_sid_sidecar_tmp_after.json` -> `sidecar_contract_status=PASS_REQUIRED`
+   - passthrough equivalence replay (`--run-id + --correlation-key + --expected-work-layer`) confirms sidecar `track_b.semantic_*` / `track_b.vendor_namespace_*`
+     match direct validators:
+     - `/tmp/reaudit_fix_sid_sidecar_equiv.json`
+     - `/tmp/reaudit_fix_sid_sem_direct.json`
+     - `/tmp/reaudit_fix_sid_ns_direct.json`
 3. Outlet compose hard-wiring visible in scan/three-plane:
    - `/tmp/full_scan_custom_project_only_afterfix4.json` contains both `send_time_reply_gate` (compose preflight) and `send_time_reply_gate_validate` pass records.
    - `/tmp/three_plane_custom_20260303_afterfix4.json` validator set includes `compose_governed_reply_preflight` + `send_time_reply_gate`, both `rc=0`.
@@ -4899,6 +4904,8 @@ Decision boundary:
 1. This intake addresses the cited P0/P1 implementation gaps from the auditor counter-evidence window.
 2. Status remains `PENDING_REAUDIT` until independent replay confirms no regression across required lanes.
 3. No claim of global full-green is made by this section.
+4. Cross-cwd runbook note:
+   - when caller cwd is not protocol-root, pass absolute `--repo-catalog` for post-execution chain replay consistency.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
