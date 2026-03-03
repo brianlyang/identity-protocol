@@ -4403,6 +4403,8 @@ Inference-to-contract mapping:
 1. Since vendor specs define portable metadata-first skills, default scaffold output containing legacy vertical constants is treated as protocol contamination (`ASB-RQ-107`, P0).
 2. Since specs separate capability interfaces from domain constants, blocker taxonomy must migrate to canonical neutral enums + explicit legacy alias bridge (`ASB-RQ-108`, P1).
 3. Since vendor security guidance requires explicit consent/controls, any domain specialization must be explicit profile opt-in + receipt, not hidden in default bootstrap.
+4. Since AI workflows iterate rapidly while protocol contracts keep moving, scaffold should be a minimal invariant shell and must not be treated as a long-lived business playbook snapshot.
+5. Protocol layer governs contracts/controls; concrete business execution plans belong to identity instance runtime and must remain outside default scaffold seeds.
 
 Boundary:
 

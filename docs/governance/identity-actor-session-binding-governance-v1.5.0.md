@@ -1803,6 +1803,18 @@ Mandatory semantics:
    - `IP-SCF-001`: forbidden legacy domain token found in default scaffold output.
    - `IP-SCF-002`: non-canonical or cross-root path found in default scaffold output.
    - `IP-SCF-003`: domain-specific overlay applied without explicit profile receipt.
+6. Protocol-vs-instance responsibility boundary:
+   - scaffold default payloads must carry protocol contracts/governance controls only,
+   - they must not hardcode business execution playbooks or handholding steps for a specific vertical domain.
+7. AI-era scaffold evolution requirement:
+   - default scaffold must remain a minimal invariant shell (`contract + guard + telemetry`),
+   - execution-specific procedures are delegated to identity instance runtime planning, not frozen into bootstrap templates.
+8. Drift control for fast iteration:
+   - scaffold artifacts must expose generation provenance (`scaffold_generation_mode`, `protocol_contract_version`, `generated_at`),
+   - strict lanes fail-closed when stale scaffold template is used without explicit compatibility receipt.
+9. Suggested drift/control error codes:
+   - `IP-SCF-004`: scaffold template version incompatible with active protocol contract version in strict lane.
+   - `IP-SCF-005`: protocol/instance responsibility boundary violated by business execution hardcoding.
 
 Vendor/spec cross-validation constraints (normative addendum):
 
