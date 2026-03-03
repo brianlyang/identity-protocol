@@ -58,6 +58,28 @@ MANDATORY_PROTOCOL_SOURCES = [
 
 REPO_FIXTURE_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_FIXTURE_WRITE"
 
+CANONICAL_BLOCKER_TYPES = [
+    "auth_login_required",
+    "anti_automation_challenge_required",
+    "session_reauthentication_required",
+    "manual_verification_required",
+]
+
+LEGACY_BLOCKER_ALIAS_MAP = {
+    "login_required": "auth_login_required",
+    "captcha_required": "anti_automation_challenge_required",
+    "session_expired": "session_reauthentication_required",
+}
+
+DOMAIN_NEUTRALITY_BLOCKLIST = [
+    "store-manager",
+    "store_manager",
+    "weixinstore-ui-agent",
+    "weixinstore-sku-onboarding",
+    "wechat_listing_update",
+    "taobao-search-automation",
+    "10000514174106",
+]
 
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -461,7 +483,7 @@ def _normalize_bootstrap_task_ids(value, identity_id: str):
     return value
 
 
-def _full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
+def _legacy_full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
     template_path = Path("identity/store-manager/CURRENT_TASK.json")
     if not template_path.exists():
         raise FileNotFoundError(f"missing template CURRENT_TASK: {template_path}")
@@ -521,8 +543,557 @@ def _full_contract_current_task(identity_id: str, title: str, description: str) 
     rbc = task.setdefault("identity_role_binding_contract", {})
     if isinstance(rbc, dict):
         rbc["role_type"] = f"{identity_id.replace('-', '_')}_runtime_operator"
+    task["scaffold_profile"] = "legacy-commerce-overlay"
+    task["scaffold_generation_mode"] = "explicit_opt_in"
     task = _ensure_dialogue_governance_contract(task, identity_id)
     return _ensure_tool_vendor_governance_contracts(task, identity_id)
+
+
+def _default_required_checks() -> list[str]:
+    return [
+        "scripts/validate_identity_runtime_contract.py",
+        "scripts/validate_identity_upgrade_prereq.py",
+        "scripts/validate_identity_update_lifecycle.py",
+        "scripts/validate_identity_trigger_regression.py",
+        "scripts/validate_identity_learning_loop.py",
+        "scripts/validate_agent_handoff_contract.py",
+        "scripts/validate_identity_collab_trigger.py",
+        "scripts/validate_identity_orchestration_contract.py",
+        "scripts/validate_identity_knowledge_contract.py",
+        "scripts/validate_identity_experience_feedback.py",
+        "scripts/validate_changelog_updated.py",
+        "scripts/validate_release_metadata_sync.py",
+        "scripts/validate_identity_role_binding.py",
+        "scripts/validate_identity_ci_enforcement.py",
+        "scripts/validate_identity_capability_arbitration.py",
+        "scripts/validate_identity_install_safety.py",
+        "scripts/validate_identity_experience_feedback_governance.py",
+        "scripts/validate_identity_self_upgrade_enforcement.py",
+        "scripts/validate_identity_install_provenance.py",
+    ]
+
+
+def _neutral_full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
+    identity_token = identity_id.replace("-", "_")
+    checks = _default_required_checks()
+    task = _minimal_current_task(identity_id, title, description)
+    gates = task.setdefault("gates", {})
+    extra_required_gates = [
+        "identity_update_gate",
+        "agent_handoff_gate",
+        "collaboration_trigger_gate",
+        "orchestration_gate",
+        "knowledge_acquisition_gate",
+        "experience_feedback_gate",
+        "install_safety_gate",
+        "install_provenance_gate",
+        "role_binding_gate",
+        "ci_enforcement_gate",
+        "arbitration_gate",
+    ]
+    for gate_name in extra_required_gates:
+        gates[gate_name] = "required"
+
+    task["state_machine"] = {
+        "current_state": "doc_crosscheck",
+        "allowed_states": [
+            "intake",
+            "doc_crosscheck",
+            "preflight",
+            "execute",
+            "monitor",
+            "repair",
+            "verify",
+            "done",
+            "blocked",
+        ],
+        "transition_rules": [
+            "intake -> doc_crosscheck",
+            "doc_crosscheck -> preflight",
+            "preflight -> execute",
+            "execute -> monitor",
+            "monitor -> verify",
+            "verify -> done",
+            "monitor -> repair",
+            "repair -> preflight",
+            "verify -> blocked",
+        ],
+    }
+    task["source_of_truth"] = {
+        "local_docs_roots": [
+            "docs/governance",
+            "docs/review",
+        ],
+        "local_project_evidence_roots": [
+            "resource/reports",
+            "resource/preflight",
+            "resource/reject-archive",
+            "identity/runtime/reports",
+            "identity/runtime/examples",
+            "identity/runtime/logs",
+        ],
+    }
+    task["required_artifacts"] = [
+        "resource/reports/*.json",
+        "resource/reports/*.md",
+        "identity/runtime/examples/*.json",
+        "identity/runtime/logs/**/*.json",
+        "identity/runtime/reports/**/*.json",
+    ]
+    task["post_execution_mandatory"] = [
+        f"append task outcome into identity/packs/{identity_id}/TASK_HISTORY.md",
+        "update objective.status",
+        "update state_machine.current_state",
+        "emit machine-readable execution report",
+    ]
+
+    task["identity_update_lifecycle_contract"] = {
+        "trigger_contract": {
+            "mandatory_conditions": [
+                "operational_failure",
+                "repeat_failure",
+                "route_exhausted",
+                "new_domain_gap",
+            ],
+            "max_attempts_before_update": 2,
+        },
+        "patch_surface_contract": {
+            "required_files": [
+                "CURRENT_TASK.json",
+                "IDENTITY_PROMPT.md",
+                "RULEBOOK.jsonl",
+                "TASK_HISTORY.md",
+            ],
+            "required_file_paths": [
+                f"identity/packs/{identity_id}/CURRENT_TASK.json",
+                f"identity/packs/{identity_id}/IDENTITY_PROMPT.md",
+                f"identity/packs/{identity_id}/RULEBOOK.jsonl",
+                f"identity/packs/{identity_id}/TASK_HISTORY.md",
+            ],
+            "required_rulebook_update": True,
+        },
+        "validation_contract": {
+            "required_checks": checks,
+            "must_pass_all": True,
+        },
+        "replay_contract": {
+            "replay_required": True,
+            "replay_same_case_required": True,
+            "replay_fail_action": "reenter_identity_update_loop",
+            "evidence_path_pattern": f"identity/runtime/examples/{identity_id}-update-replay-*.json",
+            "required_fields": [
+                "identity_id",
+                "replay_status",
+                "patched_files",
+                "validation_checks_passed",
+                "creator_invocation",
+                "check_results",
+            ],
+        },
+    }
+    task["trigger_regression_contract"] = {
+        "required": True,
+        "required_suites": [
+            "positive_cases",
+            "boundary_cases",
+            "negative_cases",
+        ],
+        "result_enum": ["PASS", "FAIL"],
+        "sample_report_path_pattern": "identity/runtime/examples/*trigger-regression*.json",
+        "fail_action": "block_merge_and_reenter_identity_update",
+    }
+    task["route_quality_contract"] = {
+        "required": True,
+        "source_pattern": "identity/runtime/logs/handoff/*.json",
+        "metrics_output_path": f"identity/runtime/metrics/{identity_id}-route-quality.json",
+        "required_metrics": [
+            "route_hit_rate",
+            "misroute_rate",
+            "fallback_rate",
+            "first_pass_success_rate",
+            "knowledge_reuse_rate",
+            "replay_success_rate",
+            "policy_drift_incidents",
+        ],
+        "validator": "scripts/export_route_quality_metrics.py",
+    }
+    task["learning_verification_contract"] = {
+        "run_id_required": True,
+        "reasoning_trace_required": True,
+        "reasoning_trace_path_pattern": "resource/reports/*reasoning*.json",
+        "rulebook_update_required": True,
+        "rulebook_link_field": "evidence_run_id",
+    }
+    task["agent_handoff_contract"] = {
+        "required": True,
+        "required_fields": [
+            "handoff_id",
+            "task_id",
+            "from_agent",
+            "to_agent",
+            "input_scope",
+            "actions_taken",
+            "artifacts",
+            "result",
+            "next_action",
+            "rulebook_update",
+        ],
+        "forbidden_mutations": [
+            "gates",
+            "protocol_review_contract",
+            "identity_update_lifecycle_contract",
+            "trigger_regression_contract",
+        ],
+        "handoff_log_path_pattern": "identity/runtime/logs/handoff/*.json",
+        "minimum_logs_required": 1,
+        "require_generated_at": True,
+        "max_log_age_days": 7,
+        "enforce_task_id_match": True,
+        "require_identity_id_match": True,
+        "sample_log_path_pattern": "identity/runtime/examples/handoff",
+        "result_enum": ["PASS", "FAIL", "BLOCKED"],
+        "self_test_required": True,
+        "validator": "scripts/validate_agent_handoff_contract.py",
+    }
+    task["blocker_taxonomy_contract"] = {
+        "required": True,
+        "required_blocker_types": list(CANONICAL_BLOCKER_TYPES),
+        "legacy_alias_bridge": dict(LEGACY_BLOCKER_ALIAS_MAP),
+        "blocker_alias_map_version": "v1",
+        "blocker_classification_required_fields": [
+            "blocker_type",
+            "source",
+            "detected_at",
+            "requires_human_collab",
+            "next_action",
+        ],
+        "fail_action": "block_merge_and_reenter_collaboration_update",
+    }
+    task["collaboration_trigger_contract"] = {
+        "required": True,
+        "hard_rule": (
+            "If human collaboration blockers are detected, notify immediately and emit chat receipt"
+        ),
+        "trigger_conditions": list(CANONICAL_BLOCKER_TYPES),
+        "legacy_alias_bridge": dict(LEGACY_BLOCKER_ALIAS_MAP),
+        "notify_channel": "ops-notification-router",
+        "dedupe_window_hours": 24,
+        "state_change_bypass_dedupe": True,
+        "must_emit_receipt_in_chat": True,
+        "receipt_required_fields": [
+            "event_id",
+            "blocker_type",
+            "notified_at",
+            "channel",
+            "dedupe_key",
+            "status",
+        ],
+        "evidence_log_path_pattern": "identity/runtime/logs/collaboration/*.json",
+        "minimum_evidence_logs_required": 1,
+        "max_log_age_days": 7,
+        "validator": "scripts/validate_identity_collab_trigger.py",
+        "notify_policy": "must_notify_when_human_required",
+        "notify_timing": "immediate",
+        "decision_basis": "role_requirement",
+    }
+    task["capability_orchestration_contract"] = {
+        "required": True,
+        "task_type_routes": {
+            "instance_delivery": {
+                "pipeline": [
+                    "observe_context",
+                    "skill_route",
+                    "mcp_preflight",
+                    "execute_pipeline",
+                    "verify_result",
+                    "emit_evidence",
+                ],
+                "primary_skills": [
+                    "identity-creator",
+                    "office-output-qa",
+                ],
+                "fallback_skills": [
+                    "web-docs-to-markdown",
+                    "gh-fix-ci",
+                ],
+                "required_mcp": [
+                    "github",
+                    "n8n-mcp",
+                ],
+                "max_tool_calls": 30,
+                "max_runtime_minutes": 20,
+            },
+            "knowledge_api_probe": {
+                "pipeline": [
+                    "observe_context",
+                    "source_research",
+                    "hypothesis_build",
+                    "api_probe",
+                    "verify_result",
+                    "emit_evidence",
+                ],
+                "primary_skills": [
+                    "identity-creator",
+                ],
+                "fallback_skills": [
+                    "web-docs-to-markdown",
+                ],
+                "required_mcp": [
+                    "n8n-mcp",
+                ],
+                "max_tool_calls": 20,
+                "max_runtime_minutes": 15,
+            },
+        },
+        "preflight_requirements": [
+            "mcp_available",
+            "auth_ready",
+            "inputs_complete",
+        ],
+        "fail_classification": [
+            "route_wrong",
+            "skill_gap",
+            "mcp_unavailable",
+            "tool_auth",
+            "data_issue",
+        ],
+        "evidence_schema_fields": [
+            "task_id",
+            "route_selected",
+            "skills_used",
+            "mcp_tools_used",
+            "actions_taken",
+            "result",
+            "artifacts",
+        ],
+    }
+    task["knowledge_acquisition_contract"] = {
+        "required": True,
+        "must_research_when": [
+            "new_api_domain",
+            "unknown_error_code",
+            "schema_changed",
+        ],
+        "source_priority": [
+            "official_spec",
+            "repo_contract",
+            "third_party",
+        ],
+        "evidence_fields": [
+            "claim",
+            "source",
+            "source_level",
+            "confidence",
+            "expiry",
+            "applies_to",
+        ],
+        "sample_report_path_pattern": "identity/runtime/examples/*knowledge-acquisition*.json",
+        "high_frequency_domains": {
+            "vendor_api": {
+                "preferred_skills": ["identity-creator"],
+                "preferred_sources": ["official_spec", "repo_contract"],
+                "required_validators": ["scripts/validate_identity_knowledge_contract.py"],
+            }
+        },
+    }
+    task["experience_feedback_contract"] = {
+        "required": True,
+        "positive_rulebook_path": "identity/runtime/rulebooks/positive.jsonl",
+        "negative_rulebook_path": "identity/runtime/rulebooks/negative.jsonl",
+        "required_fields": [
+            "case_id",
+            "layer",
+            "pattern",
+            "action",
+            "impact_score",
+            "replay_status",
+        ],
+        "cross_layer_feedback_targets": [
+            "routing_contract",
+            "capability_orchestration_contract",
+            "gates",
+        ],
+        "promote_requires_replay_pass": True,
+        "sample_report_path_pattern": "identity/runtime/examples/*experience-feedback*.json",
+        "redaction_policy_required": True,
+        "retention_days": 30,
+        "sensitive_fields_denylist": [
+            "access_token",
+            "authorization",
+            "cookie",
+            "set-cookie",
+            "api_key",
+            "email",
+            "phone",
+        ],
+        "export_scope": "aggregated-only",
+        "max_log_age_days": 7,
+        "minimum_logs_required": 1,
+        "feedback_log_path_pattern": "identity/runtime/logs/feedback/*.json",
+        "promotion_requires_replay_pass": True,
+    }
+    task["install_safety_contract"] = {
+        "required": True,
+        "preserve_existing_default": True,
+        "on_conflict": "abort_and_explain",
+        "idempotent_reinstall_allowed": True,
+        "same_signature_action": "no_op_with_report",
+        "allow_replace_only_with_backup": True,
+        "rollback_reference_required": True,
+        "install_report_required": True,
+        "dry_run_required": True,
+        "install_report_path_pattern": f"identity/runtime/examples/install/install-report-*-{identity_id}.json",
+    }
+    task["install_provenance_contract"] = {
+        "required": True,
+        "installer_tool_required": "identity-installer",
+        "operations_required": ["plan", "dry-run", "install", "verify"],
+        "report_path_pattern": f"identity/runtime/reports/install/identity-install-{identity_id}-*.json",
+        "required_report_fields": [
+            "report_id",
+            "identity_id",
+            "generated_at",
+            "operation",
+            "conflict_type",
+            "action",
+            "preserved_paths",
+            "installer_invocation",
+        ],
+        "required_invocation_fields": [
+            "tool",
+            "entrypoint",
+            "command",
+        ],
+        "enforcement_validator": "scripts/validate_identity_install_provenance.py",
+        "non_destructive_default": True,
+    }
+    task["ci_enforcement_contract"] = {
+        "required": True,
+        "required_workflows": [
+            "protocol-ci",
+            "identity-protocol-ci",
+        ],
+        "required_job": "required-gates",
+        "required_validators": checks,
+        "required_checks": [
+            "protocol-ci / required-gates",
+            "identity-protocol-ci / required-gates",
+        ],
+        "freshness_gate": {
+            "handoff_logs_max_age_days": 7,
+            "route_metrics_max_age_days": 7,
+        },
+        "required_validator_set_label": "v1.1-required",
+        "candidate_validators_v1_2": [
+            "scripts/validate_identity_feedback_freshness.py",
+            "scripts/validate_identity_feedback_promotion.py",
+        ],
+    }
+    task["capability_arbitration_contract"] = {
+        "required": True,
+        "priority_order": [
+            "accurate_judgement",
+            "governance",
+            "latency",
+            "exploration",
+        ],
+        "conflict_rules": {
+            "judgement_vs_routing": {
+                "when": [
+                    "high_risk_operation",
+                    "evidence_conflict_detected",
+                ],
+                "decision": "prefer_judgement",
+            },
+            "reasoning_vs_latency": {
+                "when": [
+                    "low_risk_and_time_bounded",
+                ],
+                "decision": "bounded_reasoning",
+            },
+            "routing_vs_learning": {
+                "when": [
+                    "exploration_enabled",
+                ],
+                "decision": "cap_exploration_ratio",
+                "max_exploration_ratio": 0.2,
+            },
+            "learning_vs_hotfix": {
+                "when": [
+                    "incident_hotfix_required",
+                ],
+                "decision": "temporary_hotfix_then_rulebook_backfill",
+            },
+        },
+        "trigger_thresholds": {
+            "misroute_rate_percent": 10,
+            "replay_failure_rate_percent": 20,
+            "first_pass_success_drop_percent": 15,
+        },
+        "decision_record_required_fields": [
+            "arbitration_id",
+            "task_id",
+            "identity_id",
+            "conflict_pair",
+            "inputs",
+            "decision",
+            "impact",
+            "rationale",
+            "decided_at",
+        ],
+        "sample_report_path_pattern": "identity/runtime/examples/*capability-arbitration*.json",
+        "fail_action": "block_merge_and_reenter_arbitration_update",
+        "safe_auto_patch_surface": {
+            "enforce_path_policy": True,
+            "allowlist": [
+                "identity/runtime/rulebooks/*",
+                f"identity/packs/{identity_id}/TASK_HISTORY.md",
+                "identity/runtime/logs/*",
+                f"identity/packs/{identity_id}/RULEBOOK.jsonl",
+            ],
+            "denylist": [
+                "identity/protocol/*",
+                ".github/workflows/*",
+                "scripts/validate_*",
+            ],
+        },
+    }
+    task["self_upgrade_enforcement_contract"] = {
+        "required": True,
+        "core_paths": [
+            f"identity/packs/{identity_id}/CURRENT_TASK.json",
+            f"identity/packs/{identity_id}/IDENTITY_PROMPT.md",
+            f"identity/packs/{identity_id}/RULEBOOK.jsonl",
+        ],
+        "required_toolkit_steps": [
+            f"scripts/execute_identity_upgrade.py --identity-id {identity_id} --mode review-required",
+            f"scripts/validate_identity_upgrade_prereq.py --identity-id {identity_id}",
+            f"scripts/validate_identity_runtime_contract.py --identity-id {identity_id}",
+            f"scripts/validate_identity_update_lifecycle.py --identity-id {identity_id}",
+            f"scripts/validate_identity_capability_arbitration.py --identity-id {identity_id}",
+        ],
+        "evidence_path_pattern": f"identity/runtime/reports/identity-upgrade-exec-{identity_id}-*.json",
+        "matching_patch_plan_required": True,
+        "enforcement_validator": "scripts/validate_identity_self_upgrade_enforcement.py",
+    }
+    task["identity_role_binding_contract"] = {
+        "required": True,
+        "role_type": f"{identity_token}_runtime_operator",
+        "catalog_registration_required": True,
+        "runtime_bootstrap_pass_required": True,
+        "activation_policy": "inactive_by_default",
+        "switch_guard_required": True,
+        "binding_evidence_path_pattern": "identity/runtime/examples/identity-role-binding-<identity-id>-*.json",
+        "enforcement_validator": "scripts/validate_identity_role_binding.py",
+        "runtime_bootstrap_live_revalidate": True,
+        "evidence_max_age_days": 7,
+        "active_binding_status_required": "BOUND_ACTIVE",
+    }
+    task = _ensure_dialogue_governance_contract(task, identity_id)
+    task = _ensure_tool_vendor_governance_contracts(task, identity_id)
+    task["scaffold_profile"] = "full-contract"
+    task["scaffold_generation_mode"] = "neutral-default"
+    return task
 
 
 def _sha256_file(path: Path) -> str:
@@ -643,7 +1214,41 @@ def _copy_jsonl_with_identity(src: Path, dst: Path, identity_id: str) -> None:
     dst.write_text("\n".join(lines_out) + ("\n" if lines_out else ""), encoding="utf-8")
 
 
-def _bootstrap_identity_samples(identity_id: str, runtime_root: Path) -> None:
+def _write_install_provenance_reports(identity_id: str, runtime_root: Path) -> None:
+    now = datetime.now(timezone.utc)
+    iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    report_dir = runtime_root / "reports" / "install"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    operations = [
+        ("plan", "fresh_install", "guarded_apply"),
+        ("dry-run", "fresh_install", "guarded_apply"),
+        ("install", "fresh_install", "guarded_apply"),
+        ("verify", "fresh_install", "verified"),
+    ]
+    for idx, (op, conflict, action) in enumerate(operations, start=1):
+        rid = f"identity-install-{identity_id}-{op}-bootstrap-{idx:02d}"
+        write_json(
+            report_dir / f"{rid}.json",
+            {
+                "report_id": rid,
+                "identity_id": identity_id,
+                "generated_at": iso,
+                "operation": op,
+                "conflict_type": conflict,
+                "action": action,
+                "source_pack": f"identity/packs/{identity_id}",
+                "target_pack": f"identity/packs/{identity_id}",
+                "preserved_paths": [f"identity/packs/{identity_id}"],
+                "installer_invocation": {
+                    "tool": "identity-installer",
+                    "entrypoint": "scripts/identity_installer.py",
+                    "command": f"identity-installer {op} --identity-id {identity_id}",
+                },
+            },
+        )
+
+
+def _bootstrap_legacy_identity_samples(identity_id: str, runtime_root: Path) -> None:
     _copy_sample_with_identity(
         Path("identity/runtime/examples/store-manager-capability-arbitration-sample.json"),
         runtime_root / "examples" / f"{identity_id}-capability-arbitration-sample.json",
@@ -717,37 +1322,325 @@ def _bootstrap_identity_samples(identity_id: str, runtime_root: Path) -> None:
     for sample in collab_src.rglob("*.json"):
         rel = sample.relative_to(collab_src)
         _copy_sample_with_identity(sample, collab_dst / rel, identity_id)
+    _write_install_provenance_reports(identity_id, runtime_root)
+
+
+def _bootstrap_neutral_identity_samples(identity_id: str, runtime_root: Path, task_id: str) -> None:
     now = datetime.now(timezone.utc)
     iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    report_dir = runtime_root / "reports" / "install"
-    report_dir.mkdir(parents=True, exist_ok=True)
-    operations = [
-        ("plan", "fresh_install", "guarded_apply"),
-        ("dry-run", "fresh_install", "guarded_apply"),
-        ("install", "fresh_install", "guarded_apply"),
-        ("verify", "fresh_install", "verified"),
-    ]
-    for idx, (op, conflict, action) in enumerate(operations, start=1):
-        rid = f"identity-install-{identity_id}-{op}-bootstrap-{idx:02d}"
-        write_json(
-            report_dir / f"{rid}.json",
-            {
-                "report_id": rid,
-                "identity_id": identity_id,
-                "generated_at": iso,
-                "operation": op,
-                "conflict_type": conflict,
-                "action": action,
-                "source_pack": f"identity/packs/{identity_id}",
-                "target_pack": f"identity/packs/{identity_id}",
-                "preserved_paths": [f"identity/packs/{identity_id}"],
-                "installer_invocation": {
-                    "tool": "identity-installer",
-                    "entrypoint": "scripts/identity_installer.py",
-                    "command": f"identity-installer {op} --identity-id {identity_id}",
-                },
+    runtime_examples = runtime_root / "examples"
+    runtime_logs = runtime_root / "logs"
+    runtime_rulebooks = runtime_root / "rulebooks"
+    runtime_metrics = runtime_root / "metrics"
+
+    write_json(
+        runtime_examples / f"{identity_id}-trigger-regression-sample.json",
+        {
+            "positive_cases": [
+                {
+                    "case_id": f"{identity_id}-reg-pos-01",
+                    "input_summary": "Routine request with complete context",
+                    "expected_route": "instance_delivery",
+                    "expected_trigger": True,
+                    "observed_route": "instance_delivery",
+                    "observed_trigger": True,
+                    "result": "PASS",
+                    "notes": "baseline positive case",
+                }
+            ],
+            "boundary_cases": [
+                {
+                    "case_id": f"{identity_id}-reg-boundary-01",
+                    "input_summary": "Boundary request with partial evidence",
+                    "expected_route": "knowledge_api_probe",
+                    "expected_trigger": True,
+                    "observed_route": "knowledge_api_probe",
+                    "observed_trigger": True,
+                    "result": "PASS",
+                    "notes": "boundary fallback route remains stable",
+                }
+            ],
+            "negative_cases": [
+                {
+                    "case_id": f"{identity_id}-reg-neg-01",
+                    "input_summary": "Known mismatch sample for regression guard",
+                    "expected_route": "instance_delivery",
+                    "expected_trigger": True,
+                    "observed_route": "knowledge_api_probe",
+                    "observed_trigger": False,
+                    "result": "FAIL",
+                    "notes": "negative fixture should fail by design",
+                }
+            ],
+            "summary": {
+                "total_cases": 3,
+                "pass_cases": 2,
+                "fail_cases": 1,
+                "overall_result": "FAIL",
             },
+        },
+    )
+
+    write_json(
+        runtime_examples / f"{identity_id}-knowledge-acquisition-sample.json",
+        {
+            "records": [
+                {
+                    "claim": "identity runtime contract requirements were reviewed",
+                    "source": "identity/protocol/IDENTITY_PROTOCOL.md",
+                    "source_level": "official_spec",
+                    "confidence": "high",
+                    "expiry": "30d",
+                    "applies_to": "protocol validation flow",
+                }
+            ]
+        },
+    )
+
+    write_json(
+        runtime_examples / f"{identity_id}-capability-arbitration-sample.json",
+        {
+            "records": [
+                {
+                    "arbitration_id": f"{identity_id}-arb-001",
+                    "task_id": task_id,
+                    "identity_id": identity_id,
+                    "conflict_pair": "reasoning_vs_latency",
+                    "inputs": {
+                        "risk_level": "low",
+                        "deadline_minutes": 20,
+                    },
+                    "decision": "bounded_reasoning",
+                    "impact": "stabilize output latency while preserving evidence quality",
+                    "rationale": "low-risk workload permits bounded reasoning policy",
+                    "decided_at": iso,
+                }
+            ]
+        },
+    )
+
+    write_json(
+        runtime_examples / f"{identity_id}-experience-feedback-sample.json",
+        {
+            "positive_updates": [
+                {
+                    "case_id": f"{identity_id}-feedback-pos-001",
+                    "layer": "instance",
+                    "pattern": "route_success_with_complete_evidence",
+                    "action": "retain_current_route",
+                    "impact_score": 0.82,
+                    "replay_status": "PASS",
+                }
+            ],
+            "negative_updates": [],
+        },
+    )
+
+    write_json(
+        runtime_examples / f"{identity_id}-learning-sample.json",
+        {
+            "run_id": "bootstrap",
+            "reasoning_attempts": [
+                {
+                    "attempt": 1,
+                    "hypothesis": "baseline neutral scaffold should satisfy runtime validators",
+                    "patch": "generated bootstrap artifacts and contract metadata",
+                    "expected_effect": "validator pass with deterministic artifacts",
+                    "result": "PASS",
+                }
+            ],
+        },
+    )
+
+    runtime_metrics.mkdir(parents=True, exist_ok=True)
+    write_json(
+        runtime_metrics / f"{identity_id}-route-quality.json",
+        {
+            "route_hit_rate": 98.5,
+            "misroute_rate": 1.5,
+            "fallback_rate": 2.0,
+            "first_pass_success_rate": 97.0,
+            "knowledge_reuse_rate": 88.0,
+            "replay_success_rate": 99.0,
+            "policy_drift_incidents": 0,
+        },
+    )
+
+    runtime_rulebooks.mkdir(parents=True, exist_ok=True)
+    rulebook_common_fields = {
+        "evidence_run_id": "bootstrap",
+        "scope": "identity_runtime",
+        "confidence": "high",
+        "updated_at": iso,
+    }
+    write(
+        runtime_rulebooks / "positive.jsonl",
+        json.dumps(
+            {
+                "rule_id": f"{identity_id}-positive-bootstrap-001",
+                "type": "positive",
+                "trigger": "validated_contract_inputs",
+                "action": "continue_execution",
+                **rulebook_common_fields,
+            },
+            ensure_ascii=False,
         )
+        + "\n",
+    )
+    write(
+        runtime_rulebooks / "negative.jsonl",
+        json.dumps(
+            {
+                "rule_id": f"{identity_id}-negative-bootstrap-001",
+                "type": "negative",
+                "trigger": "missing_evidence_fields",
+                "action": "block_and_request_remediation",
+                **rulebook_common_fields,
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+    )
+
+    write_json(
+        runtime_logs / "feedback" / f"{identity_id}-feedback-bootstrap.json",
+        {
+            "feedback_id": f"{identity_id}-feedback-001",
+            "identity_id": identity_id,
+            "task_id": task_id,
+            "run_id": "bootstrap",
+            "timestamp": iso,
+            "context_signature": "neutral_bootstrap_context",
+            "outcome": "PASS",
+            "failure_type": "",
+            "decision_trace_ref": str((runtime_examples / f"{identity_id}-learning-sample.json").as_posix()),
+            "artifacts": [
+                str((runtime_examples / f"{identity_id}-trigger-regression-sample.json").as_posix()),
+            ],
+            "rulebook_delta": ["positive:1", "negative:1"],
+            "replay_status": "PASS",
+        },
+    )
+
+    handoff_artifact = runtime_examples / f"{identity_id}-trigger-regression-sample.json"
+    write_json(
+        runtime_logs / "handoff" / f"{identity_id}-bootstrap.json",
+        {
+            "handoff_id": f"{identity_id}-handoff-bootstrap-001",
+            "task_id": task_id,
+            "identity_id": identity_id,
+            "from_agent": "identity-runtime-orchestrator",
+            "to_agent": "identity-creator",
+            "input_scope": "bootstrap_recheck",
+            "actions_taken": [
+                "validated baseline contracts",
+                "recorded runtime evidence",
+            ],
+            "artifacts": [
+                {
+                    "path": str(handoff_artifact.as_posix()),
+                    "kind": "regression_report",
+                }
+            ],
+            "result": "PASS",
+            "next_action": {
+                "owner": "identity-runtime-orchestrator",
+                "action": "proceed",
+                "input": "bootstrap artifacts complete",
+            },
+            "rulebook_update": {
+                "applied": True,
+                "evidence_run_id": "bootstrap",
+            },
+            "attempted_mutations": [],
+            "generated_at": iso,
+        },
+    )
+
+    detected_at = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    notified_at = detected_at
+    write_json(
+        runtime_logs / "collaboration" / f"{identity_id}-bootstrap.json",
+        {
+            "event_id": f"{identity_id}-collab-bootstrap-001",
+            "identity_id": identity_id,
+            "task_id": task_id,
+            "blocker_type": "auth_login_required",
+            "source": "bootstrap_simulation",
+            "detected_at": detected_at,
+            "requires_human_collab": True,
+            "next_action": "request runtime operator review",
+            "notified_at": notified_at,
+            "notify_channel": "ops-notification-router",
+            "dedupe_key": f"{identity_id}-auth-login-required",
+            "state_change_bypass_dedupe": True,
+            "chat_receipt": {
+                "emitted": True,
+                "event_id": f"{identity_id}-collab-bootstrap-001",
+                "blocker_type": "auth_login_required",
+                "notified_at": notified_at,
+                "channel": "ops-notification-router",
+                "dedupe_key": f"{identity_id}-auth-login-required",
+                "status": "SENT",
+            },
+        },
+    )
+
+    write_json(
+        runtime_examples / "install" / f"install-report-bootstrap-{identity_id}.json",
+        {
+            "report_id": f"install-report-bootstrap-{identity_id}",
+            "identity_id": identity_id,
+            "generated_at": iso,
+            "operation": "install",
+            "conflict_type": "fresh_install",
+            "action": "guarded_apply",
+            "preserved_paths": [f"identity/packs/{identity_id}"],
+            "installer_invocation": {
+                "tool": "identity-installer",
+                "entrypoint": "scripts/identity_installer.py",
+                "command": f"identity-installer install --identity-id {identity_id}",
+            },
+        },
+    )
+    _write_install_provenance_reports(identity_id, runtime_root)
+
+
+def _inject_scaffold_metadata(task: dict, profile: str) -> dict:
+    metadata = {
+        "scaffold_profile": profile,
+        "scaffold_generation_mode": "neutral-default" if profile == "full-contract" else "explicit_opt_in",
+        "protocol_contract_version": "v1.5.0",
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "blocker_taxonomy_mode": "canonical",
+        "blocker_alias_map_version": "v1",
+        "domain_neutrality_required": profile != "legacy-commerce-overlay",
+    }
+    existing = task.get("scaffold_metadata")
+    if isinstance(existing, dict):
+        existing.update(metadata)
+        task["scaffold_metadata"] = existing
+    else:
+        task["scaffold_metadata"] = metadata
+    return task
+
+
+def _scan_domain_residue(pack_dir: Path) -> list[str]:
+    text_suffixes = {".json", ".jsonl", ".md", ".txt", ".yaml", ".yml"}
+    findings: list[str] = []
+    for p in sorted(pack_dir.rglob("*")):
+        if not p.is_file():
+            continue
+        if p.suffix.lower() not in text_suffixes:
+            continue
+        try:
+            content = p.read_text(encoding="utf-8", errors="ignore").lower()
+        except Exception:
+            continue
+        for token in DOMAIN_NEUTRALITY_BLOCKLIST:
+            if token.lower() in content:
+                findings.append(f"{p}:{token}")
+    return findings
 
 
 def main() -> int:
@@ -760,9 +1653,12 @@ def main() -> int:
     ap.add_argument("--catalog", default=str(default_local_catalog_path(identity_home)))
     ap.add_argument(
         "--profile",
-        choices=["full-contract", "minimal"],
+        choices=["full-contract", "minimal", "legacy-commerce-overlay"],
         default="full-contract",
-        help="scaffold profile; full-contract mirrors runtime-required contracts",
+        help=(
+            "scaffold profile; full-contract is domain-neutral by default. "
+            "legacy-commerce-overlay is explicit opt-in for compatibility fixtures."
+        ),
     )
     ap.add_argument("--register", action="store_true", help="Register identity in catalog")
     ap.add_argument("--activate", action="store_true", help="Register with status=active (default inactive)")
@@ -856,6 +1752,7 @@ def main() -> int:
             'methodology_version: "v1.2.3"\n'
             f'profile: "{identity_profile}"\n'
             f'runtime_mode: "{identity_runtime_mode}"\n'
+            f'scaffold_profile: "{args.profile}"\n'
         ),
     )
 
@@ -874,9 +1771,12 @@ def main() -> int:
         return 1
 
     if args.profile == "full-contract":
-        current_task = _full_contract_current_task(identity_id, args.title, args.description)
+        current_task = _neutral_full_contract_current_task(identity_id, args.title, args.description)
+    elif args.profile == "legacy-commerce-overlay":
+        current_task = _legacy_full_contract_current_task(identity_id, args.title, args.description)
     else:
         current_task = _minimal_current_task(identity_id, args.title, args.description)
+    current_task = _inject_scaffold_metadata(current_task, args.profile)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
     write_json(pack_dir / "CURRENT_TASK.json", current_task)
@@ -945,7 +1845,19 @@ def main() -> int:
     )
     replay_sample_path = _write_replay_sample(identity_id, current_task, runtime_root)
     if not args.skip_sample_bootstrap:
-        _bootstrap_identity_samples(identity_id, runtime_root)
+        if args.profile == "legacy-commerce-overlay":
+            _bootstrap_legacy_identity_samples(identity_id, runtime_root)
+        else:
+            _bootstrap_neutral_identity_samples(identity_id, runtime_root, str(current_task.get("task_id") or "bootstrap"))
+
+    if args.profile != "legacy-commerce-overlay":
+        findings = _scan_domain_residue(pack_dir)
+        if findings and not args.repo_fixture:
+            print("[FAIL] scaffold domain-neutrality residue detected:")
+            for item in findings[:20]:
+                print(f"       - {item}")
+            print("       fix scaffold generation before using this identity pack.")
+            return 1
 
     print(f"[OK] created identity pack: {pack_dir}")
     print(f"[OK] created protocol review sample: {protocol_review_sample_path}")

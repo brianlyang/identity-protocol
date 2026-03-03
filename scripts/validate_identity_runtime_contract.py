@@ -64,6 +64,19 @@ REQUIRED_PROTOCOL_SOURCES = [
     "https://modelcontextprotocol.io/specification/latest",
 ]
 
+CANONICAL_BLOCKERS = {
+    "auth_login_required",
+    "anti_automation_challenge_required",
+    "session_reauthentication_required",
+    "manual_verification_required",
+}
+
+LEGACY_BLOCKER_ALIAS_MAP = {
+    "login_required": "auth_login_required",
+    "captcha_required": "anti_automation_challenge_required",
+    "session_expired": "session_reauthentication_required",
+}
+
 
 def _fail(msg: str) -> int:
     print(f"[FAIL] {msg}")
@@ -87,6 +100,41 @@ def _source_signature(item: dict[str, Any]) -> str:
     if item.get("url"):
         return str(item.get("url"))
     return ""
+
+
+def _build_alias_map(raw_map: Any) -> dict[str, str]:
+    alias_map = dict(LEGACY_BLOCKER_ALIAS_MAP)
+    if isinstance(raw_map, dict):
+        for raw_key, raw_value in raw_map.items():
+            key = str(raw_key or "").strip()
+            value = str(raw_value or "").strip()
+            if key and value in CANONICAL_BLOCKERS:
+                alias_map[key] = value
+    return alias_map
+
+
+def _normalize_blocker_types(
+    values: Iterable[Any],
+    *,
+    alias_map: dict[str, str],
+) -> tuple[set[str], list[str], list[str]]:
+    canonical: set[str] = set()
+    alias_hits: list[str] = []
+    invalid: list[str] = []
+    for raw in values:
+        value = str(raw or "").strip()
+        if not value:
+            continue
+        if value in CANONICAL_BLOCKERS:
+            canonical.add(value)
+            continue
+        mapped = alias_map.get(value)
+        if mapped:
+            canonical.add(mapped)
+            alias_hits.append(value)
+            continue
+        invalid.append(value)
+    return canonical, sorted(set(alias_hits)), sorted(set(invalid))
 
 
 def _resolve_task_path(identity: dict[str, Any]) -> Path:
@@ -323,16 +371,26 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
         print("[FAIL] blocker_taxonomy_contract must be non-empty object")
         rc = 1
     else:
-        required_blockers = set(taxonomy.get("required_blocker_types") or [])
-        expected_blockers = {"login_required", "captcha_required", "session_expired", "manual_verification_required"}
-        if not expected_blockers.issubset(required_blockers):
+        required_blockers = taxonomy.get("required_blocker_types") or []
+        alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
+        normalized_blockers, alias_hits, invalid_blockers = _normalize_blocker_types(
+            required_blockers,
+            alias_map=alias_map,
+        )
+        if invalid_blockers:
+            print(f"[FAIL] blocker taxonomy contains unsupported blocker types: {invalid_blockers}")
+            rc = 1
+        if not CANONICAL_BLOCKERS.issubset(normalized_blockers):
             print(
-                f"[FAIL] blocker_taxonomy_contract.required_blocker_types missing: "
-                f"{sorted(expected_blockers - required_blockers)}"
+                "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
+                f"{sorted(CANONICAL_BLOCKERS - normalized_blockers)}"
             )
             rc = 1
         else:
-            print("[OK]   blocker taxonomy includes required blocker classes")
+            mode = "legacy_alias_bridge" if alias_hits else "canonical"
+            print(f"[OK]   blocker taxonomy includes canonical blocker classes (mode={mode})")
+            if alias_hits:
+                print(f"[OK]   blocker taxonomy legacy alias hits: {alias_hits}")
 
     collab = data.get("collaboration_trigger_contract") or {}
     if not isinstance(collab, dict) or not collab:
