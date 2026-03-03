@@ -377,16 +377,17 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             required_blockers,
             alias_map=alias_map,
         )
+        has_all_canonical = CANONICAL_BLOCKERS.issubset(normalized_blockers)
         if invalid_blockers:
             print(f"[FAIL] blocker taxonomy contains unsupported blocker types: {invalid_blockers}")
             rc = 1
-        if not CANONICAL_BLOCKERS.issubset(normalized_blockers):
+        if not has_all_canonical:
             print(
                 "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
                 f"{sorted(CANONICAL_BLOCKERS - normalized_blockers)}"
             )
             rc = 1
-        else:
+        if not invalid_blockers and has_all_canonical:
             mode = "legacy_alias_bridge" if alias_hits else "canonical"
             print(f"[OK]   blocker taxonomy includes canonical blocker classes (mode={mode})")
             if alias_hits:
