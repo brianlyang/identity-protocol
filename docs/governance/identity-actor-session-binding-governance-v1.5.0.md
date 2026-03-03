@@ -2699,6 +2699,13 @@ Minimal acceptance predicates:
 3. Three-plane instance status `CLOSED`.
 4. Docs contracts pass (`docs_command_contract_check`, `validate_protocol_ssot_source`).
 
+Latest replay sync:
+
+1. `review 16.8.58` executed the full `16.8.57` command pack.
+2. Result remains non-closed (`readiness rc=2`, `all_ok=false`, `instance_plane_status=IN_PROGRESS`) even though
+   project-only full-scan is green (`p0=0,p1=0`).
+3. Therefore D4 remains `FAIL_REQUIRED` until the same pack returns fully green in one window.
+
 Derived lock rule:
 
 1. Until `16.8.57` predicates are all satisfied in one replay window, keep:

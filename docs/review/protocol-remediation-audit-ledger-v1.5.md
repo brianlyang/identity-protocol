@@ -5316,6 +5316,50 @@ Decision boundary:
 1. This section defines the only acceptable D4 closure pack for `v1.5` docs governance bridge.
 2. Passing individual validators outside this pack does not change D4.
 
+#### 16.8.58 D4 command-pack live execution result (`16.8.57` replay, 2026-03-03)
+
+Status: `EXECUTED_NOT_CLOSED` (`D4` remains `FAIL_REQUIRED`).
+
+Execution evidence:
+
+1. Step-1 lane-lock exit:
+   - `/tmp/release_v15_d4_lane_lock_exit.json`
+   - `session_lane_lock_exit_status=SKIPPED_NOT_REQUIRED` (no active protocol lock in this replay window)
+2. Step-2 readiness:
+   - `/tmp/release_v15_d4_readiness.log`
+   - `readiness_rc=2`
+   - generated report:
+     `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772544253.json`
+   - key fields:
+     - `all_ok=false`
+     - `upgrade_required=true`
+     - `lane_routing_status=PASS_REQUIRED`
+     - `next_action=review_required_create_pr_from_patch_plan`
+3. Step-3 project-only full-scan:
+   - `/tmp/release_v15_d4_fullscan_project_only.json`
+   - `summary={"total_identities":1,"p0":0,"p1":0,"ok":1}`
+4. Step-4 three-plane:
+   - `/tmp/release_v15_d4_threeplane_project_only.json`
+   - `instance_plane_status=IN_PROGRESS`
+   - `release_plane_status=NOT_STARTED`
+5. Step-5 docs contracts:
+   - `/tmp/release_v15_d4_docs_contract.log` -> `PASS`
+   - `/tmp/release_v15_d4_ssot.log` -> `OK`
+
+Pass-criteria evaluation against `16.8.57`:
+
+1. Readiness `rc=0` => **NOT MET** (`rc=2`).
+2. Readiness report `all_ok=true` => **NOT MET** (`all_ok=false`).
+3. Full-scan `p0=0,p1=0` => met.
+4. Three-plane `instance_plane_status=CLOSED` => **NOT MET** (`IN_PROGRESS`).
+5. Docs contracts both pass => met.
+
+Decision boundary:
+
+1. D4 does not flip to `PASS` in this run.
+2. Blocking condition has shifted from lane-lock (`IP-LAYER-GATE-007`) to update review-required closure (`upgrade_required=true`, patch-plan path).
+3. Keep `D4=FAIL_REQUIRED` and `D6=LOCKED`.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
