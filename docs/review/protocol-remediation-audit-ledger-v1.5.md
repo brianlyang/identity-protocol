@@ -5400,6 +5400,39 @@ Decision boundary:
 2. `16.8.59` defines the mandatory follow-up closure predicates when the first run lands in review-required mode.
 3. `D4` may flip to `PASS` only when both sections are simultaneously satisfied in the latest live replay window.
 
+#### 16.8.60 Protocol-feedback write-boundary freeze (`instance-only mutable path`, 2026-03-03)
+
+Status: `POLICY_FROZEN (RELEASE_BINDING)`.
+
+Hard boundary (normative):
+
+1. Identity instance is allowed to write protocol feedback artifacts only under:
+   - `<resolved_pack_path>/runtime/protocol-feedback/**`
+2. Identity instance must not write mutable artifacts under protocol repository runtime paths, including:
+   - `<protocol_root>/identity/runtime/**`
+3. `--allow-protocol-root-pack` is fixture/debug only and is disallowed in `v1.5` release closure replay.
+
+Cross-verification evidence (live run window):
+
+1. Latest readiness report (project catalog) remains under instance runtime, not protocol runtime:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772545528.json`
+2. Protocol-repo runtime report artifacts are absent for latest replay run ids:
+   - `identity/runtime/reports/*1772543500*` -> no match
+   - `identity/runtime/reports/*1772544253*` -> no match
+   - `identity/runtime/reports/*1772545528*` -> no match
+3. Runtime-output write boundary guard is present in upgrade executor:
+   - `scripts/execute_identity_upgrade.py:502` (`_resolve_runtime_output_root`)
+   - `scripts/execute_identity_upgrade.py:511` (skip candidate inside `protocol_root`)
+   - `scripts/execute_identity_upgrade.py:532` (`IP-PATH-001` fail-closed)
+4. Protocol-root pack bypass remains explicit opt-in flag and therefore must stay outside release command-pack:
+   - `scripts/identity_creator.py:1021`
+   - `scripts/identity_creator.py:2405`
+
+D4 implication:
+
+1. Any replay window using protocol-root-pack bypass is non-eligible for `D4=PASS`.
+2. `16.8.57` / `16.8.59` closure evaluation must be performed with default boundary enforcement (no fixture/debug bypass).
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

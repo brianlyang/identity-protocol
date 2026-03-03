@@ -2743,6 +2743,33 @@ Decision boundary:
 1. This subsection is governance-level anti-ambiguity binding for the review-required branch.
 2. It does not alter implementation behavior; it only freezes release-gate interpretation.
 
+### 6.6C Protocol-feedback mutable-path binding (`review 16.8.60`)
+
+Hard policy:
+
+1. In release-lane operations, mutable protocol-feedback writes are allowed only under:
+   - `<resolved_pack_path>/runtime/protocol-feedback/**`
+2. Mutable writes under protocol repository runtime paths are forbidden:
+   - `<protocol_root>/identity/runtime/**`
+3. Any run relying on `--allow-protocol-root-pack` is fixture/debug scope and cannot be used as `D4` closure evidence.
+
+Binding to D4 acceptance:
+
+1. `D4` pass requires command-pack replay under default write-boundary enforcement.
+2. If boundary bypass is used, replay result is classified as non-release-evidence and `D4` remains `FAIL_REQUIRED`.
+3. `D6` remains `LOCKED` while `D4` is fail-required.
+
+Implementation anchors:
+
+1. `scripts/execute_identity_upgrade.py:502` (`runtime_output_root` resolution with protocol-root exclusion).
+2. `scripts/execute_identity_upgrade.py:532` (`IP-PATH-001` fail-closed boundary).
+3. `scripts/identity_creator.py:1021` (`--allow-protocol-root-pack` debug-only switch).
+
+Decision boundary:
+
+1. This subsection freezes release interpretation for write-boundary compliance.
+2. It does not grant new write privileges and does not relax existing fail-closed checks.
+
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
 Mandatory policy:
