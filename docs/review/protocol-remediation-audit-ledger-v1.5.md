@@ -159,6 +159,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-044 | 2026-03-03 | protocol | lane-lock exit unified writer + index linkage (`ASB-RQ-104`; strict exit without newer EXIT remains fail-closed) | `62bdc1c` | DONE | PENDING_REAUDIT |
 | FIX-045 | 2026-03-03 | protocol | mixed-signal layer intent routing residual closure (`protocol lane` directive should positively trigger protocol lane instead of ambiguous fallback) | `7695a12` | DONE | PASS |
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
+| FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -4235,6 +4236,62 @@ Boundary:
 
 1. This is a docs-only consistency closure record.
 2. It does not alter required gate behavior or release unlock calculations.
+
+#### 16.8.38 FIX-047 implementation replay: protocol data-sanitization phone-like path-context false-positive hardening (2026-03-03, protocol)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent auditor replay.
+
+Problem:
+
+1. `ASB-RQ-046` project-scope residual (`IP-DSN-002`) was reproducible on sanitized protocol-feedback markdown lines that only contained report path references with numeric filename suffixes.
+2. Baseline failure sample:
+   - `/tmp/dsn_case_path_line_before.json`
+   - key fields: `protocol_data_sanitization_boundary_status=FAIL_REQUIRED`, `error_code=IP-DSN-002`, `path=line:2`, pattern phone-like regex.
+
+Implementation (`FIX-047`):
+
+1. File changed:
+   - `scripts/validate_protocol_data_sanitization_boundary.py`
+2. Hardened logic:
+   - adds path-context detection for markdown/json value scan lines
+   - exempts phone-like pattern matches only when context is path/evidence/report reference and no contact semantics
+   - preserves fail-closed behavior for real sensitive values
+3. New machine-readable telemetry:
+   - `phone_like_path_exempt_count`
+   - `phone_like_path_exempt_samples`
+
+Replay evidence:
+
+1. Regression A (path numeric suffix should PASS):
+   - fixture: `/tmp/dsn_case_path_line.md`
+   - result: `/tmp/dsn_case_path_line_after.json`
+   - key fields:
+     - `protocol_data_sanitization_boundary_status=PASS_REQUIRED`
+     - `error_code=""`
+     - `phone_like_path_exempt_count=1`
+2. Regression B (real phone value should FAIL_REQUIRED):
+   - fixture: `/tmp/dsn_case_real_phone.md`
+   - result: `/tmp/dsn_case_real_phone_after.json`
+   - key fields:
+     - `protocol_data_sanitization_boundary_status=FAIL_REQUIRED`
+     - `error_code=IP-DSN-002`
+     - `phone_like_path_exempt_count=0`
+3. Project-scope real batch replay (`custom-creative-ecom-analyst`):
+   - result: `/tmp/dsn_case_real_batch_after.json`
+   - key fields:
+     - `protocol_data_sanitization_boundary_status=PASS_REQUIRED`
+     - `error_code=""`
+4. Full-scan project catalog replay:
+   - result: `/tmp/fix047_full_scan_custom_project_after.json`
+   - key fields under project layer:
+     - `checks.protocol_data_sanitization_boundary.rc=0`
+     - `protocol_data_sanitization_boundary_status=PASS_REQUIRED`
+     - no `IP-DSN-002` in project scan branch
+
+Boundary:
+
+1. This section closes implementation replay for the previously identified project-scope `IP-DSN-002` false-positive path.
+2. Final `PASS` promotion still requires independent auditor re-audit.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
