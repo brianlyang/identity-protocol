@@ -157,6 +157,8 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `c310ab4` | DONE | PENDING_REAUDIT |
 | FIX-044 | 2026-03-03 | protocol | lane-lock exit unified writer + index linkage (`ASB-RQ-104`; strict exit without newer EXIT remains fail-closed) | `62bdc1c` | DONE | PENDING_REAUDIT |
+| FIX-045 | 2026-03-03 | protocol | mixed-signal layer intent routing residual closure (`protocol lane` directive should positively trigger protocol lane instead of ambiguous fallback) | `7695a12` | DONE | PASS |
+| FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
 
 ---
 
@@ -4109,6 +4111,48 @@ Boundary:
 
 1. This record closes the runbook/automation gap for lane-lock EXIT emission and canonical index linkage.
 2. Final PASS promotion still requires independent auditor replay.
+
+#### 16.8.35 Auditor re-audit closure: FIX-045/FIX-046 residual semantic gate closure (2026-03-03, protocol, scope-limited)
+
+Status: `PASS (scope-limited closure)` for FIX-045/FIX-046 target claims.  
+Global release posture remains unchanged for other `PENDING_REAUDIT` items.
+
+Closure statement:
+
+1. Prior residual finding was valid for the earlier window (`d69c948 + dc9c2e3`): mixed-signal phrase
+   `协议层治理回放，请按 protocol lane 执行` could still fall back to `instance`.
+2. This residual is now closed by `7695a12`:
+   - `scripts/response_stamp_common.py` adds protocol-lane directive detection + mixed-signal dominance routing.
+3. `dc9c2e3` remains valid as FIX-046 observability patch:
+   - strict stale-preflight emits `phase_transition_reason=baseline_mode_violation` + aligned error code.
+
+Independent replay evidence (auditor-run):
+
+1. Control phrase now routes to protocol lane:
+   - `/tmp/reaudit_fix045_control_7695a12.json`
+   - key fields: `resolved_work_layer=protocol`, `protocol_triggered=true`, no ambiguous fallback.
+2. Ambiguous non-directive phrase still safely falls back to instance:
+   - `/tmp/reaudit_fix045_ambiguous_7695a12.json`
+   - key fields: `resolved_work_layer=instance`, `fallback_reason=ambiguous_intent_signal`.
+3. Literal-question sample remains correct (no regression):
+   - `/tmp/reaudit_fix045_literal_7695a12.json`
+   - key field: `resolved_work_layer=protocol`.
+4. project-catalog source-layer stays stable:
+   - `/tmp/reaudit_fix045_control_project_7695a12.json`
+   - key fields: `resolved_source_layer=project`, first-line stamp contains `source=project`.
+5. FIX-046 strict stale-preflight trace remains valid:
+   - `/tmp/reaudit_fix046_strict_trace_7695a12.log`
+   - key fields: `phase_a_refresh_applied=false`, `phase_transition_reason=baseline_mode_violation`.
+
+Baseline checks:
+
+1. `python3 scripts/docs_command_contract_check.py` -> PASS
+2. `python3 scripts/validate_protocol_ssot_source.py` -> OK
+
+Boundary:
+
+1. This section only closes FIX-045/FIX-046 scoped claims.
+2. Do not interpret this as whole-batch green; keep summary rows with remaining `PENDING_REAUDIT` unchanged.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
