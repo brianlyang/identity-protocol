@@ -1999,6 +1999,20 @@ def main() -> int:
                     return rc_phase_b
             else:
                 phase_b_strict_revalidate_status = "FAIL_REQUIRED"
+                if (
+                    str(args.baseline_policy).strip().lower() == "strict"
+                    and refresh_error == "IP-ASB-RFS-004"
+                    and baseline_status == "FAIL"
+                ):
+                    phase_transition_reason = "baseline_mode_violation"
+                    phase_transition_error_code = baseline_error_code or refresh_error
+                    _emit_two_phase_trace(
+                        identity_id=args.identity_id,
+                        phase_a_refresh_applied=phase_a_refresh_applied,
+                        phase_b_strict_revalidate_status=phase_b_strict_revalidate_status,
+                        phase_transition_reason=phase_transition_reason,
+                        phase_transition_error_code=phase_transition_error_code,
+                    )
                 print("[FAIL] session refresh status validation failed; update blocked")
                 return rc_refresh
         else:
