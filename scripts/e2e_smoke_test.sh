@@ -316,7 +316,7 @@ for ID in $IDS; do
   "${compose_cmd[@]}"
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
-  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT")
+  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     send_time_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi

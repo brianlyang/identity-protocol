@@ -125,6 +125,10 @@ def main() -> int:
         source_layer=source_layer,
     )
     composed_reply = f"{stamp_line}\n{body}\n"
+    out_reply = str(args.out_reply_file or "").strip()
+    reply_transport_ref = (
+        str(Path(out_reply).expanduser().resolve()) if out_reply else "inline:governed_reply_compose"
+    )
 
     validate_cmd = [
         sys.executable,
@@ -139,6 +143,9 @@ def main() -> int:
         composed_reply,
         "--force-check",
         "--enforce-send-time-gate",
+        "--reply-outlet-guard-applied",
+        "--reply-transport-ref",
+        reply_transport_ref,
         "--operation",
         "send-time",
         "--expected-work-layer",
@@ -154,7 +161,6 @@ def main() -> int:
     proc = subprocess.run(validate_cmd, capture_output=True, text=True)
     validate_payload = _json_payload(proc.stdout)
 
-    out_reply = str(args.out_reply_file or "").strip()
     if proc.returncode == 0 and out_reply:
         out_reply_path = Path(out_reply).expanduser().resolve()
         out_reply_path.parent.mkdir(parents=True, exist_ok=True)
@@ -180,6 +186,8 @@ def main() -> int:
         "send_time_rc": proc.returncode,
         "reply_first_line_status": str(validate_payload.get("reply_first_line_status", "")),
         "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
+        "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
+        "reply_outlet_guard_applied": bool(validate_payload.get("reply_outlet_guard_applied", False)),
         "reply_sample_count": validate_payload.get("reply_sample_count"),
         "reply_first_line_missing_count": validate_payload.get("reply_first_line_missing_count"),
         "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),

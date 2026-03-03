@@ -22,6 +22,11 @@ from resolve_identity_context import (
     resolve_identity,
 )
 
+ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
+ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
+ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
+SCAFFOLD_CONSENT_TOKEN = "I_ACK_IDENTITY_SCAFFOLD_SCOPE_STACK_RUNTIME"
+
 
 def _run(cmd: list[str]) -> int:
     print("$", " ".join(cmd))
@@ -56,6 +61,24 @@ def _parse_json_payload(raw: str) -> dict | None:
     except Exception:
         return None
     return data if isinstance(data, dict) else None
+
+
+def _write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _infer_source_domain_from_catalog(catalog: str) -> str:
+    try:
+        p = Path(catalog).expanduser().resolve()
+    except Exception:
+        return "auto"
+    txt = str(p)
+    if "/.agents/" in txt:
+        return "project"
+    if "/.codex/" in txt:
+        return "global"
+    return "auto"
 
 
 def _emit_two_phase_trace(
@@ -907,6 +930,14 @@ def main() -> int:
     p_init.add_argument("--repo-fixture-confirm", default="")
     p_init.add_argument("--repo-fixture-purpose", default="")
     p_init.add_argument("--skip-sample-bootstrap", action="store_true")
+    p_init.add_argument(
+        "--scaffold-consent-token",
+        default="",
+        help=f"required scaffold consent token for init mutation preflight ({SCAFFOLD_CONSENT_TOKEN})",
+    )
+    p_init.add_argument("--why-now", default="", help="pre-mutation disclosure rationale for init")
+    p_init.add_argument("--planned-file", action="append", default=[], help="explicit planned mutation file for init")
+    p_init.add_argument("--pre-mutation-gate-receipt", default="", help="optional pre-mutation gate receipt path for init")
 
     p_validate = sub.add_parser("validate", help="Run identity required validators for an identity")
     p_validate.add_argument("--identity-id", required=True)
@@ -1005,6 +1036,9 @@ def main() -> int:
     p_update.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     p_update.add_argument("--expected-work-layer", default="", help="optional expected work_layer passthrough")
     p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
+    p_update.add_argument("--why-now", default="", help="pre-mutation disclosure rationale for update")
+    p_update.add_argument("--planned-file", action="append", default=[], help="explicit planned mutation file for update")
+    p_update.add_argument("--pre-mutation-gate-receipt", default="", help="optional pre-mutation gate receipt path for update")
     p_update.add_argument(
         "--release-session-lane-lock",
         action="store_true",
@@ -1034,6 +1068,69 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.command == "init":
+        gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        init_run_id = f"identity-init-{args.id}-{int(datetime.now(timezone.utc).timestamp())}"
+        source_domain = _infer_source_domain_from_catalog(args.catalog)
+        actor = f"user:{os.environ.get('USER', 'unknown')}"
+        header_line = (
+            f"Identity-Context: actor_id={actor}; identity_id={args.id}; scope=USER; lock=LOCK_MATCH; source={source_domain} "
+            f"| Layer-Context: work_layer=instance; source_layer={source_domain}"
+        )
+        print(header_line)
+        header_first_gate_status = "PASS_REQUIRED" if header_line.startswith("Identity-Context:") else "FAIL_REQUIRED"
+        scaffold_consent_gate_status = (
+            "PASS_REQUIRED"
+            if str(args.scaffold_consent_token or "").strip() == SCAFFOLD_CONSENT_TOKEN
+            else "FAIL_REQUIRED"
+        )
+        pack_root_path = Path(args.pack_root).expanduser().resolve()
+        default_planned_files = [
+            str((pack_root_path / args.id / "CURRENT_TASK.json").resolve()),
+            str((pack_root_path / args.id / "IDENTITY_PROMPT.md").resolve()),
+            str((pack_root_path / args.id / "TASK_HISTORY.md").resolve()),
+            str((pack_root_path / args.id / "RULEBOOK.jsonl").resolve()),
+        ]
+        if args.register or args.activate or args.set_default:
+            default_planned_files.append(str(Path(args.catalog).expanduser().resolve()))
+        provided_planned_files = [str(x or "").strip() for x in list(args.planned_file or []) if str(x or "").strip()]
+        planned_files = provided_planned_files or default_planned_files
+        why_now = str(args.why_now or "").strip() or f"initialize_identity_pack:{args.id}"
+        mutation_plan_disclosed = bool(planned_files and why_now)
+        pre_mutation_error_code = ""
+        if header_first_gate_status != "PASS_REQUIRED":
+            pre_mutation_error_code = ERR_EXEC_ORDER_HEADER_FIRST
+        elif scaffold_consent_gate_status != "PASS_REQUIRED":
+            pre_mutation_error_code = ERR_EXEC_ORDER_SCAFFOLD_CONSENT
+        elif not mutation_plan_disclosed:
+            pre_mutation_error_code = ERR_EXEC_ORDER_MUTATION_PLAN
+        receipt_path = (
+            Path(args.pre_mutation_gate_receipt).expanduser().resolve()
+            if str(args.pre_mutation_gate_receipt or "").strip()
+            else Path(f"/tmp/identity-pre-mutation-gate-init-{args.id}-{int(datetime.now(timezone.utc).timestamp())}.json")
+        )
+        _write_json(
+            receipt_path,
+            {
+                "identity_id": args.id,
+                "operation": "init",
+                "run_id": init_run_id,
+                "header_first_gate_status": header_first_gate_status,
+                "scaffold_consent_gate_status": scaffold_consent_gate_status,
+                "mutation_plan_disclosed": mutation_plan_disclosed,
+                "planned_files": planned_files,
+                "why_now": why_now,
+                "pre_mutation_gate_ts": gate_ts,
+                "pre_mutation_gate_error_code": pre_mutation_error_code,
+                "required_scaffold_consent_token": SCAFFOLD_CONSENT_TOKEN,
+                "status": "PASS_REQUIRED" if not pre_mutation_error_code else "FAIL_REQUIRED",
+            },
+        )
+        print(f"[INFO] pre-mutation gate receipt: {receipt_path}")
+        if pre_mutation_error_code:
+            print(f"[FAIL] init pre-mutation gate failed: {pre_mutation_error_code}")
+            if pre_mutation_error_code == ERR_EXEC_ORDER_SCAFFOLD_CONSENT:
+                print(f"[HINT] pass --scaffold-consent-token {SCAFFOLD_CONSENT_TOKEN}")
+            return 1
         cmd = [
             "python3",
             "scripts/create_identity_pack.py",
@@ -1300,6 +1397,9 @@ def main() -> int:
                 send_time_reply_file,
                 "--force-check",
                 "--enforce-send-time-gate",
+                "--reply-outlet-guard-applied",
+                "--reply-transport-ref",
+                send_time_reply_file,
                 "--operation",
                 "validate",
                 "--blocker-receipt-out",
@@ -1906,6 +2006,90 @@ def main() -> int:
         )
         if rc_boundary != 0:
             return rc_boundary
+        creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+        pre_mutation_gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        pre_mutation_reply_file = f"/tmp/identity-pre-mutation-reply-{args.identity_id}-{creator_run_id}.txt"
+        pre_mutation_send_time_blocker = (
+            f"/tmp/identity-pre-mutation-send-time-blocker-{args.identity_id}-{creator_run_id}.json"
+        )
+        pre_mutation_compose_cmd = [
+            "python3",
+            "scripts/compose_and_validate_governed_reply.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--body-text",
+            "PRE_MUTATION_HEADER_FIRST_GATE",
+            "--out-reply-file",
+            pre_mutation_reply_file,
+            "--blocker-receipt-out",
+            pre_mutation_send_time_blocker,
+            "--json-only",
+        ]
+        if args.layer_intent_text.strip():
+            pre_mutation_compose_cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
+        if args.expected_work_layer.strip():
+            pre_mutation_compose_cmd.extend(["--work-layer", args.expected_work_layer.strip()])
+        if args.expected_source_layer.strip():
+            pre_mutation_compose_cmd.extend(["--source-layer", args.expected_source_layer.strip()])
+        rc_pre_mutation_header, out_pre_mutation_header, _ = _run_capture(pre_mutation_compose_cmd)
+        pre_mutation_header_payload = _parse_json_payload(out_pre_mutation_header) or {}
+        header_first_gate_status = (
+            "PASS_REQUIRED"
+            if rc_pre_mutation_header == 0
+            and str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper() == "PASS_REQUIRED"
+            else "FAIL_REQUIRED"
+        )
+        scaffold_consent_gate_status = "PASS_NOT_APPLICABLE"
+        resolved_pack_path = Path(str(resolved.get("resolved_pack_path", "")).strip()).expanduser().resolve()
+        out_dir_path = Path(args.out_dir).expanduser().resolve()
+        default_planned_files = [
+            str((out_dir_path / f"{creator_run_id}-patch-plan.json").resolve()),
+            str((out_dir_path / f"{creator_run_id}.json").resolve()),
+            str((resolved_pack_path / "RULEBOOK.jsonl").resolve()),
+            str((resolved_pack_path / "TASK_HISTORY.md").resolve()),
+            str((resolved_pack_path / "runtime" / "state" / "prompt_contract.json").resolve()),
+        ]
+        provided_planned_files = [str(x or "").strip() for x in list(args.planned_file or []) if str(x or "").strip()]
+        planned_files = provided_planned_files or default_planned_files
+        why_now = str(args.why_now or "").strip() or "identity_update_cycle_pre_mutation_gate"
+        mutation_plan_disclosed = bool(planned_files and why_now)
+        pre_mutation_gate_error_code = ""
+        if header_first_gate_status != "PASS_REQUIRED":
+            pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST
+        elif not mutation_plan_disclosed:
+            pre_mutation_gate_error_code = ERR_EXEC_ORDER_MUTATION_PLAN
+        pre_mutation_gate_receipt = (
+            Path(args.pre_mutation_gate_receipt).expanduser().resolve()
+            if str(args.pre_mutation_gate_receipt or "").strip()
+            else Path(f"/tmp/identity-pre-mutation-gate-update-{args.identity_id}-{creator_run_id}.json")
+        )
+        _write_json(
+            pre_mutation_gate_receipt,
+            {
+                "identity_id": args.identity_id,
+                "operation": "update",
+                "run_id": creator_run_id,
+                "header_first_gate_status": header_first_gate_status,
+                "scaffold_consent_gate_status": scaffold_consent_gate_status,
+                "mutation_plan_disclosed": mutation_plan_disclosed,
+                "planned_files": planned_files,
+                "why_now": why_now,
+                "pre_mutation_gate_ts": pre_mutation_gate_ts,
+                "pre_mutation_gate_error_code": pre_mutation_gate_error_code,
+                "header_gate_blocker_receipt_path": str(
+                    pre_mutation_header_payload.get("blocker_receipt_path", "") or pre_mutation_send_time_blocker
+                ),
+                "status": "PASS_REQUIRED" if not pre_mutation_gate_error_code else "FAIL_REQUIRED",
+            },
+        )
+        print(f"[INFO] pre-mutation gate receipt: {pre_mutation_gate_receipt}")
+        if pre_mutation_gate_error_code:
+            print(f"[FAIL] update pre-mutation gate failed: {pre_mutation_gate_error_code}")
+            return 1
         rc = _run(
             [
                 "python3",
@@ -2174,13 +2358,29 @@ def main() -> int:
             args.protocol_mode,
             "--repo-catalog",
             args.repo_catalog,
+            "--run-id",
+            creator_run_id,
             "--resolved-scope",
             str(resolved.get("resolved_scope", "")),
             "--resolved-pack-path",
             str(resolved.get("resolved_pack_path", "")),
             "--capability-activation-policy",
             effective_capability_activation_policy,
+            "--header-first-gate-status",
+            header_first_gate_status,
+            "--scaffold-consent-gate-status",
+            scaffold_consent_gate_status,
+            "--mutation-plan-disclosed",
+            "true" if mutation_plan_disclosed else "false",
+            "--pre-mutation-gate-ts",
+            pre_mutation_gate_ts,
+            "--pre-mutation-gate-receipt",
+            str(pre_mutation_gate_receipt),
+            "--why-now",
+            why_now,
         ]
+        for planned in planned_files:
+            cmd.extend(["--planned-file", str(planned)])
         if args.layer_intent_text.strip():
             cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
         if args.expected_work_layer.strip():

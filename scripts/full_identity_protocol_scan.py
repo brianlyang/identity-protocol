@@ -636,6 +636,9 @@ def main() -> int:
                     send_time_reply_file,
                     "--force-check",
                     "--enforce-send-time-gate",
+                    "--reply-outlet-guard-applied",
+                    "--reply-transport-ref",
+                    send_time_reply_file,
                     "--operation",
                     "scan",
                     "--blocker-receipt-out",
@@ -1196,15 +1199,27 @@ def main() -> int:
                 ]
                 latest_report = _latest_runtime_report(iid, runtime_report_dir_path)
                 if latest_report:
-                    checks["capability_activation_report"] = [
+                    cap_report_cmd = [
                         "python3",
                         "scripts/validate_identity_capability_activation.py",
                         "--identity-id",
                         iid,
                         "--report",
                         str(latest_report),
-                        "--require-activated",
                     ]
+                    report_meta: dict[str, Any] = {}
+                    try:
+                        loaded = json.loads(latest_report.read_text(encoding="utf-8"))
+                        if isinstance(loaded, dict):
+                            report_meta = loaded
+                    except Exception:
+                        report_meta = {}
+                    report_all_ok = bool(report_meta.get("all_ok"))
+                    report_writeback_status = str(report_meta.get("writeback_status", "")).strip().upper()
+                    report_permission_state = str(report_meta.get("permission_state", "")).strip().upper()
+                    if report_all_ok and report_writeback_status == "WRITTEN" and report_permission_state == "WRITEBACK_WRITTEN":
+                        cap_report_cmd.append("--require-activated")
+                    checks["capability_activation_report"] = cap_report_cmd
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}

@@ -24,6 +24,21 @@ PROTOCOL_PUBLISH_CHECKS = {
     "scripts/validate_release_freeze_boundary.py",
 }
 
+ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
+ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
+ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
+
+
+def _as_bool(raw: str, default: bool = False) -> bool:
+    text = str(raw or "").strip().lower()
+    if not text:
+        return bool(default)
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off"}:
+        return False
+    return bool(default)
+
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     text = str(raw or "").strip()
@@ -546,6 +561,14 @@ def _base_report(
     phase_b_strict_revalidate_status: str = "NOT_APPLICABLE",
     phase_transition_reason: str = "",
     phase_transition_error_code: str = "",
+    header_first_gate_status: str = "",
+    scaffold_consent_gate_status: str = "PASS_NOT_APPLICABLE",
+    mutation_plan_disclosed: bool = False,
+    planned_files: list[str] | None = None,
+    pre_mutation_gate_ts: str = "",
+    pre_mutation_gate_error_code: str = "",
+    pre_mutation_gate_receipt: str = "",
+    why_now: str = "",
 ) -> dict[str, Any]:
     """
     Build a report skeleton with mandatory closure fields always present.
@@ -556,6 +579,7 @@ def _base_report(
     required_checks_raw = required_checks_raw or []
     skipped_protocol_publish_checks = skipped_protocol_publish_checks or []
     protocol_feedback_paths = protocol_feedback_paths or []
+    planned_files = planned_files or []
     return {
         "run_id": run_id,
         "identity_id": identity_id,
@@ -588,6 +612,14 @@ def _base_report(
         "phase_b_strict_revalidate_status": str(phase_b_strict_revalidate_status or "NOT_APPLICABLE"),
         "phase_transition_reason": str(phase_transition_reason or ""),
         "phase_transition_error_code": str(phase_transition_error_code or ""),
+        "header_first_gate_status": str(header_first_gate_status or ""),
+        "scaffold_consent_gate_status": str(scaffold_consent_gate_status or "PASS_NOT_APPLICABLE"),
+        "mutation_plan_disclosed": bool(mutation_plan_disclosed),
+        "planned_files": list(planned_files),
+        "pre_mutation_gate_ts": str(pre_mutation_gate_ts or ""),
+        "pre_mutation_gate_error_code": str(pre_mutation_gate_error_code or ""),
+        "pre_mutation_gate_receipt": str(pre_mutation_gate_receipt or ""),
+        "why_now": str(why_now or ""),
         "actions_taken": [],
         "checks": [],
         "check_results": [],
@@ -797,6 +829,58 @@ def _capability_next_action(cap: dict[str, Any]) -> str:
     return "resolve_capability_activation_then_rerun_update"
 
 
+def _run_header_first_gate(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    run_id: str,
+    layer_intent_text: str,
+    expected_work_layer: str,
+    expected_source_layer: str,
+) -> dict[str, Any]:
+    reply_file = Path("/tmp") / f"identity-pre-mutation-reply-{identity_id}-{run_id}.txt"
+    receipt_file = Path("/tmp") / f"identity-pre-mutation-send-time-blocker-{identity_id}-{run_id}.json"
+    cmd = [
+        "python3",
+        "scripts/compose_and_validate_governed_reply.py",
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--repo-catalog",
+        str(repo_catalog_path.expanduser().resolve()),
+        "--identity-id",
+        identity_id,
+        "--body-text",
+        "PRE_MUTATION_HEADER_FIRST_GATE",
+        "--out-reply-file",
+        str(reply_file),
+        "--blocker-receipt-out",
+        str(receipt_file),
+        "--json-only",
+    ]
+    if str(layer_intent_text or "").strip():
+        cmd.extend(["--layer-intent-text", str(layer_intent_text).strip()])
+    if str(expected_work_layer or "").strip():
+        cmd.extend(["--work-layer", str(expected_work_layer).strip()])
+    if str(expected_source_layer or "").strip():
+        cmd.extend(["--source-layer", str(expected_source_layer).strip()])
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    payload = _parse_json_payload(proc.stdout) or {}
+    send_time_status = str(payload.get("send_time_gate_status", "")).strip().upper()
+    ok = proc.returncode == 0 and send_time_status == "PASS_REQUIRED"
+    return {
+        "ok": ok,
+        "rc": proc.returncode,
+        "send_time_gate_status": send_time_status,
+        "error_code": str(payload.get("send_time_error_code") or payload.get("error_code") or "").strip(),
+        "reply_file": str(reply_file),
+        "blocker_receipt_path": str(payload.get("blocker_receipt_path", "")).strip() or str(receipt_file),
+        "reply_transport_ref": str(payload.get("reply_transport_ref", "")).strip() or str(reply_file),
+        "stdout_tail": (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else "",
+        "stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
+    }
+
+
 def _enforce_protocol_runtime_separation(
     pack: Path,
     resolved_pack_path: str,
@@ -849,6 +933,22 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override")
+    ap.add_argument("--run-id", default="", help="optional explicit run id for update execution/report binding")
+    ap.add_argument("--header-first-gate-status", default="", help="pre-mutation header gate status override")
+    ap.add_argument(
+        "--scaffold-consent-gate-status",
+        default="PASS_NOT_APPLICABLE",
+        help="scaffold consent gate status (PASS_REQUIRED/PASS_NOT_APPLICABLE/FAIL_REQUIRED)",
+    )
+    ap.add_argument(
+        "--mutation-plan-disclosed",
+        default="",
+        help="explicit mutation-plan disclosure marker (true/false); empty means auto-evaluate from planned_files",
+    )
+    ap.add_argument("--planned-file", action="append", default=[], help="planned mutation file (repeatable)")
+    ap.add_argument("--why-now", default="", help="pre-mutation disclosure rationale bound to run id")
+    ap.add_argument("--pre-mutation-gate-ts", default="", help="pre-mutation gate timestamp (UTC)")
+    ap.add_argument("--pre-mutation-gate-receipt", default="", help="pre-mutation gate receipt/evidence path")
     ap.add_argument("--phase-a-refresh-applied", action="store_true")
     ap.add_argument("--phase-b-strict-revalidate-status", default="NOT_APPLICABLE")
     ap.add_argument("--phase-transition-reason", default="")
@@ -856,7 +956,7 @@ def main() -> int:
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    run_id = str(args.run_id or "").strip() or f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
 
     protocol = collect_protocol_evidence(args.protocol_root, args.protocol_mode)
     protocol_root = Path(protocol["protocol_root"]).expanduser().resolve()
@@ -907,6 +1007,146 @@ def main() -> int:
     required_checks, skipped_protocol_publish_checks = _filter_required_checks_for_lane(required_checks_raw, work_layer)
     check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
     log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
+    plan_path = out_dir / f"{run_id}-patch-plan.json"
+    report_path = out_dir / f"{run_id}.json"
+    pre_mutation_gate_ts = str(args.pre_mutation_gate_ts or "").strip() or datetime.now(timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    why_now = str(args.why_now or "").strip() or "identity_upgrade_cycle_pre_mutation_gate"
+    default_planned_files = [
+        str(plan_path.resolve()),
+        str(report_path.resolve()),
+        str(current_task_path.resolve()),
+        str((pack / "RULEBOOK.jsonl").resolve()),
+        str((pack / "TASK_HISTORY.md").resolve()),
+        str(runtime_state_target.resolve()),
+        str((runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json").resolve()),
+    ]
+    provided_planned_files = [str(x or "").strip() for x in list(args.planned_file or []) if str(x or "").strip()]
+    planned_files = provided_planned_files or default_planned_files
+    seen_planned: set[str] = set()
+    planned_files_normalized: list[str] = []
+    for raw in planned_files:
+        value = str(Path(raw).expanduser().resolve()) if raw.startswith(("/", "~")) else str(raw)
+        if value in seen_planned:
+            continue
+        seen_planned.add(value)
+        planned_files_normalized.append(value)
+    planned_files = planned_files_normalized
+    mutation_plan_disclosed = _as_bool(
+        str(args.mutation_plan_disclosed or ""),
+        default=bool(planned_files and why_now),
+    )
+    if not planned_files or not why_now:
+        mutation_plan_disclosed = False
+    scaffold_consent_gate_status = str(args.scaffold_consent_gate_status or "PASS_NOT_APPLICABLE").strip().upper()
+    if scaffold_consent_gate_status not in {"PASS_REQUIRED", "PASS_NOT_APPLICABLE", "FAIL_REQUIRED"}:
+        scaffold_consent_gate_status = "FAIL_REQUIRED"
+    header_first_gate_status = str(args.header_first_gate_status or "").strip().upper()
+    pre_mutation_gate_receipt = str(args.pre_mutation_gate_receipt or "").strip()
+    pre_mutation_gate_error_code = ""
+    if not header_first_gate_status:
+        header_probe = _run_header_first_gate(
+            identity_id=args.identity_id,
+            catalog_path=Path(args.catalog),
+            repo_catalog_path=Path(args.repo_catalog),
+            run_id=run_id,
+            layer_intent_text=str(args.layer_intent_text or ""),
+            expected_work_layer=str(args.expected_work_layer or ""),
+            expected_source_layer=str(args.expected_source_layer or ""),
+        )
+        if bool(header_probe.get("ok", False)):
+            header_first_gate_status = "PASS_REQUIRED"
+            pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("reply_file", ""))
+        else:
+            header_first_gate_status = "FAIL_REQUIRED"
+            pre_mutation_gate_error_code = str(header_probe.get("error_code", "")).strip() or ERR_EXEC_ORDER_HEADER_FIRST
+            pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("blocker_receipt_path", ""))
+    elif header_first_gate_status not in {"PASS_REQUIRED", "FAIL_REQUIRED"}:
+        header_first_gate_status = "FAIL_REQUIRED"
+        pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST
+
+    pre_mutation_error = ""
+    if header_first_gate_status != "PASS_REQUIRED":
+        pre_mutation_error = ERR_EXEC_ORDER_HEADER_FIRST
+    elif scaffold_consent_gate_status == "FAIL_REQUIRED":
+        pre_mutation_error = ERR_EXEC_ORDER_SCAFFOLD_CONSENT
+    elif not mutation_plan_disclosed:
+        pre_mutation_error = ERR_EXEC_ORDER_MUTATION_PLAN
+    if pre_mutation_error and not pre_mutation_gate_error_code:
+        pre_mutation_gate_error_code = pre_mutation_error
+
+    if pre_mutation_error:
+        skipped_checks = _build_skipped_check_results(
+            check_cmds=check_cmds,
+            log_dir=log_dir,
+            run_id=run_id,
+            reason=f"pre_mutation_gate_failed:{pre_mutation_error}",
+            exit_code=99,
+        )
+        report = _base_report(
+            run_id=run_id,
+            identity_id=args.identity_id,
+            now=now,
+            mode=args.mode,
+            protocol=protocol,
+            catalog_path=args.catalog,
+            resolved_scope=str(args.resolved_scope or ""),
+            resolved_pack_path=report_pack_path,
+            runtime_output_root=str(runtime_output_root),
+            metrics_path=str((runtime_output_root / "metrics" / f"{args.identity_id}-route-quality.json").resolve()),
+            prompt_contract=prompt_contract,
+            capability_contract={
+                "capability_activation_status": "NOT_EVALUATED",
+                "capability_activation_error_code": "",
+                "capability_activation_notes": ["pre_mutation_gate_failed_before_capability_preflight"],
+                "capability_contract_required": True,
+            },
+            required_checks=required_checks,
+            required_checks_raw=required_checks_raw,
+            skipped_protocol_publish_checks=skipped_protocol_publish_checks,
+            work_layer=work_layer,
+            source_layer=source_layer,
+            applied_gate_set=applied_gate_set,
+            lane_transition_reason=lane_transition_reason,
+            header_first_gate_status=header_first_gate_status,
+            scaffold_consent_gate_status=scaffold_consent_gate_status,
+            mutation_plan_disclosed=mutation_plan_disclosed,
+            planned_files=planned_files,
+            pre_mutation_gate_ts=pre_mutation_gate_ts,
+            pre_mutation_gate_error_code=pre_mutation_gate_error_code,
+            pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            why_now=why_now,
+        )
+        report.update(
+            {
+                "checks": skipped_checks,
+                "check_results": skipped_checks,
+                "all_ok": False,
+                "upgrade_required": False,
+                "trigger_reasons": [f"pre_mutation_gate_failed:{pre_mutation_error}"],
+                "actions_taken": ["pre_mutation_gate_blocked_execution"],
+                "artifacts": [str(x) for x in [pre_mutation_gate_receipt] if str(x).strip()],
+                "permission_state": "BLOCKED",
+                "permission_error_code": pre_mutation_error,
+                "next_action": "satisfy_pre_mutation_gate_and_rerun_update",
+                "failure_reason": f"pre_mutation_gate_failed:{pre_mutation_error}",
+            }
+        )
+        report["experience_writeback"].update(
+            {
+                "required": False,
+                "status": "NOT_REQUIRED",
+                "error_code": pre_mutation_error,
+                "notes": "pre-mutation gate blocked execution before any mutation",
+            }
+        )
+        _write_json(report_path, report)
+        print(f"report={report_path}")
+        print("upgrade_required=False")
+        print("all_ok=False")
+        print("next_action=satisfy_pre_mutation_gate_and_rerun_update")
+        return 1
 
     base_sha, head_sha = _resolve_git_range()
     lane_routing_cmd = [
@@ -992,6 +1232,14 @@ def main() -> int:
             phase_b_strict_revalidate_status=str(args.phase_b_strict_revalidate_status or "NOT_APPLICABLE"),
             phase_transition_reason=str(args.phase_transition_reason or ""),
             phase_transition_error_code=str(args.phase_transition_error_code or ""),
+            header_first_gate_status=header_first_gate_status,
+            scaffold_consent_gate_status=scaffold_consent_gate_status,
+            mutation_plan_disclosed=mutation_plan_disclosed,
+            planned_files=planned_files,
+            pre_mutation_gate_ts=pre_mutation_gate_ts,
+            pre_mutation_gate_error_code=pre_mutation_gate_error_code,
+            pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            why_now=why_now,
         )
         report.update(
             {
@@ -1055,6 +1303,8 @@ def main() -> int:
                 "trigger_reasons": [f"capability_activation_blocked:{capability_error_code or 'IP-CAP-000'}"],
                 "patch_surface": [],
                 "planned_actions": ["resolve capability activation and rerun update"],
+                "planned_files": planned_files,
+                "why_now": why_now,
                 "required_checks": required_checks,
                 "protocol_mode": protocol["protocol_mode"],
                 "protocol_root": protocol["protocol_root"],
@@ -1097,6 +1347,14 @@ def main() -> int:
             protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
             lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
             lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
+            header_first_gate_status=header_first_gate_status,
+            scaffold_consent_gate_status=scaffold_consent_gate_status,
+            mutation_plan_disclosed=mutation_plan_disclosed,
+            planned_files=planned_files,
+            pre_mutation_gate_ts=pre_mutation_gate_ts,
+            pre_mutation_gate_error_code=pre_mutation_gate_error_code,
+            pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            why_now=why_now,
         )
         report.update(
             {
@@ -1160,6 +1418,8 @@ def main() -> int:
                 "trigger_reasons": [f"metrics_artifact_missing:{metrics_path}"],
                 "patch_surface": [],
                 "planned_actions": ["generate route metrics and rerun update"],
+                "planned_files": planned_files,
+                "why_now": why_now,
                 "required_checks": required_checks,
                 "protocol_mode": protocol["protocol_mode"],
                 "protocol_root": protocol["protocol_root"],
@@ -1202,6 +1462,14 @@ def main() -> int:
             protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
             lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
             lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
+            header_first_gate_status=header_first_gate_status,
+            scaffold_consent_gate_status=scaffold_consent_gate_status,
+            mutation_plan_disclosed=mutation_plan_disclosed,
+            planned_files=planned_files,
+            pre_mutation_gate_ts=pre_mutation_gate_ts,
+            pre_mutation_gate_error_code=pre_mutation_gate_error_code,
+            pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            why_now=why_now,
         )
         report.update(
             {
@@ -1279,6 +1547,12 @@ def main() -> int:
         "upgrade_required": upgrade_required,
         "trigger_reasons": reasons,
         "patch_surface": patch_surface,
+        "planned_files": planned_files,
+        "why_now": why_now,
+        "header_first_gate_status": header_first_gate_status,
+        "scaffold_consent_gate_status": scaffold_consent_gate_status,
+        "mutation_plan_disclosed": bool(mutation_plan_disclosed),
+        "pre_mutation_gate_ts": pre_mutation_gate_ts,
         "planned_actions": [
             "append arbitration decision record",
             "append rulebook learning row",
@@ -1408,6 +1682,14 @@ def main() -> int:
                         protocol_feedback_paths=list(lane_routing_payload.get("protocol_feedback_paths") or []),
                         lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
                         lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
+                        header_first_gate_status=header_first_gate_status,
+                        scaffold_consent_gate_status=scaffold_consent_gate_status,
+                        mutation_plan_disclosed=mutation_plan_disclosed,
+                        planned_files=planned_files,
+                        pre_mutation_gate_ts=pre_mutation_gate_ts,
+                        pre_mutation_gate_error_code=pre_mutation_gate_error_code,
+                        pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+                        why_now=why_now,
                     ),
                     "upgrade_required": upgrade_required,
                     "trigger_reasons": reasons,
@@ -1770,6 +2052,14 @@ def main() -> int:
         "phase_b_strict_revalidate_status": str(args.phase_b_strict_revalidate_status or "NOT_APPLICABLE"),
         "phase_transition_reason": str(args.phase_transition_reason or ""),
         "phase_transition_error_code": str(args.phase_transition_error_code or ""),
+        "header_first_gate_status": header_first_gate_status,
+        "scaffold_consent_gate_status": scaffold_consent_gate_status,
+        "mutation_plan_disclosed": bool(mutation_plan_disclosed),
+        "planned_files": list(planned_files),
+        "pre_mutation_gate_ts": pre_mutation_gate_ts,
+        "pre_mutation_gate_error_code": pre_mutation_gate_error_code,
+        "pre_mutation_gate_receipt": pre_mutation_gate_receipt,
+        "why_now": why_now,
     }
     report.update(
         _derive_writeback_continuity_fields(

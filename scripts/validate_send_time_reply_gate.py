@@ -9,10 +9,13 @@ from pathlib import Path
 from typing import Any
 
 ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
+ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
+ERR_OUTLET_GUARD_MISSING = "IP-ASB-STAMP-SESSION-003"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
+STRICT_SEND_TIME_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate", "send-time"}
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any]:
@@ -69,6 +72,26 @@ def _reply_text_from_args(args: argparse.Namespace) -> tuple[str, str]:
     return "", "missing"
 
 
+def _is_strict_send_time_context(operation: str, enforce_send_time_gate: bool) -> bool:
+    op = str(operation or "").strip().lower()
+    return bool(enforce_send_time_gate) or op in STRICT_SEND_TIME_OPERATIONS
+
+
+def _reply_transport_ref(args: argparse.Namespace, evidence_mode: str) -> str:
+    explicit = str(args.reply_transport_ref or "").strip()
+    if explicit:
+        return explicit
+    if evidence_mode == "reply_file":
+        return str(Path(str(args.reply_file or "")).expanduser().resolve())
+    if evidence_mode == "reply_log":
+        return str(Path(str(args.reply_log or "")).expanduser().resolve())
+    if evidence_mode == "reply_text":
+        return "inline:reply_text"
+    if evidence_mode in {"stamp_json", "stamp_json_composed_reply"}:
+        return str(Path(str(args.stamp_json or "")).expanduser().resolve())
+    return "unresolved"
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -91,6 +114,8 @@ def main() -> int:
     ap.add_argument("--reply-file", default="")
     ap.add_argument("--reply-log", default="")
     ap.add_argument("--stamp-json", default="", help="optional fallback to compose send-time reply from external_stamp")
+    ap.add_argument("--reply-transport-ref", default="")
+    ap.add_argument("--reply-outlet-guard-applied", action="store_true")
     ap.add_argument("--business-line", default="SEND_TIME_GATE_PROBE_BODY")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
@@ -128,11 +153,104 @@ def main() -> int:
             "send_time_gate_status": STATUS_FAIL_REQUIRED if args.enforce_send_time_gate else STATUS_WARN_NON_BLOCKING,
             "error_code": ERR_SEND_TIME_GATE,
             "reply_evidence_mode": "invalid_input",
+            "reply_transport_ref": "invalid_input",
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
             "reply_sample_count": 0,
             "reply_first_line_missing_count": 1,
             "reply_first_line_missing_refs": ["input:missing_or_invalid"],
             "blocker_receipt_path": "",
             "stale_reasons": [f"send_time_input_invalid:{exc}"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
+    reply_transport_ref = _reply_transport_ref(args, evidence_mode)
+    if strict_context and evidence_mode in {"stamp_json", "stamp_json_composed_reply", "missing"}:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_SYNTHETIC_EVIDENCE,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["strict_evidence_source_not_live"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "strict_send_time_guard",
+            "fallback_reason": "synthetic_reply_evidence_forbidden",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["strict_send_time_synthetic_evidence_forbidden"],
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+    if strict_context and not bool(args.reply_outlet_guard_applied):
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_OUTLET_GUARD_MISSING,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": False,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["reply_outlet_guard_not_applied"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "strict_send_time_guard",
+            "fallback_reason": "reply_outlet_guard_missing",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["strict_send_time_outlet_guard_missing"],
+            "upstream_validator_rc": 1,
         }
         _emit(payload, json_only=args.json_only)
         return 1
@@ -215,6 +333,7 @@ def main() -> int:
         "validator_operation": op_for_validator,
         "send_time_gate_enforced": bool(args.enforce_send_time_gate),
         "required_contract": bool(validator_payload.get("required_contract", False)),
+        "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
         "expected_work_layer": expected_work_layer,
         "expected_source_layer": expected_source_layer,
         "layer_intent_text": layer_intent_text,
@@ -222,6 +341,7 @@ def main() -> int:
         "error_code": error_code,
         "reply_first_line_status": first_line_status,
         "reply_evidence_mode": evidence_mode,
+        "reply_transport_ref": reply_transport_ref,
         "reply_evidence_ref": validator_payload.get("reply_evidence_ref", ""),
         "reply_sample_count": validator_payload.get("reply_sample_count", 0),
         "reply_first_line_missing_count": validator_payload.get("reply_first_line_missing_count", 0),
