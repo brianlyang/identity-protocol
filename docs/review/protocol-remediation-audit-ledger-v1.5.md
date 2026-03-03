@@ -4154,6 +4154,51 @@ Boundary:
 1. This section only closes FIX-045/FIX-046 scoped claims.
 2. Do not interpret this as whole-batch green; keep summary rows with remaining `PENDING_REAUDIT` unchanged.
 
+#### 16.8.36 Auditor re-check: project-scope residual P0 on sanitization boundary (`IP-DSN-002`) (2026-03-03, protocol, scope-limited)
+
+Status: `PENDING_REAUDIT` (core chain pass in project scope, single P0 residual remains open).
+
+Scope:
+
+1. Identity: `custom-creative-ecom-analyst`
+2. Project catalog: `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+3. This section does not override unrelated global historical replay states.
+
+Re-check findings (cross-validated):
+
+1. Layer-intent hidden-gate residual is closed in project scope:
+   - `validation/recheck_stamp_issue_20260303.json`
+   - `validation/recheck_stamp_issue_validate_20260303.json`
+   - key fields: `resolved_work_layer=protocol`, `resolved_source_layer=project`, `layer_intent_resolution_status=PASS_REQUIRED`.
+2. Strict update main chain is passing in project scope:
+   - `validation/recheck_update_strict_20260303_escalated.log`
+   - key fields include `protocol_version_alignment_status=PASS_REQUIRED`, `session_refresh_status=PASS_REQUIRED`, `capability_activation_status=ACTIVATED`.
+3. Project-scope full scan still has one P0:
+   - `validation/recheck_full_scan_project_only_final_20260303.json`
+   - summary: `p0=1`
+   - failing validator: `protocol_data_sanitization_boundary_status=FAIL_REQUIRED`, `error_code=IP-DSN-002`.
+4. `IP-DSN-002` hit is reproducible via direct validator replay:
+   - `validation/reaudit_dsn_custom_scan.json`
+   - `feedback_batch_path=.../FEEDBACK_BATCH_20260302T113042Z_protocol_optimization_consolidated_v2_sanitized.md`
+   - hit pattern: `\\b(?:\\+?\\d[\\d\\-\\s]{8,}\\d)\\b`
+   - hit location: `line:38`.
+5. Global replay has additional historical P0 noise and must not be conflated with project closure status:
+   - `validation/recheck_full_scan_custom_after_update_escalated_20260303.json`
+   - summary: `p0=2`, including historical `IP-WRB-003` from global instance report path.
+
+Decision:
+
+1. Protocol core repair chain is effective for this identity in project scope.
+2. Full-green closure claim is blocked by one project-scope P0 (`ASB-RQ-046`, `IP-DSN-002`).
+3. `FIX-045` / `FIX-046` remain scope-limited closed and are not reopened by this finding.
+
+Architect patch expectation (next step):
+
+1. Tighten `validate_protocol_data_sanitization_boundary.py` text-level sensitive scan to avoid phone-like false positives on report filename numeric suffixes in governance markdown evidence lines.
+2. Add regression fixture pair:
+   - case A: report filename numeric suffix in markdown path line -> expected non-blocking/pass.
+   - case B: real secret/phone-like payload -> expected `FAIL_REQUIRED`.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
