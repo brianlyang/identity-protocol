@@ -2098,23 +2098,46 @@ def main() -> int:
                 "[WARN] protocol version alignment preflight reported legacy prompt/binding tuple drift; "
                 "continuing update to refresh execution tuple in-run"
             )
-        rc = _run(
-            [
-                "python3",
-                "scripts/validate_identity_capability_activation.py",
-                "--catalog",
-                args.catalog,
-                "--repo-catalog",
-                args.repo_catalog,
-                "--identity-id",
-                args.identity_id,
-                "--activation-policy",
-                args.capability_activation_policy,
-            ]
+        effective_capability_activation_policy = str(args.capability_activation_policy or "strict-union").strip().lower()
+        capability_preflight_cmd = [
+            "python3",
+            "scripts/validate_identity_capability_activation.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--activation-policy",
+            effective_capability_activation_policy,
+        ]
+        rc_cap, out_cap, _ = _run_capture(capability_preflight_cmd)
+        cap_payload = _parse_json_payload(out_cap) or {}
+        cap_status = str(cap_payload.get("capability_activation_status", "")).strip().upper()
+        cap_error_code = str(cap_payload.get("capability_activation_error_code", "")).strip()
+        strict_cap_env_blocked = (
+            effective_capability_activation_policy == "strict-union"
+            and cap_error_code == "IP-CAP-003"
+            and (rc_cap != 0 or cap_status == "BLOCKED")
         )
-        if rc != 0:
+        if strict_cap_env_blocked:
+            print(
+                "[WARN] capability activation strict-union blocked by env/auth boundary (IP-CAP-003); "
+                "retrying with route-any-ready fallback"
+            )
+            fallback_cmd = capability_preflight_cmd.copy()
+            policy_idx = fallback_cmd.index("--activation-policy")
+            fallback_cmd[policy_idx + 1] = "route-any-ready"
+            rc_cap, out_cap_fb, _ = _run_capture(fallback_cmd)
+            if rc_cap == 0:
+                effective_capability_activation_policy = "route-any-ready"
+                if not phase_transition_reason:
+                    phase_transition_reason = "capability_env_auth_fallback"
+                if not phase_transition_error_code:
+                    phase_transition_error_code = "IP-CAP-003"
+        if rc_cap != 0:
             print("[FAIL] capability activation preflight failed; update blocked")
-            return rc
+            return rc_cap
         rc = _run(
             [
                 "python3",
@@ -2156,7 +2179,7 @@ def main() -> int:
             "--resolved-pack-path",
             str(resolved.get("resolved_pack_path", "")),
             "--capability-activation-policy",
-            args.capability_activation_policy,
+            effective_capability_activation_policy,
         ]
         if args.layer_intent_text.strip():
             cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])

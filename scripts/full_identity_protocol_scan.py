@@ -188,9 +188,18 @@ def _severity_for_row(row: dict[str, Any]) -> str:
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("prompt_quality", "prompt_activation", "prompt_lifecycle")
     )
-    capability_fail = any(
-        name in checks and not checks.get(name, {}).get("ok", False)
-        for name in ("capability_activation_preflight", "capability_activation_report")
+    capability_check_names = ("capability_activation_preflight", "capability_activation_report")
+    capability_fail_non_env = any(
+        name in checks
+        and not checks.get(name, {}).get("ok", False)
+        and not bool(checks.get(name, {}).get("env_auth_blocked", False))
+        for name in capability_check_names
+    )
+    capability_fail_env_only = any(
+        name in checks
+        and not checks.get(name, {}).get("ok", False)
+        and bool(checks.get(name, {}).get("env_auth_blocked", False))
+        for name in capability_check_names
     )
     tool_vendor_fail = any(
         name in checks and not checks.get(name, {}).get("ok", False)
@@ -220,22 +229,32 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     fit_builder_issue = fit_builder_status == "WARN_NON_BLOCKING"
     freshness = checks.get("execution_report_freshness") or {}
     freshness_fail = (not freshness.get("ok", True)) or str(freshness.get("freshness_status", "")).upper() == "FAIL"
-    cap_preflight = checks.get("capability_activation_preflight") or {}
-    capability_env_blocked = bool(cap_preflight.get("env_auth_blocked", False))
-    if capability_env_blocked:
-        capability_fail = active and any(
-            name in checks and not checks.get(name, {}).get("ok", False)
-            for name in ("capability_activation_report",)
-        )
+    capability_env_blocked = capability_fail_env_only and not capability_fail_non_env
     dialogue_fail = any(
         name in checks and not checks.get(name, {}).get("ok", False)
         for name in ("dialogue_content", "dialogue_cross_validation", "dialogue_result_support")
     )
-    if active and profile == "runtime" and (core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail):
+    if active and profile == "runtime" and (
+        core_fail or prompt_fail or capability_fail_non_env or dialogue_fail or tool_vendor_fail or freshness_fail
+    ):
         return "P0"
-    if active and capability_env_blocked and not (core_fail or prompt_fail or dialogue_fail or tool_vendor_fail):
+    if active and capability_env_blocked and not (
+        core_fail or prompt_fail or dialogue_fail or tool_vendor_fail or freshness_fail
+    ):
         return "P1"
-    if core_fail or prompt_fail or capability_fail or dialogue_fail or tool_vendor_fail or freshness_fail or baseline_issue or fit_review_issue or fit_trigger_issue or fit_builder_issue:
+    if (
+        core_fail
+        or prompt_fail
+        or capability_fail_non_env
+        or capability_fail_env_only
+        or dialogue_fail
+        or tool_vendor_fail
+        or freshness_fail
+        or baseline_issue
+        or fit_review_issue
+        or fit_trigger_issue
+        or fit_builder_issue
+    ):
         return "P1"
     return "OK"
 
@@ -1178,7 +1197,7 @@ def main() -> int:
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
-                if name == "capability_activation_preflight":
+                if name in {"capability_activation_preflight", "capability_activation_report"}:
                     cap_status, cap_code = _extract_capability_signal(r.stdout)
                     if cap_status:
                         check_payload["capability_activation_status"] = cap_status
