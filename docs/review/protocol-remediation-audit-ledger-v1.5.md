@@ -160,7 +160,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-045 | 2026-03-03 | protocol | mixed-signal layer intent routing residual closure (`protocol lane` directive should positively trigger protocol lane instead of ambiguous fallback) | `7695a12` | DONE | PASS |
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
 | FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PENDING_REAUDIT |
-| FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PENDING_REAUDIT |
 | FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 | FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 
@@ -4367,7 +4367,7 @@ Acceptance DoD (post-implementation replay):
 Boundary:
 
 1. This record is docs-only intake and planning; no runtime behavior changed in this batch.
-2. `FIX-048` remains `SPEC_READY / PENDING_REPLAY` until architect implementation + independent replay closure.
+2. Historical snapshot note: at this stage `FIX-048` remained `SPEC_READY / PENDING_REPLAY`; see `16.8.39B` for post-implementation replay intake.
 
 #### 16.8.39A Vendor + standards cross-verification addendum for FIX-048 (2026-03-03, docs-only)
 
@@ -4410,7 +4410,45 @@ Inference-to-contract mapping:
 Boundary:
 
 1. This addendum strengthens contract rationale only; runtime behavior is unchanged.
-2. `FIX-048` remains `SPEC_READY / PENDING_REPLAY` until architect implementation + independent replay closure.
+2. Historical snapshot note: at this stage `FIX-048` remained `SPEC_READY / PENDING_REPLAY`; see `16.8.39B` for post-implementation replay intake.
+
+#### 16.8.39B Implementation replay intake: scaffold neutrality + blocker taxonomy bridge (`FIX-048`, 2026-03-03, scope-limited)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` with implementation replay evidence captured; independent auditor closure is still required before `PASS`.
+
+Implementation commits in this replay window:
+
+1. `f5c97b3` — code implementation for neutral default scaffold + blocker taxonomy canonical/alias behavior:
+   - `scripts/create_identity_pack.py`
+   - `scripts/validate_identity_runtime_contract.py`
+   - `scripts/validate_identity_collab_trigger.py`
+2. `49212d2` — de-ambiguity patch for invalid blocker logs in runtime validator:
+   - `scripts/validate_identity_runtime_contract.py`
+
+Replay bundle (local reproducible evidence):
+
+1. Create + baseline validation logs:
+   - `/tmp/fix048-review/create_full_contract.log`
+   - `/tmp/fix048-review/canonical_runtime.log`
+   - `/tmp/fix048-review/canonical_collab.log`
+2. Domain-neutrality forbidden-token scan:
+   - command scope: `/tmp/fix048-review/packs/tmp-route-quality-audit5-review`
+   - result: `/tmp/fix048-review/domain_scan.log` (no matches for `store-manager|store_manager|weixinstore-ui-agent|weixinstore-sku-onboarding|wechat_listing_update|taobao-search-automation|10000514174106`)
+3. Blocker taxonomy three-way replay:
+   - canonical baseline: runtime/collab pass (`rc=0`)
+   - legacy alias bridge (`login_required/captcha_required/session_expired`): runtime/collab pass (`rc=0`) with `mode=legacy_alias_bridge`
+     - evidence: `/tmp/fix048-review/legacy_runtime.log`, `/tmp/fix048-review/legacy_collab.log`, `/tmp/fix048-review/legacy_rc.txt`
+   - invalid blocker (`unknown_blocker_x`): runtime/collab fail-closed (`rc=1`)
+     - evidence: `/tmp/fix048-review/invalid_runtime.log`, `/tmp/fix048-review/invalid_collab.log`, `/tmp/fix048-review/invalid_rc.txt`
+4. Log de-ambiguity regression check:
+   - invalid runtime log now contains fail line only (no mixed `[FAIL]` + `[OK]` taxonomy verdict)
+   - evidence: `/tmp/fix048-review/invalid_runtime.log`
+
+Decision boundary for this section:
+
+1. This replay confirms `FIX-048` code landed and behavior is reproducible.
+2. Promotion is limited to `IMPL_READY (BLOCKED_BY_AUDIT)` in governance/review status bridge.
+3. `FIX-049/050` status is unaffected by this section and remains on implementation-pending track.
 
 #### 16.8.40 Roundtable intake: live reply first-line gate recurrence root cause (`FIX-049`, 2026-03-03, docs-only)
 
