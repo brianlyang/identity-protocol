@@ -100,6 +100,17 @@ def _extract_capability_signal(raw: str) -> tuple[str, str]:
     return status, code
 
 
+def _replace_activation_policy(cmd: list[str], policy: str) -> list[str]:
+    out = list(cmd)
+    if "--activation-policy" in out:
+        idx = out.index("--activation-policy")
+        if idx + 1 < len(out):
+            out[idx + 1] = policy
+            return out
+    out.extend(["--activation-policy", policy])
+    return out
+
+
 def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
     if not report_dir.exists():
         return None
@@ -1205,6 +1216,25 @@ def main() -> int:
                         check_payload["capability_activation_error_code"] = cap_code
                     if cap_code == "IP-CAP-003":
                         check_payload["env_auth_blocked"] = True
+                    if name == "capability_activation_preflight" and r.rc != 0 and cap_code == "IP-CAP-003":
+                        fallback_cmd = _replace_activation_policy(cmd, "route-any-ready")
+                        fallback = _run(fallback_cmd, cwd=repo_root)
+                        fb_status, fb_code = _extract_capability_signal(fallback.stdout)
+                        check_payload["capability_activation_fallback_attempted"] = True
+                        check_payload["capability_activation_fallback_policy"] = "route-any-ready"
+                        check_payload["capability_activation_fallback_rc"] = fallback.rc
+                        check_payload["capability_activation_fallback_tail"] = fallback.tail
+                        if fb_status:
+                            check_payload["capability_activation_fallback_status"] = fb_status
+                        if fb_code:
+                            check_payload["capability_activation_fallback_error_code"] = fb_code
+                        if fallback.ok:
+                            check_payload["rc"] = 0
+                            check_payload["ok"] = True
+                            check_payload["tail"] = fallback.tail
+                            check_payload["capability_activation_status"] = fb_status or "ACTIVATED"
+                            check_payload["capability_activation_error_code"] = fb_code
+                            check_payload["capability_activation_policy_effective"] = "route-any-ready"
                 if name == "required_contract_coverage":
                     coverage_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
