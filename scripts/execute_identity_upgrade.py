@@ -670,7 +670,7 @@ def _derive_writeback_continuity_fields(
     perm_err = str(permission_error_code or "").strip().upper()
     na = str(next_action or "").strip()
 
-    if not upgrade_required:
+    if all_ok and (not upgrade_required or ws == "WRITTEN"):
         return {
             "writeback_mode": "STRICT_WRITEBACK",
             "degrade_reason": "",
@@ -678,15 +678,7 @@ def _derive_writeback_continuity_fields(
             "next_recovery_action": "",
         }
 
-    if all_ok and ws == "WRITTEN":
-        return {
-            "writeback_mode": "STRICT_WRITEBACK",
-            "degrade_reason": "",
-            "risk_level": "",
-            "next_recovery_action": "",
-        }
-
-    # Degraded mode for non-closure or recoverable execution paths.
+    # Degraded mode for any non-closure path (including upgrade_required=False).
     degrade_reason = "validator_failure_before_writeback"
     risk_level = "medium"
     recovery = na or "fix_failing_validators_and_rerun_update"

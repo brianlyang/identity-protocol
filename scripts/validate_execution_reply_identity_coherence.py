@@ -295,13 +295,20 @@ def main() -> int:
     if reply_samples:
         first_line = _first_nonempty_line(reply_samples[0])
     parsed = parse_identity_context_stamp(first_line)
+    expected_work_input = str(args.expected_work_layer or "").strip()
+    expected_source_input = str(args.expected_source_layer or "").strip()
+    intent_text_input = str(args.layer_intent_text or "").strip() or str(stamp_doc.get("layer_intent_text", "")).strip()
+    seed_work = expected_work_input
+    if not seed_work and not intent_text_input:
+        seed_work = str(stamp_doc.get("resolved_work_layer", "")).strip()
+    seed_source = expected_source_input
+    if not seed_source and not intent_text_input:
+        seed_source = str(stamp_doc.get("resolved_source_layer", "")).strip()
+
     layer_intent = resolve_layer_intent(
-        explicit_work_layer=str(args.expected_work_layer or "").strip()
-        or str(stamp_doc.get("resolved_work_layer", "")).strip(),
-        explicit_source_layer=str(args.expected_source_layer or "").strip()
-        or str(stamp_doc.get("resolved_source_layer", "")).strip(),
-        intent_text=str(args.layer_intent_text or "").strip()
-        or str(stamp_doc.get("layer_intent_text", "")).strip(),
+        explicit_work_layer=seed_work,
+        explicit_source_layer=seed_source,
+        intent_text=intent_text_input,
         default_work_layer="instance",
         default_source_layer=ctx.source_domain,
     )

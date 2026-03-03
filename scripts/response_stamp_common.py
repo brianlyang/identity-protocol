@@ -89,6 +89,10 @@ PROTOCOL_TRIGGER_ACTIONS = {
     "回放",
 }
 
+LAYER_LITERAL_META_TOKENS = (
+    "identity-context:",
+    "layer-context:",
+)
 
 def _detect_repo_root(start: Path | None = None) -> Path:
     base = (start or Path.cwd()).resolve()
@@ -111,8 +115,9 @@ def _global_identity_home() -> Path:
     return (Path.home() / ".codex" / "identity").resolve()
 
 
-def _source_domain(catalog_path: Path, explicit_catalog: bool) -> str:
-    repo_root = _detect_repo_root(catalog_path.parent)
+def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint: Path | None = None) -> str:
+    probe = repo_root_hint if repo_root_hint is not None else catalog_path.parent
+    repo_root = _detect_repo_root(probe)
     project_home = _project_identity_home(repo_root)
     global_home = _global_identity_home()
     c = catalog_path.resolve()
@@ -202,7 +207,11 @@ def resolve_stamp_context(
     pointer = _session_data(catalog_path, actor, identity_id)
     lock_state = _lock_state(identity_id, pointer)
     lease_id = _lease_id(pointer)
-    source = _source_domain(catalog_path, explicit_catalog=explicit_catalog)
+    source = _source_domain(
+        catalog_path,
+        explicit_catalog=explicit_catalog,
+        repo_root_hint=repo_catalog_path.parent,
+    )
     return StampContext(
         actor_id=actor,
         identity_id=identity_id,
@@ -320,6 +329,30 @@ def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
     }
 
 
+def _sanitize_layer_intent_text(intent_text: str) -> str:
+    raw = str(intent_text or "").strip()
+    if not raw:
+        return ""
+    lines = []
+    for line in raw.splitlines():
+        stripped = line.strip()
+        lower = stripped.lower()
+        if any(tok in lower for tok in LAYER_LITERAL_META_TOKENS):
+            continue
+        lines.append(stripped)
+    cleaned = "\n".join([x for x in lines if x]).strip()
+    return cleaned or raw
+
+
+def _literal_match_in_interrogative_context(text: str, start: int, end: int) -> bool:
+    s = max(0, int(start) - 64)
+    e = min(len(text), int(end) + 64)
+    window = text[s:e]
+    if ("?" in window) or ("？" in window):
+        return True
+    return bool(re.search(r"\b(why|how|what)\b|为什么|为何", window))
+
+
 def resolve_layer_intent(
     *,
     explicit_work_layer: str = "",
@@ -330,7 +363,7 @@ def resolve_layer_intent(
 ) -> dict[str, Any]:
     resolved_source = _normalize_source_layer(explicit_source_layer, fallback=default_source_layer)
     fallback_work = _normalize_work_layer(default_work_layer, fallback=DEFAULT_WORK_LAYER)
-    text = str(intent_text or "").strip().lower()
+    text = _sanitize_layer_intent_text(intent_text).strip().lower()
     trigger = _detect_protocol_trigger(text)
     base_triggered = bool(trigger.get("protocol_triggered", False))
     base_trigger_reasons = list(trigger.get("protocol_trigger_reasons") or [])
@@ -397,6 +430,21 @@ def resolve_layer_intent(
         resolved_source = _normalize_source_layer(m_source.group(2), fallback=resolved_source)
     if m_work:
         candidate = _normalize_work_layer(m_work.group(2), fallback=fallback_work)
+        protocol_keyword_detected = any((k in text) for k in PROTOCOL_TRIGGER_KEYWORDS)
+        if (
+            candidate == "instance"
+            and protocol_keyword_detected
+            and _literal_match_in_interrogative_context(text, m_work.start(), m_work.end())
+        ):
+            reasons = [*base_trigger_reasons] if base_trigger_reasons else ["protocol_keyword_interrogative_override"]
+            return _result(
+                work_layer="protocol",
+                confidence=max(0.8, trigger_confidence),
+                intent_source="natural_language",
+                fallback_reason="",
+                protocol_triggered=True,
+                protocol_trigger_reasons=["protocol_context_instance_literal_override", *reasons],
+            )
         if candidate == "protocol" and not base_triggered:
             return _result(
                 work_layer=fallback_work,

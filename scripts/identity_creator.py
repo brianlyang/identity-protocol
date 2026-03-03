@@ -1936,12 +1936,16 @@ def main() -> int:
             baseline_status = str(refresh_payload.get("baseline_status", "")).strip().upper()
             lease_status = str(refresh_payload.get("lease_status", "")).strip().upper()
             pointer_consistency = str(refresh_payload.get("pointer_consistency", "")).strip().upper()
+            stale_baseline_codes = {"IP-PBL-001", "IP-PBL-002", "IP-PBL-003", "IP-PBL-004"}
+            baseline_error_code = str(refresh_payload.get("baseline_error_code", "")).strip()
             stale_only = (
                 str(args.baseline_policy).strip().lower() == "strict"
                 and refresh_error == "IP-ASB-RFS-004"
                 and baseline_status == "FAIL"
+                and baseline_error_code in stale_baseline_codes
                 and lease_status in {"", "ACTIVE"}
                 and pointer_consistency in {"", "PASS", "WARN"}
+                and len(stale_reasons) > 0
                 and all(
                     str(x).startswith("baseline_")
                     or str(x).startswith("report_protocol")
@@ -1999,28 +2003,52 @@ def main() -> int:
                 return rc_refresh
         else:
             phase_b_strict_revalidate_status = "PASS_REQUIRED"
-        rc = _run(
-            [
-                "python3",
-                "scripts/validate_identity_protocol_version_alignment.py",
-                "--catalog",
-                args.catalog,
-                "--repo-catalog",
-                args.repo_catalog,
-                "--identity-id",
-                args.identity_id,
-                "--scope",
-                args.scope,
-                "--operation",
-                "update",
-                "--alignment-policy",
-                args.baseline_policy,
-                "--json-only",
-            ]
+        protocol_alignment_cmd = [
+            "python3",
+            "scripts/validate_identity_protocol_version_alignment.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--scope",
+            args.scope,
+            "--operation",
+            "update",
+            "--alignment-policy",
+            args.baseline_policy,
+            "--json-only",
+        ]
+        rc_pva, out_pva, _ = _run_capture(protocol_alignment_cmd)
+        pva_payload = _parse_json_payload(out_pva) or {}
+        pva_error_code = str(pva_payload.get("error_code", "")).strip()
+        tuple_checks = pva_payload.get("tuple_checks", {})
+        if not isinstance(tuple_checks, dict):
+            tuple_checks = {}
+        pva_freshness_ok = bool(tuple_checks.get("execution_report_freshness", False))
+        pva_baseline_ok = bool(tuple_checks.get("protocol_baseline_freshness", False))
+        pva_prompt_ok = bool(tuple_checks.get("prompt_activation", False))
+        pva_binding_ok = bool(tuple_checks.get("binding_tuple", False))
+        legacy_tuple_refresh_allowed = (
+            str(args.baseline_policy or "").strip().lower() == "strict"
+            and pva_error_code in {"IP-PVA-003", "IP-PVA-004"}
+            and pva_freshness_ok
+            and pva_baseline_ok
+            and (not pva_prompt_ok or not pva_binding_ok)
         )
-        if rc != 0:
+        if rc_pva != 0 and not legacy_tuple_refresh_allowed:
             print("[FAIL] protocol version alignment validation failed; update blocked")
-            return rc
+            return rc_pva
+        if rc_pva != 0 and legacy_tuple_refresh_allowed:
+            if not phase_transition_reason:
+                phase_transition_reason = "legacy_alignment_tuple_refresh"
+            if not phase_transition_error_code:
+                phase_transition_error_code = pva_error_code
+            print(
+                "[WARN] protocol version alignment preflight reported legacy prompt/binding tuple drift; "
+                "continuing update to refresh execution tuple in-run"
+            )
         rc = _run(
             [
                 "python3",

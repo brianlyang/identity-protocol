@@ -194,9 +194,26 @@ def main() -> int:
         if not stamp_line:
             stamp_line = str(stamp_doc.get("external_stamp", "")).strip()
 
-    resolver_work = str(args.work_layer or "").strip() or str(stamp_doc.get("resolved_work_layer", "")).strip()
-    resolver_source = str(args.source_layer or "").strip() or str(stamp_doc.get("resolved_source_layer", "")).strip()
+    explicit_work = str(args.work_layer or "").strip()
+    explicit_source = str(args.source_layer or "").strip()
+    expected_work_input = str(args.expected_work_layer or "").strip()
+    expected_source_input = str(args.expected_source_layer or "").strip()
     resolver_intent_text = str(args.layer_intent_text or "").strip() or str(stamp_doc.get("layer_intent_text", "")).strip()
+
+    # Avoid stale stamp self-interception:
+    # when intent text is explicitly supplied (or expected tuple is provided),
+    # do not let historical stamp resolved_* fields silently override resolver input.
+    resolver_work = explicit_work
+    if not resolver_work and expected_work_input:
+        resolver_work = expected_work_input
+    if not resolver_work and not resolver_intent_text:
+        resolver_work = str(stamp_doc.get("resolved_work_layer", "")).strip()
+
+    resolver_source = explicit_source
+    if not resolver_source and expected_source_input:
+        resolver_source = expected_source_input
+    if not resolver_source and not resolver_intent_text:
+        resolver_source = str(stamp_doc.get("resolved_source_layer", "")).strip()
 
     intent = resolve_layer_intent(
         explicit_work_layer=resolver_work,
@@ -217,12 +234,12 @@ def main() -> int:
     )
 
     expected_work_layer = _normalize_layer_value(
-        str(args.expected_work_layer or "").strip() or resolved_work_layer,
+        expected_work_input or resolved_work_layer,
         allowed=set(ALLOWED_WORK_LAYERS),
         fallback=resolved_work_layer,
     )
     expected_source_layer = _normalize_layer_value(
-        str(args.expected_source_layer or "").strip() or resolved_source_layer,
+        expected_source_input or resolved_source_layer,
         allowed=set(ALLOWED_SOURCE_LAYERS),
         fallback=resolved_source_layer,
     )
