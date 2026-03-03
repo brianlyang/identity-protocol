@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+from typing import Iterable
 
 
 def _latest(identity_id: str, report_dir: Path) -> Path | None:
@@ -27,6 +28,53 @@ def _safe_json(path: Path) -> dict:
     except Exception:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _dedupe_paths(paths: Iterable[Path]) -> list[Path]:
+    out: list[Path] = []
+    seen: set[str] = set()
+    for p in paths:
+        key = p.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(p)
+    return out
+
+
+def _infer_pack_root(report_path: Path, prompt_path_raw: str) -> Path | None:
+    prompt_raw = str(prompt_path_raw or "").strip()
+    if prompt_raw:
+        p = Path(prompt_raw).expanduser()
+        if p.is_absolute() and p.exists():
+            return p.resolve().parent
+    rp = report_path.resolve()
+    report_dir = rp.parent
+    if report_dir.name == "reports" and report_dir.parent.name == "runtime":
+        return report_dir.parent.parent.resolve()
+    return None
+
+
+def _resolve_artifact_path(raw_path: str, *, report_path: Path, pack_root: Path | None) -> tuple[Path | None, list[Path]]:
+    raw = str(raw_path or "").strip()
+    if not raw:
+        return None, []
+    p = Path(raw).expanduser()
+    candidates: list[Path] = []
+    if p.is_absolute():
+        candidates.append(p.resolve())
+    else:
+        report_dir = report_path.parent.resolve()
+        runtime_root = report_dir.parent if report_dir.name == "reports" else report_dir
+        if pack_root is not None:
+            candidates.append((pack_root / p).resolve())
+        candidates.append((report_dir / p).resolve())
+        candidates.append((runtime_root / p).resolve())
+    ordered = _dedupe_paths(candidates)
+    for cand in ordered:
+        if cand.exists():
+            return cand, ordered
+    return (ordered[0] if ordered else None), ordered
 
 
 def main() -> int:
@@ -112,9 +160,14 @@ def main() -> int:
         print(f"[FAIL] identity_prompt_status must be ACTIVATED, got: {status}")
         return 1
 
-    prompt_path = Path(str(data.get("identity_prompt_path", ""))).expanduser().resolve()
-    if not prompt_path.exists():
-        print(f"[FAIL] prompt path missing: {prompt_path}")
+    prompt_raw = str(data.get("identity_prompt_path", "")).strip()
+    inferred_pack_root = _infer_pack_root(report_path, prompt_raw)
+    prompt_path, prompt_candidates = _resolve_artifact_path(
+        prompt_raw, report_path=report_path, pack_root=inferred_pack_root
+    )
+    if prompt_path is None or not prompt_path.exists():
+        searched = ", ".join(p.as_posix() for p in prompt_candidates) if prompt_candidates else "<none>"
+        print(f"[FAIL] prompt path missing: raw={prompt_raw!r}; searched=[{searched}]")
         return 1
     prompt_sha = _sha256(prompt_path)
     if h_after and h_after != prompt_sha:
@@ -140,12 +193,18 @@ def main() -> int:
         )
         return 1
 
-    runtime_state_path = Path(runtime_state_artifact_path).expanduser().resolve() if runtime_state_artifact_path else None
+    runtime_state_path, runtime_candidates = _resolve_artifact_path(
+        runtime_state_artifact_path, report_path=report_path, pack_root=inferred_pack_root
+    )
     if change_applied and runtime_state_path is None:
         print("[FAIL] runtime_state_artifact_path missing while prompt_change_applied=true")
         return 1
     if runtime_state_path is not None and not runtime_state_path.exists() and not deferred_blocked:
-        print(f"[FAIL] runtime state artifact missing: {runtime_state_path}")
+        searched = ", ".join(p.as_posix() for p in runtime_candidates) if runtime_candidates else "<none>"
+        print(
+            "[FAIL] runtime state artifact missing: "
+            f"raw={runtime_state_artifact_path!r}; resolved={runtime_state_path}; searched=[{searched}]"
+        )
         return 1
     if runtime_state_path is not None and runtime_state_path.exists():
         doc = _safe_json(runtime_state_path)

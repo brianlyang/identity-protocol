@@ -138,7 +138,9 @@ def _classify_from_payload(
     if not validator_status:
         return _classify(required, fallback_rc)
     if validator_status == STATUS_PASS_REQUIRED:
-        return STATUS_PASS_REQUIRED, REASON_PASS
+        if required:
+            return STATUS_PASS_REQUIRED, REASON_PASS
+        return STATUS_SKIPPED_NOT_REQUIRED, REASON_SKIPPED
     if validator_status == STATUS_SKIPPED_NOT_REQUIRED:
         return STATUS_SKIPPED_NOT_REQUIRED, REASON_SKIPPED
     if validator_status == STATUS_FAIL_REQUIRED:
@@ -207,7 +209,9 @@ def _classify(required: bool, rc: int) -> tuple[str, str]:
 def _coverage_rate(passed: int, total: int) -> float:
     if total <= 0:
         return 0.0
-    return round((passed / total) * 100.0, 2)
+    raw = (passed / total) * 100.0
+    bounded = max(0.0, min(100.0, raw))
+    return round(bounded, 2)
 
 
 def main() -> int:
@@ -394,6 +398,8 @@ def main() -> int:
 
     coverage_rate = _coverage_rate(required_passed, required_total)
     discovery_coverage_rate = _coverage_rate(discovery_required_passed, discovery_required_total)
+    coverage_counter_overflow = required_passed > required_total
+    discovery_counter_overflow = discovery_required_passed > discovery_required_total
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
@@ -420,6 +426,8 @@ def main() -> int:
         "skipped_contract_count": skipped_count,
         "failed_required_contract_count": failed_required,
         "failed_optional_contract_count": failed_optional,
+        "coverage_counter_overflow": coverage_counter_overflow,
+        "discovery_counter_overflow": discovery_counter_overflow,
     }
 
     min_cov = args.min_required_contract_coverage
@@ -464,6 +472,8 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     if failed_required > 0:
+        return 1
+    if coverage_counter_overflow or discovery_counter_overflow:
         return 1
     if coverage_gate_failed:
         return 1

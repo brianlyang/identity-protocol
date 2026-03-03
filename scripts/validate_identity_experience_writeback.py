@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from resolve_identity_context import default_local_catalog_path, merged_catalog
+from tool_vendor_governance_common import latest_identity_upgrade_report
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -39,25 +40,65 @@ def _resolve_pack(identity_id: str, repo_catalog_path: Path, local_catalog_path:
     raise FileNotFoundError(f"identity pack not found: {identity_id}")
 
 
-def _resolve_report(identity_id: str, override: str) -> Path:
+def _resolve_report(identity_id: str, override: str, pack_root: Path) -> Path:
     if override:
-        p = Path(override)
+        raw = override.strip()
+        p = Path(raw).expanduser()
+        if not p.is_absolute():
+            candidate = (pack_root / p).resolve()
+            if candidate.exists():
+                return candidate
+        p = p.resolve()
         if not p.exists():
             raise FileNotFoundError(f"execution report not found: {p}")
         return p
-    pattern = f"identity-upgrade-exec-{identity_id}-*.json"
-    candidates = [
-        p
-        for p in Path("identity/runtime/reports").glob(pattern)
-        if not p.name.endswith("-patch-plan.json")
-    ]
-    if not candidates:
+    discovered = latest_identity_upgrade_report(identity_id, pack_root)
+    if discovered is not None and discovered.exists():
+        return discovered
+    pattern = f"**/identity-upgrade-exec-{identity_id}-*.json"
+    fallback_candidates: list[Path] = []
+    for root in (
+        Path("identity/runtime/reports"),
+        Path("/tmp/identity-upgrade-reports"),
+    ):
+        if root.exists():
+            fallback_candidates.extend(
+                p for p in root.glob(pattern) if p.is_file() and not p.name.endswith("-patch-plan.json")
+            )
+    if not fallback_candidates:
         raise FileNotFoundError(
-            f"no execution report found in identity/runtime/reports for pattern {pattern}; "
-            "provide --execution-report explicitly when reports are generated outside repo tree"
+            f"no execution report found for identity {identity_id}; provide --execution-report explicitly "
+            "when reports are generated outside pack/runtime roots"
         )
-    candidates.sort(key=lambda p: p.stat().st_mtime)
-    return candidates[-1]
+    fallback_candidates.sort(key=lambda p: p.stat().st_mtime)
+    return fallback_candidates[-1].resolve()
+
+
+def _resolve_writeback_path(raw_path: Any, *, pack_root: Path, report_path: Path) -> tuple[Path | None, list[Path]]:
+    raw = str(raw_path or "").strip()
+    if not raw:
+        return None, []
+    p = Path(raw).expanduser()
+    candidates: list[Path] = []
+    if p.is_absolute():
+        candidates.append(p.resolve())
+    else:
+        report_dir = report_path.parent.resolve()
+        runtime_root = report_dir.parent if report_dir.name == "reports" else report_dir
+        for base in (pack_root.resolve(), report_dir, runtime_root):
+            candidates.append((base / p).resolve())
+    dedup: list[Path] = []
+    seen: set[str] = set()
+    for cand in candidates:
+        key = cand.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        dedup.append(cand)
+    for cand in dedup:
+        if cand.exists():
+            return cand, dedup
+    return None, dedup
 
 
 def _load_rulebook_rows(path: Path) -> list[dict[str, Any]]:
@@ -90,7 +131,7 @@ def main() -> int:
         local_catalog = Path(args.local_catalog).expanduser().resolve()
         pack = _resolve_pack(args.identity_id, repo_catalog, local_catalog)
         override = args.execution_report or args.report
-        report_path = _resolve_report(args.identity_id, override)
+        report_path = _resolve_report(args.identity_id, override, pack)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
@@ -149,9 +190,10 @@ def main() -> int:
         print("[FAIL] report.writeback_paths must include RULEBOOK and TASK_HISTORY paths")
         return 1
     for wp in writeback_paths:
-        p = Path(str(wp)).expanduser()
-        if not p.exists():
-            print(f"[FAIL] report.writeback_paths item not found: {p}")
+        resolved, searched = _resolve_writeback_path(wp, pack_root=pack, report_path=report_path)
+        if resolved is None:
+            searched_hint = ", ".join(p.as_posix() for p in searched) if searched else "<none>"
+            print(f"[FAIL] report.writeback_paths item not found: {wp!r}; searched=[{searched_hint}]")
             return 1
     if str(report.get("writeback_status", "")).strip() != "WRITTEN":
         print(f"[FAIL] report.writeback_status must be WRITTEN, got={report.get('writeback_status')!r}")

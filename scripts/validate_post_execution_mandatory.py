@@ -14,6 +14,8 @@ STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_MANDATORY_STATE = "IP-WRB-003"
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
@@ -82,7 +84,7 @@ def _run_experience_writeback_validator(
 ) -> tuple[int, str, str]:
     cmd = [
         "python3",
-        "scripts/validate_identity_experience_writeback.py",
+        str((SCRIPT_DIR / "validate_identity_experience_writeback.py").resolve()),
         "--repo-catalog",
         str(repo_catalog_path),
         "--local-catalog",
@@ -92,7 +94,7 @@ def _run_experience_writeback_validator(
         "--execution-report",
         str(report_path),
     ]
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
