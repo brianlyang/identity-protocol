@@ -1804,6 +1804,14 @@ Mandatory semantics:
    - `IP-SCF-002`: non-canonical or cross-root path found in default scaffold output.
    - `IP-SCF-003`: domain-specific overlay applied without explicit profile receipt.
 
+Vendor/spec cross-validation constraints (normative addendum):
+
+1. OpenAI Codex Skills guidance defines skills as reusable instruction packages with progressive disclosure (`metadata -> SKILL.md -> references/scripts as needed`), which implies scaffold defaults should stay generic and not preload domain-specific constants.
+2. Agent Skills specification requires minimal portable frontmatter (`name`, `description`) and optional assets/scripts; therefore default bootstrap artifacts must preserve portability across domains.
+3. MCP specification models capabilities by typed boundaries (`tools`, `resources`, `prompts`) and capability declaration, not by vertical-business constants; scaffold bootstrap must avoid embedding commerce-specific route tokens as implicit capability selectors.
+4. Security/consent alignment:
+   - when a workflow truly requires vendor/domain specialization, specialization must be explicit and auditable (profile opt-in + receipt), not hidden in default scaffold seeds.
+
 #### 5.8.33 `blocker_taxonomy_decoupling_contract_v1` (P1, FIX-048)
 
 Goal:
@@ -1827,6 +1835,19 @@ Mandatory semantics:
 5. Suggested error codes:
    - `IP-BLOCKER-001`: unsupported blocker enum with no valid alias bridge.
    - `IP-BLOCKER-002`: legacy blocker enum used beyond configured bridge window in strict lane.
+
+Canonical blocker baseline (migration target):
+
+1. `auth_login_required`
+2. `anti_automation_challenge_required`
+3. `session_reauthentication_required`
+4. `manual_verification_required`
+
+Legacy bridge requirements:
+
+1. Legacy aliases (for example `login_required`, `captcha_required`, `session_expired`) are compatibility inputs only.
+2. Strict lanes MUST emit alias-hit telemetry and resolved canonical blocker.
+3. Bridge deprecation window must be explicit in task/runtime metadata; missing window metadata in strict lanes is fail-closed.
 
 #### 5.8.34 `live_reply_outlet_evidence_hard_boundary_contract_v1` (P0, FIX-049)
 
@@ -2390,8 +2411,8 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-104 | protocol lane lock exit must have a unified writer entrypoint with canonical outbox + index linkage; strict lane exit without newer EXIT remains fail-closed | `write_session_lane_lock_exit.py` + `identity_creator.py update --release-session-lane-lock` + lane-routing exit telemetry surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | `FIX-044` landed in `62bdc1c` with canonical EXIT writer (`IP-LAYER-GATE-008/009`) and creator automation switch; independent replay closure pending in review `16.8.34` |
 | ASB-RQ-105 | mixed-signal layer-intent routing must positively enter `protocol` lane when explicit protocol-lane directive is present (instead of default ambiguous fallback) while preserving fail-safe instance fallback for true ambiguity | `resolve_layer_intent` semantic resolver + stamp render/validators telemetry surfaces | P1 | GATE_READY | `FIX-045` landed in `7695a12` with protocol-lane directive detection + mixed-signal dominance routing; independent re-audit closure recorded in review `16.8.35` |
 | ASB-RQ-106 | strict stale preflight must emit machine-readable phase-transition trace (`baseline_mode_violation` + aligned error code) when stale-only self-repair is denied | `identity_creator.py` strict baseline preflight trace fields + upgrade replay artifacts | P1 | GATE_READY | `FIX-046` landed in `dc9c2e3` with explicit baseline-mode violation trace emission; independent re-audit closure recorded in review `16.8.35` |
-| ASB-RQ-107 | identity scaffold default bootstrap must be domain-neutral and path-governed: no legacy business constants in default generated `CURRENT_TASK`/runtime samples, and no cross-root relative pointers | `scripts/create_identity_pack.py` + neutral scaffold seed artifacts + scaffold-neutrality validator (new) + creator/readiness scan telemetry surfaces | P0 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`); architect implementation pending |
-| ASB-RQ-108 | blocker taxonomy must be decoupled from legacy commerce enums: canonical neutral blocker set + explicit legacy alias bridge + strict-lane fail-closed on unsupported values | `scripts/validate_identity_runtime_contract.py`, `scripts/validate_identity_collab_trigger.py`, blocker alias-map contract (new), coverage/readiness telemetry surfaces | P1 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`); architect implementation pending |
+| ASB-RQ-107 | identity scaffold default bootstrap must be domain-neutral and path-governed: no legacy business constants in default generated `CURRENT_TASK`/runtime samples, and no cross-root relative pointers | `scripts/create_identity_pack.py` + neutral scaffold seed artifacts + scaffold-neutrality validator (new) + creator/readiness scan telemetry surfaces | P0 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`) and vendor/spec addendum (`review 16.8.39A`); architect implementation pending |
+| ASB-RQ-108 | blocker taxonomy must be decoupled from legacy commerce enums: canonical neutral blocker set + explicit legacy alias bridge + strict-lane fail-closed on unsupported values | `scripts/validate_identity_runtime_contract.py`, `scripts/validate_identity_collab_trigger.py`, blocker alias-map contract (new), coverage/readiness telemetry surfaces | P1 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`) and vendor/spec addendum (`review 16.8.39A`); architect implementation pending |
 | ASB-RQ-109 | strict send-time/first-line gate must validate real outbound reply payload and reject synthetic stamp-only evidence sources; missing outlet guard is fail-closed | `scripts/validate_send_time_reply_gate.py`, `scripts/validate_reply_identity_context_first_line.py`, runtime reply outlet adapter (new), readiness/e2e/full-scan/three-plane evidence-mode telemetry | P0 | SPEC_READY | introduced by `FIX-049` docs intake (`review 16.8.40`) after repeated live missing-header recurrence despite synthetic replay pass |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
@@ -2440,7 +2461,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-103 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-043` landed in `c310ab4` with runtime prompt-state externalization and lifecycle binding validator updates; independent replay closure pending in review `16.8.33` |
 | ASB-RQ-104 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-044` landed in `62bdc1c` with canonical lane-lock EXIT writer + index linkage and creator automation switch (`--release-session-lane-lock`); independent replay closure pending in review `16.8.34` |
 | ASB-RQ-105 / ASB-RQ-106 | `NEW -> GATE_READY (P1)` | `FIX-045/046` landed (`7695a12`, `dc9c2e3`) and residual misclassification + stale-preflight trace observability were re-audit closed in review `16.8.35` (scope-limited; does not alter other `PENDING_REAUDIT` batches) |
-| ASB-RQ-107 / ASB-RQ-108 | `NEW -> SPEC_READY (P0/P1)` | `FIX-048` docs intake (`review 16.8.39`) adds scaffold domain-neutral bootstrap + blocker taxonomy decoupling migration contracts; implementation/replay pending |
+| ASB-RQ-107 / ASB-RQ-108 | `NEW -> SPEC_READY (P0/P1)` | `FIX-048` docs intake (`review 16.8.39`) + vendor/spec cross-verification addendum (`review 16.8.39A`) add scaffold domain-neutral bootstrap + blocker taxonomy decoupling migration contracts; implementation/replay pending |
 | ASB-RQ-109 | `NEW -> SPEC_READY (P0)` | `FIX-049` docs intake (`review 16.8.40`) closes evidence-source ambiguity for live reply first-line gate; requires strict non-synthetic send-time evidence and pre-send outlet adapter |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)

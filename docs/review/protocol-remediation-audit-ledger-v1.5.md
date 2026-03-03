@@ -4368,6 +4368,47 @@ Boundary:
 1. This record is docs-only intake and planning; no runtime behavior changed in this batch.
 2. `FIX-048` remains `SPEC_READY / PENDING_REPLAY` until architect implementation + independent replay closure.
 
+#### 16.8.39A Vendor + standards cross-verification addendum for FIX-048 (2026-03-03, docs-only)
+
+Status: `SPEC_VALIDATED_EXTERNALLY` (requirements strengthened; implementation still pending).
+
+Why this addendum exists:
+
+1. `FIX-048` targets identity initialization bootstrap semantics and skill/runtime portability.
+2. To avoid local-design drift, contract wording is cross-validated against vendor/standards sources before implementation.
+
+Cross-verification sources (official/vendor + Context7 mirrors):
+
+1. OpenAI Codex Skills:
+   - https://developers.openai.com/codex/skills/
+   - confirms progressive disclosure (`metadata -> SKILL.md -> references/scripts when needed`) and reusable skill packaging.
+2. OpenAI Customization / Skills:
+   - https://developers.openai.com/codex/concepts/customization/#skills
+   - confirms metadata-first discovery and explicit/implicit skill invocation.
+3. OpenAI Codex Security:
+   - https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations
+   - confirms explicit approval/sandbox controls for sensitive operations.
+4. MCP Specification:
+   - https://modelcontextprotocol.io/specification/latest
+   - confirms typed capability boundaries (`tools`, `resources`, `prompts`) and tool-security expectations.
+5. Agent Skills specification:
+   - https://agentskills.io/specification
+   - confirms portable baseline (`SKILL.md` required frontmatter with `name` + `description`).
+6. Context7 mirrors used for independent retrieval:
+   - `/websites/modelcontextprotocol_io_specification_2025-11-25`
+   - `/websites/agentskills_io`
+
+Inference-to-contract mapping:
+
+1. Since vendor specs define portable metadata-first skills, default scaffold output containing legacy vertical constants is treated as protocol contamination (`ASB-RQ-107`, P0).
+2. Since specs separate capability interfaces from domain constants, blocker taxonomy must migrate to canonical neutral enums + explicit legacy alias bridge (`ASB-RQ-108`, P1).
+3. Since vendor security guidance requires explicit consent/controls, any domain specialization must be explicit profile opt-in + receipt, not hidden in default bootstrap.
+
+Boundary:
+
+1. This addendum strengthens contract rationale only; runtime behavior is unchanged.
+2. `FIX-048` remains `SPEC_READY / PENDING_REPLAY` until architect implementation + independent replay closure.
+
 #### 16.8.40 Roundtable intake: live reply first-line gate recurrence root cause (`FIX-049`, 2026-03-03, docs-only)
 
 Status: `SPEC_READY` (P0 contract gap confirmed; architect patch required).
