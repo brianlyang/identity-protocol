@@ -1528,6 +1528,11 @@ Mandatory semantics:
    - strict operations must fail-closed with explicit remediation hint (`provide --expected-work-layer protocol` or protocol lane lock receipt).
 3. Session lane lock contract:
    - protocol lane lock must persist for current governed round until explicit exit receipt is written.
+   - explicit exit receipt must be archived under canonical protocol-feedback channel and indexed:
+     - `runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_*.json`
+     - `runtime/protocol-feedback/evidence-index/INDEX.md`
+   - if a newer exit receipt is not present, strict instance-lane operations remain blocked by `IP-LAYER-GATE-007`.
+   - if auto exit writer is unavailable in current implementation, runbook must define operator-driven exit emission as mandatory closure action before returning to instance lane.
 4. Required telemetry fields:
    - `protocol_context_detected`
    - `session_lane_lock`

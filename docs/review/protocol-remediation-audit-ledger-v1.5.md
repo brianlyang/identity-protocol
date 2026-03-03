@@ -4000,6 +4000,26 @@ Replay highlights (local):
    - result:
      - legacy prompt runtime block removed in test fixture,
      - runtime state artifact written with `prompt_policy_hash` binding.
+7. Scenario A cross-validation addendum (`system-requirements-analyst`):
+   - report evidence:
+     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772512085.json`
+   - key fields:
+     - `all_ok=true`
+     - `work_layer=instance`
+     - `applied_gate_set=instance_required_checks`
+     - `writeback_status=WRITTEN`
+   - lane receipts present:
+     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260303T042034Z.json`
+     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/LAYER_GATE_PROTOCOL_PENDING_20260303T042103Z.json`
+     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`
+8. Collaboration hard-block contract verification:
+   - command replay:
+     - `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
+   - result: `rc=0`, notify policy remains `must_notify_when_human_required`; task contract retains `must_emit_receipt_in_chat=true`.
+9. Residual operational gap (runbook-level, not protocol-semantics gap):
+   - evidence index currently links protocol lock + pending, but no link for `SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`.
+   - script scan confirms `scripts/validate_work_layer_gate_set_routing.py` consumes `SESSION_LANE_LOCK_EXIT_*` as lock-release evidence, but no dedicated auto-exit writer surface is currently wired.
+   - closure action required: runbook must explicitly define protocol round exit emission + index linkage; otherwise strict lane checks can remain in `IP-LAYER-GATE-007` blocked state.
 
 Boundary:
 
