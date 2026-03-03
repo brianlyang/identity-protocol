@@ -4842,8 +4842,9 @@ Scope-limited replay evidence:
 4. Coverage KPI normalization:
    - `/tmp/fix053_cov_custom_threeplane_after.json` -> `required_contract_total=7`, `required_contract_passed=7`, `required_contract_coverage_rate=100.0`.
    - `/tmp/three_plane_custom_20260303_afterfix3.json` -> `required_contract_total=3`, `required_contract_passed=3`, `required_contract_coverage_rate=100.0`.
-5. Full-scan boundary sample:
+5. Full-scan boundary sample (historical window):
    - `/tmp/full_scan_custom_project_only_afterfix3.json` -> project scope `p0=0`, residual `p1=1` (`IP-CAP-003` auth/env preflight), not protocol writeback/semantic/coverage regression.
+   - superseded for current-state decision by live re-audit intake `16.8.48` (project scope now `p0=1,p1=0` due `IP-CAP-003`).
 
 Boundary:
 
@@ -4896,8 +4897,9 @@ Replay evidence (scope-limited):
 3. Outlet compose hard-wiring visible in scan/three-plane:
    - `/tmp/full_scan_custom_project_only_afterfix4.json` contains both `send_time_reply_gate` (compose preflight) and `send_time_reply_gate_validate` pass records.
    - `/tmp/three_plane_custom_20260303_afterfix4.json` validator set includes `compose_governed_reply_preflight` + `send_time_reply_gate`, both `rc=0`.
-4. Remaining non-blocking residual in this sample window:
-   - project-scope scan still reports `P1` (`IP-CAP-003` env/auth preflight), not protocol writeback/semantic/send-time regression.
+4. Remaining residual in this sample window (historical):
+   - project-scope scan reports `P1` (`IP-CAP-003` env/auth preflight), not protocol writeback/semantic/send-time regression.
+   - superseded for current-state decision by live re-audit intake `16.8.48` (`IP-CAP-003` classified as `P0` blocker in current project replay window).
 
 Decision boundary:
 
@@ -4906,6 +4908,34 @@ Decision boundary:
 3. No claim of global full-green is made by this section.
 4. Cross-cwd runbook note:
    - when caller cwd is not protocol-root, pass absolute `--repo-catalog` for post-execution chain replay consistency.
+
+#### 16.8.48 Auditor live re-audit sync: implementation closure retained, runtime env blocker remains `P0` (`IP-CAP-003`) (2026-03-03, project scope)
+
+Status: `DONE / PENDING_REAUDIT` (protocol code-gap closure stands; project runtime remains blocked by env/auth preflight).
+
+Evidence intake (independent live replay):
+
+1. `/tmp/reaudit_643_fullscan_project_only_live.json`
+   - `summary.p0=1`, `summary.p1=0`
+   - blocker class: `capability_activation_preflight`
+   - blocker code: `IP-CAP-003`
+2. `/tmp/reaudit_643_threeplane_live.json`
+   - `instance_plane_status=IN_PROGRESS`
+   - `capability_activation_error_code=IP-CAP-003`
+
+Cross-check on fixed implementation claims (still valid):
+
+1. FIX-051 CWD invariance:
+   - `/tmp/reaudit_643_wrb_root.json` and `/tmp/reaudit_643_wrb_tmp.json` both `writeback_continuity_status=PASS_REQUIRED`.
+2. FIX-054 outlet wiring + sidecar pass-through:
+   - `/tmp/reaudit_643_sidecar_root.json` and `/tmp/reaudit_643_sidecar_tmp.json` both `sidecar_contract_status=PASS_REQUIRED`.
+   - `/tmp/reaudit_643_semantic_direct.json` remains equivalent to sidecar `track_b.semantic_*` under identical passthrough args.
+
+Decision boundary (current-state):
+
+1. Do **not** use `p0=0,p1=1` as current-state release posture for project scope; that is historical-only.
+2. Current project-scope state is `P0` blocked by `IP-CAP-003` (env/auth preflight), while protocol implementation fixes from `6430852` remain valid.
+3. External claim must stay conservative: `IMPL_READY (BLOCKED_BY_ENV_AUDIT)` for this replay window; no full-closed/full-green claim.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
