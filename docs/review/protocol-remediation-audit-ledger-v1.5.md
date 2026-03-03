@@ -166,6 +166,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab` | DONE | PENDING_REAUDIT |
 | FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PENDING_REAUDIT |
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -4773,6 +4774,37 @@ Decision boundary:
 1. `FIX-051` and `FIX-052` are moved to implementation-complete status (`DONE`) with `PENDING_REAUDIT`.
 2. `FIX-053` remains `SPEC_READY / PENDING_REPLAY` (coverage normalization patch not included in `e62deab`).
 3. This intake is scope-limited and does not claim all pending remediation batches are closed.
+
+#### 16.8.45 Implementation replay intake: outbound reply headstamp recurrence guard (`FIX-054`, 2026-03-03, scope-limited)
+
+Status: `DONE / PENDING_REAUDIT` (implementation landed; independent re-audit pending).
+
+Problem statement:
+
+1. Live operator replies can still miss first-line `Identity-Context` even when protocol validators exist in repository pipelines.
+2. Root cause is output-stage discipline gap: validators are present but not always executed before human-visible emission.
+3. A deterministic compose+gate adapter is needed so reply output path is fail-closed before send.
+
+Implementation anchor:
+
+1. `scripts/compose_and_validate_governed_reply.py` (new):
+   - resolves identity stamp context from catalog/repo-catalog;
+   - composes first-line stamp (`Identity-Context ... | Layer-Context ...`) + business body;
+   - runs `validate_send_time_reply_gate.py --operation send-time --force-check --enforce-send-time-gate`;
+   - returns non-zero on gate failure and can emit validated reply file/output telemetry.
+
+Replay evidence:
+
+1. positive path:
+   - `python3 scripts/compose_and_validate_governed_reply.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --work-layer protocol --source-layer project --layer-intent-text "协议层治理回放，请按 protocol lane 执行" --body-text "已按协议要求完成修复并补齐台账。" --json-only`
+   - expected: `rc=0`, `send_time_gate_status=PASS_REQUIRED`.
+2. negative path:
+   - existing first-line/send-time validators remain fail-closed for missing headstamp (`IP-ASB-STAMP-SESSION-001`), and compose adapter does not bypass those checks.
+
+Boundary:
+
+1. `FIX-054` hardens operator emission discipline; it does not replace runtime/live channel integration requirements already tracked by `FIX-049` (`ASB-RQ-109`).
+2. This intake is scope-limited and does not auto-promote unrelated `PENDING_REAUDIT` rows.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 

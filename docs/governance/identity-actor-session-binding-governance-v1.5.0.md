@@ -1981,6 +1981,30 @@ Mandatory semantics:
    - `IP-COV-002`: required coverage counter overflow detected.
    - `IP-COV-003`: coverage payload status inconsistent with required_effective partitioning.
 
+#### 5.8.39 `outbound_reply_composition_preflight_contract_v1` (P0, FIX-054)
+
+Goal:
+
+1. Eliminate operator-side recurrence where user-visible reply is emitted without first-line identity stamp.
+2. Make outbound reply composition path deterministic: compose stamp + body first, then fail-closed validate before emission.
+
+Mandatory semantics:
+
+1. Outbound governed replies must pass a preflight composition gate:
+   - compose first line via canonical renderer (`Identity-Context ... | Layer-Context ...`);
+   - append business body only after stamp line is present.
+2. Preflight must run send-time gate on the exact composed payload before emission:
+   - validator: `validate_send_time_reply_gate.py --operation send-time --force-check --enforce-send-time-gate`;
+   - missing/invalid first-line stamp remains fail-closed (`IP-ASB-STAMP-SESSION-001`).
+3. Preflight adapter must expose machine-readable telemetry:
+   - `send_time_gate_status`
+   - `reply_first_line_status`
+   - `reply_evidence_mode`
+   - `work_layer`
+   - `source_layer`
+4. Suggested adapter:
+   - `scripts/compose_and_validate_governed_reply.py` for compose + preflight in one deterministic step.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2527,6 +2551,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-111 | post-execution strict closure must be CWD-invariant: relative writeback/runtime-state paths must resolve deterministically against report/pack anchors, and child validator invocation must not depend on caller working directory | `validate_identity_experience_writeback.py`, `validate_identity_prompt_lifecycle.py`, `validate_post_execution_mandatory.py` path canonicalization + absolute script invocation adapter | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-051` (`e62deab`) with shared cross-root report discovery + validator wiring replay; independent closure audit pending (`review 16.8.44`) |
 | ASB-RQ-112 | semantic routing guard strict closure must enforce complete metadata (`intent_domain`, `intent_confidence`, `classifier_reason`) on selected protocol-feedback batch with run/correlation-bound selection semantics | `validate_semantic_routing_guard.py` metadata completeness gate + strict batch selection policy + feedback writer schema parity | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-052` (`e62deab`) with legacy auto-required contract default fallback + correlated batch replay; independent closure audit pending (`review 16.8.44`) |
 | ASB-RQ-113 | required-contract coverage KPI must be mathematically normalized (`required_passed<=required_total`, coverage in `[0,100]`) and aligned with required_effective partition semantics | `validate_required_contract_coverage.py` classification/counter normalization + overflow telemetry | P1 | SPEC_READY | introduced by `FIX-053` docs intake (`review 16.8.43`) after three-plane coverage overflow anomaly (`133.33`) |
+| ASB-RQ-114 | outbound governed reply path must compose first-line identity stamp and execute send-time preflight on exact payload before emission (operator-side missing-headstamp recurrence is fail-closed) | `scripts/compose_and_validate_governed_reply.py` + `validate_send_time_reply_gate.py` (`operation=send-time`) + first-line validator telemetry | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-054` (`a559820`) with compose+validate adapter; independent closure audit pending (`review 16.8.45`) |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2579,6 +2604,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-110 | `NEW -> SPEC_READY (P0)` | `FIX-050` docs intake (`review 16.8.41`) enforces initialization/update execution-order hard boundaries (header-first, scaffold-consent, disclose-before-write) with fqsh recurrence evidence anchors |
 | ASB-RQ-111 / ASB-RQ-112 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-051/052` implementation landed in `e62deab` with scope-limited replay closure for custom-lane mode-guard unblock + correlated protocol-feedback chain + cross-root report discovery; independent audit promotion pending (`review 16.8.44`) |
 | ASB-RQ-113 | `NEW -> SPEC_READY (P1)` | `FIX-053` docs intake (`review 16.8.43`) captures required-coverage metric overflow anomaly (`required_contract_coverage_rate=133.33`) and normalization contract requirement |
+| ASB-RQ-114 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-054` implementation landed in `a559820` with outbound compose+send-time preflight adapter to prevent operator-side missing-headstamp recurrence; independent audit promotion pending (`review 16.8.45`) |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
