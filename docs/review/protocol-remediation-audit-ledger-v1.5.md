@@ -163,6 +163,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PENDING_REAUDIT |
 | FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 | FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 
 ---
 
@@ -4627,6 +4630,82 @@ Decision impact:
    - `FIX-029..032`: `PENDING_REAUDIT`
    - `FIX-034..044`: unchanged current states in summary table.
 3. Architect next priority should stay on P1 closure for correlation strictness and requiredized coverage uplift.
+
+#### 16.8.43 Protocol closure reverify intake: `custom-creative-ecom-analyst` remains `NOT_CLOSED` (`NO_GO`, 2026-03-03, scope-limited)
+
+Status: `NOT_CLOSED / NO_GO` for protocol-layer closure claim.
+
+Scope boundary:
+
+1. This section is independent replay intake for one project identity.
+2. It does not auto-promote any previously `PENDING_REAUDIT` remediation row.
+
+Reverify bundle (cross-validated):
+
+1. full-scan:
+   - `/tmp/full_scan_custom_20260303_reverify_escalated.json`
+2. three-plane:
+   - `/tmp/three_plane_custom_20260303_reverify_escalated.json`
+3. capability strict-union probe:
+   - `/tmp/capability_activation_custom_20260303.json`
+4. protocol feedback closure batch:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260303T082408Z_protocol_closure_reverify_sanitized.md`
+5. evidence index linkage:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+
+Hard blockers reproduced:
+
+1. `IP-WRB-003` (`FAIL_REQUIRED`) persists in both full-scan and three-plane.
+2. `IP-SEM-001` (`FAIL_REQUIRED`) persists in both full-scan and three-plane.
+
+Cross-validation details:
+
+1. `IP-WRB-003` root cause is path/CWD sensitivity in writeback/prompt lifecycle chain:
+   - `scripts/validate_identity_experience_writeback.py:151` currently resolves `report.writeback_paths` as raw `Path(wp)` without report-relative/pack-relative canonicalization.
+   - `scripts/validate_identity_prompt_lifecycle.py:143` resolves relative `runtime_state_artifact_path` against process CWD.
+   - `scripts/validate_post_execution_mandatory.py:100` invokes child validator via relative script path, amplifying CWD sensitivity into post-execution fail-closed output.
+2. Same-report CWD differential replay is reproducible:
+   - `validate_identity_experience_writeback.py` with same report:
+     - protocol root: `FAIL` (`report.writeback_paths item not found: RULEBOOK.jsonl`)
+     - pack root: `PASS`
+   - `validate_identity_prompt_lifecycle.py` with same report:
+     - protocol root: `FAIL` (`runtime state artifact missing`)
+     - pack root: `PASS`
+3. `IP-SEM-001` is reproducible on current reverify batch:
+   - `FEEDBACK_BATCH_20260303T082408Z_protocol_closure_reverify_sanitized.md` still lacks required semantic metadata fields:
+     - `intent_domain`
+     - `intent_confidence`
+     - `classifier_reason`
+   - strict replay returns `FAIL_REQUIRED`, `error_code=IP-SEM-001`.
+
+Confirmed pass items in the same window:
+
+1. Capability activation in strict-union is no longer blocked:
+   - `capability_activation_status=ACTIVATED`.
+2. Protocol data sanitization boundary passes:
+   - `protocol_data_sanitization_boundary_status=PASS_REQUIRED`.
+
+Additional non-blocking anomaly (audit consistency):
+
+1. three-plane payload reported:
+   - `required_contract_total=3`
+   - `required_contract_passed=4`
+   - `required_contract_coverage_rate=133.33`
+2. This indicates metric semantics drift (`passed > total`) and should be normalized before using coverage KPI as governance signal.
+
+Follow-up fix intake mapping:
+
+1. `FIX-051` (`ASB-RQ-111`, P0):
+   - close CWD-sensitive writeback/prompt lifecycle chain in strict operations (`IP-WRB-003` closure).
+2. `FIX-052` (`ASB-RQ-112`, P0):
+   - enforce semantic metadata completeness for closure batches (`IP-SEM-001` closure).
+3. `FIX-053` (`ASB-RQ-113`, P1):
+   - normalize required-coverage accounting and bound rate to `[0,100]`.
+
+Decision boundary:
+
+1. Protocol closure claim remains `NOT_CLOSED` for this identity replay window.
+2. This section is docs-only governance intake and does not change runtime behavior.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 

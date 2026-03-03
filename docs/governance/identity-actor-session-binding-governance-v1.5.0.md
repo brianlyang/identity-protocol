@@ -1912,6 +1912,75 @@ Mandatory semantics:
    - `IP-EXEC-ORDER-002`: scaffold generation attempted without explicit consent.
    - `IP-EXEC-ORDER-003`: mutation attempted without prior plan disclosure.
 
+#### 5.8.36 `post_execution_writeback_cwd_invariant_contract_v1` (P0, FIX-051)
+
+Goal:
+
+1. Eliminate CWD-dependent pass/fail drift in post-execution writeback chain.
+2. Ensure strict post-execution closure (`IP-WRB-003`) reflects contract truth, not invocation directory.
+
+Mandatory semantics:
+
+1. Relative writeback paths in execution reports must be canonicalized against an explicit anchor:
+   - preferred anchor order: `report_path.parent` -> `resolved_pack_path`.
+2. Child validator invocation in post-execution chain must be CWD-invariant:
+   - script path resolved from protocol-root absolute path (`Path(__file__)` anchored),
+   - subprocess `cwd` fixed to protocol-root (or passed explicitly).
+3. Prompt lifecycle runtime state artifact path must be canonicalized with same anchor semantics as writeback paths.
+4. Strict operations must fail-closed only on semantic writeback violation, not path-resolution ambiguity.
+5. Required telemetry fields:
+   - `writeback_path_resolution_mode`
+   - `writeback_path_anchor`
+   - `subvalidator_invocation_mode`
+   - `subvalidator_script_ref`
+6. Suggested error codes:
+   - `IP-WRB-004`: unresolved relative writeback path anchor.
+   - `IP-WRB-005`: subvalidator invocation is CWD-sensitive / unresolved script path.
+
+#### 5.8.37 `semantic_feedback_metadata_closure_contract_v1` (P0, FIX-052)
+
+Goal:
+
+1. Enforce deterministic semantic classification payload in protocol feedback closure batches.
+2. Remove strict-lane `IP-SEM-001` ambiguity caused by missing metadata fields.
+
+Mandatory semantics:
+
+1. Every strict-lane closure batch must include:
+   - `intent_domain`
+   - `intent_confidence`
+   - `classifier_reason`
+2. Batch selector in strict closure replay must prefer explicit run-bound/correlation-bound batch over history-only latest-by-mtime fallback.
+3. Missing required semantic metadata in strict lane is fail-closed (`IP-SEM-001`).
+4. Allowed fallback synthesis is explicit and auditable only when contract permits it; synthesized fields must mark provenance.
+5. Required telemetry fields:
+   - `semantic_metadata_source` (`batch_explicit` / `batch_latest` / `synthesized`)
+   - `semantic_metadata_complete`
+   - `semantic_batch_selection_mode`
+   - `semantic_batch_correlation_key`
+
+#### 5.8.38 `required_coverage_metric_normalization_contract_v1` (P1, FIX-053)
+
+Goal:
+
+1. Keep required-contract coverage KPI mathematically stable and audit-safe.
+2. Prevent `passed > total` and out-of-range coverage rates from polluting governance decisions.
+
+Mandatory semantics:
+
+1. `required_contract_passed` must never exceed `required_contract_total`.
+2. `required_contract_coverage_rate` must be clamped to `[0,100]`.
+3. Classification logic must align with effective requiredness:
+   - optional targets cannot inflate required-pass counters even when validator payload reports `PASS_REQUIRED`.
+4. Required telemetry fields:
+   - `required_pass_clamped`
+   - `required_pass_overflow_detected`
+   - `coverage_rate_raw`
+   - `coverage_rate_normalized`
+5. Suggested error codes:
+   - `IP-COV-002`: required coverage counter overflow detected.
+   - `IP-COV-003`: coverage payload status inconsistent with required_effective partitioning.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2447,7 +2516,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-100 | split-receipt activity detection must enforce current-round correlation before strict `IP-PFB-CH-006` fail-closed path | split receipt validator activity detector + correlation receipt linkage + windowed stale filter | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-040` (`83e5a03`) with correlation window + `IP-PFB-CH-007` uncorrelated path; replay closure pending in review `16.8.32` |
 | ASB-RQ-101 | invalid `expected-source-layer` input must not be silently downgraded in strict operations; caller intent must remain auditable | stamp/common resolver + first-line/send-time validators source-layer input validator | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-041` (`83e5a03`) with strict invalid-input fail-closed (`IP-SOURCE-LAYER-001`) + downgrade telemetry; replay closure pending in review `16.8.32` |
 | ASB-RQ-102 | required-contract coverage aggregator must be lane-aware (`instance_targets/protocol_targets`) and avoid protocol-governance hard-fails in pure instance lane without current-round protocol linkage | `validate_required_contract_coverage.py` lane partition policy + orchestration mapping | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-042` (`83e5a03`) with lane target partition + protocol-target inclusion/blocking telemetry; replay closure pending in review `16.8.32` |
-| ASB-RQ-103 | runtime lifecycle state must be externalized from `IDENTITY_PROMPT.md`; prompt policy text remains immutable across non-policy upgrade runs | `execute_identity_upgrade.py` prompt-state writer split + prompt lifecycle validator/state artifact binder + readiness/scan telemetry surfaces | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | `FIX-043` landed in `c310ab4` with runtime state artifact (`runtime/state/prompt_contract.json`) and lifecycle validator externalization binding checks; independent replay closure pending in review `16.8.33` |
+| ASB-RQ-103 | runtime lifecycle state must be externalized from `IDENTITY_PROMPT.md`; prompt policy text remains immutable across non-policy upgrade runs | `execute_identity_upgrade.py` prompt-state writer split + prompt lifecycle validator/state artifact binder + readiness/scan telemetry surfaces | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | `FIX-043` landed in `c310ab4` with runtime state artifact (`runtime/state/prompt_contract.json`) and lifecycle validator externalization binding checks; project-scope reverify still shows CWD-sensitive validation drift (`review 16.8.43`), independent replay closure pending |
 | ASB-RQ-104 | protocol lane lock exit must have a unified writer entrypoint with canonical outbox + index linkage; strict lane exit without newer EXIT remains fail-closed | `write_session_lane_lock_exit.py` + `identity_creator.py update --release-session-lane-lock` + lane-routing exit telemetry surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | `FIX-044` landed in `62bdc1c` with canonical EXIT writer (`IP-LAYER-GATE-008/009`) and creator automation switch; independent replay closure pending in review `16.8.34` (scope-limited lock/exit replay evidence intake added in review `16.8.42`) |
 | ASB-RQ-105 | mixed-signal layer-intent routing must positively enter `protocol` lane when explicit protocol-lane directive is present (instead of default ambiguous fallback) while preserving fail-safe instance fallback for true ambiguity | `resolve_layer_intent` semantic resolver + stamp render/validators telemetry surfaces | P1 | GATE_READY | `FIX-045` landed in `7695a12` with protocol-lane directive detection + mixed-signal dominance routing; independent re-audit closure recorded in review `16.8.35` |
 | ASB-RQ-106 | strict stale preflight must emit machine-readable phase-transition trace (`baseline_mode_violation` + aligned error code) when stale-only self-repair is denied | `identity_creator.py` strict baseline preflight trace fields + upgrade replay artifacts | P1 | GATE_READY | `FIX-046` landed in `dc9c2e3` with explicit baseline-mode violation trace emission; independent re-audit closure recorded in review `16.8.35` |
@@ -2455,6 +2524,9 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-108 | blocker taxonomy must be decoupled from legacy commerce enums: canonical neutral blocker set + explicit legacy alias bridge + strict-lane fail-closed on unsupported values | `scripts/validate_identity_runtime_contract.py`, `scripts/validate_identity_collab_trigger.py`, blocker alias-map contract (new), coverage/readiness telemetry surfaces | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-048` (`f5c97b3`) + log de-ambiguity follow-up (`49212d2`); canonical/legacy/invalid replay intake recorded in review `16.8.39B`, independent re-audit closure pending |
 | ASB-RQ-109 | strict send-time/first-line gate must validate real outbound reply payload and reject synthetic stamp-only evidence sources; missing outlet guard is fail-closed | `scripts/validate_send_time_reply_gate.py`, `scripts/validate_reply_identity_context_first_line.py`, runtime reply outlet adapter (new), readiness/e2e/full-scan/three-plane evidence-mode telemetry | P0 | SPEC_READY | introduced by `FIX-049` docs intake (`review 16.8.40`) after repeated live missing-header recurrence despite synthetic replay pass |
 | ASB-RQ-110 | initialization/update mutation flow must enforce `header-first + scaffold-consent + mutation-plan-disclosure` before first write, and cannot bypass these gates through profile-local required-check omissions | mutation executor preflight (`execute_identity_upgrade.py` / creator update path), scaffold writer, gate telemetry collectors, readiness/e2e replay adapters | P0 | SPEC_READY | introduced by `FIX-050` docs intake (`review 16.8.41`) with fqsh cross-project recurrence evidence |
+| ASB-RQ-111 | post-execution strict closure must be CWD-invariant: relative writeback/runtime-state paths must resolve deterministically against report/pack anchors, and child validator invocation must not depend on caller working directory | `validate_identity_experience_writeback.py`, `validate_identity_prompt_lifecycle.py`, `validate_post_execution_mandatory.py` path canonicalization + absolute script invocation adapter | P0 | SPEC_READY | introduced by `FIX-051` docs intake (`review 16.8.43`) after reproducible `IP-WRB-003` CWD differential replay |
+| ASB-RQ-112 | semantic routing guard strict closure must enforce complete metadata (`intent_domain`, `intent_confidence`, `classifier_reason`) on selected protocol-feedback batch with run/correlation-bound selection semantics | `validate_semantic_routing_guard.py` metadata completeness gate + strict batch selection policy + feedback writer schema parity | P0 | SPEC_READY | introduced by `FIX-052` docs intake (`review 16.8.43`) after reproducible `IP-SEM-001` on latest closure reverify batch |
+| ASB-RQ-113 | required-contract coverage KPI must be mathematically normalized (`required_passed<=required_total`, coverage in `[0,100]`) and aligned with required_effective partition semantics | `validate_required_contract_coverage.py` classification/counter normalization + overflow telemetry | P1 | SPEC_READY | introduced by `FIX-053` docs intake (`review 16.8.43`) after three-plane coverage overflow anomaly (`133.33`) |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2499,12 +2571,14 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-098 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-038` landed in `c310ab4` with two-phase stale-baseline refresh trace (`phase_a_refresh_applied`, `phase_b_strict_revalidate_status`, `phase_transition_*`); independent replay closure pending in review `16.8.33` |
 | ASB-RQ-099 / ASB-RQ-100 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-039..040` implementation landed (`83e5a03`) with lane-scope requiredization + correlation-aware split activity gating; independent replay closure pending in review `16.8.32` |
 | ASB-RQ-101 / ASB-RQ-102 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-041..042` implementation landed (`83e5a03`) with strict invalid source-layer validation + lane-aware coverage partition; independent replay closure pending in review `16.8.32` |
-| ASB-RQ-103 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-043` landed in `c310ab4` with runtime prompt-state externalization and lifecycle binding validator updates; independent replay closure pending in review `16.8.33` |
+| ASB-RQ-103 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-043` landed in `c310ab4` with runtime prompt-state externalization and lifecycle binding validator updates; project-scope reverify still shows path-sensitive drift in review `16.8.43`, so closure remains pending |
 | ASB-RQ-104 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-044` landed in `62bdc1c` with canonical lane-lock EXIT writer + index linkage and creator automation switch (`--release-session-lane-lock`); independent replay closure pending in review `16.8.34` (scope-limited lock/exit closure replay evidence intake in `16.8.42`) |
 | ASB-RQ-105 / ASB-RQ-106 | `NEW -> GATE_READY (P1)` | `FIX-045/046` landed (`7695a12`, `dc9c2e3`) and residual misclassification + stale-preflight trace observability were re-audit closed in review `16.8.35` (scope-limited; does not alter other `PENDING_REAUDIT` batches) |
 | ASB-RQ-107 / ASB-RQ-108 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0/P1)` | `FIX-048` implementation landed (`f5c97b3`) with review replay intake (`16.8.39B`): default scaffold neutrality and blocker taxonomy canonical/legacy/invalid triad verified; independent re-audit promotion pending |
 | ASB-RQ-109 | `NEW -> SPEC_READY (P0)` | `FIX-049` docs intake (`review 16.8.40`) closes evidence-source ambiguity for live reply first-line gate; requires strict non-synthetic send-time evidence and pre-send outlet adapter |
 | ASB-RQ-110 | `NEW -> SPEC_READY (P0)` | `FIX-050` docs intake (`review 16.8.41`) enforces initialization/update execution-order hard boundaries (header-first, scaffold-consent, disclose-before-write) with fqsh recurrence evidence anchors |
+| ASB-RQ-111 / ASB-RQ-112 | `NEW -> SPEC_READY (P0)` | `FIX-051/052` docs intake (`review 16.8.43`) captures unresolved protocol closure blockers: `IP-WRB-003` CWD-sensitive writeback chain and `IP-SEM-001` semantic metadata completeness gap |
+| ASB-RQ-113 | `NEW -> SPEC_READY (P1)` | `FIX-053` docs intake (`review 16.8.43`) captures required-coverage metric overflow anomaly (`required_contract_coverage_rate=133.33`) and normalization contract requirement |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
