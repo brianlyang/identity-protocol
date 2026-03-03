@@ -146,16 +146,16 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
 | FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
 | FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7 / 913973a / 9d830d8` | DONE | PASS |
-| FIX-034 | 2026-03-02 | protocol | protocol-context lane-lock hardening (`ASB-RQ-094`; protocol-topic sessions must not silently fallback to instance on empty intent) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-035 | 2026-03-02 | protocol | run-pinned strict baseline freshness contract (`ASB-RQ-095`; avoid moving-HEAD nondeterministic strict failures) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
-| FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-034 | 2026-03-02 | protocol | protocol-context lane-lock hardening (`ASB-RQ-094`; protocol-topic sessions must not silently fallback to instance on empty intent) | `c310ab4` | DONE | PENDING_REAUDIT |
+| FIX-035 | 2026-03-02 | protocol | run-pinned strict baseline freshness contract (`ASB-RQ-095`; avoid moving-HEAD nondeterministic strict failures) | `c310ab4` | DONE | PENDING_REAUDIT |
+| FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `c310ab4` | DONE | PENDING_REAUDIT |
 | FIX-037 | 2026-03-02 | ecosystem | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | TRANSFERRED_ECOSYSTEM_TRACK |
-| FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `c310ab4` | DONE | PENDING_REAUDIT |
 | FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `83e5a03` | DONE | PENDING_REAUDIT |
-| FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_PATCH |
+| FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `c310ab4` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -3910,6 +3910,101 @@ Acceptance replay template (post-implementation):
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay signoff.
+
+Implementation scope (`c310ab4`):
+
+1. `FIX-034` / `ASB-RQ-094`:
+   - `scripts/validate_work_layer_gate_set_routing.py` now emits:
+     - `protocol_context_detected`
+     - `session_lane_lock`
+     - `lane_resolution_decision`
+     - `lane_resolution_blocked`
+     - `lane_resolution_error_code`
+   - strict fallback under protocol context now fail-closed via:
+     - `IP-LAYER-GATE-006`
+     - `IP-LAYER-GATE-007`
+   - protocol lane writes lane-lock receipt (`SESSION_LANE_LOCK_PROTOCOL_*.json`) with evidence-index linkage.
+2. `FIX-035` / `ASB-RQ-095`:
+   - run-start pinned baseline anchor fields added:
+     - `protocol_head_sha_at_run_start`
+     - `baseline_reference_mode`
+     - `head_drift_detected`
+   - strict baseline freshness now enforces `run_pinned` semantics:
+     - missing pinned anchor => `IP-PBL-005`
+     - strict non-`run_pinned` mode => `IP-PBL-006`
+   - session refresh payload/validator and scan/three-plane telemetry synchronized to new baseline fields.
+3. `FIX-036` / `ASB-RQ-096`:
+   - new validator: `scripts/validate_e2e_hermetic_runtime_import.py`
+   - `scripts/e2e_smoke_test.sh` now:
+     - bootstraps `PYTHONPATH` internally,
+     - runs hermetic import preflight,
+     - emits machine-readable fields (`e2e_hermetic_runtime_status`, `pythonpath_bootstrap_mode`, `import_preflight_status`, `import_preflight_error_code`)
+     - fail-closed with `IP-E2E-HERM-001` on import preflight failure.
+   - readiness/full-scan/three-plane/CI required-gates wired to hermetic validator.
+4. `FIX-038` / `ASB-RQ-098`:
+   - `scripts/identity_creator.py update` now supports strict two-phase stale-baseline path:
+     - phase A refresh (`refresh_identity_session_status`)
+     - phase B strict revalidate (`validate_identity_session_refresh_status`)
+   - emits machine-readable phase trace:
+     - `phase_a_refresh_applied`
+     - `phase_b_strict_revalidate_status`
+     - `phase_transition_reason`
+     - `phase_transition_error_code`
+   - stale-only two-phase unavailable path returns `IP-UPG-BASE-001`.
+5. `FIX-043` / `ASB-RQ-103`:
+   - runtime lifecycle state moved to:
+     - `runtime/state/prompt_contract.json`
+   - `IDENTITY_PROMPT.md` runtime metadata block is no longer authoritative; migration removal supported.
+   - new report telemetry:
+     - `prompt_runtime_state_externalization_status`
+     - `prompt_policy_hash`
+     - `runtime_state_artifact_path`
+     - `runtime_state_artifact_hash`
+     - `prompt_runtime_state_binding_status`
+   - `scripts/validate_identity_prompt_lifecycle.py` updated for externalized-state validation.
+
+Replay highlights (local):
+
+1. Static:
+   - `python3 -m py_compile ...` -> `rc=0`
+   - `bash -n scripts/e2e_smoke_test.sh` -> `rc=0`
+2. `FIX-034` protocol-context fallback block:
+   - `python3 scripts/validate_work_layer_gate_set_routing.py ... --operation validate --force-check --json-only`
+   - evidence: `/tmp/fix034_protocol_context_fallback.json`
+   - result: `rc=1`, `error_code=IP-LAYER-GATE-006`, `protocol_context_detected=true`, `lane_resolution_blocked=true`.
+3. `FIX-035` run-pinned strict baseline:
+   - pass case evidence: `/tmp/fix035_run_pinned_pass.out.json`
+     - `rc=0`, `baseline_status=PASS`, `baseline_reference_mode=run_pinned`, `head_drift_detected=true`.
+   - missing anchor fail case evidence: `/tmp/fix035_run_pinned_missing_anchor.out.json`
+     - `rc=1`, `baseline_error_code=IP-PBL-005`.
+4. `FIX-036` hermetic e2e import:
+   - `unset PYTHONPATH && ... bash scripts/e2e_smoke_test.sh`
+   - evidence: `/tmp/fix036_e2e_replay.log`
+   - first-line payload:
+     - `e2e_hermetic_runtime_status=PASS_REQUIRED`
+     - `import_preflight_error_code=""`
+     - no `ModuleNotFoundError` for `response_stamp_common`.
+5. `FIX-038` two-phase stale-baseline trace:
+   - evidence: `/tmp/fix038_identity_update_v2.log`
+   - emitted trace:
+     - `phase_a_refresh_applied=true`
+     - `phase_b_strict_revalidate_status=FAIL_REQUIRED`
+     - `phase_transition_error_code=IP-UPG-BASE-001`
+6. `FIX-043` runtime-state externalization migration function replay:
+   - evidence:
+     - `/tmp/fix043_prompt_test/runtime/state/prompt_contract.json`
+   - result:
+     - legacy prompt runtime block removed in test fixture,
+     - runtime state artifact written with `prompt_policy_hash` binding.
+
+Boundary:
+
+1. This record is protocol-layer implementation replay only.
+2. Independent auditor replay still required before PASS promotion.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
