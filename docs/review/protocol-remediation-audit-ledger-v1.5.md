@@ -160,6 +160,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-045 | 2026-03-03 | protocol | mixed-signal layer intent routing residual closure (`protocol lane` directive should positively trigger protocol lane instead of ambiguous fallback) | `7695a12` | DONE | PASS |
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
 | FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PENDING_REAUDIT |
+| FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 
 ---
 
@@ -4292,6 +4293,79 @@ Boundary:
 
 1. This section closes implementation replay for the previously identified project-scope `IP-DSN-002` false-positive path.
 2. Final `PASS` promotion still requires independent auditor re-audit.
+
+#### 16.8.39 Roundtable intake: scaffold legacy-domain contamination + blocker taxonomy coupling (`FIX-048`, 2026-03-03, docs-only)
+
+Status: `SPEC_READY` (architect patch required; this section is evidence + plan only).
+
+Cross-validation method:
+
+1. Source-level inspection:
+   - `scripts/create_identity_pack.py`
+   - `scripts/validate_identity_runtime_contract.py`
+   - `scripts/validate_identity_collab_trigger.py`
+2. Runtime reproduction (fresh scaffold, isolated temp root):
+   - `python3 scripts/create_identity_pack.py --id tmp-route-quality-audit --title "Route Quality Audit" --description "Scaffold contamination audit" --pack-root /tmp/ip-template-audit-before --catalog /tmp/ip-template-audit-before/catalog.local.yaml --profile full-contract --skip-bootstrap-check`
+   - `rg -n "weixinstore|wechat|taobao|store-manager|10000514174106|login_required|captcha_required|session_expired|manual_verification_required" /tmp/ip-template-audit-before/tmp-route-quality-audit/CURRENT_TASK.json /tmp/ip-template-audit-before/tmp-route-quality-audit/runtime`
+
+Observed evidence (reproducible):
+
+1. Scaffold source is still coupled to legacy business template/sample roots:
+   - `scripts/create_identity_pack.py:465` (`identity/store-manager/CURRENT_TASK.json`)
+   - `scripts/create_identity_pack.py:648`
+   - `scripts/create_identity_pack.py:693`
+2. Generated pack contains legacy business-domain tokens and non-neutral paths:
+   - `/tmp/ip-template-audit-before/tmp-route-quality-audit/CURRENT_TASK.json:228` (`weixinstore-ui-agent`)
+   - `/tmp/ip-template-audit-before/tmp-route-quality-audit/CURRENT_TASK.json:421` (`wechat_listing_update`)
+   - `/tmp/ip-template-audit-before/tmp-route-quality-audit/CURRENT_TASK.json:322` (`../webbrowser/restored/wechat-shop-docs*`)
+3. Generated runtime samples/logs still carry legacy business identifiers:
+   - `/tmp/ip-template-audit-before/tmp-route-quality-audit/runtime/logs/collaboration/tmp-route-quality-audit-bootstrap.json:6` (`taobao-search-automation`)
+   - `/tmp/ip-template-audit-before/tmp-route-quality-audit/runtime/logs/collaboration/tmp-route-quality-audit-bootstrap.json:12` (`product:10000514174106`)
+   - `/tmp/ip-template-audit-before/tmp-route-quality-audit/runtime/logs/feedback/tmp-route-quality-audit-feedback-bootstrap.json:8` (`weixinstore_product_update`)
+4. Blocker taxonomy and self-test assumptions are tightly bound to legacy commerce blockers/identity:
+   - `scripts/validate_identity_runtime_contract.py:327` (`login_required`, `captcha_required`, `session_expired`, `manual_verification_required`)
+   - `scripts/validate_identity_collab_trigger.py:14`
+   - `scripts/validate_identity_collab_trigger.py:196` (`identity_id="store-manager"`)
+
+Risk classification:
+
+1. `P0` routing-quality and governance contamination:
+   - new identities inherit non-neutral business constants, causing protocol/instance boundary confusion and latent hidden-gate noise.
+2. `P1` contract evolution blockage:
+   - blocker enum semantics are locked to one business scenario, reducing cross-domain reuse and slowing future schema migration.
+3. `P1` maintenance debt:
+   - every new scaffold re-injects stale samples, increasing ongoing sanitization/cleanup cost.
+
+Architect patch package (implementation ownership: protocol architect):
+
+1. Neutral scaffold source split:
+   - replace hard dependency on `identity/store-manager/CURRENT_TASK.json` with domain-neutral base template.
+   - keep optional profile overlays as explicit opt-in, not bootstrap default.
+2. Bootstrap sample/log sanitizer:
+   - seed runtime artifacts with neutral placeholders (no vendor/business IDs, no legacy route keys).
+   - enforce canonical runtime-relative paths only; ban cross-repo relative pointers in generated contracts.
+3. Blocker taxonomy decoupling with migration bridge:
+   - define canonical neutral blocker enums for protocol contracts.
+   - add compatibility alias map for legacy enums during migration window.
+   - deprecate strict hard-coded legacy enum set in validators after bridge period.
+4. Self-test de-hardcoding:
+   - remove fixed `store-manager` assumptions from collab/runtime self-tests and switch to generated identity-local fixtures.
+
+Acceptance DoD (post-implementation replay):
+
+1. Recreate scaffold in `/tmp`; forbidden-token scan must return zero hits for:
+   - `weixinstore|wechat|taobao|store-manager|10000514174106`.
+2. Generated `CURRENT_TASK.json` and runtime samples must contain only neutral placeholders and canonical identity-scoped paths.
+3. Validator compatibility check:
+   - canonical blocker enums pass;
+   - legacy enums pass only through explicit alias bridge telemetry;
+   - missing bridge in strict lanes fail-closed.
+4. Full-scan and three-plane on project catalog must not introduce new P0 from scaffold artifacts.
+
+Boundary:
+
+1. This record is docs-only intake and planning; no runtime behavior changed in this batch.
+2. `FIX-048` remains `SPEC_READY / PENDING_REPLAY` until architect implementation + independent replay closure.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
