@@ -20,6 +20,10 @@ REQ_KEYS = [
 ]
 
 
+def _protocol_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
@@ -37,12 +41,15 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     target = next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
     if not target:
         raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
+    catalog_dir = catalog_path.expanduser().resolve().parent
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
+        raw_pack = Path(pack_path).expanduser()
+        pack = raw_pack if raw_pack.is_absolute() else (catalog_dir / raw_pack)
+        p = (pack / "CURRENT_TASK.json").resolve()
         if p.exists():
             return p
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
+    legacy = _protocol_root() / "identity" / identity_id / "CURRENT_TASK.json"
     if legacy.exists():
         return legacy
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
@@ -73,7 +80,24 @@ def _validate_rulebook(path: Path, req_fields: list[str], label: str) -> int:
     return rc
 
 
-def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
+def _resolve_contract_path(raw: str, *, pack_root: Path, protocol_root: Path) -> Path:
+    text = str(raw or "").strip()
+    if not text:
+        return Path()
+    p = Path(text).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    pack_candidate = (pack_root / p).resolve()
+    if pack_candidate.exists():
+        return pack_candidate
+    protocol_candidate = (protocol_root / p).resolve()
+    if protocol_candidate.exists():
+        return protocol_candidate
+    # deterministic fail-path: prefer pack-root anchored interpretation
+    return pack_candidate
+
+
+def _glob_paths(pattern: str, *, pack_root: Path, protocol_root: Path) -> list[Path]:
     raw = str(pattern or "").strip()
     if not raw:
         return []
@@ -86,7 +110,7 @@ def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
     preferred = sorted(pack_root.glob(raw))
     if preferred:
         return preferred
-    return sorted(Path(".").glob(raw))
+    return sorted(protocol_root.glob(raw))
 
 
 def main() -> int:
@@ -106,6 +130,7 @@ def main() -> int:
     print(f"[INFO] validate experience feedback for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
     pack_root = task_path.parent.resolve()
+    protocol_root = _protocol_root().resolve()
 
     task = _load_json(task_path)
     c = task.get("experience_feedback_contract") or {}
@@ -124,8 +149,18 @@ def main() -> int:
 
     req_fields = c.get("required_fields") or []
     rc = 0
-    rc |= _validate_rulebook(Path(c.get("positive_rulebook_path")), req_fields, "positive_rulebook")
-    rc |= _validate_rulebook(Path(c.get("negative_rulebook_path")), req_fields, "negative_rulebook")
+    positive_path = _resolve_contract_path(
+        str(c.get("positive_rulebook_path", "")),
+        pack_root=pack_root,
+        protocol_root=protocol_root,
+    )
+    negative_path = _resolve_contract_path(
+        str(c.get("negative_rulebook_path", "")),
+        pack_root=pack_root,
+        protocol_root=protocol_root,
+    )
+    rc |= _validate_rulebook(positive_path, req_fields, "positive_rulebook")
+    rc |= _validate_rulebook(negative_path, req_fields, "negative_rulebook")
 
     targets = set(c.get("cross_layer_feedback_targets") or [])
     need = {"routing_contract", "capability_orchestration_contract", "gates"}
@@ -146,7 +181,11 @@ def main() -> int:
         else (pack_root / "runtime" / "examples" / f"{args.identity_id}-experience-feedback-sample.json").resolve()
     )
     if not report_path.exists():
-        files = _glob_paths(str(c.get("sample_report_path_pattern", "")), pack_root=pack_root)
+        files = _glob_paths(
+            str(c.get("sample_report_path_pattern", "")),
+            pack_root=pack_root,
+            protocol_root=protocol_root,
+        )
         if files:
             report_path = files[-1]
     if not report_path.exists():
@@ -176,8 +215,8 @@ def main() -> int:
         return 1
 
     if args.self_test:
-        pos = sorted(Path("identity/runtime/examples/experience/positive").glob("*.json"))
-        neg = sorted(Path("identity/runtime/examples/experience/negative").glob("*.json"))
+        pos = sorted((protocol_root / "identity/runtime/examples/experience/positive").glob("*.json"))
+        neg = sorted((protocol_root / "identity/runtime/examples/experience/negative").glob("*.json"))
         if len(pos) < 2 or len(neg) < 1:
             print("[FAIL] experience self-test requires >=2 positive and >=1 negative samples")
             return 1

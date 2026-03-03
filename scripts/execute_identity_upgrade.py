@@ -274,16 +274,17 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int) -> dict[str, Any]:
+def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int, *, cwd: Path | None = None) -> dict[str, Any]:
     start = datetime.now(timezone.utc)
     t0 = time()
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
     end = datetime.now(timezone.utc)
     elapsed_ms = int((time() - t0) * 1000)
     log_path = log_dir / f"{run_id}-check-{idx:02d}.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_content = (
         f"$ {' '.join(cmd)}\n"
+        f"[cwd] {str(cwd) if cwd else str(Path.cwd())}\n"
         f"[exit_code] {p.returncode}\n"
         f"[started_at] {start.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
         f"[ended_at] {end.strftime('%Y-%m-%dT%H:%M:%SZ')}\n\n"
@@ -304,6 +305,7 @@ def _run(cmd: list[str], log_dir: Path, run_id: str, idx: int) -> dict[str, Any]
         "duration_ms": elapsed_ms,
         "exit_code": p.returncode,
         "log_path": str(log_path),
+        "cwd": str(cwd) if cwd else str(Path.cwd()),
         "sha256": log_sha256,
     }
 
@@ -1820,7 +1822,7 @@ def main() -> int:
             )
 
     # Run required validators + replay-equivalent gate checks
-    checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1) for i, cmd in enumerate(check_cmds)]
+    checks = [_run(cmd, log_dir=log_dir, run_id=run_id, idx=i + 1, cwd=protocol_root) for i, cmd in enumerate(check_cmds)]
     baseline_signal = _extract_baseline_signal(
         checks,
         protocol_head_sha_at_run_start=str(
