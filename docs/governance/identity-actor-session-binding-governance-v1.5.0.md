@@ -30,7 +30,7 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 | D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | PASS |
 | D2 Implementation complete | Mandatory scripts/validators/tools landed | PASS |
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
-| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (CHECKLIST_16.8.57_EXECUTED_REVIEW_REQUIRED_16.8.59) |
+| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (CHECKLIST_16.8.57_GREEN_BUT_REVIEW_REQUIRED_PENDING_16.8.59/16.8.61) |
 | D5 Audit sign-off | Architect + audit expert both PASS | PASS |
 | D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED |
 
@@ -2007,6 +2007,29 @@ Mandatory semantics:
 4. Suggested adapter:
    - `scripts/compose_and_validate_governed_reply.py` for compose + preflight in one deterministic step.
 
+#### 5.8.40 `experience_feedback_validator_cwd_invariant_contract_v1` (P0, FIX-056)
+
+Goal:
+
+1. Remove D4 single-point readiness blocker caused by CWD-sensitive experience-feedback contract validation.
+2. Make both direct validator replay and update-chain validator execution deterministic across caller working directories.
+
+Mandatory semantics:
+
+1. `validate_identity_experience_feedback.py` must resolve contract file paths using anchored roots:
+   - rulebooks resolve `pack_root` first, then protocol-root fallback;
+   - sample report fallback resolves under `pack_root/runtime/examples`;
+   - self-test fixtures resolve from protocol-root script anchor (not caller CWD).
+2. Upgrade validator subprocess execution must not inherit arbitrary caller CWD:
+   - `execute_identity_upgrade.py` required validators run with explicit `cwd=protocol_root`;
+   - each check log must include executable `cwd` telemetry.
+3. Suggested failure classes:
+   - `IP-EXP-FB-001`: required experience rulebook path cannot be resolved under anchored roots.
+   - `IP-EXP-FB-002`: sample/self-test artifact resolution remains caller-CWD dependent.
+4. Replay evidence for closure must include dual-CWD equivalence:
+   - repo-root replay PASS;
+   - `/tmp` (or non-repo CWD) replay PASS.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2554,6 +2577,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-112 | semantic routing guard strict closure must enforce complete metadata (`intent_domain`, `intent_confidence`, `classifier_reason`) on selected protocol-feedback batch with run/correlation-bound selection semantics | `validate_semantic_routing_guard.py` metadata completeness gate + strict batch selection policy + feedback writer schema parity | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-052` (`e62deab`) with legacy auto-required contract default fallback + correlated batch replay; independent closure audit pending (`review 16.8.44`) |
 | ASB-RQ-113 | required-contract coverage KPI must be mathematically normalized (`required_passed<=required_total`, coverage in `[0,100]`) and aligned with required_effective partition semantics | `validate_required_contract_coverage.py` classification/counter normalization + overflow telemetry | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-053` (`ddb1529`) with optional-pass counter normalization + bounded coverage rate/overflow telemetry; independent closure audit pending (`review 16.8.46`) |
 | ASB-RQ-114 | outbound governed reply path must compose first-line identity stamp and execute send-time preflight on exact payload before emission (operator-side missing-headstamp recurrence is fail-closed) | `scripts/compose_and_validate_governed_reply.py` + `validate_send_time_reply_gate.py` (`operation=send-time`) + first-line validator telemetry | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-054` (`a559820`, `6430852`) with compose adapter + required chain wiring (`identity_creator`, `release_readiness`, `e2e`, `full_scan`, `three_plane`) so send-time gates consume composed reply-file payloads; latest project replay keeps `IP-CAP-003` auditable via strict->route-any-ready fallback trace and scan fallback telemetry (`review 16.8.51/16.8.52`), therefore independent closure audit remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
+| ASB-RQ-115 | D4 acceptance chain must be CWD-invariant for experience-feedback contract enforcement: rulebook/sample paths and validator child invocation must resolve deterministically under both repo-root and non-repo caller CWD | `validate_identity_experience_feedback.py` anchored path resolver + `execute_identity_upgrade.py` explicit child-`cwd` execution + check-log CWD telemetry | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-056` (`e8596da`) with pack-root/protocol-root path anchoring + `cwd=protocol_root` validator execution; dual-CWD replay evidence is recorded in review `16.8.61`, independent audit promotion pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2606,6 +2630,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-111 / ASB-RQ-112 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-051/052` implementation landed in `e62deab` with additional closure deltas in `ddb1529` + `6430852` (path-contract child invocation CWD invariance + sidecar passthrough ordering); targeted replay closure is confirmed in review `16.8.46/16.8.47`, and latest project replay retains `IP-CAP-003` only as env/auth telemetry boundary (scan fallback closure in `16.8.52`); independent audit promotion remains pending |
 | ASB-RQ-113 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-053` implementation landed in `ddb1529` (required-pass counter normalization + bounded coverage rate + overflow telemetry); scope-limited replay intake recorded in `review 16.8.46`, independent audit promotion pending |
 | ASB-RQ-114 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-054` implementation landed in `a559820` with chain-wiring follow-up `6430852` so outbound send-time checks validate composed reply-file evidence across readiness/e2e/full-scan/three-plane/validate lanes; latest project replay keeps `IP-CAP-003` as auditable env/auth telemetry with strict->route-any-ready fallback + scan fallback closure (`review 16.8.51/16.8.52`), therefore independent audit promotion remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
+| ASB-RQ-115 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-056` landed in `e8596da` with experience-feedback rulebook/sample anchored path resolution + validator child-process `cwd` pinning; latest project replay (`review 16.8.61`) shows readiness `rc=0`, full-scan `p0=0,p1=0`, and three-plane `instance_plane_status=CLOSED`, while D4 remains checklist-blocked by review-required continuation semantics |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2656,27 +2681,28 @@ Audit output requirement:
 This section is the authoritative bridge for D-gate states in section 0.3.
 It is replay-driven and supersedes earlier `OPEN` placeholders.
 
-Evidence bundle (live):
+Evidence bundle (latest live replay window):
 
-1. `/tmp/release_v15_fullscan_project_strict_only_20260303T_live.json`
+1. `/tmp/release_v15_d4_lane_lock_exit_fix056.json`
+   - `session_lane_lock_exit_status=SKIPPED_NOT_REQUIRED` (no active protocol lock in this window)
+2. `/tmp/release_v15_d4_readiness_fix056.log`
+   - readiness `rc=0`
+   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772546337.json`
+     with `all_ok=true`, `writeback_status=WRITTEN`, `lane_routing_status=PASS_REQUIRED`, and still
+     `upgrade_required=true`, `next_action=review_required_create_pr_from_patch_plan`
+3. `/tmp/release_v15_d4_fullscan_project_only_fix056.json`
    - project-only summary: `p0=0`, `p1=0`, `ok=1`
-2. `/tmp/release_v15_threeplane_project_only_20260303T_live.json`
-   - `instance_plane_status=IN_PROGRESS`, `release_plane_status=NOT_STARTED`
-3. `/tmp/release_v15_readiness_project_only_with_lane_20260303T_live.log`
-   - readiness `rc=1`
-   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772543373.json` shows `lane_routing_error_code=IP-LAYER-GATE-007`
-4. `/tmp/release_v15_lane_lock_exit_20260303T_live.json`
-   - `session_lane_lock_exit_status=PASS_REQUIRED`
-5. `/tmp/release_v15_readiness_project_only_after_exit_20260303T_live.log`
-   - readiness `rc=2`
-   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772543500.json` shows `lane_routing_status=PASS_REQUIRED` after exit, but `upgrade_required=true` and `next_action=review_required_create_pr_from_patch_plan`
+4. `/tmp/release_v15_d4_threeplane_project_only_fix056.json`
+   - `instance_plane_status=CLOSED`, `release_plane_status=NOT_STARTED`
+5. `/tmp/release_v15_d4_docs_contract_fix056.log` and `/tmp/release_v15_d4_ssot_fix056.log`
+   - docs contract checks remain green (`PASS` / `OK`)
 
 Gate-state mapping:
 
 1. `D1=PASS`: contract set is frozen for `v1.5`; no unresolved schema/error-semantics delta is open.
 2. `D2=PASS`: implementation surface is landed (`FIX-001..055`, `HOTFIX-P0-*`) and synchronized in review.
 3. `D3=PASS`: six-surface gate wiring is evidenced by independent replay bundles (`16.8.50`, `16.8.55`, `16.8.56`).
-4. `D4=FAIL_REQUIRED`: mandatory acceptance command set is not fully green in latest live readiness replay (`rc=2`, review-required patch-plan pending).
+4. `D4=FAIL_REQUIRED`: command pack core gates are green in latest replay, but review-required continuation closure predicates (`16.8.59`) are still open (`upgrade_required=true`, `next_action=review_required_create_pr_from_patch_plan`).
 5. `D5=PASS`: architect + audit expert protocol-scope sign-off is complete for implemented remediation lines.
 6. `D6=LOCKED`: lock remains until `D4` passes and 6.5 unlock formula evaluates true.
 
@@ -2701,10 +2727,13 @@ Minimal acceptance predicates:
 
 Latest replay sync:
 
-1. `review 16.8.58` executed the full `16.8.57` command pack.
-2. Result remains non-closed (`readiness rc=2`, `all_ok=false`, `instance_plane_status=IN_PROGRESS`) even though
-   project-only full-scan is green (`p0=0,p1=0`).
-3. Therefore D4 remains `FAIL_REQUIRED` until the same pack returns fully green in one window.
+1. `review 16.8.61` executed the full `16.8.57` command pack after `FIX-056`.
+2. Core acceptance predicates now pass in one window:
+   - readiness `rc=0`, `all_ok=true`, `writeback_status=WRITTEN`;
+   - project-only full-scan `p0=0,p1=0`;
+   - three-plane `instance_plane_status=CLOSED`.
+3. D4 still remains `FAIL_REQUIRED` because `16.8.59` continuation branch is still active
+   (`upgrade_required=true`, `next_action=review_required_create_pr_from_patch_plan`).
 
 Derived lock rule:
 
@@ -2719,7 +2748,7 @@ Normative trigger:
 1. This subsection applies when `16.8.57` has been executed but readiness report remains in review-required mode:
    - `upgrade_required=true`
    - `next_action=review_required_create_pr_from_patch_plan`
-2. Current live trigger anchor is recorded in `review 16.8.58` and carried forward by `review 16.8.59`.
+2. Current live trigger anchor is updated by `review 16.8.61` and remains governed by `review 16.8.59`.
 
 Hard continuation rule:
 

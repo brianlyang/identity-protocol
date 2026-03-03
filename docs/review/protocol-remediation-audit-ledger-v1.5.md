@@ -168,6 +168,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
 | FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
+| FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -5432,6 +5433,56 @@ D4 implication:
 
 1. Any replay window using protocol-root-pack bypass is non-eligible for `D4=PASS`.
 2. `16.8.57` / `16.8.59` closure evaluation must be performed with default boundary enforcement (no fixture/debug bypass).
+
+#### 16.8.61 D4 replay sync after `FIX-056`: experience-feedback CWD drift closed, review-required branch still locked by checklist semantics (2026-03-03, protocol, project scope)
+
+Status: `PARTIAL_GO (COMMAND_PACK_GREEN_EXCEPT_REVIEW_REQUIRED_BRANCH_CLOSURE)`.
+
+Root-cause replay (before patch):
+
+1. Direct validator was CWD-sensitive and failed under project command-pack replay window:
+   - `/tmp/fix_d4_exp_feedback_before.log`
+   - symptom: missing `runtime/rulebooks/positive.jsonl` / `runtime/rulebooks/negative.jsonl` while files existed under pack runtime root.
+2. Execution chain amplified the same drift because validator subprocesses inherited caller CWD:
+   - `scripts/execute_identity_upgrade.py` pre-patch behavior (historical evidence in review `16.8.58` / readiness `rc=2`).
+
+Implementation intake (`e8596da`):
+
+1. `scripts/validate_identity_experience_feedback.py`
+   - rulebook paths now resolve via `pack_root` first, then protocol fallback (`line 152..161`);
+   - sample report fallback now resolves under `pack_root/runtime/examples` (`line 178..182`);
+   - self-test fixtures are anchored to protocol root (`line 218..219`).
+2. `scripts/execute_identity_upgrade.py`
+   - subprocess runner now accepts explicit `cwd` and emits `[cwd]` in check logs (`line 277..309`);
+   - required validators are executed with `cwd=protocol_root` (`line 1825`), removing caller-CWD drift.
+
+Independent replay evidence (this round):
+
+1. Direct validator (repo root) now passes:
+   - `/tmp/fix_d4_exp_feedback_after.log` -> PASS.
+2. Direct validator (`/tmp` CWD) now also passes:
+   - `/tmp/fix056_exp_feedback_tmpcwd.log` -> PASS.
+3. `16.8.57` command pack rerun (project-only scope):
+   - lane-lock exit: `/tmp/release_v15_d4_lane_lock_exit_fix056.json` (`SKIPPED_NOT_REQUIRED`, no active lock).
+   - readiness: `/tmp/release_v15_d4_readiness_fix056.log` (`rc=0`), report:
+     `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772546337.json`
+     with `all_ok=true`, `writeback_status=WRITTEN`, `lane_routing_status=PASS_REQUIRED`.
+   - full-scan: `/tmp/release_v15_d4_fullscan_project_only_fix056.json` summary `p0=0,p1=0`.
+   - three-plane: `/tmp/release_v15_d4_threeplane_project_only_fix056.json` shows
+     `instance_plane_status=CLOSED`, `repo_plane_status=CLOSED`, `release_plane_status=NOT_STARTED`.
+   - docs contracts:
+     `/tmp/release_v15_d4_docs_contract_fix056.log` -> PASS,
+     `/tmp/release_v15_d4_ssot_fix056.log` -> OK.
+
+Decision boundary (no over-claim):
+
+1. `FIX-056` implementation target (CWD-invariant experience-feedback gate) is achieved in this replay window.
+2. `D4` still cannot be promoted under current `16.8.59` strict continuation predicate because latest readiness report remains:
+   - `upgrade_required=true`
+   - `next_action=review_required_create_pr_from_patch_plan`
+3. Therefore keep:
+   - `FIX-056` summary row at `PENDING_REAUDIT` (await independent audit promotion),
+   - `D4=FAIL_REQUIRED` / `D6=LOCKED` until governance checklist predicate is explicitly closed.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
