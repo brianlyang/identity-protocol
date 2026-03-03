@@ -148,24 +148,24 @@ def _resolve_session_lane_lock(
     identity_id: str,
     actor_id: str,
     feedback_root: Path,
-) -> tuple[str, str, str]:
+) -> tuple[str, str, str, str]:
     binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
     for key in ("session_lane_lock", "lane_lock", "work_layer_lock"):
         token = str(binding.get(key, "")).strip().lower()
         if token in {"protocol", "instance", "dual"}:
-            return token, "actor_binding", str(binding.get("actor_session_path", "")).strip()
+            return token, "actor_binding", str(binding.get("actor_session_path", "")).strip(), ""
 
     outbox_dir = (feedback_root / "outbox-to-protocol").resolve()
     lock_protocol = _latest_lane_lock_receipt(outbox_dir=outbox_dir, prefix=LOCK_PROTOCOL_PREFIX, identity_id=identity_id)
     lock_exit = _latest_lane_lock_receipt(outbox_dir=outbox_dir, prefix=LOCK_EXIT_PREFIX, identity_id=identity_id)
     if lock_protocol is None:
-        return "", "", ""
+        return "", "", "", str(lock_exit) if lock_exit is not None else ""
 
     protocol_mtime = lock_protocol.stat().st_mtime
     exit_mtime = lock_exit.stat().st_mtime if lock_exit is not None else -1.0
     if exit_mtime > protocol_mtime:
-        return "", "", ""
-    return "protocol", "receipt", str(lock_protocol)
+        return "", "", "", str(lock_exit) if lock_exit is not None else ""
+    return "protocol", "receipt", str(lock_protocol), str(lock_exit) if lock_exit is not None else ""
 
 
 def _now_iso() -> str:
@@ -342,11 +342,13 @@ def main() -> int:
     error_code = ""
 
     actor_id = resolve_actor_id(args.actor_id)
-    session_lane_lock, session_lane_lock_source, session_lane_lock_receipt = _resolve_session_lane_lock(
+    session_lane_lock, session_lane_lock_source, session_lane_lock_receipt, session_lane_lock_exit_receipt = (
+        _resolve_session_lane_lock(
         catalog_path=catalog_path,
         identity_id=args.identity_id,
         actor_id=actor_id,
         feedback_root=feedback_root,
+        )
     )
     if str(args.session_lane_lock_receipt or "").strip():
         receipt_path = Path(str(args.session_lane_lock_receipt).strip()).expanduser().resolve()
@@ -356,6 +358,7 @@ def main() -> int:
                 session_lane_lock = "protocol"
                 session_lane_lock_source = "explicit_receipt"
                 session_lane_lock_receipt = str(receipt_path)
+                session_lane_lock_exit_receipt = ""
     protocol_context_reasons: list[str] = []
     explicit_work_layer = str(args.expected_work_layer or "").strip().lower()
     explicit_protocol = explicit_work_layer == "protocol"
@@ -392,6 +395,7 @@ def main() -> int:
             "session_lane_lock": session_lane_lock,
             "session_lane_lock_source": session_lane_lock_source,
             "session_lane_lock_receipt": session_lane_lock_receipt,
+            "session_lane_lock_exit_receipt": session_lane_lock_exit_receipt,
             "lane_resolution_decision": lane_resolution_decision,
             "lane_resolution_blocked": lane_resolution_blocked,
             "lane_resolution_error_code": lane_resolution_error_code,
@@ -474,6 +478,7 @@ def main() -> int:
                 session_lane_lock = "protocol"
                 session_lane_lock_source = "receipt"
                 session_lane_lock_receipt = lane_lock_receipt_path
+                session_lane_lock_exit_receipt = ""
             except Exception as exc:
                 if not error_code:
                     lane_resolution_decision = "PROTOCOL_LOCK_RECEIPT_MISSING"
@@ -516,6 +521,7 @@ def main() -> int:
         "session_lane_lock": session_lane_lock,
         "session_lane_lock_source": session_lane_lock_source,
         "session_lane_lock_receipt": session_lane_lock_receipt,
+        "session_lane_lock_exit_receipt": session_lane_lock_exit_receipt,
         "lane_resolution_decision": lane_resolution_decision,
         "lane_resolution_blocked": lane_resolution_blocked,
         "lane_resolution_error_code": lane_resolution_error_code,

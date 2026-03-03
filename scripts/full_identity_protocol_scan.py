@@ -1230,6 +1230,7 @@ def main() -> int:
                         "session_lane_lock",
                         "session_lane_lock_source",
                         "session_lane_lock_receipt",
+                        "session_lane_lock_exit_receipt",
                         "lane_resolution_decision",
                         "lane_resolution_blocked",
                         "lane_resolution_error_code",

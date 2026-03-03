@@ -999,6 +999,19 @@ def main() -> int:
     p_update.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     p_update.add_argument("--expected-work-layer", default="", help="optional expected work_layer passthrough")
     p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
+    p_update.add_argument(
+        "--release-session-lane-lock",
+        action="store_true",
+        help=(
+            "emit canonical SESSION_LANE_LOCK_EXIT receipt before update. "
+            "Use when protocol lane lock must be explicitly exited before returning to instance lane."
+        ),
+    )
+    p_update.add_argument(
+        "--session-lane-lock-exit-reason",
+        default="manual_session_lane_lock_exit",
+        help="exit reason payload for SESSION_LANE_LOCK_EXIT receipt",
+    )
 
     p_heal = sub.add_parser("heal", help="Run runtime identity self-healing flow (scan/adopt/lock/repair/validate)")
     p_heal.add_argument("--identity-id", required=True)
@@ -1871,6 +1884,28 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] instance isolation validation failed; update blocked")
             return rc
+        if args.release_session_lane_lock:
+            exit_cmd = [
+                "python3",
+                "scripts/write_session_lane_lock_exit.py",
+                "--identity-id",
+                args.identity_id,
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--operation",
+                "update",
+                "--exit-reason",
+                str(args.session_lane_lock_exit_reason or "").strip() or "manual_session_lane_lock_exit",
+                "--json-only",
+            ]
+            if args.expected_source_layer.strip():
+                exit_cmd.extend(["--source-layer", args.expected_source_layer.strip()])
+            rc = _run(exit_cmd)
+            if rc != 0:
+                print("[FAIL] session lane lock exit emission failed; update blocked")
+                return rc
         phase_a_refresh_applied = False
         phase_b_strict_revalidate_status = "NOT_APPLICABLE"
         phase_transition_reason = ""

@@ -1614,6 +1614,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "session_lane_lock": lane_payload.get("session_lane_lock", ""),
             "session_lane_lock_source": lane_payload.get("session_lane_lock_source", ""),
             "session_lane_lock_receipt": lane_payload.get("session_lane_lock_receipt", ""),
+            "session_lane_lock_exit_receipt": lane_payload.get("session_lane_lock_exit_receipt", ""),
             "lane_resolution_decision": lane_payload.get("lane_resolution_decision", ""),
             "lane_resolution_blocked": lane_payload.get("lane_resolution_blocked"),
             "lane_resolution_error_code": lane_payload.get("lane_resolution_error_code", ""),
