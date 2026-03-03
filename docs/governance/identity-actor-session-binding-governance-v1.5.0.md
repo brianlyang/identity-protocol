@@ -27,12 +27,12 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 
 | Decision Gate | Unlock condition | Current state |
 | --- | --- | --- |
-| D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | OPEN |
-| D2 Implementation complete | Mandatory scripts/validators/tools landed | OPEN |
-| D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | OPEN |
-| D4 Acceptance pass | Mandatory acceptance command set green | OPEN |
-| D5 Audit sign-off | Architect + audit expert both PASS | OPEN |
-| D6 Tag allowed | D1~D5 all PASS | LOCKED |
+| D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | PASS |
+| D2 Implementation complete | Mandatory scripts/validators/tools landed | PASS |
+| D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
+| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (UPDATE_REVIEW_REQUIRED) |
+| D5 Audit sign-off | Architect + audit expert both PASS | PASS |
+| D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED |
 
 ### 0.4 Requirement status model (machine-readable governance semantics)
 
@@ -2626,7 +2626,7 @@ Historical implementation notes remain preserved in 6.4/6.4A.
 Current release boundary (unchanged):
 
 1. v1.5 remains `NO_GO` until 6.5 unlock formula is satisfied.
-2. Latest independent replay no longer classifies `IP-CAP-003` as project-scope `P0/P1` blocker (`FIX-055` closure in review `16.8.55`); release remains `NO_GO` because unlock formula inputs (D1~D5 and release-plane predicates) are not yet fully satisfied.
+2. Latest independent replay no longer classifies `IP-CAP-003` as project-scope `P0/P1` blocker (`FIX-055` closure in review `16.8.55`); release remains `NO_GO` because `D4` is not yet pass-closed under live readiness replay (`review 16.8.56`).
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -2650,6 +2650,39 @@ Parallel-planning constraint:
 Audit output requirement:
 
 1. Every architect return must include explicit calculation evidence for unlock formula inputs, not just narrative conclusions.
+
+### 6.6 D-gate audit bridge snapshot (2026-03-03, live replay sync)
+
+This section is the authoritative bridge for D-gate states in section 0.3.
+It is replay-driven and supersedes earlier `OPEN` placeholders.
+
+Evidence bundle (live):
+
+1. `/tmp/release_v15_fullscan_project_strict_only_20260303T_live.json`
+   - project-only summary: `p0=0`, `p1=0`, `ok=1`
+2. `/tmp/release_v15_threeplane_project_only_20260303T_live.json`
+   - `instance_plane_status=IN_PROGRESS`, `release_plane_status=NOT_STARTED`
+3. `/tmp/release_v15_readiness_project_only_with_lane_20260303T_live.log`
+   - readiness `rc=1`
+   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772543373.json` shows `lane_routing_error_code=IP-LAYER-GATE-007`
+4. `/tmp/release_v15_lane_lock_exit_20260303T_live.json`
+   - `session_lane_lock_exit_status=PASS_REQUIRED`
+5. `/tmp/release_v15_readiness_project_only_after_exit_20260303T_live.log`
+   - readiness `rc=2`
+   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772543500.json` shows `lane_routing_status=PASS_REQUIRED` after exit, but `upgrade_required=true` and `next_action=review_required_create_pr_from_patch_plan`
+
+Gate-state mapping:
+
+1. `D1=PASS`: contract set is frozen for `v1.5`; no unresolved schema/error-semantics delta is open.
+2. `D2=PASS`: implementation surface is landed (`FIX-001..055`, `HOTFIX-P0-*`) and synchronized in review.
+3. `D3=PASS`: six-surface gate wiring is evidenced by independent replay bundles (`16.8.50`, `16.8.55`, `16.8.56`).
+4. `D4=FAIL_REQUIRED`: mandatory acceptance command set is not fully green in latest live readiness replay (`rc=2`, review-required patch-plan pending).
+5. `D5=PASS`: architect + audit expert protocol-scope sign-off is complete for implemented remediation lines.
+6. `D6=LOCKED`: lock remains until `D4` passes and 6.5 unlock formula evaluates true.
+
+Hotfix bridge alignment:
+
+1. `HOTFIX-P0-009` and `HOTFIX-P0-010` are treated as closed via `FIX-021/022` replay promotion (`review 16.8.53`, reflected in review emergency table update at `16.8.56`).
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

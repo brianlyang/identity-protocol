@@ -46,8 +46,8 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 | HOTFIX-P0-006 | 2026-03-01 | protocol | protocol-feedback SSOT archival required-gate missing (mirror-only report risk) | DONE | PASS |
 | HOTFIX-P0-007 | 2026-03-01 | protocol | readiness scope arbitration not exposed via `--scope` causing `IP-ENV-002` under dual-catalog conflicts | DONE | PASS |
 | HOTFIX-P0-008 | 2026-03-01 | protocol | strict user-visible reply gates allowed `LOCK_MISMATCH` to pass, masking actor/catalog lane drift as perceived identity hard-switch | DONE | PASS |
-| HOTFIX-P0-009 | 2026-03-01 | protocol | strict operation command-target identity tuple and user-visible reply tuple can diverge under dual-catalog lanes (execution/reply coherence gap) | DONE | PENDING_REPLAY |
-| HOTFIX-P0-010 | 2026-03-01 | protocol | disclosure-profile drift can omit tuple refs (`catalog_ref`/`pack_ref`) in strict gate stamp artifacts, causing coherence false-green/false-red ambiguity | DONE | PENDING_REPLAY |
+| HOTFIX-P0-009 | 2026-03-01 | protocol | strict operation command-target identity tuple and user-visible reply tuple can diverge under dual-catalog lanes (execution/reply coherence gap) | DONE | PASS |
+| HOTFIX-P0-010 | 2026-03-01 | protocol | disclosure-profile drift can omit tuple refs (`catalog_ref`/`pack_ref`) in strict gate stamp artifacts, causing coherence false-green/false-red ambiguity | DONE | PASS |
 
 Alignment note (2026-02-28, anti-drift):
 
@@ -4942,10 +4942,15 @@ Decision boundary (current-state):
 
 Status: `NO_GO (v1.5 release)` + `PLANNING_ALLOWED (v1.6 parallel track)`.
 
+Historical-note boundary:
+
+1. This section is a point-in-time snapshot.
+2. D-gate live status is superseded by `16.8.56`.
+
 Evidence bundle:
 
-1. Release-lock table remains hard-locked:
-   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:30-35` (`D1~D5=OPEN`, `D6=LOCKED`).
+1. Release-lock table snapshot at capture time:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:30-35` (`D1~D5=OPEN`, `D6=LOCKED` at that time).
 2. Unlock formula remains hard condition:
    - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:2615` (`all P0 DONE` + `D1~D5 PASS`).
 3. Current 6.4 `P0` status census (machine parse snapshot, 2026-03-03):
@@ -5218,6 +5223,46 @@ Decision boundary:
 
 1. This promotion closes protocol re-audit pending items only.
 2. `v1.5` release remains governed by section `6.5` unlock formula; summary promotion does not auto-flip `D1~D6`.
+
+#### 16.8.56 Live D-gate recalculation (project-only replay + lock-state cross-check, 2026-03-03)
+
+Status: `D1=PASS, D2=PASS, D3=PASS, D4=FAIL_REQUIRED, D5=PASS, D6=LOCKED`.
+
+Cross-verified evidence (live replay):
+
+1. Project-only full scan (global noise removed):
+   - `/tmp/release_v15_fullscan_project_strict_only_20260303T_live.json`
+   - `summary={"total_identities":1,"p0":0,"p1":0,"ok":1}`
+2. Three-plane status for the same catalog/identity:
+   - `/tmp/release_v15_threeplane_project_only_20260303T_live.json`
+   - `instance_plane_status=IN_PROGRESS`, `release_plane_status=NOT_STARTED`, `overall_release_decision=Conditional Go`
+3. Readiness before lock-exit:
+   - `/tmp/release_v15_readiness_project_only_with_lane_20260303T_live.log` (`rc=1`)
+   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772543373.json`
+   - key blocker: `lane_routing_status=FAIL_REQUIRED`, `lane_routing_error_code=IP-LAYER-GATE-007`
+4. Lock-exit replay action:
+   - `/tmp/release_v15_lane_lock_exit_20260303T_live.json`
+   - `session_lane_lock_exit_status=PASS_REQUIRED`
+5. Readiness after lock-exit:
+   - `/tmp/release_v15_readiness_project_only_after_exit_20260303T_live.log` (`rc=2`)
+   - report `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772543500.json`
+   - `lane_routing_status=PASS_REQUIRED` (lock issue cleared),
+   - but `upgrade_required=true`, `all_ok=false`, `next_action=review_required_create_pr_from_patch_plan`
+
+D-gate decision mapping:
+
+1. `D1 Contract freeze = PASS` (governance contracts/fields are complete and no unresolved schema delta is open for `v1.5`).
+2. `D2 Implementation complete = PASS` (rolling summary `FIX-001..055` and `HOTFIX-P0-002..010` are `DONE/PASS` in protocol scope).
+3. `D3 Gate wiring complete = PASS` (creator/e2e/readiness/full-scan/three-plane/CI wiring has replay evidence across `16.8.50`, `16.8.55`, and this section).
+4. `D4 Acceptance pass = FAIL_REQUIRED` (mandatory readiness command set is not fully green in live replay; post-lock state still requires patch-plan closure).
+5. `D5 Audit sign-off = PASS` (architect implementation + independent audit replay promotion complete for protocol remediation scope).
+6. `D6 Tag allowed = LOCKED` (derived from D4 fail; unlock formula not yet satisfied).
+
+HOTFIX closure alignment:
+
+1. `HOTFIX-P0-009` is closed by `FIX-021` independent replay promotion in `16.8.53`.
+2. `HOTFIX-P0-010` is closed by `FIX-022` independent replay promotion in `16.8.53`.
+3. Top emergency table is synchronized to `PASS` for both items in this update.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
