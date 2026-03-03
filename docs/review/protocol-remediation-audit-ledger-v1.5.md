@@ -165,7 +165,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 | FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab` | DONE | PENDING_REAUDIT |
 | FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PENDING_REAUDIT |
-| FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PENDING_REAUDIT |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820` | DONE | PENDING_REAUDIT |
 
 ---
@@ -4805,6 +4805,51 @@ Boundary:
 
 1. `FIX-054` hardens operator emission discipline; it does not replace runtime/live channel integration requirements already tracked by `FIX-049` (`ASB-RQ-109`).
 2. This intake is scope-limited and does not auto-promote unrelated `PENDING_REAUDIT` rows.
+
+#### 16.8.46 Implementation replay intake: custom project reverify closure for CWD drift + coverage normalization (`FIX-051/053`, 2026-03-03, scope-limited)
+
+Status: `DONE / PENDING_REAUDIT` for implementation scope (`FIX-051` drift closure delta + `FIX-053` code landing).  
+Decision boundary remains scope-limited (no full-green promotion).
+
+Commit anchor:
+
+1. `ddb1529` — `fix(protocol): close cwd-relative writeback drift and normalize coverage`
+
+Implementation delta:
+
+1. `scripts/validate_identity_experience_writeback.py`
+   - report discovery now pack-root aware (`latest_identity_upgrade_report`);
+   - `writeback_paths` are resolved against pack/report/runtime roots instead of caller CWD.
+2. `scripts/validate_identity_prompt_lifecycle.py`
+   - relative `runtime_state_artifact_path` resolution now report/pack aware (no CWD-dependent miss).
+3. `scripts/validate_post_execution_mandatory.py`
+   - downstream `validate_identity_experience_writeback.py` invocation now uses absolute script path + protocol-root cwd.
+4. `scripts/validate_required_contract_coverage.py`
+   - optional-lane PASS no longer inflates required-pass counters;
+   - coverage is bounded to `[0,100]` with overflow telemetry fields.
+
+Scope-limited replay evidence:
+
+1. CWD invariance (same report, two working directories):
+   - `validate_identity_experience_writeback.py` root + pack both `rc=0`.
+   - `validate_identity_prompt_lifecycle.py` root + pack both `rc=0`.
+2. Post-execution chain:
+   - `/tmp/fix051_postexec_validate_root.json` -> `post_execution_mandatory_status=PASS_REQUIRED`.
+   - `/tmp/fix051_postexec_validate_tmp.json` -> `post_execution_mandatory_status=PASS_REQUIRED`.
+3. Semantic routing guard current batch:
+   - metadata-fixed batch `FEEDBACK_BATCH_20260303T082408Z_protocol_closure_reverify_sanitized.md`
+     now passes `IP-SEM-001` guard (`/tmp/fix052_semantic_custom_validate_after.json`).
+4. Coverage KPI normalization:
+   - `/tmp/fix053_cov_custom_threeplane_after.json` -> `required_contract_total=7`, `required_contract_passed=7`, `required_contract_coverage_rate=100.0`.
+   - `/tmp/three_plane_custom_20260303_afterfix3.json` -> `required_contract_total=3`, `required_contract_passed=3`, `required_contract_coverage_rate=100.0`.
+5. Full-scan boundary sample:
+   - `/tmp/full_scan_custom_project_only_afterfix3.json` -> project scope `p0=0`, residual `p1=1` (`IP-CAP-003` auth/env preflight), not protocol writeback/semantic/coverage regression.
+
+Boundary:
+
+1. This replay closes the reported protocol defects (`IP-WRB-003` CWD drift + coverage overflow anomaly) for the project-catalog scenario.
+2. Global-catalog historical runtime residuals are explicitly out of scope for this intake and are not auto-promoted to closed.
+3. Status table remains conservative: `PENDING_REAUDIT` until independent auditor replay confirms closure.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
