@@ -167,7 +167,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PASS |
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
-| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary de-P0 closure (`full_identity_protocol_scan` severity normalization + strict update env fallback trace) | `UNCOMMITTED` | DONE | PENDING_REAUDIT |
+| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary de-P0 closure (`full_identity_protocol_scan` severity normalization + strict update env fallback trace) | `9c4530d` | DONE | PENDING_REAUDIT |
 
 ---
 
