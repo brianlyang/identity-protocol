@@ -1884,6 +1884,34 @@ Mandatory semantics:
    - `IP-ASB-STAMP-SESSION-002`: synthetic/non-live evidence source used for strict send-time gate.
    - `IP-ASB-STAMP-SESSION-003`: send-time outlet guard not applied before reply emission in strict lane.
 
+#### 5.8.35 `initialization_execution_order_and_scaffold_consent_contract_v1` (P0, FIX-050)
+
+Goal:
+
+1. Enforce deterministic execution order in mutation-capable flows (`header-first`, `consent-before-scaffold`, `disclose-before-write`).
+2. Prevent unconfirmed scaffold writes and execution-order drift during initialization/update.
+
+Mandatory semantics:
+
+1. Header-first pre-mutation gate:
+   - mutation-capable command paths must prove first-line `Identity-Context` emission before first filesystem mutation.
+2. Scaffold consent gate:
+   - scaffold generation is blocked until explicit user acknowledgement of scope/stack/runtime is captured.
+3. Mutation-plan disclosure gate:
+   - before first write, runtime must emit `planned_files[]` and `why_now`, bound to current run id.
+4. Required-check parity:
+   - initialization/update executor must not bypass header/send-time hard gates through profile-local `required_checks` omission.
+5. Required telemetry fields:
+   - `header_first_gate_status`
+   - `scaffold_consent_gate_status`
+   - `mutation_plan_disclosed`
+   - `planned_files`
+   - `pre_mutation_gate_ts`
+6. Suggested error codes:
+   - `IP-EXEC-ORDER-001`: mutation attempted before header-first gate pass.
+   - `IP-EXEC-ORDER-002`: scaffold generation attempted without explicit consent.
+   - `IP-EXEC-ORDER-003`: mutation attempted without prior plan disclosure.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2426,6 +2454,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-107 | identity scaffold default bootstrap must be domain-neutral and path-governed: no legacy business constants in default generated `CURRENT_TASK`/runtime samples, and no cross-root relative pointers | `scripts/create_identity_pack.py` + neutral scaffold seed artifacts + scaffold-neutrality validator (new) + creator/readiness scan telemetry surfaces | P0 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`) and vendor/spec addendum (`review 16.8.39A`); architect implementation pending |
 | ASB-RQ-108 | blocker taxonomy must be decoupled from legacy commerce enums: canonical neutral blocker set + explicit legacy alias bridge + strict-lane fail-closed on unsupported values | `scripts/validate_identity_runtime_contract.py`, `scripts/validate_identity_collab_trigger.py`, blocker alias-map contract (new), coverage/readiness telemetry surfaces | P1 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`) and vendor/spec addendum (`review 16.8.39A`); architect implementation pending |
 | ASB-RQ-109 | strict send-time/first-line gate must validate real outbound reply payload and reject synthetic stamp-only evidence sources; missing outlet guard is fail-closed | `scripts/validate_send_time_reply_gate.py`, `scripts/validate_reply_identity_context_first_line.py`, runtime reply outlet adapter (new), readiness/e2e/full-scan/three-plane evidence-mode telemetry | P0 | SPEC_READY | introduced by `FIX-049` docs intake (`review 16.8.40`) after repeated live missing-header recurrence despite synthetic replay pass |
+| ASB-RQ-110 | initialization/update mutation flow must enforce `header-first + scaffold-consent + mutation-plan-disclosure` before first write, and cannot bypass these gates through profile-local required-check omissions | mutation executor preflight (`execute_identity_upgrade.py` / creator update path), scaffold writer, gate telemetry collectors, readiness/e2e replay adapters | P0 | SPEC_READY | introduced by `FIX-050` docs intake (`review 16.8.41`) with fqsh cross-project recurrence evidence |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2475,6 +2504,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-105 / ASB-RQ-106 | `NEW -> GATE_READY (P1)` | `FIX-045/046` landed (`7695a12`, `dc9c2e3`) and residual misclassification + stale-preflight trace observability were re-audit closed in review `16.8.35` (scope-limited; does not alter other `PENDING_REAUDIT` batches) |
 | ASB-RQ-107 / ASB-RQ-108 | `NEW -> SPEC_READY (P0/P1)` | `FIX-048` docs intake (`review 16.8.39`) + vendor/spec cross-verification addendum (`review 16.8.39A`) add scaffold domain-neutral bootstrap + blocker taxonomy decoupling migration contracts; implementation/replay pending |
 | ASB-RQ-109 | `NEW -> SPEC_READY (P0)` | `FIX-049` docs intake (`review 16.8.40`) closes evidence-source ambiguity for live reply first-line gate; requires strict non-synthetic send-time evidence and pre-send outlet adapter |
+| ASB-RQ-110 | `NEW -> SPEC_READY (P0)` | `FIX-050` docs intake (`review 16.8.41`) enforces initialization/update execution-order hard boundaries (header-first, scaffold-consent, disclose-before-write) with fqsh recurrence evidence anchors |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 

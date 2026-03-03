@@ -162,6 +162,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PENDING_REAUDIT |
 | FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 | FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 
 ---
 
@@ -4474,6 +4475,80 @@ Boundary:
 
 1. This section is docs-only intake and does not change runtime behavior.
 2. `FIX-049` remains `SPEC_READY / PENDING_REPLAY` until architect implementation and independent replay closure.
+
+#### 16.8.41 Cross-project evidence intake: fqsh header-first recurrence + scaffold pollution (`FIX-050`, 2026-03-03, docs-only)
+
+Status: `SPEC_READY` (P0 evidence confirmed; protocol architect implementation pending).
+
+Scope:
+
+1. Identity: `feiqiao-guard-delivery-lead`
+2. Catalog: `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/catalog.local.yaml`
+3. This section records external project evidence and does not mutate protocol runtime code.
+
+Verified facts:
+
+1. Protocol-feedback submission chain exists and is machine-readable:
+   - batch: `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-03-headstamp-and-scaffold-pollution.md`
+   - issue: `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/protocol-vendor-intel/ISSUE_2026-03-03-execution-order-and-scaffold-pollution.md`
+   - proposal: `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/upgrade-proposals/PROPOSAL_2026-03-03-enforce-header-and-scaffold-consent-gate.md`
+2. Reply-channel validator replay confirms canonical channel pass:
+   - command output: `/tmp/fqsh_reply_channel_check.json`
+   - key fields: `protocol_feedback_reply_channel_status=PASS_REQUIRED`, `error_code=""`.
+3. Runtime contract replay confirms current instance contract is structurally valid:
+   - command output: `/tmp/fqsh_runtime_contract_check.log`
+   - result: `Identity runtime contract validation PASSED`.
+4. Scaffold pollution files are present in project workspace and match incident narrative:
+   - `/Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/config.py`
+   - `/Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/models.py`
+   - `/Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/policy.py`
+   - `/Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/audit.py`
+
+Root-cause refinement (why recurrence still happens):
+
+1. Upgrade required-check set for this identity does not include reply first-line/send-time gates:
+   - `CURRENT_TASK.json` required checks list has no
+     - `scripts/validate_reply_identity_context_first_line.py`
+     - `scripts/validate_send_time_reply_gate.py`
+   - evidence: `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/CURRENT_TASK.json:167`
+2. Execution report confirms these gates were not executed in that upgrade run:
+   - `/Users/yangxi/claude/codex_project/fqsh/resource/reports/identity-upgrade-exec-feiqiao-guard-delivery-lead-1772523548.json`
+   - no `reply_first_line_status` / `send_time_gate_status` fields.
+3. Existing send-time gate can pass on synthetic stamp evidence (`stamp_json_composed_reply`), so replay pass does not prove live channel compliance:
+   - evidence: `/tmp/fix049_stamp_synthetic_pass.json`.
+
+Additional evidence-integrity gaps (non-blocking but should be closed):
+
+1. Evidence index currently omits receipt artifact path:
+   - index: `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/evidence-index/INDEX.md`
+   - missing row: `outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_2026-03-03-headstamp-scaffold.json`.
+2. No live reply transcript artifact is attached under runtime tree for this incident, so header-missing claim is narrative-only rather than replay-bound.
+
+Architect patch package (`FIX-050`, maps to `ASB-RQ-110`):
+
+1. Header-first pre-mutation gate:
+   - before any mutation-capable step, enforce first-line `Identity-Context` emission and verification.
+2. Scaffold consent gate:
+   - block scaffold writes unless explicit user confirmation of scope/stack has been captured.
+3. Mutation plan disclosure:
+   - emit `planned_files[]` + `why_now` before first write, then enforce allowlist against actual writes.
+4. Required-check parity:
+   - add first-line/send-time gate checks to mutation/update required-check chain (or enforce centrally in executor preflight).
+
+Acceptance DoD:
+
+1. Simulate missing header in initialization/update mutation flow => deterministic fail-closed before first write.
+2. Simulate scaffold attempt without explicit consent => deterministic fail-closed before file creation.
+3. Successful compliant run must include machine-readable pre-mutation proof:
+   - `header_first_gate_status=PASS_REQUIRED`
+   - `scaffold_consent_gate_status=PASS_REQUIRED`
+   - `mutation_plan_disclosed=true`.
+4. Evidence-index must include batch + issue + proposal + receipt entries for same incident id.
+
+Boundary:
+
+1. This section is docs-only intake and planning.
+2. `FIX-050` remains `SPEC_READY / PENDING_REPLAY` until architect implementation and independent replay closure.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
