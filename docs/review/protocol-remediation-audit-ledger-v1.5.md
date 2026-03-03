@@ -4937,6 +4937,30 @@ Decision boundary (current-state):
 2. Current project-scope state is `P0` blocked by `IP-CAP-003` (env/auth preflight), while protocol implementation fixes from `6430852` remain valid.
 3. External claim must stay conservative: `IMPL_READY (BLOCKED_BY_ENV_AUDIT)` for this replay window; no full-closed/full-green claim.
 
+#### 16.8.49 Release-lock posture sync (`v1.5` NO_GO, `v1.6` planning allowed in parallel) (2026-03-03, docs-only bridge)
+
+Status: `NO_GO (v1.5 release)` + `PLANNING_ALLOWED (v1.6 parallel track)`.
+
+Evidence bundle:
+
+1. Release-lock table remains hard-locked:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:30-35` (`D1~D5=OPEN`, `D6=LOCKED`).
+2. Unlock formula remains hard condition:
+   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:2615` (`all P0 DONE` + `D1~D5 PASS`).
+3. Current 6.4 `P0` status census (machine parse snapshot, 2026-03-03):
+   - `P0_TOTAL=85`, `P0_DONE=0`, `P0_NOT_DONE=85`.
+   - Status distribution: `SPEC_READY=26`, `IMPL_READY(BLOCKED_BY_AUDIT)=26`, `GATE_READY=28`, `VERIFIED=5`, `DONE=0`.
+4. Live runtime replay still has `P0` blocker (`IP-CAP-003`):
+   - `/tmp/reaudit_643_fullscan_project_only_live.json` -> `summary.p0=1`.
+   - `/tmp/reaudit_643_threeplane_live.json` -> `instance_plane_status=IN_PROGRESS`, `capability_activation_error_code=IP-CAP-003`.
+   - `/tmp/release_readiness_custom_live.log` -> readiness `rc=2` with capability activation preflight blocked (`IP-CAP-003`).
+
+Decision boundary:
+
+1. `v1.5` release/tag remains blocked (`NO_GO`) until unlock formula in governance 6.5 is satisfied.
+2. `v1.6` planning/design execution can proceed in parallel, but cannot be used as evidence to waive any `v1.5` lock gate.
+3. External messaging must not claim `Full Go` for `v1.5` under current state.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

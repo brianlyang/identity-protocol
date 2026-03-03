@@ -2622,6 +2622,11 @@ Non-equivalence constraints:
 3. `GATE_READY != DONE`
 4. Passing a subset of ad-hoc commands cannot override the formula above.
 
+Parallel-planning constraint:
+
+1. `v1.6` planning/design work may run in parallel with `v1.5` remediation, but **cannot** be used as substitute unlock evidence for `v1.5`.
+2. `v1.5` remains `NO_GO` until the exact 6.5 unlock formula is satisfied.
+
 Audit output requirement:
 
 1. Every architect return must include explicit calculation evidence for unlock formula inputs, not just narrative conclusions.
