@@ -30,7 +30,7 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 | D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | PASS |
 | D2 Implementation complete | Mandatory scripts/validators/tools landed | PASS |
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
-| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (UPDATE_REVIEW_REQUIRED) |
+| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (CHECKLIST_16.8.57_PENDING) |
 | D5 Audit sign-off | Architect + audit expert both PASS | PASS |
 | D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED |
 
@@ -2683,6 +2683,27 @@ Gate-state mapping:
 Hotfix bridge alignment:
 
 1. `HOTFIX-P0-009` and `HOTFIX-P0-010` are treated as closed via `FIX-021/022` replay promotion (`review 16.8.53`, reflected in review emergency table update at `16.8.56`).
+
+### 6.6A D4 closure checklist binding (`review 16.8.57`)
+
+Hard binding:
+
+1. D4 can move from `FAIL_REQUIRED` to `PASS` only by executing the command pack defined in
+   `docs/review/protocol-remediation-audit-ledger-v1.5.md` section `16.8.57`.
+2. Partial green (for example full-scan green while readiness non-zero) is non-sufficient.
+
+Minimal acceptance predicates:
+
+1. Readiness replay `rc=0` with lane-routing closure (`IP-LAYER-GATE-006/007` absent).
+2. Project-only full-scan summary `p0=0,p1=0`.
+3. Three-plane instance status `CLOSED`.
+4. Docs contracts pass (`docs_command_contract_check`, `validate_protocol_ssot_source`).
+
+Derived lock rule:
+
+1. Until `16.8.57` predicates are all satisfied in one replay window, keep:
+   - `D4=FAIL_REQUIRED`
+   - `D6=LOCKED`
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

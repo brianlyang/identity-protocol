@@ -5264,6 +5264,58 @@ HOTFIX closure alignment:
 2. `HOTFIX-P0-010` is closed by `FIX-022` independent replay promotion in `16.8.53`.
 3. Top emergency table is synchronized to `PASS` for both items in this update.
 
+#### 16.8.57 D4 acceptance closure command pack (`v1.5`, 2026-03-03, docs-only runbook bridge)
+
+Status: `ACTIONABLE_PENDING_EXECUTION` (command pack is fixed; D4 flips to `PASS` only after this exact pack returns green).
+
+Execution scope (hard constraints):
+
+1. Use project catalog only:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+2. Identity under replay:
+   - `custom-creative-ecom-analyst`
+3. Global history noise is excluded by forcing `--global-catalog /tmp/nonexistent_catalog_for_project_only.yaml` in full-scan step.
+
+Command pack (authoritative order):
+
+1. Optional/idempotent lane-lock exit pre-step (recommended every D4 replay run):
+   - `python3 scripts/write_session_lane_lock_exit.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --source-layer project --exit-reason "d4-acceptance-replay" --json-only > /tmp/release_v15_d4_lane_lock_exit.json`
+2. Mandatory readiness command (must be green):
+   - `python3 scripts/release_readiness_check.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --capability-activation-policy route-any-ready --execution-report-policy strict --baseline-policy strict --layer-intent-text "project instance release readiness replay" --expected-work-layer instance --expected-source-layer project > /tmp/release_v15_d4_readiness.log 2>&1`
+3. Mandatory project-only full-scan:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /tmp/nonexistent_catalog_for_project_only.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/release_v15_d4_fullscan_project_only.json`
+4. Mandatory three-plane replay:
+   - `python3 scripts/report_three_plane_status.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --out /tmp/release_v15_d4_threeplane_project_only.json`
+5. Mandatory docs contract checks:
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+Pass criteria (`D4=PASS`) - all must hold in the same replay window:
+
+1. Step-2 readiness command exits `rc=0`.
+2. Latest readiness-generated execution report has:
+   - `all_ok=true`
+   - `lane_routing_status=PASS_REQUIRED`
+   - no `lane_routing_error_code` in `{IP-LAYER-GATE-006, IP-LAYER-GATE-007}`
+3. Step-3 full-scan summary is exactly:
+   - `p0=0`
+   - `p1=0`
+4. Step-4 three-plane shows:
+   - `instance_plane_status=CLOSED`
+   - `release_plane_status` not regressed by instance blockers
+5. Step-5 docs checks both pass.
+
+Fail-handling mapping (deterministic):
+
+1. If readiness fails with `IP-LAYER-GATE-007`, repeat step-1 (lane-lock exit), then rerun from step-2.
+2. If readiness fails with `upgrade_required=true` and `next_action=review_required_create_pr_from_patch_plan`, D4 remains `FAIL_REQUIRED` and must not be force-promoted.
+3. If full-scan is green but readiness is non-zero, D4 stays `FAIL_REQUIRED` (command-pack gate is readiness-first).
+
+Decision boundary:
+
+1. This section defines the only acceptable D4 closure pack for `v1.5` docs governance bridge.
+2. Passing individual validators outside this pack does not change D4.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
