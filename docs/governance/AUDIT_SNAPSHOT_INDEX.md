@@ -21,6 +21,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical actor-scoped session binding governance (v1.5.0):
   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
   - Scope is protocol-only; no instance business policy allowed.
+- Canonical actor-scoped session binding governance (v1.6.0 planning track):
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.md`
 
 ## Snapshots
 
