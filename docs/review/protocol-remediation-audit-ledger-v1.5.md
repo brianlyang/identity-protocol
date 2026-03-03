@@ -161,6 +161,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
 | FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PENDING_REAUDIT |
 | FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 
 ---
 
@@ -4366,6 +4367,70 @@ Boundary:
 
 1. This record is docs-only intake and planning; no runtime behavior changed in this batch.
 2. `FIX-048` remains `SPEC_READY / PENDING_REPLAY` until architect implementation + independent replay closure.
+
+#### 16.8.40 Roundtable intake: live reply first-line gate recurrence root cause (`FIX-049`, 2026-03-03, docs-only)
+
+Status: `SPEC_READY` (P0 contract gap confirmed; architect patch required).
+
+Incident trigger:
+
+1. Live conversation still produced replies without first-line `Identity-Context`, despite prior HOTFIX/P0 closure claims.
+2. This was reported as repeated recurrence in current audit round.
+
+Cross-validation findings (code + replay):
+
+1. `validate_send_time_reply_gate.py` currently allows `--stamp-json` as primary evidence and auto-composes synthetic reply text:
+   - `scripts/validate_send_time_reply_gate.py:59`
+   - `scripts/validate_send_time_reply_gate.py:67`
+   - emitted mode: `reply_evidence_mode=stamp_json_composed_reply`.
+2. Multiple gate surfaces feed send-time/first-line validators with `--stamp-json` (synthetic artifact), not real outbound reply payload:
+   - `scripts/identity_creator.py:1227`
+   - `scripts/identity_creator.py:1262`
+   - `scripts/release_readiness_check.py:562`
+   - `scripts/release_readiness_check.py:580`
+   - `scripts/full_identity_protocol_scan.py:544`
+   - `scripts/full_identity_protocol_scan.py:580`
+   - `scripts/report_three_plane_status.py:530`
+   - `scripts/report_three_plane_status.py:602`
+3. E2E replay itself builds send-time sample from rendered stamp artifact:
+   - `scripts/e2e_smoke_test.sh:305`
+   - `scripts/e2e_smoke_test.sh:316`
+4. Repro pair (same identity context):
+   - real missing-header reply file => `FAIL_REQUIRED` (`IP-ASB-STAMP-SESSION-001`)
+   - stamp-only mode => `PASS_REQUIRED` with `reply_evidence_mode=stamp_json_composed_reply`.
+
+Root cause statement:
+
+1. Existing hard gate proves validator semantics, but not live channel enforcement.
+2. Gate evidence source can be synthetic and self-satisfying; therefore strict pass does not guarantee actual outbound reply compliance.
+3. This is why recurrence can happen repeatedly after “gate passed” replays.
+
+Architect patch package (implementation ownership: protocol architect):
+
+1. Enforce real-evidence boundary in strict lanes:
+   - `validate_send_time_reply_gate.py` must reject synthetic `stamp_json_composed_reply` evidence in strict operations.
+   - strict lanes require `reply_file` or `reply_log` bound to actual outbound payload.
+2. Add explicit error path:
+   - suggested code `IP-ASB-STAMP-SESSION-002`: send-time gate received non-live/synthetic evidence source.
+3. Add runtime outlet adapter:
+   - before emitting user-visible reply, assemble final payload, run send-time gate on that exact payload, block send on failure.
+4. Telemetry hardening:
+   - required fields: `reply_evidence_mode`, `reply_transport_ref`, `reply_outlet_guard_applied`.
+   - strict lanes must fail when `reply_outlet_guard_applied=false`.
+5. Replay policy update:
+   - readiness/e2e/full-scan/three-plane must include at least one real reply payload replay sample; synthetic-only replay is insufficient for closure claims.
+
+Acceptance DoD (post-implementation):
+
+1. Missing header in real outbound payload => deterministic `FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`.
+2. `--stamp-json` synthetic mode under strict operations => deterministic `FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-002`.
+3. Compliant real outbound payload with first-line identity stamp => `PASS_REQUIRED`.
+4. Full-scan/three-plane expose non-synthetic evidence (`reply_evidence_mode` not equal to `stamp_json_composed_reply`) for strict-closure claims.
+
+Boundary:
+
+1. This section is docs-only intake and does not change runtime behavior.
+2. `FIX-049` remains `SPEC_READY / PENDING_REPLAY` until architect implementation and independent replay closure.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 

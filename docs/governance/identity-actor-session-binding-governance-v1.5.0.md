@@ -1828,6 +1828,29 @@ Mandatory semantics:
    - `IP-BLOCKER-001`: unsupported blocker enum with no valid alias bridge.
    - `IP-BLOCKER-002`: legacy blocker enum used beyond configured bridge window in strict lane.
 
+#### 5.8.34 `live_reply_outlet_evidence_hard_boundary_contract_v1` (P0, FIX-049)
+
+Goal:
+
+1. Ensure first-line identity-context hard gate is evaluated against real outbound reply payload, not synthetic stamp artifacts.
+2. Eliminate recurrence where replay passes but live dialogue output still misses first-line stamp.
+
+Mandatory semantics:
+
+1. In strict operations, send-time gate evidence source must be live reply payload:
+   - allowed: `reply_file`, `reply_log` (mapped to actual outbound message buffer/log),
+   - forbidden as sole strict evidence: `stamp_json_composed_reply`.
+2. Strict operations must fail-closed when evidence source is synthetic or unresolved.
+3. Pre-send outlet guard is mandatory:
+   - assembled final reply text must be validated before emit.
+4. Required telemetry fields:
+   - `reply_evidence_mode`
+   - `reply_transport_ref`
+   - `reply_outlet_guard_applied`
+5. Suggested error codes:
+   - `IP-ASB-STAMP-SESSION-002`: synthetic/non-live evidence source used for strict send-time gate.
+   - `IP-ASB-STAMP-SESSION-003`: send-time outlet guard not applied before reply emission in strict lane.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2369,6 +2392,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-106 | strict stale preflight must emit machine-readable phase-transition trace (`baseline_mode_violation` + aligned error code) when stale-only self-repair is denied | `identity_creator.py` strict baseline preflight trace fields + upgrade replay artifacts | P1 | GATE_READY | `FIX-046` landed in `dc9c2e3` with explicit baseline-mode violation trace emission; independent re-audit closure recorded in review `16.8.35` |
 | ASB-RQ-107 | identity scaffold default bootstrap must be domain-neutral and path-governed: no legacy business constants in default generated `CURRENT_TASK`/runtime samples, and no cross-root relative pointers | `scripts/create_identity_pack.py` + neutral scaffold seed artifacts + scaffold-neutrality validator (new) + creator/readiness scan telemetry surfaces | P0 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`); architect implementation pending |
 | ASB-RQ-108 | blocker taxonomy must be decoupled from legacy commerce enums: canonical neutral blocker set + explicit legacy alias bridge + strict-lane fail-closed on unsupported values | `scripts/validate_identity_runtime_contract.py`, `scripts/validate_identity_collab_trigger.py`, blocker alias-map contract (new), coverage/readiness telemetry surfaces | P1 | SPEC_READY | introduced by `FIX-048` docs intake (`review 16.8.39`); architect implementation pending |
+| ASB-RQ-109 | strict send-time/first-line gate must validate real outbound reply payload and reject synthetic stamp-only evidence sources; missing outlet guard is fail-closed | `scripts/validate_send_time_reply_gate.py`, `scripts/validate_reply_identity_context_first_line.py`, runtime reply outlet adapter (new), readiness/e2e/full-scan/three-plane evidence-mode telemetry | P0 | SPEC_READY | introduced by `FIX-049` docs intake (`review 16.8.40`) after repeated live missing-header recurrence despite synthetic replay pass |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2417,6 +2441,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-104 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-044` landed in `62bdc1c` with canonical lane-lock EXIT writer + index linkage and creator automation switch (`--release-session-lane-lock`); independent replay closure pending in review `16.8.34` |
 | ASB-RQ-105 / ASB-RQ-106 | `NEW -> GATE_READY (P1)` | `FIX-045/046` landed (`7695a12`, `dc9c2e3`) and residual misclassification + stale-preflight trace observability were re-audit closed in review `16.8.35` (scope-limited; does not alter other `PENDING_REAUDIT` batches) |
 | ASB-RQ-107 / ASB-RQ-108 | `NEW -> SPEC_READY (P0/P1)` | `FIX-048` docs intake (`review 16.8.39`) adds scaffold domain-neutral bootstrap + blocker taxonomy decoupling migration contracts; implementation/replay pending |
+| ASB-RQ-109 | `NEW -> SPEC_READY (P0)` | `FIX-049` docs intake (`review 16.8.40`) closes evidence-source ambiguity for live reply first-line gate; requires strict non-synthetic send-time evidence and pre-send outlet adapter |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
