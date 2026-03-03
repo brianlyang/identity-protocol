@@ -94,6 +94,20 @@ LAYER_LITERAL_META_TOKENS = (
     "layer-context:",
 )
 
+
+def _has_protocol_lane_directive(text: str) -> bool:
+    raw = str(text or "").strip().lower()
+    if not raw:
+        return False
+    directive_patterns = (
+        re.compile(r"\bprotocol\s+(lane|layer|track)\b"),
+        re.compile(r"\bprotocol[_\-\s]?lane\b"),
+        re.compile(r"(协议层|协议轨|协议通道|协议lane)"),
+        re.compile(r"(按|走|切到|进入)\s*protocol"),
+    )
+    return any(p.search(raw) for p in directive_patterns)
+
+
 def _detect_repo_root(start: Path | None = None) -> Path:
     base = (start or Path.cwd()).resolve()
     for parent in [base, *base.parents]:
@@ -308,6 +322,9 @@ def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
 
     if PROTOCOL_TRIGGER_ERROR_CODE_PATTERN.search(text):
         reasons.append("protocol_error_code_signal")
+
+    if _has_protocol_lane_directive(text):
+        reasons.append("protocol_lane_directive")
 
     tokens = set(re.findall(r"[a-zA-Z_]+|[\u4e00-\u9fff]{1,4}", text))
     keyword_hits = sum(1 for k in PROTOCOL_TRIGGER_KEYWORDS if k in text or k in tokens)
@@ -565,6 +582,34 @@ def resolve_layer_intent(
         )
 
     if score_instance > 0 and score_protocol > 0:
+        protocol_directive = _has_protocol_lane_directive(text)
+        protocol_strong_trigger = bool(
+            {"explicit_protocol_trigger_flag", "protocol_error_code_signal"} & set(base_trigger_reasons)
+        )
+        protocol_signal_dominates = score_protocol > score_instance
+        if base_triggered and (protocol_directive or protocol_strong_trigger or protocol_signal_dominates):
+            reasons = list(base_trigger_reasons)
+            if protocol_directive:
+                reasons.append("protocol_lane_directive_mixed_signal")
+            elif protocol_strong_trigger:
+                reasons.append("protocol_strong_trigger_mixed_signal")
+            else:
+                reasons.append("protocol_signal_dominates_mixed_signal")
+            confidence = max(
+                0.78,
+                min(
+                    0.98,
+                    0.56 + 0.06 * score_protocol + 0.02 * len(set(reasons)),
+                ),
+            )
+            return _result(
+                work_layer="protocol",
+                confidence=confidence,
+                intent_source="natural_language",
+                fallback_reason="",
+                protocol_triggered=True,
+                protocol_trigger_reasons=reasons,
+            )
         return _result(
             work_layer=fallback_work,
             confidence=0.45,
