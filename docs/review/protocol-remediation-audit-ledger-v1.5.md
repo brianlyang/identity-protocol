@@ -5360,6 +5360,46 @@ Decision boundary:
 2. Blocking condition has shifted from lane-lock (`IP-LAYER-GATE-007`) to update review-required closure (`upgrade_required=true`, patch-plan path).
 3. Keep `D4=FAIL_REQUIRED` and `D6=LOCKED`.
 
+#### 16.8.59 D4 review-required closure checklist bridge (`upgrade_required=true`, 2026-03-03)
+
+Status: `ACTIONABLE_PENDING_EXECUTION` (closure path is fixed; `D4` remains `FAIL_REQUIRED` until a follow-up replay satisfies all predicates below).
+
+Scope and trigger boundary:
+
+1. This section is activated only when `16.8.57` command pack has been executed and latest readiness report contains:
+   - `upgrade_required=true`
+   - `next_action=review_required_create_pr_from_patch_plan`
+2. Current trigger evidence:
+   - readiness report:
+     `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772544253.json`
+   - generated patch plan:
+     `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772544253-patch-plan.json`
+
+Deterministic closure checklist (all required in one follow-up replay window):
+
+1. Run `16.8.57` command pack again in the same project-only scope after patch-plan actions are applied.
+2. Step-2 readiness exits `rc=0`.
+3. Latest readiness report contains all of:
+   - `all_ok=true`
+   - `upgrade_required=false`
+   - `next_action` not equal to `review_required_create_pr_from_patch_plan`
+   - `writeback_status=WRITTEN`
+4. Step-3 full-scan summary remains exactly `p0=0,p1=0`.
+5. Step-4 three-plane reaches `instance_plane_status=CLOSED`.
+6. Step-5 docs checks both pass.
+
+Fail-state mapping (do not force promote):
+
+1. If readiness remains `rc!=0`, keep `D4=FAIL_REQUIRED`.
+2. If readiness becomes `rc=0` but report still has `upgrade_required=true`, keep `D4=FAIL_REQUIRED` and classify as `REVIEW_REQUIRED_NOT_CLEARED`.
+3. If `all_ok=true` but `writeback_status!=WRITTEN`, keep `D4=FAIL_REQUIRED` (`writeback continuity not closed`).
+
+Decision boundary:
+
+1. `16.8.57` defines the mandatory command pack.
+2. `16.8.59` defines the mandatory follow-up closure predicates when the first run lands in review-required mode.
+3. `D4` may flip to `PASS` only when both sections are simultaneously satisfied in the latest live replay window.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

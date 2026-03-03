@@ -30,7 +30,7 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 | D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | PASS |
 | D2 Implementation complete | Mandatory scripts/validators/tools landed | PASS |
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
-| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (CHECKLIST_16.8.57_PENDING) |
+| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (CHECKLIST_16.8.57_EXECUTED_REVIEW_REQUIRED_16.8.59) |
 | D5 Audit sign-off | Architect + audit expert both PASS | PASS |
 | D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED |
 
@@ -2711,6 +2711,37 @@ Derived lock rule:
 1. Until `16.8.57` predicates are all satisfied in one replay window, keep:
    - `D4=FAIL_REQUIRED`
    - `D6=LOCKED`
+
+### 6.6B D4 review-required continuation binding (`review 16.8.59`)
+
+Normative trigger:
+
+1. This subsection applies when `16.8.57` has been executed but readiness report remains in review-required mode:
+   - `upgrade_required=true`
+   - `next_action=review_required_create_pr_from_patch_plan`
+2. Current live trigger anchor is recorded in `review 16.8.58` and carried forward by `review 16.8.59`.
+
+Hard continuation rule:
+
+1. In this state, partial signals (for example full-scan green) are insufficient.
+2. D4 stays `FAIL_REQUIRED` until the follow-up replay satisfies every predicate in `review 16.8.59`.
+3. D6 stays `LOCKED` while D4 is fail-required.
+
+Pass transition rule (strict):
+
+1. D4 can move to `PASS` only when latest replay window satisfies both:
+   - mandatory command pack in `review 16.8.57`, and
+   - review-required continuation closure in `review 16.8.59`.
+2. Required report-state closure includes:
+   - `all_ok=true`
+   - `upgrade_required=false`
+   - `next_action` no longer `review_required_create_pr_from_patch_plan`
+   - `writeback_status=WRITTEN`
+
+Decision boundary:
+
+1. This subsection is governance-level anti-ambiguity binding for the review-required branch.
+2. It does not alter implementation behavior; it only freezes release-gate interpretation.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
