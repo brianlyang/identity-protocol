@@ -141,32 +141,33 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
 | FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
 | FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
-| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
-| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
-| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
-| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | PENDING_REAUDIT |
+| FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2 / 560f710` | DONE | PASS |
+| FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | PASS |
+| FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | PASS |
+| FIX-032 | 2026-03-02 | protocol | protocol inquiry follow-up chain (`ASB-RQ-086..089`; analyzable feedback + deterministic follow-up + business-signal sanitization + source/source_layer semantic clarification + anti-starvation convergence + requiredization bridge trigger) | `a95f5a2 / 560f710` | DONE | PASS |
 | FIX-033 | 2026-03-02 | protocol | work-layer gate-set split hardening (`ASB-RQ-090..093`; instance self-drive must not be blocked by protocol publish gates, protocol lane remains strict fail-closed with canonical feedback closure) | `d387b12 / 0d7ebc7 / 913973a / 9d830d8` | DONE | PASS |
-| FIX-034 | 2026-03-02 | protocol | protocol-context lane-lock hardening (`ASB-RQ-094`; protocol-topic sessions must not silently fallback to instance on empty intent) | `c310ab4` | DONE | PENDING_REAUDIT |
-| FIX-035 | 2026-03-02 | protocol | run-pinned strict baseline freshness contract (`ASB-RQ-095`; avoid moving-HEAD nondeterministic strict failures) | `c310ab4` | DONE | PENDING_REAUDIT |
-| FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `c310ab4` | DONE | PENDING_REAUDIT |
+| FIX-034 | 2026-03-02 | protocol | protocol-context lane-lock hardening (`ASB-RQ-094`; protocol-topic sessions must not silently fallback to instance on empty intent) | `c310ab4` | DONE | PASS |
+| FIX-035 | 2026-03-02 | protocol | run-pinned strict baseline freshness contract (`ASB-RQ-095`; avoid moving-HEAD nondeterministic strict failures) | `c310ab4` | DONE | PASS |
+| FIX-036 | 2026-03-02 | protocol | e2e hermetic runtime import contract (`ASB-RQ-096`; no external PYTHONPATH dependency) | `c310ab4` | DONE | PASS |
 | FIX-037 | 2026-03-02 | ecosystem | skill contract execution integrity (`ASB-RQ-097`; required skill command path must exist/executable) | `DOCS_ONLY_INTAKE` | SPEC_READY | TRANSFERRED_ECOSYSTEM_TRACK |
-| FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `c310ab4` | DONE | PENDING_REAUDIT |
-| FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `83e5a03` | DONE | PENDING_REAUDIT |
-| FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `83e5a03` | DONE | PENDING_REAUDIT |
-| FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `83e5a03` | DONE | PENDING_REAUDIT |
-| FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `83e5a03` | DONE | PENDING_REAUDIT |
-| FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `c310ab4` | DONE | PENDING_REAUDIT |
-| FIX-044 | 2026-03-03 | protocol | lane-lock exit unified writer + index linkage (`ASB-RQ-104`; strict exit without newer EXIT remains fail-closed) | `62bdc1c` | DONE | PENDING_REAUDIT |
+| FIX-038 | 2026-03-02 | protocol | strict self-repair two-phase stale-baseline refresh (`ASB-RQ-098`; stale-only self-lock elimination) | `c310ab4` | DONE | PASS |
+| FIX-039 | 2026-03-02 | protocol | requiredization lane-scope hardening (`ASB-RQ-099`; prevent protocol-governance history from auto-hardening instance lane) | `83e5a03` | DONE | PASS |
+| FIX-040 | 2026-03-02 | protocol | split-receipt activity correlation hardening (`ASB-RQ-100`; strict activity must be current-round correlated) | `83e5a03` | DONE | PASS |
+| FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `83e5a03` | DONE | PASS |
+| FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `83e5a03` | DONE | PASS |
+| FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `c310ab4` | DONE | PASS |
+| FIX-044 | 2026-03-03 | protocol | lane-lock exit unified writer + index linkage (`ASB-RQ-104`; strict exit without newer EXIT remains fail-closed) | `62bdc1c` | DONE | PASS |
 | FIX-045 | 2026-03-03 | protocol | mixed-signal layer intent routing residual closure (`protocol lane` directive should positively trigger protocol lane instead of ambiguous fallback) | `7695a12` | DONE | PASS |
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
-| FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PENDING_REAUDIT |
-| FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PENDING_REAUDIT |
+| FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PASS |
+| FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PASS |
 | FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 | FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
-| FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab / ddb1529 / 6430852` | DONE | PENDING_REAUDIT |
-| FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PENDING_REAUDIT |
-| FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PENDING_REAUDIT |
-| FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PENDING_REAUDIT |
+| FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab / ddb1529 / 6430852` | DONE | PASS |
+| FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PASS |
+| FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
+| FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
+| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary de-P0 closure (`full_identity_protocol_scan` severity normalization + strict update env fallback trace) | `UNCOMMITTED` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -4960,6 +4961,102 @@ Decision boundary:
 1. `v1.5` release/tag remains blocked (`NO_GO`) until unlock formula in governance 6.5 is satisfied.
 2. `v1.6` planning/design execution can proceed in parallel, but cannot be used as evidence to waive any `v1.5` lock gate.
 3. External messaging must not claim `Full Go` for `v1.5` under current state.
+
+#### 16.8.50 Independent closure pack replay: promote pending re-audit rows to PASS (`FIX-029..032`, `FIX-034..044`, `FIX-047/048`, `FIX-051..054`) (2026-03-03, protocol scope)
+
+Status: `PASS (protocol implementation re-audit scope)` + `NO_GO (release scope, env blocker remains)`.
+
+Execution context:
+
+1. protocol-root replay + `/tmp` cross-cwd replay (where required).
+2. project catalog:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+3. target identity:
+   - `custom-creative-ecom-analyst`.
+
+Independent replay bundle (this round):
+
+1. full-scan:
+   - `/tmp/reaudit_v15_fullscan_custom_live.json`
+   - protocol validator checks pass; non-pass is environment preflight only (`capability_activation_preflight`, `IP-CAP-003`).
+2. three-plane:
+   - `/tmp/reaudit_v15_threeplane_custom_live.json`
+   - protocol planes closed for current implementation scope; instance runtime remains `IN_PROGRESS` due `IP-CAP-003`.
+3. readiness:
+   - `/tmp/reaudit_v15_release_readiness_custom_live.log` (`rc=2`, `capability_activation_error_code=IP-CAP-003`).
+4. FIX-040 correlation dual-path:
+   - uncorrelated: `/tmp/reaudit_fix040_uncorrelated.json` -> `instance_protocol_split_status=SKIPPED_NOT_REQUIRED`, `activity_correlation_status=ACTIVITY_UNSCOPED`.
+   - correlated: `/tmp/reaudit_fix040_correlated.json` -> `instance_protocol_split_status=PASS_REQUIRED`, `activity_correlation_status=CORRELATED_CURRENT_ROUND`.
+5. FIX-041 strict invalid-input fail-closed:
+   - `/tmp/reaudit_fix041_invalid_source_layer.json` -> `error_code=IP-SOURCE-LAYER-001`, `expected_source_layer_validation_status=FAIL_REQUIRED`.
+6. FIX-044 full lock lifecycle:
+   - blocked without exit: `/tmp/reaudit_fix044_instance_blocked.json` -> `error_code=IP-LAYER-GATE-007`.
+   - canonical exit writer: `/tmp/reaudit_fix044_exit_writer.json` -> `session_lane_lock_exit_status=PASS_REQUIRED`, `index_linked=true`.
+   - instance restore after exit: `/tmp/reaudit_fix044_instance_after_exit.json` -> `work_layer_gate_set_routing_status=PASS_REQUIRED`.
+7. FIX-051 CWD invariance:
+   - `/tmp/reaudit_fix051_wrb_root.json` and `/tmp/reaudit_fix051_wrb_tmp.json` both `writeback_continuity_status=PASS_REQUIRED`.
+8. FIX-052 sidecar passthrough + CWD invariance:
+   - `/tmp/reaudit_fix052_sidecar_root.json` and `/tmp/reaudit_fix052_sidecar_tmp.json` both `sidecar_contract_status=PASS_REQUIRED`.
+9. FIX-054 send-time hard gate negative replay:
+   - `/tmp/reaudit_fix054_missing_head.json` -> `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`.
+10. FIX-048 scaffold/taxonomy closure triad:
+    - neutral scaffold scan: `/tmp/reaudit_fix048_legacy_terms_scan.log` (0 matches).
+    - canonical pass: `/tmp/reaudit_fix048_runtime_canonical.log`, `/tmp/reaudit_fix048_collab_canonical.log`.
+    - legacy alias bridge pass: `/tmp/reaudit_fix048_runtime_legacy.log`, `/tmp/reaudit_fix048_collab_legacy.log`.
+    - invalid taxonomy fail-closed: `/tmp/reaudit_fix048_runtime_invalid.log`, `/tmp/reaudit_fix048_collab_invalid.log`.
+11. FIX-038 stale preflight guard:
+    - this-round strict replay: `/tmp/reaudit_fix038_identity_update_strict.log` -> `phase_a_refresh_applied=false`.
+    - retained baseline-mode-violation evidence (`IP-PBL-006`, no phase-A): `/tmp/fix046_identity_update_audit_strict.log`.
+
+Promotion decision (this section):
+
+1. Promote to `PASS` in rolling summary:
+   - `FIX-029..032`
+   - `FIX-034..044`
+   - `FIX-047`
+   - `FIX-048`
+   - `FIX-051..054`
+2. Promotion scope is protocol implementation closure only; it does not waive release lock gates.
+
+Decision boundary:
+
+1. `v1.5` release remains `NO_GO` while release-lock formula and release-plane conditions are unsatisfied (this subsection kept the then-current `IP-CAP-003` snapshot; superseded by `16.8.51` for latest capability boundary posture).
+2. This section closes independent audit for previously pending protocol fixes; remaining blocker class is environment/auth preflight, not protocol code-gap recurrence.
+
+#### 16.8.51 `IP-CAP-003` de-P0 closure sync (project scope live replay, `FIX-055`, 2026-03-03)
+
+Status: `DONE / PENDING_REAUDIT` (project-scope `IP-CAP-003` is no longer a `P0` classifier; retained as `P1` env boundary).
+
+Implementation anchors:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - capability env/auth failures now classify as `P1` when non-env hard failures are absent.
+2. `scripts/identity_creator.py`
+   - strict capability preflight now auto-fallbacks to `route-any-ready` on `IP-CAP-003` and emits phase trace:
+     - `phase_transition_reason=capability_env_auth_fallback`
+     - `phase_transition_error_code=IP-CAP-003`
+3. `scripts/release_readiness_check.py`
+   - readiness capability validator path includes strict->route-any-ready fallback for `IP-CAP-003`.
+
+Replay evidence:
+
+1. Project-only full scan:
+   - `/tmp/fix055_fullscan_project_only_live.json`
+   - `summary={"p0":0,"p1":1,"ok":0}` for target identity.
+2. Strict update fallback trace:
+   - `/tmp/fix_ipcap003_identity_update_strict_after3.log`
+   - contains strict warning + fallback + emitted phase transition fields.
+3. Three-plane current report:
+   - `/tmp/fix055_threeplane_project_live.json`
+   - `capability_activation_status=ACTIVATED`, no capability error code in selected report.
+4. Strict readiness replay:
+   - `/tmp/fix_ipcap003_release_readiness_strict_after.log`
+   - shows fallback path and capability activation recovery (remaining non-closure reason is `review_required_create_pr_from_patch_plan`, not `IP-CAP-003` as hard blocker).
+
+Decision boundary:
+
+1. `IP-CAP-003` remains visible as env/auth boundary (`P1`), but no longer drives project-scope `P0` classification.
+2. This closure does not imply release-plane closure or v1.5 unlock.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
