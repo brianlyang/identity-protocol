@@ -1619,12 +1619,19 @@ Mandatory semantics:
 1. When strict preflight fails solely due to stale baseline (`IP-PBL-001`-class) and no other P0 blockers exist:
    - phase A: run controlled baseline refresh substep,
    - phase B: re-run strict validation in same command context.
+   - phase-A entry predicate must be explicit and fail-closed:
+     - `baseline_error_code` must be in stale-baseline whitelist (`IP-PBL-001`-class only),
+     - `stale_reasons` must be non-empty and each reason must be baseline-scoped.
+   - baseline-mode violations (for example `IP-PBL-006`) must not enter phase A and must remain strict fail-closed.
 2. If non-baseline blockers coexist, command remains strict fail-closed (no hidden downgrade).
 3. Two-phase path must emit machine-readable execution trace:
    - `phase_a_refresh_applied`
    - `phase_b_strict_revalidate_status`
    - `phase_transition_reason`
    - `phase_transition_error_code`
+   - trace reason taxonomy must distinguish:
+     - `stale_baseline_only_detected`
+     - `baseline_mode_violation`
 4. Suggested error code:
    - `IP-UPG-BASE-001`: strict self-repair two-phase refresh unavailable when stale-baseline-only scenario detected.
 

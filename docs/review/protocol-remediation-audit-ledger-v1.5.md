@@ -4020,6 +4020,30 @@ Replay highlights (local):
    - evidence index currently links protocol lock + pending, but no link for `SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`.
    - script scan confirms `scripts/validate_work_layer_gate_set_routing.py` consumes `SESSION_LANE_LOCK_EXIT_*` as lock-release evidence, but no dedicated auto-exit writer surface is currently wired.
    - closure action required: runbook must explicitly define protocol round exit emission + index linkage; otherwise strict lane checks can remain in `IP-LAYER-GATE-007` blocked state.
+10. Residual validator gap (`FIX-038`, strict two-phase stale-only predicate too broad):
+   - code path: `scripts/identity_creator.py:1904`.
+   - observed replay (`/tmp/fix038_identity_update_v2.log`, `/tmp/audit_real_instance_update.log`):
+     - `baseline_error_code=IP-PBL-006`,
+     - `stale_reasons=[]`,
+     - still enters `phase_a_refresh_applied=true` and ends with `IP-UPG-BASE-001`.
+   - governance mismatch:
+     - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md:1619` requires stale-baseline (`IP-PBL-001`-class) only.
+   - required closure:
+     - add baseline error-code whitelist for phase-A entry,
+     - reject stale-only when `stale_reasons` is empty,
+     - differentiate trace reason `stale_baseline_only_detected` vs `baseline_mode_violation`.
+11. Residual routing gap (literal interception):
+   - replay evidence: `/tmp/layer_intent_issue_stamp_validate_latest.json`
+   - result: `error_code=IP-ASB-STAMP-SESSION-001`, `stale_reasons=[\"work_layer_mismatch\"]`.
+   - interpretation: literal `work_layer=instance` text can still force protocol-topic replay into instance path.
+12. Residual source-layer stability gap:
+   - replay evidence: `/tmp/layer_intent_source_project_expect_latest.json`
+   - result: `error_code=IP-ASB-STAMP-SESSION-001`, `stale_reasons=[\"source_layer_mismatch\"]`.
+   - interpretation: source-layer resolution still drifts from expected `project` in cross-repo contexts.
+13. Residual strict-update blockers still present on custom lane sample:
+   - strict update replay: `/tmp/custom_identity_update_strict_latest.log` -> `protocol_version_alignment_status=FAIL_REQUIRED`, `error_code=IP-PVA-003`.
+   - full-scan replay: `/tmp/full_scan_custom_latest.json` -> `post_execution_mandatory_status=FAIL_REQUIRED`, `error_code=IP-WRB-003`.
+   - status implication: current posture remains `PARTIAL_GO`; not eligible for “full closure” claim.
 
 Boundary:
 
