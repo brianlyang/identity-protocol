@@ -4199,6 +4199,43 @@ Architect patch expectation (next step):
    - case A: report filename numeric suffix in markdown path line -> expected non-blocking/pass.
    - case B: real secret/phone-like payload -> expected `FAIL_REQUIRED`.
 
+#### 16.8.37 Docs consistency pass: governance/review bridge alignment for FIX-029..044 (2026-03-03, docs-only)
+
+Status: `SYNCED_FOR_AUDIT_CONSISTENCY` (no code-path behavior changes).
+
+Purpose:
+
+1. Remove governance/review dual-status ambiguity for open batches `FIX-029..032` and `FIX-034..044`.
+2. Preserve scoped-pass closures for `FIX-033` and `FIX-045/046` without implying whole-batch green.
+
+Actions:
+
+1. Governance section `6.4` rows `ASB-RQ-075..089` were normalized from `GATE_READY` to
+   `IMPL_READY (BLOCKED_BY_AUDIT)` so they match review summary rows where
+   `FIX-029..032` remain `PENDING_REAUDIT`.
+2. Evidence pointers for `ASB-RQ-075..089` now explicitly reference:
+   - implementation commits: `a95f5a2`, `560f710`
+   - replay anchors: review `16.8.28` + summary rows `FIX-029..032`.
+3. No status promotion was applied to `FIX-034..044`; pending posture remains unchanged.
+
+Cross-check snapshot:
+
+1. Review summary rows:
+   - `FIX-029..032` -> `PENDING_REAUDIT`
+   - `FIX-033` -> `PASS`
+   - `FIX-034..044` -> `PENDING_REAUDIT`
+   - `FIX-045..046` -> `PASS`
+2. Governance rows:
+   - `ASB-RQ-075..089` -> `IMPL_READY (BLOCKED_BY_AUDIT)`
+   - `ASB-RQ-090..093` -> `GATE_READY` (closed by review `16.8.27`)
+   - `ASB-RQ-094..104` -> `IMPL_READY (BLOCKED_BY_AUDIT)`
+   - `ASB-RQ-105..106` -> `GATE_READY` (closed by review `16.8.35`)
+
+Boundary:
+
+1. This is a docs-only consistency closure record.
+2. It does not alter required gate behavior or release unlock calculations.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
