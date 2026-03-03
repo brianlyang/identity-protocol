@@ -71,6 +71,7 @@ def main() -> int:
     ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="standard")
     ap.add_argument("--out-reply-file", default="")
     ap.add_argument("--out-json", default="")
+    ap.add_argument("--blocker-receipt-out", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -146,6 +147,8 @@ def main() -> int:
         source_layer,
         "--json-only",
     ]
+    if str(args.blocker_receipt_out or "").strip():
+        validate_cmd += ["--blocker-receipt-out", str(args.blocker_receipt_out).strip()]
     if str(args.layer_intent_text or "").strip():
         validate_cmd += ["--layer-intent-text", str(args.layer_intent_text).strip()]
     proc = subprocess.run(validate_cmd, capture_output=True, text=True)
@@ -173,11 +176,13 @@ def main() -> int:
         "disclosure_level": disclosure_level,
         "send_time_gate_status": str(validate_payload.get("send_time_gate_status", "")),
         "send_time_error_code": str(validate_payload.get("error_code", "")),
+        "error_code": str(validate_payload.get("error_code", "")),
         "send_time_rc": proc.returncode,
         "reply_first_line_status": str(validate_payload.get("reply_first_line_status", "")),
         "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
         "reply_sample_count": validate_payload.get("reply_sample_count"),
         "reply_first_line_missing_count": validate_payload.get("reply_first_line_missing_count"),
+        "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),
         "out_reply_file": str(out_reply_path) if out_reply and out_reply_path else "",
     }
 

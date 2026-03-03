@@ -251,6 +251,7 @@ def main() -> int:
     stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
     stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
     reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-{identity_id}.json"
+    send_time_reply_file = f"/tmp/identity-send-time-reply-{identity_id}.txt"
     send_time_reply_gate_blocker_receipt = (
         f"/tmp/identity-send-time-reply-gate-blocker-receipt-{identity_id}.json"
     )
@@ -577,6 +578,23 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/compose_and_validate_governed_reply.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--body-text",
+            "READINESS_SEND_TIME_REPLY_BODY",
+            "--out-reply-file",
+            send_time_reply_file,
+            "--blocker-receipt-out",
+            send_time_reply_gate_blocker_receipt,
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_send_time_reply_gate.py",
             "--catalog",
             catalog,
@@ -584,8 +602,8 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--identity-id",
             identity_id,
-            "--stamp-json",
-            stamp_artifact,
+            "--reply-file",
+            send_time_reply_file,
             "--force-check",
             "--enforce-send-time-gate",
             "--operation",
@@ -1376,6 +1394,7 @@ def main() -> int:
             script = cmd[1]
             if script in {
                 "scripts/render_identity_response_stamp.py",
+                "scripts/compose_and_validate_governed_reply.py",
                 "scripts/validate_layer_intent_resolution.py",
                 "scripts/validate_reply_identity_context_first_line.py",
                 "scripts/validate_send_time_reply_gate.py",
@@ -1401,10 +1420,20 @@ def main() -> int:
                 "scripts/validate_protocol_inquiry_followup_chain.py",
             } and "--expected-work-layer" not in cmd:
                 cmd.extend(["--expected-work-layer", expected_work_layer])
+            if (
+                cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                and "--work-layer" not in cmd
+            ):
+                cmd.extend(["--work-layer", expected_work_layer])
     if expected_source_layer:
         for cmd in seq:
             if len(cmd) < 2:
                 continue
+            if (
+                cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                and "--source-layer" not in cmd
+            ):
+                cmd.extend(["--source-layer", expected_source_layer])
             if cmd[1] in {
                 "scripts/validate_layer_intent_resolution.py",
                 "scripts/validate_reply_identity_context_first_line.py",

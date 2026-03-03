@@ -25,6 +25,8 @@ ERR_PATH_MISMATCH = "IP-WRB-004"
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
 ALLOWED_RISK_LEVELS = {"low", "medium", "high", "critical"}
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
@@ -84,7 +86,7 @@ def _required_contract(task: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
 def _path_contract_ok(identity_id: str, catalog_path: Path, repo_catalog_path: Path, report_path: Path) -> tuple[bool, str]:
     cmd = [
         "python3",
-        "scripts/validate_identity_execution_report_path_contract.py",
+        str((SCRIPT_DIR / "validate_identity_execution_report_path_contract.py").resolve()),
         "--identity-id",
         identity_id,
         "--catalog",
@@ -95,7 +97,7 @@ def _path_contract_ok(identity_id: str, catalog_path: Path, repo_catalog_path: P
         str(report_path),
         "--json-only",
     ]
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     payload = _parse_json_payload((p.stdout or "").strip()) or {}
     status = str(payload.get("path_governance_status", "")).strip().upper()
     if p.returncode != 0 or status == "FAIL_REQUIRED":

@@ -435,6 +435,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     reply_first_line_blocker_receipt = (
         f"/tmp/identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}.json"
     )
+    send_time_reply_file = f"/tmp/identity-send-time-reply-three-plane-{args.identity_id}.txt"
     send_time_reply_gate_blocker_receipt = (
         f"/tmp/identity-send-time-reply-gate-blocker-receipt-three-plane-{args.identity_id}.json"
     )
@@ -597,6 +598,41 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_layer_intent != 0 or layer_intent_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    compose_send_time_cmd = [
+        "python3",
+        "scripts/compose_and_validate_governed_reply.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--body-text",
+        "THREE_PLANE_SEND_TIME_REPLY_BODY",
+        "--out-reply-file",
+        send_time_reply_file,
+        "--blocker-receipt-out",
+        send_time_reply_gate_blocker_receipt,
+        "--json-only",
+    ]
+    if layer_intent_text:
+        compose_send_time_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        compose_send_time_cmd.extend(["--work-layer", expected_work_layer])
+    if expected_source_layer:
+        compose_send_time_cmd.extend(["--source-layer", expected_source_layer])
+    rc_compose_send_time, out_compose_send_time, err_compose_send_time = _run(compose_send_time_cmd)
+    compose_send_time_payload = _parse_json_payload(out_compose_send_time) or {}
+    validators["compose_governed_reply_preflight"] = {
+        "rc": rc_compose_send_time,
+        "ok": rc_compose_send_time == 0,
+        "out": out_compose_send_time,
+        "err": err_compose_send_time,
+    }
+    compose_send_time_status = str(compose_send_time_payload.get("send_time_gate_status", "")).strip().upper()
+    if rc_compose_send_time != 0 or compose_send_time_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     send_time_cmd = [
         "python3",
         "scripts/validate_send_time_reply_gate.py",
@@ -606,8 +642,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         args.repo_catalog,
         "--identity-id",
         args.identity_id,
-        "--stamp-json",
-        stamp_artifact,
+        "--reply-file",
+        send_time_reply_file,
         "--force-check",
         "--enforce-send-time-gate",
         "--operation",

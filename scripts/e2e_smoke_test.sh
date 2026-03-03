@@ -302,19 +302,18 @@ for ID in $IDS; do
   echo "[12.46/30][$ID] validate reply first-line blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
-  echo "[12.465/30][$ID] build send-time reply sample (real dialogue outlet replay)"
-  python3 - <<'PY' "$STAMP_JSON" "$SEND_TIME_REPLY_FILE"
-import json
-import pathlib
-import sys
-
-stamp_json = pathlib.Path(sys.argv[1]).resolve()
-reply_file = pathlib.Path(sys.argv[2]).resolve()
-doc = json.loads(stamp_json.read_text(encoding="utf-8"))
-stamp_line = str(doc.get("external_stamp", "")).strip()
-reply_file.write_text(f"{stamp_line}\nE2E_SEND_TIME_REPLY_BODY\n", encoding="utf-8")
-print(f"[OK] send-time reply sample emitted: {reply_file}")
-PY
+  echo "[12.465/30][$ID] compose governed send-time reply sample + preflight"
+  compose_cmd=(python3 scripts/compose_and_validate_governed_reply.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --json-only)
+  if [ -n "$LAYER_INTENT_TEXT" ]; then
+    compose_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
+  fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    compose_cmd+=(--work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    compose_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
+  "${compose_cmd[@]}"
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
   send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT")

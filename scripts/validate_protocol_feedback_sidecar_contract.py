@@ -42,6 +42,8 @@ DEFAULT_CONTRACT = {
 }
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -77,7 +79,7 @@ def _extract_error_code(stdout: str, stderr: str) -> str:
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     return p.returncode, p.stdout or "", p.stderr or ""
 
 
@@ -335,10 +337,6 @@ def main() -> int:
         wb_cmd += ["--report", report]
         post_cmd += ["--report", report]
 
-    sem_result, sem_payload = _validator_payload(cmd=sem_cmd, status_key="semantic_routing_status", default_status=STATUS_FAIL_REQUIRED)
-    ns_result, ns_payload = _validator_payload(cmd=ns_cmd, status_key="vendor_namespace_status", default_status=STATUS_FAIL_REQUIRED)
-    wb_result, wb_payload = _validator_payload(cmd=wb_cmd, status_key="writeback_continuity_status", default_status=STATUS_FAIL_REQUIRED)
-    post_result, post_payload = _validator_payload(cmd=post_cmd, status_key="post_execution_mandatory_status", default_status=STATUS_FAIL_REQUIRED)
     reply_channel_cmd = [
         "python3",
         "scripts/validate_protocol_feedback_reply_channel.py",
@@ -353,6 +351,7 @@ def main() -> int:
         "--force-check",
         "--json-only",
     ]
+
     if str(args.expected_work_layer or "").strip():
         sem_cmd += ["--expected-work-layer", str(args.expected_work_layer).strip()]
         ns_cmd += ["--expected-work-layer", str(args.expected_work_layer).strip()]
@@ -377,6 +376,27 @@ def main() -> int:
     sem_cmd += ["--activity-window-hours", str(float(args.activity_window_hours or 72.0))]
     ns_cmd += ["--activity-window-hours", str(float(args.activity_window_hours or 72.0))]
     reply_channel_cmd += ["--activity-window-hours", str(float(args.activity_window_hours or 72.0))]
+
+    sem_result, sem_payload = _validator_payload(
+        cmd=sem_cmd,
+        status_key="semantic_routing_status",
+        default_status=STATUS_FAIL_REQUIRED,
+    )
+    ns_result, ns_payload = _validator_payload(
+        cmd=ns_cmd,
+        status_key="vendor_namespace_status",
+        default_status=STATUS_FAIL_REQUIRED,
+    )
+    wb_result, wb_payload = _validator_payload(
+        cmd=wb_cmd,
+        status_key="writeback_continuity_status",
+        default_status=STATUS_FAIL_REQUIRED,
+    )
+    post_result, post_payload = _validator_payload(
+        cmd=post_cmd,
+        status_key="post_execution_mandatory_status",
+        default_status=STATUS_FAIL_REQUIRED,
+    )
     reply_channel_result, reply_channel_payload = _validator_payload(
         cmd=reply_channel_cmd,
         status_key="protocol_feedback_reply_channel_status",

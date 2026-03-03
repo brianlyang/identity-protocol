@@ -353,6 +353,7 @@ def main() -> int:
             stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
             stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
             reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-scan-{iid}.json"
+            send_time_reply_file = f"/tmp/identity-send-time-reply-scan-{iid}.txt"
             send_time_reply_gate_blocker_receipt = (
                 f"/tmp/identity-send-time-reply-gate-blocker-receipt-scan-{iid}.json"
             )
@@ -577,6 +578,23 @@ def main() -> int:
                 ],
                 "send_time_reply_gate": [
                     "python3",
+                    "scripts/compose_and_validate_governed_reply.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--body-text",
+                    "SCAN_SEND_TIME_REPLY_BODY",
+                    "--out-reply-file",
+                    send_time_reply_file,
+                    "--blocker-receipt-out",
+                    send_time_reply_gate_blocker_receipt,
+                    "--json-only",
+                ],
+                "send_time_reply_gate_validate": [
+                    "python3",
                     "scripts/validate_send_time_reply_gate.py",
                     "--catalog",
                     str(catalog),
@@ -584,8 +602,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
-                    "--stamp-json",
-                    stamp_artifact,
+                    "--reply-file",
+                    send_time_reply_file,
                     "--force-check",
                     "--enforce-send-time-gate",
                     "--operation",
@@ -1009,9 +1027,10 @@ def main() -> int:
             if layer_intent_text:
                 for key in (
                     "response_stamp_render",
+                    "send_time_reply_gate",
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
-                    "send_time_reply_gate",
+                    "send_time_reply_gate_validate",
                     "execution_reply_identity_coherence",
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
@@ -1023,7 +1042,7 @@ def main() -> int:
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
-                    "send_time_reply_gate",
+                    "send_time_reply_gate_validate",
                     "execution_reply_identity_coherence",
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
@@ -1031,14 +1050,16 @@ def main() -> int:
                     "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--expected-work-layer", expected_work_layer])
+                checks["send_time_reply_gate"].extend(["--work-layer", expected_work_layer])
             if expected_source_layer:
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
-                    "send_time_reply_gate",
+                    "send_time_reply_gate_validate",
                     "execution_reply_identity_coherence",
                 ):
                     checks[key].extend(["--expected-source-layer", expected_source_layer])
+                checks["send_time_reply_gate"].extend(["--source-layer", expected_source_layer])
                 for key in (
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
