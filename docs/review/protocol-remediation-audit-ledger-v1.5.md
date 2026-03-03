@@ -163,8 +163,8 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PENDING_REAUDIT |
 | FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 | FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
-| FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
-| FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
+| FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab` | DONE | PENDING_REAUDIT |
+| FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PENDING_REAUDIT |
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `DOCS_ONLY_INTAKE` | SPEC_READY | PENDING_REPLAY |
 
 ---
@@ -4706,6 +4706,73 @@ Decision boundary:
 
 1. Protocol closure claim remains `NOT_CLOSED` for this identity replay window.
 2. This section is docs-only governance intake and does not change runtime behavior.
+
+#### 16.8.44 Implementation replay intake: custom-lane validate unblock + current-round protocol-feedback closure (`FIX-051/052`, 2026-03-03, scope-limited)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)`; implementation landed and replayed, independent re-audit still required.
+
+Commit anchor:
+
+1. `e62deab` — `fix(protocol): unblock custom validate lane and correlated feedback closure`
+
+Scope:
+
+1. Protocol repository code patch + cross-project replay intake (`fqsh` identity runtime evidence).
+2. This section updates implementation status boundaries for `FIX-051/052`; it does not alter `FIX-053`.
+
+Target blockers (from prior intake) and replay result:
+
+1. Runtime mode guard blocked `identity_creator validate` in custom catalog lane (`mode=custom`, `expected_mode_match=false`):
+   - patch: `scripts/identity_creator.py` validate flow now invokes runtime guard with `--expect-mode any`;
+   - replay: `/tmp/fix051_final_creator_validate.log` now starts with runtime mode guard `PASS`;
+   - boundary: validate command still returns `rc=1` due downstream `IP-ASB-RFS-004` (separate baseline/session-refresh gate, not mode-guard regression).
+2. Current-round correlated protocol-feedback chain failed with `IP-PFB-CH-006`:
+   - patch support + closure artifacts now include split receipt:
+     - `.../runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_20260303T082733Z_headstamp_scaffold.json`;
+   - replay:
+     - `/tmp/fix051_split_fqsh_after2.json` => `instance_protocol_split_status=PASS_REQUIRED`;
+     - `/tmp/fix051_final_reply.json` => `protocol_feedback_reply_channel_status=PASS_REQUIRED`.
+3. Sidecar strict enforcement failed with `IP-SID-001` on missing sidecar contract fields:
+   - patch: `scripts/validate_protocol_feedback_sidecar_contract.py` adds fail-closed rules for declared-required contracts and default-contract fallback only for auto-required legacy profiles;
+   - replay: `/tmp/fix051_final_sidecar.json` => `sidecar_contract_status=PASS_REQUIRED`, `error_code=""`.
+4. Writeback/post-execution CWD/cross-root report resolution drift:
+   - patch: shared report discovery helper in `scripts/tool_vendor_governance_common.py` and wiring in `validate_writeback_continuity.py` / `validate_post_execution_mandatory.py`;
+   - replay:
+     - `/tmp/fix051_reg_wrb_fqsh.json` => `writeback_continuity_status=PASS_REQUIRED`;
+     - `/tmp/fix051_reg_post_fqsh.json` => `post_execution_mandatory_status=PASS_REQUIRED`.
+5. Open-state and scaffold-disposition closure evidence gap:
+   - status closure updated:
+     - `.../TASK_HISTORY.md` (`status: closed`);
+     - `.../outbox-to-protocol/FEEDBACK_BATCH_2026-03-03-headstamp-and-scaffold-pollution.md` (`status: CLOSED`);
+   - new independent closure receipt added:
+     - `.../outbox-to-protocol/SCAFFOLD_DISPOSITION_RECEIPT_20260303T082900Z.json`;
+   - canonical linkage updated:
+     - `.../outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_2026-03-03-headstamp-scaffold.json` => `status=CLOSED`;
+     - `.../runtime/protocol-feedback/evidence-index/INDEX.md` includes split + scaffold disposition receipts.
+
+Changed files (implementation):
+
+1. `scripts/identity_creator.py`
+2. `scripts/tool_vendor_governance_common.py`
+3. `scripts/protocol_feedback_lane_common.py`
+4. `scripts/validate_writeback_continuity.py`
+5. `scripts/validate_post_execution_mandatory.py`
+6. `scripts/validate_semantic_routing_guard.py`
+7. `scripts/validate_protocol_feedback_sidecar_contract.py`
+8. `scripts/create_identity_pack.py`
+
+Static/doc contract checks:
+
+1. `python3 -m py_compile ...` (patched scripts set) => `rc=0`
+2. `bash -n scripts/e2e_smoke_test.sh` => `rc=0`
+3. `python3 scripts/docs_command_contract_check.py` => `PASS`
+4. `python3 scripts/validate_protocol_ssot_source.py` => `OK`
+
+Decision boundary:
+
+1. `FIX-051` and `FIX-052` are moved to implementation-complete status (`DONE`) with `PENDING_REAUDIT`.
+2. `FIX-053` remains `SPEC_READY / PENDING_REPLAY` (coverage normalization patch not included in `e62deab`).
+3. This intake is scope-limited and does not claim all pending remediation batches are closed.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
