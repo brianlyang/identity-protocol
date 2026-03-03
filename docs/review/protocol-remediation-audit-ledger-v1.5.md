@@ -156,6 +156,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-041 | 2026-03-02 | protocol | strict expected-source-layer input validation (`ASB-RQ-101`; no silent downgrade on invalid input) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-042 | 2026-03-02 | protocol | lane-aware required-contract coverage partitioning (`ASB-RQ-102`; split instance/protocol coverage targets) | `83e5a03` | DONE | PENDING_REAUDIT |
 | FIX-043 | 2026-03-02 | protocol | prompt-runtime state externalization (`ASB-RQ-103`; keep `IDENTITY_PROMPT.md` immutable across non-policy upgrade runs) | `c310ab4` | DONE | PENDING_REAUDIT |
+| FIX-044 | 2026-03-03 | protocol | lane-lock exit unified writer + index linkage (`ASB-RQ-104`; strict exit without newer EXIT remains fail-closed) | `62bdc1c` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -4016,7 +4017,7 @@ Replay highlights (local):
    - command replay:
      - `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml`
    - result: `rc=0`, notify policy remains `must_notify_when_human_required`; task contract retains `must_emit_receipt_in_chat=true`.
-9. Residual operational gap (runbook-level, not protocol-semantics gap):
+9. Residual operational gap (historical snapshot, superseded by FIX-044 in `16.8.34`):
    - evidence index currently links protocol lock + pending, but no link for `SESSION_LANE_LOCK_EXIT_20260303T042733Z.json`.
    - script scan confirms `scripts/validate_work_layer_gate_set_routing.py` consumes `SESSION_LANE_LOCK_EXIT_*` as lock-release evidence, but no dedicated auto-exit writer surface is currently wired.
    - closure action required: runbook must explicitly define protocol round exit emission + index linkage; otherwise strict lane checks can remain in `IP-LAYER-GATE-007` blocked state.
@@ -4049,6 +4050,65 @@ Boundary:
 
 1. This record is protocol-layer implementation replay only.
 2. Independent auditor replay still required before PASS promotion.
+
+#### 16.8.34 FIX-044 lane-lock exit unified writer + canonical index replay (2026-03-03, protocol)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay signoff.
+
+Implementation scope (`62bdc1c`):
+
+1. New unified writer entrypoint:
+   - `scripts/write_session_lane_lock_exit.py`
+   - strict write/index errors:
+     - `IP-LAYER-GATE-008` (EXIT write failed)
+     - `IP-LAYER-GATE-009` (EXIT index linkage missing)
+2. Creator update automation switch:
+   - `scripts/identity_creator.py update --release-session-lane-lock --session-lane-lock-exit-reason <reason>`
+3. Lane-routing telemetry enhancement:
+   - `scripts/validate_work_layer_gate_set_routing.py` now emits `session_lane_lock_exit_receipt`.
+4. Scan/report visibility wiring:
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+
+Replay highlights (local, DoD A/B/C/D):
+
+1. Sample A (`instance lane + protocol diff`):
+   - command:
+     `python3 scripts/validate_work_layer_gate_set_routing.py ... --feedback-root /tmp/fix044_lane_A --expected-work-layer instance --base 83e5a03 --head c310ab4 --json-only`
+   - evidence:
+     - `/tmp/fix044_outputs/A_instance_pending.json`
+   - result:
+     - `rc=0`
+     - `work_layer_gate_set_routing_status=PASS_REQUIRED`
+     - `applied_gate_set=instance_required_checks`
+     - `protocol_feedback_triggered=true`
+     - `pending_receipt_path=.../LAYER_GATE_PROTOCOL_PENDING_*.json`
+2. Sample B (`protocol lane + missing closure roots`):
+   - evidence:
+     - `/tmp/fix044_outputs/B_protocol_missing_closure.json`
+   - result:
+     - `rc=1`
+     - `error_code=IP-LAYER-GATE-004`
+3. Sample C (`protocol lock exists + no EXIT`):
+   - evidence:
+     - lock seed: `/tmp/fix044_outputs/C0_protocol_lock_seed.json`
+     - blocked instance: `/tmp/fix044_outputs/C1_instance_blocked_no_exit.json`
+   - result:
+     - blocked replay `rc=1`
+     - `error_code=IP-LAYER-GATE-007`
+4. Sample D (`emit EXIT + index linkage + return instance`):
+   - evidence:
+     - writer output: `/tmp/fix044_outputs/D0_exit_writer.json`
+     - post-exit instance replay: `/tmp/fix044_outputs/D1_instance_after_exit.json`
+     - canonical index hit: `/tmp/fix044_lane_C/evidence-index/INDEX.md` contains `SESSION_LANE_LOCK_EXIT_*.json`
+   - result:
+     - writer `rc=0`, `session_lane_lock_exit_status=PASS_REQUIRED`, `index_linked=true`
+     - post-exit replay `rc=0`, `work_layer_gate_set_routing_status=PASS_REQUIRED`
+
+Boundary:
+
+1. This record closes the runbook/automation gap for lane-lock EXIT emission and canonical index linkage.
+2. Final PASS promotion still requires independent auditor replay.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 

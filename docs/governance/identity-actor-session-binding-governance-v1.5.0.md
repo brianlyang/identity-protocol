@@ -1531,8 +1531,10 @@ Mandatory semantics:
    - explicit exit receipt must be archived under canonical protocol-feedback channel and indexed:
      - `runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_*.json`
      - `runtime/protocol-feedback/evidence-index/INDEX.md`
+   - unified exit writer entrypoint:
+     - `python3 scripts/write_session_lane_lock_exit.py --identity-id <id> --catalog <catalog> --repo-catalog identity/catalog/identities.yaml --operation update --source-layer <global|project|env|auto> --exit-reason <reason> --json-only`
    - if a newer exit receipt is not present, strict instance-lane operations remain blocked by `IP-LAYER-GATE-007`.
-   - if auto exit writer is unavailable in current implementation, runbook must define operator-driven exit emission as mandatory closure action before returning to instance lane.
+   - creator update path must provide deterministic automation switch for exit emission (`--release-session-lane-lock`) before strict lane re-entry validation.
 4. Required telemetry fields:
    - `protocol_context_detected`
    - `session_lane_lock`
@@ -1746,6 +1748,32 @@ Mandatory semantics:
    - `prompt_runtime_state_binding_status`
 5. Suggested error code:
    - `IP-PROMPT-STATE-001`: mutable runtime lifecycle state embedded in prompt policy file under strict lifecycle governance.
+
+#### 5.8.31 `session_lane_lock_exit_writer_contract_v1` (P0, FIX-044)
+
+Goal:
+
+1. Provide a deterministic, auditable, machine-executable exit path for protocol lane locks.
+2. Remove closure ambiguity where lock-exit semantics are documented but no unified writer entrypoint exists.
+
+Mandatory semantics:
+
+1. Exit writer must emit canonical receipt in protocol-feedback outbox:
+   - `runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_*.json`
+2. Exit writer must enforce evidence-index linkage in canonical index:
+   - `runtime/protocol-feedback/evidence-index/INDEX.md`
+3. Exit writer payload must include:
+   - `identity_id`
+   - `actor_id`
+   - `from_lock_receipt_ref`
+   - `source_layer`
+   - `exit_reason`
+   - `generated_at`
+4. Strict lane behavior remains fail-closed:
+   - protocol lock present + no newer EXIT => strict instance lane blocked by `IP-LAYER-GATE-007`.
+   - EXIT write failure / index linkage failure => `IP-LAYER-GATE-008/009` fail-closed in strict operations.
+5. Update orchestration must expose an automation switch for deterministic exit emission:
+   - `identity_creator.py update --release-session-lane-lock`.
 
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
@@ -2283,6 +2311,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-101 | invalid `expected-source-layer` input must not be silently downgraded in strict operations; caller intent must remain auditable | stamp/common resolver + first-line/send-time validators source-layer input validator | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-041` (`83e5a03`) with strict invalid-input fail-closed (`IP-SOURCE-LAYER-001`) + downgrade telemetry; replay closure pending in review `16.8.32` |
 | ASB-RQ-102 | required-contract coverage aggregator must be lane-aware (`instance_targets/protocol_targets`) and avoid protocol-governance hard-fails in pure instance lane without current-round protocol linkage | `validate_required_contract_coverage.py` lane partition policy + orchestration mapping | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-042` (`83e5a03`) with lane target partition + protocol-target inclusion/blocking telemetry; replay closure pending in review `16.8.32` |
 | ASB-RQ-103 | runtime lifecycle state must be externalized from `IDENTITY_PROMPT.md`; prompt policy text remains immutable across non-policy upgrade runs | `execute_identity_upgrade.py` prompt-state writer split + prompt lifecycle validator/state artifact binder + readiness/scan telemetry surfaces | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | `FIX-043` landed in `c310ab4` with runtime state artifact (`runtime/state/prompt_contract.json`) and lifecycle validator externalization binding checks; independent replay closure pending in review `16.8.33` |
+| ASB-RQ-104 | protocol lane lock exit must have a unified writer entrypoint with canonical outbox + index linkage; strict lane exit without newer EXIT remains fail-closed | `write_session_lane_lock_exit.py` + `identity_creator.py update --release-session-lane-lock` + lane-routing exit telemetry surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | `FIX-044` landed in `62bdc1c` with canonical EXIT writer (`IP-LAYER-GATE-008/009`) and creator automation switch; independent replay closure pending in review `16.8.34` |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2327,6 +2356,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-099 / ASB-RQ-100 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-039..040` implementation landed (`83e5a03`) with lane-scope requiredization + correlation-aware split activity gating; independent replay closure pending in review `16.8.32` |
 | ASB-RQ-101 / ASB-RQ-102 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-041..042` implementation landed (`83e5a03`) with strict invalid source-layer validation + lane-aware coverage partition; independent replay closure pending in review `16.8.32` |
 | ASB-RQ-103 | `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-043` landed in `c310ab4` with runtime prompt-state externalization and lifecycle binding validator updates; independent replay closure pending in review `16.8.33` |
+| ASB-RQ-104 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-044` landed in `62bdc1c` with canonical lane-lock EXIT writer + index linkage and creator automation switch (`--release-session-lane-lock`); independent replay closure pending in review `16.8.34` |
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
