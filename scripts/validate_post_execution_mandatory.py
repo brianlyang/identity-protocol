@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from tool_vendor_governance_common import latest_identity_upgrade_report, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -66,28 +66,11 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _latest_report(identity_id: str, pack_path: Path) -> Path | None:
-    roots = [(pack_path / "runtime" / "reports").resolve(), (pack_path / "runtime").resolve()]
-    rows: list[Path] = []
-    for root in roots:
-        if not root.exists():
-            continue
-        rows.extend(
-            p
-            for p in root.glob(f"**/identity-upgrade-exec-{identity_id}-*.json")
-            if not p.name.endswith("-patch-plan.json")
-        )
-    if not rows:
-        return None
-    rows.sort(key=lambda p: p.stat().st_mtime)
-    return rows[-1]
-
-
 def _resolve_report(identity_id: str, pack_path: Path, explicit: str) -> Path | None:
     if explicit.strip():
         p = Path(explicit).expanduser().resolve()
         return p if p.exists() else None
-    return _latest_report(identity_id, pack_path)
+    return latest_identity_upgrade_report(identity_id, pack_path)
 
 
 def _run_experience_writeback_validator(

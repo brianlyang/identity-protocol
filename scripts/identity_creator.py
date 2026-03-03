@@ -76,7 +76,13 @@ def _emit_two_phase_trace(
     print(json.dumps(payload, ensure_ascii=False))
 
 
-def _runtime_mode_guard(identity_id: str, catalog: str, repo_catalog: str, scope: str = "") -> int:
+def _runtime_mode_guard(
+    identity_id: str,
+    catalog: str,
+    repo_catalog: str,
+    scope: str = "",
+    expect_mode: str = "auto",
+) -> int:
     cmd = [
         "python3",
         "scripts/validate_identity_runtime_mode_guard.py",
@@ -87,7 +93,7 @@ def _runtime_mode_guard(identity_id: str, catalog: str, repo_catalog: str, scope
         "--repo-catalog",
         repo_catalog,
         "--expect-mode",
-        "auto",
+        str(expect_mode or "auto"),
     ]
     if scope.strip():
         cmd.extend(["--scope", scope.strip()])
@@ -1062,7 +1068,13 @@ def main() -> int:
 
     if args.command == "validate":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
-        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+        rc_guard = _runtime_mode_guard(
+            args.identity_id,
+            args.catalog,
+            args.repo_catalog,
+            args.scope,
+            expect_mode="any",
+        )
         if rc_guard != 0:
             return rc_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)

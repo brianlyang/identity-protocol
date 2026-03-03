@@ -348,11 +348,52 @@ def _vendor_api_solution_contract_skeleton(identity_id: str) -> dict:
     }
 
 
+def _semantic_routing_guard_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "feedback_batch_path_pattern": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
+        "required_fields": ["intent_domain", "intent_confidence", "classifier_reason"],
+        "domain_enum": ["protocol_vendor", "business_partner", "mixed", "unknown"],
+        "enforcement_validator": "scripts/validate_semantic_routing_guard.py",
+    }
+
+
+def _instance_protocol_split_receipt_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "receipt_path_pattern": "runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_*.json",
+        "enforcement_validator": "scripts/validate_instance_protocol_split_receipt.py",
+    }
+
+
+def _protocol_feedback_reply_channel_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "primary_outbox_glob": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
+        "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
+        "enforcement_validator": "scripts/validate_protocol_feedback_reply_channel.py",
+    }
+
+
+def _protocol_feedback_sidecar_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "default_mode": "non_blocking",
+        "blocking_error_prefixes": ["IP-WRB-", "IP-SEM-", "IP-PFB-"],
+        "escalation_policy": "p0_governance_boundary",
+        "enforcement_validator": "scripts/validate_protocol_feedback_sidecar_contract.py",
+    }
+
+
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
+        "semantic_routing_guard_contract_v1": _semantic_routing_guard_contract_skeleton(),
+        "instance_protocol_split_receipt_contract_v1": _instance_protocol_split_receipt_contract_skeleton(),
+        "protocol_feedback_canonical_reply_channel_contract_v1": _protocol_feedback_reply_channel_contract_skeleton(),
+        "protocol_feedback_sidecar_contract_v1": _protocol_feedback_sidecar_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)

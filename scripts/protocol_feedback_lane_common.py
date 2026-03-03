@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from tool_vendor_governance_common import latest_identity_upgrade_report
 
 def _safe_json(path: Path) -> dict[str, Any]:
     try:
@@ -16,9 +17,7 @@ def _safe_json(path: Path) -> dict[str, Any]:
 
 
 def discover_default_correlation_keys(pack_root: Path) -> dict[str, Any]:
-    reports_dir = (pack_root / "runtime" / "reports").resolve()
-    report_files = sorted(reports_dir.glob("identity-upgrade-exec-*.json"), key=lambda p: p.stat().st_mtime) if reports_dir.exists() else []
-    latest = report_files[-1] if report_files else None
+    latest = latest_identity_upgrade_report("*", pack_root)
     keys: set[str] = set()
     latest_run_id = ""
     if latest and latest.exists():
@@ -204,4 +203,3 @@ def decide_requiredization_scope(
         "requiredization_scope_decision": "AUTO_REQUIRED_BLOCKED",
         "requiredization_scope_reason": "history_only_without_current_round_linkage",
     }
-

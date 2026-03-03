@@ -36,6 +36,13 @@ REQ_CONTRACT_KEYS = (
 )
 DEFAULT_REQUIRED_FIELDS = ("intent_domain", "intent_confidence", "classifier_reason")
 DEFAULT_DOMAIN_ENUM = ("protocol_vendor", "business_partner", "mixed", "unknown")
+DEFAULT_CONTRACT = {
+    "required": False,
+    "feedback_batch_path_pattern": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
+    "required_fields": list(DEFAULT_REQUIRED_FIELDS),
+    "enforcement_validator": "scripts/validate_semantic_routing_guard.py",
+    "domain_enum": list(DEFAULT_DOMAIN_ENUM),
+}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -228,6 +235,8 @@ def main() -> int:
         "intent_confidence": None,
         "classifier_reason": "",
         "legacy_namespace_refs": [],
+        "contract_defaults_applied": False,
+        "contract_missing_fields": [],
         "stale_reasons": [],
     }
 
@@ -240,12 +249,18 @@ def main() -> int:
         return 0
 
     missing_contract = [k for k in REQ_CONTRACT_KEYS if k not in contract]
+    payload["contract_missing_fields"] = missing_contract
     if missing_contract:
-        payload["semantic_routing_status"] = STATUS_FAIL_REQUIRED
-        payload["error_code"] = ERR_MISSING_CLASSIFICATION
-        payload["stale_reasons"] = [f"contract_missing_fields:{','.join(missing_contract)}"]
-        _emit(payload, json_only=args.json_only)
-        return 1
+        if required_declared:
+            payload["semantic_routing_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_MISSING_CLASSIFICATION
+            payload["stale_reasons"] = [f"contract_missing_fields:{','.join(missing_contract)}"]
+            _emit(payload, json_only=args.json_only)
+            return 1
+        merged = dict(DEFAULT_CONTRACT)
+        merged.update(contract)
+        contract = merged
+        payload["contract_defaults_applied"] = True
 
     batch_path: Path | None = None
     if args.feedback_batch.strip():

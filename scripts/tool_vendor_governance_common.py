@@ -74,6 +74,52 @@ def resolve_report_path(
     return hits[-1]
 
 
+def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
+    roots: list[Path] = []
+    seen: set[str] = set()
+
+    def _push(p: Path) -> None:
+        key = p.as_posix()
+        if key in seen:
+            return
+        seen.add(key)
+        roots.append(p)
+
+    pack_resolved = pack_root.resolve()
+    _push((pack_resolved / "runtime" / "reports").resolve())
+    _push((pack_resolved / "runtime").resolve())
+    # Cross-repo custom catalog support:
+    # identity pack often lives at <project>/.agents/identity/<id>, while reports are in <project>/resource/reports.
+    for parent in [pack_resolved, *pack_resolved.parents]:
+        candidate = (parent / "resource" / "reports").resolve()
+        _push(candidate)
+        if candidate.exists():
+            # Keep scan bounded once we hit the nearest project reports root.
+            break
+    return roots
+
+
+def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | None:
+    rows: list[Path] = []
+    normalized = str(identity_id or "").strip()
+    if normalized in {"", "*"}:
+        pattern = "**/identity-upgrade-exec-*.json"
+    else:
+        pattern = f"**/identity-upgrade-exec-{normalized}-*.json"
+    for root in _candidate_upgrade_report_roots(pack_root):
+        if not root.exists():
+            continue
+        rows.extend(
+            p
+            for p in root.glob(pattern)
+            if p.is_file() and not p.name.endswith("-patch-plan.json")
+        )
+    if not rows:
+        return None
+    rows.sort(key=lambda p: p.stat().st_mtime)
+    return rows[-1]
+
+
 def boolish(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -102,4 +148,3 @@ def nonempty(value: Any) -> bool:
 
 def contract_required(contract: dict[str, Any]) -> bool:
     return boolish(contract.get("required", False))
-

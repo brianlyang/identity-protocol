@@ -34,6 +34,12 @@ REQ_CONTRACT_KEYS = (
     "escalation_policy",
 )
 DEFAULT_BLOCKING_PREFIXES = ("IP-WRB-", "IP-SEM-", "IP-PFB-")
+DEFAULT_CONTRACT = {
+    "required": False,
+    "default_mode": "non_blocking",
+    "blocking_error_prefixes": list(DEFAULT_BLOCKING_PREFIXES),
+    "escalation_policy": "p0_governance_boundary",
+}
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 
@@ -231,6 +237,8 @@ def main() -> int:
         "p0_violations": [],
         "track_a": {},
         "track_b": {},
+        "contract_defaults_applied": False,
+        "contract_missing_fields": [],
         "stale_reasons": [],
     }
 
@@ -243,12 +251,18 @@ def main() -> int:
         return 0
 
     missing_contract = [k for k in REQ_CONTRACT_KEYS if k not in contract]
+    payload["contract_missing_fields"] = missing_contract
     if missing_contract:
-        payload["sidecar_contract_status"] = STATUS_FAIL_REQUIRED
-        payload["sidecar_error_code"] = ERR_CONTRACT_MISSING_FIELDS
-        payload["stale_reasons"] = [f"contract_missing_fields:{','.join(missing_contract)}"]
-        _emit(payload, json_only=args.json_only)
-        return 1
+        if required_declared:
+            payload["sidecar_contract_status"] = STATUS_FAIL_REQUIRED
+            payload["sidecar_error_code"] = ERR_CONTRACT_MISSING_FIELDS
+            payload["stale_reasons"] = [f"contract_missing_fields:{','.join(missing_contract)}"]
+            _emit(payload, json_only=args.json_only)
+            return 1
+        merged = dict(DEFAULT_CONTRACT)
+        merged.update(contract)
+        contract = merged
+        payload["contract_defaults_applied"] = True
 
     default_mode = str(contract.get("default_mode", "non_blocking")).strip().lower() or "non_blocking"
     if default_mode != "non_blocking":
