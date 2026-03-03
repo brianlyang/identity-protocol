@@ -47,6 +47,15 @@ EXEMPT_DOMAIN_TERMS = {
     "intent_domain_after",
 }
 
+CONTACT_CONTEXT_PATTERN = re.compile(
+    r"(?i)(phone|mobile|tel|contact|whatsapp|wechat|手机号|电话|联系方式|联系电话|联系号码)"
+)
+PATH_LIKE_CONTEXT_PATTERN = re.compile(
+    r"(?i)(/|\\|\.json\b|\.md\b|\.ya?ml\b|\.log\b|\.txt\b|\.csv\b|"
+    r"runtime/protocol-feedback|outbox-to-protocol|evidence-index|upgrade-proposals|"
+    r"feedback_batch|identity-upgrade-exec|index\.md)"
+)
+
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -125,6 +134,39 @@ def _contains_exempt_term(text: str) -> bool:
     return any(term in low for term in EXEMPT_DOMAIN_TERMS)
 
 
+def _is_phone_like_pattern(pat: re.Pattern[str]) -> bool:
+    try:
+        return bool(pat.search("13800138000"))
+    except Exception:
+        return False
+
+
+def _looks_like_path_context(text: str) -> bool:
+    raw = str(text or "").strip()
+    if not raw:
+        return False
+    low = raw.lower()
+    if raw.startswith(("/", "./", "../", "~")) and ("/" in raw or "\\" in raw):
+        return True
+    if re.search(r"(?:/|\\).+\.(?:md|json|ya?ml|log|txt|csv|pdf)\b", raw, flags=re.IGNORECASE):
+        return True
+    if ("path:" in low or "report" in low or "evidence" in low) and PATH_LIKE_CONTEXT_PATTERN.search(raw):
+        return True
+    return bool(PATH_LIKE_CONTEXT_PATTERN.search(raw))
+
+
+def _has_contact_context(text: str) -> bool:
+    return bool(CONTACT_CONTEXT_PATTERN.search(str(text or "")))
+
+
+def _should_exempt_phone_like_hit(pat: re.Pattern[str], text: str) -> bool:
+    if not _is_phone_like_pattern(pat):
+        return False
+    if not _looks_like_path_context(text):
+        return False
+    return not _has_contact_context(text)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate protocol data sanitization boundary for closure payloads.")
     ap.add_argument("--catalog", required=True)
@@ -169,6 +211,8 @@ def main() -> int:
         "feedback_batch_path": "",
         "forbidden_key_hits": [],
         "sensitive_pattern_hits": [],
+        "phone_like_path_exempt_count": 0,
+        "phone_like_path_exempt_samples": [],
         "violation_count": 0,
         "stale_reasons": [],
     }
@@ -224,6 +268,7 @@ def main() -> int:
 
     forbidden_key_hits: list[dict[str, Any]] = []
     sensitive_hits: list[dict[str, Any]] = []
+    phone_like_path_exemptions: list[dict[str, Any]] = []
 
     if parsed:
         for ppath, key, val in _walk_json(parsed):
@@ -251,6 +296,17 @@ def main() -> int:
             # sensitive constants leak
             for pat in sensitive_patterns:
                 if pat.search(sval):
+                    if _should_exempt_phone_like_hit(pat, sval):
+                        phone_like_path_exemptions.append(
+                            {
+                                "path": f"{ppath}.{key}",
+                                "key": key,
+                                "value_preview": sval[:120],
+                                "pattern": pat.pattern,
+                                "exemption_reason": "phone_like_in_path_context",
+                            }
+                        )
+                        continue
                     sensitive_hits.append(
                         {
                             "path": f"{ppath}.{key}",
@@ -271,6 +327,17 @@ def main() -> int:
             continue
         for pat in sensitive_patterns:
             if pat.search(l):
+                if _should_exempt_phone_like_hit(pat, l):
+                    phone_like_path_exemptions.append(
+                        {
+                            "path": f"line:{idx}",
+                            "key": "",
+                            "value_preview": l[:120],
+                            "pattern": pat.pattern,
+                            "exemption_reason": "phone_like_in_path_context",
+                        }
+                    )
+                    continue
                 sensitive_hits.append(
                     {
                         "path": f"line:{idx}",
@@ -295,6 +362,7 @@ def main() -> int:
 
     forbidden_key_hits = _dedupe(forbidden_key_hits)
     sensitive_hits = _dedupe(sensitive_hits)
+    phone_like_path_exemptions = _dedupe(phone_like_path_exemptions)
 
     stale_reasons: list[str] = []
     error_code = ""
@@ -308,6 +376,8 @@ def main() -> int:
 
     payload["forbidden_key_hits"] = forbidden_key_hits[:30]
     payload["sensitive_pattern_hits"] = sensitive_hits[:30]
+    payload["phone_like_path_exempt_count"] = len(phone_like_path_exemptions)
+    payload["phone_like_path_exempt_samples"] = phone_like_path_exemptions[:20]
     payload["violation_count"] = len(forbidden_key_hits) + len(sensitive_hits)
 
     if stale_reasons:
