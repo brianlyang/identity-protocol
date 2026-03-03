@@ -133,14 +133,14 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-018 | 2026-03-01 | protocol | baseline policy stratification hardening (`P0-B`: strict-by-default for release/mutation paths) | `b0c1483` | DONE | PASS |
 | FIX-019 | 2026-03-01 | protocol | protocol version alignment contract unified validator + six-surface wiring (`P0-C`, ASB-RQ-043) | `3c259da` | DONE | PASS |
 | FIX-020 | 2026-03-01 | protocol | lock-bound response stamp/session gate for strict operations (`IP-ASB-STAMP-005`) | `483e368` | DONE | PASS |
-| FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering + tail-appended `Layer-Context` (`work_layer/source_layer`) to keep tuple/layer coherence deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PENDING_REPLAY |
-| FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PENDING_REPLAY |
-| FIX-023 | 2026-03-01 | protocol | layer-tail hard-gate requiredization (`work_layer/source_layer` machine-readable, fail-closed in strict lanes) | `8a97afc` | DONE | PENDING_REPLAY |
-| FIX-024 | 2026-03-01 | protocol | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan machine-readable telemetry (`IP-ASB-STAMP-SESSION-001`) | `b1cbe1f` | DONE | PENDING_REPLAY |
-| FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PENDING_REPLAY |
-| FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PENDING_REPLAY |
-| FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PENDING_REPLAY |
-| FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `UNCOMMITTED` | DONE | PENDING_REPLAY |
+| FIX-022 | 2026-03-01 | protocol | strict gate stamp rendering + tail-appended `Layer-Context` (`work_layer/source_layer`) to keep tuple/layer coherence deterministic (`HOTFIX-P0-010`) | `81f61f6` | DONE | PASS |
+| FIX-021 | 2026-03-01 | protocol | execution/reply identity tuple coherence gate + strict fail-closed semantics (`IP-ASB-CTX-001..003`) | `81f61f6 / 2c8348d` | DONE | PASS |
+| FIX-023 | 2026-03-01 | protocol | layer-tail hard-gate requiredization (`work_layer/source_layer` machine-readable, fail-closed in strict lanes) | `8a97afc` | DONE | PASS |
+| FIX-024 | 2026-03-01 | protocol | send-time unified reply outlet gate + real dialogue replay path + three-plane/full-scan machine-readable telemetry (`IP-ASB-STAMP-SESSION-001`) | `b1cbe1f` | DONE | PASS |
+| FIX-025 | 2026-03-01 | protocol | layer-intent auto-resolution (instance/protocol/dual) + confidence/fallback telemetry + strict tuple compatibility gate | `a735868` | DONE | PASS |
+| FIX-026 | 2026-03-01 | protocol | layer-intent pass-through closure across send-time/readiness/e2e/full-scan/three-plane/creator (expected-layer + intent propagation) | `0c4cea7` | DONE | PASS |
+| FIX-027 | 2026-03-01 | protocol | default work layer switches to `instance`; protocol escalation requires auditable trigger; regression gate covers instance/protocol/ambiguous intents | `e84459d` | DONE | PASS |
+| FIX-028 | 2026-03-02 | protocol | same-actor multi-session binding overwrite closure implementation (`ASB-RQ-071..074`: multibinding schema + CAS + six-surface gate wiring) | `48e5445` | DONE | PASS |
 | FIX-029 | 2026-03-02 | protocol | protocol-feedback canonical reply-channel hard gate + sidecar `IP-PFB-*` blocking + split-receipt requiredization bridge (`ASB-RQ-075..078`) | `a95f5a2 / 560f710` | DONE | PASS |
 | FIX-030 | 2026-03-02 | protocol | protocol-layer entry bootstrap-readiness hardening (`ASB-RQ-079..081`; trigger-to-feedback forced path chain + anti-deadlock deterministic bootstrap constructor) | `a95f5a2 / 560f710` | DONE | PASS |
 | FIX-031 | 2026-03-02 | protocol | protocol-entry candidate clarification bridge (`ASB-RQ-082..085`; weak-signal anti-deadlock + canonical candidate-seed feedback chain) | `a95f5a2 / 560f710` | DONE | PASS |
@@ -5082,6 +5082,58 @@ Decision boundary:
 
 1. This closure is classification/output closure for project-scope scan path; it does not alter release-lock formula or release-plane prerequisites.
 2. Env/auth boundary remains auditable via capability fallback telemetry rather than `P1` summary classification.
+
+#### 16.8.53 Targeted independent replay closure (`FIX-021..028`) + pending boundary recheck (`FIX-049/050/055`) (2026-03-03)
+
+Status: `DONE / PARTIAL_PROMOTION` (eight pending replay items promoted to `PASS`; three items remain pending by hard evidence).
+
+Scope and replay bundle (this round):
+
+1. Stamp/coherence/send-time strict replay (`FIX-021/022/023/024`):
+   - `/tmp/reaudit2_fix021_coherence_pass.json` -> `coherence_status=PASS_REQUIRED`
+   - `/tmp/reaudit2_fix021_coherence_fail.json` -> `coherence_status=FAIL_REQUIRED`, `error_code=IP-ASB-CTX-001`
+   - `/tmp/reaudit2_fix021_coherence_scan_warn.json` -> `coherence_status=WARN_NON_BLOCKING`
+   - `/tmp/reaudit2_fix022_validate_stamp.json` -> `stamp_status=PASS`, `disclosure_level=standard`
+   - `/tmp/reaudit2_fix022_trigger_session_project.json` + `/tmp/reaudit2_fix022_followup_project.json` -> session disclosure profile persisted (`trigger_session -> session_state`)
+   - `/tmp/reaudit2_fix023_firstline_pass.json` -> `PASS_REQUIRED`
+   - `/tmp/reaudit2_fix023_firstline_fail.json` -> `FAIL_REQUIRED`, `IP-ASB-STAMP-SESSION-001`
+   - `/tmp/reaudit2_fix024_sendtime_pass.json` -> `send_time_gate_status=PASS_REQUIRED`
+   - `/tmp/reaudit2_fix024_sendtime_fail.json` -> `send_time_gate_status=FAIL_REQUIRED`, `IP-ASB-STAMP-SESSION-001`
+2. Layer-intent strict replay (`FIX-025/027`):
+   - `/tmp/reaudit2_fix025_instance_v2.json` -> `resolved_work_layer=instance`, `PASS_REQUIRED`
+   - `/tmp/reaudit2_fix025_protocol_v2.json` -> `resolved_work_layer=protocol`, `protocol_triggered=true`, `PASS_REQUIRED`
+   - `/tmp/reaudit2_fix025_negative_mismatch.json` -> strict mismatch `FAIL_REQUIRED`
+   - `/tmp/reaudit2_fix027_default_v2.json` -> default `instance`, regression samples `PASS_REQUIRED`
+   - `/tmp/reaudit2_fix027_protocol_trigger_v2.json` -> protocol trigger path `PASS_REQUIRED`
+3. Layer-intent pass-through cross-surface check (`FIX-026`):
+   - `/tmp/reaudit2_fix026_sendtime_infer.json` -> expected/resolved tuple inference `PASS_REQUIRED`
+   - `/tmp/reaudit2_fix026_fullscan.json` -> `layer_intent_resolution_status=PASS_REQUIRED`
+   - `/tmp/reaudit2_fix026_threeplane.json` -> stamp plane includes `layer_intent_resolution_status=PASS_REQUIRED`, `send_time_gate_status=PASS_REQUIRED`, `reply_coherence_status=PASS_REQUIRED`
+4. Multibinding concurrency replay (`FIX-028`):
+   - `/tmp/reaudit2_fix028_positive.json` -> `actor_session_multibinding_status=PASS_REQUIRED`
+   - `/tmp/reaudit2_fix028_mb001.json` -> `FAIL_REQUIRED`, `error_code=IP-ASB-MB-001`
+   - `/tmp/reaudit2_fix028_mb003.json` -> `FAIL_REQUIRED`, `error_code=IP-ASB-MB-003`
+
+Promotion decision (this section):
+
+1. Promote to `PASS` in summary:
+   - `FIX-021`
+   - `FIX-022`
+   - `FIX-023`
+   - `FIX-024`
+   - `FIX-025`
+   - `FIX-026`
+   - `FIX-027`
+   - `FIX-028` (commit backfilled to `48e5445`)
+2. Keep pending:
+   - `FIX-049` (`PENDING_REPLAY`): synthetic evidence path still passes strict gate (`/tmp/reaudit2_fix049_synthetic_check.json`, `reply_evidence_mode=stamp_json_composed_reply`)
+   - `FIX-050` (`PENDING_REPLAY`): implementation markers not present in `scripts/` (`header_first_gate_status`, `scaffold_consent_gate_status`, `mutation_plan_disclosed`, `IP-ASB-STAMP-SESSION-002`)
+   - `FIX-055` (`PENDING_REAUDIT`): latest project-only full scan remains `p0=1` with `capability_activation_report` failure (`/tmp/reaudit2_fix055_fullscan_project_only_after_update.json`)
+
+Decision boundary:
+
+1. This section supersedes `PENDING_REPLAY` wording in historical implementation lanes for `FIX-021..028`.
+2. `v1.5` release status remains `NO_GO`; this promotion is protocol re-audit closure only and does not waive release-plane gates.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
