@@ -161,13 +161,13 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-046 | 2026-03-03 | protocol | strict stale-preflight trace observability hardening (`baseline_mode_violation` trace + error-code emission) | `dc9c2e3` | DONE | PASS |
 | FIX-047 | 2026-03-03 | protocol | data-sanitization false-positive hardening for phone-like regex in path-context markdown lines (`ASB-RQ-046`; keep real sensitive values fail-closed) | `d50b3a9` | DONE | PASS |
 | FIX-048 | 2026-03-03 | protocol | scaffold domain-neutralization + blocker taxonomy decoupling (`ASB-RQ-107/108`; remove legacy business-domain leakage from pack bootstrap while preserving compatibility migration) | `f5c97b3 / 49212d2` | DONE | PASS |
-| FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `f5363e5` | DONE | PENDING_REAUDIT |
-| FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `f5363e5` | DONE | PENDING_REAUDIT |
+| FIX-049 | 2026-03-03 | protocol | live reply first-line hard-gate evidence-source closure (`ASB-RQ-109`; forbid stamp-only synthetic evidence from satisfying send-time gate in strict lanes) | `f5363e5` | DONE | PASS |
+| FIX-050 | 2026-03-03 | protocol | initialization execution-order hardening (`ASB-RQ-110`; enforce header-first + scaffold-consent before first mutation and require mutation-plan disclosure) | `f5363e5` | DONE | PASS |
 | FIX-051 | 2026-03-03 | protocol | post-execution writeback CWD-invariant closure (`ASB-RQ-111`; canonicalize report-relative writeback paths + CWD-invariant validator invocation chain for `IP-WRB-003`) | `e62deab / ddb1529 / 6430852` | DONE | PASS |
 | FIX-052 | 2026-03-03 | protocol | semantic feedback metadata closure (`ASB-RQ-112`; required `intent_domain/intent_confidence/classifier_reason` in closure batches for strict protocol lane to eliminate `IP-SEM-001`) | `e62deab` | DONE | PASS |
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
-| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PENDING_REAUDIT |
+| FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
 
 ---
 
@@ -5186,6 +5186,38 @@ Decision boundary:
 1. `FIX-049/050` are now implementation-complete (`DONE`) but remain `PENDING_REAUDIT` until independent replay promotion.
 2. `FIX-055` follow-up in this commit closes scan-path capability-report overreach; overall project replay can still be `P0` due unrelated validators (for example `post_execution_mandatory`/`prompt_lifecycle`) and this section does not claim full release closure.
 3. `v1.5` release posture remains governed by unlock formula and release-plane conditions (`NO_GO` unless all release-lock predicates are satisfied).
+
+#### 16.8.55 Independent replay promotion: close `FIX-049/050/055` audit pending (2026-03-03)
+
+Status: `PASS` (independent replay confirms all three pending items are closure-complete for protocol scope).
+
+Replay evidence (independent run):
+
+1. `FIX-049` strict send-time evidence hard boundary:
+   - `/tmp/recheck_fix049_synthetic.json` -> `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-002`, `reply_evidence_mode=stamp_json_composed_reply`.
+   - `/tmp/recheck_fix049_no_guard.json` -> `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-003`, `reply_evidence_mode=reply_file`, `reply_outlet_guard_applied=false`.
+   - `/tmp/recheck_fix049_live_guard.json` -> `send_time_gate_status=PASS_REQUIRED`, `reply_evidence_mode=reply_file`, `reply_outlet_guard_applied=true`.
+   - `/tmp/recheck_fix049_compose.json` -> compose adapter emits `reply_transport_ref` and `reply_outlet_guard_applied=true`.
+2. `FIX-050` pre-mutation execution-order gate:
+   - `/tmp/recheck_fix050_init_no_consent.log` -> fail-closed with `IP-EXEC-ORDER-002`.
+   - `/tmp/identity-pre-mutation-gate-init-fix050-no-consent-1772541713.json` -> `status=FAIL_REQUIRED`.
+   - `/tmp/identity-pre-mutation-gate-init-fix050-with-consent-1772541713.json` -> `status=PASS_REQUIRED`.
+   - `/private/tmp/recheck_fix050_update_receipt.json` -> update pre-mutation receipt includes `header_first_gate_status`, `scaffold_consent_gate_status`, `mutation_plan_disclosed`, `planned_files`, `why_now`.
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772541748.json` includes full pre-mutation gate fields (`header_first_gate_status`, `scaffold_consent_gate_status`, `mutation_plan_disclosed`, `planned_files`, `pre_mutation_gate_*`, `why_now`).
+3. `FIX-055` capability boundary closure:
+   - `/tmp/recheck_fix055_fullscan_project_only.json` -> `summary={"p0":0,"p1":0,"ok":1}` and target identity severity `OK`.
+   - `/tmp/recheck_fix055_fullscan_live.json` -> project layer `OK`; capability checks remain `ok=true` for both project/global layers.
+   - global-layer residual `P0` in mixed scan is attributable to non-capability checks (`cross_actor_isolation`, `post_execution_mandatory`, `prompt_lifecycle`) and is out of `FIX-055` scope.
+
+Promotion decision:
+
+1. Promote `FIX-049`, `FIX-050`, `FIX-055` from `PENDING_REAUDIT` -> `PASS`.
+2. With this promotion, no `PENDING_REPLAY/PENDING_REAUDIT` row remains in the rolling summary.
+
+Decision boundary:
+
+1. This promotion closes protocol re-audit pending items only.
+2. `v1.5` release remains governed by section `6.5` unlock formula; summary promotion does not auto-flip `D1~D6`.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
