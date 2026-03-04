@@ -2073,6 +2073,32 @@ Mandatory semantics:
    - repo-root replay PASS;
    - `/tmp` (or non-repo CWD) replay PASS.
 
+#### 5.8.42 `governed_outlet_exclusive_emission_contract_v1` (P0, FIX-060)
+
+Goal:
+
+1. Eliminate recurring headstamp loss caused by user-visible emissions that bypass governed compose+send-time preflight.
+2. Ensure every strict-lane outbound reply is emitted from one canonical governed outlet path.
+
+Mandatory semantics:
+
+1. User-visible emission in strict operations is allowed only through governed outlet adapter:
+   - compose canonical first line (`Identity-Context ... | Layer-Context ...`);
+   - run send-time gate on exact outbound payload;
+   - write preflight receipt before emission.
+2. Any direct/free-form channel that emits without governed outlet is fail-closed:
+   - `IP-ASB-STAMP-SESSION-004`: non-governed outlet emission attempt.
+3. Existing strict fail-closed semantics remain mandatory:
+   - `IP-ASB-STAMP-SESSION-002`: synthetic/non-live evidence in strict send-time gate.
+   - `IP-ASB-STAMP-SESSION-003`: outlet preflight guard missing.
+4. Required telemetry fields in execution/report surfaces:
+   - `governed_outlet_enforced`
+   - `outlet_channel_id`
+   - `outlet_preflight_receipt`
+   - `outlet_bypass_detected`
+5. This contract does not change write-boundary policy:
+   - mutable protocol feedback remains restricted to identity-local `runtime/protocol-feedback/**`.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2622,6 +2648,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-114 | outbound governed reply path must compose first-line identity stamp and execute send-time preflight on exact payload before emission (operator-side missing-headstamp recurrence is fail-closed) | `scripts/compose_and_validate_governed_reply.py` + `validate_send_time_reply_gate.py` (`operation=send-time`) + first-line validator telemetry | P0 | DONE | implementation landed in `FIX-054` (`a559820`,`6430852`); independent replay closure promoted in review `16.8.50` with live-boundary follow-up in `16.8.51/16.8.52`. |
 | ASB-RQ-115 | D4 acceptance chain must be CWD-invariant for experience-feedback contract enforcement: rulebook/sample paths and validator child invocation must resolve deterministically under both repo-root and non-repo caller CWD | `validate_identity_experience_feedback.py` anchored path resolver + `execute_identity_upgrade.py` explicit child-`cwd` execution + check-log CWD telemetry | P0 | DONE | `FIX-056` landed in `e8596da`; independent re-audit promotion completed in review `16.8.68` (repo-root/non-root replay both `rc=0`). |
 | ASB-RQ-116 | activation lane must fail-closed on cross-identity actor switch unless explicit switch-intent receipt is supplied (`actor_id + from_identity_id + to_identity_id` tuple bound), preventing execution-time hidden identity mutation | `identity_creator.py activate` switch-intent pre-mutation guard + actor binding resolver + switch report telemetry fields | P0 | DONE | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion completed in review `16.8.68` (P0/P1/P2 rows accepted, including non-root replay and actor-bound tail validator parity). |
+| ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | SPEC_READY | P0 emergency intake from review `16.8.79` (`FIX-060` docs-only): recurrence root cause classified as outlet-governance bypass; architect implementation patch required before release unlock. |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2676,6 +2703,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-114 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-054` implementation landed in `a559820` with chain-wiring follow-up `6430852` so outbound send-time checks validate composed reply-file evidence across readiness/e2e/full-scan/three-plane/validate lanes; latest project replay keeps `IP-CAP-003` as auditable env/auth telemetry with strict->route-any-ready fallback + scan fallback closure (`review 16.8.51/16.8.52`), therefore independent audit promotion remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
 | ASB-RQ-115 | `NEW -> GATE_READY (P0)` | `FIX-056` landed in `e8596da`; independent re-audit promotion recorded in review `16.8.68` with dual-CWD validator replay pass and no caller-CWD drift. |
 | ASB-RQ-116 | `NEW -> GATE_READY (P0)` | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion recorded in review `16.8.68` with P0 guard (`IP-ACT-SWITCH-001/002`) + P1 actor-bound + P2 CWD-invariant rows accepted. |
+| ASB-RQ-117 | `NEW -> SPEC_READY (P0)` | emergency intake in review `16.8.79`: headstamp recurrence reclassified as governed-outlet bypass risk; `FIX-060` is docs-only intake and requires architect implementation for universal outlet exclusivity (`IP-ASB-STAMP-SESSION-004`). |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2778,6 +2806,24 @@ Release boundary after this batch:
 1. `P0_TOTAL=87`, `P0_DONE=84`, `P0_NOT_DONE=3`.
 2. Remaining `P0_NOT_DONE` rows are all `IMPL_READY (BLOCKED_BY_AUDIT)` (`ASB-RQ-014..016`).
 3. `D6` remains `LOCKED` until `ASB-RQ-014..016` receive independent re-audit promotion to `DONE` and 6.5 formula conditions are fully satisfied.
+
+### 6.4F P0 emergency intake snapshot (2026-03-04, headstamp recurrence boundary)
+
+Snapshot decision:
+
+1. Add one release-blocking `P0` row from emergency review intake:
+   - `ASB-RQ-117` (`FIX-060`, docs-only intake; implementation not landed).
+2. This snapshot supersedes `6.4E` for current unlock arithmetic while preserving `6.4E` as historical batch-C record.
+
+Release boundary after emergency intake:
+
+1. `P0_TOTAL=88`, `P0_DONE=84`, `P0_NOT_DONE=4`.
+2. Current `P0_NOT_DONE` set:
+   - `ASB-RQ-014`
+   - `ASB-RQ-015`
+   - `ASB-RQ-016`
+   - `ASB-RQ-117`
+3. `D6` remains `LOCKED` until all four rows are promoted to `DONE` under section `6.5` formula.
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
@@ -3110,6 +3156,24 @@ Decision boundary:
    - row-B: P1 actor-bound tail validators accepted (activation actor == validator actor),
    - row-C: P2 CWD-invariant execution accepted (non-root replay reaches guard, no path-not-found drift).
 4. If any row fails, keep `ASB-RQ-116` in `IMPL_READY (BLOCKED_BY_AUDIT)` and publish residual in review section `16.8.67`.
+
+### 6.6H Headstamp recurrence hard boundary (`review 16.8.79`, P0 emergency intake)
+
+Normative risk:
+
+1. Headstamp can still disappear when user-visible output is emitted through non-governed free-form channels.
+2. This is a release-blocking execution risk even if validator logic is correct on governed payloads.
+
+Binding rule:
+
+1. Strict operations must emit user-visible output only through governed outlet adapter.
+2. Outlet bypass attempt must fail-closed with `IP-ASB-STAMP-SESSION-004`.
+3. `ASB-RQ-117` remains `SPEC_READY` until architect implementation lands and replay evidence is accepted.
+
+Release implication:
+
+1. `ASB-RQ-117` is part of section `6.4` unlock arithmetic and blocks `D6` the same way as other non-`DONE` `P0` rows.
+2. No docs-only statement can override this blocker without implementation + replay + audit promotion.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

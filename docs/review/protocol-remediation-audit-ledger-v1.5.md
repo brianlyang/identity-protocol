@@ -172,6 +172,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PASS |
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
+| FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_OPEN (BLOCKED_BY_ARCH_FIX) |
 
 ---
 
@@ -3998,6 +3999,53 @@ Boundary:
 
 1. This section is implementation + self-replay intake only.
 2. Independent re-audit promotion is still required before `ASB-RQ-014/015/016` can be moved to `DONE`.
+
+#### 16.8.79 P0 emergency intake: headstamp recurrence via non-governed outlet bypass (`FIX-060`, 2026-03-04, docs-only)
+
+Status: `SPEC_READY (P0_BLOCKER_DECLARED)`.
+
+Decision:
+
+1. Missing first-line headstamp recurrence is treated as `P0`, not `P1`.
+2. Root cause in this recurrence window is outlet-governance bypass, not validator syntax drift:
+   - strict send-time/first-line validators can fail-closed when invoked on governed payloads;
+   - but free-form/direct emission paths can still skip compose+preflight when they are outside governed outlet chain.
+3. This intake is docs-only and escalates an architect-required implementation patch; no protocol script behavior is changed in this batch.
+
+Cross-validated anchors:
+
+1. `review 16.8.65` captures recurrence symptom and channel-risk boundary (`free-form emission without preflight remains non-governed`).
+2. `review 16.8.55` confirms strict send-time gate semantics are valid for governed payload (`IP-ASB-STAMP-SESSION-002/003`).
+3. Governance contract coverage currently enforces compose/send-time behavior per wired chains, but does not yet assert universal outlet exclusivity across all user-visible channels.
+
+Required architecture patch package (owner: base-repo architect):
+
+1. Introduce a universal governed-outlet adapter as the only allowed user-visible emission path in strict operations.
+2. Force all interactive output lanes to call:
+   - canonical compose step,
+   - send-time gate preflight on exact outbound payload,
+   - receipt writeback before emission.
+3. Add fail-closed code for bypass attempts:
+   - `IP-ASB-STAMP-SESSION-004`: outbound reply attempted from non-governed outlet.
+4. Add machine-readable telemetry to execution/report surfaces:
+   - `governed_outlet_enforced`
+   - `outlet_channel_id`
+   - `outlet_preflight_receipt`
+   - `outlet_bypass_detected`
+5. Keep protocol-feedback write boundary unchanged:
+   - mutable feedback artifacts remain restricted to identity-local `runtime/protocol-feedback/**` roots.
+
+Acceptance replay template (post-implementation, required for promotion):
+
+1. negative: attempt direct/free-form user-visible emission without governed outlet -> `FAIL_REQUIRED` (`IP-ASB-STAMP-SESSION-004`).
+2. negative: governed outlet invoked but preflight skipped -> `FAIL_REQUIRED` (`IP-ASB-STAMP-SESSION-003`).
+3. negative: preflight receives non-live/synthetic evidence in strict lane -> `FAIL_REQUIRED` (`IP-ASB-STAMP-SESSION-002`).
+4. positive: governed outlet + compose + send-time preflight + receipt all present -> `PASS_REQUIRED`.
+5. positive: same payload from repo-root and non-root invocation produces equivalent pass/fail verdict (CWD-invariant channel behavior).
+
+Release-lock implication:
+
+1. `ASB-RQ-117` is added as `P0 SPEC_READY`; until implemented and promoted to `DONE`, `D6` cannot unlock by section `6.5` formula.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
