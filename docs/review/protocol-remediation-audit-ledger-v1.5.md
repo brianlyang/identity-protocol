@@ -5721,6 +5721,16 @@ Replay evidence (captured this round):
    - rendered stamp: `/tmp/p0_fix057_render_after.json`
    - first-line gate pass: `/tmp/p0_fix057_firstline_after.json` (`reply_first_line_status=PASS_REQUIRED`, `reply_first_line_lock_state=LOCK_MATCH`)
 
+Forensic replay (operator confusion disambiguation, same window):
+
+1. The observed `base-repo-architect -> base-repo-audit-expert-v3` transition in this workspace was produced by explicit activation commands, not silent auto-switch logic.
+2. Actor binding receipts prove two explicit mutations for `assistant:codex`:
+   - `run:activate-base-repo-audit-expert-v3-1772590587` (`switch_reason=restore protocol architect audit identity`, `applied_at=2026-03-04T02:16:28Z`)
+   - `run:activate-base-repo-audit-expert-v3-1772590819` (`switch_reason=fix057 reverify activation closure`, `applied_at=2026-03-04T02:20:20Z`)
+3. Evidence anchor:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/actors/assistant_codex.json`
+4. Therefore, this incident classifies as "activation-path mutation observed and auditable", not "non-auditable hidden auto-switch". Remaining prevention focus is switch-intent visibility/runbook discipline.
+
 Boundary decision:
 
 1. This is a protocol-layer implementation closure for the activation switchback regression path, not a docs-only narrative fix.

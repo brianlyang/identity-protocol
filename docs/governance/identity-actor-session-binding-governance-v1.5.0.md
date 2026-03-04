@@ -2917,6 +2917,13 @@ Verification anchors (this round):
    - `/tmp/p0_fix057_resolve_after.json`
    - `/tmp/p0_fix057_firstline_after.json`
 
+Forensic boundary (avoid RCA misclassification):
+
+1. "Identity appears switched during active troubleshooting" must first be checked against actor binding receipts.
+2. If actor receipt contains explicit `activate` mutation with matching `applied_at/run_id/switch_reason`, classify as auditable switch-intent execution (not hidden auto-switch defect).
+3. Required forensic anchor:
+   - `<catalog_parent>/session/actors/assistant_codex.json` (or actor-equivalent file), verifying `rebind_receipts[]` timeline.
+
 Decision boundary:
 
 1. This subsection is a governance bridge for `FIX-057` implementation replay intake and prevents ambiguous RCA in future P0 switchback recurrences.
