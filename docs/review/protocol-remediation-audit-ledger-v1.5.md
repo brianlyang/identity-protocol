@@ -168,9 +168,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-053 | 2026-03-03 | protocol | required-coverage metric normalization (`ASB-RQ-113`; enforce `required_contract_passed<=required_contract_total` and bound coverage rate to `[0,100]`) | `ddb1529` | DONE | PASS |
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
 | FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
-| FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PENDING_REAUDIT |
-| FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PENDING_REAUDIT |
-| FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PENDING_REAUDIT |
+| FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PASS |
+| FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PASS |
+| FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 
 ---
 
@@ -5818,6 +5818,35 @@ Auditor sign-off template (no-ambiguity, direct handoff format):
 4. Closure gate:
    - promote `FIX-058` only if all three decision rows above are `accepted`;
    - otherwise keep `PENDING_REAUDIT` and emit explicit residual item with error-code anchor.
+
+#### 16.8.68 Independent re-audit promotion for FIX-056/057/058 (2026-03-04, protocol, scope-limited)
+
+Status: `PASS_PROMOTED (FIX-056/057/058)`.
+
+Independent replay set (this round):
+
+1. FIX-056 (`experience feedback CWD invariance`):
+   - repo-root self-test: `/tmp/audit_fix056_repo_root_selftest.log` (`rc=0`)
+   - non-root self-test: `/tmp/audit_fix056_nonroot_selftest.log` (`rc=0`)
+2. FIX-057 (`runtime evidence path closure`):
+   - repo-root runtime contract: `/tmp/audit_fix057_runtime_contract_repo_root.log` (`rc=0`)
+   - non-root runtime contract: `/tmp/audit_fix057_runtime_contract_nonroot.log` (`rc=0`)
+3. FIX-058 (`switch-intent kill switch + actor/cwd residual closure`):
+   - no-allow negative: `/tmp/audit_fix058_negative_no_allow_only.log` (`IP-ACT-SWITCH-001`)
+   - bad-receipt negative: `/tmp/audit_fix058_negative_bad_receipt_only.log` (`IP-ACT-SWITCH-002`)
+   - same-identity positive: `/tmp/audit_fix058_positive_same_identity_headcheck.log` (`rc=0`)
+   - non-root negative path: `/tmp/audit_fix058_nonroot_negative_headcheck.log` (`rc=1`, hits switch guard)
+
+Promotion decision:
+
+1. `FIX-056`: `PENDING_REAUDIT -> PASS`.
+2. `FIX-057`: `PENDING_REAUDIT -> PASS`.
+3. `FIX-058`: `PENDING_REAUDIT -> PASS`.
+
+Boundary:
+
+1. This promotion is limited to `FIX-056/057/058` and does not auto-promote unrelated pending batches.
+2. `D6` release lock formula in governance `6.5` is unchanged by this scope-limited promotion.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
