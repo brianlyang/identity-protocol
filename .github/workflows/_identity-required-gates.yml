@@ -221,7 +221,11 @@ jobs:
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
             PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --mode review-required --out-dir /tmp/identity-upgrade-reports --expected-work-layer instance
-            UPGRADE_REPORT=$(ls -1t /tmp/identity-upgrade-reports/identity-upgrade-exec-"$ID"-*.json | head -n 1)
+            UPGRADE_REPORT="$(find /tmp/identity-upgrade-reports -maxdepth 1 -type f -name "identity-upgrade-exec-${ID}-*.json" -printf '%T@ %p\n' | sort -nr | head -n 1 | cut -d' ' -f2-)"
+            if [ -z "${UPGRADE_REPORT}" ]; then
+              echo "[FAIL] missing identity upgrade report for ${ID}"
+              exit 1
+            fi
             python3 scripts/validate_writeback_continuity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --report "$UPGRADE_REPORT" --operation ci
             python3 scripts/validate_post_execution_mandatory.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --report "$UPGRADE_REPORT" --operation ci
             python3 scripts/validate_protocol_feedback_sidecar_contract.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --report "$UPGRADE_REPORT" --operation ci --enforce-blocking
