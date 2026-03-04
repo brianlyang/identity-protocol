@@ -582,6 +582,8 @@ def main() -> int:
             send_time_reply_file,
             "--blocker-receipt-out",
             send_time_reply_gate_blocker_receipt,
+            "--outlet-channel-id",
+            "governed_adapter_v1",
             "--json-only",
         ],
         [
@@ -598,6 +600,8 @@ def main() -> int:
             "--force-check",
             "--enforce-send-time-gate",
             "--reply-outlet-guard-applied",
+            "--outlet-channel-id",
+            "governed_adapter_v1",
             "--reply-transport-ref",
             send_time_reply_file,
             "--operation",

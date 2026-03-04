@@ -34,6 +34,10 @@ MANDATORY_REPORT_FIELDS = (
     "phase_b_strict_revalidate_status",
     "phase_transition_reason",
     "phase_transition_error_code",
+    "governed_outlet_enforced",
+    "outlet_channel_id",
+    "outlet_preflight_receipt",
+    "outlet_bypass_detected",
 )
 
 
@@ -155,6 +159,10 @@ def main() -> int:
         "phase_b_strict_revalidate_status": "",
         "phase_transition_reason": "",
         "phase_transition_error_code": "",
+        "governed_outlet_enforced": False,
+        "outlet_channel_id": "",
+        "outlet_preflight_receipt": "",
+        "outlet_bypass_detected": False,
         "stale_reasons": [],
     }
 
@@ -213,6 +221,10 @@ def main() -> int:
             "phase_b_strict_revalidate_status": str(report.get("phase_b_strict_revalidate_status", "")).strip(),
             "phase_transition_reason": str(report.get("phase_transition_reason", "")).strip(),
             "phase_transition_error_code": str(report.get("phase_transition_error_code", "")).strip(),
+            "governed_outlet_enforced": bool(report.get("governed_outlet_enforced", False)),
+            "outlet_channel_id": str(report.get("outlet_channel_id", "")).strip(),
+            "outlet_preflight_receipt": str(report.get("outlet_preflight_receipt", "")).strip(),
+            "outlet_bypass_detected": bool(report.get("outlet_bypass_detected", False)),
         }
     )
 
@@ -229,6 +241,16 @@ def main() -> int:
         phase_b = str(payload.get("phase_b_strict_revalidate_status", "")).strip()
         if not phase_b or phase_b in {"NOT_APPLICABLE", "UNKNOWN"}:
             stale_reasons.append("phase_b_strict_revalidate_status_missing_after_phase_a")
+
+    if args.operation in STRICT_OPERATIONS:
+        if not bool(payload.get("governed_outlet_enforced", False)):
+            stale_reasons.append("governed_outlet_not_enforced")
+        if not str(payload.get("outlet_channel_id", "")).strip():
+            stale_reasons.append("outlet_channel_id_missing")
+        if not str(payload.get("outlet_preflight_receipt", "")).strip():
+            stale_reasons.append("outlet_preflight_receipt_missing")
+        if bool(payload.get("outlet_bypass_detected", False)):
+            stale_reasons.append("outlet_bypass_detected_in_strict_operation")
 
     if upgrade_required and all_ok and writeback_status == "WRITTEN":
         rc_ew, out_ew, err_ew = _run_experience_writeback_validator(

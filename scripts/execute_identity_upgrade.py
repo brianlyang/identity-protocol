@@ -570,6 +570,10 @@ def _base_report(
     pre_mutation_gate_ts: str = "",
     pre_mutation_gate_error_code: str = "",
     pre_mutation_gate_receipt: str = "",
+    governed_outlet_enforced: bool = False,
+    outlet_channel_id: str = "",
+    outlet_preflight_receipt: str = "",
+    outlet_bypass_detected: bool = False,
     why_now: str = "",
 ) -> dict[str, Any]:
     """
@@ -621,6 +625,10 @@ def _base_report(
         "pre_mutation_gate_ts": str(pre_mutation_gate_ts or ""),
         "pre_mutation_gate_error_code": str(pre_mutation_gate_error_code or ""),
         "pre_mutation_gate_receipt": str(pre_mutation_gate_receipt or ""),
+        "governed_outlet_enforced": bool(governed_outlet_enforced),
+        "outlet_channel_id": str(outlet_channel_id or ""),
+        "outlet_preflight_receipt": str(outlet_preflight_receipt or ""),
+        "outlet_bypass_detected": bool(outlet_bypass_detected),
         "why_now": str(why_now or ""),
         "actions_taken": [],
         "checks": [],
@@ -858,6 +866,8 @@ def _run_header_first_gate(
         str(reply_file),
         "--blocker-receipt-out",
         str(receipt_file),
+        "--outlet-channel-id",
+        "governed_adapter_v1",
         "--json-only",
     ]
     if str(layer_intent_text or "").strip():
@@ -878,6 +888,10 @@ def _run_header_first_gate(
         "reply_file": str(reply_file),
         "blocker_receipt_path": str(payload.get("blocker_receipt_path", "")).strip() or str(receipt_file),
         "reply_transport_ref": str(payload.get("reply_transport_ref", "")).strip() or str(reply_file),
+        "governed_outlet_enforced": bool(payload.get("governed_outlet_enforced", False)),
+        "outlet_channel_id": str(payload.get("outlet_channel_id", "")).strip(),
+        "outlet_preflight_receipt": str(payload.get("outlet_preflight_receipt", "")).strip(),
+        "outlet_bypass_detected": bool(payload.get("outlet_bypass_detected", False)),
         "stdout_tail": (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else "",
         "stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
     }
@@ -1046,6 +1060,10 @@ def main() -> int:
         scaffold_consent_gate_status = "FAIL_REQUIRED"
     header_first_gate_status = str(args.header_first_gate_status or "").strip().upper()
     pre_mutation_gate_receipt = str(args.pre_mutation_gate_receipt or "").strip()
+    governed_outlet_enforced = False
+    outlet_channel_id = ""
+    outlet_preflight_receipt = ""
+    outlet_bypass_detected = False
     pre_mutation_gate_error_code = ""
     if not header_first_gate_status:
         header_probe = _run_header_first_gate(
@@ -1064,9 +1082,20 @@ def main() -> int:
             header_first_gate_status = "FAIL_REQUIRED"
             pre_mutation_gate_error_code = str(header_probe.get("error_code", "")).strip() or ERR_EXEC_ORDER_HEADER_FIRST
             pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("blocker_receipt_path", ""))
+        governed_outlet_enforced = bool(header_probe.get("governed_outlet_enforced", False))
+        outlet_channel_id = str(header_probe.get("outlet_channel_id", "")).strip()
+        outlet_preflight_receipt = (
+            str(header_probe.get("outlet_preflight_receipt", "")).strip() or pre_mutation_gate_receipt
+        )
+        outlet_bypass_detected = bool(header_probe.get("outlet_bypass_detected", False))
     elif header_first_gate_status not in {"PASS_REQUIRED", "FAIL_REQUIRED"}:
         header_first_gate_status = "FAIL_REQUIRED"
         pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST
+    else:
+        governed_outlet_enforced = header_first_gate_status == "PASS_REQUIRED"
+        outlet_channel_id = "external_override"
+        outlet_preflight_receipt = pre_mutation_gate_receipt
+        outlet_bypass_detected = header_first_gate_status != "PASS_REQUIRED"
 
     pre_mutation_error = ""
     if header_first_gate_status != "PASS_REQUIRED":
@@ -1118,6 +1147,10 @@ def main() -> int:
             pre_mutation_gate_ts=pre_mutation_gate_ts,
             pre_mutation_gate_error_code=pre_mutation_gate_error_code,
             pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            governed_outlet_enforced=governed_outlet_enforced,
+            outlet_channel_id=outlet_channel_id,
+            outlet_preflight_receipt=outlet_preflight_receipt,
+            outlet_bypass_detected=outlet_bypass_detected,
             why_now=why_now,
         )
         report.update(
@@ -1241,6 +1274,10 @@ def main() -> int:
             pre_mutation_gate_ts=pre_mutation_gate_ts,
             pre_mutation_gate_error_code=pre_mutation_gate_error_code,
             pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            governed_outlet_enforced=governed_outlet_enforced,
+            outlet_channel_id=outlet_channel_id,
+            outlet_preflight_receipt=outlet_preflight_receipt,
+            outlet_bypass_detected=outlet_bypass_detected,
             why_now=why_now,
         )
         report.update(
@@ -1356,6 +1393,10 @@ def main() -> int:
             pre_mutation_gate_ts=pre_mutation_gate_ts,
             pre_mutation_gate_error_code=pre_mutation_gate_error_code,
             pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            governed_outlet_enforced=governed_outlet_enforced,
+            outlet_channel_id=outlet_channel_id,
+            outlet_preflight_receipt=outlet_preflight_receipt,
+            outlet_bypass_detected=outlet_bypass_detected,
             why_now=why_now,
         )
         report.update(
@@ -1471,6 +1512,10 @@ def main() -> int:
             pre_mutation_gate_ts=pre_mutation_gate_ts,
             pre_mutation_gate_error_code=pre_mutation_gate_error_code,
             pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+            governed_outlet_enforced=governed_outlet_enforced,
+            outlet_channel_id=outlet_channel_id,
+            outlet_preflight_receipt=outlet_preflight_receipt,
+            outlet_bypass_detected=outlet_bypass_detected,
             why_now=why_now,
         )
         report.update(
@@ -1555,6 +1600,10 @@ def main() -> int:
         "scaffold_consent_gate_status": scaffold_consent_gate_status,
         "mutation_plan_disclosed": bool(mutation_plan_disclosed),
         "pre_mutation_gate_ts": pre_mutation_gate_ts,
+        "governed_outlet_enforced": bool(governed_outlet_enforced),
+        "outlet_channel_id": str(outlet_channel_id or ""),
+        "outlet_preflight_receipt": str(outlet_preflight_receipt or ""),
+        "outlet_bypass_detected": bool(outlet_bypass_detected),
         "planned_actions": [
             "append arbitration decision record",
             "append rulebook learning row",
@@ -1691,6 +1740,10 @@ def main() -> int:
                         pre_mutation_gate_ts=pre_mutation_gate_ts,
                         pre_mutation_gate_error_code=pre_mutation_gate_error_code,
                         pre_mutation_gate_receipt=pre_mutation_gate_receipt,
+                        governed_outlet_enforced=governed_outlet_enforced,
+                        outlet_channel_id=outlet_channel_id,
+                        outlet_preflight_receipt=outlet_preflight_receipt,
+                        outlet_bypass_detected=outlet_bypass_detected,
                         why_now=why_now,
                     ),
                     "upgrade_required": upgrade_required,
@@ -2061,6 +2114,10 @@ def main() -> int:
         "pre_mutation_gate_ts": pre_mutation_gate_ts,
         "pre_mutation_gate_error_code": pre_mutation_gate_error_code,
         "pre_mutation_gate_receipt": pre_mutation_gate_receipt,
+        "governed_outlet_enforced": bool(governed_outlet_enforced),
+        "outlet_channel_id": str(outlet_channel_id or ""),
+        "outlet_preflight_receipt": str(outlet_preflight_receipt or ""),
+        "outlet_bypass_detected": bool(outlet_bypass_detected),
         "why_now": why_now,
     }
     report.update(

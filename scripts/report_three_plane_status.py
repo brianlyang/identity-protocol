@@ -613,6 +613,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         send_time_reply_file,
         "--blocker-receipt-out",
         send_time_reply_gate_blocker_receipt,
+        "--outlet-channel-id",
+        "governed_adapter_v1",
         "--json-only",
     ]
     if layer_intent_text:
@@ -647,6 +649,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--force-check",
         "--enforce-send-time-gate",
         "--reply-outlet-guard-applied",
+        "--outlet-channel-id",
+        "governed_adapter_v1",
         "--reply-transport-ref",
         send_time_reply_file,
         "--operation",
@@ -2088,6 +2092,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "layer_intent_fallback_reason": layer_intent_payload.get("fallback_reason", ""),
             "send_time_gate_status": send_time_gate_payload.get("send_time_gate_status"),
             "send_time_gate_error_code": send_time_gate_payload.get("error_code", ""),
+            "governed_outlet_enforced": send_time_gate_payload.get("governed_outlet_enforced", False),
+            "outlet_channel_id": send_time_gate_payload.get("outlet_channel_id", ""),
+            "outlet_preflight_receipt": send_time_gate_payload.get("outlet_preflight_receipt", ""),
+            "outlet_bypass_detected": send_time_gate_payload.get("outlet_bypass_detected", False),
             "send_time_reply_evidence_mode": send_time_gate_payload.get("reply_evidence_mode", ""),
             "send_time_reply_evidence_ref": send_time_gate_payload.get("reply_evidence_ref", ""),
             "send_time_reply_sample_count": send_time_gate_payload.get("reply_sample_count", 0),

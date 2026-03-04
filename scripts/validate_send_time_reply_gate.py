@@ -11,6 +11,7 @@ from typing import Any
 ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
 ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
 ERR_OUTLET_GUARD_MISSING = "IP-ASB-STAMP-SESSION-003"
+ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -92,6 +93,13 @@ def _reply_transport_ref(args: argparse.Namespace, evidence_mode: str) -> str:
     return "unresolved"
 
 
+def _is_governed_outlet(channel_id: str) -> bool:
+    cid = str(channel_id or "").strip().lower()
+    if not cid:
+        return False
+    return cid.startswith("governed_") or cid.startswith("governed-") or cid in {"governed", "governedoutlet"}
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -115,6 +123,11 @@ def main() -> int:
     ap.add_argument("--reply-log", default="")
     ap.add_argument("--stamp-json", default="", help="optional fallback to compose send-time reply from external_stamp")
     ap.add_argument("--reply-transport-ref", default="")
+    ap.add_argument(
+        "--outlet-channel-id",
+        default="governed_adapter_v1",
+        help="logical reply outlet channel id; strict operations require governed_* channel",
+    )
     ap.add_argument("--reply-outlet-guard-applied", action="store_true")
     ap.add_argument("--business-line", default="SEND_TIME_GATE_PROBE_BODY")
     ap.add_argument("--expected-work-layer", default="")
@@ -166,6 +179,60 @@ def main() -> int:
 
     strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
     reply_transport_ref = _reply_transport_ref(args, evidence_mode)
+    outlet_channel_id = str(args.outlet_channel_id or "").strip() or "governed_adapter_v1"
+    governed_outlet = _is_governed_outlet(outlet_channel_id)
+    strict_outlet_enforced = strict_context and governed_outlet and bool(args.reply_outlet_guard_applied)
+    preflight_receipt_ref = str(Path(args.blocker_receipt_out).expanduser().resolve()) if str(args.blocker_receipt_out or "").strip() else ""
+
+    if strict_context and not governed_outlet:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_NON_GOVERNED_OUTLET,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": strict_outlet_enforced,
+            "outlet_channel_id": outlet_channel_id,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["non_governed_outlet_channel"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "strict_send_time_guard",
+            "fallback_reason": "non_governed_outlet_channel",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["strict_send_time_non_governed_outlet_forbidden"],
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
     if strict_context and evidence_mode in {"stamp_json", "stamp_json_composed_reply", "missing"}:
         payload = {
             "identity_id": args.identity_id,
@@ -183,6 +250,10 @@ def main() -> int:
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": strict_outlet_enforced,
+            "outlet_channel_id": outlet_channel_id,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
             "reply_sample_count": 0,
             "reply_first_line_missing_count": 1,
@@ -227,6 +298,10 @@ def main() -> int:
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
             "reply_outlet_guard_applied": False,
+            "governed_outlet_enforced": False,
+            "outlet_channel_id": outlet_channel_id,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
             "reply_sample_count": 0,
             "reply_first_line_missing_count": 1,
@@ -334,6 +409,14 @@ def main() -> int:
         "send_time_gate_enforced": bool(args.enforce_send_time_gate),
         "required_contract": bool(validator_payload.get("required_contract", False)),
         "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+        "governed_outlet_enforced": strict_outlet_enforced,
+        "outlet_channel_id": outlet_channel_id,
+        "outlet_preflight_receipt": preflight_receipt_ref,
+        "outlet_bypass_detected": bool(
+            (strict_context and not governed_outlet)
+            or (strict_context and not bool(args.reply_outlet_guard_applied))
+            or str(error_code).strip() == ERR_NON_GOVERNED_OUTLET
+        ),
         "expected_work_layer": expected_work_layer,
         "expected_source_layer": expected_source_layer,
         "layer_intent_text": layer_intent_text,

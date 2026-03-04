@@ -5,6 +5,7 @@ import argparse
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,9 @@ from response_stamp_common import (
     resolve_layer_intent,
     resolve_stamp_context,
 )
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
 
 
 def _load_body(args: argparse.Namespace) -> str:
@@ -72,6 +76,8 @@ def main() -> int:
     ap.add_argument("--out-reply-file", default="")
     ap.add_argument("--out-json", default="")
     ap.add_argument("--blocker-receipt-out", default="")
+    ap.add_argument("--preflight-receipt-out", default="")
+    ap.add_argument("--outlet-channel-id", default="governed_adapter_v1")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -132,7 +138,7 @@ def main() -> int:
 
     validate_cmd = [
         sys.executable,
-        "scripts/validate_send_time_reply_gate.py",
+        str((SCRIPT_DIR / "validate_send_time_reply_gate.py").resolve()),
         "--identity-id",
         args.identity_id,
         "--catalog",
@@ -146,6 +152,8 @@ def main() -> int:
         "--reply-outlet-guard-applied",
         "--reply-transport-ref",
         reply_transport_ref,
+        "--outlet-channel-id",
+        str(args.outlet_channel_id or "").strip() or "governed_adapter_v1",
         "--operation",
         "send-time",
         "--expected-work-layer",
@@ -158,8 +166,38 @@ def main() -> int:
         validate_cmd += ["--blocker-receipt-out", str(args.blocker_receipt_out).strip()]
     if str(args.layer_intent_text or "").strip():
         validate_cmd += ["--layer-intent-text", str(args.layer_intent_text).strip()]
-    proc = subprocess.run(validate_cmd, capture_output=True, text=True)
+    proc = subprocess.run(validate_cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     validate_payload = _json_payload(proc.stdout)
+
+    default_preflight_receipt = (Path("/tmp") / f"identity-governed-outlet-preflight-{args.identity_id}.json").resolve()
+    preflight_receipt_path: Path | None = (
+        Path(str(args.preflight_receipt_out).strip()).expanduser().resolve()
+        if str(args.preflight_receipt_out or "").strip()
+        else default_preflight_receipt
+    )
+    try:
+        preflight_receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        preflight_receipt = {
+            "receipt_type": "governed_outlet_preflight_v1",
+            "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "identity_id": args.identity_id,
+            "work_layer": work_layer,
+            "source_layer": source_layer,
+            "send_time_gate_status": str(validate_payload.get("send_time_gate_status", "")),
+            "error_code": str(validate_payload.get("error_code", "")),
+            "governed_outlet_enforced": bool(validate_payload.get("governed_outlet_enforced", False)),
+            "outlet_channel_id": str(validate_payload.get("outlet_channel_id", "")),
+            "outlet_bypass_detected": bool(validate_payload.get("outlet_bypass_detected", False)),
+            "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
+            "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
+            "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),
+        }
+        preflight_receipt_path.write_text(
+            json.dumps(preflight_receipt, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except Exception:
+        preflight_receipt_path = None
 
     if proc.returncode == 0 and out_reply:
         out_reply_path = Path(out_reply).expanduser().resolve()
@@ -188,6 +226,10 @@ def main() -> int:
         "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
         "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
         "reply_outlet_guard_applied": bool(validate_payload.get("reply_outlet_guard_applied", False)),
+        "governed_outlet_enforced": bool(validate_payload.get("governed_outlet_enforced", False)),
+        "outlet_channel_id": str(validate_payload.get("outlet_channel_id", str(args.outlet_channel_id or "").strip())),
+        "outlet_preflight_receipt": str(preflight_receipt_path) if preflight_receipt_path else "",
+        "outlet_bypass_detected": bool(validate_payload.get("outlet_bypass_detected", False)),
         "reply_sample_count": validate_payload.get("reply_sample_count"),
         "reply_first_line_missing_count": validate_payload.get("reply_first_line_missing_count"),
         "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),

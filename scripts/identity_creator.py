@@ -1555,6 +1555,8 @@ def main() -> int:
                 send_time_reply_file,
                 "--blocker-receipt-out",
                 send_time_reply_gate_blocker_receipt,
+                "--outlet-channel-id",
+                "governed_adapter_v1",
                 "--json-only",
             ],
             [
@@ -1571,6 +1573,8 @@ def main() -> int:
                 "--force-check",
                 "--enforce-send-time-gate",
                 "--reply-outlet-guard-applied",
+                "--outlet-channel-id",
+                "governed_adapter_v1",
                 "--reply-transport-ref",
                 send_time_reply_file,
                 "--operation",
@@ -2202,6 +2206,8 @@ def main() -> int:
             pre_mutation_reply_file,
             "--blocker-receipt-out",
             pre_mutation_send_time_blocker,
+            "--outlet-channel-id",
+            "governed_adapter_v1",
             "--json-only",
         ]
         if args.layer_intent_text.strip():
@@ -2258,6 +2264,10 @@ def main() -> int:
                 "header_gate_blocker_receipt_path": str(
                     pre_mutation_header_payload.get("blocker_receipt_path", "") or pre_mutation_send_time_blocker
                 ),
+                "governed_outlet_enforced": bool(pre_mutation_header_payload.get("governed_outlet_enforced", False)),
+                "outlet_channel_id": str(pre_mutation_header_payload.get("outlet_channel_id", "")),
+                "outlet_preflight_receipt": str(pre_mutation_header_payload.get("outlet_preflight_receipt", "")),
+                "outlet_bypass_detected": bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)),
                 "status": "PASS_REQUIRED" if not pre_mutation_gate_error_code else "FAIL_REQUIRED",
             },
         )

@@ -621,6 +621,8 @@ def main() -> int:
                     send_time_reply_file,
                     "--blocker-receipt-out",
                     send_time_reply_gate_blocker_receipt,
+                    "--outlet-channel-id",
+                    "governed_adapter_v1",
                     "--json-only",
                 ],
                 "send_time_reply_gate_validate": [
@@ -637,6 +639,8 @@ def main() -> int:
                     "--force-check",
                     "--enforce-send-time-gate",
                     "--reply-outlet-guard-applied",
+                    "--outlet-channel-id",
+                    "governed_adapter_v1",
                     "--reply-transport-ref",
                     send_time_reply_file,
                     "--operation",
@@ -1858,6 +1862,10 @@ def main() -> int:
                     for k in (
                         "send_time_gate_status",
                         "error_code",
+                        "governed_outlet_enforced",
+                        "outlet_channel_id",
+                        "outlet_preflight_receipt",
+                        "outlet_bypass_detected",
                         "reply_evidence_mode",
                         "reply_evidence_ref",
                         "reply_sample_count",
