@@ -169,7 +169,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
 | FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
 | FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PENDING_REAUDIT |
-| FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `2808ccf` | DONE | PENDING_REAUDIT |
+| FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PENDING_REAUDIT |
 
 ---
 
