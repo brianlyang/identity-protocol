@@ -5794,6 +5794,31 @@ Decision boundary:
 2. Any cross-identity activation without explicit switch-intent receipt is now non-executable by default.
 3. Independent audit promotion is still required before status can move from `PENDING_REAUDIT` to `PASS`.
 
+Auditor sign-off template (no-ambiguity, direct handoff format):
+
+1. Decision (`accepted|rejected + one-line rationale`):
+   - P0-guard (`IP-ACT-SWITCH-001/002`, cross-identity fail-closed)
+   - P1-tail-validator actor binding (`--actor-id` must equal activation actor)
+   - P2-CWD invariance (non-repo CWD replay must still hit switch guard, not missing-script failure)
+2. Implementation evidence:
+   - code commit: `33f6808 / 1de3832`
+   - docs bridge: `cdcbc67 / e2fbf54`
+   - file anchors:
+     - `scripts/identity_creator.py` (`switch-intent gate`, `_run/_run_capture cwd`, actor-bound validator calls)
+     - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` (`5.8.41`, `6.6G`)
+3. Replay evidence anchors (this round):
+   - `/tmp/p0_fix058_negative_no_allow.log`
+   - `/tmp/p0_fix058_negative_bad_receipt.log`
+   - `/tmp/p0_fix058_positive_same_identity.log`
+   - `/tmp/p0_fix058_state_after_negatives.json`
+   - `/tmp/fix058_p1_actor_binding_positive_v2.log`
+   - `/tmp/fix058_p1_actor_binding_positive_v3_escalated.log`
+   - `/tmp/fix058_p2_nonroot_negative.log`
+   - `/tmp/fix058_p2_nonroot_negative_v2.log`
+4. Closure gate:
+   - promote `FIX-058` only if all three decision rows above are `accepted`;
+   - otherwise keep `PENDING_REAUDIT` and emit explicit residual item with error-code anchor.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

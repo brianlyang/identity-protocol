@@ -2997,11 +2997,22 @@ Verification anchors (this round):
 2. invalid-receipt negative: `/tmp/p0_fix058_negative_bad_receipt.log` (`IP-ACT-SWITCH-002`)
 3. same-identity positive: `/tmp/p0_fix058_positive_same_identity.log`
 4. post-negative state unchanged: `/tmp/p0_fix058_state_after_negatives.json`
+5. P1 actor-binding residual closure:
+   - `/tmp/fix058_p1_actor_binding_positive_v2.log`
+   - `/tmp/fix058_p1_actor_binding_positive_v3_escalated.log`
+6. P2 CWD-invariant residual closure:
+   - `/tmp/fix058_p2_nonroot_negative.log`
+   - `/tmp/fix058_p2_nonroot_negative_v2.log`
 
 Decision boundary:
 
 1. This is a hard execution safeguard, not a narrative reminder.
 2. Any future "identity changed during command execution" claim must replay against these four anchors first.
+3. Audit promotion checklist is three-row deterministic (must all pass):
+   - row-A: P0 cross-identity switch guard accepted (`IP-ACT-SWITCH-001/002` verified),
+   - row-B: P1 actor-bound tail validators accepted (activation actor == validator actor),
+   - row-C: P2 CWD-invariant execution accepted (non-root replay reaches guard, no path-not-found drift).
+4. If any row fails, keep `ASB-RQ-116` in `IMPL_READY (BLOCKED_BY_AUDIT)` and publish residual in review section `16.8.67`.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
