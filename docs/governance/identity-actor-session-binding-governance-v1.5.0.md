@@ -2651,7 +2651,7 @@ Historical implementation notes remain preserved in 6.4/6.4A.
 Current release boundary (unchanged):
 
 1. v1.5 remains `NO_GO` until 6.5 unlock formula is satisfied.
-2. Latest independent replay no longer classifies `IP-CAP-003` as project-scope `P0/P1` blocker (`FIX-055` closure in review `16.8.55`); release remains `NO_GO` because `D4` is not yet pass-closed under live readiness replay (`review 16.8.56`).
+2. Latest independent replay no longer classifies `IP-CAP-003` as project-scope `P0/P1` blocker (`FIX-055` closure in review `16.8.55`); `D4` closure interpretation is normalized to `PASS` by review `16.8.62`, while release still remains `NO_GO` because section `6.5` unlock formula is not yet satisfied.
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
