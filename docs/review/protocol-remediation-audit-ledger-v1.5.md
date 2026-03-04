@@ -5848,6 +5848,41 @@ Boundary:
 1. This promotion is limited to `FIX-056/057/058` and does not auto-promote unrelated pending batches.
 2. `D6` release lock formula in governance `6.5` is unchanged by this scope-limited promotion.
 
+#### 16.8.70 Governance DONE normalization batch-A (`PASS != DONE`, 2026-03-04, docs-only)
+
+Status: `CLOSED_SCOPE_BATCH_A`.
+
+Decision semantics (normative):
+
+1. `PASS` is fix-level audit verdict in review ledger.
+2. `DONE` is requirement-level release-gating state in governance `6.4/6.5`.
+3. Therefore `PASS != DONE` by default; `DONE` must be explicitly promoted in governance after cross-check.
+
+Promoted in this batch (`P0`, governance `6.4`, `GATE_READY/VERIFIED -> DONE`):
+
+1. `ASB-RQ-010`
+2. `ASB-RQ-037..045`
+3. `ASB-RQ-054`
+4. `ASB-RQ-055..064`
+5. `ASB-RQ-066`
+6. `ASB-RQ-067..068`
+7. `ASB-RQ-070..074`
+8. `ASB-RQ-090..093`
+9. `ASB-RQ-109..110`
+10. `ASB-RQ-115..116`
+
+Residual release math after this batch (from governance `6.4` table):
+
+1. `P0_TOTAL=87`
+2. `P0_DONE=37`
+3. `P0_NOT_DONE=50`
+4. Remaining distribution: `SPEC_READY=24`, `IMPL_READY (BLOCKED_BY_AUDIT)=26`
+
+Boundary:
+
+1. This batch does not promote `SPEC_READY` or `IMPL_READY (BLOCKED_BY_AUDIT)` rows.
+2. `D6` remains `LOCKED` until all remaining `P0` rows in governance `6.4` reach `DONE`.
+
 #### 16.8.69 Instance self-drive supplement intake (`system-requirements-analyst`, 2026-03-04, cross-check)
 
 Status: `CROSS_CHECKED (no new protocol code gap; runbook clarification required)`.
