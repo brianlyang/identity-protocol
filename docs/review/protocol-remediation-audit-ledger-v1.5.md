@@ -5848,6 +5848,36 @@ Boundary:
 1. This promotion is limited to `FIX-056/057/058` and does not auto-promote unrelated pending batches.
 2. `D6` release lock formula in governance `6.5` is unchanged by this scope-limited promotion.
 
+#### 16.8.69 Instance self-drive supplement intake (`system-requirements-analyst`, 2026-03-04, cross-check)
+
+Status: `CROSS_CHECKED (no new protocol code gap; runbook clarification required)`.
+
+Cross-verification evidence:
+
+1. fail-closed baseline before patch (non-canonical blocker enums):
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772591327.json`
+   - failing validators (from report logs):
+     - `validate_identity_runtime_contract.py`
+     - `validate_identity_collab_trigger.py`
+     - `validate_identity_role_binding.py`
+2. post-patch refresh replay:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772595166.json`
+   - key fields: `all_ok=true`, `writeback_status=WRITTEN`, `work_layer=instance`, `applied_gate_set=instance_required_checks`.
+3. strict final replay:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772595338.json`
+   - key fields remain stable (`all_ok=true`, strict lane routing pass).
+4. feedback and evidence linkage:
+   - outbox batch: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+   - evidence index: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+   - roundtable report anchor: `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-self-drive-prompt-hardening-roundtable-2026-03-04.md`
+
+Decision:
+
+1. No new protocol code FIX is opened from this supplement.
+2. One docs/runbook clarification is required under `FIX-038` semantics:
+   - after core-file edits (`CURRENT_TASK.json`, `IDENTITY_PROMPT.md`), run tuple refresh first, then strict preflight/update;
+   - `IP-PVA-001` before refresh should be interpreted as expected stale-alignment fail-safe, not protocol regression.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

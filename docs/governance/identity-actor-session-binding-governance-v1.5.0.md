@@ -1636,6 +1636,10 @@ Mandatory semantics:
      - `baseline_mode_violation`
 4. Suggested error code:
    - `IP-UPG-BASE-001`: strict self-repair two-phase refresh unavailable when stale-baseline-only scenario detected.
+5. Scenario A operator runbook requirement (post core-file mutation):
+   - after editing identity core contract files (`CURRENT_TASK.json`, `IDENTITY_PROMPT.md`), operator must run tuple/session refresh before strict preflight;
+   - if strict preflight is executed before refresh and returns `IP-PVA-001`, this is expected stale-alignment behavior (not protocol regression);
+   - runbook must explicitly document the sequence: `core-file edit -> tuple refresh -> strict preflight -> strict update replay`.
 
 #### 5.8.26 `requiredization_lane_scope_contract_v1` (P0, FIX-039)
 
