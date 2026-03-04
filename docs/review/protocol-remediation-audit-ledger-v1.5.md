@@ -171,6 +171,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PASS |
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PASS |
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
+| FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
 
 ---
 
@@ -3925,6 +3926,78 @@ Acceptance replay template (post-implementation):
 5. positive: complete split receipt + linked SSOT evidence -> `PASS_REQUIRED`
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
+
+#### 16.8.75 Governance P0 normalization batch-C (2026-03-04, docs-only bridge)
+
+Status: `CLOSED_SCOPE_BATCH_C`.
+
+Decision semantics:
+
+1. This batch targets the remaining `SPEC_READY` P0 rows left after 16.8.71 (`24` rows total).
+2. Rows with already-closed implementation/replay chains in existing FIX windows are promoted directly to `DONE`.
+3. Rows with new code landing in current window are promoted to `IMPL_READY (BLOCKED_BY_AUDIT)` and handed to independent audit.
+
+Promoted to `DONE` in this batch (`21` rows):
+
+1. `ASB-RQ-001..007`
+2. `ASB-RQ-009`
+3. `ASB-RQ-018..021`
+4. `ASB-RQ-028..036`
+
+Cross-check anchors:
+
+1. existing governance delta bridge (`6.4A/6.4B`) already records landed validator/wiring chains for the rows above;
+2. review FIX rows are already `DONE/PASS` for corresponding implementation windows (`FIX-002..013`, `FIX-020`, `FIX-024`, `FIX-051`, `FIX-056/057`).
+
+Residual after batch-C:
+
+1. only `ASB-RQ-014/015/016` remain non-`DONE`, now tracked as `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay promotion.
+2. `D6` remains `LOCKED` until those three rows are independently promoted to `DONE` under governance formula `6.5`.
+
+#### 16.8.76 FIX-059 implementation intake (ASB-RQ-014/015/016, 2026-03-04, protocol code + self-replay)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)`.
+
+Scope:
+
+1. `ASB-RQ-014`: actor-risk health profile quartet must be mandatory and machine-counted.
+2. `ASB-RQ-015`: heal apply/report closure must carry deterministic refs (`health_report_ref/heal_report_ref/post_validate_ref`) and be machine-validated.
+3. `ASB-RQ-016`: readiness/e2e closure health gates must bind explicit execution report (`--execution-report`) and fail on binding drift.
+
+Commit anchor:
+
+1. `2a8c3ee` — `fix(protocol): land actor-risk health/heal/report-binding closure for RQ-014..016`
+
+Patch surfaces:
+
+1. `scripts/collect_identity_health_report.py`
+2. `scripts/validate_identity_actor_health_profile.py` (new)
+3. `scripts/validate_identity_heal_replay_closure.py` (new)
+4. `scripts/identity_creator.py` (`heal` flow refs + closure validator hook)
+5. `scripts/release_readiness_check.py` (bound health checks after execution-report resolution)
+6. `scripts/e2e_smoke_test.sh` (bound actor-health profile checks in e2e branch)
+
+Self-replay evidence (current round):
+
+1. static/syntax:
+   - `python3 -m py_compile scripts/collect_identity_health_report.py scripts/validate_identity_actor_health_profile.py scripts/validate_identity_heal_replay_closure.py scripts/identity_creator.py scripts/release_readiness_check.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+2. RQ-014 actor-risk coverage + binding:
+   - collect health with explicit report: `/tmp/fix059_collect_base.log` (`report=/private/tmp/identity-health-reports/identity-health-base-repo-audit-expert-v3-1772602474.json`)
+   - positive bound check: `/tmp/fix059_actor_profile_positive.json` (`actor_health_profile_status=PASS_REQUIRED`)
+   - negative mismatch check: `/tmp/fix059_actor_profile_negative.json` (`FAIL_REQUIRED`, `error_code=IP-HLT-002`)
+3. RQ-015 heal replay deterministic closure validator:
+   - positive synthetic closure: `/tmp/fix059_heal_closure_positive.json` (`heal_replay_closure_status=PASS_REQUIRED`)
+   - negative stale closure: `/tmp/fix059_heal_closure_negative.json` (`FAIL_REQUIRED`, `error_code=IP-HEAL-003`)
+4. RQ-016 readiness bound wiring:
+   - readiness run shows bound health command with explicit execution report:
+     `/tmp/fix059_release_readiness_passlane.log` includes
+     `scripts/collect_identity_health_report.py ... --execution-report ... --enforce-pass --scope USER`.
+
+Boundary:
+
+1. This section is implementation + self-replay intake only.
+2. Independent re-audit promotion is still required before `ASB-RQ-014/015/016` can be moved to `DONE`.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 

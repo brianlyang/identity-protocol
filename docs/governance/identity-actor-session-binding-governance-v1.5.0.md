@@ -2506,42 +2506,42 @@ This subsection prevents ambiguity between the baseline rows above and current r
 
 | Requirement ID | Requirement summary | Code surface / validator | Blocking level | Current status | Evidence ref / notes |
 | --- | --- | --- | --- | --- | --- |
-| ASB-RQ-001 | actor session binding contract schema + storage contract (`session/actors/<actor_id>.json`) | `resolve_identity_context.py`, activation/session pointer sync routine | P0 | SPEC_READY | Spec defined in 5.1; code pending |
-| ASB-RQ-002 | dual-write migration (actor pointer + legacy mirror) | activation/session pointer mirror routine, migration utilities | P0 | SPEC_READY | Phase A defined; code pending |
-| ASB-RQ-003 | validator: actor session binding integrity | `validate_actor_session_binding` (new) | P0 | SPEC_READY | Command declared; script pending |
-| ASB-RQ-004 | validator: no implicit switch across actors | `validate_no_implicit_switch` (new) | P0 | SPEC_READY | Command declared; script pending |
-| ASB-RQ-005 | validator: cross-actor isolation | `validate_cross_actor_isolation` (new) | P0 | SPEC_READY | Command declared; script pending |
-| ASB-RQ-006 | dynamic response stamp renderer (redacted external view + internal evidence view) | `render_identity_response_stamp` (new) | P0 | SPEC_READY | Display safety boundary defined in 5.2 |
-| ASB-RQ-007 | response stamp validator + CI enforcement | `validate_identity_response_stamp` (new), required-gates | P0 | SPEC_READY | Validator/gate pending |
+| ASB-RQ-001 | actor session binding contract schema + storage contract (`session/actors/<actor_id>.json`) | `resolve_identity_context.py`, activation/session pointer sync routine | P0 | DONE | actor-scoped canonical source + mirror compatibility + six-surface replay are closed (`FIX-009/010/015`, review `16.8.74`). |
+| ASB-RQ-002 | dual-write migration (actor pointer + legacy mirror) | activation/session pointer mirror routine, migration utilities | P0 | DONE | dual-write migration and compatibility replay are closed in actor-scoped chain (`FIX-009/010/015`, review `16.8.74`). |
+| ASB-RQ-003 | validator: actor session binding integrity | `validate_actor_session_binding` (new) | P0 | DONE | validator landed and replay-closed in required lanes (`FIX-010`, `HOTFIX-P0-002`, review `16.8.74`). |
+| ASB-RQ-004 | validator: no implicit switch across actors | `validate_no_implicit_switch` (new) | P0 | DONE | validator landed and replay-closed in required lanes (`FIX-010`, `HOTFIX-P0-002`, review `16.8.74`). |
+| ASB-RQ-005 | validator: cross-actor isolation | `validate_cross_actor_isolation` (new) | P0 | DONE | validator landed and replay-closed in required lanes (`FIX-010`, `HOTFIX-P0-002`, review `16.8.74`). |
+| ASB-RQ-006 | dynamic response stamp renderer (redacted external view + internal evidence view) | `render_identity_response_stamp` (new) | P0 | DONE | renderer/dual-view safety boundary is implementation+replay closed (`FIX-004`, `HOTFIX-P0-001/003`, `FIX-020`). |
+| ASB-RQ-007 | response stamp validator + CI enforcement | `validate_identity_response_stamp` (new), required-gates | P0 | DONE | validator + required-gate wiring are replay closed (`HOTFIX-P0-003/004`, `FIX-024`, `FIX-054`). |
 | ASB-RQ-008 | refresh command for live actor binding status | `refresh_identity_session_status` (new) | P1 | SPEC_READY | three-plane visibility binding pending |
-| ASB-RQ-009 | mandatory gate wiring across creator/e2e/readiness/full-scan/three-plane/CI | multiple surfaces listed in 6.3 | P0 | SPEC_READY | Wiring pending |
+| ASB-RQ-009 | mandatory gate wiring across creator/e2e/readiness/full-scan/three-plane/CI | multiple surfaces listed in 6.3 | P0 | DONE | mandatory wiring is closed across creator/e2e/readiness/full-scan/three-plane/CI (`FIX-009/010/015`, `HOTFIX-P0-002`). |
 | ASB-RQ-010 | single-active removal from activation/consistency path | `identity_creator.py`, `identity_installer.py`, `validate_identity_state_consistency.py`, `validate_identity_session_pointer_consistency.py`, `compile_identity_runtime.py` | P0 | DONE | actor-scoped multi-active patch is committed and replay-audited (`FIX-015`) |
 | ASB-RQ-011 | vendor discovery/solution baseline gates (legacy chain) remain wired and compatible | `validate_identity_vendor_api_discovery.py`, `validate_identity_vendor_api_solution.py`, `validate_required_contract_coverage.py` | P1 | GATE_READY | Existing chain already wired in protocol gates |
 | ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
 | ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
-| ASB-RQ-014 | actor-risk health profile coverage (binding/lease/implicit-switch/pointer) is mandatory and machine-counted | `collect_identity_health_report.py`, `validate_identity_actor_health_profile` (new) | P0 | SPEC_READY | Spec defined in 5.3A; implementation pending |
-| ASB-RQ-015 | heal apply supports actor-centric repair branches with deterministic output refs | `identity_creator.py heal`, `validate_identity_heal_replay_closure` (new) | P0 | SPEC_READY | Spec defined in 5.3A; implementation pending |
-| ASB-RQ-016 | deterministic report-binding in closure gates (explicit `--report` for health contract checks) | readiness/e2e/CI health-contract invocation surfaces | P0 | SPEC_READY | Anti-stale closure rule defined in 5.3A; wiring pending |
+| ASB-RQ-014 | actor-risk health profile coverage (binding/lease/implicit-switch/pointer) is mandatory and machine-counted | `collect_identity_health_report.py`, `validate_identity_actor_health_profile` (new) | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed (`FIX-059`, `2a8c3ee`): actor-risk quartet exported + machine-counted coverage + strict bound-report validator; independent re-audit pending. |
+| ASB-RQ-015 | heal apply supports actor-centric repair branches with deterministic output refs | `identity_creator.py heal`, `validate_identity_heal_replay_closure` (new) | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed (`FIX-059`, `2a8c3ee`): heal report now carries health/heal/post refs and closure validator enforces replay determinism; independent re-audit pending. |
+| ASB-RQ-016 | deterministic report-binding in closure gates (explicit `--report` for health contract checks) | readiness/e2e/CI health-contract invocation surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed (`FIX-059`, `2a8c3ee`): readiness/e2e bound health checks now pass explicit execution-report and enforce report-binding validator; independent re-audit pending. |
 | ASB-RQ-017 | health-heal-validate chain evidence exported in three-plane/full-scan views | `report_three_plane_status.py`, `full_identity_protocol_scan.py` | P1 | SPEC_READY | Visibility semantics declared; implementation pending |
-| ASB-RQ-018 | dynamic response stamp fields are runtime-resolved and non-hardcoded | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | SPEC_READY | Spec defined in 5.2/5.2A; implementation pending |
-| ASB-RQ-019 | stamp mismatch must fail-closed with `blocker_receipt` contract | `validate_identity_response_stamp_blocker_receipt` (new), release/e2e gate behavior | P0 | SPEC_READY | Spec defined in 5.2A; implementation pending |
-| ASB-RQ-020 | external stamp output is redacted by default; absolute paths reserved for internal evidence view | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | SPEC_READY | Display boundary hardened in 5.2/5.2A |
-| ASB-RQ-021 | stamp render/validate must be CWD-invariant and deterministic across project/global pointer arbitration | stamp renderer + stamp validator + readiness/e2e/full-scan/three-plane/CI surfaces | P0 | SPEC_READY | Portability guard defined in 5.2A; implementation pending |
+| ASB-RQ-018 | dynamic response stamp fields are runtime-resolved and non-hardcoded | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | DONE | dynamic stamp resolution and replay contracts are closed (`FIX-004`, `HOTFIX-P0-001/003`, `FIX-024`). |
+| ASB-RQ-019 | stamp mismatch must fail-closed with `blocker_receipt` contract | `validate_identity_response_stamp_blocker_receipt` (new), release/e2e gate behavior | P0 | DONE | blocker-receipt fail-closed path is implemented and replay-closed (`FIX-024`, `FIX-054`, `FIX-049`). |
+| ASB-RQ-020 | external stamp output is redacted by default; absolute paths reserved for internal evidence view | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | DONE | redacted external/internal evidence view boundary is replay closed (`FIX-004`, `HOTFIX-P0-001/003`, `FIX-054`). |
+| ASB-RQ-021 | stamp render/validate must be CWD-invariant and deterministic across project/global pointer arbitration | stamp renderer + stamp validator + readiness/e2e/full-scan/three-plane/CI surfaces | P0 | DONE | CWD-invariant stamp render/validate surfaces are replay closed (`FIX-024`, `FIX-056`, review `16.8.68`). |
 | ASB-RQ-022 | response stamp presentation is configurable (message/email style) under governance-safe invariants | renderer + runtime contract + stamp validator | P1 | SPEC_READY | Spec defined in 5.2B; style configurable, safety invariants non-configurable |
 | ASB-RQ-023 | disclosure-level + user-named explicit trigger support with auditable scope and non-bypass guarantees | runtime stamp config + trigger parser + stamp validator | P1 | SPEC_READY | Spec defined in 5.2C; explicit trigger allowed, governance invariants unchanged |
 | ASB-RQ-024 | natural-language explicit trigger normalization and confidence-gated execution | trigger parser + stamp config applier + audit log + stamp validator | P1 | SPEC_READY | Spec defined in 5.2C; NL trigger allowed with non-ambiguous normalization |
 | ASB-RQ-025 | anytime refresh command exports actor session status and risk hints | `refresh_identity_session_status` (new), `validate_identity_session_refresh_status` (new) | P1 | SPEC_READY | Spec defined in 5.3C; implementation pending |
 | ASB-RQ-026 | refresh output includes protocol baseline version visibility fields | refresh command + baseline payload contract | P1 | SPEC_READY | Spec defined in 5.3C; implementation pending |
 | ASB-RQ-027 | three-plane/full-scan include refresh-consistent actor and baseline visibility for same identity context | `report_three_plane_status.py`, `full_identity_protocol_scan.py` + refresh validator wiring | P1 | SPEC_READY | Spec defined in 5.3C; visibility/wiring pending |
-| ASB-RQ-028 | runtime catalog `pack_path` canonicalization is strict and machine-validated | `validate_identity_pack_path_canonical` (new), resolver/catalog write paths | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
-| ASB-RQ-029 | report `resolved_pack_path` is canonical absolute and non-relative | `validate_identity_execution_report_path_contract` (new), `execute_identity_upgrade.py` | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
-| ASB-RQ-030 | `identity_home == dirname(identity_catalog)` alignment is fail-closed for runtime mutation | `validate_identity_home_catalog_alignment` (new), runtime mode guard surfaces | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
-| ASB-RQ-031 | fixture/runtime boundary is validator-enforced for activate/update/readiness paths | `validate_fixture_runtime_boundary` (new), creator/update/readiness/scan surfaces | P0 | SPEC_READY | Spec defined in 5.6; implementation pending |
-| ASB-RQ-032 | writeback continuity contract enforces strict/degraded writeback semantics with mandatory risk fields | `validate_writeback_continuity` (new), `execute_identity_upgrade.py`, readiness/e2e/scan surfaces | P0 | SPEC_READY | Spec defined in 5.7.1; implementation pending |
-| ASB-RQ-033 | post-execution mandatory validator blocks closure when runtime state machine is not advanced | `validate_post_execution_mandatory` (new), upgrade execution closure surfaces | P0 | SPEC_READY | Spec defined in 5.7.1; implementation pending |
-| ASB-RQ-034 | semantic routing guard contract enforces intent-domain pre-classification before retrieval | `validate_semantic_routing_guard` (new), protocol-feedback router surfaces | P0 | SPEC_READY | Spec defined in 5.7.2; implementation pending |
-| ASB-RQ-035 | protocol-vendor and business-partner namespace separation is validator-enforced | `validate_vendor_namespace_separation` (new), feedback artifact writers/readers | P0 | SPEC_READY | Spec defined in 5.7.2; implementation pending |
-| ASB-RQ-036 | protocol-feedback sidecar escalation remains auditable and non-blocking-by-default | `validate_protocol_feedback_sidecar_contract` (new), required-gates escalation logic | P0 | SPEC_READY | Spec defined in 5.7.3; implementation pending |
+| ASB-RQ-028 | runtime catalog `pack_path` canonicalization is strict and machine-validated | `validate_identity_pack_path_canonical` (new), resolver/catalog write paths | P0 | DONE | path-governance chain is implementation+replay closed (`FIX-002~007`, `FIX-056`). |
+| ASB-RQ-029 | report `resolved_pack_path` is canonical absolute and non-relative | `validate_identity_execution_report_path_contract` (new), `execute_identity_upgrade.py` | P0 | DONE | execution-report path contract is implementation+replay closed (`FIX-002~007`, `FIX-051`). |
+| ASB-RQ-030 | `identity_home == dirname(identity_catalog)` alignment is fail-closed for runtime mutation | `validate_identity_home_catalog_alignment` (new), runtime mode guard surfaces | P0 | DONE | home/catalog alignment fail-closed semantics are replay closed in path-governance chain (`FIX-002~007`). |
+| ASB-RQ-031 | fixture/runtime boundary is validator-enforced for activate/update/readiness paths | `validate_fixture_runtime_boundary` (new), creator/update/readiness/scan surfaces | P0 | DONE | fixture/runtime boundary validator is implementation+replay closed (`FIX-002~007`, `FIX-057`). |
+| ASB-RQ-032 | writeback continuity contract enforces strict/degraded writeback semantics with mandatory risk fields | `validate_writeback_continuity` (new), `execute_identity_upgrade.py`, readiness/e2e/scan surfaces | P0 | DONE | writeback continuity gate is implementation+replay closed (`FIX-011`, `FIX-051`). |
+| ASB-RQ-033 | post-execution mandatory validator blocks closure when runtime state machine is not advanced | `validate_post_execution_mandatory` (new), upgrade execution closure surfaces | P0 | DONE | post-execution mandatory gate is implementation+replay closed (`FIX-011`, `FIX-051`). |
+| ASB-RQ-034 | semantic routing guard contract enforces intent-domain pre-classification before retrieval | `validate_semantic_routing_guard` (new), protocol-feedback router surfaces | P0 | DONE | semantic routing guard is implementation+replay closed (`FIX-012`, `FIX-052`). |
+| ASB-RQ-035 | protocol-vendor and business-partner namespace separation is validator-enforced | `validate_vendor_namespace_separation` (new), feedback artifact writers/readers | P0 | DONE | namespace separation guard is implementation+replay closed (`FIX-013`, `FIX-041/042`). |
+| ASB-RQ-036 | protocol-feedback sidecar escalation remains auditable and non-blocking-by-default | `validate_protocol_feedback_sidecar_contract` (new), required-gates escalation logic | P0 | DONE | sidecar escalation contract is implementation+replay closed (`FIX-013`, `FIX-051` sidecar ordering closure). |
 | ASB-RQ-037 | instance-to-base-repo mutation boundary is codified as docs-allow/protocol-code-deny and fail-closed | `validate_instance_base_repo_write_boundary` (new), readiness/e2e/CI change-range surfaces | P0 | DONE | replayed and audit-confirmed in HOTFIX-P0-005 lane |
 | ASB-RQ-038 | protocol-feedback outputs must be SSOT-archived before mirror publication | `validate_protocol_feedback_ssot_archival` (new), outbox/evidence-index writer surfaces | P0 | DONE | replayed and audit-confirmed in HOTFIX-P0-006 lane |
 | ASB-RQ-039 | readiness dual-catalog arbitration must be explicit via `--scope` and deterministic fail-closed on ambiguity | `release_readiness_check.py` + runtime mode/scope validators (`validate_identity_runtime_mode_guard`) | P0 | DONE | no-scope fail-closed + scoped passthrough replayed and confirmed in HOTFIX-P0-007 lane |
@@ -2750,6 +2750,34 @@ Release boundary after this batch:
 1. `P0_TOTAL=87`, `P0_DONE=63`, `P0_NOT_DONE=24`.
 2. Remaining `P0_NOT_DONE` rows are all `SPEC_READY` (`ASB-RQ-001..007`, `009`, `014..016`, `018..021`, `028..036`).
 3. `D6` remains `LOCKED` until those `SPEC_READY` rows are implemented and then promoted to `DONE` via the same 6.5 formula.
+
+### 6.4E DONE/IMPL promotion snapshot (2026-03-04, architect closure batch-C + FIX-059 intake)
+
+Promotion rule used in this batch:
+
+1. `SPEC_READY -> DONE` is allowed only for rows that already have:
+   - replay-closed implementation chains recorded in review (`FIX` row `DONE/PASS`), and
+   - existing governance delta evidence in 6.4A/B that is now normalized into 6.4 main table.
+2. `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT)` is used when implementation lands this round, but independent re-audit is still pending.
+
+Batch-C normalization (`21` rows, `SPEC_READY -> DONE`):
+
+1. `ASB-RQ-001..007`
+2. `ASB-RQ-009`
+3. `ASB-RQ-018..021`
+4. `ASB-RQ-028..036`
+
+New implementation intake (`3` rows, `SPEC_READY -> IMPL_READY (BLOCKED_BY_AUDIT)`):
+
+1. `ASB-RQ-014` (`FIX-059`, `2a8c3ee`: actor-risk profile coverage + machine-counted quartet)
+2. `ASB-RQ-015` (`FIX-059`, `2a8c3ee`: heal replay deterministic refs + closure validator)
+3. `ASB-RQ-016` (`FIX-059`, `2a8c3ee`: explicit execution-report binding in readiness/e2e closure checks)
+
+Release boundary after this batch:
+
+1. `P0_TOTAL=87`, `P0_DONE=84`, `P0_NOT_DONE=3`.
+2. Remaining `P0_NOT_DONE` rows are all `IMPL_READY (BLOCKED_BY_AUDIT)` (`ASB-RQ-014..016`).
+3. `D6` remains `LOCKED` until `ASB-RQ-014..016` receive independent re-audit promotion to `DONE` and 6.5 formula conditions are fully satisfied.
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
