@@ -173,7 +173,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
-| FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
+| FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421` | DONE | PASS |
 
 ---
 
@@ -4228,6 +4228,40 @@ Boundary:
 
 1. This section is implementation + self-replay intake only.
 2. `FIX-061` requires independent re-audit before promotion to `DONE/PASS`.
+
+#### 16.8.84 Independent re-audit promotion: FIX-061 (`ASB-RQ-118`, 2026-03-04, protocol, audit lane)
+
+Status: `PASS` (promoted from `PENDING_REAUDIT` to independent closure).
+
+Audit scope:
+
+1. Verify explicit actor context cannot emit a governed reply for non-current actor-bound identity.
+2. Verify strict send-time evidence remains file-backed and rejects inline synthetic `reply_text`.
+3. Verify governed outlet bypass guard still fails closed and does not regress.
+
+Independent replay evidence:
+
+1. Runtime pointer replay:
+   - `/tmp/fix061_identity_switch_replay.json`
+   - actor pointer and active canonical pointer both remain `base-repo-architect` (no runtime switch in incident window).
+2. Positive actor-bound governed path:
+   - `/tmp/fix061_reaudit_positive.json`
+   - `rc=0`, `send_time_gate_status=PASS_REQUIRED`, `reply_evidence_mode=reply_file`, `governed_outlet_enforced=true`.
+3. Negative actor-bound mismatch:
+   - `/tmp/fix061_reaudit_negative_mismatch.json`
+   - `rc=1`, `error_code=IP-ASB-STAMP-SESSION-005`, `actor_bound_identity_id=base-repo-architect`.
+4. Negative strict inline synthetic evidence:
+   - `/tmp/fix061_reaudit_negative_inline.json`
+   - `rc=1`, `error_code=IP-ASB-STAMP-SESSION-002`, `stale_reasons` contains `strict_send_time_inline_reply_text_forbidden`.
+5. Negative non-governed outlet bypass:
+   - `/tmp/fix061_reaudit_negative_nongoverned.json`
+   - `rc=1`, `error_code=IP-ASB-STAMP-SESSION-004`.
+
+Audit decision:
+
+1. `ASB-RQ-118` meets independent positive/negative replay closure and is promoted to `DONE`.
+2. `FIX-061` is promoted to `DONE/PASS` in rolling summary.
+3. This promotion removes the `6.4I` residual `P0` blocker and re-enables `v1.5` unlock arithmetic.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 

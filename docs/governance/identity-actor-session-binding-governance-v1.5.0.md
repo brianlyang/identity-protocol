@@ -32,7 +32,7 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
 | D4 Acceptance pass | Mandatory acceptance command set green | PASS (CHECKLIST_16.8.57_GREEN + NORMALIZED_REVIEW_REQUIRED_BRANCH_CLOSURE_16.8.62) |
 | D5 Audit sign-off | Architect + audit expert both PASS | PASS |
-| D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED (`ASB-RQ-118` pending; snapshot `6.4I`) |
+| D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | PASS (UNLOCK_ALLOWED; snapshot `6.4J`) |
 
 ### 0.4 Requirement status model (machine-readable governance semantics)
 
@@ -2669,7 +2669,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-115 | D4 acceptance chain must be CWD-invariant for experience-feedback contract enforcement: rulebook/sample paths and validator child invocation must resolve deterministically under both repo-root and non-repo caller CWD | `validate_identity_experience_feedback.py` anchored path resolver + `execute_identity_upgrade.py` explicit child-`cwd` execution + check-log CWD telemetry | P0 | DONE | `FIX-056` landed in `e8596da`; independent re-audit promotion completed in review `16.8.68` (repo-root/non-root replay both `rc=0`). |
 | ASB-RQ-116 | activation lane must fail-closed on cross-identity actor switch unless explicit switch-intent receipt is supplied (`actor_id + from_identity_id + to_identity_id` tuple bound), preventing execution-time hidden identity mutation | `identity_creator.py activate` switch-intent pre-mutation guard + actor binding resolver + switch report telemetry fields | P0 | DONE | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion completed in review `16.8.68` (P0/P1/P2 rows accepted, including non-root replay and actor-bound tail validator parity). |
 | ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | DONE | implementation landed in `FIX-060` (`50005f0`) and independent re-audit promoted in review `16.8.82`: governed outlet pass path plus fail-closed bypass/missing-guard branches (`IP-ASB-STAMP-SESSION-004` / `IP-ASB-STAMP-SESSION-003`) are accepted. |
-| ASB-RQ-118 | strict governed outlet must remain actor-bound coherent: explicit actor context cannot emit replies for historical/non-current identity bindings, and strict send-time evidence must be file-backed live payload | actor-bound current-binding mismatch guard in compose/first-line validators + strict inline-evidence rejection + actor-bound telemetry surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-061` (`119a421`): actor-bound mismatch now fail-closed (`IP-ASB-STAMP-SESSION-005`) and strict inline reply-text evidence is denied (`IP-ASB-STAMP-SESSION-002`); independent re-audit promotion pending (`review 16.8.83`). |
+| ASB-RQ-118 | strict governed outlet must remain actor-bound coherent: explicit actor context cannot emit replies for historical/non-current identity bindings, and strict send-time evidence must be file-backed live payload | actor-bound current-binding mismatch guard in compose/first-line validators + strict inline-evidence rejection + actor-bound telemetry surfaces | P0 | DONE | implementation landed in `FIX-061` (`119a421`) and independent re-audit promoted in review `16.8.84`: actor-bound mismatch is fail-closed (`IP-ASB-STAMP-SESSION-005`) and strict inline reply-text evidence is denied (`IP-ASB-STAMP-SESSION-002`) with non-governed bypass guard retained (`IP-ASB-STAMP-SESSION-004`). |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2725,7 +2725,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-115 | `NEW -> GATE_READY (P0)` | `FIX-056` landed in `e8596da`; independent re-audit promotion recorded in review `16.8.68` with dual-CWD validator replay pass and no caller-CWD drift. |
 | ASB-RQ-116 | `NEW -> GATE_READY (P0)` | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion recorded in review `16.8.68` with P0 guard (`IP-ACT-SWITCH-001/002`) + P1 actor-bound + P2 CWD-invariant rows accepted. |
 | ASB-RQ-117 | `NEW -> DONE (P0)` | `FIX-060` implementation landed (`50005f0`) and independent re-audit promoted in review `16.8.82`; governed outlet exclusivity and fail-closed bypass/missing-guard branches are accepted. |
-| ASB-RQ-118 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-061` implementation landed (`119a421`) with actor-bound identity mismatch fail-closed (`IP-ASB-STAMP-SESSION-005`) + strict inline reply-text evidence denial; independent replay promotion pending in review `16.8.83`. |
+| ASB-RQ-118 | `NEW -> DONE (P0)` | `FIX-061` implementation landed (`119a421`) and independent re-audit promoted in review `16.8.84`; actor-bound mismatch fail-closed + strict inline evidence rejection + non-governed bypass guard replay are accepted. |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2743,10 +2743,10 @@ Historical implementation notes remain preserved in 6.4/6.4A.
 | ASB-RQ-107..108 | `IMPL_READY (BLOCKED_BY_AUDIT, P0/P1) -> GATE_READY (P0/P1)` | independent replay promotes `FIX-048` to `PASS`: neutral scaffold zero legacy terms + blocker taxonomy canonical/legacy/invalid triad, review `16.8.50` |
 | ASB-RQ-111..114 | `IMPL_READY (BLOCKED_BY_AUDIT, P0/P1) -> GATE_READY (P0/P1)` | independent replay promotes `FIX-051..054` to `PASS`: writeback/sidecar CWD invariance, coverage normalization, and send-time missing-head fail-closed, review `16.8.50` |
 
-Current release boundary (unchanged):
+Historical release boundary at `6.4B` snapshot time:
 
-1. v1.5 remains `NO_GO` until 6.5 unlock formula is satisfied.
-2. Latest independent replay no longer classifies `IP-CAP-003` as project-scope `P0/P1` blocker (`FIX-055` closure in review `16.8.55`); `D4` closure interpretation is normalized to `PASS` by review `16.8.62`, while release still remains `NO_GO` because section `6.5` unlock formula is not yet satisfied.
+1. `v1.5` remained `NO_GO` at that time because section `6.5` unlock formula was not yet satisfied.
+2. This snapshot is preserved as historical progression evidence and is superseded for current release arithmetic by `6.4J`.
 
 ### 6.4C DONE promotion snapshot (2026-03-04, auditor closure batch-A)
 
@@ -2889,6 +2889,19 @@ Release boundary after follow-up intake:
    - `ASB-RQ-118` (`IMPL_READY (BLOCKED_BY_AUDIT)`).
 3. Section `6.5` formula evaluates `unlock_allowed=false`; `D6` remains `LOCKED` until `ASB-RQ-118` is promoted to `DONE`.
 
+### 6.4J Independent re-audit promotion snapshot (`FIX-061`, 2026-03-04)
+
+Snapshot decision:
+
+1. Promote `ASB-RQ-118` from `IMPL_READY (BLOCKED_BY_AUDIT)` to `DONE` based on independent re-audit closure in review `16.8.84`.
+2. This snapshot supersedes `6.4I` for current unlock arithmetic while preserving `6.4I` as historical recurrence-intake state.
+
+Release boundary after promotion:
+
+1. `P0_TOTAL=89`, `P0_DONE=89`, `P0_NOT_DONE=0`.
+2. Remaining `P0_NOT_DONE` set: none.
+3. Section `6.5` formula evaluates `unlock_allowed=true`; `D6` is promoted to `PASS (UNLOCK_ALLOWED)`.
+
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:
@@ -2906,7 +2919,7 @@ Non-equivalence constraints:
 Parallel-planning constraint:
 
 1. `v1.6` planning/design work may run in parallel with `v1.5` remediation, but **cannot** be used as substitute unlock evidence for `v1.5`.
-2. `v1.5` is `NO_GO` until the exact 6.5 unlock formula is satisfied; current status is `NO_GO` because `6.4I` keeps `unlock_allowed=false`.
+2. `v1.5` is `NO_GO` until the exact 6.5 unlock formula is satisfied; current status is `GO` because `6.4J` yields `unlock_allowed=true`.
 
 Audit output requirement:
 
@@ -3221,7 +3234,7 @@ Decision boundary:
    - row-C: P2 CWD-invariant execution accepted (non-root replay reaches guard, no path-not-found drift).
 4. If any row fails, keep `ASB-RQ-116` in `IMPL_READY (BLOCKED_BY_AUDIT)` and publish residual in review section `16.8.67`.
 
-### 6.6H Headstamp recurrence hard boundary (`review 16.8.79` intake, `16.8.82` promotion, `16.8.83` actor-bound follow-up)
+### 6.6H Headstamp recurrence hard boundary (`review 16.8.79` intake, `16.8.82` promotion, `16.8.83/16.8.84` actor-bound closure)
 
 Normative risk:
 
@@ -3238,12 +3251,13 @@ Binding rule:
    - `IP-ASB-STAMP-SESSION-005` when explicit actor context does not match actor-bound current identity.
 6. Strict send-time evidence must be file-backed payload (inline `reply_text` rejected):
    - `IP-ASB-STAMP-SESSION-002` + stale reason `strict_send_time_inline_reply_text_forbidden`.
-7. `ASB-RQ-118` tracks independent replay promotion for this follow-up and remains `IMPL_READY (BLOCKED_BY_AUDIT)`.
+7. Historical follow-up intake (`16.8.83`) introduced `ASB-RQ-118` as release-blocking `P0`.
+8. Current authoritative state (`16.8.84`): `ASB-RQ-118` is independently promoted to `DONE`.
 
 Release implication:
 
-1. Historical blocker effect is preserved in `6.4F/6.4G/6.4H`.
-2. Follow-up actor-bound coherence closure must satisfy `ASB-RQ-118` independent replay before final release arithmetic can treat this lane as closed.
+1. Historical blocker effect is preserved in `6.4F/6.4G/6.4H/6.4I`.
+2. Current unlock arithmetic follows `6.4J` where `P0_NOT_DONE=0` and `D6=PASS (UNLOCK_ALLOWED)`.
 3. No docs-only statement can override this boundary; promotion requires implementation + replay + independent audit.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
