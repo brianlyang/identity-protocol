@@ -5730,6 +5730,9 @@ Forensic replay (operator confusion disambiguation, same window):
 3. Evidence anchor:
    - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/actors/assistant_codex.json`
 4. Therefore, this incident classifies as "activation-path mutation observed and auditable", not "non-auditable hidden auto-switch". Remaining prevention focus is switch-intent visibility/runbook discipline.
+5. Additional discriminator (critical):
+   - before `2026-03-04T02:52:33Z`, `assistant_codex` actor receipts contain no `base-repo-architect` activation record;
+   - therefore any earlier header line claiming `identity_id=base-repo-architect` is declaration-channel drift (stamp text not bound to current actor receipt), not a completed runtime switch event.
 
 Boundary decision:
 

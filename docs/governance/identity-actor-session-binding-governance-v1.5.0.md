@@ -2923,6 +2923,7 @@ Forensic boundary (avoid RCA misclassification):
 2. If actor receipt contains explicit `activate` mutation with matching `applied_at/run_id/switch_reason`, classify as auditable switch-intent execution (not hidden auto-switch defect).
 3. Required forensic anchor:
    - `<catalog_parent>/session/actors/assistant_codex.json` (or actor-equivalent file), verifying `rebind_receipts[]` timeline.
+4. If user-facing header identity appears without corresponding actor receipt in that time window, classify as declaration-channel drift (stamp emission not runtime-bound), not catalog mutation.
 
 Decision boundary:
 
