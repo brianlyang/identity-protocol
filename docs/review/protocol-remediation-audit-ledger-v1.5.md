@@ -170,7 +170,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
 | FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PENDING_REAUDIT |
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PENDING_REAUDIT |
-| FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808` | DONE | PENDING_REAUDIT |
+| FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PENDING_REAUDIT |
 
 ---
 
