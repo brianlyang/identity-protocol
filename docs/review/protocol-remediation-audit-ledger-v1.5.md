@@ -173,6 +173,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
+| FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
 
 ---
 
@@ -4177,6 +4178,56 @@ Audit decision:
 1. `ASB-RQ-117` satisfies independent positive/negative contract replay and is promoted to `DONE`.
 2. `FIX-060` is promoted to `DONE/PASS` in the rolling summary.
 3. This promotion closes the last remaining `P0` blocker row for `v1.5` release unlock arithmetic.
+
+#### 16.8.83 P0 recurrence intake and implementation hardening: actor-bound headstamp coherence (`FIX-061`, `ASB-RQ-118`, 2026-03-04, protocol)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)`.
+
+Recurrence replay conclusion:
+
+1. Runtime activation/session pointer did not drift in the reported window; both canonical pointer and actor pointer remained `base-repo-architect`.
+2. Observed `identity_id=base-repo-audit-expert-v3` headstamp was an emission-layer stale literal recurrence, not a successful runtime identity switch.
+3. Root cause class:
+   - governed outlet accepted actor historical identity entries when caller supplied mismatched `--identity-id`;
+   - strict send-time accepted inline `--reply-text` synthetic evidence path.
+
+Implementation anchor:
+
+1. `119a421` — `fix(protocol): harden actor-bound headstamp coherence in governed outlet`
+
+Patch scope:
+
+1. `scripts/compose_and_validate_governed_reply.py`
+   - add explicit actor-bound current identity mismatch hard gate (`IP-ASB-STAMP-SESSION-005`);
+   - send-time preflight now uses file-backed reply evidence (`--reply-file`) instead of inline text.
+2. `scripts/validate_reply_identity_context_first_line.py`
+   - strict mode with explicit `--actor-id` now validates actor-bound current identity and fails closed on mismatch (`IP-ASB-STAMP-SESSION-005`);
+   - emit `actor_bound_identity_id` and lock telemetry fields.
+3. `scripts/validate_send_time_reply_gate.py`
+   - strict send-time now rejects inline `reply_text` evidence (`IP-ASB-STAMP-SESSION-002`, stale reason `strict_send_time_inline_reply_text_forbidden`);
+   - propagate runtime-binding mismatch code path as outlet-bypass telemetry.
+
+Self-replay evidence:
+
+1. runtime pointer replay:
+   - `/tmp/fix061_identity_switch_replay.json`
+   - actor/canonical pointer both resolve to `base-repo-architect` in incident window.
+2. positive governed actor-bound pass:
+   - `/tmp/fix061_positive_stdout4.json` (`rc=0`, `send_time_gate_status=PASS_REQUIRED`, `reply_evidence_mode=reply_file`)
+3. negative actor-bound mismatch (same actor, mismatched identity-id):
+   - `/tmp/fix061_negative_lock_mismatch_stdout3.json`
+   - `rc=1`, `error_code=IP-ASB-STAMP-SESSION-005`
+4. negative strict inline synthetic evidence:
+   - `/tmp/fix061_negative_inline_reply_text.json`
+   - `rc=1`, `error_code=IP-ASB-STAMP-SESSION-002`
+5. negative non-governed outlet (regression guard retained):
+   - `/tmp/fix061_negative_nongoverned.json`
+   - `rc=1`, `error_code=IP-ASB-STAMP-SESSION-004`
+
+Boundary:
+
+1. This section is implementation + self-replay intake only.
+2. `FIX-061` requires independent re-audit before promotion to `DONE/PASS`.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
