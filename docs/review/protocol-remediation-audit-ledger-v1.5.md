@@ -172,7 +172,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PASS |
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
-| FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
+| FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
 
 ---
 
@@ -4138,6 +4138,45 @@ Boundary:
 
 1. This section is implementation + self-replay intake only.
 2. Independent re-audit promotion is required before `ASB-RQ-117` can move to `DONE`.
+
+#### 16.8.82 Independent re-audit promotion: FIX-060 (`ASB-RQ-117`, 2026-03-04, protocol, audit lane)
+
+Status: `PASS` (promoted from `PENDING_REAUDIT` to independent closure).
+
+Audit scope:
+
+1. Verify strict-lane user-visible reply emission is governed-outlet only.
+2. Verify non-governed bypass and missing-guard branches both fail-closed with deterministic error codes.
+3. Verify outlet telemetry fields are machine-readable and stable for release arithmetic.
+
+Independent replay evidence:
+
+1. Consolidated replay summary:
+   - `/tmp/fix060_reaudit_summary.json`
+2. Positive governed path:
+   - `rc=0`
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `governed_outlet_enforced=true`
+   - `outlet_channel_id=governed_adapter_v1`
+   - `outlet_bypass_detected=false`
+3. Negative non-governed outlet bypass:
+   - `rc=1`
+   - `send_time_gate_status=FAIL_REQUIRED`
+   - `error_code=IP-ASB-STAMP-SESSION-004`
+   - `outlet_channel_id=freeform_cli`
+   - `outlet_bypass_detected=true`
+4. Negative governed-channel missing preflight guard:
+   - `rc=1`
+   - `send_time_gate_status=FAIL_REQUIRED`
+   - `error_code=IP-ASB-STAMP-SESSION-003`
+   - `outlet_channel_id=governed_adapter_v1`
+   - `outlet_bypass_detected=true`
+
+Audit decision:
+
+1. `ASB-RQ-117` satisfies independent positive/negative contract replay and is promoted to `DONE`.
+2. `FIX-060` is promoted to `DONE/PASS` in the rolling summary.
+3. This promotion closes the last remaining `P0` blocker row for `v1.5` release unlock arithmetic.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 

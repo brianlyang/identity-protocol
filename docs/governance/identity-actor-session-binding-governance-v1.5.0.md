@@ -32,7 +32,7 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
 | D4 Acceptance pass | Mandatory acceptance command set green | PASS (CHECKLIST_16.8.57_GREEN + NORMALIZED_REVIEW_REQUIRED_BRANCH_CLOSURE_16.8.62) |
 | D5 Audit sign-off | Architect + audit expert both PASS | PASS |
-| D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED |
+| D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | PASS (UNLOCK_ALLOWED; snapshot `6.4H`) |
 
 ### 0.4 Requirement status model (machine-readable governance semantics)
 
@@ -2648,7 +2648,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-114 | outbound governed reply path must compose first-line identity stamp and execute send-time preflight on exact payload before emission (operator-side missing-headstamp recurrence is fail-closed) | `scripts/compose_and_validate_governed_reply.py` + `validate_send_time_reply_gate.py` (`operation=send-time`) + first-line validator telemetry | P0 | DONE | implementation landed in `FIX-054` (`a559820`,`6430852`); independent replay closure promoted in review `16.8.50` with live-boundary follow-up in `16.8.51/16.8.52`. |
 | ASB-RQ-115 | D4 acceptance chain must be CWD-invariant for experience-feedback contract enforcement: rulebook/sample paths and validator child invocation must resolve deterministically under both repo-root and non-repo caller CWD | `validate_identity_experience_feedback.py` anchored path resolver + `execute_identity_upgrade.py` explicit child-`cwd` execution + check-log CWD telemetry | P0 | DONE | `FIX-056` landed in `e8596da`; independent re-audit promotion completed in review `16.8.68` (repo-root/non-root replay both `rc=0`). |
 | ASB-RQ-116 | activation lane must fail-closed on cross-identity actor switch unless explicit switch-intent receipt is supplied (`actor_id + from_identity_id + to_identity_id` tuple bound), preventing execution-time hidden identity mutation | `identity_creator.py activate` switch-intent pre-mutation guard + actor binding resolver + switch report telemetry fields | P0 | DONE | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion completed in review `16.8.68` (P0/P1/P2 rows accepted, including non-root replay and actor-bound tail validator parity). |
-| ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-060` (`50005f0`): send-time gate enforces non-governed outlet fail-closed (`IP-ASB-STAMP-SESSION-004`) and exports outlet telemetry fields; independent re-audit promotion pending (`review 16.8.81`). |
+| ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | DONE | implementation landed in `FIX-060` (`50005f0`) and independent re-audit promoted in review `16.8.82`: governed outlet pass path plus fail-closed bypass/missing-guard branches (`IP-ASB-STAMP-SESSION-004` / `IP-ASB-STAMP-SESSION-003`) are accepted. |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2703,7 +2703,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-114 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-054` implementation landed in `a559820` with chain-wiring follow-up `6430852` so outbound send-time checks validate composed reply-file evidence across readiness/e2e/full-scan/three-plane/validate lanes; latest project replay keeps `IP-CAP-003` as auditable env/auth telemetry with strict->route-any-ready fallback + scan fallback closure (`review 16.8.51/16.8.52`), therefore independent audit promotion remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
 | ASB-RQ-115 | `NEW -> GATE_READY (P0)` | `FIX-056` landed in `e8596da`; independent re-audit promotion recorded in review `16.8.68` with dual-CWD validator replay pass and no caller-CWD drift. |
 | ASB-RQ-116 | `NEW -> GATE_READY (P0)` | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion recorded in review `16.8.68` with P0 guard (`IP-ACT-SWITCH-001/002`) + P1 actor-bound + P2 CWD-invariant rows accepted. |
-| ASB-RQ-117 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-060` implementation landed (`50005f0`) with governed outlet exclusivity + outlet telemetry fields + CWD-invariant replay pair (`review 16.8.81`); independent re-audit promotion pending. |
+| ASB-RQ-117 | `NEW -> DONE (P0)` | `FIX-060` implementation landed (`50005f0`) and independent re-audit promoted in review `16.8.82`; governed outlet exclusivity and fail-closed bypass/missing-guard branches are accepted. |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2839,6 +2839,19 @@ Release boundary after promotion:
    - `ASB-RQ-117` (`IMPL_READY (BLOCKED_BY_AUDIT)`, independent promotion pending).
 3. `D6` remains `LOCKED` until `ASB-RQ-117` is promoted to `DONE` under section `6.5` formula.
 
+### 6.4H Independent re-audit promotion snapshot (`FIX-060`, 2026-03-04)
+
+Snapshot decision:
+
+1. Promote `ASB-RQ-117` from `IMPL_READY (BLOCKED_BY_AUDIT)` to `DONE` based on independent re-audit closure in review `16.8.82`.
+2. This snapshot supersedes `6.4G` for current unlock arithmetic while preserving `6.4G` as historical pre-promotion state.
+
+Release boundary after promotion:
+
+1. `P0_TOTAL=88`, `P0_DONE=88`, `P0_NOT_DONE=0`.
+2. Remaining `P0_NOT_DONE` set: none.
+3. Section `6.5` formula now evaluates `unlock_allowed=true`; `D6` is promoted to `PASS (UNLOCK_ALLOWED)`.
+
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:
@@ -2856,7 +2869,7 @@ Non-equivalence constraints:
 Parallel-planning constraint:
 
 1. `v1.6` planning/design work may run in parallel with `v1.5` remediation, but **cannot** be used as substitute unlock evidence for `v1.5`.
-2. `v1.5` remains `NO_GO` until the exact 6.5 unlock formula is satisfied.
+2. `v1.5` is `NO_GO` until the exact 6.5 unlock formula is satisfied; current status is `GO` because `6.4H` yields `unlock_allowed=true`.
 
 Audit output requirement:
 
@@ -3171,7 +3184,7 @@ Decision boundary:
    - row-C: P2 CWD-invariant execution accepted (non-root replay reaches guard, no path-not-found drift).
 4. If any row fails, keep `ASB-RQ-116` in `IMPL_READY (BLOCKED_BY_AUDIT)` and publish residual in review section `16.8.67`.
 
-### 6.6H Headstamp recurrence hard boundary (`review 16.8.79`, P0 emergency intake)
+### 6.6H Headstamp recurrence hard boundary (`review 16.8.79` intake, superseded by `16.8.82` promotion)
 
 Normative risk:
 
@@ -3182,12 +3195,14 @@ Binding rule:
 
 1. Strict operations must emit user-visible output only through governed outlet adapter.
 2. Outlet bypass attempt must fail-closed with `IP-ASB-STAMP-SESSION-004`.
-3. `ASB-RQ-117` is now `IMPL_READY (BLOCKED_BY_AUDIT)` after implementation landing (`FIX-060`, `50005f0`) and remains release-blocking until independent replay evidence is accepted.
+3. Historical intake state (`16.8.79`): `ASB-RQ-117` entered release-blocking lane; implementation landed in `FIX-060` (`50005f0`).
+4. Current authoritative state (`16.8.82`): `ASB-RQ-117` is independently promoted to `DONE` with accepted positive/negative replay bundle.
 
 Release implication:
 
-1. `ASB-RQ-117` is part of section `6.4` unlock arithmetic and blocks `D6` the same way as other non-`DONE` `P0` rows.
-2. No docs-only statement can override this blocker without implementation + replay + audit promotion.
+1. Historical blocker effect is preserved in `6.4F/6.4G`.
+2. Current unlock arithmetic follows `6.4H` where `P0_NOT_DONE=0` and `D6=PASS (UNLOCK_ALLOWED)`.
+3. No docs-only statement can override this boundary; promotion requires implementation + replay + independent audit.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
