@@ -3927,7 +3927,7 @@ Acceptance replay template (post-implementation):
 
 This section is docs-only intake; no protocol script behavior changed in this batch.
 
-#### 16.8.75 Governance P0 normalization batch-C (2026-03-04, docs-only bridge)
+#### 16.8.77 Governance P0 normalization batch-C (2026-03-04, docs-only bridge)
 
 Status: `CLOSED_SCOPE_BATCH_C`.
 
@@ -3954,7 +3954,7 @@ Residual after batch-C:
 1. only `ASB-RQ-014/015/016` remain non-`DONE`, now tracked as `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay promotion.
 2. `D6` remains `LOCKED` until those three rows are independently promoted to `DONE` under governance formula `6.5`.
 
-#### 16.8.76 FIX-059 implementation intake (ASB-RQ-014/015/016, 2026-03-04, protocol code + self-replay)
+#### 16.8.78 FIX-059 implementation intake (ASB-RQ-014/015/016, 2026-03-04, protocol code + self-replay)
 
 Status: `IMPL_READY (BLOCKED_BY_AUDIT)`.
 
