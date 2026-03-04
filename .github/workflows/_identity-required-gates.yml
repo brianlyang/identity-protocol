@@ -23,7 +23,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Lint workflows (actionlint)
-        uses: rhysd/actionlint@v1
+        uses: rhysd/actionlint@v1.7.11
 
       - name: Secret scan (gitleaks)
         uses: gitleaks/gitleaks-action@v2
