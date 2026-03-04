@@ -7,6 +7,24 @@ Applies to: identity protocol base-repo architecture decisions only
 This handoff note exists to keep index links stable and provide a concise execution bridge
 between audit findings and implementation tasks in v1.4.13.
 
+## 2026-03-04 release lane CI hotfix addendum
+
+To keep protocol-core release gates fail-closed without false negatives:
+
+1. Required-gates workflow now pins `rhysd/actionlint` to a valid immutable tag.
+2. Upgrade-report lookup in CI no longer uses `ls` (shellcheck `SC2012` compliance).
+3. Fixture and runtime identities share compatibility fixes for:
+   - runtime evidence pattern resolution (pack-local first + repo fallback),
+   - repository-relative rulebook path resolution,
+   - prompt quality scope arbitration (`--scope AUTO`),
+   - role-binding evidence lookup fallback behavior.
+4. Fixture samples were refreshed to maintain required gate freshness:
+   - store-manager prompt principle token presence,
+   - store-manager role-binding evidence timestamp,
+   - system-requirements-analyst blocker taxonomy alias bridge normalization.
+
+This addendum is protocol-governance guidance only; release semantics and fail-closed policy remain unchanged.
+
 Execution directive (mandatory):
 
 1. Execute protocol-strengthening items based on this handoff document only.
