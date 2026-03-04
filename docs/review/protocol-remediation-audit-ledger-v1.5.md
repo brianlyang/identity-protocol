@@ -5640,6 +5640,45 @@ Promotion guard (must stay fail-closed):
 2. Status change to `DONE` requires architect commit plus independent auditor countersign for each row.
 3. Until those commits land in section `6.4`, `D6` remains `LOCKED`.
 
+#### 16.8.65 P0 reverify: identity headstamp hard-switch recurrence (`base-repo-audit-expert-v3` vs `base-repo-architect`, 2026-03-04)
+
+Status: `REVERIFIED_CLOSED (channel guard confirmed; env drift guard hardened)`.
+
+Issue statement:
+
+1. A user-visible reply sample showed header identity switched to `base-repo-architect` while expected identity was `base-repo-audit-expert-v3`.
+2. This is P0 severity for governance semantics because `LOCK_MATCH` sessions must not emit cross-identity stamp.
+
+Cross-verification findings:
+
+1. Validator contract itself is fail-closed and catches mismatch:
+   - negative evidence: `/tmp/p0_identity_switch_negative_isolated.json`
+   - result: `reply_first_line_status=FAIL_REQUIRED`, `stale_reasons=['reply_first_line_identity_mismatch']`.
+2. Positive control passes when identity matches:
+   - `/tmp/p0_identity_switch_positive.json` (`PASS_REQUIRED`).
+3. Root drift source is catalog lane selection, not validator logic:
+   - without project forcing, global catalog can resolve `base-repo-architect`:
+     `/tmp/p0_identity_resolve_global_architect.json`;
+   - with workspace-local forcing, `base-repo-audit-expert-v3` resolves under project catalog and `base-repo-architect` is not found:
+     `/tmp/p0_identity_resolve_project_audit.json`,
+     `/tmp/p0_identity_resolve_project_architect_fail.log`.
+
+Remediation landed (workspace runtime guard):
+
+1. Updated workspace helper:
+   - `/Users/yangxi/claude/codex_project/weixinstore/scripts/use_local_identity_env.sh`
+2. Hardening points:
+   - force project runtime identity root when `.agents/identity/catalog.local.yaml` exists (unless `IDENTITY_PREFER_GLOBAL=1`);
+   - fix sourced-script path detection for zsh (prevent wrong `WORKSPACE_ROOT` and false fallback to global catalog);
+   - print `IDENTITY_ENV_SOURCE` telemetry for operator auditability.
+3. Evidence:
+   - `/tmp/p0_identity_env_source.log` shows `IDENTITY_ENV_SOURCE=project_runtime_forced`.
+
+Decision boundary:
+
+1. This closes the reverify for runtime env drift in this workspace (project mode now deterministic via one command).
+2. Release governance implication: keep send-time first-line gate mandatory (`FIX-049/054`) and keep pre-send compose+validate path as authoritative; free-form emission without preflight remains non-governed.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

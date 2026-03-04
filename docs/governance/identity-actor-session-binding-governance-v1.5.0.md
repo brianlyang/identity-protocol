@@ -2844,6 +2844,40 @@ Release authority boundary:
 2. Only section `6.4` row statuses and section `0.3` D-gate values feed release unlock.
 3. Any `D6=PASS` claim without synchronized `6.4` `P0=DONE` evidence is invalid.
 
+### 6.6E Identity stamp lock-source binding (`review 16.8.65`, P0 reverify)
+
+Normative risk:
+
+1. `LOCK_MATCH` session replies must not emit a different `identity_id` in first-line stamp.
+2. Cross-catalog drift (global vs project runtime) can produce false identity selection before send-time validation is applied.
+
+Binding rule (workspace operations):
+
+1. Before any runtime identity operation or governed reply emission, load workspace-local runtime env:
+   - `source /Users/yangxi/claude/codex_project/weixinstore/scripts/use_local_identity_env.sh`
+2. Required post-source invariant:
+   - `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+   - `IDENTITY_ENV_SOURCE=project_runtime_forced` (unless explicit `IDENTITY_PREFER_GLOBAL=1` is set).
+3. If invariant fails, treat as fail-closed and do not emit governed reply.
+
+Verification anchors:
+
+1. Negative mismatch fail-closed:
+   - `/tmp/p0_identity_switch_negative_isolated.json`
+2. Positive matched stamp pass:
+   - `/tmp/p0_identity_switch_positive.json`
+3. Project-forced resolver evidence:
+   - `/tmp/p0_identity_resolve_project_audit.json`
+   - `/tmp/p0_identity_resolve_project_architect_fail.log`
+4. Env-source telemetry:
+   - `/tmp/p0_identity_env_source.log`
+
+Decision boundary:
+
+1. This subsection is operational governance binding for stamp lock-source consistency.
+2. It does not relax existing `FIX-049/054` send-time fail-closed semantics.
+3. Any future recurrence should be classified as `P0` and replayed against the above anchors before release claims.
+
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
 Mandatory policy:
