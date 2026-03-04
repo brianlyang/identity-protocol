@@ -2060,7 +2060,12 @@ Mandatory semantics:
    - `identity_switch_to`
    - `switch_intent_override.receipt_path`
    - `switch_intent_override.receipt_fields`
-4. Replay evidence for closure must include dual-CWD equivalence:
+7. Post-activation actor-bound validators must use the same actor context as activation command:
+   - `validate_identity_session_pointer_consistency.py --actor-id <actor_id_resolved>`
+   - `validate_actor_session_multibinding_concurrency.py --actor-id <actor_id_resolved>`
+8. Activation subvalidator execution must be CWD-invariant:
+   - command execution is anchored to protocol-root (`cwd=PROTOCOL_ROOT`) so non-repo invocation cannot bypass switch guard with missing-script errors.
+9. Replay evidence for closure must include dual-CWD equivalence:
    - repo-root replay PASS;
    - `/tmp` (or non-repo CWD) replay PASS.
 

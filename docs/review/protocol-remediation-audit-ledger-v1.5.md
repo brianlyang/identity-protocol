@@ -5777,6 +5777,17 @@ Replay evidence (this round):
 4. post-negative state integrity: `/tmp/p0_fix058_state_after_negatives.json`
    - expected: canonical + actor identity remain unchanged (`base-repo-architect`).
 
+Auditor follow-up residual closure (`2026-03-04` addendum):
+
+1. P1 fixed: activation tail validator now binds the current actor explicitly.
+   - code: `scripts/identity_creator.py` passes `--actor-id <actor_id_resolved>` to:
+     - `validate_actor_session_multibinding_concurrency.py`
+     - `validate_identity_session_pointer_consistency.py`
+   - replay: `/tmp/fix058_p1_actor_binding_positive_v2.log` shows both validators running with `actor=assistant:codex`.
+2. P2 fixed: identity_creator subvalidator invocation is now CWD-invariant (protocol-root anchored).
+   - code: `scripts/identity_creator.py` `_run/_run_capture` execute with `cwd=PROTOCOL_ROOT`.
+   - replay: `/tmp/fix058_p2_nonroot_negative.log` from `/tmp` still reaches switch-guard and fails with `IP-ACT-SWITCH-001` (no missing-script path drift).
+
 Decision boundary:
 
 1. This patch targets the exact P0 root cause ("identity switched during execution") with a mandatory pre-mutation gate.

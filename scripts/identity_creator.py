@@ -26,16 +26,18 @@ ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 SCAFFOLD_CONSENT_TOKEN = "I_ACK_IDENTITY_SCAFFOLD_SCOPE_STACK_RUNTIME"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROTOCOL_ROOT = SCRIPT_DIR.parent
 
 
 def _run(cmd: list[str]) -> int:
     print("$", " ".join(cmd))
-    return subprocess.call(cmd)
+    return subprocess.call(cmd, cwd=str(PROTOCOL_ROOT))
 
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
     print("$", " ".join(cmd))
-    p = subprocess.run(cmd, capture_output=True, text=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
     if p.stdout.strip():
         print(p.stdout.strip())
     if p.stderr.strip():
@@ -564,6 +566,8 @@ def _activate_identity(
                 str(local_catalog),
                 "--identity-id",
                 identity_id,
+                "--actor-id",
+                actor_id_resolved,
                 "--canonical-out",
                 str(canonical_session_pointer),
                 "--mirror-out",
@@ -580,6 +584,8 @@ def _activate_identity(
                 str(local_catalog),
                 "--identity-id",
                 identity_id,
+                "--actor-id",
+                actor_id_resolved,
                 "--operation",
                 "activate",
                 "--json-only",
