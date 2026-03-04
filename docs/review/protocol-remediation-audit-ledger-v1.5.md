@@ -5528,6 +5528,63 @@ Decision on latest replay window:
    - `D4=PASS`
    - `D6` remains `LOCKED` until section `6.5` unlock formula is fully satisfied (no shortcut/no externalization).
 
+#### 16.8.63 D6 unlock blocker decomposition + role ownership (2026-03-04, docs-only)
+
+Status: `BLOCKER_DECOMPOSED (D6 remains LOCKED)`.
+
+Purpose:
+
+1. Freeze a single non-ambiguous answer for "what still blocks `D6=PASS`".
+2. Separate work owned by architect, independent auditor, and docs-maintainer.
+3. Prevent repeated "narrative green" claims from overriding section `6.5` formula.
+
+Machine recomputation snapshot (from current canonical ledger):
+
+1. Source: `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` section `6.4`.
+2. Snapshot artifact: `/tmp/release_v15_d6_unlock_gap_20260304.json`.
+3. Computed inputs:
+   - `p0_total=86`
+   - `p0_done_total=0`
+   - `p0_not_done_total=86`
+   - `status_counts={"SPEC_READY":24,"VERIFIED":5,"GATE_READY":30,"IMPL_READY (BLOCKED_BY_AUDIT)":27}`
+4. Formula verdict:
+   - section `6.5` requires all `P0` rows in `6.4` to be `DONE`;
+   - current verdict is deterministic: `unlock_allowed=false`, so `D6=LOCKED`.
+
+Execution decomposition (what can be closed next):
+
+1. Lane A (`GATE_READY/VERIFIED -> DONE` promotions, no code change):
+   - current stock: `35` rows (`GATE_READY=30`, `VERIFIED=5`).
+   - owner: `base-repo-architect` (status authority) + independent auditor countersign.
+   - gate: each promotion must reference an existing replay section and command artifact window.
+2. Lane B (`IMPL_READY (BLOCKED_BY_AUDIT) -> GATE_READY/DONE`):
+   - current stock: `27` rows.
+   - owner: independent auditor (`system-requirements-analyst`) for replay verdict; architect applies resulting status promotion.
+   - gate: no narrative-only promotion; replay must include failure/closure counter-evidence where applicable.
+3. Lane C (`SPEC_READY -> implemented`) :
+   - current stock: `24` rows.
+   - owner: architect (implementation decision). Docs cannot self-promote these rows.
+   - gate: either implement and replay, or explicitly de-scope out of `v1.5` unlock scope through governance decision.
+
+Role boundary (strict):
+
+1. `base-repo-architect`:
+   - approves/commits row-level status transitions in section `6.4`;
+   - owns formula input correctness for release decision.
+2. `system-requirements-analyst`:
+   - produces independent replay verdicts for Lane A/B promotions;
+   - can veto promotion when counter-evidence remains.
+3. docs maintainer:
+   - maintains bridge sections (`16.8.x`, `6.4A/6.4B/6.6x`);
+   - cannot promote release states without architect + auditor evidence.
+
+Immediate next checkpoint (to accelerate but remain rigorous):
+
+1. Architect publishes a `Lane A` promotion proposal list (35 rows) with one-to-one evidence anchors.
+2. Auditor performs quick independent replay for that list and returns `PASS/REJECT` per row.
+3. Governance `6.4` is updated in one atomic batch, then `6.5` is recomputed from table values.
+4. Only if recomputation becomes true and `D1~D5=PASS`, `D6` can be flipped to `PASS`.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

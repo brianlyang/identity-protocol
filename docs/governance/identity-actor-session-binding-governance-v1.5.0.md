@@ -2803,6 +2803,40 @@ Decision boundary:
 1. This subsection freezes release interpretation for write-boundary compliance.
 2. It does not grant new write privileges and does not relax existing fail-closed checks.
 
+### 6.6D D6 unlock execution matrix (bridge from `review 16.8.63`)
+
+Normative position:
+
+1. `D4=PASS` does not imply `D6=PASS`.
+2. `D6` can change only when section `6.5` formula evaluates true using section `6.4` table values.
+3. Narrative or partial replay windows cannot replace row-level status transitions in section `6.4`.
+
+Current formula inputs (machine snapshot, 2026-03-04):
+
+1. Snapshot artifact: `/tmp/release_v15_d6_unlock_gap_20260304.json`.
+2. Derived from section `6.4` current table state:
+   - `p0_total=86`
+   - `p0_done_total=0`
+   - `p0_not_done_total=86`
+   - `status_counts={"SPEC_READY":24,"VERIFIED":5,"GATE_READY":30,"IMPL_READY (BLOCKED_BY_AUDIT)":27}`
+3. Formula evaluation:
+   - `unlock_allowed=false`
+   - `D6=LOCKED` (authoritative until table values change).
+
+Execution matrix (owner + closure predicate):
+
+| Lane | Current stock | Target transition | Owner | Closure predicate |
+| --- | --- | --- | --- | --- |
+| Lane A | `35` rows (`GATE_READY=30`, `VERIFIED=5`) | `-> DONE` | `base-repo-architect` + independent auditor countersign | each promoted row must reference a replay section + command artifact window already recorded in review |
+| Lane B | `27` rows (`IMPL_READY (BLOCKED_BY_AUDIT)`) | `-> GATE_READY` then `-> DONE` | independent auditor (`system-requirements-analyst`) verdict + architect promotion commit | independent replay must clear blocking reason; no docs-only or narrative promotion |
+| Lane C | `24` rows (`SPEC_READY`) | implemented + replayed + promoted | `base-repo-architect` | either implementation+replay closure in `v1.5`, or explicit de-scope decision out of `v1.5` unlock scope |
+
+Release authority boundary:
+
+1. Docs bridge sections (`6.4A/6.4B/6.6x`, review `16.8.x`) are explanatory, not formula overrides.
+2. Only section `6.4` row statuses and section `0.3` D-gate values feed release unlock.
+3. Any `D6=PASS` claim without synchronized `6.4` `P0=DONE` evidence is invalid.
+
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
 Mandatory policy:
