@@ -9,6 +9,21 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-policy-v1.2.11.md`
 - Template: `docs/governance/templates/audit-snapshot-template.md`
 - Upgrade cross-validation template: `docs/governance/templates/upgrade-cross-validation-template.md`
+- Identity onboarding 72h playbook template:
+  - `docs/governance/templates/identity-onboarding-72h-playbook-template.md`
+- Identity onboarding 72h audit-return template:
+  - `docs/governance/templates/identity-onboarding-72h-audit-return-template.md`
+- Architect follow-up issue template pack:
+  - `docs/governance/templates/protocol-p1-followup-issue-pack-v1.4.13.md`
+- Canonical SSOT rule for protocol-strengthening handoff:
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+  - Any `artifacts/` mirror is non-normative evidence only.
+- Canonical actor-scoped session binding governance (v1.5.0):
+  - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
+  - Scope is protocol-only; no instance business policy allowed.
+- Canonical actor-scoped session binding governance (v1.6.0 planning track):
+  - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.md`
 
 ## Snapshots
 
@@ -26,6 +41,11 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md` — protocol/runtime hard-boundary closure (no repo runtime fallback), fixture override semantics, and cleanliness verification evidence
 - `docs/governance/audit-snapshot-2026-02-25-readme-core-goal-alignment-v1.4.13.md` — root README core objective alignment (deterministic/auditable/release-safe), boundary model clarification (identity/agent/skill/MCP/tool), and prompt-lifecycle governance semantics
 - `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md` — token-consumption governance upgrade requirements with cross-vendor validation (tiered gates, incremental execution, summary/full report split, cache strategy, and skill-parity operator model)
+- `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md` — three-plane audit checklist (instance fail-operational / release fail-closed) and cloud-closure evidence contract
+- `docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md` — environment/path governance deep audit with 2026-02-26 closure addendum (recoverable report contract, runtime mode drift guard, and cross-validated evidence log)
+- `docs/governance/identity-base-protocol-runtime-retro-and-governance-feedback-v1.4.13.md` — protocol-only retro + governance hardening baseline (anti-coupling rules, dialogue governance contract/KPI model, and implementation DoD)
+- `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` — canonical execution handoff (SSOT) for protocol strengthening: anti-sprawl budget, gate/validator/error-code mapping, DCIC + audit-ownership enforcement, and architect action checklist
+- `docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md` — compatibility alias that forwards to canonical protocol-only v1.4.13 governance doc
 
 ## Protocol hardening plans
 

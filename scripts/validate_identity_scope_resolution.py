@@ -68,12 +68,13 @@ def main() -> int:
     if not Path(resolved_pack_path).expanduser().exists():
         print(f"[FAIL] resolved_pack_path does not exist: {resolved_pack_path}")
         return 1
-    if bool(ctx.get("conflict_detected")):
+    explicit_scope = bool(str(args.scope or "").strip())
+    if bool(ctx.get("conflict_detected")) and not explicit_scope:
         print("[FAIL] conflict_detected=true; explicit arbitration required before running gates")
         return 1
 
     scope = str(ctx.get("resolved_scope", "")).upper()
-    if scope in {"USER", "REPO", "ADMIN"}:
+    if scope in {"USER", "REPO", "ADMIN"} and not explicit_scope:
         existing = _probe_existing_instance_dirs(args.identity_id)
         if len(existing) > 1:
             print(

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,30 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _glob_reports(pattern: str, *, pack_root: Path) -> list[Path]:
+    """
+    Resolve report candidates in a cwd-agnostic way.
+    Supports:
+    - absolute patterns (including wildcards),
+    - pack-root relative patterns (preferred),
+    - cwd-relative patterns (legacy fallback).
+    """
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate install safety contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -65,6 +90,7 @@ def main() -> int:
 
     print(f"[INFO] validate install safety for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
+    pack_root = task_path.parent.resolve()
 
     task = _load_json(task_path)
     gates = task.get("gates") or {}
@@ -119,7 +145,7 @@ def main() -> int:
 
     report_path = Path(args.report) if args.report else None
     if not report_path or not report_path.exists():
-        reports = sorted(Path(".").glob(pattern))
+        reports = _glob_reports(pattern, pack_root=pack_root)
         if reports:
             report_path = reports[-1]
     if not report_path or not report_path.exists():

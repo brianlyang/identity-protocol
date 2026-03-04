@@ -1,0 +1,20 @@
+{
+  "identity_id": "system-requirements-analyst",
+  "records": [
+    {
+      "arbitration_id": "arb-20260226-001",
+      "task_id": "system-requirements-analyst_bootstrap",
+      "identity_id": "system-requirements-analyst",
+      "conflict_pair": "judgement_vs_routing",
+      "inputs": {
+        "risk_level": "high",
+        "evidence_conflict": true,
+        "impact_surface": "checkout-payment-sequence"
+      },
+      "decision": "prefer_judgement",
+      "impact": "slower route convergence but higher requirements correctness",
+      "rationale": "high-risk flow with conflicting sources requires judgement-first reconciliation before routing optimization",
+      "decided_at": "2026-02-26T16:30:00Z"
+    }
+  ]
+}

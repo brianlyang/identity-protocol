@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,22 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate knowledge acquisition contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -63,6 +80,7 @@ def main() -> int:
 
     print(f"[INFO] validate knowledge acquisition for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
+    pack_root = task_path.parent.resolve()
 
     task = _load_json(task_path)
     c = task.get("knowledge_acquisition_contract") or {}
@@ -90,10 +108,14 @@ def main() -> int:
         return 1
 
     pattern = c.get("sample_report_path_pattern")
-    report_path = Path(args.report) if args.report else Path("identity/runtime/examples") / f"{args.identity_id}-knowledge-acquisition-sample.json"
+    report_path = (
+        Path(args.report).expanduser().resolve()
+        if args.report
+        else (pack_root / "runtime" / "examples" / f"{args.identity_id}-knowledge-acquisition-sample.json").resolve()
+    )
     if not report_path.exists():
         # fallback pattern search
-        files = sorted(Path('.').glob(pattern)) if pattern else []
+        files = _glob_paths(str(pattern or ""), pack_root=pack_root)
         if files:
             report_path = files[-1]
     if not report_path.exists():

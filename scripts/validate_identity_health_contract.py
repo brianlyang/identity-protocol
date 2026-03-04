@@ -33,7 +33,7 @@ def main() -> int:
         return 1
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    required = ["report_id", "generated_at", "identity_id", "overall_status", "checks", "recommendations"]
+    required = ["report_id", "generated_at", "identity_id", "overall_status", "warning_count", "failed_count", "checks", "recommendations"]
     miss = [k for k in required if k not in data]
     if miss:
         print(f"[FAIL] health report missing fields: {miss}")
@@ -48,18 +48,46 @@ def main() -> int:
         print("[FAIL] health report checks must be non-empty list")
         return 1
 
-    failed = [c for c in checks if not bool(c.get("ok"))]
+    failed: list[dict] = []
+    warns: list[dict] = []
+    for c in checks:
+        status = str(c.get("status", "")).strip().upper()
+        if not status:
+            status = "PASS" if bool(c.get("ok")) else "FAIL"
+        if status == "FAIL":
+            failed.append(c)
+        elif status == "WARN":
+            warns.append(c)
+        elif status != "PASS":
+            print(f"[FAIL] invalid health check status={status!r} in check={c.get('name')}")
+            return 1
+
     recs = data.get("recommendations") or []
-    if failed and not recs:
-        print("[FAIL] failed health checks require non-empty recommendations")
+    if (failed or warns) and not recs:
+        print("[FAIL] non-pass health checks require non-empty recommendations")
         return 1
 
-    if args.require_pass and str(data.get("overall_status", "")).upper() != "PASS":
-        print(f"[FAIL] health overall status is not PASS: {data.get('overall_status')}")
+    overall = str(data.get("overall_status", "")).upper()
+    if overall not in {"PASS", "WARN", "FAIL"}:
+        print(f"[FAIL] invalid overall_status in health report: {data.get('overall_status')!r}")
+        return 1
+    if args.require_pass and failed:
+        print(f"[FAIL] health report contains failed checks (overall_status={overall})")
         return 2
 
+    if int(data.get("warning_count", -1)) != len(warns):
+        print(
+            f"[FAIL] warning_count mismatch: report={data.get('warning_count')} computed={len(warns)}"
+        )
+        return 1
+    if int(data.get("failed_count", -1)) != len(failed):
+        print(
+            f"[FAIL] failed_count mismatch: report={data.get('failed_count')} computed={len(failed)}"
+        )
+        return 1
+
     print(f"[OK] health report contract validated: {path}")
-    print(f"     overall_status={data.get('overall_status')} failed_checks={len(failed)}")
+    print(f"     overall_status={overall} warning_checks={len(warns)} failed_checks={len(failed)}")
     return 0
 
 

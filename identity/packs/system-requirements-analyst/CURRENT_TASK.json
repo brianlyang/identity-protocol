@@ -1,0 +1,855 @@
+{
+  "task_id": "system-requirements-analyst_bootstrap",
+  "agent_identity": {
+    "name": "system-requirements-analyst",
+    "role": "System Requirements Analyst",
+    "methodology_version": "v1.3",
+    "prompt_version": "v1.3",
+    "json_version": "v1.3",
+    "identity_prompt_path": "identity/packs/system-requirements-analyst/IDENTITY_PROMPT.md",
+    "canon_path": "identity/protocol/IDENTITY_PROTOCOL.md"
+  },
+  "objective": {
+    "title": "Analyze mixed-source documents and produce production-grade requirements and system design packs with direct vibe-coding handoff for interactive POC delivery.",
+    "priority": "HIGH",
+    "status": "pending"
+  },
+  "state_machine": {
+    "current_state": "intake",
+    "allowed_states": [
+      "intake",
+      "source_inventory",
+      "evidence_mapping",
+      "requirements_synthesis",
+      "architecture_design",
+      "vibe_handoff_packaging",
+      "review",
+      "done",
+      "blocked_offline"
+    ],
+    "transition_rules": [
+      "intake -> source_inventory",
+      "source_inventory -> evidence_mapping",
+      "evidence_mapping -> requirements_synthesis",
+      "requirements_synthesis -> architecture_design",
+      "architecture_design -> vibe_handoff_packaging",
+      "vibe_handoff_packaging -> review",
+      "review -> done",
+      "review -> requirements_synthesis",
+      "review -> architecture_design",
+      "requirements_synthesis -> blocked_offline",
+      "architecture_design -> blocked_offline"
+    ]
+  },
+  "gates": {
+    "document_gate": "required",
+    "media_gate": "required",
+    "category_compliance_gate": "required",
+    "reject_memory_gate": "required",
+    "protocol_baseline_review_gate": "required",
+    "identity_update_gate": "required",
+    "payload_evidence_gate": "required",
+    "multimodal_consistency_gate": "required",
+    "reasoning_loop_gate": "required",
+    "routing_gate": "required",
+    "rulebook_gate": "required",
+    "agent_handoff_gate": "required",
+    "collaboration_trigger_gate": "required",
+    "orchestration_gate": "required",
+    "knowledge_acquisition_gate": "required",
+    "experience_feedback_gate": "required",
+    "ci_enforcement_gate": "required",
+    "arbitration_gate": "required",
+    "install_safety_gate": "required",
+    "install_provenance_gate": "required",
+    "role_binding_gate": "required"
+  },
+  "protocol_review_contract": {
+    "required_before": [
+      "identity_capability_upgrade",
+      "identity_architecture_decision",
+      "vibe_handoff_decision"
+    ],
+    "must_review_sources": [
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "identity/protocol/IDENTITY_PROTOCOL.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-installer-skill-creator-skill-update-lifecycle.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/references/skill-mcp-tool-collaboration-contract-v1.0.md"
+      },
+      {
+        "type": "github_repo_file",
+        "repo": "brianlyang/identity-protocol",
+        "path": "docs/research/IDENTITY_PROTOCOL_BENCHMARK_SKILLS_2026-02-19.md"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://developers.openai.com/codex/skills/"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://developers.openai.com/codex/cli/reference/"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://developers.openai.com/apps-sdk/"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://code.claude.com/docs/en/overview"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://aistudio.google.com/prompts/new_chat"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://ai.google.dev/gemini-api/docs/ai-studio-quickstart"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://docs.moonshot.ai/"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://github.com/MoonshotAI/Kimi-K2"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://agentskills.io/specification"
+      },
+      {
+        "type": "official_doc",
+        "url": "https://modelcontextprotocol.io/specification/latest"
+      }
+    ],
+    "required_evidence_fields": [
+      "review_id",
+      "reviewed_at",
+      "reviewer_identity",
+      "purpose",
+      "sources_reviewed",
+      "findings",
+      "decision"
+    ],
+    "evidence_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/protocol-baseline-review-system-requirements-analyst-*.json",
+    "max_review_age_days": 7
+  },
+  "identity_update_lifecycle_contract": {
+    "trigger_contract": {
+      "mandatory_conditions": [
+        "operational_failure",
+        "repeat_failure",
+        "route_exhausted",
+        "new_domain_gap"
+      ],
+      "max_attempts_before_update": 2
+    },
+    "patch_surface_contract": {
+      "required_files": [
+        "CURRENT_TASK.json",
+        "IDENTITY_PROMPT.md",
+        "RULEBOOK.jsonl",
+        "TASK_HISTORY.md"
+      ],
+      "required_file_paths": [
+        "identity/packs/system-requirements-analyst/CURRENT_TASK.json",
+        "identity/packs/system-requirements-analyst/IDENTITY_PROMPT.md",
+        "identity/packs/system-requirements-analyst/RULEBOOK.jsonl",
+        "identity/packs/system-requirements-analyst/TASK_HISTORY.md"
+      ],
+      "required_rulebook_update": true
+    },
+    "validation_contract": {
+      "required_checks": [
+        "scripts/validate_identity_runtime_contract.py",
+        "scripts/validate_identity_upgrade_prereq.py",
+        "scripts/validate_identity_update_lifecycle.py",
+        "scripts/validate_identity_trigger_regression.py",
+        "scripts/validate_identity_learning_loop.py",
+        "scripts/validate_agent_handoff_contract.py",
+        "scripts/validate_identity_collab_trigger.py",
+        "scripts/validate_identity_orchestration_contract.py",
+        "scripts/validate_identity_knowledge_contract.py",
+        "scripts/validate_identity_experience_feedback.py",
+        "scripts/validate_changelog_updated.py",
+        "scripts/validate_release_metadata_sync.py",
+        "scripts/validate_identity_role_binding.py",
+        "scripts/validate_identity_ci_enforcement.py",
+        "scripts/validate_identity_capability_arbitration.py",
+        "scripts/validate_identity_install_safety.py",
+        "scripts/validate_identity_experience_feedback_governance.py",
+        "scripts/validate_identity_self_upgrade_enforcement.py",
+        "scripts/validate_identity_install_provenance.py"
+      ],
+      "must_pass_all": true
+    },
+    "replay_contract": {
+      "replay_required": true,
+      "replay_same_case_required": true,
+      "replay_fail_action": "reenter_identity_update_loop",
+      "evidence_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/system-requirements-analyst-update-replay-*.json",
+      "required_fields": [
+        "identity_id",
+        "replay_status",
+        "patched_files",
+        "validation_checks_passed",
+        "creator_invocation",
+        "check_results"
+      ]
+    }
+  },
+  "trigger_regression_contract": {
+    "required": true,
+    "required_suites": [
+      "positive_cases",
+      "boundary_cases",
+      "negative_cases"
+    ],
+    "result_enum": [
+      "PASS",
+      "FAIL"
+    ],
+    "sample_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/system-requirements-analyst-trigger-regression-sample.json",
+    "fail_action": "block_merge_and_reenter_identity_update"
+  },
+  "evaluation_contract": {
+    "required_evidence_triplet": [
+      "api_evidence",
+      "event_evidence",
+      "ui_evidence"
+    ],
+    "consistency_required": true,
+    "consistency_fail_action": "block_done_and_trigger_recheck",
+    "run_report_path_pattern": "resource/reports/*run*.json"
+  },
+  "reasoning_loop_contract": {
+    "max_attempts_before_escalation": 3,
+    "mandatory_fields_per_attempt": [
+      "attempt",
+      "hypothesis",
+      "patch",
+      "expected_effect",
+      "result"
+    ],
+    "failure_requires_next_action": true
+  },
+  "routing_contract": {
+    "auto_route_enabled": true,
+    "fallback_switch_after_failures": 2,
+    "problem_type_routes": {
+      "multi_doc_conflict": [
+        "identity-creator",
+        "web-docs-to-markdown"
+      ],
+      "requirement_gap": [
+        "identity-creator",
+        "web-docs-to-markdown"
+      ],
+      "architecture_tradeoff": [
+        "identity-creator"
+      ],
+      "vibe_tool_packaging": [
+        "identity-creator",
+        "web-docs-to-markdown"
+      ],
+      "capability_gap": [
+        "identity-creator",
+        "identity-installer"
+      ],
+      "human_collab_required": [
+        "ops-notification-router"
+      ]
+    }
+  },
+  "route_quality_contract": {
+    "required": true,
+    "source_pattern": "identity/packs/system-requirements-analyst/runtime/logs/handoff/system-requirements-analyst-*.json",
+    "metrics_output_path": "identity/packs/system-requirements-analyst/runtime/metrics/system-requirements-analyst-route-quality.json",
+    "required_metrics": [
+      "route_hit_rate",
+      "misroute_rate",
+      "fallback_rate",
+      "first_pass_success_rate",
+      "knowledge_reuse_rate",
+      "replay_success_rate",
+      "policy_drift_incidents"
+    ],
+    "validator": "scripts/export_route_quality_metrics.py"
+  },
+  "rulebook_contract": {
+    "append_only": true,
+    "required_rule_types": [
+      "negative",
+      "positive"
+    ],
+    "required_fields": [
+      "rule_id",
+      "type",
+      "trigger",
+      "action",
+      "evidence_run_id",
+      "scope",
+      "confidence",
+      "updated_at"
+    ],
+    "rulebook_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/RULEBOOK.jsonl"
+  },
+  "learning_verification_contract": {
+    "run_id_required": true,
+    "reasoning_trace_required": true,
+    "reasoning_trace_path_pattern": "resource/reports/*reasoning*.json",
+    "rulebook_update_required": true,
+    "rulebook_link_field": "evidence_run_id"
+  },
+  "agent_handoff_contract": {
+    "required": true,
+    "required_fields": [
+      "handoff_id",
+      "task_id",
+      "from_agent",
+      "to_agent",
+      "input_scope",
+      "actions_taken",
+      "artifacts",
+      "result",
+      "next_action",
+      "rulebook_update"
+    ],
+    "forbidden_mutations": [
+      "gates",
+      "protocol_review_contract",
+      "identity_update_lifecycle_contract",
+      "trigger_regression_contract"
+    ],
+    "handoff_log_path_pattern": "identity/packs/system-requirements-analyst/runtime/logs/handoff/system-requirements-analyst-*.json",
+    "minimum_logs_required": 1,
+    "require_generated_at": true,
+    "max_log_age_days": 7,
+    "enforce_task_id_match": true,
+    "require_identity_id_match": true,
+    "sample_log_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/handoff",
+    "result_enum": [
+      "PASS",
+      "FAIL",
+      "BLOCKED"
+    ],
+    "self_test_required": true,
+    "validator": "scripts/validate_agent_handoff_contract.py"
+  },
+  "source_of_truth": {
+    "local_docs_roots": [
+      "docs",
+      "prd",
+      "specs",
+      "design",
+      "api",
+      "identity/protocol",
+      "identity/catalog",
+      "resource/input-docs"
+    ],
+    "local_project_evidence_roots": [
+      "resource/reports",
+      "resource/requirements",
+      "resource/system-design",
+      "resource/vibe-handoff",
+      "resource/research-notes"
+    ]
+  },
+  "escalation_policy": {
+    "email_for_offline_only": true,
+    "offline_blockers": [
+      "stakeholder_confirmation_required",
+      "source_document_access_required",
+      "legal_or_security_approval_required",
+      "cross_system_dependency_owner_unavailable"
+    ],
+    "do_not_email_for": [
+      "routine_status_update",
+      "normal_progress_report",
+      "non_blocking_warning"
+    ],
+    "email_for_human_collab_blockers": true,
+    "human_collab_blockers": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required"
+    ]
+  },
+  "required_artifacts": [
+    "resource/requirements/*.md",
+    "resource/system-design/*.md",
+    "resource/vibe-handoff/*.md",
+    "resource/vibe-handoff/*.json",
+    "resource/reports/*.md",
+    "resource/reports/*.json"
+  ],
+  "post_execution_mandatory": [
+    "append task outcome into identity/packs/system-requirements-analyst/TASK_HISTORY.md",
+    "update objective.status",
+    "update state_machine.current_state",
+    "emit requirement report + system design report + vibe handoff package"
+  ],
+  "version_control": {
+    "sync_status": "initialized",
+    "last_updated": "2026-02-26",
+    "protocol_revision": "v1.5.0-requirements-analyst-bootstrap"
+  },
+  "blocker_taxonomy_contract": {
+    "required": true,
+    "required_blocker_types": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required",
+      "stakeholder_confirmation_required",
+      "source_document_access_required",
+      "requirement_conflict_unresolved",
+      "compliance_decision_required"
+    ],
+    "blocker_classification_required_fields": [
+      "blocker_type",
+      "source",
+      "detected_at",
+      "requires_human_collab",
+      "next_action"
+    ],
+    "fail_action": "block_merge_and_reenter_collaboration_update"
+  },
+  "collaboration_trigger_contract": {
+    "required": true,
+    "hard_rule": "If hard collaboration blockers or unresolved stakeholder decisions are detected, notify immediately and emit chat receipt",
+    "trigger_conditions": [
+      "login_required",
+      "captcha_required",
+      "session_expired",
+      "manual_verification_required",
+      "stakeholder_confirmation_required",
+      "source_document_access_required"
+    ],
+    "notify_channel": "ops-notification-router",
+    "dedupe_window_hours": 24,
+    "state_change_bypass_dedupe": true,
+    "must_emit_receipt_in_chat": true,
+    "receipt_required_fields": [
+      "event_id",
+      "blocker_type",
+      "notified_at",
+      "channel",
+      "dedupe_key",
+      "status"
+    ],
+    "evidence_log_path_pattern": "identity/packs/system-requirements-analyst/runtime/logs/collaboration/system-requirements-analyst-*.json",
+    "minimum_evidence_logs_required": 1,
+    "max_log_age_days": 7,
+    "validator": "scripts/validate_identity_collab_trigger.py",
+    "notify_policy": "must_notify_when_human_required",
+    "notify_timing": "immediate",
+    "decision_basis": "requirements_governance"
+  },
+  "capability_orchestration_contract": {
+    "required": true,
+    "task_type_routes": {
+      "requirements_analysis": {
+        "pipeline": [
+          "observe_context",
+          "ingest_sources",
+          "map_evidence",
+          "synthesize_requirements",
+          "review_coverage",
+          "emit_artifacts"
+        ],
+        "primary_skills": [
+          "web-docs-to-markdown"
+        ],
+        "fallback_skills": [
+          "identity-creator"
+        ],
+        "required_mcp": [
+          "chrome-devtools",
+          "fetcher"
+        ],
+        "max_tool_calls": 40,
+        "max_runtime_minutes": 30
+      },
+      "system_design": {
+        "pipeline": [
+          "observe_context",
+          "derive_constraints",
+          "define_components",
+          "specify_interfaces",
+          "risk_and_tradeoff_review",
+          "emit_artifacts"
+        ],
+        "primary_skills": [
+          "identity-creator"
+        ],
+        "fallback_skills": [
+          "web-docs-to-markdown"
+        ],
+        "required_mcp": [
+          "chrome-devtools",
+          "fetcher",
+          "n8n-mcp"
+        ],
+        "max_tool_calls": 45,
+        "max_runtime_minutes": 35
+      },
+      "vibe_handoff_pack": {
+        "pipeline": [
+          "normalize_backlog",
+          "generate_prompt_pack",
+          "map_acceptance_tests",
+          "package_delivery"
+        ],
+        "primary_skills": [
+          "identity-creator"
+        ],
+        "fallback_skills": [
+          "web-docs-to-markdown"
+        ],
+        "required_mcp": [
+          "chrome-devtools",
+          "fetcher"
+        ],
+        "max_tool_calls": 30,
+        "max_runtime_minutes": 20
+      }
+    },
+    "preflight_requirements": [
+      "inputs_complete",
+      "source_access_ready",
+      "constraints_defined",
+      "target_vibe_tool_declared"
+    ],
+    "fail_classification": [
+      "route_wrong",
+      "skill_gap",
+      "mcp_unavailable",
+      "tool_auth",
+      "data_issue",
+      "doc_ambiguity"
+    ],
+    "evidence_schema_fields": [
+      "task_id",
+      "route_selected",
+      "skills_used",
+      "mcp_tools_used",
+      "actions_taken",
+      "result",
+      "artifacts"
+    ]
+  },
+  "knowledge_acquisition_contract": {
+    "required": true,
+    "must_research_when": [
+      "new_api_domain",
+      "unknown_error_code",
+      "schema_changed",
+      "tooling_behavior_unclear",
+      "conflicting_official_docs"
+    ],
+    "source_priority": [
+      "official_spec",
+      "repo_contract",
+      "third_party"
+    ],
+    "evidence_fields": [
+      "claim",
+      "source",
+      "source_level",
+      "confidence",
+      "expiry",
+      "applies_to"
+    ],
+    "sample_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/*knowledge-acquisition*.json",
+    "high_frequency_domains": {
+      "vibe_coding_platforms": {
+        "preferred_skills": [
+          "web-docs-to-markdown",
+          "identity-creator"
+        ],
+        "preferred_sources": [
+          "official_spec",
+          "repo_contract"
+        ],
+        "required_validators": [
+          "scripts/validate_identity_knowledge_contract.py"
+        ]
+      },
+      "llm_tooling_contracts": {
+        "preferred_skills": [
+          "identity-creator"
+        ],
+        "preferred_sources": [
+          "official_spec",
+          "repo_contract"
+        ],
+        "required_validators": [
+          "scripts/validate_identity_knowledge_contract.py"
+        ]
+      }
+    }
+  },
+  "experience_feedback_contract": {
+    "required": true,
+    "positive_rulebook_path": "identity/packs/system-requirements-analyst/runtime/rulebooks/positive.jsonl",
+    "negative_rulebook_path": "identity/packs/system-requirements-analyst/runtime/rulebooks/negative.jsonl",
+    "required_fields": [
+      "case_id",
+      "layer",
+      "pattern",
+      "action",
+      "impact_score",
+      "replay_status"
+    ],
+    "cross_layer_feedback_targets": [
+      "routing_contract",
+      "capability_orchestration_contract",
+      "gates"
+    ],
+    "promote_requires_replay_pass": true,
+    "sample_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/*experience-feedback*.json",
+    "redaction_policy_required": true,
+    "retention_days": 30,
+    "sensitive_fields_denylist": [
+      "access_token",
+      "authorization",
+      "cookie",
+      "set-cookie",
+      "api_key",
+      "email",
+      "phone"
+    ],
+    "export_scope": "aggregated-only",
+    "max_log_age_days": 7,
+    "minimum_logs_required": 1,
+    "feedback_log_path_pattern": "identity/packs/system-requirements-analyst/runtime/logs/feedback/system-requirements-analyst-feedback-*.json",
+    "promotion_requires_replay_pass": true
+  },
+  "ci_enforcement_contract": {
+    "required": true,
+    "required_workflows": [
+      "protocol-ci",
+      "identity-protocol-ci"
+    ],
+    "required_job": "required-gates",
+    "required_validators": [
+      "scripts/validate_identity_runtime_contract.py",
+      "scripts/validate_identity_upgrade_prereq.py",
+      "scripts/validate_identity_update_lifecycle.py",
+      "scripts/validate_identity_trigger_regression.py",
+      "scripts/validate_identity_learning_loop.py",
+      "scripts/validate_agent_handoff_contract.py",
+      "scripts/validate_identity_collab_trigger.py",
+      "scripts/validate_identity_orchestration_contract.py",
+      "scripts/validate_identity_knowledge_contract.py",
+      "scripts/validate_identity_experience_feedback.py",
+      "scripts/validate_changelog_updated.py",
+      "scripts/validate_release_metadata_sync.py",
+      "scripts/validate_identity_ci_enforcement.py",
+      "scripts/validate_identity_capability_arbitration.py",
+      "scripts/validate_identity_install_safety.py",
+      "scripts/validate_identity_experience_feedback_governance.py",
+      "scripts/validate_identity_self_upgrade_enforcement.py",
+      "scripts/validate_identity_install_provenance.py"
+    ],
+    "required_checks": [
+      "protocol-ci / required-gates",
+      "identity-protocol-ci / required-gates"
+    ],
+    "freshness_gate": {
+      "handoff_logs_max_age_days": 7,
+      "route_metrics_max_age_days": 7
+    },
+    "required_validator_set_label": "v1.1-required",
+    "candidate_validators_v1_2": [
+      "scripts/validate_identity_feedback_freshness.py",
+      "scripts/validate_identity_feedback_promotion.py"
+    ]
+  },
+  "capability_arbitration_contract": {
+    "required": true,
+    "priority_order": [
+      "accurate_judgement",
+      "governance",
+      "latency",
+      "exploration"
+    ],
+    "conflict_rules": {
+      "judgement_vs_routing": {
+        "when": [
+          "high_risk_listing",
+          "evidence_conflict_detected"
+        ],
+        "decision": "prefer_judgement"
+      },
+      "reasoning_vs_latency": {
+        "when": [
+          "low_risk_and_time_bounded"
+        ],
+        "decision": "bounded_reasoning"
+      },
+      "routing_vs_learning": {
+        "when": [
+          "exploration_enabled"
+        ],
+        "decision": "cap_exploration_ratio",
+        "max_exploration_ratio": 0.2
+      },
+      "learning_vs_hotfix": {
+        "when": [
+          "incident_hotfix_required"
+        ],
+        "decision": "temporary_hotfix_then_rulebook_backfill"
+      }
+    },
+    "trigger_thresholds": {
+      "misroute_rate_percent": 10,
+      "replay_failure_rate_percent": 20,
+      "first_pass_success_drop_percent": 15
+    },
+    "decision_record_required_fields": [
+      "arbitration_id",
+      "task_id",
+      "identity_id",
+      "conflict_pair",
+      "inputs",
+      "decision",
+      "impact",
+      "rationale",
+      "decided_at"
+    ],
+    "sample_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/system-requirements-analyst-capability-arbitration-sample.json",
+    "fail_action": "block_merge_and_reenter_arbitration_update",
+    "safe_auto_patch_surface": {
+      "enforce_path_policy": true,
+      "allowlist": [
+        "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/TASK_HISTORY.md",
+        "identity/packs/system-requirements-analyst/RULEBOOK.jsonl",
+        "identity/packs/system-requirements-analyst/TASK_HISTORY.md",
+        "identity/packs/system-requirements-analyst/runtime/logs/*",
+        "identity/packs/system-requirements-analyst/runtime/rulebooks/*"
+      ],
+      "denylist": [
+        "identity/protocol/*",
+        ".github/workflows/*",
+        "scripts/validate_*"
+      ]
+    }
+  },
+  "install_safety_contract": {
+    "required": true,
+    "preserve_existing_default": true,
+    "on_conflict": "abort_and_explain",
+    "idempotent_reinstall_allowed": true,
+    "same_signature_action": "no_op_with_report",
+    "allow_replace_only_with_backup": true,
+    "rollback_reference_required": true,
+    "install_report_required": true,
+    "dry_run_required": true,
+    "install_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/install/install-report-*-system-requirements-analyst.json"
+  },
+  "self_upgrade_enforcement_contract": {
+    "required": true,
+    "core_paths": [
+      "identity/packs/system-requirements-analyst/CURRENT_TASK.json",
+      "identity/packs/system-requirements-analyst/IDENTITY_PROMPT.md",
+      "identity/packs/system-requirements-analyst/RULEBOOK.jsonl"
+    ],
+    "required_toolkit_steps": [
+      "scripts/execute_identity_upgrade.py --identity-id system-requirements-analyst --mode review-required",
+      "scripts/validate_identity_upgrade_prereq.py --identity-id system-requirements-analyst",
+      "scripts/validate_identity_runtime_contract.py --identity-id system-requirements-analyst",
+      "scripts/validate_identity_update_lifecycle.py --identity-id system-requirements-analyst",
+      "scripts/validate_identity_capability_arbitration.py --identity-id system-requirements-analyst"
+    ],
+    "evidence_path_pattern": "identity/packs/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-*.json",
+    "matching_patch_plan_required": true,
+    "enforcement_validator": "scripts/validate_identity_self_upgrade_enforcement.py"
+  },
+  "install_provenance_contract": {
+    "required": true,
+    "installer_tool_required": "identity-installer",
+    "operations_required": [
+      "plan",
+      "dry-run",
+      "install",
+      "verify"
+    ],
+    "report_path_pattern": "identity/packs/system-requirements-analyst/runtime/reports/install/identity-install-system-requirements-analyst-*.json",
+    "required_report_fields": [
+      "report_id",
+      "identity_id",
+      "generated_at",
+      "operation",
+      "conflict_type",
+      "action",
+      "preserved_paths",
+      "installer_invocation"
+    ],
+    "required_invocation_fields": [
+      "tool",
+      "entrypoint",
+      "command"
+    ],
+    "enforcement_validator": "scripts/validate_identity_install_provenance.py",
+    "non_destructive_default": true
+  },
+  "identity_role_binding_contract": {
+    "required": true,
+    "role_type": "system_requirements_analyst_runtime_operator",
+    "catalog_registration_required": true,
+    "runtime_bootstrap_pass_required": true,
+    "activation_policy": "inactive_by_default",
+    "switch_guard_required": true,
+    "binding_evidence_path_pattern": "identity/packs/system-requirements-analyst/runtime/examples/identity-role-binding-<identity-id>-*.json",
+    "enforcement_validator": "scripts/validate_identity_role_binding.py",
+    "runtime_bootstrap_live_revalidate": true,
+    "evidence_max_age_days": 7,
+    "active_binding_status_required": "BOUND_ACTIVE"
+  },
+  "dialogue_governance_contract": {
+    "required": false,
+    "rollout_mode": "warn",
+    "rollout_phase": "phase-1",
+    "report_path_pattern": "identity/packs/system-requirements-analyst/runtime/reports/*system-requirements-analyst*dialogue*.json",
+    "dialogue_content_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/reports/dialogue-content-synthesis-system-requirements-analyst-*.json",
+    "dialogue_cross_validation_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/reports/dialogue-cross-validation-matrix-system-requirements-analyst-*.json",
+    "dialogue_result_support_report_path_pattern": "identity/packs/system-requirements-analyst/runtime/reports/dialogue-result-support-system-requirements-analyst-*.json",
+    "top3_thresholds": {
+      "dialogue_constraint_coverage_rate": 95,
+      "dialogue_traceability_rate": 95,
+      "dialogue_change_reconciliation_rate": 90
+    },
+    "hard_subset_min": 100,
+    "redline_thresholds": {
+      "hard_constraint_missing_artifact_count": {
+        "max": 0
+      },
+      "untraceable_final_claim_count": {
+        "max": 0
+      }
+    },
+    "done_state_blocker": {
+      "unresolved_ambiguity_count": {
+        "max": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+$ python3 scripts/validate_release_metadata_sync.py --identity-id system-requirements-analyst
+[exit_code] 0
+[started_at] 2026-02-26T15:06:44Z
+[ended_at] 2026-02-26T15:06:44Z
+
+[stdout]
+PASS
+[stderr]
+

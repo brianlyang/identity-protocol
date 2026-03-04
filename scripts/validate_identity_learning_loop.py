@@ -25,12 +25,12 @@ def _fail(msg: str) -> int:
     return 1
 
 
-def _resolve_current_task(catalog_path: Path, override: str, identity_id: str) -> tuple[Path, str]:
+def _resolve_current_task(catalog_path: Path, override: str, identity_id: str) -> tuple[Path, str, Path]:
     if override:
         p = Path(override)
         if not p.exists():
             raise FileNotFoundError(f"override current task not found: {p}")
-        return p, identity_id or "(override)"
+        return p, identity_id or "(override)", p.parent
 
     catalog = _load_yaml(catalog_path)
     target_id = identity_id or str(catalog.get("default_identity", "")).strip()
@@ -43,27 +43,25 @@ def _resolve_current_task(catalog_path: Path, override: str, identity_id: str) -
     if pack_path:
         p = Path(pack_path) / "CURRENT_TASK.json"
         if p.exists():
-            return p, target_id
+            return p, target_id, Path(pack_path)
 
     legacy = Path("identity") / target_id / "CURRENT_TASK.json"
     if legacy.exists():
-        return legacy, target_id
+        return legacy, target_id, legacy.parent
 
     raise FileNotFoundError("CURRENT_TASK.json not found from catalog identity")
 
 
-def _resolve_run_report(identity_id: str, override: str) -> Path:
+def _resolve_run_report(identity_id: str, pack_dir: Path, override: str) -> Path:
     if override:
         return Path(override)
 
-    preferred = Path(f"identity/runtime/examples/{identity_id}-learning-sample.json")
+    preferred = pack_dir / "runtime" / "examples" / f"{identity_id}-learning-sample.json"
     if preferred.exists():
         return preferred
-
-    raise FileNotFoundError(
-        "identity-scoped learning report not found: "
-        f"{preferred}. provide --run-report explicitly (cross-identity fallback disabled)."
-    )
+    # Do not fall back across identities (e.g., store-manager sample).
+    # Missing identity-scoped evidence must fail-fast.
+    return preferred
 
 
 def main() -> int:
@@ -80,14 +78,11 @@ def main() -> int:
         return _fail(f"missing catalog: {catalog_path}")
 
     try:
-        task_path, identity_id = _resolve_current_task(catalog_path, args.current_task, args.identity_id)
+        task_path, identity_id, pack_dir = _resolve_current_task(catalog_path, args.current_task, args.identity_id)
     except Exception as e:
         return _fail(str(e))
 
-    try:
-        run_report_path = _resolve_run_report(identity_id, args.run_report)
-    except Exception as e:
-        return _fail(str(e))
+    run_report_path = _resolve_run_report(identity_id, pack_dir, args.run_report)
 
     if not task_path.exists():
         return _fail(f"missing current task file: {task_path}")
@@ -137,7 +132,17 @@ def main() -> int:
         else:
             print(f"[OK]   attempt[{i}] fields complete")
 
-    rulebook_path = Path(args.rulebook) if args.rulebook else Path(rb_contract.get("rulebook_path") or "")
+    if args.rulebook:
+        rulebook_path = Path(args.rulebook)
+    else:
+        rb_val = str(rb_contract.get("rulebook_path") or "").strip()
+        if rb_val:
+            rb_candidate = Path(rb_val).expanduser()
+            if not rb_candidate.is_absolute():
+                rb_candidate = (pack_dir / rb_candidate).resolve()
+            rulebook_path = rb_candidate
+        else:
+            rulebook_path = pack_dir / "RULEBOOK.jsonl"
     if lvc.get("rulebook_update_required", False):
         if not rulebook_path.exists():
             print(f"[FAIL] rulebook not found: {rulebook_path}")

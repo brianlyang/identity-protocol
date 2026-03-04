@@ -33,7 +33,8 @@
   - `identity/runtime/examples/protocol-baseline-review-*.json`
 
 6. Integrate `.codex/config.toml`:
-- set `model_instructions_file = "../identity/runtime/IDENTITY_COMPILED.md"` (resolved from `.codex/`)
+- set `model_instructions_file = "../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md"` (resolved from `.codex/`)
+  and avoid depending on the legacy `../identity/runtime/IDENTITY_COMPILED.md` bridge path unless explicitly maintained.
 - keep skills and MCP in native keys
 
 7. Validate:

@@ -20,7 +20,9 @@ Project extension features:
 
 1. Read `.codex/config.toml`.
 2. Resolve `model_instructions_file` relative to `.codex/config.toml` directory.
-   - Example in this repo: `../identity/runtime/IDENTITY_COMPILED.md`.
+   - Consumer workspace (protocol repo checked out as `<workspace>/identity-protocol-local`):
+     `../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md`
+   - Legacy mirror example: `../identity/runtime/IDENTITY_COMPILED.md` (only if that bridge file is maintained).
 3. Read active identity from `identity/catalog/identities.yaml` (`default_identity` or override).
 4. Validate identity pack exists and required files are present.
 5. Validate CURRENT_TASK minimum required blocks.
@@ -65,4 +67,3 @@ After each high-impact action:
 - update CURRENT_TASK state
 - append TASK_HISTORY entry
 - persist evidence artifact paths
-

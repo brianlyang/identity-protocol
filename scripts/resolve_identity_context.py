@@ -186,6 +186,8 @@ def collect_protocol_evidence(protocol_root: str | None = None, protocol_mode: s
         "protocol_mode": str(protocol_mode or "").strip() or "mode_a_shared",
         "protocol_root": str(root),
         "protocol_commit_sha": commit,
+        "protocol_head_sha_at_run_start": commit,
+        "baseline_reference_mode": "run_pinned",
         "protocol_ref": ref,
     }
 
@@ -289,7 +291,7 @@ def resolve_identity(
         pack = Path(pack_raw).expanduser().resolve()
         profile = str((row or {}).get("profile", "")).strip().lower()
         runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
-        if source_layer == "repo" and (profile == "fixture" or runtime_mode == "demo_only"):
+        if profile == "fixture" or runtime_mode == "demo_only":
             scope: ScopeName = "SYSTEM"
         else:
             scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)

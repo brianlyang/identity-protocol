@@ -18,7 +18,7 @@ pinned_commit: "<full_sha>"
 In `.codex/config.toml`:
 
 ```toml
-model_instructions_file = "../identity/runtime/IDENTITY_COMPILED.md"
+model_instructions_file = "../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md"
 ```
 
 ## 3) Enable required skills

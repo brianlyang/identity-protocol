@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,11 +10,17 @@ from typing import Any
 
 import yaml
 
-REQUIRED_BLOCKERS = {
-    "login_required",
-    "captcha_required",
-    "session_expired",
+CANONICAL_BLOCKERS = {
+    "auth_login_required",
+    "anti_automation_challenge_required",
+    "session_reauthentication_required",
     "manual_verification_required",
+}
+
+LEGACY_BLOCKER_ALIAS_MAP = {
+    "login_required": "auth_login_required",
+    "captcha_required": "anti_automation_challenge_required",
+    "session_expired": "session_reauthentication_required",
 }
 
 REQUIRED_TAXONOMY_FIELDS = {
@@ -32,6 +39,47 @@ REQUIRED_RECEIPT_FIELDS = {
     "dedupe_key",
     "status",
 }
+
+
+def _build_alias_map(*raw_maps: Any) -> dict[str, str]:
+    alias_map = dict(LEGACY_BLOCKER_ALIAS_MAP)
+    for raw_map in raw_maps:
+        if not isinstance(raw_map, dict):
+            continue
+        for raw_key, raw_value in raw_map.items():
+            key = str(raw_key or "").strip()
+            value = str(raw_value or "").strip()
+            if key and value in CANONICAL_BLOCKERS:
+                alias_map[key] = value
+    return alias_map
+
+
+def _canonicalize_blocker(raw: Any, *, alias_map: dict[str, str]) -> tuple[str, str]:
+    value = str(raw or "").strip()
+    if value in CANONICAL_BLOCKERS:
+        return value, "canonical"
+    mapped = alias_map.get(value)
+    if mapped:
+        return mapped, "legacy_alias_bridge"
+    return "", "invalid"
+
+
+def _normalize_blocker_set(values: Any, *, alias_map: dict[str, str]) -> tuple[set[str], list[str], list[str]]:
+    normalized: set[str] = set()
+    alias_hits: list[str] = []
+    invalid: list[str] = []
+    if not isinstance(values, list):
+        return normalized, alias_hits, invalid
+    for raw in values:
+        canonical, mode = _canonicalize_blocker(raw, alias_map=alias_map)
+        if mode == "canonical":
+            normalized.add(canonical)
+        elif mode == "legacy_alias_bridge":
+            normalized.add(canonical)
+            alias_hits.append(str(raw))
+        else:
+            invalid.append(str(raw))
+    return normalized, sorted(set(alias_hits)), sorted(set(invalid))
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -78,11 +126,23 @@ def _parse_iso_dt(value: str) -> datetime:
     return dt.astimezone(timezone.utc)
 
 
-def _iter_logs(pattern: str, explicit_file: str) -> list[Path]:
+def _iter_logs(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Path]:
     if explicit_file:
-        p = Path(explicit_file)
+        p = Path(explicit_file).expanduser()
         return [p] if p.exists() else []
-    return sorted(Path(".").glob(pattern))
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
 
 
 def _validate_log(
@@ -93,6 +153,7 @@ def _validate_log(
     max_log_age_days: int,
     notify_channel: str,
     require_receipt: bool,
+    alias_map: dict[str, str],
 ) -> tuple[int, list[str]]:
     rc = 0
     logs: list[str] = []
@@ -110,9 +171,13 @@ def _validate_log(
         rc = 1
 
     blocker = str(rec.get("blocker_type") or "")
-    if blocker not in REQUIRED_BLOCKERS:
-        logs.append(f"[FAIL] {p} blocker_type must be one of {sorted(REQUIRED_BLOCKERS)}")
+    blocker_canonical, blocker_mode = _canonicalize_blocker(blocker, alias_map=alias_map)
+    if not blocker_canonical:
+        allowed = sorted(set(CANONICAL_BLOCKERS).union(alias_map.keys()))
+        logs.append(f"[FAIL] {p} blocker_type must be one of {allowed}")
         rc = 1
+    elif blocker_mode == "legacy_alias_bridge":
+        logs.append(f"[OK] {p} blocker_type mapped via legacy alias bridge: {blocker} -> {blocker_canonical}")
 
     if rec.get("requires_human_collab") is not True:
         logs.append(f"[FAIL] {p} requires_human_collab must be true")
@@ -170,6 +235,7 @@ def _validate_log(
 
 
 def _run_self_test(sample_root: Path) -> int:
+    alias_map = _build_alias_map()
     pos = sorted((sample_root / "positive").glob("*.json"))
     neg = sorted((sample_root / "negative").glob("*.json"))
     if not pos or not neg:
@@ -178,13 +244,18 @@ def _run_self_test(sample_root: Path) -> int:
 
     rc = 0
     for p in pos:
+        sample = _load_json(p)
+        sample_identity = str(sample.get("identity_id") or "sample-identity")
+        sample_task_id = str(sample.get("task_id") or "sample-task")
+        sample_channel = str(sample.get("notify_channel") or "ops-notification-router")
         irc, logs = _validate_log(
             p,
-            identity_id="store-manager",
-            task_id="store_manager_20260218_role_os_bootstrap",
+            identity_id=sample_identity,
+            task_id=sample_task_id,
             max_log_age_days=0,
-            notify_channel="ops-notification-router",
+            notify_channel=sample_channel,
             require_receipt=True,
+            alias_map=alias_map,
         )
         for ln in logs:
             print(ln)
@@ -193,13 +264,18 @@ def _run_self_test(sample_root: Path) -> int:
             rc = 1
 
     for p in neg:
+        sample = _load_json(p)
+        sample_identity = str(sample.get("identity_id") or "sample-identity")
+        sample_task_id = str(sample.get("task_id") or "sample-task")
+        sample_channel = str(sample.get("notify_channel") or "ops-notification-router")
         irc, logs = _validate_log(
             p,
-            identity_id="store-manager",
-            task_id="store_manager_20260218_role_os_bootstrap",
+            identity_id=sample_identity,
+            task_id=sample_task_id,
             max_log_age_days=0,
-            notify_channel="ops-notification-router",
+            notify_channel=sample_channel,
             require_receipt=True,
+            alias_map=alias_map,
         )
         for ln in logs:
             print(ln)
@@ -227,6 +303,7 @@ def main() -> int:
         return 1
 
     task = _load_json(task_path)
+    pack_root = task_path.parent.resolve()
 
     gates = task.get("gates") or {}
     if gates.get("collaboration_trigger_gate") != "required":
@@ -243,11 +320,25 @@ def main() -> int:
         print("[FAIL] blocker_taxonomy_contract.required must be true")
         return 1
 
-    blockers = set(taxonomy.get("required_blocker_types") or [])
-    if not REQUIRED_BLOCKERS.issubset(blockers):
-        print(f"[FAIL] blocker_taxonomy_contract.required_blocker_types missing: {sorted(REQUIRED_BLOCKERS - blockers)}")
+    alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
+
+    blockers_norm, blockers_alias_hits, blockers_invalid = _normalize_blocker_set(
+        taxonomy.get("required_blocker_types") or [],
+        alias_map=alias_map,
+    )
+    if blockers_invalid:
+        print(f"[FAIL] blocker_taxonomy_contract.required_blocker_types contains unsupported blockers: {blockers_invalid}")
         return 1
-    print("[OK] blocker taxonomy covers required classes")
+    if not CANONICAL_BLOCKERS.issubset(blockers_norm):
+        print(
+            "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
+            f"{sorted(CANONICAL_BLOCKERS - blockers_norm)}"
+        )
+        return 1
+    mode = "legacy_alias_bridge" if blockers_alias_hits else "canonical"
+    print(f"[OK] blocker taxonomy covers canonical classes (mode={mode})")
+    if blockers_alias_hits:
+        print(f"[OK] blocker taxonomy legacy alias hits: {blockers_alias_hits}")
 
     tax_fields = set(taxonomy.get("blocker_classification_required_fields") or [])
     if not REQUIRED_TAXONOMY_FIELDS.issubset(tax_fields):
@@ -278,10 +369,22 @@ def main() -> int:
         print(f"[FAIL] collaboration_trigger_contract missing fields: {miss}")
         return 1
 
-    trig = set(contract.get("trigger_conditions") or [])
-    if not REQUIRED_BLOCKERS.issubset(trig):
-        print(f"[FAIL] collaboration_trigger_contract.trigger_conditions missing: {sorted(REQUIRED_BLOCKERS - trig)}")
+    alias_map = _build_alias_map(alias_map, contract.get("legacy_alias_bridge"))
+    trig_norm, trig_alias_hits, trig_invalid = _normalize_blocker_set(
+        contract.get("trigger_conditions") or [],
+        alias_map=alias_map,
+    )
+    if trig_invalid:
+        print(f"[FAIL] collaboration_trigger_contract.trigger_conditions contains unsupported blockers: {trig_invalid}")
         return 1
+    if not CANONICAL_BLOCKERS.issubset(trig_norm):
+        print(
+            "[FAIL] collaboration_trigger_contract.trigger_conditions missing canonical blockers: "
+            f"{sorted(CANONICAL_BLOCKERS - trig_norm)}"
+        )
+        return 1
+    if trig_alias_hits:
+        print(f"[OK] collaboration trigger legacy alias hits: {trig_alias_hits}")
 
     policy = str(contract.get("notify_policy") or "").strip()
     if not policy:
@@ -328,7 +431,7 @@ def main() -> int:
         print("[FAIL] collaboration_trigger_contract.evidence_log_path_pattern missing")
         return 1
 
-    files = _iter_logs(pattern, args.file)
+    files = _iter_logs(pattern, args.file, pack_root=pack_root)
     minimum = int(contract.get("minimum_evidence_logs_required") or 1)
     if len(files) < minimum:
         print(f"[FAIL] collaboration evidence logs insufficient: found={len(files)}, required={minimum}")
@@ -346,6 +449,7 @@ def main() -> int:
             max_log_age_days=max_age_days,
             notify_channel=channel,
             require_receipt=bool(contract.get("must_emit_receipt_in_chat", True)),
+            alias_map=alias_map,
         )
         for ln in logs:
             print(ln)

@@ -114,7 +114,7 @@ To confirm boundary hardening, this should fail without explicit override:
 
 ```bash
 python3 scripts/identity_installer.py plan --identity-id <runtime-id> --target-root identity/packs
-# expected: blocked unless --allow-repo-target
+# expected: blocked unless --allow-repo-target + confirm token + purpose
 ```
 
 ---
@@ -142,7 +142,7 @@ No, not by default. Runtime identities are local-only and resolved from local ca
 Yes, but only explicitly:
 
 ```bash
-python3 scripts/create_identity_pack.py ... --repo-fixture --pack-root identity/packs --catalog identity/catalog/identities.yaml
+python3 scripts/create_identity_pack.py ... --repo-fixture --repo-fixture-confirm "I_UNDERSTAND_REPO_FIXTURE_WRITE" --repo-fixture-purpose "demo fixture only" --pack-root identity/packs --catalog identity/catalog/identities.yaml
 ```
 
 ### Q3: Why is writeback validation required in migration checklist?

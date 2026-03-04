@@ -90,6 +90,17 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _resolve_path_with_pack(path_value: str, pack_root: Path) -> Path:
+    raw = str(path_value or "").strip()
+    p = Path(raw).expanduser()
+    if p.is_absolute():
+        return p
+    candidate = (pack_root / raw).resolve()
+    if candidate.exists():
+        return candidate
+    return (Path.cwd() / raw).resolve()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity update lifecycle contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -107,6 +118,7 @@ def main() -> int:
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    pack_root = task_path.parent.resolve()
 
     print(f"[INFO] validate update lifecycle for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
@@ -168,7 +180,11 @@ def main() -> int:
 
     required_file_paths = patch.get("required_file_paths") or []
     if required_file_paths:
-        missing_paths = [p for p in required_file_paths if not Path(str(p)).exists()]
+        missing_paths = []
+        for p in required_file_paths:
+            resolved = _resolve_path_with_pack(str(p), pack_root)
+            if not resolved.exists():
+                missing_paths.append(str(p))
         if missing_paths:
             print(f"[FAIL] patch_surface_contract.required_file_paths not found: {missing_paths}")
             return 1
@@ -283,7 +299,7 @@ def main() -> int:
         if miss:
             print(f"[FAIL] replay evidence check_results[{i}] missing fields: {miss}")
             return 1
-        lp = Path(str(cr.get("log_path", "")).strip())
+        lp = _resolve_path_with_pack(str(cr.get("log_path", "")).strip(), pack_root)
         if not lp.exists():
             print(f"[FAIL] replay evidence check_results[{i}].log_path not found: {lp}")
             return 1

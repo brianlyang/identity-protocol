@@ -27,6 +27,9 @@ identity/runtime/examples/*-learning-*.json
 identity/runtime/examples/*-trigger-regression-*.json
 identity/runtime/examples/*-update-replay-*.json
 
+# Pack runtime protocol-feedback artifacts (generated during local replays)
+identity/packs/*/runtime/protocol-feedback/
+
 # keep deterministic handoff self-test fixtures versioned
 !identity/runtime/local/
 identity/runtime/local/*

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -71,6 +72,23 @@ def _parse_ts(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
+def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate experience feedback governance controls")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -86,6 +104,7 @@ def main() -> int:
 
     print(f"[INFO] validate experience feedback governance for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
+    pack_root = task_path.parent.resolve()
 
     task = _load_json(task_path)
     c = task.get("experience_feedback_contract") or {}
@@ -132,7 +151,7 @@ def main() -> int:
         print("[FAIL] feedback_log_path_pattern missing")
         return 1
 
-    logs = sorted(Path(".").glob(pattern))
+    logs = _glob_paths(pattern, pack_root=pack_root)
     if len(logs) < min_logs:
         print(f"[FAIL] feedback logs count {len(logs)} < minimum_logs_required {min_logs}")
         return 1
@@ -172,7 +191,7 @@ def main() -> int:
     if not report_path or not report_path.exists():
         sample_pattern = str(c.get("sample_report_path_pattern", "")).strip()
         if sample_pattern:
-            samples = sorted(Path(".").glob(sample_pattern))
+            samples = _glob_paths(sample_pattern, pack_root=pack_root)
             if samples:
                 report_path = samples[-1]
     if report_path and report_path.exists():

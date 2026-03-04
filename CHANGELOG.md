@@ -2,6 +2,386 @@
 
 ## Unreleased
 
+- **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
+  - added protocol-level contract-first validators:
+    - `scripts/validate_identity_tool_installation.py`
+    - `scripts/validate_identity_vendor_api_discovery.py`
+    - `scripts/validate_identity_vendor_api_solution.py`
+    - shared resolver/helper: `scripts/tool_vendor_governance_common.py`
+  - wired the new validator chain into required protocol execution paths:
+    - `scripts/identity_creator.py validate`
+    - `scripts/e2e_smoke_test.sh`
+    - `scripts/release_readiness_check.py`
+    - `scripts/full_identity_protocol_scan.py`
+    - `.github/workflows/_identity-required-gates.yml`
+  - extended runtime health collection and default scaffold contracts:
+    - `scripts/collect_identity_health_report.py` now includes tool/vendor closure checks
+    - `scripts/create_identity_pack.py` now injects optional contracts
+      (`tool_installation_contract`, `vendor_api_discovery_contract`,
+      `vendor_api_solution_contract`) with safe default `required=false`
+    - `identity/store-manager/CURRENT_TASK.json` updated to include the same optional
+      tool/vendor closure contract skeletons
+  - route quality export compatibility fix for local runtime identities:
+    - `scripts/export_route_quality_metrics.py` now supports absolute
+      `handoff_log_path_pattern` values (via glob-based resolution) in addition
+      to relative repo patterns, preventing false `NotImplementedError` in
+      `e2e_smoke_test.sh` for instance-local runtime paths
+
+- **v1.4.13 execution-report freshness + required-contract coverage semantics (draft)**:
+  - added report freshness preflight validator:
+    - `scripts/validate_execution_report_freshness.py`
+    - structured freshness payload with policy gate (`strict|warn`) and
+      stale/mismatch error code `IP-REL-001`
+  - release readiness now enforces freshness before late-stage validators:
+    - `scripts/release_readiness_check.py` now runs report freshness preflight
+      and supports `--execution-report-policy`
+    - auto report discovery now prioritizes prompt-sha-aligned report candidates
+      when selecting latest execution report
+  - added required-contract coverage classifier for tool/vendor closures:
+    - `scripts/validate_required_contract_coverage.py`
+    - machine-readable statuses:
+      `PASS_REQUIRED` / `SKIPPED_NOT_REQUIRED` / `FAIL_REQUIRED` / `FAIL_OPTIONAL`
+    - coverage metrics:
+      `required_contract_coverage_rate`,
+      `required_contract_total`,
+      `required_contract_passed`,
+      `skipped_contract_count`
+    - optional policy threshold: `--min-required-contract-coverage`
+  - coverage/freshness surfaced in governance chains:
+    - `scripts/release_readiness_check.py`
+    - `scripts/e2e_smoke_test.sh`
+    - `scripts/report_three_plane_status.py`
+    - `scripts/full_identity_protocol_scan.py`
+    - `scripts/identity_creator.py validate`
+    - `.github/workflows/_identity-required-gates.yml`
+  - report candidate selection now follows pack-local first resolution:
+    - `scripts/validate_execution_report_freshness.py` and
+      `scripts/validate_identity_protocol_baseline_freshness.py` now search
+      `<resolved_pack>/runtime/**` first and only fallback to shared roots
+      (`/tmp`, `$IDENTITY_HOME`) when local candidates are absent
+    - avoids cross-catalog identity-id collisions selecting another instance's
+      report under dual-layer (project/global) environments
+  - canonical handoff synced with local-first report binding semantics:
+    - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+
+- **v1.4.13 protocol baseline propagation + upgrade-wave closure (draft)**:
+  - added protocol baseline freshness validator:
+    - `scripts/validate_identity_protocol_baseline_freshness.py`
+    - compares execution report `protocol_commit_sha` against current protocol
+      HEAD under `report.protocol_root`
+    - policy gate: `--baseline-policy strict|warn`
+    - structured error codes:
+      `IP-PBL-001` / `IP-PBL-002` / `IP-PBL-003` / `IP-PBL-004`
+  - upgraded health checks with warn-aware contract semantics:
+    - `scripts/collect_identity_health_report.py` adds
+      `protocol_baseline_freshness` check (warn policy by default)
+    - health report now emits:
+      `warning_count`, `failed_count`, `checks[].status`, `checks[].error_code`
+    - `scripts/validate_identity_health_contract.py` accepts `PASS/WARN/FAIL`
+      and keeps `--require-pass` fail-only on `FAIL` checks
+  - wired baseline freshness visibility into core governance chains:
+    - `scripts/release_readiness_check.py` adds baseline preflight
+      (`--baseline-policy`)
+    - `scripts/full_identity_protocol_scan.py` adds
+      `protocol_baseline_freshness` check and parsed fields
+    - `scripts/report_three_plane_status.py` exposes baseline freshness detail
+      in instance-plane output (warn-visible by default)
+    - `scripts/e2e_smoke_test.sh` adds strict baseline freshness step
+    - `.github/workflows/_identity-required-gates.yml` adds strict baseline
+      freshness check on generated upgrade report
+  - added batch protocol upgrade orchestrator:
+    - `scripts/run_protocol_upgrade_wave.py`
+    - supports catalog-driven stale detection + dry-run inventory +
+      optional apply mode to trigger `identity_creator update`
+    - emits machine-readable wave report:
+      `outdated_identities`, `updated_count`, `blocked_count`, `items[]`
+    - review-required convergence semantics hardened:
+      - `identity_creator update` exit code `2` with empty hard error and
+        review-required next action is now classified as `REVIEW_REQUIRED`
+        instead of `BLOCKED`
+      - wave payload now emits `review_required_count` and per-item
+        `update_status` (`UPDATED` / `REVIEW_REQUIRED` / `BLOCKED` /
+        `SKIPPED_*`) for clearer audit triage
+    - stale/outdated detection policy now treats all non-`PASS` baseline states
+      as convergence candidates (including `IP-PBL-002` report-missing),
+      preventing false `identity_aligned_to_current_protocol` labels for
+      bootstrap-required identities
+
+- **v1.4.13 scope-arbitrated full-scan/three-plane stabilization (draft)**:
+  - scope classification now treats `profile=fixture` / `runtime_mode=demo_only`
+    as `SYSTEM` regardless catalog source layer:
+    - `scripts/resolve_identity_context.py`
+  - scope validators now support explicit arbitration without false conflict hard-fail:
+    - `scripts/validate_identity_scope_resolution.py`
+    - `scripts/validate_identity_scope_isolation.py`
+  - three-plane reporter now accepts explicit scope binding:
+    - `scripts/report_three_plane_status.py --scope REPO|USER|ADMIN|SYSTEM`
+  - full scan now injects catalog-layer scope hints and forwards explicit scope to:
+    - resolve/scope validators
+    - three-plane reporter
+  - full scan severity now keeps fixture/demo baseline `WARN` as non-blocking and
+    skips prompt-quality hard-gate for fixture/demo identities to avoid
+    protocol/fixture mixed-layer false P1 noise:
+    - `scripts/full_identity_protocol_scan.py`
+
+- **v1.4.13 layered-governance closure hardening (draft)**:
+  - added unified three-plane governance reporter:
+    - `scripts/report_three_plane_status.py`
+    - standardized output contract now includes
+      `instance_plane_status` / `repo_plane_status` / `release_plane_status`
+      plus release evidence fields and `overall_release_decision`
+  - upgraded `IDENTITY_PROMPT.md` from static doc to runtime contract object:
+    - `execute_identity_upgrade.py` now writes prompt activation evidence fields into execution reports
+    - added `scripts/validate_identity_prompt_activation.py`
+    - wired prompt activation validator into e2e (`27.7/30`), release readiness, and three-plane status reporter
+    - `execute_identity_upgrade.py` now applies deterministic prompt runtime-contract block updates
+      during upgrade runs and records `hash_before/hash_after` lifecycle fields
+    - added `scripts/validate_identity_prompt_lifecycle.py`
+    - wired prompt lifecycle validator into e2e (`27.8/30`), release readiness, three-plane status,
+      and active-runtime checks in full protocol scan
+  - added full-repo identity governance scanner:
+    - `scripts/full_identity_protocol_scan.py`
+    - scans project/global catalogs with shared validator matrix and
+      emits severity summary (`P0`/`P1`/`OK`) for cross-instance readiness
+  - hardened instance-plane fail-operational closure and legacy debt repair:
+    - added `scripts/repair_rulebook_schema_backfill.py` for idempotent historical
+      `RULEBOOK.jsonl` schema backfill (focus: missing `scope`)
+    - enhanced `scripts/repair_identity_learning_sample.py` to backfill existing
+      run-linked rulebook rows instead of only appending new rows
+    - wired rulebook schema backfill into `scripts/e2e_smoke_test.sh` preflight (step 2.45/30)
+      and `identity_creator.py heal` auto-repair flow
+  - update/e2e/reporting governance consistency uplift:
+  - prompt lifecycle validator now supports deferred blocked execution semantics:
+    - `scripts/validate_identity_prompt_lifecycle.py` now treats known
+      pre-mutation blocked outcomes (`IP-UPG-001` / `IP-PERM-001`) as valid
+      deferred lifecycle state when `all_ok=false`
+    - review-required deferred outcomes with
+      `next_action=review_required_create_pr_from_patch_plan` and
+      `identity_prompt_change_note=prompt_change_deferred_due_to_failed_validators`
+      are now classified as valid deferred lifecycle state (not false hard-fail)
+    - prevents false P0 escalation when prompt mutation is intentionally
+      blocked before writeback by policy/permission boundaries
+    - `execute_identity_upgrade.py` now guarantees structured failure/report fields
+      for recoverable vs hard-boundary interpretation
+    - added capability activation evidence contract for skill/MCP/tool attachment:
+      - `scripts/validate_identity_capability_activation.py`
+      - `identity_creator update` now probes capability activation before upgrade execution
+      - upgrade execution report now always includes
+        `skills_used` / `mcp_tools_used` / `tool_calls_used` /
+        `capability_activation_status` / `capability_activation_error_code`
+      - wired capability evidence checks into:
+        - `scripts/e2e_smoke_test.sh`
+        - `scripts/release_readiness_check.py`
+        - `scripts/report_three_plane_status.py`
+        - `scripts/full_identity_protocol_scan.py`
+      - normalized writeback validator invocation to use explicit
+        `--repo-catalog + --local-catalog` binding in e2e/readiness/three-plane
+        (prevents implicit global-catalog drift during instance-plane evaluation)
+      - capability activation now enforces GitHub auth readiness:
+        - `scripts/validate_identity_capability_activation.py` splits
+          `github` MCP readiness into `cli_present` + `auth_ready`
+        - when `required_mcp` includes `github` and auth is not ready,
+          status is `BLOCKED` with `IP-CAP-003` (no false `ACTIVATED`)
+      - `scripts/full_identity_protocol_scan.py` now supports
+        `--scan-mode target --identity-ids ...` in addition to full scan mode,
+        so release preflight can isolate target-instance posture from historical backlog
+      - `scripts/export_route_quality_metrics.py` removed default repo runtime fallback:
+        - defaults now require `IDENTITY_RUNTIME_OUTPUT_ROOT` or
+          `<resolved_pack_path>/runtime`
+        - repo fallback moved behind explicit
+          `--allow-repo-runtime-fallback` (fixture/debug only)
+      - `scripts/e2e_smoke_test.sh` now adds early global-runtime writeability preflight
+        and fail-fast guidance to switch to `project` mode when global runtime is not writable
+    - `e2e_smoke_test.sh` now emits dual-plane terminal states
+      (`instance_plane_status`, `release_plane_status`)
+  - repo-plane contract tooling improvements:
+    - added `scripts/docs_command_contract_check.py` (dynamic index-driven coverage)
+      and kept it decoupled from instance main chain
+    - added `scripts/validate_release_plane_cloud_closure.py` for release-only cloud closure checks
+  - identity session/runtime lifecycle quality:
+    - added `scripts/sync_session_identity.py` to remove activation-chain missing-script warning
+    - added single-active precheck/auto-converge option in activation/update paths
+  - CI security/path governance hardening:
+    - required-gates workflow now includes:
+      - actionlint (workflow lint)
+      - gitleaks (secret scanning)
+      - ast-grep path governance rule:
+        `.github/ast-grep/no-default-repo-runtime-fallback.yml`
+  - governance documentation updates:
+    - added
+      `docs/governance/identity-token-efficiency-and-skill-parity-governance-v1.4.13.md`
+    - added
+      `docs/governance/identity-token-governance-audit-checklist-v1.4.13.md`
+    - updated `README.md`, `docs/governance/AUDIT_SNAPSHOT_INDEX.md`,
+      `docs/governance/identity-instance-closure-checklist-v1.4.12.md`
+    - updated consumer integration references to prefer stable model instructions path
+      `../identity-protocol-local/identity/runtime/IDENTITY_COMPILED.md`
+      instead of relying on optional `../identity/runtime/IDENTITY_COMPILED.md` bridge files
+  - creation/installer exception-path hardening + anti-pollution cleanup:
+    - `scripts/create_identity_pack.py` now anchors repo boundary to detected `.git` root
+      (no cwd-dependent drift), and keeps fixture/demo runtime artifacts under
+      `<pack>/runtime` instead of mutating shared `identity/runtime` templates
+    - `scripts/create_identity_pack.py` adds overlap guards that fail when bootstrap
+      source==destination, preventing in-place fixture corruption
+    - added optional `--skip-sample-bootstrap` (advanced/boundary testing only)
+      to run boundary regression without runtime fixture mutation side effects
+    - `scripts/identity_installer.py` aligns repo-target exception model with
+      create flow: `--allow-repo-target` now requires explicit confirm token +
+      purpose; registration now writes `profile` + `runtime_mode` consistently
+    - added `scripts/validate_identity_creation_boundary.py` (4-case regression:
+      missing confirm fail, repo runtime fail, local runtime pass, fixture pass)
+      and wired it into `scripts/e2e_smoke_test.sh` + `scripts/release_readiness_check.py`
+    - e2e compile step now writes to `/tmp/identity-compiled-runtime/*.md` to avoid
+      tracked workspace churn from runtime brief generation
+  - recoverable self-drive contract alignment (fail-operational):
+    - `execute_identity_upgrade.py` now emits complete preflight-blocked evidence
+      (synthetic `checks/check_results`, `required_checks`, matching patch plan,
+      `creator_invocation`, and structured next_action) for capability/metrics blocked paths
+      instead of empty check arrays
+    - this removes false-fail in `validate_identity_self_upgrade_enforcement.py`
+      for recoverable blocked reports (`IP-CAP-*`, metrics-missing) while keeping
+      machine-auditable evidence integrity
+  - capability activation policy extension:
+    - `validate_identity_capability_activation.py` now emits per-route readiness matrix
+      (`route_activation_matrix`, `route_ready_count`, `route_total_count`)
+    - added `--activation-policy`:
+      - `strict-union` (default, backward-compatible, keeps IP-CAP-003 hard block semantics)
+      - `route-any-ready` (opt-in route-scoped activation semantics)
+  - three-plane repo-status hardening:
+    - `report_three_plane_status.py` repo-plane now includes tracked worktree cleanliness
+      (`workspace_clean`, dirty entries) and blocks `repo_plane_status=CLOSED` when tracked files are dirty
+  - ast-grep path governance rule strengthened:
+    - `.github/ast-grep/no-default-repo-runtime-fallback.yml` now covers broader Python path variants
+      and prevents unguarded repo `.codex/identity/runtime` fallback patterns across scripts
+    - `scripts/export_route_quality_metrics.py` repo fallback path construction is now
+      centralized via `_repo_runtime_metrics_path(...)` so explicit debug-only fallback
+      remains auditable while avoiding rule false positives on guarded branches
+  - runtime mode/catalog fail-fast guard:
+    - added `scripts/validate_identity_runtime_mode_guard.py` to enforce resolver tuple
+      (`source_layer`, `catalog_path`, `pack_path`, `resolved_scope`) against selected
+      runtime mode before identity operations
+    - wired guard into `identity_creator.py` (`validate`/`activate`/`update`),
+      `scripts/release_readiness_check.py`, and `scripts/e2e_smoke_test.sh`
+      to block project/global mode drift early with explicit remediation hints
+  - activation session pointer consistency hardening:
+    - canonical session pointer path standardized to
+      `<catalog_dir>/session/active_identity.json` (legacy mirror remains
+      `/tmp/identity-session/current.json`)
+    - `scripts/sync_session_identity.py` now writes canonical pointer by default
+      and mirror pointer as warning-only compatibility path
+    - `identity_creator.py activate` now passes explicit canonical `--out` and
+      treats canonical sync failure as transactional failure (rollback catalog/META/evidence)
+    - added `scripts/validate_identity_session_pointer_consistency.py` and wired
+      into activate flow, `e2e_smoke_test.sh`, `release_readiness_check.py`,
+      `report_three_plane_status.py`, and `full_identity_protocol_scan.py`
+  - blocked-arbitration semantics and release capability policy clarification:
+    - `scripts/validate_identity_capability_arbitration.py` now applies
+      blocked-aware linkage handling: when upgrade report shows
+      `capability_activation_status=BLOCKED` and trigger reason contains
+      `capability_activation_blocked:*`, metrics-trigger mismatch is bypassed
+      as recoverable fail-operational state instead of hard failure
+    - `scripts/release_readiness_check.py` now exposes
+      `--capability-activation-policy {strict-union,route-any-ready}`
+      and passes policy through to both preflight validation and
+      auto-generated `identity_creator update` execution path
+    - `scripts/identity_creator.py update` and
+      `scripts/execute_identity_upgrade.py` now accept/propagate
+      `--capability-activation-policy` for deterministic policy semantics across
+      preflight and execution reports
+  - dialogue governance contract landing (optional contract-first, protocol-only):
+    - added shared helper `scripts/dialogue_governance_common.py`
+      (contract resolution, report discovery, threshold parsing, warn/enforce outcome handling)
+    - added dialogue validators with deterministic `IP-DCIC-*` semantics:
+      - `scripts/validate_identity_dialogue_content.py`
+      - `scripts/validate_identity_dialogue_cross_validation.py`
+      - `scripts/validate_identity_dialogue_result_support.py`
+    - wired dialogue validators into:
+      - `scripts/e2e_smoke_test.sh` (instance-plane optional contract checks)
+      - `scripts/release_readiness_check.py` (release-plane protocol gate chain)
+      - `scripts/report_three_plane_status.py` (instance-plane validator matrix)
+      - `scripts/full_identity_protocol_scan.py` (cross-catalog severity model)
+      - `.github/workflows/_identity-required-gates.yml` (CI required-gates loop)
+    - added protocol-governance documentation:
+      - `docs/governance/identity-base-protocol-runtime-retro-and-governance-feedback-v1.4.13.md`
+      - compatibility alias:
+        `docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md`
+      - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+  - dialogue-governance scaffold defaults for new identities:
+    - `scripts/create_identity_pack.py` now injects
+      `dialogue_governance_contract` skeleton into both `minimal` and `full-contract`
+      init profiles with safe default `required=false`
+    - `identity/store-manager/CURRENT_TASK.json` now includes the same contract skeleton
+      as template baseline for future scaffolds
+  - protocol SSOT hardening (handoff canonical + artifacts non-normative):
+    - added `scripts/validate_protocol_ssot_source.py`
+      (index policy marker checks, canonical handoff integrity checks, anti-normative artifact guard)
+    - added `scripts/validate_protocol_handoff_coupling.py`
+      (protocol-core file changes must include canonical handoff doc update in same git range)
+    - added configurable protocol-core scope map:
+      `docs/governance/templates/protocol-core-change-map.yaml`
+      used by coupling validator to avoid hardcoded matcher drift
+    - wired SSOT validators into:
+      - `.github/workflows/_identity-required-gates.yml`
+      - `scripts/release_readiness_check.py`
+      - `scripts/e2e_smoke_test.sh`
+    - updated `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+      with explicit execution directive:
+      "execute by handoff only; artifacts are evidence mirrors"
+  - protocol audit preflight hardening (local reproducibility + auth clarity):
+    - added `scripts/preflight_protocol_audit_env.sh`
+      (checks `gh auth status`, `actionlint`, and `ast-grep` availability)
+    - supports `--install-missing` to reduce local-vs-CI tooling drift
+    - supports `--require-gh-auth` for strict release profiles where capability auth
+      readiness is mandatory
+    - SSOT/README guidance now explicitly treats strict-union `IP-CAP-003`
+      with unauthenticated `gh` as environment-auth blocked state
+      (not protocol regression by itself)
+  - instance baseline extension (separate from protocol contract change):
+    - added `system-requirements-analyst` baseline identity assets:
+      - `identity/catalog/identities.yaml` registration
+      - `identity/packs/system-requirements-analyst/**` scaffold and runtime examples
+    - explicit linkage for historical baseline commit: `6ecdaae`
+    - governance classification: this is instance/baseline track (B-track),
+      not protocol SSOT contract mutation
+  - session pointer mirror deconfliction:
+    - default mirror path switched from global `/tmp` to catalog-scoped
+      `<catalog_dir>/session/mirror/current.json`
+    - `validate_identity_session_pointer_consistency.py` now enforces canonical pointer
+      by default while keeping mirror mismatch warning-only unless `--require-mirror`
+    - `identity_creator.py activate` sync/verify now uses catalog-scoped mirror by default
+  - local preflight parity with CI required-gates:
+    - `scripts/preflight_protocol_audit_env.sh` now checks `gitleaks` availability
+      in addition to `actionlint` and `ast-grep`
+  - validate-chain alignment for local/release/e2e semantics:
+    - `identity_creator.py validate` now includes dialogue validators:
+      - `validate_identity_dialogue_content.py`
+      - `validate_identity_dialogue_cross_validation.py`
+      - `validate_identity_dialogue_result_support.py`
+    - keeps contract-first semantics (`required=false` remains skip/non-blocking)
+  - install/migration rewrite consistency hardening:
+    - `identity_installer.py install` now runs path normalization rewrite after `_sync_pack`
+      (same semantic level as adopt flow)
+    - rewrite coverage expanded to `CURRENT_TASK.json` + `runtime/**/*.json` path-bearing fields
+      with install report counters (`rewritten_files_count`, `rewritten_fields_count`)
+    - `validate_identity_update_lifecycle.py` now resolves relative-first evidence paths
+      against pack root for relocation-safe replay checks
+    - `create_identity_pack.py` replay sample generator now writes relative
+      `evidence_path` / `log_path` fields by default
+  - validator portability hardening:
+    - `validate_identity_role_binding.py` runtime live-revalidation no longer depends
+      on caller cwd; validator path/cwd now anchored to script/repo root
+  - FR-005 wording/implementation alignment:
+    - DCIC documentation now explicitly states protocol defines gate routing path,
+      while `dialogue_governance_contract.required` controls per-instance activation stage
+      (`warn` / `enforce`)
+  - release-freeze boundary governance alignment:
+    - `validate_release_freeze_boundary.py` now allows catalog rows under
+      `identity/packs/*` only when classified as `profile=fixture` + `runtime_mode=demo_only`
+    - non-fixture rows under forbidden scope remain fail-closed
+  - full-scan environment-auth severity normalization:
+    - `full_identity_protocol_scan.py` now parses capability preflight output and
+      classifies `IP-CAP-003` as environment-auth blocked (`P1`) rather than protocol regression (`P0`)
+
 - **v1.4.12 self-upgrade closure follow-up (draft)**:
   - added handoff contract self-test fixtures for `base-repo-architect`
     under `identity/runtime/local/base-repo-architect/examples/handoff/{positive,negative}`

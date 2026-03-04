@@ -64,6 +64,19 @@ REQUIRED_PROTOCOL_SOURCES = [
     "https://modelcontextprotocol.io/specification/latest",
 ]
 
+CANONICAL_BLOCKERS = {
+    "auth_login_required",
+    "anti_automation_challenge_required",
+    "session_reauthentication_required",
+    "manual_verification_required",
+}
+
+LEGACY_BLOCKER_ALIAS_MAP = {
+    "login_required": "auth_login_required",
+    "captcha_required": "anti_automation_challenge_required",
+    "session_expired": "session_reauthentication_required",
+}
+
 
 def _fail(msg: str) -> int:
     print(f"[FAIL] {msg}")
@@ -89,6 +102,41 @@ def _source_signature(item: dict[str, Any]) -> str:
     return ""
 
 
+def _build_alias_map(raw_map: Any) -> dict[str, str]:
+    alias_map = dict(LEGACY_BLOCKER_ALIAS_MAP)
+    if isinstance(raw_map, dict):
+        for raw_key, raw_value in raw_map.items():
+            key = str(raw_key or "").strip()
+            value = str(raw_value or "").strip()
+            if key and value in CANONICAL_BLOCKERS:
+                alias_map[key] = value
+    return alias_map
+
+
+def _normalize_blocker_types(
+    values: Iterable[Any],
+    *,
+    alias_map: dict[str, str],
+) -> tuple[set[str], list[str], list[str]]:
+    canonical: set[str] = set()
+    alias_hits: list[str] = []
+    invalid: list[str] = []
+    for raw in values:
+        value = str(raw or "").strip()
+        if not value:
+            continue
+        if value in CANONICAL_BLOCKERS:
+            canonical.add(value)
+            continue
+        mapped = alias_map.get(value)
+        if mapped:
+            canonical.add(mapped)
+            alias_hits.append(value)
+            continue
+        invalid.append(value)
+    return canonical, sorted(set(alias_hits)), sorted(set(invalid))
+
+
 def _resolve_task_path(identity: dict[str, Any]) -> Path:
     identity_id = str(identity.get("id", "")).strip()
     pack_path = str(identity.get("pack_path", "")).strip()
@@ -104,7 +152,28 @@ def _resolve_task_path(identity: dict[str, Any]) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack_path = str((identity or {}).get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    return Path(pack_path).expanduser().resolve()
+
+
+def _resolve_runtime_pattern(pattern: str, pack_root: Path | None, identity_id: str) -> str:
+    if not pattern:
+        return pattern
+    if pack_root is None:
+        return pattern
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if pattern.startswith(local_prefix):
+        return str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    if pattern.startswith("identity/runtime/"):
+        return str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    return pattern
+
+
+def _latest_evidence(pattern: str, identity_id: str, *, pack_root: Path | None = None) -> Path | None:
+    pattern = _resolve_runtime_pattern(pattern, pack_root, identity_id)
     if Path(pattern).is_absolute():
         files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
     else:
@@ -117,7 +186,12 @@ def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
     return files[-1]
 
 
-def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -> tuple[int, list[str]]:
+def _validate_protocol_review_contract(
+    data: dict[str, Any],
+    identity_id: str,
+    *,
+    pack_root: Path | None = None,
+) -> tuple[int, list[str]]:
     rc = 0
     logs: list[str] = []
 
@@ -152,7 +226,7 @@ def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -
         logs.append("[FAIL] protocol_review_contract.evidence_report_path_pattern missing")
         return rc, logs
 
-    latest = _latest_evidence(pattern, identity_id)
+    latest = _latest_evidence(pattern, identity_id, pack_root=pack_root)
     if not latest:
         rc = 1
         logs.append(f"[FAIL] no protocol review evidence file matched: {pattern}")
@@ -201,7 +275,7 @@ def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -
     return rc, logs
 
 
-def _validate_single_identity(identity_id: str, task_path: Path) -> int:
+def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: Path | None = None) -> int:
     print(f"[INFO] validating CURRENT_TASK for identity={identity_id}: {task_path}")
 
     try:
@@ -243,7 +317,7 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
     else:
         print("[OK]   evaluation_contract.consistency_required=true")
 
-    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id)
+    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id, pack_root=pack_root)
     for ln in prc_logs:
         print(ln)
     rc = max(rc, prc_rc)
@@ -271,11 +345,21 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
         print("[OK]   routing_contract.problem_type_routes is non-empty")
 
     rb = data.get("rulebook_contract") or {}
-    rulebook_path = Path(rb.get("rulebook_path", ""))
-    if not rulebook_path or not rulebook_path.exists():
-        print(f"[FAIL] rulebook_contract.rulebook_path missing or not found: {rulebook_path}")
+    rulebook_raw = str(rb.get("rulebook_path", "")).strip()
+    rulebook_path = Path()
+    if not rulebook_raw:
+        print("[FAIL] rulebook_contract.rulebook_path missing or empty")
         rc = 1
     else:
+        rulebook_path = Path(rulebook_raw).expanduser()
+        if not rulebook_path.is_absolute():
+            rulebook_path = (task_path.parent / rulebook_path).resolve()
+        else:
+            rulebook_path = rulebook_path.resolve()
+    if rulebook_raw and not rulebook_path.exists():
+        print(f"[FAIL] rulebook_contract.rulebook_path missing or not found: {rulebook_raw}")
+        rc = 1
+    elif rulebook_raw:
         print(f"[OK]   rulebook exists: {rulebook_path}")
 
     if rb.get("append_only") is not True:
@@ -313,16 +397,27 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
         print("[FAIL] blocker_taxonomy_contract must be non-empty object")
         rc = 1
     else:
-        required_blockers = set(taxonomy.get("required_blocker_types") or [])
-        expected_blockers = {"login_required", "captcha_required", "session_expired", "manual_verification_required"}
-        if not expected_blockers.issubset(required_blockers):
+        required_blockers = taxonomy.get("required_blocker_types") or []
+        alias_map = _build_alias_map(taxonomy.get("legacy_alias_bridge"))
+        normalized_blockers, alias_hits, invalid_blockers = _normalize_blocker_types(
+            required_blockers,
+            alias_map=alias_map,
+        )
+        has_all_canonical = CANONICAL_BLOCKERS.issubset(normalized_blockers)
+        if invalid_blockers:
+            print(f"[FAIL] blocker taxonomy contains unsupported blocker types: {invalid_blockers}")
+            rc = 1
+        if not has_all_canonical:
             print(
-                f"[FAIL] blocker_taxonomy_contract.required_blocker_types missing: "
-                f"{sorted(expected_blockers - required_blockers)}"
+                "[FAIL] blocker_taxonomy_contract.required_blocker_types missing canonical blockers: "
+                f"{sorted(CANONICAL_BLOCKERS - normalized_blockers)}"
             )
             rc = 1
-        else:
-            print("[OK]   blocker taxonomy includes required blocker classes")
+        if not invalid_blockers and has_all_canonical:
+            mode = "legacy_alias_bridge" if alias_hits else "canonical"
+            print(f"[OK]   blocker taxonomy includes canonical blocker classes (mode={mode})")
+            if alias_hits:
+                print(f"[OK]   blocker taxonomy legacy alias hits: {alias_hits}")
 
     collab = data.get("collaboration_trigger_contract") or {}
     if not isinstance(collab, dict) or not collab:
@@ -406,7 +501,11 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             print("[FAIL] identity_role_binding_contract.binding_evidence_path_pattern missing")
             rc = 1
         else:
-            latest = _latest_evidence(pattern.replace("<identity-id>", identity_id), identity_id)
+            latest = _latest_evidence(
+                pattern.replace("<identity-id>", identity_id),
+                identity_id,
+                pack_root=pack_root,
+            )
             if not latest:
                 print(f"[FAIL] role binding evidence not found by pattern: {pattern}")
                 rc = 1
@@ -467,7 +566,7 @@ def main() -> int:
         path = Path(args.current_task)
         if not path.exists():
             return _fail(f"override current task not found: {path}")
-        rc = _validate_single_identity(args.identity_id or "(override)", path)
+        rc = _validate_single_identity(args.identity_id or "(override)", path, pack_root=path.parent)
         return rc
 
     try:
@@ -490,7 +589,7 @@ def main() -> int:
             continue
 
         print("\n" + "=" * 72)
-        rc = max(rc, _validate_single_identity(identity_id, task_path))
+        rc = max(rc, _validate_single_identity(identity_id, task_path, pack_root=_resolve_pack_root(item)))
 
     return rc
 

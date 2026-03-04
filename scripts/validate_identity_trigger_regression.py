@@ -49,11 +49,22 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
-        p = Path(pack_path) / "CURRENT_TASK.json"
-        if p.exists():
-            return p
+        raw = Path(pack_path).expanduser()
+        candidates: list[Path] = []
+        if raw.is_absolute():
+            candidates.append(raw.resolve())
+        else:
+            candidates.append((catalog_path.parent / raw).resolve())
+            if catalog_path.parent.parent != catalog_path.parent:
+                candidates.append((catalog_path.parent.parent / raw).resolve())
+            protocol_root = Path(__file__).resolve().parent.parent
+            candidates.append((protocol_root / raw).resolve())
+        for base in candidates:
+            task = (base / "CURRENT_TASK.json").resolve()
+            if task.exists():
+                return task
 
-    legacy = Path("identity") / identity_id / "CURRENT_TASK.json"
+    legacy = (catalog_path.parent / "identity" / identity_id / "CURRENT_TASK.json").resolve()
     if legacy.exists():
         return legacy
 
@@ -140,20 +151,30 @@ def main() -> int:
         print("[FAIL] trigger_regression_contract.result_enum must be [PASS, FAIL]")
         return 1
 
+    pack_root = task_path.parent.resolve()
+
     if args.report:
-        report_path = Path(args.report)
+        report_path = Path(args.report).expanduser()
+        if not report_path.is_absolute():
+            report_path = (pack_root / report_path).resolve()
+        else:
+            report_path = report_path.resolve()
     else:
         pattern = str(c.get("sample_report_path_pattern", "")).replace("<identity-id>", args.identity_id)
         if pattern:
             if Path(pattern).is_absolute():
                 matched = sorted(Path(p) for p in glob.glob(pattern))
             else:
-                matched = sorted(Path(".").glob(pattern))
-            report_path = matched[-1] if matched else Path("identity/runtime/examples") / f"{args.identity_id}-trigger-regression-sample.json"
+                matched = sorted(pack_root.glob(pattern))
+            report_path = (
+                matched[-1]
+                if matched
+                else (pack_root / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
+            )
         else:
-            report_path = Path("identity/runtime/examples") / f"{args.identity_id}-trigger-regression-sample.json"
+            report_path = (pack_root / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
     if not report_path.exists():
-        print(f"[FAIL] missing trigger regression report: {report_path}")
+        print(f"[FAIL] IP-CWD-001 missing trigger regression report (pack-root anchored): {report_path}")
         return 1
 
     try:

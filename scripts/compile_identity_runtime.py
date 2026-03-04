@@ -11,6 +11,8 @@ from typing import Any
 
 import yaml
 
+from actor_session_common import load_actor_binding, resolve_actor_id
+
 
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
@@ -35,6 +37,7 @@ def main() -> int:
     p.add_argument("--catalog", default="identity/catalog/identities.yaml")
     p.add_argument("--output", default="identity/runtime/IDENTITY_COMPILED.md")
     p.add_argument("--identity-id", default="", help="explicit identity id for identity-neutral baseline")
+    p.add_argument("--actor-id", default="", help="optional actor id used for actor-scoped identity resolution")
     args = p.parse_args()
 
     catalog_path = Path(args.catalog)
@@ -56,13 +59,26 @@ def main() -> int:
         if not active:
             raise SystemExit(f"default_identity not found in identities: {default_id}")
     else:
+        actor_id = resolve_actor_id(args.actor_id)
+        actor_binding = load_actor_binding(catalog_path.resolve(), actor_id)
+        bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
+        if bound_identity_id:
+            active = next((x for x in identities if isinstance(x, dict) and x.get("id") == bound_identity_id), None)
+            if not active:
+                raise SystemExit(f"actor-bound identity not found in identities: actor={actor_id} identity={bound_identity_id}")
+            if str(active.get("status", "")).lower() != "active":
+                raise SystemExit(
+                    f"actor-bound identity is not active: actor={actor_id} identity={bound_identity_id} "
+                    f"status={active.get('status', '')}"
+                )
         active_rows = [x for x in identities if isinstance(x, dict) and str(x.get("status", "")).lower() == "active"]
-        if len(active_rows) == 1:
-            active = active_rows[0]
-        elif len(active_rows) > 1:
-            raise SystemExit("multiple active identities found; pass --identity-id explicitly")
-        else:
-            raise SystemExit("identity-neutral baseline with no active/default identity; pass --identity-id explicitly")
+        if not active:
+            if len(active_rows) == 1:
+                active = active_rows[0]
+            elif len(active_rows) > 1:
+                raise SystemExit("multiple active identities found; pass --identity-id or --actor-id explicitly")
+            else:
+                raise SystemExit("identity-neutral baseline with no active/default identity; pass --identity-id explicitly")
 
     pack_path = Path(active.get("pack_path", ""))
     current_task_path = pack_path / "CURRENT_TASK.json"
@@ -132,8 +148,8 @@ def main() -> int:
     lines += [
         "",
         "See source:",
-        f"- {catalog_path.as_posix()}",
-        f"- {current_task_path.as_posix()}",
+        "- ${IDENTITY_CATALOG}",
+        f"- ${{IDENTITY_HOME}}/{active.get('id', 'unknown')}/CURRENT_TASK.json  # resolved via catalog pack_path",
     ]
 
     output = Path(args.output)

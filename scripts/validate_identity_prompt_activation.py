@@ -2,115 +2,107 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import hashlib
 import json
 from pathlib import Path
 
 from resolve_identity_context import resolve_identity
 
-REQ_FIELDS = [
-    "identity_prompt_path",
-    "identity_prompt_sha256",
-    "identity_prompt_activated_at",
-    "identity_prompt_source_layer",
-    "identity_prompt_status",
-]
 
-ALLOWED_STATUS = {"ACTIVATED", "PRESENT", "STALE", "TEMPLATE_ONLY", "MISSING", "READ_ERROR", "PLACEHOLDER_OR_TOO_SHORT"}
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
-def _load_json(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError("report root must be object")
-    return data
-
-
-def _sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def _auto_report(identity_id: str, catalog: str) -> Path:
-    ctx = resolve_identity(
-        identity_id,
-        Path("identity/catalog/identities.yaml").resolve(),
-        Path(catalog).expanduser().resolve(),
-        preferred_scope="",
-        allow_conflict=True,
-    )
-    pack = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve()
-    runtime_reports = pack / "runtime" / "reports"
-    matched = sorted(runtime_reports.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)
-    matched = [p for p in matched if not p.name.endswith("-patch-plan.json")]
-    if not matched:
-        raise FileNotFoundError(f"no execution report found under {runtime_reports}")
-    return matched[-1]
+def _latest(identity_id: str, report_dir: Path) -> Path | None:
+    rows = sorted(report_dir.glob(f"identity-upgrade-exec-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)
+    rows = [p for p in rows if not p.name.endswith("-patch-plan.json")]
+    return rows[-1] if rows else None
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validate identity prompt activation evidence in upgrade execution report")
+    ap = argparse.ArgumentParser(description="Validate IDENTITY_PROMPT activation contract from execution report.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default="", help="runtime catalog path (required when --report is not provided)")
+    ap.add_argument("--catalog", required=True)
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
+    ap.add_argument("--report-dir", default="/tmp/identity-upgrade-reports")
+    ap.add_argument("--scope", default="")
     args = ap.parse_args()
 
-    if args.report:
-        report_path = Path(args.report).expanduser().resolve()
-    else:
-        if not args.catalog:
-            print("[FAIL] --catalog is required when --report is omitted")
-            return 2
-        try:
-            report_path = _auto_report(args.identity_id, args.catalog)
-        except Exception as exc:
-            print(f"[FAIL] {exc}")
-            return 2
-
-    if not report_path.exists():
-        print(f"[FAIL] report not found: {report_path}")
+    report_path = Path(args.report).expanduser().resolve() if args.report else _latest(
+        args.identity_id, Path(args.report_dir).expanduser().resolve()
+    )
+    if report_path is None or not report_path.exists():
+        print(f"[FAIL] execution report not found for identity={args.identity_id}")
         return 1
+    data = json.loads(report_path.read_text(encoding="utf-8"))
 
-    try:
-        report = _load_json(report_path)
-    except Exception as exc:
-        print(f"[FAIL] invalid report json: {exc}")
-        return 1
-
-    missing = [k for k in REQ_FIELDS if not str(report.get(k, "")).strip()]
+    required = [
+        "identity_prompt_path",
+        "identity_prompt_sha256",
+        "identity_prompt_bytes",
+        "identity_prompt_activated_at",
+        "identity_prompt_source_layer",
+        "identity_prompt_scope",
+        "identity_prompt_status",
+    ]
+    missing = [k for k in required if k not in data]
     if missing:
-        print(f"[FAIL] prompt activation fields missing/empty: {missing}")
+        print(f"[FAIL] prompt activation fields missing in report: {missing}")
         return 1
 
-    status = str(report.get("identity_prompt_status") or "")
-    if status not in ALLOWED_STATUS:
-        print(f"[FAIL] identity_prompt_status invalid: {status}")
+    prompt_path = Path(str(data.get("identity_prompt_path", ""))).expanduser().resolve()
+    status = str(data.get("identity_prompt_status", "")).strip().upper()
+    sha = str(data.get("identity_prompt_sha256", "")).strip()
+    b = int(data.get("identity_prompt_bytes", 0) or 0)
+    if status != "ACTIVATED":
+        print(f"[FAIL] identity_prompt_status must be ACTIVATED, got: {status}")
         return 1
-
-    prompt_path = Path(str(report.get("identity_prompt_path") or "")).expanduser().resolve()
     if not prompt_path.exists():
-        print(f"[FAIL] identity prompt file missing on disk: {prompt_path}")
+        print(f"[FAIL] prompt path missing on disk: {prompt_path}")
+        return 1
+    disk_sha = _sha256(prompt_path)
+    disk_b = int(prompt_path.stat().st_size)
+    if sha != disk_sha:
+        print(f"[FAIL] prompt sha mismatch report={sha} disk={disk_sha}")
+        return 1
+    if b != disk_b:
+        print(f"[FAIL] prompt bytes mismatch report={b} disk={disk_b}")
         return 1
 
-    disk_hash = _sha256_text(prompt_path.read_text(encoding="utf-8", errors="ignore"))
-    report_hash = str(report.get("identity_prompt_sha256") or "")
-    if disk_hash != report_hash:
-        print("[FAIL] identity prompt hash mismatch between report and disk")
-        print(f"       report={report_hash}")
-        print(f"       disk={disk_hash}")
+    ctx = resolve_identity(
+        args.identity_id,
+        Path(args.repo_catalog).expanduser().resolve(),
+        Path(args.catalog).expanduser().resolve(),
+        preferred_scope=str(args.scope or ""),
+        allow_conflict=True,
+    )
+    resolved_path = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve() / "IDENTITY_PROMPT.md"
+    if resolved_path != prompt_path:
+        print(f"[FAIL] prompt path not aligned with resolved pack path: report={prompt_path} resolved={resolved_path}")
+        return 1
+    source_layer = str(ctx.get("source_layer", "")).strip()
+    resolved_scope = str(ctx.get("resolved_scope", "")).strip()
+    if str(data.get("identity_prompt_source_layer", "")).strip() != source_layer:
+        print(
+            f"[FAIL] identity_prompt_source_layer mismatch: report={data.get('identity_prompt_source_layer')} resolved={source_layer}"
+        )
+        return 1
+    if str(data.get("identity_prompt_scope", "")).strip() != resolved_scope:
+        print(f"[FAIL] identity_prompt_scope mismatch: report={data.get('identity_prompt_scope')} resolved={resolved_scope}")
         return 1
 
-    source_layer = str(report.get("identity_prompt_source_layer") or "")
-    if source_layer not in {"project", "global"}:
-        print(f"[FAIL] identity_prompt_source_layer must be project|global, got={source_layer}")
-        return 1
-
-    print(f"[OK] prompt activation validated: {report_path}")
-    print(f"     identity_prompt_status={status} source_layer={source_layer}")
-    print(f"     identity_prompt_path={prompt_path}")
-    print(f"     identity_prompt_sha256={report_hash}")
+    print(f"[OK] identity prompt activation validated: {report_path}")
+    print(f"     prompt={prompt_path}")
+    print(f"     sha256={sha}")
+    print(f"     bytes={b}")
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

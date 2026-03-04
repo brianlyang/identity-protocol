@@ -1,0 +1,30 @@
+version: 2
+updated_at: "2026-02-26"
+purpose: >
+  Protocol core-change coupling map. Used by validate_protocol_handoff_coupling.py
+  to decide which code-path changes require canonical handoff updates in the same range.
+
+handoff:
+  index_path: docs/governance/AUDIT_SNAPSHOT_INDEX.md
+  canonical_doc_pattern: docs/governance/identity-protocol-strengthening-handoff-v\d+\.\d+\.\d+\.md
+
+core_change_map:
+  files:
+    - README.md
+    - VERSIONING.md
+    - .github/workflows/_identity-required-gates.yml
+    - scripts/e2e_smoke_test.sh
+    - scripts/release_readiness_check.py
+    - scripts/report_three_plane_status.py
+    - scripts/full_identity_protocol_scan.py
+    - scripts/identity_creator.py
+    - scripts/execute_identity_upgrade.py
+    - scripts/create_identity_pack.py
+    - scripts/identity_installer.py
+    - identity/catalog/identities.yaml
+    - identity/catalog/schema/identities.schema.json
+  prefixes:
+    - identity/protocol/
+    - skills/identity-
+    - scripts/validate_identity_
+    - scripts/validate_protocol_

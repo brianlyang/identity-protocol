@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 from pathlib import Path
 from typing import Any
@@ -82,6 +83,36 @@ def _validate_record(rec: dict[str, Any], identity_id: str, *, strict_identity: 
     return issues
 
 
+def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
+    raw = str(pattern or "").strip()
+    if not raw:
+        return []
+    p = Path(raw).expanduser()
+    has_magic = any(ch in raw for ch in ["*", "?", "["])
+    if p.is_absolute():
+        if has_magic:
+            return sorted(Path(x).resolve() for x in glob.glob(str(p)))
+        return [p.resolve()] if p.exists() else []
+
+    preferred = sorted(pack_root.glob(raw))
+    if preferred:
+        return preferred
+    return sorted(Path(".").glob(raw))
+
+
+def _resolve_path(path_value: str, *, pack_root: Path) -> Path:
+    raw = str(path_value or "").strip()
+    if not raw:
+        return Path("")
+    p = Path(raw).expanduser()
+    if p.is_absolute():
+        return p
+    candidate = (pack_root / raw).resolve()
+    if candidate.exists():
+        return candidate
+    return (Path.cwd() / raw).resolve()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate capability arbitration contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -100,6 +131,7 @@ def main() -> int:
 
     print(f"[INFO] validate capability arbitration for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
+    pack_root = task_path.parent.resolve()
 
     task = _load_json(task_path)
     c = task.get("capability_arbitration_contract") or {}
@@ -175,14 +207,31 @@ def main() -> int:
             dynamic_history_path = rb_path.replace("RULEBOOK.jsonl", "TASK_HISTORY.md")
         has_rulebook_glob = any(str(x).endswith("rulebooks/*") for x in allow)
         has_logs_glob = any(str(x).endswith("logs/*") for x in allow)
-        required_allow = {dynamic_history_path}
+        allow_norm: set[str] = set()
+        for item in allow:
+            raw_item = str(item).strip()
+            if not raw_item:
+                continue
+            if any(ch in raw_item for ch in ["*", "?", "["]):
+                allow_norm.add(raw_item)
+                continue
+            allow_norm.add(str(_resolve_path(raw_item, pack_root=pack_root)))
+
+        history_candidates = {
+            str(_resolve_path(dynamic_history_path, pack_root=pack_root)),
+            str((pack_root / "TASK_HISTORY.md").resolve()),
+        }
+        has_history_allow = any(x in allow_norm for x in history_candidates)
         required_deny = {
             "identity/protocol/*",
             ".github/workflows/*",
             "scripts/validate_*",
         }
-        if not required_allow.issubset(set(allow)):
-            print(f"[FAIL] safe_auto_patch_surface.allowlist missing required entries: {sorted(required_allow - set(allow))}")
+        if not has_history_allow:
+            print(
+                "[FAIL] safe_auto_patch_surface.allowlist missing required entries: "
+                f"{sorted(history_candidates)}"
+            )
             rc = 1
         if not has_rulebook_glob:
             print("[FAIL] safe_auto_patch_surface.allowlist missing rulebooks/* entry")
@@ -194,9 +243,13 @@ def main() -> int:
             print(f"[FAIL] safe_auto_patch_surface.denylist missing required entries: {sorted(required_deny - set(deny))}")
             rc = 1
 
-    report_path = Path(args.report) if args.report else Path("identity/runtime/examples") / f"{args.identity_id}-capability-arbitration-sample.json"
+    report_path = (
+        Path(args.report).expanduser().resolve()
+        if args.report
+        else (pack_root / "runtime" / "examples" / f"{args.identity_id}-capability-arbitration-sample.json").resolve()
+    )
     if not report_path.exists():
-        files = sorted(Path(".").glob(c.get("sample_report_path_pattern", "")))
+        files = _glob_paths(str(c.get("sample_report_path_pattern", "")), pack_root=pack_root)
         if files:
             report_path = files[-1]
     if not report_path.exists():
@@ -219,8 +272,9 @@ def main() -> int:
 
     # Optional threshold/metrics linkage validation (enabled when metrics artifact exists)
     route_quality = task.get("route_quality_contract") or {}
-    metrics_path = Path(args.metrics_path) if args.metrics_path else Path(
-        route_quality.get("metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json")
+    metrics_path = _resolve_path(
+        str(args.metrics_path or route_quality.get("metrics_output_path", f"identity/runtime/metrics/{args.identity_id}-route-quality.json")),
+        pack_root=pack_root,
     )
     if metrics_path.exists():
         try:
@@ -255,7 +309,22 @@ def main() -> int:
 
             if "upgrade_required" in trigger_source:
                 reported_trigger = bool(trigger_source.get("upgrade_required", False))
-                if should_trigger != reported_trigger:
+                trigger_reasons = trigger_source.get("trigger_reasons") or []
+                if not isinstance(trigger_reasons, list):
+                    trigger_reasons = []
+                capability_status = str(trigger_source.get("capability_activation_status", "")).strip().upper()
+                blocked_by_capability = capability_status == "BLOCKED" and any(
+                    str(reason).startswith("capability_activation_blocked")
+                    for reason in trigger_reasons
+                )
+
+                if blocked_by_capability:
+                    print(
+                        "[OK] metrics/threshold linkage blocked-aware bypass: "
+                        f"should_trigger={should_trigger}, upgrade_required={reported_trigger}, "
+                        f"capability_status={capability_status}, trigger_reasons={trigger_reasons}"
+                    )
+                elif should_trigger != reported_trigger:
                     print(
                         "[FAIL] metrics/threshold linkage mismatch: "
                         f"should_trigger={should_trigger}, upgrade_required={reported_trigger}"

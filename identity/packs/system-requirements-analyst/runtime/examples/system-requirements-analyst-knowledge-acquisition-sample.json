@@ -1,0 +1,31 @@
+{
+  "identity_id": "system-requirements-analyst",
+  "task_id": "system-requirements-analyst_bootstrap",
+  "domain": "vibe-coding-platforms",
+  "records": [
+    {
+      "claim": "OpenAI Codex skills require a SKILL.md entrypoint and can include scripts/assets/references folders.",
+      "source": "https://developers.openai.com/codex/skills/",
+      "source_level": "official_spec",
+      "confidence": 0.95,
+      "expiry": "2026-08-31",
+      "applies_to": "openai.codex.skills.structure"
+    },
+    {
+      "claim": "Google AI Studio Build supports generating app structures from natural language and can deploy to Cloud Run.",
+      "source": "https://developers.googleblog.com/en/introducing-new-google-ai-capabilities-for-developers-at-cloud-next-25/",
+      "source_level": "official_spec",
+      "confidence": 0.9,
+      "expiry": "2026-08-31",
+      "applies_to": "google.ai_studio.build_mode"
+    },
+    {
+      "claim": "MCP specification latest defines standardized tool/resource/prompt interoperability for model-tool integration.",
+      "source": "https://modelcontextprotocol.io/specification/latest",
+      "source_level": "repo_contract",
+      "confidence": 0.93,
+      "expiry": "2026-08-31",
+      "applies_to": "mcp.interop.contract"
+    }
+  ]
+}

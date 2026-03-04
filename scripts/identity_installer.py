@@ -21,6 +21,8 @@ from resolve_identity_context import (
     resolve_identity,
 )
 
+REPO_TARGET_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_TARGET_WRITE"
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -122,6 +124,14 @@ def _resolve_target_pack(args: argparse.Namespace) -> Path:
     return Path(args.target_root) / args.identity_id
 
 
+def _is_within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def _repo_root() -> Path:
     cur = Path.cwd().resolve()
     for p in [cur, *cur.parents]:
@@ -145,8 +155,20 @@ def _canonical_target_for_scope(args: argparse.Namespace) -> Path:
 
 def _enforce_target_boundary(args: argparse.Namespace) -> None:
     target_root = Path(args.target_root).expanduser().resolve()
-    repo_root = Path.cwd().resolve()
-    if not args.allow_repo_target and str(target_root).startswith(str(repo_root)):
+    repo_root = _repo_root()
+    in_repo = _is_within(target_root, repo_root)
+    if args.allow_repo_target and str(args.allow_repo_target_confirm).strip() != REPO_TARGET_CONFIRM_TOKEN:
+        raise PermissionError(
+            "--allow-repo-target requires explicit confirmation token. "
+            f'Pass --allow-repo-target-confirm "{REPO_TARGET_CONFIRM_TOKEN}".'
+        )
+    if args.allow_repo_target and not str(args.allow_repo_target_purpose).strip():
+        raise PermissionError("--allow-repo-target requires --allow-repo-target-purpose for audit intent.")
+    if not args.allow_repo_target and (
+        str(args.allow_repo_target_confirm).strip() or str(args.allow_repo_target_purpose).strip()
+    ):
+        raise PermissionError("--allow-repo-target-confirm/--allow-repo-target-purpose require --allow-repo-target.")
+    if not args.allow_repo_target and in_repo:
         raise PermissionError(
             "repo target blocked by local-instance persistence boundary. "
             "Use --allow-repo-target only for explicit fixture/demo operations."
@@ -178,7 +200,17 @@ def _sync_pack(src: Path, dst: Path) -> list[str]:
     return copied
 
 
-def _register_identity(catalog_path: Path, identity_id: str, title: str, description: str, pack_path: str, activate: bool) -> None:
+def _register_identity(
+    catalog_path: Path,
+    identity_id: str,
+    title: str,
+    description: str,
+    pack_path: str,
+    activate: bool,
+    *,
+    profile: str,
+    runtime_mode: str,
+) -> None:
     if not catalog_path.exists():
         _dump_yaml(
             catalog_path,
@@ -196,6 +228,8 @@ def _register_identity(catalog_path: Path, identity_id: str, title: str, descrip
         existing["pack_path"] = pack_path
         existing["title"] = title or existing.get("title", identity_id)
         existing["description"] = description or existing.get("description", "")
+        existing["profile"] = profile
+        existing["runtime_mode"] = runtime_mode
         if activate:
             existing["status"] = "active"
     else:
@@ -206,12 +240,34 @@ def _register_identity(catalog_path: Path, identity_id: str, title: str, descrip
                 "description": description or "",
                 "status": "active" if activate else "inactive",
                 "methodology_version": "v1.2.3",
+                "profile": profile,
+                "runtime_mode": runtime_mode,
                 "pack_path": pack_path,
                 "tags": ["identity"],
             }
         )
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
+
+
+def _single_active_precheck(catalog_path: Path, target_identity_id: str, auto_converge: bool = False) -> int:
+    if not catalog_path.exists():
+        print(f"[FAIL] catalog not found: {catalog_path}")
+        return 1
+    data = _load_yaml(catalog_path)
+    identities = [x for x in (data.get("identities") or []) if isinstance(x, dict)]
+    actives = [str(x.get("id", "")).strip() for x in identities if str(x.get("status", "")).strip().lower() == "active"]
+    actives = [x for x in actives if x]
+    if len(actives) <= 1:
+        return 0
+    if auto_converge:
+        print(
+            "[WARN] --auto-converge-active is deprecated under multi-active model; "
+            f"preserving active identities: {actives}"
+        )
+    else:
+        print(f"[INFO] multi-active catalog detected (allowed): active_identities={actives}")
+    return 0
 
 
 def _all_scan_candidates(args: argparse.Namespace) -> list[Path]:
@@ -240,42 +296,137 @@ def _all_scan_candidates(args: argparse.Namespace) -> list[Path]:
     return out
 
 
-def _rewrite_identity_contract_paths(pack_dir: Path, old_root: Path | None = None) -> int:
-    current_task = pack_dir / "CURRENT_TASK.json"
-    if not current_task.exists():
-        return 0
-    data = json.loads(current_task.read_text(encoding="utf-8"))
-    before = json.dumps(data, ensure_ascii=False)
-    old_prefix = str(old_root.resolve()) if old_root else ""
-    new_prefix = str(pack_dir.resolve())
+PATH_FIELD_HINTS = {
+    "path",
+    "pack_path",
+    "canonical_pack_path",
+    "catalog_path",
+    "evidence_path",
+    "log_path",
+    "report_path",
+    "required_file_paths",
+}
 
-    def _rewrite(obj: Any) -> Any:
-        if isinstance(obj, dict):
-            return {k: _rewrite(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [_rewrite(v) for v in obj]
-        if isinstance(obj, str):
-            s = obj
-            if old_prefix and old_prefix in s:
-                s = s.replace(old_prefix, new_prefix)
-            # normalize legacy identity home path roots to current pack root for file fields
-            if "/identity/" in s and s.endswith((".json", ".jsonl", ".md")) and "<identity-id>" not in s and "*" not in s:
-                tail_markers = ["/CURRENT_TASK.json", "/IDENTITY_PROMPT.md", "/RULEBOOK.jsonl", "/TASK_HISTORY.md", "/META.yaml"]
-                for marker in tail_markers:
-                    idx = s.rfind(marker)
-                    if idx >= 0:
-                        tail = s[idx:]
-                        s = f"{new_prefix}{tail}"
-                        break
+# Protocol/path-governance anchors must remain canonical absolute in runtime reports.
+ABSOLUTE_ANCHOR_FIELDS = {
+    "resolved_pack_path",
+    "catalog_path",
+    "identity_home",
+    "protocol_root",
+    "report_selected_path",
+    "identity_prompt_path",
+    "runtime_output_root",
+    "metrics_path",
+    "task_path",
+    }
+
+
+def _looks_path_key(key: str) -> bool:
+    k = str(key or "").strip().lower()
+    return (
+        k in PATH_FIELD_HINTS
+        or k.endswith("_path")
+        or k.endswith("_paths")
+        or k.endswith("_path_pattern")
+    )
+
+
+def _rewrite_path_string(
+    value: str,
+    *,
+    key_hint: str,
+    pack_dir: Path,
+    old_prefix: str,
+    identity_id: str,
+) -> str:
+    s = str(value)
+    new_prefix = str(pack_dir.resolve())
+    if old_prefix and old_prefix in s:
+        s = s.replace(old_prefix, new_prefix)
+
+    key_norm = str(key_hint or "").strip().lower()
+    if key_norm in ABSOLUTE_ANCHOR_FIELDS:
+        try:
+            p_abs = Path(s).expanduser()
+            if p_abs.is_absolute():
+                return str(p_abs.resolve())
+        except Exception:
             return s
+        return s
+
+    legacy_marker = f"/identity/packs/{identity_id}"
+    idx = s.find(legacy_marker)
+    if idx >= 0:
+        tail = s[idx + len(legacy_marker) :].lstrip("/")
+        s = f"{new_prefix}/{tail}" if tail else new_prefix
+
+    if not _looks_path_key(key_hint):
+        return s
+    if "<identity-id>" in s or "*" in s:
+        return s
+
+    try:
+        p = Path(s).expanduser()
+    except Exception:
+        return s
+    if not p.is_absolute():
+        return s
+    try:
+        rel = p.resolve().relative_to(pack_dir.resolve())
+    except Exception:
+        return s
+    return rel.as_posix()
+
+
+def _rewrite_identity_contract_paths(pack_dir: Path, old_root: Path | None = None) -> tuple[int, int]:
+    files: list[Path] = []
+    current_task = pack_dir / "CURRENT_TASK.json"
+    if current_task.exists():
+        files.append(current_task)
+    runtime_dir = pack_dir / "runtime"
+    if runtime_dir.exists():
+        files.extend(sorted(runtime_dir.rglob("*.json")))
+    if not files:
+        return 0, 0
+
+    old_prefix = str(old_root.resolve()) if old_root else ""
+    identity_id = pack_dir.name
+    changed_files = 0
+    changed_fields = 0
+
+    def _rewrite(obj: Any, *, key_hint: str) -> Any:
+        nonlocal changed_fields
+        if isinstance(obj, dict):
+            return {k: _rewrite(v, key_hint=str(k)) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_rewrite(v, key_hint=key_hint) for v in obj]
+        if isinstance(obj, str):
+            new_val = _rewrite_path_string(
+                obj,
+                key_hint=key_hint,
+                pack_dir=pack_dir,
+                old_prefix=old_prefix,
+                identity_id=identity_id,
+            )
+            if new_val != obj:
+                changed_fields += 1
+            return new_val
         return obj
 
-    rewritten = _rewrite(data)
-    after = json.dumps(rewritten, ensure_ascii=False)
-    if before != after:
-        current_task.write_text(json.dumps(rewritten, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        return 1
-    return 0
+    for fp in files:
+        try:
+            payload = json.loads(fp.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        before = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        rewritten = _rewrite(payload, key_hint="")
+        after = json.dumps(rewritten, ensure_ascii=False, sort_keys=True)
+        if before == after:
+            continue
+        fp.write_text(json.dumps(rewritten, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        changed_files += 1
+
+    return changed_files, changed_fields
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
@@ -357,7 +508,7 @@ def cmd_adopt(args: argparse.Namespace) -> int:
             return 1
         shutil.rmtree(dst)
     shutil.copytree(src, dst)
-    rewrote = _rewrite_identity_contract_paths(dst, old_root=src)
+    rewritten_files, rewritten_fields = _rewrite_identity_contract_paths(dst, old_root=src)
 
     catalog_path = Path(args.catalog).expanduser().resolve()
     repo_catalog = Path(args.repo_catalog).expanduser().resolve()
@@ -395,7 +546,10 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     _dump_yaml(catalog_path, catalog)
 
     print(f"[OK] adopted identity={args.identity_id} canonical={dst}")
-    print(f"contract_paths_rewritten={bool(rewrote)}")
+    print(
+        "contract_paths_rewritten="
+        f"{bool(rewritten_files)} files={rewritten_files} fields={rewritten_fields}"
+    )
     print(f"catalog={catalog_path}")
     return 0
 
@@ -439,12 +593,30 @@ def cmd_repair_paths(args: argparse.Namespace) -> int:
     if not pack.exists():
         print(f"[FAIL] pack path not found: {pack}")
         return 1
-    changed = _rewrite_identity_contract_paths(pack, old_root=None)
-    print(f"[OK] repaired contract paths for {args.identity_id}: changed={bool(changed)}")
+    rewritten_files, rewritten_fields = _rewrite_identity_contract_paths(pack, old_root=None)
+    print(
+        f"[OK] repaired contract paths for {args.identity_id}: "
+        f"changed={bool(rewritten_files)} files={rewritten_files} fields={rewritten_fields}"
+    )
     return 0
 
 
-def _build_report(args: argparse.Namespace, *, operation: str, conflict_type: str, action: str, source_pack: Path, target_pack: Path, preserved: list[str], backup_ref: str = "", rollback_ref: str = "", dry_run: bool = False, changed_files: list[str] | None = None) -> tuple[dict[str, Any], Path]:
+def _build_report(
+    args: argparse.Namespace,
+    *,
+    operation: str,
+    conflict_type: str,
+    action: str,
+    source_pack: Path,
+    target_pack: Path,
+    preserved: list[str],
+    backup_ref: str = "",
+    rollback_ref: str = "",
+    dry_run: bool = False,
+    changed_files: list[str] | None = None,
+    rewritten_files_count: int = 0,
+    rewritten_fields_count: int = 0,
+) -> tuple[dict[str, Any], Path]:
     ts = datetime.now(timezone.utc)
     report_id = f"identity-install-{args.identity_id}-{operation}-{int(ts.timestamp())}-{int(ts.microsecond/1000):03d}"
     protocol = collect_protocol_evidence(args.protocol_root, args.protocol_mode)
@@ -462,6 +634,8 @@ def _build_report(args: argparse.Namespace, *, operation: str, conflict_type: st
         "preserved_paths": preserved,
         "dry_run": dry_run,
         "changed_files": changed_files or [],
+        "rewritten_files_count": int(rewritten_files_count),
+        "rewritten_fields_count": int(rewritten_fields_count),
         "installer_invocation": {
             "tool": "identity-installer",
             "entrypoint": "scripts/identity_installer.py",
@@ -509,6 +683,13 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
+    rc = _single_active_precheck(
+        Path(args.catalog).expanduser().resolve(),
+        args.identity_id,
+        auto_converge=bool(getattr(args, "auto_converge_active", False)),
+    )
+    if rc != 0:
+        return rc
     _enforce_target_boundary(args)
     src = _resolve_source_pack(args)
     dst = _resolve_target_pack(args)
@@ -519,6 +700,8 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
     backup_ref = ""
     rollback_ref = ""
     changed: list[str] = []
+    rewritten_files_count = 0
+    rewritten_fields_count = 0
     if not dry_run and action == "guarded_apply":
         if dst.exists():
             backup_dir = Path(args.backup_dir) / f"{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
@@ -527,8 +710,11 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             backup_ref = backup_dir.as_posix()
             rollback_ref = f"restore_from:{backup_ref}"
         changed = _sync_pack(src, dst)
+        rewritten_files_count, rewritten_fields_count = _rewrite_identity_contract_paths(dst, old_root=src)
 
     if args.register and not dry_run:
+        identity_profile = "fixture" if bool(args.allow_repo_target) else "runtime"
+        identity_runtime_mode = "demo_only" if bool(args.allow_repo_target) else "local_only"
         _register_identity(
             Path(args.catalog),
             args.identity_id,
@@ -536,6 +722,8 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             args.description,
             (Path(args.target_root) / args.identity_id).as_posix(),
             args.activate,
+            profile=identity_profile,
+            runtime_mode=identity_runtime_mode,
         )
 
     op = "dry-run" if dry_run else "install"
@@ -551,6 +739,8 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         rollback_ref=rollback_ref,
         dry_run=dry_run,
         changed_files=changed,
+        rewritten_files_count=rewritten_files_count,
+        rewritten_fields_count=rewritten_fields_count,
     )
     _write_json(report_path, report)
 
@@ -565,6 +755,11 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         print(f"mirror={mirror}")
     print(f"conflict_type={conflict_type}")
     print(f"action={action}")
+    if not dry_run and action == "guarded_apply":
+        print(
+            "rewrite_summary="
+            f"files:{rewritten_files_count} fields:{rewritten_fields_count}"
+        )
     if action == "abort_and_explain":
         print("next_action=abort_and_explain_conflict")
     return 0
@@ -645,10 +840,13 @@ def main() -> int:
     common.add_argument("--backup-dir", default="/tmp/identity-install-backups")
     common.add_argument("--destructive-replace", action="store_true")
     common.add_argument("--allow-repo-target", action="store_true")
+    common.add_argument("--allow-repo-target-confirm", default="")
+    common.add_argument("--allow-repo-target-purpose", default="")
     common.add_argument("--register", action="store_true")
     common.add_argument("--activate", action="store_true")
     common.add_argument("--title", default="")
     common.add_argument("--description", default="")
+    common.add_argument("--auto-converge-active", action="store_true")
     common.add_argument("--protocol-root", default="")
     common.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     common.add_argument(
@@ -693,4 +891,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except PermissionError as exc:
+        print(f"[FAIL] {exc}")
+        raise SystemExit(1)

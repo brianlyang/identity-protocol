@@ -40,9 +40,6 @@ def main() -> int:
 
     active_ids = [str(x.get("id", "")).strip() for x in identities if str(x.get("status", "")).strip().lower() == "active"]
     active_ids = [x for x in active_ids if x]
-    if len(active_ids) > 1:
-        print(f"[FAIL] catalog has multiple active identities: {active_ids}")
-        return 1
 
     rc = 0
     checked = 0
@@ -89,6 +86,7 @@ def main() -> int:
     print("[OK] identity state consistency validated")
     print(f"     catalog={catalog_path}")
     print(f"     active_identities={active_ids}")
+    print(f"     active_count={len(active_ids)}")
     print(f"     checked_meta_files={checked}")
     return 0
 

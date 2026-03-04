@@ -54,6 +54,36 @@ def _resolve_range(base: str | None, head: str | None) -> tuple[str, str]:
     return resolved_base, resolved_head
 
 
+def _is_backfill_range(base: str, head: str) -> bool:
+    """
+    A historical range that does not include current HEAD.
+    This is typical when validating delayed changelog linkage for already-landed commits.
+    """
+    current_head = _run_git(["rev-parse", "HEAD"])
+    return head != current_head
+
+
+def _has_backfill_changelog_link(changelog_path: Path, head: str) -> bool:
+    """
+    Accept explicit linkage by commit SHA token in changelog text.
+    Keeps gate strict while allowing post-facto linkage for historical ranges.
+    """
+    try:
+        text = changelog_path.read_text(encoding="utf-8")
+    except Exception:
+        return False
+    short = head[:7]
+    tokens = {
+        head,
+        short,
+        f"`{head}`",
+        f"`{short}`",
+        f"({head})",
+        f"({short})",
+    }
+    return any(tok in text for tok in tokens)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate changelog update across a git range")
     ap.add_argument("--base", help="base commit SHA")
@@ -62,6 +92,14 @@ def main() -> int:
         "--changelog-path",
         default="CHANGELOG.md",
         help="path to changelog file (default: CHANGELOG.md)",
+    )
+    ap.add_argument(
+        "--strict-range-only",
+        action="store_true",
+        help=(
+            "disable historical backfill linkage allowance; require CHANGELOG to be "
+            "modified in the exact --base..--head range"
+        ),
     )
     args = ap.parse_args()
 
@@ -88,6 +126,15 @@ def main() -> int:
         return 0
 
     if not changed_changelog:
+        if (not args.strict_range_only) and _is_backfill_range(base, head):
+            changelog_path = Path(args.changelog_path)
+            if _has_backfill_changelog_link(changelog_path, head):
+                print(
+                    "[OK] significant historical changes detected; "
+                    "explicit changelog backfill linkage found for head commit"
+                )
+                print("validate_changelog_updated PASSED (historical backfill linkage)")
+                return 0
         print(
             "[FAIL] significant changes detected but CHANGELOG.md was not updated in this range"
         )

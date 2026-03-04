@@ -12,6 +12,9 @@ from typing import Any
 
 import yaml
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -110,8 +113,8 @@ def _parse_utc(ts: str) -> datetime | None:
         return None
 
 
-def _run(cmd: list[str]) -> tuple[int, str, str]:
-    p = subprocess.run(cmd, capture_output=True, text=True)
+def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
+    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
     return p.returncode, p.stdout.strip(), p.stderr.strip()
 
 
@@ -256,15 +259,17 @@ def main() -> int:
             print("[FAIL] runtime_bootstrap.validator must be scripts/validate_identity_runtime_contract.py")
             return 1
         if bool(contract.get("runtime_bootstrap_live_revalidate", False)):
+            runtime_validator = SCRIPT_DIR / "validate_identity_runtime_contract.py"
             rc, out, err = _run(
                 [
                     "python3",
-                    "scripts/validate_identity_runtime_contract.py",
+                    str(runtime_validator),
                     "--catalog",
                     str(catalog_path),
                     "--identity-id",
                     identity_id,
-                ]
+                ],
+                cwd=REPO_ROOT,
             )
             if rc != 0:
                 print("[FAIL] runtime bootstrap live revalidation failed")

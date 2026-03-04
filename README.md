@@ -14,12 +14,67 @@ This system is intentionally designed to solve three recurring failure modes:
    Runtime mode selection, explicit catalog binding, and scope checks prevent silent cross-instance contamination.
 3. **Identity becoming a static shell**  
    `IDENTITY_PROMPT.md` is treated as a runtime contract object (activation, validation, hash evidence, lifecycle updates), not just a passive file.
+   Current loading model is **command-time reload** (per validate/update/e2e/readiness invocation), not daemon hot-reload.
+   Upgrade execution reports now carry prompt activation/lifecycle evidence fields:
+   `identity_prompt_path`, `identity_prompt_sha256`, `identity_prompt_bytes`,
+   `identity_prompt_activated_at`, `identity_prompt_source_layer`, `identity_prompt_scope`,
+   `identity_prompt_status`, `prompt_change_required`, `prompt_change_applied`,
+   `identity_prompt_hash_before`, `identity_prompt_hash_after`, `identity_prompt_change_note`.
 
 ### Practical outcomes
 
 - Better release safety: required gates block promotion when critical contracts fail.
 - Lower audit cost: every key decision can be traced to report fields and validator outputs.
 - Continuous identity evolution: prompt/rulebook/task-history can evolve with explicit evidence and replayability.
+
+### Protocol SSOT governance (canonical source + coupling)
+
+- Canonical protocol-strengthening source:
+  `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+- `artifacts/` content is evidence-only and non-normative.
+- Protocol core-change scope is maintained in:
+  `docs/governance/templates/protocol-core-change-map.yaml`
+- Enforcement validators:
+  - `scripts/validate_protocol_ssot_source.py`
+  - `scripts/validate_protocol_handoff_coupling.py`
+- Local preflight helper (tooling + auth readiness):
+  - `scripts/preflight_protocol_audit_env.sh`
+  - run before protocol audits:
+    - `bash scripts/preflight_protocol_audit_env.sh`
+    - `bash scripts/preflight_protocol_audit_env.sh --require-gh-auth` (release-grade strict profile)
+  - checks local parity for:
+    - `actionlint`
+    - `ast-grep`
+    - `gitleaks`
+    - `gh auth status -h github.com`
+  - when `gh auth` is not ready, strict-union readiness may fail with `IP-CAP-003`;
+    treat this as environment-auth not-ready state, not protocol-regression.
+
+### Dialogue governance (optional, contract-first)
+
+For identities that need stronger conversation-to-result evidence guarantees, add
+`dialogue_governance_contract` to `CURRENT_TASK.json` and provide dialogue artifacts.
+
+Three optional validators are available and are wired into e2e/readiness/required-gates:
+
+```bash
+python3 scripts/validate_identity_dialogue_content.py --identity-id <id> --catalog <catalog>
+python3 scripts/validate_identity_dialogue_cross_validation.py --identity-id <id> --catalog <catalog>
+python3 scripts/validate_identity_dialogue_result_support.py --identity-id <id> --catalog <catalog>
+```
+
+Rollout semantics are contract-driven:
+
+- `required=false` (or contract absent): validators skip without blocking.
+- `required=true` + `rollout_mode=warn`: issues are reported but non-blocking.
+- `required=true` + `rollout_mode=enforce`: violations fail with deterministic codes
+  (`IP-DCIC-001..004`).
+
+Scaffold default:
+
+- `identity_creator init` / `create_identity_pack.py` now inject a
+  `dialogue_governance_contract` skeleton by default with `required=false`,
+  so new identities are protocol-ready with zero runtime disruption.
 
 ### Boundary model: Identity vs Agent vs Skill vs MCP vs Tool
 
@@ -43,6 +98,51 @@ Enforcement principle: **Identity governance > Skill procedure > MCP/Tool execut
 - **Code-plane**: upgraded with local-runtime boundary + identity-scoped anti-pollution gates.
 - **Release-plane**: **Conditional Go** until cloud `required-gates` is green with the latest workflow changes.
 - Do **not** externally claim `Full Go` before all required cloud checks are green.
+
+### Plane blocking policy (must not mix)
+
+1. **Instance-plane = fail-operational**
+   - local identity runtime must keep recoverable progress (`auto-repair` / `deferred` / `next_action`).
+   - only hard-stop for true safety boundaries (cross-identity contamination, path boundary, permission boundary).
+2. **Release-plane = fail-closed**
+   - cloud required-gates and release evidence decide Full Go.
+   - release checks must not block day-to-day instance self-drive iteration.
+
+### Unified three-plane status output (standard report template)
+
+Use one command to emit a normalized governance snapshot (instance/repo/release planes):
+
+```bash
+source ./scripts/identity_runtime_select.sh project
+python3 scripts/report_three_plane_status.py \
+  --identity-id base-repo-audit-expert-v3 \
+  --with-docs-contract
+```
+
+Required top-level output keys (for audit handoff):
+
+- `target_branch`
+- `release_head_sha`
+- `required_gates_run_id`
+- `run_url`
+- `workflow_file_sha`
+- `required_checks_set`
+- `instance_plane_status`
+- `repo_plane_status`
+- `release_plane_status`
+- `overall_release_decision` (`Full Go` only when all three planes are `CLOSED`)
+
+Release-plane cloud closure remains optional for day-to-day self-drive:
+- no cloud run evidence -> `release_plane_status=NOT_STARTED`
+- provide required-gates evidence -> script evaluates cloud closure conditions and returns `CLOSED/BLOCKED`
+
+For cross-instance operational hygiene, run full scan periodically:
+
+```bash
+python3 scripts/full_identity_protocol_scan.py --with-docs-contract
+```
+
+This produces an all-identity summary across project/global catalogs and marks findings by severity (`P0`/`P1`/`OK`).
 
 This repository standardizes identity as a first-class layer parallel to:
 - **skills** (capability packaging)
@@ -72,8 +172,8 @@ This is the severe bug closed in v1.4.6 hardening:
 
 Enforcement:
 
-- `create_identity_pack.py` defaults to local paths, blocks repo target unless `--repo-fixture`
-- `identity_installer.py` defaults to local paths, blocks repo target unless `--allow-repo-target`
+- `create_identity_pack.py` defaults to local paths; repo fixture mode requires `--repo-fixture` + confirm token + purpose
+- `identity_installer.py` defaults to local paths; repo target mode requires `--allow-repo-target` + confirm token + purpose
 - `identity_creator.py` resolves runtime context from local catalog first (local > repo)
 - `validate_identity_local_persistence.py` hard-fails invalid runtime placement
 - Canonical runtime pack root is `${IDENTITY_HOME}` (skills-style root convention)
@@ -263,11 +363,17 @@ For runtime operations (validate/activate/update/install/writeback), always use 
 ### State consistency gate
 
 - Active status source-of-truth: catalog (`catalog.local.yaml` for runtime).
+- Session pointer canonical path: `<catalog_dir>/session/active_identity.json`
+- Session pointer mirror path (default): `<catalog_dir>/session/mirror/current.json`
+  (legacy `/tmp/identity-session/current.json` is compatibility-only and opt-in).
 - Strategy selected in v1.4.x hardening: **dual-write + strong consistency**.
   - catalog drives activation/scheduling decisions.
   - `META.status` is a required mirrored field for audit/readability.
+  - activation transaction must sync canonical session pointer and rollback on
+    canonical sync failure.
   - activation transaction must keep catalog + META synchronized.
 - Validator: `scripts/validate_identity_state_consistency.py`
+  + `scripts/validate_identity_session_pointer_consistency.py`
 
 ## Quickstart
 
@@ -286,6 +392,10 @@ python scripts/migrate_repo_instances_to_local.py --apply
 # NOTE (v1.4.12+ hardening):
 # release-bound scripts no longer allow implicit catalog fallback.
 # You must pass --catalog or export IDENTITY_CATALOG from selected runtime mode.
+#
+# Runtime mode drift guard (v1.4.13+):
+# Fail fast if resolved catalog/pack does not match selected mode.
+python3 scripts/validate_identity_runtime_mode_guard.py --identity-id store-manager --catalog "${IDENTITY_CATALOG}"
 
 python scripts/validate_identity_protocol.py
 python scripts/validate_identity_local_persistence.py
@@ -314,10 +424,14 @@ python scripts/export_route_quality_metrics.py --identity-id store-manager
 python scripts/execute_identity_upgrade.py --identity-id store-manager --mode review-required
 # optional: run release-readiness bundle
 python scripts/release_readiness_check.py --identity-id store-manager
+# optional: make capability policy explicit (default=strict-union)
+python scripts/release_readiness_check.py --identity-id store-manager --capability-activation-policy strict-union
+# optional (instance iteration / route-level degrade): allow at-least-one-route-ready
+python scripts/release_readiness_check.py --identity-id store-manager --capability-activation-policy route-any-ready
 # optional: scaffold a new local runtime identity
 python scripts/create_identity_pack.py --id quality-supervisor --title "Quality Supervisor" --description "Cross-checks listing quality" --register
-# optional: explicit fixture creation under repo (demo only)
-python scripts/create_identity_pack.py --id demo-fixture --title "Demo Fixture" --description "Fixture identity" --repo-fixture --pack-root identity/packs --catalog identity/catalog/identities.yaml --register
+# optional: explicit fixture creation under repo (demo only; requires double confirmation)
+python scripts/create_identity_pack.py --id demo-fixture --title "Demo Fixture" --description "Fixture identity" --repo-fixture --repo-fixture-confirm "I_UNDERSTAND_REPO_FIXTURE_WRITE" --repo-fixture-purpose "demo fixture for protocol validation only" --pack-root identity/packs --catalog identity/catalog/identities.yaml --register
 ```
 
 ## Minimum acceptance commands (release gate)
@@ -415,6 +529,7 @@ If a document defines required behavior for CI/release/audit decisions, it belon
   - `docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md`
   - `docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md`
   - `docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md`
+  - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` (canonical SSOT; do not use artifacts mirror as normative source)
 
 ### Release documentation closure set (MUST, same PR batch)
 
@@ -432,12 +547,12 @@ For any release posture update (Conditional Go/Full Go), the following files mus
 
 The release/audit source-of-truth repository is:
 
-`/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local`
+`${IDENTITY_PROTOCOL_HOME:-<identity-protocol-local-repo>}`
 
 Before running release commands, verify working directory and branch:
 
 ```bash
-cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+cd "${IDENTITY_PROTOCOL_HOME:-<identity-protocol-local-repo>}"
 pwd
 git rev-parse --abbrev-ref HEAD
 ```

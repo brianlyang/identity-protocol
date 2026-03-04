@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import re
+from pathlib import Path
+
+import yaml
+
+
+INDEX_PATH = Path("docs/governance/AUDIT_SNAPSHOT_INDEX.md")
+CANONICAL_DOC_PATTERN = re.compile(r"docs/governance/identity-protocol-strengthening-handoff-v\d+\.\d+\.\d+\.md")
+CORE_CHANGE_MAP_PATH = Path("docs/governance/templates/protocol-core-change-map.yaml")
+
+INDEX_REQUIRED_MARKERS = (
+    "Canonical SSOT rule for protocol-strengthening handoff",
+    "Any `artifacts/` mirror is non-normative evidence only.",
+)
+
+CANONICAL_REQUIRED_MARKERS = (
+    "Status:",
+    "Governance layer: protocol",
+    "Layered governance boundary (mandatory)",
+    "Scope guardrails",
+    "Repository path governance matrix (mandatory)",
+    "Protocol layer only",
+    "Document lifecycle governance (mandatory)",
+    "SSOT + gate binding + periodic archive",
+)
+
+ARTIFACT_NORMATIVE_MARKERS = (
+    "Status: Canonical",
+    "single source of truth",
+    "SSOT",
+    "must execute",
+    "normative requirement",
+)
+
+
+def _find_canonical_doc(index_text: str) -> Path | None:
+    matches = CANONICAL_DOC_PATTERN.findall(index_text)
+    if not matches:
+        return None
+    # prefer latest version by lexical sort (vX.Y.Z pattern is zero-padded semantics enough for our current use).
+    rel = sorted(set(matches))[-1]
+    return Path(rel)
+
+
+def _contains_absolute_user_path(text: str) -> bool:
+    return bool(re.search(r"/Users/[^/\\s]+/", text))
+
+
+def _load_core_change_map(path: Path) -> dict:
+    if not path.exists():
+        raise FileNotFoundError(f"core-change map missing: {path}")
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError("core-change map root must be object")
+    handoff = data.get("handoff")
+    core = data.get("core_change_map")
+    if not isinstance(handoff, dict):
+        raise ValueError("core-change map missing handoff section")
+    if not isinstance(core, dict):
+        raise ValueError("core-change map missing core_change_map section")
+    files = core.get("files")
+    prefixes = core.get("prefixes")
+    if not isinstance(files, list) or not files:
+        raise ValueError("core-change map core_change_map.files must be non-empty list")
+    if not isinstance(prefixes, list) or not prefixes:
+        raise ValueError("core-change map core_change_map.prefixes must be non-empty list")
+    return data
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Validate protocol SSOT source boundary: handoff is canonical, artifacts are evidence-only.")
+    ap.add_argument(
+        "--require-canonical-changed",
+        action="store_true",
+        help="reserved for future wiring; no-op in this validator (use validate_protocol_handoff_coupling.py for diff-range checks)",
+    )
+    args = ap.parse_args()
+
+    if not INDEX_PATH.exists():
+        print(f"[FAIL] IP-SSOT-001 missing index file: {INDEX_PATH}")
+        return 1
+
+    index_text = INDEX_PATH.read_text(encoding="utf-8")
+    for marker in INDEX_REQUIRED_MARKERS:
+        if marker not in index_text:
+            print(f"[FAIL] IP-SSOT-001 index missing required SSOT marker: {marker}")
+            return 1
+
+    canonical = _find_canonical_doc(index_text)
+    if canonical is None:
+        print("[FAIL] IP-SSOT-002 canonical handoff document not referenced in index")
+        return 1
+    if not canonical.exists():
+        print(f"[FAIL] IP-SSOT-002 canonical handoff document missing: {canonical}")
+        return 1
+
+    handoff_text = canonical.read_text(encoding="utf-8")
+    for marker in CANONICAL_REQUIRED_MARKERS:
+        if marker not in handoff_text:
+            print(f"[FAIL] IP-SSOT-003 canonical handoff missing required marker: {marker}")
+            return 1
+    if "docs/governance/templates/" not in handoff_text:
+        print("[FAIL] IP-SSOT-006 canonical handoff missing template reference under docs/governance/templates/")
+        return 1
+    if _contains_absolute_user_path(handoff_text):
+        print(f"[FAIL] IP-SSOT-005 canonical handoff contains user absolute path: {canonical}")
+        return 1
+
+    try:
+        core_map = _load_core_change_map(CORE_CHANGE_MAP_PATH)
+    except Exception as exc:
+        print(f"[FAIL] IP-SSOT-007 invalid protocol core-change mapping: {exc}")
+        return 1
+    mapped_index = Path(str((core_map.get("handoff") or {}).get("index_path", "")).strip())
+    if mapped_index != INDEX_PATH:
+        print(
+            "[FAIL] IP-SSOT-007 core-change mapping index_path mismatch: "
+            f"expected={INDEX_PATH} got={mapped_index}"
+        )
+        return 1
+
+    # Guard against accidentally promoting artifacts to normative source.
+    for root in [Path("docs"), Path("identity/runtime")]:
+        if not root.exists():
+            continue
+        for p in root.rglob("*artifacts*/*.md"):
+            text = p.read_text(encoding="utf-8", errors="ignore")
+            hit = next((m for m in ARTIFACT_NORMATIVE_MARKERS if m in text), "")
+            if hit:
+                print(f"[FAIL] IP-SSOT-004 artifact doc contains normative marker ({hit}): {p}")
+                return 1
+
+    print("[OK] protocol SSOT source boundary validated")
+    print(f"     canonical_handoff={canonical}")
+    print(f"     core_change_map={CORE_CHANGE_MAP_PATH}")
+    print("     artifacts_policy=evidence_only_non_normative")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

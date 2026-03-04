@@ -1,0 +1,14 @@
+{
+  "binding_id": "identity-role-binding-system-requirements-analyst-negative-sample",
+  "generated_at": "2026-02-26T15:06:44Z",
+  "identity_id": "system-requirements-analyst",
+  "role_type": "system_requirements_analyst_runtime_operator",
+  "binding_status": "UNBOUND",
+  "runtime_bootstrap": {
+    "status": "FAIL",
+    "validator": "scripts/validate_identity_runtime_contract.py"
+  },
+  "switch_guard": {
+    "status": "FAIL"
+  }
+}
