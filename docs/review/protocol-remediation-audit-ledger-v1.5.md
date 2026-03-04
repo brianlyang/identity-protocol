@@ -5883,6 +5883,39 @@ Boundary:
 1. This batch does not promote `SPEC_READY` or `IMPL_READY (BLOCKED_BY_AUDIT)` rows.
 2. `D6` remains `LOCKED` until all remaining `P0` rows in governance `6.4` reach `DONE`.
 
+#### 16.8.71 Governance DONE normalization batch-B (`IMPL_READY -> DONE`, 2026-03-04, docs-only)
+
+Status: `CLOSED_SCOPE_BATCH_B`.
+
+Decision semantics (normative):
+
+1. Batch-B only handles rows that were `IMPL_READY (BLOCKED_BY_AUDIT)` in governance `6.4`.
+2. Promotion requires fix-level `DONE/PASS` plus explicit replay-promotion anchors in review windows (`16.8.50` and follow-up windows where applicable).
+3. Batch-B does not touch any `SPEC_READY` row.
+
+Promoted in this batch (`P0`, governance `6.4`, `IMPL_READY -> DONE`):
+
+1. `ASB-RQ-046`
+2. `ASB-RQ-075..089`
+3. `ASB-RQ-094..096`
+4. `ASB-RQ-099..100`
+5. `ASB-RQ-104`
+6. `ASB-RQ-107`
+7. `ASB-RQ-111..112`
+8. `ASB-RQ-114`
+
+Residual release math after this batch (from governance `6.4` table):
+
+1. `P0_TOTAL=87`
+2. `P0_DONE=63`
+3. `P0_NOT_DONE=24`
+4. Remaining distribution: `SPEC_READY=24`
+
+Boundary:
+
+1. `D6` remains `LOCKED` because section `6.5` requires all `P0` rows to be `DONE`.
+2. Current `P0_NOT_DONE=24` are all implementation-missing (`SPEC_READY`) and need architecture/implementation closure before audit promotion can continue.
+
 #### 16.8.69 Instance self-drive supplement intake (`system-requirements-analyst`, 2026-03-04, cross-check)
 
 Status: `CROSS_CHECKED (no new protocol code gap; runbook clarification required)`.
@@ -5912,6 +5945,29 @@ Decision:
 2. One docs/runbook clarification is required under `FIX-038` semantics:
    - after core-file edits (`CURRENT_TASK.json`, `IDENTITY_PROMPT.md`), run tuple refresh first, then strict preflight/update;
    - `IP-PVA-001` before refresh should be interpreted as expected stale-alignment fail-safe, not protocol regression.
+
+#### 16.8.70 Historical reject normalization for FIX-008 (`cross-actor inspection routing`, 2026-03-04, docs-only boundary lock)
+
+Status: `NO_NEW_ACTION_REQUIRED (historical reject retained for traceability; closure is already FIX-010)`.
+
+Reason for normalization:
+
+1. Summary board keeps `FIX-008` as historical `REJECT` entry, which is correct for chronology but can be misread as an open implementation queue.
+2. The exact reject condition ("three-plane fell back to strict `operation=validate` for cross-actor isolation") is already closed by `FIX-010` and has remained stable in current code wiring.
+
+Cross-check anchors (current code state):
+
+1. three-plane routing uses explicit inspection operation:
+   - `scripts/report_three_plane_status.py` invokes `validate_cross_actor_isolation.py --operation three-plane`.
+2. scan/readiness/e2e lanes each pass lane-specific operation values:
+   - `scripts/full_identity_protocol_scan.py` (`--operation scan`)
+   - `scripts/release_readiness_check.py` (`--operation readiness`)
+   - `scripts/e2e_smoke_test.sh` (`--operation e2e`)
+
+Decision boundary:
+
+1. Keep `FIX-008` as immutable historical reject record (audit trail intact).
+2. Treat implementation closure authority as `FIX-010 PASS`; do not reopen `FIX-008` unless a new regression replay reproduces the original strict-fallback defect.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
