@@ -2831,6 +2831,13 @@ Execution matrix (owner + closure predicate):
 | Lane B | `27` rows (`IMPL_READY (BLOCKED_BY_AUDIT)`) | `-> GATE_READY` then `-> DONE` | independent auditor (`system-requirements-analyst`) verdict + architect promotion commit | independent replay must clear blocking reason; no docs-only or narrative promotion |
 | Lane C | `24` rows (`SPEC_READY`) | implemented + replayed + promoted | `base-repo-architect` | either implementation+replay closure in `v1.5`, or explicit de-scope decision out of `v1.5` unlock scope |
 
+Lane A row-level register binding:
+
+1. Authoritative row list is frozen in review `16.8.64` with one-to-one requirement mapping and evidence anchor.
+2. Candidate list artifact: `/tmp/release_v15_laneA_promotion_candidates_20260304.json`.
+3. Row set: `ASB-RQ-010,037,038,039,040,041,042,043,044,045,054,055,056,057,058,059,060,061,062,063,064,066,067,068,070,071,072,073,074,090,091,092,093,109,110`.
+4. No row outside this register can be promoted under Lane A batch without an explicit review delta.
+
 Release authority boundary:
 
 1. Docs bridge sections (`6.4A/6.4B/6.6x`, review `16.8.x`) are explanatory, not formula overrides.

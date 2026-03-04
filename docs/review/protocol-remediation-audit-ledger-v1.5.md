@@ -5585,6 +5585,61 @@ Immediate next checkpoint (to accelerate but remain rigorous):
 3. Governance `6.4` is updated in one atomic batch, then `6.5` is recomputed from table values.
 4. Only if recomputation becomes true and `D1~D5=PASS`, `D6` can be flipped to `PASS`.
 
+#### 16.8.64 Lane A row-level promotion candidate sheet (35 rows, 2026-03-04, docs-only)
+
+Status: `CANDIDATE_LIST_READY (await architect proposal commit + auditor countersign)`.
+
+Source of truth for this sheet:
+
+1. Section `6.4` current statuses in governance.
+2. Machine extraction artifact: `/tmp/release_v15_laneA_promotion_candidates_20260304.json`.
+
+Per-row candidate mapping (`GATE_READY/VERIFIED -> CANDIDATE_FOR_DONE`):
+
+| Requirement ID | Current status | Evidence anchor from governance `6.4` | Candidate target |
+| --- | --- | --- | --- |
+| `ASB-RQ-010` | `VERIFIED` | actor-scoped multi-active patch is committed and replay-audited (`FIX-015`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-037` | `VERIFIED` | replayed and audit-confirmed in HOTFIX-P0-005 lane | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-038` | `VERIFIED` | replayed and audit-confirmed in HOTFIX-P0-006 lane | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-039` | `VERIFIED` | no-scope fail-closed + scoped passthrough replayed and confirmed in HOTFIX-P0-007 lane | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-040` | `GATE_READY` | user-visible zero-miss closure is audit-passed (`HOTFIX-P0-004`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-041` | `GATE_READY` | implemented and audit-passed (`FIX-017`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-042` | `GATE_READY` | implemented and audit-passed (`FIX-018`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-043` | `GATE_READY` | unified validator implemented and audit-passed (`FIX-019`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-044` | `GATE_READY` | implemented and audit-passed (`P0-D`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-045` | `GATE_READY` | implemented and audit-passed (`P0-E`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-054` | `VERIFIED` | implementation + strict/inspection replay audit-passed (`HOTFIX-P0-008` / `FIX-020`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-055` | `GATE_READY` | implemented via `validate_instance_protocol_split_receipt.py` + replay payload mapping (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-056` | `GATE_READY` | six-surface wiring landed (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-057` | `GATE_READY` | hard-condition classifier + IP-SPLIT failure paths landed (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-058` | `GATE_READY` | anti-mixed-lane + sanitization checks landed in split-receipt validator (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-059` | `GATE_READY` | CWD-invariant resolution landed and replayed from `/tmp` (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-060` | `GATE_READY` | pack/protocol-root deterministic fallback landed (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-061` | `GATE_READY` | protocol-root deterministic launch + IP-CWD-004 error semantics landed (`8778bdf`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-062` | `GATE_READY` | `validate_discovery_requiredization.py` + update preflight apply path landed (`295daf7`,`3baa355`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-063` | `GATE_READY` | IP-DREQ-001..004 fail-closed + six-surface wiring landed (`295daf7`,`3baa355`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-064` | `GATE_READY` | apply-requiredization path auto-syncs CI required validators (`3baa355`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-066` | `GATE_READY` | discovery subset counters + threshold gate landed (`295daf7`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-067` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` (`FIX-021` promoted to `PASS`: strict pass/fail + inspection warn paths all matched expected semantics). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-068` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` (`FIX-024` promoted to `PASS`: reply-file positive + missing-header fail-closed `IP-ASB-STAMP-SESSION-001`). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-070` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` (`FIX-027` promoted to `PASS`: default instance path + protocol-triggered path + regression sample set all passed). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-071` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` (`FIX-028` promoted to `PASS`: positive multibinding path and `IP-ASB-MB-001` negative replay matched). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-072` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` (`FIX-028` promoted to `PASS`: CAS conflict replay emitted `IP-ASB-MB-003`). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-073` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` with strict mutation-boundary/receipt semantics retained under multibinding contract (`FIX-028`). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-074` | `GATE_READY` | independent replay closure confirmed in review `16.8.53` (`FIX-028` summary row backfilled to commit `48e5445`, status promoted to `PASS`). | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-090` | `GATE_READY` | `FIX-033` implementation landed (`0d7ebc7`) + lane applied-gate-set propagation patch (`913973a`); independent replay closed in review (`16.8.27`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-091` | `GATE_READY` | `FIX-033` implementation landed (`0d7ebc7`) + re-audit docs closure (`9d830d8`); independent replay closed in review (`16.8.27`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-092` | `GATE_READY` | `FIX-033` implementation landed (`0d7ebc7`) + lane applied-gate-set replay closure (`913973a`,`9d830d8`); independent replay closed in review (`16.8.27`) | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-093` | `GATE_READY` | telemetry closure verified by independent replay after patch (`913973a`,`9d830d8`), review record `16.8.27`; additional scope-limited instance Full-Go evidence intake is recorded in review `16.8.42` | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-109` | `GATE_READY` | implementation + independent replay are closed (`FIX-049`, `f5363e5`): synthetic strict path fails with `IP-ASB-STAMP-SESSION-002`, missing outlet guard fails with `IP-ASB-STAMP-SESSION-003`, live guarded reply passes; closure anchored in review `16.8.55`. | `CANDIDATE_FOR_DONE` |
+| `ASB-RQ-110` | `GATE_READY` | implementation + independent replay are closed (`FIX-050`, `f5363e5`): init/update pre-mutation gate receipts and fail-closed codes (`IP-EXEC-ORDER-001/002/003`) are active, and execution-report schema fields are present; closure anchored in review `16.8.55`. | `CANDIDATE_FOR_DONE` |
+
+Promotion guard (must stay fail-closed):
+
+1. This sheet is not an auto-promotion.
+2. Status change to `DONE` requires architect commit plus independent auditor countersign for each row.
+3. Until those commits land in section `6.4`, `D6` remains `LOCKED`.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).
