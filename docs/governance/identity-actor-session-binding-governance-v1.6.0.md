@@ -104,6 +104,7 @@ Hard rules:
 | WS-5 | cross-cwd runbook hardening | P1 | absolute-path invocation profile + deterministic replay recipe |
 | WS-6 | docs bridge automation | P1 | governance/review status bridge template and consistency checker |
 | WS-7 | office-ops deterministic self-drive hardening | P1 | run-id report binding, baseline bootstrap automation, temp/freshness/feedback emit helpers |
+| WS-8 | initial prompt capability bootstrap governance | P0 | capability-driver-native initialization contract + fail-closed matrix validator + business-interference runbook |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -179,6 +180,78 @@ Hard rules:
 1. v1.6 intake must not retroactively relabel current v1.5 unlock blockers.
 2. every adopted suggestion must keep canonical protocol-feedback channel and SSOT linkage semantics unchanged.
 
+### 4.7 `identity_prompt_bootstrap_capability_contract_v1` (P0)
+
+Input package boundary:
+
+1. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+2. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
+3. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
+4. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-brief-2026-03-04-initial-prompt-base-contract-capability-and-business-impact.md`
+5. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
+
+Mandatory capability drivers for initialization templates:
+
+1. source precedence driver
+2. four-core capability driver (`judgement/reasoning/routing/rule-learning`)
+3. baseline review driver
+4. self-upgrade lifecycle driver (`trigger -> patch -> validate -> replay`)
+5. trigger-regression + handoff driver
+6. canonical collaboration-trigger driver
+7. control-loop extension driver (`Observe -> Decide -> Orchestrate -> Validate -> Learn -> Update`)
+8. capability arbitration + conflict-order driver
+9. lane separation driver (`instance` vs `protocol`)
+10. dual-track governance + release declaration driver
+
+Hard rules:
+
+1. missing required driver in initialization template is fail-closed.
+2. this contract must strengthen initialization semantics only and must not weaken existing runtime gates.
+
+### 4.8 `prompt_capability_matrix_fail_closed_contract_v1` (P0)
+
+Mandatory validator behavior:
+
+1. a dedicated prompt capability validator must output machine-readable coverage and missing-driver list.
+2. requiredized capability drivers must enforce `FAIL_REQUIRED` when absent.
+3. validator output must be consumable by creator/readiness/full-scan/three-plane pipelines.
+
+Mandatory output fields:
+
+1. `capability_driver_required_total`
+2. `capability_driver_present_total`
+3. `capability_driver_coverage_rate`
+4. `missing_capability_drivers`
+5. `prompt_bootstrap_contract_status`
+6. `error_code`
+
+### 4.9 `bootstrap_runbook_business_interference_guard_contract_v1` (P1)
+
+Mandatory runbook sequence after core-file edits (`IDENTITY_PROMPT.md` or `CURRENT_TASK.json`):
+
+1. refresh replay (`baseline-policy=warn`) for tuple refresh
+2. strict replay (`baseline-policy=strict`) for final closure
+3. business interference matrix output with bounded impact window and mitigation pointers
+
+Hard rules:
+
+1. `IP-PVA-001` immediately after intentional core-file edits is treated as expected fail-safe before refresh and cannot be claimed as protocol regression by default.
+2. refresh->strict sequence is mandatory in runbook examples and acceptance package.
+
+### 4.10 `multi_source_cross_verification_evidence_contract_v1` (P1)
+
+Cross-verification bundle is valid only when all four tracks are present:
+
+1. roundtable track (local protocol roundtable/architect packet)
+2. vendor track (official multi-vendor scan with source URLs)
+3. OpenAI docs track (`openaidoc` anchors for strict schema/tool guidance)
+4. Context7 track (OpenAI platform docs extraction, no contradictory guidance)
+
+Hard rules:
+
+1. if any track is missing, intake status cannot advance beyond `PENDING_INTAKE`.
+2. evidence must remain protocol-only and cannot include business-sensitive runtime payloads.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -196,6 +269,10 @@ Hard rules:
 | ASB16-RQ-011 | regression self-drive temp strategy must be collision-safe in `/tmp` | regression scripts + temp allocator helper | P1 | SPEC_READY | office-ops intake `16.8.75` |
 | ASB16-RQ-012 | handoff/collab age-only freshness failures should support deterministic bootstrap auto-rotation | handoff/collab freshness validators + bootstrap receipt writer | P1 | SPEC_READY | office-ops intake `16.8.75` |
 | ASB16-RQ-013 | protocol-feedback atomic emit helper must write batch + index + receipt in one command | feedback emit helper + SSOT index updater + split receipt writer | P1 | SPEC_READY | office-ops intake `16.8.75` |
+| ASB16-RQ-014 | initial identity prompt must be bootstrap capability-driver native | identity pack templates + prompt bootstrap contracts + strict update lanes | P0 | SPEC_READY | SRA batch `2026-03-04/002` + architect brief |
+| ASB16-RQ-015 | prompt capability matrix validator must fail-closed on missing requiredized drivers | new prompt capability validator + required gate wiring | P0 | SPEC_READY | SRA batch `2026-03-04/003` |
+| ASB16-RQ-016 | post-core-edit runbook must require refresh->strict and emit business interference matrix | runbook + replay scripts + reporting contracts | P1 | SPEC_READY | SRA batch `2026-03-04/001` + business-impact packet |
+| ASB16-RQ-017 | v1.6 intake for bootstrap capability must include roundtable+vendor+openaidoc+context7 cross-verification | review intake checklist + governance evidence contract | P1 | SPEC_READY | SRA evidence index + vendor scan + OpenAI/context7 anchors |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -209,6 +286,9 @@ Hard rules:
 | C6 | cross-cwd runbook replay deterministic | root/tmp replay parity records |
 | C7 | governance/review bridge has no contradictory status pair | consistency checker output |
 | C8 | promotion to `DONE` only via evidence-backed decision | promotion receipt with commit + evidence + reviewer |
+| C9 | initialization templates are capability-driver complete for requiredized matrix | prompt capability matrix report (`coverage_rate=100` for P0 set) |
+| C10 | post-core-edit replay follows refresh->strict sequence with bounded business interference | paired refresh+strict reports + interference matrix receipt |
+| C11 | cross-verification packet includes roundtable/vendor/openaidoc/context7 | intake checklist marked complete with four-track anchors |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -227,6 +307,10 @@ Hard rules:
 | ASB16-RQ-011 | regression temp collision-safe strategy | P1 | SPEC_READY | implementation pending |
 | ASB16-RQ-012 | handoff/collab freshness auto-bootstrap | P1 | SPEC_READY | implementation pending |
 | ASB16-RQ-013 | protocol-feedback atomic emit helper | P1 | SPEC_READY | implementation pending |
+| ASB16-RQ-014 | prompt bootstrap capability contract | P0 | SPEC_READY | SRA intake pending implementation |
+| ASB16-RQ-015 | prompt capability matrix fail-closed validator | P0 | SPEC_READY | SRA intake pending implementation |
+| ASB16-RQ-016 | refresh->strict + business interference runbook contract | P1 | SPEC_READY | SRA intake pending implementation |
+| ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | SRA intake pending implementation |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -234,6 +318,7 @@ Hard rules:
 | --- | --- | --- |
 | ASB16-RQ-001..008 | `NEW -> SPEC_READY` | this document kickoff baseline |
 | ASB16-RQ-009..013 | `NEW -> SPEC_READY` | office-ops intake triage bridge (`review v1.5 16.8.75`) |
+| ASB16-RQ-014..017 | `NEW -> SPEC_READY` | SRA bootstrap capability intake (`review v1.6 FIX16-015`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
@@ -271,3 +356,14 @@ Required reporting format:
 2. `docs/review/protocol-remediation-audit-ledger-v1.5.md`
 3. `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
 4. `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+5. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-brief-2026-03-04-initial-prompt-base-contract-capability-and-business-impact.md`
+6. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
+7. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+8. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
+9. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
+10. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-01_official-vibe-coding-playbook.md`
+11. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+12. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+13. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
+14. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
+15. `context7:/websites/developers_openai_api (strict schema/tool docs extraction)`

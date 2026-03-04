@@ -62,6 +62,10 @@ Carry-over evidence:
 | FIX16-012 | 2026-03-04 | protocol | regression temp collision-safe strategy (`ASB16-RQ-011`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-013 | 2026-03-04 | protocol | handoff/collab freshness auto-bootstrap (`ASB16-RQ-012`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-014 | 2026-03-04 | protocol | protocol-feedback atomic emit helper (`ASB16-RQ-013`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-015 | 2026-03-04 | protocol | bootstrap capability-driver intake from SRA packet (`ASB16-RQ-014`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-016 | 2026-03-04 | protocol | prompt capability matrix fail-close validator intake (`ASB16-RQ-015`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-017 | 2026-03-04 | protocol | refresh->strict + business interference guard runbook intake (`ASB16-RQ-016`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-018 | 2026-03-04 | protocol | roundtable/vendor/openaidoc/context7 cross-verification intake (`ASB16-RQ-017`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -198,6 +202,53 @@ Cross-check boundary:
 1. office-ops current reports stay passing (`all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `writeback_status=WRITTEN`) and do not create a new v1.5 blocker in this window.
 2. this intake is backlog registration only; no protocol code path changed in this docs step.
 
+### FIX16-015 - SRA bootstrap capability packet intake (`ASB16-RQ-014..017`)
+
+- Status: `SPEC_READY`
+- Goal: register system-requirements-analyst proposal as v1.6 protocol enhancement with deterministic intake boundary and no v1.5 formula drift.
+
+Source package:
+
+1. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+2. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
+3. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
+4. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+5. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-brief-2026-03-04-initial-prompt-base-contract-capability-and-business-impact.md`
+6. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
+
+Triage decision:
+
+1. promote the bootstrap-capability request into v1.6 governance scope as `ASB16-RQ-014..017`.
+2. keep v1.5 boundary unchanged; this intake does not change current v1.5 unlock formula or D6 status.
+3. classify this intake as docs/governance strengthening only (`UNCOMMITTED`, `PENDING_INTAKE`) until implementation + replay evidence land.
+
+Cross-verification matrix (requiredized for this intake):
+
+1. roundtable track:
+   - local roundtable doc confirms 10 capability drivers and fail->refresh-pass->strict-pass replay path.
+2. vendor track:
+   - vendor scan confirms official guidance alignment for structured outputs, instruction hierarchy, skills protocol, and sandbox/approval boundaries.
+3. OpenAI docs track:
+   - strict mode guidance confirms schema adherence expectation and recommends strict mode with `additionalProperties=false` + required fields.
+4. Context7 track:
+   - OpenAI platform docs extraction returns same strict-schema constraints and tool contract expectations.
+
+Cross-verification anchors:
+
+1. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+2. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
+3. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
+4. `context7:/websites/developers_openai_api`
+5. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-01_official-vibe-coding-playbook.md`
+6. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+
+Acceptance target (`ASB16-RQ-014..017` planning stage):
+
+1. initialization template can be machine-checked against required capability-driver matrix.
+2. missing requiredized capability driver is fail-closed (`FAIL_REQUIRED`) with machine-readable error code.
+3. runbook explicitly enforces `refresh -> strict` after core-file edits and emits business-interference matrix.
+4. intake cannot advance without all four cross-verification tracks (roundtable/vendor/openaidoc/context7).
+
 ---
 
 ## 4) Reviewer decision log
@@ -218,6 +269,10 @@ Cross-check boundary:
 | FIX16-012 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-013 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-014 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-015 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T05:20:00Z | SRA 001/002/003 packet triaged into `ASB16-RQ-014..017`; v1.5 boundary explicitly preserved |
+| FIX16-016 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-017 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-018 | PENDING_INTAKE | - | - | requires implementation |
 
 ---
 
@@ -239,3 +294,15 @@ Cross-check boundary:
 2. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
 3. `docs/review/protocol-remediation-audit-ledger-v1.5.md`
 4. `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+5. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+6. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
+7. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
+8. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/evidence-index/INDEX.md`
+9. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-brief-2026-03-04-initial-prompt-base-contract-capability-and-business-impact.md`
+10. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
+11. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-01_official-vibe-coding-playbook.md`
+12. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+13. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+14. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
+15. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
+16. `context7:/websites/developers_openai_api`
