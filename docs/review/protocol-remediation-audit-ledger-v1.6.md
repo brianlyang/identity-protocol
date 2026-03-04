@@ -68,6 +68,7 @@ Carry-over evidence:
 | FIX16-018 | 2026-03-04 | protocol | roundtable/vendor/openaidoc/context7 cross-verification intake (`ASB16-RQ-017`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-020 | 2026-03-04 | protocol | discovery dual-track activation + apply-time coverage fail-close intake (`ASB16-RQ-023..024`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-021 | 2026-03-04 | protocol | kernel-first baseline: contract source canonicalization + mapping + derived prompt lineage (`ASB16-RQ-025..028`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -345,6 +346,75 @@ Acceptance target (`ASB16-RQ-023..024` planning stage):
    - otherwise fail-close with dedicated code (`IP-DREQ-002` reserved for v1.6 implementation).
 4. apply path must keep receipt + evidence-index linkage as mandatory acceptance artifacts.
 
+### FIX16-021 - kernel-first baseline intake (`ASB16-RQ-025..028`)
+
+- Status: `SPEC_READY`
+- Goal: re-anchor v1.6 on identity kernel contracts so protocol semantics are sourced from `identity/` first and projected to governance/review/scripts deterministically.
+
+Source package:
+
+1. `https://github.com/brianlyang/identity-protocol/tree/main/identity`
+2. `identity/protocol/IDENTITY_PROTOCOL.md`
+3. `identity/protocol/IDENTITY_RUNTIME.md`
+4. `identity/protocol/IDENTITY_DISCOVERY.md`
+5. `identity/catalog/schema/identities.schema.json`
+6. `identity/catalog/identities.yaml`
+7. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
+8. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
+9. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-01_official-vibe-coding-playbook.md`
+10. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+
+Deterministic findings:
+
+1. `identity/` contains protocol/catalog/packs/runtime surfaces and is structurally ready to be the protocol kernel.
+2. Current protocol markdown still routes active normative semantics to governance/review docs (`Normative source map`), creating source-center drift.
+3. Foundational contract constants are duplicated across scripts (for example mandatory protocol sources), increasing semantic divergence risk.
+4. Identity prompts have source references but no enforced derived-lineage metadata contract (version/digest/contract-id projection).
+5. Existing discovery/control-loop hardening confirms fail-close discipline is mature enough to absorb kernel-first uplift without weakening gate strictness.
+
+Triage decision:
+
+1. add `ASB16-RQ-025` for kernel-source canonicalization (`identity/protocol/*` + `identity/catalog/schema/*` as contract origin).
+2. add `ASB16-RQ-026` for kernel-to-validator-to-doc mapping coverage (`100%` P0 coverage, orphan-free).
+3. add `ASB16-RQ-027` for derived prompt compilation lineage and runtime conformance metadata.
+4. add `ASB16-RQ-028` for instance write-boundary lock (instance can write only its own runtime/protocol-feedback surfaces).
+
+Cross-verification tracks (requiredized for this intake):
+
+1. roundtable track:
+   - initial prompt capability roundtable already frames kernel-driven startup behavior and replay closure expectations.
+2. vendor track:
+   - official multi-vendor scans converge on structured, contract-first execution and deterministic evidence.
+3. OpenAI docs track:
+   - strict schema + skills progressive disclosure + sandbox/approval boundaries align with kernel-first fail-closed governance.
+4. Context7 track:
+   - OpenAI API and Codex docs extraction confirms strict-contract and boundary-enforcement posture.
+5. skill protocol track:
+   - local skill references require trigger/patch/validate/replay discipline, matching kernel-projection architecture.
+
+Cross-verification anchors:
+
+1. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+2. `https://developers.openai.com/codex/skills/`
+3. `https://developers.openai.com/codex/security/`
+4. `context7:/websites/developers_openai_api`
+5. `context7:/websites/developers_openai`
+6. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+7. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+8. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+
+Acceptance target (`ASB16-RQ-025..028` planning stage):
+
+1. kernel canonicalization:
+   - base-contract origin is `identity/protocol/*` + `identity/catalog/schema/*`;
+   - governance/review contain mapped projections only.
+2. mapping closure:
+   - every P0 contract has `kernel_contract_id`, validator surfaces, governance anchor, review anchor.
+3. derived prompt closure:
+   - active identity prompt must carry derivation metadata and digest linkage to kernel contracts.
+4. instance boundary closure:
+   - instance self-drive writes to protocol kernel/governance/review surfaces are fail-closed with deterministic boundary code.
+
 ---
 
 ## 4) Reviewer decision log
@@ -371,6 +441,7 @@ Acceptance target (`ASB16-RQ-023..024` planning stage):
 | FIX16-018 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-019 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T06:55:00Z | latest office-ops self-drive replay evidence ingested; new gaps mapped to `ASB16-RQ-018..022` |
 | FIX16-020 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T08:45:00Z | discovery dual-track simulation ingested; apply-time `PASS_REQUIRED` with `0/3` coverage formalized into `ASB16-RQ-023..024` |
+| FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T10:15:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028` |
 
 ---
 
@@ -415,3 +486,9 @@ Acceptance target (`ASB16-RQ-023..024` planning stage):
 25. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
 26. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
 27. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+28. `https://github.com/brianlyang/identity-protocol/tree/main/identity`
+29. `identity/protocol/IDENTITY_PROTOCOL.md`
+30. `identity/protocol/IDENTITY_RUNTIME.md`
+31. `identity/protocol/IDENTITY_DISCOVERY.md`
+32. `identity/catalog/schema/identities.schema.json`
+33. `identity/catalog/identities.yaml`

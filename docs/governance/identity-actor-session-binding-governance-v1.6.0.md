@@ -92,6 +92,8 @@ Hard rules:
 1. Environment/auth blockers cannot be silently reclassified as protocol code closure.
 2. Protocol release claims must include machine-readable formula evidence.
 3. No release status claim may override D1~D6 table results.
+4. `identity/protocol/*` and `identity/catalog/schema/*` are the kernel contract surfaces for v1.6; governance/review docs may map and audit them, but must not redefine their base semantics.
+5. Instance-side automation may emit evidence only under instance runtime/protocol-feedback surfaces and must not mutate protocol-kernel sources.
 
 ## 3) v1.6 Workstream Targets
 
@@ -106,6 +108,7 @@ Hard rules:
 | WS-7 | office-ops deterministic self-drive hardening | P1 | run-id report binding, baseline bootstrap automation, temp/freshness/feedback emit helpers, dedup winner determinism, skill-path integrity, route pinning, fallback taxonomy |
 | WS-8 | initial prompt capability bootstrap governance | P0 | capability-driver-native initialization contract + fail-closed matrix validator + business-interference runbook |
 | WS-9 | discovery dual-track requiredization closure | P0 | trigger-conditioned requiredization policy + apply-time coverage fail-close gate + receipt/index evidence lock |
+| WS-10 | identity kernel-first canonicalization | P0 | kernel SSOT contract surface + contract mapping projection + derived prompt compilation + instance write-boundary lock |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -317,6 +320,82 @@ Cross-verification constraints (mandatory for intake advance):
 3. OpenAI docs track present (`strict-mode` + `codex skills/security` anchors).
 4. Context7 track present with non-contradictory extraction.
 
+### 4.14 `identity_kernel_ssot_contract_v1` (P0)
+
+Kernel canonical boundary:
+
+1. `identity/protocol/*` defines protocol-base contracts.
+2. `identity/catalog/schema/*` defines machine-readable schema constraints.
+3. `identity/catalog/identities.yaml` is the canonical registry payload surface.
+
+Governance/review projection boundary:
+
+1. `docs/governance/*` stores release-gate semantics, requirement status, and acceptance policy.
+2. `docs/review/*` stores intake/replay/audit decisions.
+3. Neither layer may introduce an unmapped base contract that is absent from kernel surfaces.
+
+Hard rules:
+
+1. base-contract edits must land in kernel surfaces before projection into governance/review.
+2. script-only or docs-only semantic changes that bypass kernel are non-compliant.
+3. each promoted contract must carry `kernel_contract_id` and source path.
+
+### 4.15 `kernel_contract_mapping_projection_contract_v1` (P0)
+
+Mandatory mapping tuple per contract:
+
+1. `kernel_contract_id`
+2. `kernel_source_path`
+3. `validator_ids`
+4. `gate_surfaces` (`creator/readiness/e2e/full-scan/three-plane/ci`)
+5. `governance_anchor`
+6. `review_anchor`
+
+Hard rules:
+
+1. mapping coverage for P0 contracts must be `100%`.
+2. orphan entries (validator or requirement without `kernel_contract_id`) fail-closed.
+3. mapping checks run before status promotion to `IMPL_READY`.
+
+### 4.16 `derived_identity_prompt_compilation_contract_v1` (P0)
+
+Prompt derivation model:
+
+1. `IDENTITY_PROMPT.md` is generated from:
+   - kernel base contracts (`identity/protocol/*`) and
+   - identity-specific overlay (role/domain directives).
+2. runtime must carry machine fields:
+   - `kernel_contract_version`
+   - `kernel_contract_digest`
+   - `derived_from_contract_ids`
+   - `overlay_digest`
+
+Hard rules:
+
+1. direct manual prompt mutation without derivation metadata is fail-closed in strict lanes.
+2. prompt hash mismatch between derived metadata and runtime report is fail-closed.
+3. derived prompt conformance is required for P0 release assertions.
+
+### 4.17 `instance_protocol_write_boundary_lock_contract_v1` (P0)
+
+Allowed write surfaces for instance self-drive:
+
+1. `<instance>/runtime/**`
+2. `<instance>/runtime/protocol-feedback/**`
+
+Forbidden write surfaces for instance self-drive:
+
+1. `identity/protocol/**`
+2. `docs/governance/**`
+3. `docs/review/**`
+4. protocol-level scripts and workflow files unless explicitly executed in protocol-owner lane.
+
+Hard rules:
+
+1. forbidden writes fail-closed with dedicated boundary code (`IP-KERNEL-WRITE-001`, reserved in v1.6).
+2. evidence must show write-boundary enforcement decision in replay artifacts.
+3. lock policy applies regardless of work-layer narrative claims.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -345,6 +424,10 @@ Cross-verification constraints (mandatory for intake advance):
 | ASB16-RQ-022 | fallback reasons must be normalized to governed enum taxonomy for downstream arbitration | fallback taxonomy validator + report schema mapping | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-023 | discovery path must escalate to requiredization only under deterministic trigger classes and keep fail-close semantics when apply is skipped | discovery requiredization validator + trigger-window classifier + update lane wiring | P0 | SPEC_READY | SRA discovery simulation intake (`review v1.6 FIX16-020`) |
 | ASB16-RQ-024 | apply-time requiredization cannot pass with partial discovery coverage; coverage closure must be fail-closed | discovery coverage gate + receipt/index linker + scan/three-plane consumption | P0 | SPEC_READY | SRA discovery simulation intake (`review v1.6 FIX16-020`) |
+| ASB16-RQ-025 | identity kernel surfaces (`identity/protocol/*`, `identity/catalog/schema/*`) must be canonical contract source for v1.6 | kernel contracts + release/docs projection validators | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
+| ASB16-RQ-026 | every P0 contract must have machine-readable kernel-to-validator-to-doc mapping | mapping checker + status-promotion gate | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
+| ASB16-RQ-027 | identity prompts must be kernel-derived artifacts with conformance metadata | prompt compiler + conformance validator + runtime report fields | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
+| ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -363,6 +446,10 @@ Cross-verification constraints (mandatory for intake advance):
 | C11 | cross-verification packet includes roundtable/vendor/openaidoc/context7 | intake checklist marked complete with four-track anchors |
 | C12 | discovery requiredization trigger semantics stay deterministic (`not_triggered -> optional`, `triggered_no_apply -> FAIL_REQUIRED`) | discovery requiredization report with trigger class + error code (`IP-DREQ-001`) |
 | C13 | apply-time discovery coverage reaches full closure before `PASS_REQUIRED` | same-payload coverage proof (`passed==total`, `coverage_rate=100`) + linked receipt/index |
+| C14 | kernel-first canonicalization holds (`identity/protocol/*` + `identity/catalog/schema/*` are source of base contracts) | kernel-source map report + projection diff check |
+| C15 | P0 mapping coverage is complete and orphan-free | mapping coverage report (`coverage=100`, `orphan_count=0`) |
+| C16 | active identity prompts are derived and metadata-consistent with kernel contracts | prompt conformance report with digest/version linkage |
+| C17 | instance write attempts to protocol-kernel/governance/review paths are fail-closed | boundary validator replay with deterministic error code (`IP-KERNEL-WRITE-001`) |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -392,6 +479,10 @@ Cross-verification constraints (mandatory for intake advance):
 | ASB16-RQ-022 | fallback taxonomy normalization contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
 | ASB16-RQ-023 | discovery trigger-conditioned requiredization contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
 | ASB16-RQ-024 | discovery apply-time coverage fail-close contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
+| ASB16-RQ-025 | kernel-first canonical source contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-026 | kernel contract mapping projection contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -402,6 +493,7 @@ Cross-verification constraints (mandatory for intake advance):
 | ASB16-RQ-014..017 | `NEW -> SPEC_READY` | SRA bootstrap capability intake (`review v1.6 FIX16-015`) |
 | ASB16-RQ-018..022 | `NEW -> SPEC_READY` | office-ops supplemental replay intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-023..024 | `NEW -> SPEC_READY` | SRA discovery dual-track simulation intake (`review v1.6 FIX16-020`) |
+| ASB16-RQ-025..028 | `NEW -> SPEC_READY` | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
@@ -457,3 +549,12 @@ Required reporting format:
 20. `https://developers.openai.com/codex/skills/`
 21. `https://developers.openai.com/codex/security/`
 22. `context7:/websites/developers_openai (Codex skills/security extraction)`
+23. `https://github.com/brianlyang/identity-protocol/tree/main/identity`
+24. `identity/protocol/IDENTITY_PROTOCOL.md`
+25. `identity/protocol/IDENTITY_RUNTIME.md`
+26. `identity/protocol/IDENTITY_DISCOVERY.md`
+27. `identity/catalog/schema/identities.schema.json`
+28. `identity/catalog/identities.yaml`
+29. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+30. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+31. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
