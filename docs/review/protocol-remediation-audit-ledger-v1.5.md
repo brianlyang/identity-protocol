@@ -5365,6 +5365,12 @@ Decision boundary:
 
 Status: `ACTIONABLE_PENDING_EXECUTION` (closure path is fixed; `D4` remains `FAIL_REQUIRED` until a follow-up replay satisfies all predicates below).
 
+Supersession note (anti-ambiguity):
+
+1. This section is retained as historical checklist baseline for the pre-normalization branch.
+2. D4 closure interpretation for review-required mode is superseded by `16.8.62`.
+3. When `16.8.59` conflicts with `16.8.62`, use `16.8.62` as authoritative.
+
 Scope and trigger boundary:
 
 1. This section is activated only when `16.8.57` command pack has been executed and latest readiness report contains:
