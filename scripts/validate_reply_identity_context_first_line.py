@@ -398,21 +398,25 @@ def main() -> int:
         if strict_format_enforced and not error_code:
             error_code = ERR_REPLY_FIRST_LINE
 
-    actor_id_explicit = str(args.actor_id or "").strip()
+    actor_id_effective = str(ctx.actor_id or "").strip()
     actor_bound_identity = ""
-    if actor_id_explicit:
-        actor_binding = load_actor_binding(catalog_path, actor_id_explicit)
-        actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
-        if strict_format_enforced and actor_bound_identity and actor_bound_identity != ctx.identity_id and not error_code:
-            stale_reasons.append("actor_bound_identity_mismatch")
-            error_code = ERR_RUNTIME_BINDING_MISMATCH
+    actor_binding = load_actor_binding(catalog_path, actor_id_effective)
+    actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+    if strict_format_enforced and actor_bound_identity and actor_bound_identity != ctx.identity_id and not error_code:
+        stale_reasons.append("actor_bound_identity_mismatch")
+        error_code = ERR_RUNTIME_BINDING_MISMATCH
 
     lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
     parsed_lock_state = ""
+    parsed_actor_id = ""
     if not error_code and first_lines:
         parsed_lock_state = str(parsed_first.get("lock", "")).strip()
+        parsed_actor_id = str(parsed_first.get("actor_id", "")).strip()
+    if strict_format_enforced and parsed_actor_id and parsed_actor_id != actor_id_effective and not error_code:
+        stale_reasons.append("reply_first_line_actor_mismatch")
+        error_code = ERR_RUNTIME_BINDING_MISMATCH
     if not error_code and lock_boundary_enforced:
-        if actor_id_explicit and ctx.lock_state != "LOCK_MATCH":
+        if actor_bound_identity and ctx.lock_state != "LOCK_MATCH":
             stale_reasons.append("actor_binding_lock_not_match")
             error_code = ERR_RUNTIME_BINDING_MISMATCH
         elif parsed_lock_state and parsed_lock_state != "LOCK_MATCH":
@@ -455,6 +459,8 @@ def main() -> int:
         "reply_first_line_source_layer": parsed_source_layer,
         "lock_boundary_enforced": lock_boundary_enforced,
         "context_lock_state": ctx.lock_state,
+        "expected_actor_id": actor_id_effective,
+        "reply_first_line_actor_id": parsed_actor_id,
         "actor_bound_identity_id": actor_bound_identity,
         "expected_lock_state": ctx.lock_state,
         "reply_first_line_lock_state": parsed_lock_state,

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding
+from actor_session_common import load_actor_binding, resolve_actor_id
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -110,13 +110,12 @@ def main() -> int:
         print(f"[FAIL] unable to resolve identity stamp context: {exc}")
         return 1
 
-    actor_id_explicit = str(args.actor_id or "").strip()
+    actor_id_effective = resolve_actor_id(str(args.actor_id or "").strip())
     actor_bound_identity = ""
-    if actor_id_explicit:
-        actor_binding = load_actor_binding(catalog_path, actor_id_explicit)
-        actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+    actor_binding = load_actor_binding(catalog_path, actor_id_effective)
+    actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
 
-    if actor_id_explicit and actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
+    if actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
@@ -146,6 +145,7 @@ def main() -> int:
             "blocker_receipt_path": "",
             "out_reply_file": str(Path(args.out_reply_file).expanduser().resolve()) if str(args.out_reply_file or "").strip() else "",
             "context_lock_state": str(ctx.lock_state or "").strip(),
+            "resolved_actor_id": actor_id_effective,
             "actor_bound_identity_id": actor_bound_identity,
         }
         out_json = str(args.out_json or "").strip()
@@ -215,8 +215,7 @@ def main() -> int:
         source_layer,
         "--json-only",
     ]
-    if str(args.actor_id or "").strip():
-        validate_cmd += ["--actor-id", str(args.actor_id).strip()]
+    validate_cmd += ["--actor-id", str(actor_id_effective).strip()]
     if str(args.blocker_receipt_out or "").strip():
         validate_cmd += ["--blocker-receipt-out", str(args.blocker_receipt_out).strip()]
     if str(args.layer_intent_text or "").strip():
