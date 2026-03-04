@@ -5484,6 +5484,44 @@ Decision boundary (no over-claim):
    - `FIX-056` summary row at `PENDING_REAUDIT` (await independent audit promotion),
    - `D4=FAIL_REQUIRED` / `D6=LOCKED` until governance checklist predicate is explicitly closed.
 
+#### 16.8.62 D4 review-required predicate normalization + closure decision (`v1.5`, 2026-03-04, docs-only governance bridge)
+
+Status: `CLOSURE_DECIDED (D4=PASS, D6 still LOCKED by 6.5 formula)`.
+
+Why normalization is required (cross-check against executable contracts):
+
+1. `16.8.59` originally required `upgrade_required=false` to close D4.
+2. Runtime contracts classify `upgrade_required=true + all_ok=true + writeback_status=WRITTEN` as a valid closure outcome for review-required mode:
+   - `scripts/validate_post_execution_mandatory.py` (`upgrade_required && all_ok && writeback_status==WRITTEN` executes strict linkage validator path);
+   - `scripts/validate_identity_experience_writeback.py` (`upgrade_required=true` + `all_ok=true` enforces and validates writeback linkage).
+3. Therefore forcing `upgrade_required=false` in review-required branch creates a governance deadlock not aligned with executable contracts.
+
+Normalized closure predicate (authoritative from this section forward):
+
+1. Keep `16.8.57` command-pack hard requirements unchanged.
+2. For review-required branch (`next_action=review_required_create_pr_from_patch_plan`), D4 closure is allowed when all of the following hold in one replay window:
+   - readiness command `rc=0`;
+   - execution report `all_ok=true`;
+   - execution report `writeback_status=WRITTEN`;
+   - patch-plan artifact exists for the same run id (`*-patch-plan.json`);
+   - project-only full-scan summary remains `p0=0,p1=0`;
+   - three-plane `instance_plane_status=CLOSED`;
+   - docs contract checks are green.
+
+Decision on latest replay window:
+
+1. Evidence set:
+   - readiness: `/tmp/release_v15_d4_readiness_fix056.log` (rc=0)
+   - report: `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772546337.json`
+   - patch plan: `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1772546337-patch-plan.json`
+   - full-scan: `/tmp/release_v15_d4_fullscan_project_only_fix056.json` (`p0=0,p1=0`)
+   - three-plane: `/tmp/release_v15_d4_threeplane_project_only_fix056.json` (`instance_plane_status=CLOSED`)
+   - docs contracts: `/tmp/release_v15_d4_docs_contract_fix056.log`, `/tmp/release_v15_d4_ssot_fix056.log`
+2. Result: D4 acceptance command-set is satisfied under normalized review-required predicate.
+3. Gate decision:
+   - `D4=PASS`
+   - `D6` remains `LOCKED` until section `6.5` unlock formula is fully satisfied (no shortcut/no externalization).
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

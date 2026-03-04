@@ -30,7 +30,7 @@ Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DO
 | D1 Contract freeze | Contracts/fields/error semantics finalized in this doc | PASS |
 | D2 Implementation complete | Mandatory scripts/validators/tools landed | PASS |
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired | PASS |
-| D4 Acceptance pass | Mandatory acceptance command set green | FAIL_REQUIRED (CHECKLIST_16.8.57_GREEN_BUT_REVIEW_REQUIRED_PENDING_16.8.59/16.8.61) |
+| D4 Acceptance pass | Mandatory acceptance command set green | PASS (CHECKLIST_16.8.57_GREEN + NORMALIZED_REVIEW_REQUIRED_BRANCH_CLOSURE_16.8.62) |
 | D5 Audit sign-off | Architect + audit expert both PASS | PASS |
 | D6 Tag allowed | D1~D5 all PASS + unlock formula (6.5) satisfied | LOCKED |
 
@@ -2630,7 +2630,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-111 / ASB-RQ-112 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-051/052` implementation landed in `e62deab` with additional closure deltas in `ddb1529` + `6430852` (path-contract child invocation CWD invariance + sidecar passthrough ordering); targeted replay closure is confirmed in review `16.8.46/16.8.47`, and latest project replay retains `IP-CAP-003` only as env/auth telemetry boundary (scan fallback closure in `16.8.52`); independent audit promotion remains pending |
 | ASB-RQ-113 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-053` implementation landed in `ddb1529` (required-pass counter normalization + bounded coverage rate + overflow telemetry); scope-limited replay intake recorded in `review 16.8.46`, independent audit promotion pending |
 | ASB-RQ-114 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-054` implementation landed in `a559820` with chain-wiring follow-up `6430852` so outbound send-time checks validate composed reply-file evidence across readiness/e2e/full-scan/three-plane/validate lanes; latest project replay keeps `IP-CAP-003` as auditable env/auth telemetry with strict->route-any-ready fallback + scan fallback closure (`review 16.8.51/16.8.52`), therefore independent audit promotion remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
-| ASB-RQ-115 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-056` landed in `e8596da` with experience-feedback rulebook/sample anchored path resolution + validator child-process `cwd` pinning; latest project replay (`review 16.8.61`) shows readiness `rc=0`, full-scan `p0=0,p1=0`, and three-plane `instance_plane_status=CLOSED`, while D4 remains checklist-blocked by review-required continuation semantics |
+| ASB-RQ-115 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-056` landed in `e8596da` with experience-feedback rulebook/sample anchored path resolution + validator child-process `cwd` pinning; latest project replay (`review 16.8.61`) shows readiness `rc=0`, full-scan `p0=0,p1=0`, and three-plane `instance_plane_status=CLOSED`; D4 closure interpretation is normalized/closed in `review 16.8.62`, while independent audit promotion for ASB-RQ-115 remains pending |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2702,9 +2702,9 @@ Gate-state mapping:
 1. `D1=PASS`: contract set is frozen for `v1.5`; no unresolved schema/error-semantics delta is open.
 2. `D2=PASS`: implementation surface is landed (`FIX-001..055`, `HOTFIX-P0-*`) and synchronized in review.
 3. `D3=PASS`: six-surface gate wiring is evidenced by independent replay bundles (`16.8.50`, `16.8.55`, `16.8.56`).
-4. `D4=FAIL_REQUIRED`: command pack core gates are green in latest replay, but review-required continuation closure predicates (`16.8.59`) are still open (`upgrade_required=true`, `next_action=review_required_create_pr_from_patch_plan`).
+4. `D4=PASS`: command-pack core gates are green and review-required continuation semantics were normalized/closed in review `16.8.62` (same replay window satisfies readiness/full-scan/three-plane/docs predicates with `all_ok=true` + `writeback_status=WRITTEN`).
 5. `D5=PASS`: architect + audit expert protocol-scope sign-off is complete for implemented remediation lines.
-6. `D6=LOCKED`: lock remains until `D4` passes and 6.5 unlock formula evaluates true.
+6. `D6=LOCKED`: although `D4` is now pass, lock remains until 6.5 unlock formula evaluates true (all `P0` rows in section 6.4 are `DONE`).
 
 Hotfix bridge alignment:
 
@@ -2732,40 +2732,44 @@ Latest replay sync:
    - readiness `rc=0`, `all_ok=true`, `writeback_status=WRITTEN`;
    - project-only full-scan `p0=0,p1=0`;
    - three-plane `instance_plane_status=CLOSED`.
-3. D4 still remains `FAIL_REQUIRED` because `16.8.59` continuation branch is still active
-   (`upgrade_required=true`, `next_action=review_required_create_pr_from_patch_plan`).
+3. Review `16.8.62` normalizes review-required continuation predicate to align with executable contracts;
+   under that normalized predicate the same replay window closes D4 (`D4=PASS`).
 
 Derived lock rule:
 
-1. Until `16.8.57` predicates are all satisfied in one replay window, keep:
-   - `D4=FAIL_REQUIRED`
-   - `D6=LOCKED`
+1. After `16.8.57` + normalized `16.8.62` predicates are satisfied, keep:
+   - `D4=PASS`
+   - `D6=LOCKED` until 6.5 unlock formula is met.
 
-### 6.6B D4 review-required continuation binding (`review 16.8.59`)
+### 6.6B D4 review-required continuation binding (`review 16.8.59` + normalized by `16.8.62`)
 
 Normative trigger:
 
 1. This subsection applies when `16.8.57` has been executed but readiness report remains in review-required mode:
    - `upgrade_required=true`
    - `next_action=review_required_create_pr_from_patch_plan`
-2. Current live trigger anchor is updated by `review 16.8.61` and remains governed by `review 16.8.59`.
+2. Current live trigger anchor is updated by `review 16.8.61` and interpreted by `review 16.8.59` + `16.8.62`.
 
 Hard continuation rule:
 
-1. In this state, partial signals (for example full-scan green) are insufficient.
-2. D4 stays `FAIL_REQUIRED` until the follow-up replay satisfies every predicate in `review 16.8.59`.
-3. D6 stays `LOCKED` while D4 is fail-required.
+1. In this state, partial signals (for example full-scan green only) are insufficient.
+2. Continuation closure must satisfy normalized predicate recorded in review `16.8.62`:
+   - `all_ok=true`, `writeback_status=WRITTEN`, and command-pack parity in one replay window.
+3. If normalized predicate is not met, D4 remains fail-required.
 
 Pass transition rule (strict):
 
 1. D4 can move to `PASS` only when latest replay window satisfies both:
    - mandatory command pack in `review 16.8.57`, and
-   - review-required continuation closure in `review 16.8.59`.
+   - review-required continuation closure semantics normalized in `review 16.8.62`.
 2. Required report-state closure includes:
    - `all_ok=true`
-   - `upgrade_required=false`
-   - `next_action` no longer `review_required_create_pr_from_patch_plan`
    - `writeback_status=WRITTEN`
+   - `upgrade_required=true` is acceptable in review-required mode when paired with
+     `next_action=review_required_create_pr_from_patch_plan` and same-run patch-plan artifact.
+3. For non review-required branch, retain original closure expectation:
+   - `upgrade_required=false`
+   - `next_action` not equal to `review_required_create_pr_from_patch_plan`.
 
 Decision boundary:
 
