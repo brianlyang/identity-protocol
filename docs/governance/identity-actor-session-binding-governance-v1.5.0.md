@@ -2026,6 +2026,40 @@ Mandatory semantics:
 3. Suggested failure classes:
    - `IP-EXP-FB-001`: required experience rulebook path cannot be resolved under anchored roots.
    - `IP-EXP-FB-002`: sample/self-test artifact resolution remains caller-CWD dependent.
+
+#### 5.8.41 `activation_switch_intent_guard_contract_v1` (P0, FIX-058)
+
+Goal:
+
+1. Eliminate execution-time identity hard-switch during diagnostics/maintenance operations.
+2. Make cross-identity activation a deliberate, auditable action instead of an implicit side effect.
+
+Mandatory semantics:
+
+1. Activation pre-mutation guard must compare:
+   - current actor-bound identity (`assistant` actor binding store),
+   - requested activation target identity.
+2. If identities differ, activation is blocked by default unless both are provided:
+   - `--allow-identity-switch`
+   - `--switch-intent-receipt <json>`
+3. `switch-intent-receipt` must include and match:
+   - `receipt_id`
+   - `actor_id`
+   - `from_identity_id`
+   - `to_identity_id`
+   - `approved_by`
+   - `approved_at`
+   - `reason`
+4. Cross-identity activation without valid receipt is fail-closed:
+   - `IP-ACT-SWITCH-001`: explicit switch intent missing.
+   - `IP-ACT-SWITCH-002`: receipt missing/invalid/mismatched.
+5. No-op reaffirmation (target identity equals current actor-bound identity) remains allowed without switch-intent receipt.
+6. Activation switch reports must include:
+   - `identity_switch_detected`
+   - `identity_switch_from`
+   - `identity_switch_to`
+   - `switch_intent_override.receipt_path`
+   - `switch_intent_override.receipt_fields`
 4. Replay evidence for closure must include dual-CWD equivalence:
    - repo-root replay PASS;
    - `/tmp` (or non-repo CWD) replay PASS.
@@ -2578,6 +2612,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-113 | required-contract coverage KPI must be mathematically normalized (`required_passed<=required_total`, coverage in `[0,100]`) and aligned with required_effective partition semantics | `validate_required_contract_coverage.py` classification/counter normalization + overflow telemetry | P1 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-053` (`ddb1529`) with optional-pass counter normalization + bounded coverage rate/overflow telemetry; independent closure audit pending (`review 16.8.46`) |
 | ASB-RQ-114 | outbound governed reply path must compose first-line identity stamp and execute send-time preflight on exact payload before emission (operator-side missing-headstamp recurrence is fail-closed) | `scripts/compose_and_validate_governed_reply.py` + `validate_send_time_reply_gate.py` (`operation=send-time`) + first-line validator telemetry | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-054` (`a559820`, `6430852`) with compose adapter + required chain wiring (`identity_creator`, `release_readiness`, `e2e`, `full_scan`, `three_plane`) so send-time gates consume composed reply-file payloads; latest project replay keeps `IP-CAP-003` auditable via strict->route-any-ready fallback trace and scan fallback telemetry (`review 16.8.51/16.8.52`), therefore independent closure audit remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
 | ASB-RQ-115 | D4 acceptance chain must be CWD-invariant for experience-feedback contract enforcement: rulebook/sample paths and validator child invocation must resolve deterministically under both repo-root and non-repo caller CWD | `validate_identity_experience_feedback.py` anchored path resolver + `execute_identity_upgrade.py` explicit child-`cwd` execution + check-log CWD telemetry | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-056` (`e8596da`) with pack-root/protocol-root path anchoring + `cwd=protocol_root` validator execution; dual-CWD replay evidence is recorded in review `16.8.61`, independent audit promotion pending |
+| ASB-RQ-116 | activation lane must fail-closed on cross-identity actor switch unless explicit switch-intent receipt is supplied (`actor_id + from_identity_id + to_identity_id` tuple bound), preventing execution-time hidden identity mutation | `identity_creator.py activate` switch-intent pre-mutation guard + actor binding resolver + switch report telemetry fields | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed in `FIX-058` (this round) with `IP-ACT-SWITCH-001/002` fail-closed paths and explicit `--allow-identity-switch --switch-intent-receipt` contract; replay evidence is recorded in review `16.8.67`, independent audit promotion pending |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2631,6 +2666,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-113 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P1)` | `FIX-053` implementation landed in `ddb1529` (required-pass counter normalization + bounded coverage rate + overflow telemetry); scope-limited replay intake recorded in `review 16.8.46`, independent audit promotion pending |
 | ASB-RQ-114 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-054` implementation landed in `a559820` with chain-wiring follow-up `6430852` so outbound send-time checks validate composed reply-file evidence across readiness/e2e/full-scan/three-plane/validate lanes; latest project replay keeps `IP-CAP-003` as auditable env/auth telemetry with strict->route-any-ready fallback + scan fallback closure (`review 16.8.51/16.8.52`), therefore independent audit promotion remains pending (`review 16.8.45/16.8.47/16.8.51/16.8.52`) |
 | ASB-RQ-115 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-056` landed in `e8596da` with experience-feedback rulebook/sample anchored path resolution + validator child-process `cwd` pinning; latest project replay (`review 16.8.61`) shows readiness `rc=0`, full-scan `p0=0,p1=0`, and three-plane `instance_plane_status=CLOSED`; D4 closure interpretation is normalized/closed in `review 16.8.62`, while independent audit promotion for ASB-RQ-115 remains pending |
+| ASB-RQ-116 | `NEW -> IMPL_READY (BLOCKED_BY_AUDIT, P0)` | `FIX-058` landed (this round) with activation switch-intent pre-mutation guard: cross-identity activate now fails by default (`IP-ACT-SWITCH-001`) and invalid receipt fails (`IP-ACT-SWITCH-002`); replay evidence is recorded in `review 16.8.67`, independent audit promotion pending |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2929,6 +2965,38 @@ Decision boundary:
 
 1. This subsection is a governance bridge for `FIX-057` implementation replay intake and prevents ambiguous RCA in future P0 switchback recurrences.
 2. It does not alter current D-gate formula inputs by itself; release promotion still requires independent auditor countersign in review/governance status rows.
+
+### 6.6G Execution-time identity-switch kill switch (`review 16.8.67`, P0)
+
+Normative risk:
+
+1. Troubleshooting commands can mutate actor-bound identity mid-session when `activate` is invoked against a different target identity.
+2. Without explicit switch-intent contract, the mutation may be technically auditable but operationally perceived as hidden hard-switch.
+
+Binding rule:
+
+1. Cross-identity activation is non-executable by default:
+   - fail-closed unless `--allow-identity-switch --switch-intent-receipt <json>` are both supplied.
+2. Switch-intent receipt must bind the tuple:
+   - `actor_id`, `from_identity_id`, `to_identity_id`.
+3. No-op reaffirmation (`from == to`) remains executable without switch-intent receipt.
+4. Activation report must expose switch-intent telemetry for forensic replay:
+   - `identity_switch_detected`
+   - `identity_switch_from`
+   - `identity_switch_to`
+   - `switch_intent_override.receipt_path/receipt_fields`
+
+Verification anchors (this round):
+
+1. no-allow negative: `/tmp/p0_fix058_negative_no_allow.log` (`IP-ACT-SWITCH-001`)
+2. invalid-receipt negative: `/tmp/p0_fix058_negative_bad_receipt.log` (`IP-ACT-SWITCH-002`)
+3. same-identity positive: `/tmp/p0_fix058_positive_same_identity.log`
+4. post-negative state unchanged: `/tmp/p0_fix058_state_after_negatives.json`
+
+Decision boundary:
+
+1. This is a hard execution safeguard, not a narrative reminder.
+2. Any future "identity changed during command execution" claim must replay against these four anchors first.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

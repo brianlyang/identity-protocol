@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from actor_session_common import list_actor_bindings, load_actor_binding_store, resolve_actor_id
+from actor_session_common import list_actor_bindings, load_actor_binding, load_actor_binding_store, resolve_actor_id
 from resolve_identity_context import (
     collect_protocol_evidence,
     default_identity_home,
@@ -285,6 +285,43 @@ def _load_cross_actor_receipt(path_raw: str) -> tuple[dict, list[str], str]:
     return data, missing, str(p)
 
 
+def _load_switch_intent_receipt(
+    path_raw: str,
+    *,
+    actor_id: str,
+    from_identity_id: str,
+    to_identity_id: str,
+) -> tuple[dict, list[str], str]:
+    if not str(path_raw or "").strip():
+        return {}, ["switch_intent_receipt_missing"], ""
+    p = Path(path_raw).expanduser().resolve()
+    if not p.exists():
+        return {}, ["switch_intent_receipt_not_found"], str(p)
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}, ["switch_intent_receipt_invalid_json"], str(p)
+    if not isinstance(data, dict):
+        return {}, ["switch_intent_receipt_payload_not_object"], str(p)
+
+    required = ("receipt_id", "actor_id", "from_identity_id", "to_identity_id", "approved_by", "approved_at", "reason")
+    missing = [f"switch_intent_receipt_missing_field:{k}" for k in required if not str(data.get(k, "")).strip()]
+    if missing:
+        return data, missing, str(p)
+
+    errors: list[str] = []
+    actor_receipt = str(data.get("actor_id", "")).strip()
+    from_receipt = str(data.get("from_identity_id", "")).strip()
+    to_receipt = str(data.get("to_identity_id", "")).strip()
+    if actor_receipt != actor_id:
+        errors.append("switch_intent_receipt_actor_mismatch")
+    if from_receipt != from_identity_id:
+        errors.append("switch_intent_receipt_from_identity_mismatch")
+    if to_receipt != to_identity_id:
+        errors.append("switch_intent_receipt_to_identity_mismatch")
+    return data, errors, str(p)
+
+
 def _cross_actor_conflicts(catalog_path: Path, active_identities: list[str], actor_id: str) -> list[dict]:
     out: list[dict] = []
     active_set = {x for x in active_identities if x}
@@ -319,6 +356,8 @@ def _activate_identity(
     actor_id: str = "",
     run_id: str = "",
     switch_reason: str = "",
+    allow_identity_switch: bool = False,
+    switch_intent_receipt: str = "",
     allow_cross_actor_switch: bool = False,
     cross_actor_receipt: str = "",
 ) -> int:
@@ -331,6 +370,34 @@ def _activate_identity(
     actor_id_resolved = resolve_actor_id(actor_id)
     run_id_resolved = str(run_id or "").strip() or f"activate-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
     switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
+    actor_binding = load_actor_binding(local_catalog, actor_id_resolved)
+    current_actor_identity = str(actor_binding.get("identity_id", "")).strip()
+    switch_intent_payload: dict = {}
+    switch_intent_receipt_path = ""
+    switch_intent_receipt_errors: list[str] = []
+    identity_switch_detected = bool(current_actor_identity and current_actor_identity != identity_id)
+    if identity_switch_detected:
+        if not allow_identity_switch:
+            print(
+                "[FAIL] activation would switch actor-bound identity without explicit switch intent "
+                f"(error_code=IP-ACT-SWITCH-001, actor_id={actor_id_resolved}, current_identity={current_actor_identity}, "
+                f"target_identity={identity_id})."
+            )
+            print("[HINT] re-run with --allow-identity-switch --switch-intent-receipt <path.json>")
+            return 1
+        switch_intent_payload, switch_intent_receipt_errors, switch_intent_receipt_path = _load_switch_intent_receipt(
+            switch_intent_receipt,
+            actor_id=actor_id_resolved,
+            from_identity_id=current_actor_identity,
+            to_identity_id=identity_id,
+        )
+        if switch_intent_receipt_errors:
+            print(
+                "[FAIL] invalid switch-intent receipt for identity switch "
+                f"(error_code=IP-ACT-SWITCH-002, receipt={switch_intent_receipt_path or switch_intent_receipt}, "
+                f"errors={switch_intent_receipt_errors})"
+            )
+            return 1
 
     rc = _run(["python3", "scripts/validate_identity_role_binding.py", "--catalog", str(local_catalog), "--identity-id", identity_id])
     if rc != 0:
@@ -412,6 +479,14 @@ def _activate_identity(
             "run_id": run_id_resolved,
             "entrypoint_pid": str(os.getpid()),
             "switch_reason": switch_reason_resolved,
+            "identity_switch_detected": identity_switch_detected,
+            "identity_switch_from": current_actor_identity,
+            "identity_switch_to": identity_id,
+            "switch_intent_override": {
+                "applied": bool(identity_switch_detected),
+                "receipt_path": switch_intent_receipt_path,
+                "receipt_fields": switch_intent_payload if switch_intent_payload else {},
+            },
             "cross_actor_demotion_detected": bool(cross_actor_conflicts),
             "cross_actor_conflicts": cross_actor_conflicts,
             "cross_actor_override": {
@@ -967,6 +1042,20 @@ def main() -> int:
     p_activate.add_argument("--actor-id", default="", help="actor id for actor-scoped session binding")
     p_activate.add_argument("--run-id", default="", help="activation run id for audit traceability")
     p_activate.add_argument("--switch-reason", default="explicit_activate", help="reason for activation switch")
+    p_activate.add_argument(
+        "--allow-identity-switch",
+        action="store_true",
+        help=(
+            "explicitly allow switching actor-bound identity; required when current actor binding points to a different identity"
+        ),
+    )
+    p_activate.add_argument(
+        "--switch-intent-receipt",
+        default="",
+        help=(
+            "JSON receipt path required with --allow-identity-switch; must bind actor_id/from_identity_id/to_identity_id"
+        ),
+    )
     p_activate.add_argument(
         "--allow-cross-actor-switch",
         action="store_true",
@@ -1933,6 +2022,8 @@ def main() -> int:
             args.actor_id,
             args.run_id,
             args.switch_reason,
+            bool(args.allow_identity_switch),
+            args.switch_intent_receipt,
             bool(args.allow_cross_actor_switch),
             args.cross_actor_receipt,
         )

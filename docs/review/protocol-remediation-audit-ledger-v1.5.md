@@ -170,6 +170,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
 | FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PENDING_REAUDIT |
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PENDING_REAUDIT |
+| FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `TBD (this batch)` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -5739,6 +5740,48 @@ Boundary decision:
 1. This is a protocol-layer implementation closure for the activation switchback regression path, not a docs-only narrative fix.
 2. Governance/release promotion remains fail-closed until independent auditor countersign updates this row from `PENDING_REAUDIT`.
 3. This closure does not alter unrelated pending batches in `FIX-029..032`, `FIX-034..036`, and `FIX-056`.
+
+#### 16.8.67 P0 closure patch: execution-time identity hard-switch prevention (`FIX-058`, 2026-03-04, protocol+governance bridge)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` (implementation landed and replayed; independent re-audit pending).
+
+Problem statement:
+
+1. During troubleshooting, executing `identity_creator.py activate` could silently mutate `assistant:codex` actor-bound identity and cause mid-session header identity drift.
+2. Existing activation flow lacked a mandatory "switch intent" gate when target identity differed from current actor binding.
+3. This is a P0 execution-plane risk because audit continuity can be broken by operator-side mutation during diagnostics.
+
+Implementation landed:
+
+1. `scripts/identity_creator.py` adds a strict switch-intent guard for cross-identity activation.
+2. New activate flags:
+   - `--allow-identity-switch`
+   - `--switch-intent-receipt <path.json>`
+3. New fail-closed error paths:
+   - `IP-ACT-SWITCH-001`: cross-identity activation attempted without explicit allow + switch intent.
+   - `IP-ACT-SWITCH-002`: switch-intent receipt missing/invalid/mismatched actor/from/to tuple.
+4. Switch report now records switch-intent telemetry fields:
+   - `identity_switch_detected`
+   - `identity_switch_from`
+   - `identity_switch_to`
+   - `switch_intent_override.receipt_path/receipt_fields`
+
+Replay evidence (this round):
+
+1. negative (no allow flag): `/tmp/p0_fix058_negative_no_allow.log`
+   - expected: fail-closed with `IP-ACT-SWITCH-001`.
+2. negative (allow but invalid receipt): `/tmp/p0_fix058_negative_bad_receipt.log`
+   - expected: fail-closed with `IP-ACT-SWITCH-002`.
+3. positive (same identity, no switch): `/tmp/p0_fix058_positive_same_identity.log`
+   - expected: activation pass (guard does not block no-op identity reaffirm).
+4. post-negative state integrity: `/tmp/p0_fix058_state_after_negatives.json`
+   - expected: canonical + actor identity remain unchanged (`base-repo-architect`).
+
+Decision boundary:
+
+1. This patch targets the exact P0 root cause ("identity switched during execution") with a mandatory pre-mutation gate.
+2. Any cross-identity activation without explicit switch-intent receipt is now non-executable by default.
+3. Independent audit promotion is still required before status can move from `PENDING_REAUDIT` to `PASS`.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
