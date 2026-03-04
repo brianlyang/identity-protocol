@@ -216,8 +216,9 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_resolution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --out-dir /tmp/identity-health-reports --enforce-pass
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir /tmp/identity-health-reports --enforce-pass
   python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --require-pass
+  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --operation e2e --json-only
 done
 
 echo "[7/30] compile runtime brief (for each target identity)"
@@ -244,8 +245,9 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[10.8/32][$ID] collect + validate health report"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --out-dir /tmp/identity-health-reports --enforce-pass
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir /tmp/identity-health-reports --enforce-pass
   python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --require-pass
+  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --operation e2e --json-only
 
   echo "[11/30][$ID] validate runtime ORRLC contract"
   python3 scripts/validate_identity_runtime_contract.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -553,6 +555,25 @@ PY
     --repo-catalog identity/catalog/identities.yaml \
     --report "$UPGRADE_REPORT" \
     --operation e2e
+
+  echo "[26.305/30][$ID] collect actor-risk health profile with bound execution report"
+  python3 scripts/collect_identity_health_report.py \
+    --identity-id "$ID" \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --operation e2e \
+    --execution-report "$UPGRADE_REPORT" \
+    --out-dir /tmp/identity-health-reports \
+    --enforce-pass
+
+  echo "[26.31/30][$ID] validate actor-risk health profile coverage/binding"
+  python3 scripts/validate_identity_actor_health_profile.py \
+    --identity-id "$ID" \
+    --report-dir /tmp/identity-health-reports \
+    --execution-report "$UPGRADE_REPORT" \
+    --operation e2e \
+    --enforce-bound-report \
+    --json-only
 
   echo "[26.32/30][$ID] validate protocol-feedback canonical reply channel gate (FIX-029)"
   python3 scripts/validate_protocol_feedback_reply_channel.py \

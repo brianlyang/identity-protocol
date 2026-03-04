@@ -630,6 +630,9 @@ def _heal_identity(
         "catalog": str(local_catalog),
         "repo_catalog": str(repo_catalog),
         "apply_fix": apply_fix,
+        "health_report_ref": "",
+        "heal_report_ref": str((Path(out_dir).expanduser().resolve() / f"{report_id}.json")),
+        "post_validate_ref": "",
         "steps": [],
     }
 
@@ -646,11 +649,46 @@ def _heal_identity(
         )
         return rc
 
+    def _extract_report_ref(text: str) -> str:
+        for line in str(text or "").splitlines():
+            line = line.strip()
+            if not line.startswith("report="):
+                continue
+            raw = line.split("=", 1)[1].strip()
+            if not raw:
+                continue
+            try:
+                return str(Path(raw).expanduser().resolve())
+            except Exception:
+                return raw
+        return ""
+
     base_opts = ["--identity-id", identity_id, "--catalog", str(local_catalog), "--repo-catalog", str(repo_catalog)]
     if scope:
         base_opts += ["--scope", scope]
     if canonical_root:
         base_opts += ["--canonical-root", canonical_root]
+
+    detect_cmd = [
+        "python3",
+        "scripts/collect_identity_health_report.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        str(local_catalog),
+        "--repo-catalog",
+        str(repo_catalog),
+        "--operation",
+        "scan",
+        "--out-dir",
+        out_dir,
+    ]
+    if scope:
+        detect_cmd.extend(["--scope", scope])
+    rc_detect = _step("health_detect", detect_cmd)
+    if rc_detect == 0:
+        detect_step = report["steps"][-1]
+        report["health_report_ref"] = _extract_report_ref(str(detect_step.get("stdout", "")))
 
     rc = _step("scan", ["python3", "scripts/identity_installer.py", "scan", *base_opts])
     if rc != 0:
@@ -853,17 +891,57 @@ def _heal_identity(
             if rc_arb == 0:
                 rc = _step("revalidate_after_arbitration_repair", validate_cmd)
 
+    post_health_cmd = [
+        "python3",
+        "scripts/collect_identity_health_report.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        str(local_catalog),
+        "--repo-catalog",
+        str(repo_catalog),
+        "--operation",
+        "validate",
+        "--out-dir",
+        out_dir,
+    ]
+    if scope:
+        post_health_cmd.extend(["--scope", scope])
+    rc_post_health = _step("health_post_validate_recheck", post_health_cmd)
+    if rc_post_health == 0:
+        post_step = report["steps"][-1]
+        report["post_validate_ref"] = _extract_report_ref(str(post_step.get("stdout", "")))
+
+    heal_report_path = _write_heal_report(report, out_dir, announce=False)
+    report["heal_report_ref"] = str(heal_report_path)
+    rc_heal_closure = _step(
+        "validate_heal_replay_closure",
+        [
+            "python3",
+            "scripts/validate_identity_heal_replay_closure.py",
+            "--identity-id",
+            identity_id,
+            "--heal-report",
+            str(heal_report_path),
+            "--json-only",
+        ],
+    )
+    if rc == 0 and rc_heal_closure != 0:
+        rc = rc_heal_closure
+
     report["result"] = "PASS" if rc == 0 else "FAIL_VALIDATE"
-    _write_heal_report(report, out_dir)
+    _write_heal_report(report, out_dir, announce=True)
     return rc
 
 
-def _write_heal_report(report: dict, out_dir: str) -> None:
+def _write_heal_report(report: dict, out_dir: str, announce: bool = True) -> Path:
     p = Path(out_dir).expanduser().resolve()
     p.mkdir(parents=True, exist_ok=True)
     out = p / f"{report['report_id']}.json"
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"[INFO] heal report: {out}")
+    if announce:
+        print(f"[INFO] heal report: {out}")
+    return out
 
 
 def _cleanup_duplicate_instance_dirs(identity_id: str, canonical_pack_path: str) -> tuple[list[str], list[str]]:

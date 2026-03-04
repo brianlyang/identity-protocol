@@ -465,26 +465,6 @@ def main() -> int:
             "--baseline-policy",
             args.baseline_policy,
         ],
-        [
-            "python3",
-            "scripts/collect_identity_health_report.py",
-            "--identity-id",
-            identity_id,
-            "--catalog",
-            catalog,
-            "--out-dir",
-            "/tmp/identity-health-reports",
-            "--enforce-pass",
-        ],
-        [
-            "python3",
-            "scripts/validate_identity_health_contract.py",
-            "--identity-id",
-            identity_id,
-            "--report-dir",
-            "/tmp/identity-health-reports",
-            "--require-pass",
-        ],
         ["python3", "scripts/validate_audit_snapshot_index.py"],
         ["python3", "scripts/validate_protocol_ssot_source.py"],
         [
@@ -1181,6 +1161,54 @@ def main() -> int:
             "readiness",
         ]
     )
+    seq.append(
+        [
+            "python3",
+            "scripts/collect_identity_health_report.py",
+            "--identity-id",
+            identity_id,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--operation",
+            "readiness",
+            "--execution-report",
+            execution_report,
+            "--out-dir",
+            "/tmp/identity-health-reports",
+            "--enforce-pass",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_health_contract.py",
+            "--identity-id",
+            identity_id,
+            "--report-dir",
+            "/tmp/identity-health-reports",
+            "--require-pass",
+        ]
+    )
+    seq.append(
+        [
+            "python3",
+            "scripts/validate_identity_actor_health_profile.py",
+            "--identity-id",
+            identity_id,
+            "--report-dir",
+            "/tmp/identity-health-reports",
+            "--execution-report",
+            execution_report,
+            "--operation",
+            "readiness",
+            "--enforce-bound-report",
+            "--json-only",
+        ]
+    )
+    if scope:
+        seq[-3].extend(["--scope", scope])
     seq.append(
         [
             "python3",
