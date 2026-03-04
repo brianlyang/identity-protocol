@@ -9,6 +9,17 @@
   - made upgrade report lookup shellcheck/actionlint compliant by replacing
     `ls`-based selection with `find + sort` and explicit empty-result fail-closed
     guard in the required runtime gates loop
+  - fixed fixture/runtime evidence path resolution regressions in
+    `scripts/validate_identity_runtime_contract.py`:
+    - runtime evidence pattern lookup now supports pack-local first with
+      repository-relative fallback for `identity/runtime/**` patterns
+    - rulebook path resolution now supports repository-relative paths (for
+      fixture identities) and pack-relative fallback (for runtime packs)
+  - fixed scope arbitration for mixed SYSTEM/USER catalogs in prompt quality gate:
+    - `scripts/validate_identity_prompt_quality.py` now accepts `--scope AUTO`
+      (or empty) to infer scope from resolver context
+    - required-gates workflow now calls prompt quality validator with
+      `--scope AUTO` instead of forcing `--scope USER`
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

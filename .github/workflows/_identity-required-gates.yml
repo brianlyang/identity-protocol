@@ -159,7 +159,7 @@ jobs:
           CATALOG_PARENT="$(dirname "$(realpath identity/catalog/identities.yaml)")"
           for ID in $IDS; do
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
-            python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --scope USER
+            python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --scope AUTO
             python3 scripts/validate_identity_role_binding.py --identity-id "$ID"
             python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --identity-home "$CATALOG_PARENT"
             python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci

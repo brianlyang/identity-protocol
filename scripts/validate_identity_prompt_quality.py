@@ -43,14 +43,18 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", required=True, help="local runtime catalog path")
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
-    ap.add_argument("--scope", default="USER")
+    ap.add_argument("--scope", default="", help="optional explicit scope (USER|SYSTEM|...); use AUTO/empty to infer")
     args = ap.parse_args()
+
+    preferred_scope = str(args.scope or "").strip()
+    if preferred_scope.upper() == "AUTO":
+        preferred_scope = ""
 
     ctx = resolve_identity(
         args.identity_id,
         Path(args.repo_catalog).expanduser().resolve(),
         Path(args.catalog).expanduser().resolve(),
-        preferred_scope=args.scope,
+        preferred_scope=preferred_scope,
         allow_conflict=True,
     )
     pack = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve()

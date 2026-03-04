@@ -159,31 +159,50 @@ def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
     return Path(pack_path).expanduser().resolve()
 
 
-def _resolve_runtime_pattern(pattern: str, pack_root: Path | None, identity_id: str) -> str:
+def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_id: str) -> list[str]:
     if not pattern:
-        return pattern
+        return [pattern]
+    candidates: list[str] = [pattern]
     if pack_root is None:
-        return pattern
+        return candidates
     local_prefix = f"identity/runtime/local/{identity_id}/"
+    mapped = ""
     if pattern.startswith(local_prefix):
-        return str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
-    if pattern.startswith("identity/runtime/"):
-        return str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
-    return pattern
+        mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    elif pattern.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    if mapped and mapped not in candidates:
+        # pack-local runtime first, then fallback to repository-relative runtime pattern
+        candidates.insert(0, mapped)
+    return candidates
 
 
 def _latest_evidence(pattern: str, identity_id: str, *, pack_root: Path | None = None) -> Path | None:
-    pattern = _resolve_runtime_pattern(pattern, pack_root, identity_id)
-    if Path(pattern).is_absolute():
-        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
-    else:
-        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
-    if not files:
-        return None
-    scoped = [p for p in files if identity_id in p.name]
-    if scoped:
-        return sorted(scoped, key=lambda p: p.stat().st_mtime)[-1]
-    return files[-1]
+    for candidate in _runtime_pattern_candidates(pattern, pack_root, identity_id):
+        if Path(candidate).is_absolute():
+            files = sorted((Path(p) for p in glob.glob(candidate)), key=lambda p: p.stat().st_mtime)
+        else:
+            files = sorted(Path(".").glob(candidate), key=lambda p: p.stat().st_mtime)
+        if not files:
+            continue
+        scoped = [p for p in files if identity_id in p.name]
+        if scoped:
+            return sorted(scoped, key=lambda p: p.stat().st_mtime)[-1]
+        return files[-1]
+    return None
+
+
+def _resolve_rulebook_path(raw: str, *, task_path: Path) -> Path:
+    path = Path(raw).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    repo_relative = path.resolve()
+    task_relative = (task_path.parent / path).resolve()
+    if repo_relative.exists():
+        return repo_relative
+    if task_relative.exists():
+        return task_relative
+    return task_relative
 
 
 def _validate_protocol_review_contract(
@@ -351,11 +370,7 @@ def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: P
         print("[FAIL] rulebook_contract.rulebook_path missing or empty")
         rc = 1
     else:
-        rulebook_path = Path(rulebook_raw).expanduser()
-        if not rulebook_path.is_absolute():
-            rulebook_path = (task_path.parent / rulebook_path).resolve()
-        else:
-            rulebook_path = rulebook_path.resolve()
+        rulebook_path = _resolve_rulebook_path(rulebook_raw, task_path=task_path)
     if rulebook_raw and not rulebook_path.exists():
         print(f"[FAIL] rulebook_contract.rulebook_path missing or not found: {rulebook_raw}")
         rc = 1

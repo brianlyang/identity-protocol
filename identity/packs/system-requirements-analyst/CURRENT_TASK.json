@@ -429,7 +429,13 @@
       "requires_human_collab",
       "next_action"
     ],
-    "fail_action": "block_merge_and_reenter_collaboration_update"
+    "fail_action": "block_merge_and_reenter_collaboration_update",
+    "legacy_alias_bridge": {
+      "stakeholder_confirmation_required": "manual_verification_required",
+      "source_document_access_required": "manual_verification_required",
+      "requirement_conflict_unresolved": "manual_verification_required",
+      "compliance_decision_required": "manual_verification_required"
+    }
   },
   "collaboration_trigger_contract": {
     "required": true,

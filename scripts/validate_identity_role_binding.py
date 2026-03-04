@@ -72,30 +72,38 @@ def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
     return Path(pack_path).expanduser().resolve()
 
 
-def _resolve_runtime_pattern(pattern: str, pack_root: Path | None, identity_id: str) -> str:
+def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_id: str) -> list[str]:
     if not pattern:
-        return pattern
+        return [pattern]
+    candidates: list[str] = [pattern]
+    if pack_root is None:
+        return candidates
     local_prefix = f"identity/runtime/local/{identity_id}/"
-    if pattern.startswith(local_prefix) and pack_root is not None:
-        return str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
-    if pattern.startswith("identity/runtime/") and pack_root is not None:
-        return str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
-    return pattern
+    mapped = ""
+    if pattern.startswith(local_prefix):
+        mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    elif pattern.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    if mapped and mapped not in candidates:
+        candidates.insert(0, mapped)
+    return candidates
 
 
 def _resolve_latest_evidence(pattern: str, identity_id: str, explicit: str, pack_root: Path | None) -> Path | None:
     if explicit:
         p = Path(explicit)
         return p if p.exists() else None
-    pattern = _resolve_runtime_pattern(pattern, pack_root, identity_id).replace("<identity-id>", identity_id)
-    if Path(pattern).is_absolute():
-        files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
-    else:
-        files = sorted(Path(".").glob(pattern), key=lambda p: p.stat().st_mtime)
-    if not files:
-        return None
-    scoped = [p for p in files if identity_id in p.name]
-    return (sorted(scoped, key=lambda p: p.stat().st_mtime)[-1] if scoped else files[-1])
+    for candidate in _runtime_pattern_candidates(pattern, pack_root, identity_id):
+        candidate = candidate.replace("<identity-id>", identity_id)
+        if Path(candidate).is_absolute():
+            files = sorted((Path(p) for p in glob.glob(candidate)), key=lambda p: p.stat().st_mtime)
+        else:
+            files = sorted(Path(".").glob(candidate), key=lambda p: p.stat().st_mtime)
+        if not files:
+            continue
+        scoped = [p for p in files if identity_id in p.name]
+        return sorted(scoped, key=lambda p: p.stat().st_mtime)[-1] if scoped else files[-1]
+    return None
 
 
 def _parse_utc(ts: str) -> datetime | None:
