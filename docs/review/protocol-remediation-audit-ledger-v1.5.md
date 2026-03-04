@@ -173,7 +173,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
-| FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421` | DONE | PASS |
+| FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421 / 5b54cee` | DONE | PASS |
 
 ---
 
@@ -4194,6 +4194,7 @@ Recurrence replay conclusion:
 Implementation anchor:
 
 1. `119a421` — `fix(protocol): harden actor-bound headstamp coherence in governed outlet`
+2. `5b54cee` — `fix(protocol): enforce actor-current binding in governed reply preflight`
 
 Patch scope:
 
@@ -4206,6 +4207,8 @@ Patch scope:
 3. `scripts/validate_send_time_reply_gate.py`
    - strict send-time now rejects inline `reply_text` evidence (`IP-ASB-STAMP-SESSION-002`, stale reason `strict_send_time_inline_reply_text_forbidden`);
    - propagate runtime-binding mismatch code path as outlet-bypass telemetry.
+4. `scripts/compose_and_validate_governed_reply.py` follow-up closure:
+   - actor-current binding guard now applies to effective actor context (`resolve_actor_id`) instead of explicit-only actor flag.
 
 Self-replay evidence:
 
