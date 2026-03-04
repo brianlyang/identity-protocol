@@ -169,6 +169,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-054 | 2026-03-03 | protocol | outbound reply header recurrence guard (`ASB-RQ-114`; compose+validate first-line Identity-Context before emission to eliminate operator-side missing-headstamp slips) | `a559820 / 6430852` | DONE | PASS |
 | FIX-055 | 2026-03-03 | protocol | `IP-CAP-003` env/auth boundary closure (`strict update/readiness fallback + scan preflight auto-fallback`) | `9c4530d / ed64ea6 / f5363e5` | DONE | PASS |
 | FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PENDING_REAUDIT |
+| FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `2808ccf` | DONE | PENDING_REAUDIT |
 
 ---
 
@@ -5678,6 +5679,53 @@ Decision boundary:
 
 1. This closes the reverify for runtime env drift in this workspace (project mode now deterministic via one command).
 2. Release governance implication: keep send-time first-line gate mandatory (`FIX-049/054`) and keep pre-send compose+validate path as authoritative; free-form emission without preflight remains non-governed.
+
+#### 16.8.66 P0 reverify: activation switchback closure (`base-repo-audit-expert-v3`, 2026-03-04, protocol+runtime evidence bridge)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)` (implementation + local replay passed; independent auditor promotion pending).
+
+Issue statement (no ambiguity):
+
+1. The observed “identity did not switch back” path was reproducible in activation lane even after stamp validators were healthy.
+2. Root cause was activation rollback triggered by runtime-bootstrap live revalidation when evidence patterns remained unresolved under `identity/runtime/local/...` in project runtime packs.
+3. Symptom was deterministic:
+   - role-binding gate entered live revalidate,
+   - protocol baseline evidence lookup failed by unresolved pattern string,
+   - activation aborted before stable session-pointer convergence.
+
+Code-level remediation landed (this batch):
+
+1. `scripts/validate_identity_runtime_contract.py` now resolves runtime evidence patterns against pack-root:
+   - `_resolve_pack_root(...)`: `scripts/validate_identity_runtime_contract.py:155`
+   - `_resolve_runtime_pattern(...)`: `scripts/validate_identity_runtime_contract.py:162`
+   - pack-root aware evidence lookup: `scripts/validate_identity_runtime_contract.py:175`
+2. Protocol-review evidence lookup now consumes pack-root context:
+   - `_validate_protocol_review_contract(..., pack_root=...)`: `scripts/validate_identity_runtime_contract.py:189`
+   - invocation binding in single-identity validator: `scripts/validate_identity_runtime_contract.py:320`
+3. Role-binding evidence lookup now consumes same pack-root context:
+   - role-binding pattern lookup path: `scripts/validate_identity_runtime_contract.py:504`
+4. Main entry now passes pack-root from catalog identity row and override current-task path:
+   - override path mode: `scripts/validate_identity_runtime_contract.py:569`
+   - catalog-target mode: `scripts/validate_identity_runtime_contract.py:592`
+
+Replay evidence (captured this round):
+
+1. Activation re-run completed and switched canonical pointer to expected identity:
+   - `/tmp/p0_fix057_activate_after.log`
+2. Runtime contract live revalidation now passes for the project pack:
+   - `/tmp/p0_fix057_runtime_contract_after.log`
+3. Role-binding validator passes and keeps live revalidate green:
+   - `/tmp/p0_fix057_role_binding_after.log`
+4. Resolver and stamp checks now align with project lane + lock match:
+   - resolver: `/tmp/p0_fix057_resolve_after.json`
+   - rendered stamp: `/tmp/p0_fix057_render_after.json`
+   - first-line gate pass: `/tmp/p0_fix057_firstline_after.json` (`reply_first_line_status=PASS_REQUIRED`, `reply_first_line_lock_state=LOCK_MATCH`)
+
+Boundary decision:
+
+1. This is a protocol-layer implementation closure for the activation switchback regression path, not a docs-only narrative fix.
+2. Governance/release promotion remains fail-closed until independent auditor countersign updates this row from `PENDING_REAUDIT`.
+3. This closure does not alter unrelated pending batches in `FIX-029..032`, `FIX-034..036`, and `FIX-056`.
 
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 

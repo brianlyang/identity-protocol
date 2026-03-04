@@ -152,7 +152,28 @@ def _resolve_task_path(identity: dict[str, Any]) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
-def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack_path = str((identity or {}).get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    return Path(pack_path).expanduser().resolve()
+
+
+def _resolve_runtime_pattern(pattern: str, pack_root: Path | None, identity_id: str) -> str:
+    if not pattern:
+        return pattern
+    if pack_root is None:
+        return pattern
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if pattern.startswith(local_prefix):
+        return str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    if pattern.startswith("identity/runtime/"):
+        return str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    return pattern
+
+
+def _latest_evidence(pattern: str, identity_id: str, *, pack_root: Path | None = None) -> Path | None:
+    pattern = _resolve_runtime_pattern(pattern, pack_root, identity_id)
     if Path(pattern).is_absolute():
         files = sorted((Path(p) for p in glob.glob(pattern)), key=lambda p: p.stat().st_mtime)
     else:
@@ -165,7 +186,12 @@ def _latest_evidence(pattern: str, identity_id: str) -> Path | None:
     return files[-1]
 
 
-def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -> tuple[int, list[str]]:
+def _validate_protocol_review_contract(
+    data: dict[str, Any],
+    identity_id: str,
+    *,
+    pack_root: Path | None = None,
+) -> tuple[int, list[str]]:
     rc = 0
     logs: list[str] = []
 
@@ -200,7 +226,7 @@ def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -
         logs.append("[FAIL] protocol_review_contract.evidence_report_path_pattern missing")
         return rc, logs
 
-    latest = _latest_evidence(pattern, identity_id)
+    latest = _latest_evidence(pattern, identity_id, pack_root=pack_root)
     if not latest:
         rc = 1
         logs.append(f"[FAIL] no protocol review evidence file matched: {pattern}")
@@ -249,7 +275,7 @@ def _validate_protocol_review_contract(data: dict[str, Any], identity_id: str) -
     return rc, logs
 
 
-def _validate_single_identity(identity_id: str, task_path: Path) -> int:
+def _validate_single_identity(identity_id: str, task_path: Path, *, pack_root: Path | None = None) -> int:
     print(f"[INFO] validating CURRENT_TASK for identity={identity_id}: {task_path}")
 
     try:
@@ -291,7 +317,7 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
     else:
         print("[OK]   evaluation_contract.consistency_required=true")
 
-    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id)
+    prc_rc, prc_logs = _validate_protocol_review_contract(data, identity_id, pack_root=pack_root)
     for ln in prc_logs:
         print(ln)
     rc = max(rc, prc_rc)
@@ -475,7 +501,11 @@ def _validate_single_identity(identity_id: str, task_path: Path) -> int:
             print("[FAIL] identity_role_binding_contract.binding_evidence_path_pattern missing")
             rc = 1
         else:
-            latest = _latest_evidence(pattern.replace("<identity-id>", identity_id), identity_id)
+            latest = _latest_evidence(
+                pattern.replace("<identity-id>", identity_id),
+                identity_id,
+                pack_root=pack_root,
+            )
             if not latest:
                 print(f"[FAIL] role binding evidence not found by pattern: {pattern}")
                 rc = 1
@@ -536,7 +566,7 @@ def main() -> int:
         path = Path(args.current_task)
         if not path.exists():
             return _fail(f"override current task not found: {path}")
-        rc = _validate_single_identity(args.identity_id or "(override)", path)
+        rc = _validate_single_identity(args.identity_id or "(override)", path, pack_root=path.parent)
         return rc
 
     try:
@@ -559,7 +589,7 @@ def main() -> int:
             continue
 
         print("\n" + "=" * 72)
-        rc = max(rc, _validate_single_identity(identity_id, task_path))
+        rc = max(rc, _validate_single_identity(identity_id, task_path, pack_root=_resolve_pack_root(item)))
 
     return rc
 

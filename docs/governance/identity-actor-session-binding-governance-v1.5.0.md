@@ -2878,6 +2878,50 @@ Decision boundary:
 2. It does not relax existing `FIX-049/054` send-time fail-closed semantics.
 3. Any future recurrence should be classified as `P0` and replayed against the above anchors before release claims.
 
+### 6.6F Activation switchback evidence-path binding (`review 16.8.66`, P0 reverify bridge)
+
+Normative risk:
+
+1. Activation lane can appear as “identity not switched back” when runtime-bootstrap live revalidation fails on unresolved evidence patterns (`identity/runtime/local/...`) and triggers rollback before pointer convergence.
+2. This is protocol-layer governance risk because operators may misclassify it as session lock drift while root cause is evidence path anchoring.
+
+Binding rule:
+
+1. Runtime contract evidence lookup in activation/live-revalidate paths MUST be pack-root aware for both:
+   - `protocol_review_contract.evidence_report_path_pattern`
+   - `identity_role_binding_contract.binding_evidence_path_pattern`
+2. Any validator relying on `identity/runtime/local/<identity-id>/...` pattern must resolve against `resolved_pack_path/runtime/...`, not caller CWD nor repo fixture roots.
+3. Activation switchback closure claims are valid only when:
+   - runtime contract live revalidation passes,
+   - role-binding validator passes,
+   - canonical session pointer is updated to expected identity in current catalog lane.
+
+Implementation anchors:
+
+1. `scripts/validate_identity_runtime_contract.py:155` (`_resolve_pack_root`)
+2. `scripts/validate_identity_runtime_contract.py:162` (`_resolve_runtime_pattern`)
+3. `scripts/validate_identity_runtime_contract.py:175` (`_latest_evidence` pack-root aware)
+4. `scripts/validate_identity_runtime_contract.py:320` (protocol-review revalidate uses `pack_root`)
+5. `scripts/validate_identity_runtime_contract.py:504` (role-binding evidence lookup uses `pack_root`)
+6. `scripts/validate_identity_runtime_contract.py:592` (catalog-target validator path passes resolved pack-root)
+
+Verification anchors (this round):
+
+1. activation closure replay:
+   - `/tmp/p0_fix057_activate_after.log`
+2. runtime contract pass:
+   - `/tmp/p0_fix057_runtime_contract_after.log`
+3. role-binding pass:
+   - `/tmp/p0_fix057_role_binding_after.log`
+4. resolver + first-line lock-match confirmation:
+   - `/tmp/p0_fix057_resolve_after.json`
+   - `/tmp/p0_fix057_firstline_after.json`
+
+Decision boundary:
+
+1. This subsection is a governance bridge for `FIX-057` implementation replay intake and prevents ambiguous RCA in future P0 switchback recurrences.
+2. It does not alter current D-gate formula inputs by itself; release promotion still requires independent auditor countersign in review/governance status rows.
+
 ## 7) SSOT and Mixed-Source Cleanup Policy
 
 Mandatory policy:
