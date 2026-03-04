@@ -105,6 +105,7 @@ Hard rules:
 | WS-6 | docs bridge automation | P1 | governance/review status bridge template and consistency checker |
 | WS-7 | office-ops deterministic self-drive hardening | P1 | run-id report binding, baseline bootstrap automation, temp/freshness/feedback emit helpers, dedup winner determinism, skill-path integrity, route pinning, fallback taxonomy |
 | WS-8 | initial prompt capability bootstrap governance | P0 | capability-driver-native initialization contract + fail-closed matrix validator + business-interference runbook |
+| WS-9 | discovery dual-track requiredization closure | P0 | trigger-conditioned requiredization policy + apply-time coverage fail-close gate + receipt/index evidence lock |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -277,6 +278,45 @@ Hard rules:
 1. extension intake is `v1.6` backlog only and must not retroactively rewrite `v1.5` release blockers.
 2. all evidence remains sanitized protocol-only payload, with no business/customer raw data.
 
+### 4.12 `discovery_dual_track_requiredization_activation_contract_v1` (P0)
+
+Input package boundary:
+
+1. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
+2. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
+3. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
+
+Mandatory behavior:
+
+1. discovery contracts remain optional while no requiredization trigger class is active.
+2. when trigger class is active (for example `repeat_platform_optimization_intent`), status must switch into requiredization path deterministically.
+3. if trigger is active and requiredization is not applied, fail-close with `IP-DREQ-001` and machine-readable stale reasons.
+4. lane separation must remain explicit (`work_layer=instance`) and cannot implicitly force protocol-layer write actions.
+
+Hard rules:
+
+1. conditional escalation is required; unconditional escalation is prohibited.
+2. absence of trigger evidence must not be reclassified as trigger success.
+
+### 4.13 `discovery_apply_coverage_fail_closed_contract_v1` (P0)
+
+Mandatory apply-time closure gate:
+
+1. if `requiredization_applied=true`, all requiredized discovery contracts must be evaluated in the same payload.
+2. apply-time pass requires:
+   - `discovery_required_total > 0`
+   - `discovery_required_passed == discovery_required_total`
+   - `discovery_required_coverage_rate == 100.0`
+3. any mismatch must fail-close with dedicated error code (`IP-DREQ-002` reserved for v1.6 implementation).
+4. apply path must emit and link both receipt and evidence-index records in the same execution window.
+
+Cross-verification constraints (mandatory for intake advance):
+
+1. roundtable track present.
+2. vendor track present.
+3. OpenAI docs track present (`strict-mode` + `codex skills/security` anchors).
+4. Context7 track present with non-contradictory extraction.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -303,6 +343,8 @@ Hard rules:
 | ASB16-RQ-020 | skill contract references must be path-valid in active repo/runtime layout before readiness/release acceptance | skill-path integrity validator + readiness/release wiring | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-021 | route endpoint and target workflow publish version must remain pinned and auditable | route pinning validator + workflow version proof receipts | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-022 | fallback reasons must be normalized to governed enum taxonomy for downstream arbitration | fallback taxonomy validator + report schema mapping | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
+| ASB16-RQ-023 | discovery path must escalate to requiredization only under deterministic trigger classes and keep fail-close semantics when apply is skipped | discovery requiredization validator + trigger-window classifier + update lane wiring | P0 | SPEC_READY | SRA discovery simulation intake (`review v1.6 FIX16-020`) |
+| ASB16-RQ-024 | apply-time requiredization cannot pass with partial discovery coverage; coverage closure must be fail-closed | discovery coverage gate + receipt/index linker + scan/three-plane consumption | P0 | SPEC_READY | SRA discovery simulation intake (`review v1.6 FIX16-020`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -319,6 +361,8 @@ Hard rules:
 | C9 | initialization templates are capability-driver complete for requiredized matrix | prompt capability matrix report (`coverage_rate=100` for P0 set) |
 | C10 | post-core-edit replay follows refresh->strict sequence with bounded business interference | paired refresh+strict reports + interference matrix receipt |
 | C11 | cross-verification packet includes roundtable/vendor/openaidoc/context7 | intake checklist marked complete with four-track anchors |
+| C12 | discovery requiredization trigger semantics stay deterministic (`not_triggered -> optional`, `triggered_no_apply -> FAIL_REQUIRED`) | discovery requiredization report with trigger class + error code (`IP-DREQ-001`) |
+| C13 | apply-time discovery coverage reaches full closure before `PASS_REQUIRED` | same-payload coverage proof (`passed==total`, `coverage_rate=100`) + linked receipt/index |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -346,6 +390,8 @@ Hard rules:
 | ASB16-RQ-020 | skill-path integrity contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
 | ASB16-RQ-021 | route/version pinning contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
 | ASB16-RQ-022 | fallback taxonomy normalization contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
+| ASB16-RQ-023 | discovery trigger-conditioned requiredization contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
+| ASB16-RQ-024 | discovery apply-time coverage fail-close contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -355,6 +401,7 @@ Hard rules:
 | ASB16-RQ-009..013 | `NEW -> SPEC_READY` | office-ops intake triage bridge (`review v1.5 16.8.75`) |
 | ASB16-RQ-014..017 | `NEW -> SPEC_READY` | SRA bootstrap capability intake (`review v1.6 FIX16-015`) |
 | ASB16-RQ-018..022 | `NEW -> SPEC_READY` | office-ops supplemental replay intake (`review v1.6 FIX16-019`) |
+| ASB16-RQ-023..024 | `NEW -> SPEC_READY` | SRA discovery dual-track simulation intake (`review v1.6 FIX16-020`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
@@ -403,3 +450,10 @@ Required reporting format:
 13. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
 14. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
 15. `context7:/websites/developers_openai_api (strict schema/tool docs extraction)`
+16. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
+17. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
+18. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
+19. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
+20. `https://developers.openai.com/codex/skills/`
+21. `https://developers.openai.com/codex/security/`
+22. `context7:/websites/developers_openai (Codex skills/security extraction)`

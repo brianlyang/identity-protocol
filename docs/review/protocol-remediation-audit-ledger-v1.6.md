@@ -67,6 +67,7 @@ Carry-over evidence:
 | FIX16-017 | 2026-03-04 | protocol | refresh->strict + business interference guard runbook intake (`ASB16-RQ-016`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-018 | 2026-03-04 | protocol | roundtable/vendor/openaidoc/context7 cross-verification intake (`ASB16-RQ-017`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-020 | 2026-03-04 | protocol | discovery dual-track activation + apply-time coverage fail-close intake (`ASB16-RQ-023..024`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -282,6 +283,68 @@ Boundary:
 1. this supplemental intake does not alter v1.5 unlock formula.
 2. this is docs/governance planning intake only; no protocol script behavior changed in this step.
 
+### FIX16-020 - SRA discovery dual-track hardening intake (`ASB16-RQ-023..024`)
+
+- Status: `SPEC_READY`
+- Goal: promote discovery dual-track from "mechanism works" to deterministic strong-control closure when requiredization is applied.
+
+Source package:
+
+1. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
+2. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
+3. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
+4. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
+
+Deterministic finding matrix (from simulation receipt):
+
+1. trigger path proves dual-track activation is functional:
+   - `requiredization_triggered=true`
+   - `trigger_classes=["repeat_platform_optimization_intent"]`
+2. fail-close without apply is already correct:
+   - `discovery_requiredization_status=FAIL_REQUIRED`
+   - `error_code=IP-DREQ-001`
+3. apply path promotes contracts and links receipt/index:
+   - `requiredization_applied=true`
+   - `requiredization_receipt_linked=true`
+4. governance gap remains:
+   - same payload can still show `discovery_requiredization_status=PASS_REQUIRED` with:
+   - `discovery_required_total=3`, `discovery_required_passed=0`, `discovery_required_coverage_rate=0.0`
+
+Triage decision:
+
+1. add `ASB16-RQ-023` for conditional requiredization policy under discovery trigger classes.
+2. add `ASB16-RQ-024` for apply-time strict coverage closure gate.
+3. keep v1.5 boundary unchanged; this is v1.6-only governance intake.
+
+Cross-verification tracks (requiredized for this intake):
+
+1. roundtable: capability + replay narrative in architect packet and roundtable docs.
+2. vendor: official-source and cross-vendor checks retained via vendor scan references and unified index chain.
+3. OpenAI docs: strict schema and Codex skills/security guidance reinforce deterministic fail-closed contract design.
+4. Context7: OpenAI API/dev docs extraction returns the same strict-schema and sandbox/approval constraints.
+
+Cross-verification anchors:
+
+1. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+2. `https://developers.openai.com/codex/skills/`
+3. `https://developers.openai.com/codex/security/`
+4. `context7:/websites/developers_openai_api`
+5. `context7:/websites/developers_openai`
+6. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+7. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+8. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+
+Acceptance target (`ASB16-RQ-023..024` planning stage):
+
+1. trigger not fired -> discovery remains optional and must not escalate by default.
+2. trigger fired without apply -> fail-close with `IP-DREQ-001`.
+3. `requiredization_applied=true` must require:
+   - `discovery_required_total > 0`
+   - `discovery_required_passed == discovery_required_total`
+   - `discovery_required_coverage_rate == 100.0`
+   - otherwise fail-close with dedicated code (`IP-DREQ-002` reserved for v1.6 implementation).
+4. apply path must keep receipt + evidence-index linkage as mandatory acceptance artifacts.
+
 ---
 
 ## 4) Reviewer decision log
@@ -307,6 +370,7 @@ Boundary:
 | FIX16-017 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-018 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-019 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T06:55:00Z | latest office-ops self-drive replay evidence ingested; new gaps mapped to `ASB16-RQ-018..022` |
+| FIX16-020 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T08:45:00Z | discovery dual-track simulation ingested; apply-time `PASS_REQUIRED` with `0/3` coverage formalized into `ASB16-RQ-023..024` |
 
 ---
 
@@ -341,3 +405,13 @@ Boundary:
 15. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
 16. `context7:/websites/developers_openai_api`
 17. `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-self-drive-regression-v2026-03-04.md`
+18. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
+19. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
+20. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
+21. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
+22. `https://developers.openai.com/codex/skills/`
+23. `https://developers.openai.com/codex/security/`
+24. `context7:/websites/developers_openai`
+25. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+26. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+27. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
