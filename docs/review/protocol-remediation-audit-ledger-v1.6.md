@@ -66,6 +66,7 @@ Carry-over evidence:
 | FIX16-016 | 2026-03-04 | protocol | prompt capability matrix fail-close validator intake (`ASB16-RQ-015`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-017 | 2026-03-04 | protocol | refresh->strict + business interference guard runbook intake (`ASB16-RQ-016`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-018 | 2026-03-04 | protocol | roundtable/vendor/openaidoc/context7 cross-verification intake (`ASB16-RQ-017`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -249,6 +250,38 @@ Acceptance target (`ASB16-RQ-014..017` planning stage):
 3. runbook explicitly enforces `refresh -> strict` after core-file edits and emits business-interference matrix.
 4. intake cannot advance without all four cross-verification tracks (roundtable/vendor/openaidoc/context7).
 
+### FIX16-019 - office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`)
+
+- Status: `SPEC_READY`
+- Goal: absorb latest office-ops real-run evidence and register uncovered protocol-framework gaps into v1.6 governance backlog.
+
+Source package:
+
+1. `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-self-drive-regression-v2026-03-04.md`
+
+Cross-checked replay evidence intake:
+
+1. strict fast-lane (`ids=5`, `strict_quality_meta=true`) reports closure:
+   - `route_action=skip_all_high_quality`
+   - `inferred_only_count=0`
+   - `reason=completed_high_quality`
+2. same-`run_id` concurrency stress in serial orchestrator remains stable:
+   - one `submitted`, others `duplicate_ignored`
+3. regression sample (`ids=1-30`) keeps `inferred_only_count=0` for both strict and non-strict runs.
+
+Gap mapping decision (new in this supplemental intake):
+
+1. deterministic dedup winner contract -> `ASB16-RQ-018`.
+2. cross-workflow evidence schema required fields -> `ASB16-RQ-019`.
+3. skill-path drift gate (`SKILL.md` target existence) -> `ASB16-RQ-020`.
+4. route/version pinning consistency contract -> `ASB16-RQ-021`.
+5. fallback taxonomy enum normalization -> `ASB16-RQ-022`.
+
+Boundary:
+
+1. this supplemental intake does not alter v1.5 unlock formula.
+2. this is docs/governance planning intake only; no protocol script behavior changed in this step.
+
 ---
 
 ## 4) Reviewer decision log
@@ -273,6 +306,7 @@ Acceptance target (`ASB16-RQ-014..017` planning stage):
 | FIX16-016 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-017 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-018 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-019 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T06:55:00Z | latest office-ops self-drive replay evidence ingested; new gaps mapped to `ASB16-RQ-018..022` |
 
 ---
 
@@ -306,3 +340,4 @@ Acceptance target (`ASB16-RQ-014..017` planning stage):
 14. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
 15. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
 16. `context7:/websites/developers_openai_api`
+17. `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-self-drive-regression-v2026-03-04.md`

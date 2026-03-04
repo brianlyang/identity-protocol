@@ -103,7 +103,7 @@ Hard rules:
 | WS-4 | outlet/sidecar anti-regression | P0 | regression matrix for compose/send-time/sidecar across root/tmp/catalog lanes |
 | WS-5 | cross-cwd runbook hardening | P1 | absolute-path invocation profile + deterministic replay recipe |
 | WS-6 | docs bridge automation | P1 | governance/review status bridge template and consistency checker |
-| WS-7 | office-ops deterministic self-drive hardening | P1 | run-id report binding, baseline bootstrap automation, temp/freshness/feedback emit helpers |
+| WS-7 | office-ops deterministic self-drive hardening | P1 | run-id report binding, baseline bootstrap automation, temp/freshness/feedback emit helpers, dedup winner determinism, skill-path integrity, route pinning, fallback taxonomy |
 | WS-8 | initial prompt capability bootstrap governance | P0 | capability-driver-native initialization contract + fail-closed matrix validator + business-interference runbook |
 
 ## 4) Protocol Contract Additions (v1.6)
@@ -252,6 +252,31 @@ Hard rules:
 1. if any track is missing, intake status cannot advance beyond `PENDING_INTAKE`.
 2. evidence must remain protocol-only and cannot include business-sensitive runtime payloads.
 
+### 4.11 `office_ops_regression_closure_extension_contract_v1` (P1)
+
+Input package boundary:
+
+1. `/Users/yangxi/claude/codex_project/ddm/docs/governance/identity-protocol-feedback-office-ops-self-drive-regression-v2026-03-04.md`
+
+Mandatory extension points:
+
+1. dedup winner determinism:
+   - winner must be monotonic by `(run_id, earliest_claim_ts, stable_tiebreaker)`;
+   - conflict policy must be explicit and machine-readable.
+2. cross-workflow closure evidence schema:
+   - required fields: `run_id`, `route_action`, `quality_meta_state`, `dedup_state`, `evidence_hash`.
+3. skill path integrity:
+   - `SKILL.md` executable/script targets must exist in active repo layout for declared runtime mode.
+4. route/version pinning consistency:
+   - router endpoint must match active target workflow publish version evidence.
+5. fallback taxonomy normalization:
+   - fallback reasons must map to governed enum classes (`data_missing`, `model_weak_signal`, `transport_error`, `policy_blocked`).
+
+Hard rules:
+
+1. extension intake is `v1.6` backlog only and must not retroactively rewrite `v1.5` release blockers.
+2. all evidence remains sanitized protocol-only payload, with no business/customer raw data.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -273,6 +298,11 @@ Hard rules:
 | ASB16-RQ-015 | prompt capability matrix validator must fail-closed on missing requiredized drivers | new prompt capability validator + required gate wiring | P0 | SPEC_READY | SRA batch `2026-03-04/003` |
 | ASB16-RQ-016 | post-core-edit runbook must require refresh->strict and emit business interference matrix | runbook + replay scripts + reporting contracts | P1 | SPEC_READY | SRA batch `2026-03-04/001` + business-impact packet |
 | ASB16-RQ-017 | v1.6 intake for bootstrap capability must include roundtable+vendor+openaidoc+context7 cross-verification | review intake checklist + governance evidence contract | P1 | SPEC_READY | SRA evidence index + vendor scan + OpenAI/context7 anchors |
+| ASB16-RQ-018 | dedup winner selection must be deterministic and monotonic for same `run_id` concurrency windows | serial orchestrator dedup contract + replay validator | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
+| ASB16-RQ-019 | cross-workflow closure evidence must enforce required schema fields for machine-checkable replay | workflow evidence schema validator + report normalizer | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
+| ASB16-RQ-020 | skill contract references must be path-valid in active repo/runtime layout before readiness/release acceptance | skill-path integrity validator + readiness/release wiring | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
+| ASB16-RQ-021 | route endpoint and target workflow publish version must remain pinned and auditable | route pinning validator + workflow version proof receipts | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
+| ASB16-RQ-022 | fallback reasons must be normalized to governed enum taxonomy for downstream arbitration | fallback taxonomy validator + report schema mapping | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -311,6 +341,11 @@ Hard rules:
 | ASB16-RQ-015 | prompt capability matrix fail-closed validator | P0 | SPEC_READY | SRA intake pending implementation |
 | ASB16-RQ-016 | refresh->strict + business interference runbook contract | P1 | SPEC_READY | SRA intake pending implementation |
 | ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | SRA intake pending implementation |
+| ASB16-RQ-018 | dedup winner determinism contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
+| ASB16-RQ-019 | cross-workflow evidence schema contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
+| ASB16-RQ-020 | skill-path integrity contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
+| ASB16-RQ-021 | route/version pinning contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
+| ASB16-RQ-022 | fallback taxonomy normalization contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -319,6 +354,7 @@ Hard rules:
 | ASB16-RQ-001..008 | `NEW -> SPEC_READY` | this document kickoff baseline |
 | ASB16-RQ-009..013 | `NEW -> SPEC_READY` | office-ops intake triage bridge (`review v1.5 16.8.75`) |
 | ASB16-RQ-014..017 | `NEW -> SPEC_READY` | SRA bootstrap capability intake (`review v1.6 FIX16-015`) |
+| ASB16-RQ-018..022 | `NEW -> SPEC_READY` | office-ops supplemental replay intake (`review v1.6 FIX16-019`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
