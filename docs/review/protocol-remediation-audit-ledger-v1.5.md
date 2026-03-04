@@ -5848,7 +5848,7 @@ Boundary:
 1. This promotion is limited to `FIX-056/057/058` and does not auto-promote unrelated pending batches.
 2. `D6` release lock formula in governance `6.5` is unchanged by this scope-limited promotion.
 
-#### 16.8.70 Governance DONE normalization batch-A (`PASS != DONE`, 2026-03-04, docs-only)
+#### 16.8.72 Governance DONE normalization batch-A (`PASS != DONE`, 2026-03-04, docs-only)
 
 Status: `CLOSED_SCOPE_BATCH_A`.
 
@@ -5883,7 +5883,7 @@ Boundary:
 1. This batch does not promote `SPEC_READY` or `IMPL_READY (BLOCKED_BY_AUDIT)` rows.
 2. `D6` remains `LOCKED` until all remaining `P0` rows in governance `6.4` reach `DONE`.
 
-#### 16.8.71 Governance DONE normalization batch-B (`IMPL_READY -> DONE`, 2026-03-04, docs-only)
+#### 16.8.73 Governance DONE normalization batch-B (`IMPL_READY -> DONE`, 2026-03-04, docs-only)
 
 Status: `CLOSED_SCOPE_BATCH_B`.
 
