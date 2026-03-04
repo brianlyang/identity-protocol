@@ -5783,10 +5783,10 @@ Auditor follow-up residual closure (`2026-03-04` addendum):
    - code: `scripts/identity_creator.py` passes `--actor-id <actor_id_resolved>` to:
      - `validate_actor_session_multibinding_concurrency.py`
      - `validate_identity_session_pointer_consistency.py`
-   - replay: `/tmp/fix058_p1_actor_binding_positive_v2.log` shows both validators running with `actor=assistant:codex`.
+   - replay: `/tmp/fix058_p1_actor_binding_positive_v2.log` + `/tmp/fix058_p1_actor_binding_positive_v3_escalated.log` shows both validators running with `actor=assistant:codex`.
 2. P2 fixed: identity_creator subvalidator invocation is now CWD-invariant (protocol-root anchored).
    - code: `scripts/identity_creator.py` `_run/_run_capture` execute with `cwd=PROTOCOL_ROOT`.
-   - replay: `/tmp/fix058_p2_nonroot_negative.log` from `/tmp` still reaches switch-guard and fails with `IP-ACT-SWITCH-001` (no missing-script path drift).
+   - replay: `/tmp/fix058_p2_nonroot_negative.log` + `/tmp/fix058_p2_nonroot_negative_v2.log` from `/tmp` still reaches switch-guard and fails with `IP-ACT-SWITCH-001` (no missing-script path drift).
 
 Decision boundary:
 
