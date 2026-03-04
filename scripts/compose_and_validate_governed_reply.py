@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import load_actor_binding
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -20,6 +21,7 @@ from response_stamp_common import (
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
+ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
 
 
 def _load_body(args: argparse.Namespace) -> str:
@@ -108,6 +110,52 @@ def main() -> int:
         print(f"[FAIL] unable to resolve identity stamp context: {exc}")
         return 1
 
+    actor_id_explicit = str(args.actor_id or "").strip()
+    actor_bound_identity = ""
+    if actor_id_explicit:
+        actor_binding = load_actor_binding(catalog_path, actor_id_explicit)
+        actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+
+    if actor_id_explicit and actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "work_layer": "",
+            "source_layer": "",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": ["actor_binding_lock_mismatch"],
+            "intent_source": "strict_actor_binding_guard",
+            "intent_confidence": 1.0,
+            "fallback_reason": "actor_binding_lock_mismatch",
+            "disclosure_level": "standard",
+            "send_time_gate_status": "FAIL_REQUIRED",
+            "send_time_error_code": ERR_RUNTIME_BINDING_MISMATCH,
+            "error_code": ERR_RUNTIME_BINDING_MISMATCH,
+            "send_time_rc": 1,
+            "reply_first_line_status": "FAIL_REQUIRED",
+            "reply_evidence_mode": "none",
+            "reply_transport_ref": "",
+            "reply_outlet_guard_applied": True,
+            "governed_outlet_enforced": False,
+            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or "governed_adapter_v1",
+            "outlet_preflight_receipt": "",
+            "outlet_bypass_detected": True,
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "blocker_receipt_path": "",
+            "out_reply_file": str(Path(args.out_reply_file).expanduser().resolve()) if str(args.out_reply_file or "").strip() else "",
+            "context_lock_state": str(ctx.lock_state or "").strip(),
+            "actor_bound_identity_id": actor_bound_identity,
+        }
+        out_json = str(args.out_json or "").strip()
+        if out_json:
+            out_json_path = Path(out_json).expanduser().resolve()
+            out_json_path.parent.mkdir(parents=True, exist_ok=True)
+            out_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
+
     disclosure = resolve_disclosure_level(ctx, explicit_level=str(args.disclosure_level or "standard"))
     disclosure_level = str(disclosure.get("disclosure_level", "standard")).strip() or "standard"
     intent = resolve_layer_intent(
@@ -132,9 +180,14 @@ def main() -> int:
     )
     composed_reply = f"{stamp_line}\n{body}\n"
     out_reply = str(args.out_reply_file or "").strip()
-    reply_transport_ref = (
-        str(Path(out_reply).expanduser().resolve()) if out_reply else "inline:governed_reply_compose"
+    out_reply_path = (
+        Path(out_reply).expanduser().resolve()
+        if out_reply
+        else (Path("/tmp") / f"identity-governed-reply-{args.identity_id}.txt").resolve()
     )
+    out_reply_path.parent.mkdir(parents=True, exist_ok=True)
+    out_reply_path.write_text(composed_reply, encoding="utf-8")
+    reply_transport_ref = str(out_reply_path)
 
     validate_cmd = [
         sys.executable,
@@ -145,8 +198,8 @@ def main() -> int:
         str(catalog_path),
         "--repo-catalog",
         str(repo_catalog_path),
-        "--reply-text",
-        composed_reply,
+        "--reply-file",
+        str(out_reply_path),
         "--force-check",
         "--enforce-send-time-gate",
         "--reply-outlet-guard-applied",
@@ -162,6 +215,8 @@ def main() -> int:
         source_layer,
         "--json-only",
     ]
+    if str(args.actor_id or "").strip():
+        validate_cmd += ["--actor-id", str(args.actor_id).strip()]
     if str(args.blocker_receipt_out or "").strip():
         validate_cmd += ["--blocker-receipt-out", str(args.blocker_receipt_out).strip()]
     if str(args.layer_intent_text or "").strip():
@@ -199,12 +254,9 @@ def main() -> int:
     except Exception:
         preflight_receipt_path = None
 
-    if proc.returncode == 0 and out_reply:
-        out_reply_path = Path(out_reply).expanduser().resolve()
-        out_reply_path.parent.mkdir(parents=True, exist_ok=True)
-        out_reply_path.write_text(composed_reply, encoding="utf-8")
-    else:
-        out_reply_path = Path(out_reply).expanduser().resolve() if out_reply else None
+    if proc.returncode != 0 and not out_reply:
+        # keep temporary reply evidence for strict fail-closed replay
+        pass
 
     payload = {
         "identity_id": args.identity_id,
@@ -233,7 +285,7 @@ def main() -> int:
         "reply_sample_count": validate_payload.get("reply_sample_count"),
         "reply_first_line_missing_count": validate_payload.get("reply_first_line_missing_count"),
         "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),
-        "out_reply_file": str(out_reply_path) if out_reply and out_reply_path else "",
+        "out_reply_file": str(out_reply_path),
     }
 
     out_json = str(args.out_json or "").strip()

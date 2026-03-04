@@ -12,6 +12,7 @@ ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
 ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
 ERR_OUTLET_GUARD_MISSING = "IP-ASB-STAMP-SESSION-003"
 ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
+ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -233,7 +234,12 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    if strict_context and evidence_mode in {"stamp_json", "stamp_json_composed_reply", "missing"}:
+    if strict_context and evidence_mode in {"reply_text", "stamp_json", "stamp_json_composed_reply", "missing"}:
+        synthetic_reason = (
+            "strict_send_time_inline_reply_text_forbidden"
+            if evidence_mode == "reply_text"
+            else "strict_send_time_synthetic_evidence_forbidden"
+        )
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
@@ -276,7 +282,7 @@ def main() -> int:
             "protocol_trigger_reasons": [],
             "protocol_trigger_confidence": 0.0,
             "blocker_receipt_path": "",
-            "stale_reasons": ["strict_send_time_synthetic_evidence_forbidden"],
+            "stale_reasons": [synthetic_reason],
             "upstream_validator_rc": 1,
         }
         _emit(payload, json_only=args.json_only)
@@ -450,6 +456,8 @@ def main() -> int:
         "stale_reasons": validator_payload.get("stale_reasons", []),
         "upstream_validator_rc": p.returncode,
     }
+    if str(error_code).strip() == ERR_RUNTIME_BINDING_MISMATCH:
+        payload["outlet_bypass_detected"] = True
     if "blocker_receipt" in validator_payload:
         payload["blocker_receipt"] = validator_payload.get("blocker_receipt")
 

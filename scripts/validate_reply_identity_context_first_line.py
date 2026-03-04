@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import load_actor_binding
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -22,6 +23,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_REPLY_FIRST_LINE = "IP-ASB-STAMP-SESSION-001"
 ERR_INVALID_EXPECTED_SOURCE_LAYER = "IP-SOURCE-LAYER-001"
+ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
 STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
 
 
@@ -396,14 +398,23 @@ def main() -> int:
         if strict_format_enforced and not error_code:
             error_code = ERR_REPLY_FIRST_LINE
 
+    actor_id_explicit = str(args.actor_id or "").strip()
+    actor_bound_identity = ""
+    if actor_id_explicit:
+        actor_binding = load_actor_binding(catalog_path, actor_id_explicit)
+        actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+        if strict_format_enforced and actor_bound_identity and actor_bound_identity != ctx.identity_id and not error_code:
+            stale_reasons.append("actor_bound_identity_mismatch")
+            error_code = ERR_RUNTIME_BINDING_MISMATCH
+
     lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
     parsed_lock_state = ""
     if not error_code and first_lines:
         parsed_lock_state = str(parsed_first.get("lock", "")).strip()
     if not error_code and lock_boundary_enforced:
-        if ctx.lock_state != "LOCK_MATCH":
+        if actor_id_explicit and ctx.lock_state != "LOCK_MATCH":
             stale_reasons.append("actor_binding_lock_not_match")
-            error_code = ERR_REPLY_FIRST_LINE
+            error_code = ERR_RUNTIME_BINDING_MISMATCH
         elif parsed_lock_state and parsed_lock_state != "LOCK_MATCH":
             stale_reasons.append("reply_first_line_lock_not_match")
             error_code = ERR_REPLY_FIRST_LINE
@@ -443,6 +454,8 @@ def main() -> int:
         "source_layer_downgrade_applied": source_layer_downgrade_applied,
         "reply_first_line_source_layer": parsed_source_layer,
         "lock_boundary_enforced": lock_boundary_enforced,
+        "context_lock_state": ctx.lock_state,
+        "actor_bound_identity_id": actor_bound_identity,
         "expected_lock_state": ctx.lock_state,
         "reply_first_line_lock_state": parsed_lock_state,
         "reply_first_line_missing_count": len(missing_refs),
@@ -461,6 +474,8 @@ def main() -> int:
         next_action = "emit_identity_context_first_line_then_retry"
         if error_code == ERR_INVALID_EXPECTED_SOURCE_LAYER:
             next_action = "use_valid_expected_source_layer(project|global|env|auto)_then_retry"
+        elif error_code == ERR_RUNTIME_BINDING_MISMATCH:
+            next_action = "activate_actor_bound_identity_then_retry"
         receipt = blocker_receipt(
             error_code=error_code or ERR_REPLY_FIRST_LINE,
             expected_identity_id=ctx.identity_id,
