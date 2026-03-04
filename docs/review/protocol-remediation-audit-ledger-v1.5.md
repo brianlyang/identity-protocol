@@ -172,7 +172,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PASS |
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
-| FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_OPEN (BLOCKED_BY_ARCH_FIX) |
+| FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
 
 ---
 
@@ -4080,6 +4080,64 @@ Audit decision:
 1. Contract-level positive and negative branches for `RQ-014..016` are independently reproducible and machine-auditable.
 2. `FIX-059` is promoted to `DONE/PASS`.
 3. This promotion does not unlock release by itself; current `D6` lock is now attributable to `ASB-RQ-117` only (see governance latest snapshot).
+
+#### 16.8.81 FIX-060 implementation intake (`ASB-RQ-117`, 2026-03-04, protocol code + self-replay)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)`.
+
+Scope:
+
+1. Enforce strict-lane governed-outlet exclusivity before user-visible emission.
+2. Add fail-closed code for non-governed outlet channel attempts:
+   - `IP-ASB-STAMP-SESSION-004`.
+3. Export mandatory telemetry fields in send-time and execution/report surfaces:
+   - `governed_outlet_enforced`
+   - `outlet_channel_id`
+   - `outlet_preflight_receipt`
+   - `outlet_bypass_detected`
+
+Implementation anchor:
+
+1. `50005f0` — `fix(protocol): enforce governed outlet exclusivity and telemetry for ASB-RQ-117`
+
+Patch surfaces:
+
+1. `scripts/validate_send_time_reply_gate.py`
+2. `scripts/compose_and_validate_governed_reply.py`
+3. `scripts/execute_identity_upgrade.py`
+4. `scripts/validate_post_execution_mandatory.py`
+5. `scripts/identity_creator.py`
+6. `scripts/release_readiness_check.py`
+7. `scripts/e2e_smoke_test.sh`
+8. `scripts/full_identity_protocol_scan.py`
+9. `scripts/report_three_plane_status.py`
+
+Self-replay evidence:
+
+1. positive governed outlet (repo-root):
+   - `/tmp/fix060_positive_root.json`
+   - `send_time_gate_status=PASS_REQUIRED`, `governed_outlet_enforced=true`, `outlet_bypass_detected=false`.
+2. positive governed outlet (non-root `/tmp`):
+   - `/tmp/fix060_positive_tmp.json`
+   - same pass verdict as repo-root (CWD-invariant outlet behavior).
+3. negative non-governed outlet bypass:
+   - repo-root: `/tmp/fix060_negative_bypass_root.json`
+   - non-root: `/tmp/fix060_negative_bypass_tmp.json`
+   - both return `FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-004`.
+4. negative outlet guard missing:
+   - `/tmp/fix060_negative_guard_missing.json`
+   - `FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-003`.
+5. negative synthetic evidence in strict lane:
+   - `/tmp/fix060_negative_synthetic.json`
+   - `FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-002`.
+6. static contract checks:
+   - `python3 -m py_compile` for changed scripts (`rc=0`);
+   - `bash -n scripts/e2e_smoke_test.sh` (`rc=0`).
+
+Boundary:
+
+1. This section is implementation + self-replay intake only.
+2. Independent re-audit promotion is required before `ASB-RQ-117` can move to `DONE`.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
