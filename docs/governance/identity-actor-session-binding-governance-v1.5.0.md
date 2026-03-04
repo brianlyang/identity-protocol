@@ -2108,7 +2108,7 @@ Goal:
 
 Mandatory semantics:
 
-1. When `--actor-id` is explicitly provided, governed compose/send-time must verify actor-bound current identity equals requested `identity_id`; mismatch is fail-closed:
+1. Governed compose/send-time must verify actor-bound current identity equals requested `identity_id` for effective actor context (`--actor-id` explicit or resolver fallback); mismatch is fail-closed:
    - `IP-ASB-STAMP-SESSION-005`: actor/session bound identity mismatch.
 2. Strict send-time validation must reject inline `reply_text` evidence (file-backed reply evidence required):
    - `IP-ASB-STAMP-SESSION-002` with stale reason `strict_send_time_inline_reply_text_forbidden`.

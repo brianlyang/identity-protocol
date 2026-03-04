@@ -4202,7 +4202,7 @@ Patch scope:
    - add explicit actor-bound current identity mismatch hard gate (`IP-ASB-STAMP-SESSION-005`);
    - send-time preflight now uses file-backed reply evidence (`--reply-file`) instead of inline text.
 2. `scripts/validate_reply_identity_context_first_line.py`
-   - strict mode with explicit `--actor-id` now validates actor-bound current identity and fails closed on mismatch (`IP-ASB-STAMP-SESSION-005`);
+   - strict mode now validates actor-bound current identity for effective actor context and fails closed on mismatch (`IP-ASB-STAMP-SESSION-005`);
    - emit `actor_bound_identity_id` and lock telemetry fields.
 3. `scripts/validate_send_time_reply_gate.py`
    - strict send-time now rejects inline `reply_text` evidence (`IP-ASB-STAMP-SESSION-002`, stale reason `strict_send_time_inline_reply_text_forbidden`);
