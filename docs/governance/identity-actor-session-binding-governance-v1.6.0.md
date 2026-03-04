@@ -525,6 +525,47 @@ Required reporting format:
 3. list current blocker codes (protocol vs env classification).
 4. include evidence paths.
 
+### 8.1 Kernel-Uplift Non-Regression Guardrails (mandatory)
+
+Scope:
+
+1. applies to implementation rollout of `ASB16-RQ-025..028` only.
+2. enforces "kernel-first uplift without breaking v1.5 operating baseline".
+
+Baseline invariants (must stay true during all rollout phases):
+
+1. `v1.5` release-plane contract and D-gate semantics remain unchanged by v1.6 implementation tasks.
+2. instance write boundary remains locked to:
+   - `<instance>/runtime/**`
+   - `<instance>/runtime/protocol-feedback/**`
+   and does not allow protocol-kernel/governance/review writes.
+3. anti-overclaim and unlock formula in section `7.2` remain authoritative and unmodified by partial implementation progress.
+
+Phased rollout contract (hard order):
+
+1. `Phase-A (shadow)`:
+   - new kernel/mapping/prompt/boundary validators run in observe-only mode;
+   - no status promotion side effects are allowed.
+2. `Phase-B (required-no-promotion)`:
+   - validators become required for intake acceptance;
+   - requirement status may reach `IMPL_READY`, but promotion to `DONE` is still blocked.
+3. `Phase-C (fail-close)`:
+   - fail-close enforcement is enabled only after replay parity shows deterministic closure in both root/tmp execution contexts.
+
+Promotion freeze triggers (any hit locks promotion):
+
+1. detection of semantic drift between kernel contracts and governance/review projection tables.
+2. mismatch between derived prompt metadata (`digest/version/contract IDs`) and runtime report values.
+3. boundary replay showing instance-side writes outside allowed runtime/protocol-feedback surfaces.
+4. unresolved replay variance between root/tmp runs for the same payload.
+
+Evidence bundle required for Phase-B -> Phase-C transition:
+
+1. kernel-to-validator mapping report (`coverage=100`, `orphan_count=0`).
+2. prompt derivation conformance report (metadata/hash aligned).
+3. write-boundary replay with deterministic fail-close code (`IP-KERNEL-WRITE-001`).
+4. parity replay proof (same inputs, root/tmp equivalent outcomes).
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

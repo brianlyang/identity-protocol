@@ -415,6 +415,44 @@ Acceptance target (`ASB16-RQ-025..028` planning stage):
 4. instance boundary closure:
    - instance self-drive writes to protocol kernel/governance/review surfaces are fail-closed with deterministic boundary code.
 
+Value deep-dive and non-regression judgment (cross-verified, 2026-03-04):
+
+1. structural value:
+   - resolves source-center drift by setting kernel contracts as origin and docs/scripts as mapped projections.
+2. operational value:
+   - reduces repeated "patch-then-regress" cycles by requiring machine-readable mapping closure before promotion.
+3. runtime consistency value:
+   - converts prompt quality from narrative-only review into provenance-checked compilation and conformance metadata.
+4. risk-control value:
+   - hardens instance/protocol boundary so self-drive evidence stays in runtime feedback surfaces without polluting protocol sources.
+5. audit value:
+   - makes cross-track evidence deterministic (roundtable/vendor/OpenAI docs/Context7/skill protocol) and replayable.
+
+Cross-verification convergence matrix (same-question, multi-track):
+
+1. roundtable track:
+   - question: should base contracts be moved to kernel origin with projected governance/review mapping.
+   - convergence: yes; aligns with capability-bootstrap and replay closure framing.
+2. vendor track:
+   - question: does contract-first execution reduce drift and rework under self-drive.
+   - convergence: yes; official scans consistently favor deterministic contract surfaces and evidence chains.
+3. OpenAI docs track:
+   - question: does strict-schema + sandbox/approval posture support fail-closed kernel governance.
+   - convergence: yes; strict mode and codex security model are consistent with requiredized contract enforcement.
+4. Context7 track:
+   - question: is extracted OpenAI API/Codex guidance contradictory to kernel-first fail-close design.
+   - convergence: no contradiction found; extraction confirms strict schema and boundary controls.
+5. skill protocol track:
+   - question: do local skill lifecycle contracts match kernel -> mapping -> validator -> replay workflow.
+   - convergence: yes; trigger/patch/validate/replay discipline is compatible with the same projection model.
+
+Non-regression closure decision:
+
+1. this intake may advance to implementation planning without touching v1.5 release semantics.
+2. implementation must follow staged rollout (`shadow -> required-no-promotion -> fail-close`) and parity replays.
+3. any boundary leak, prompt lineage mismatch, or kernel/projection drift is treated as promotion blocker.
+4. therefore, value uplift is accepted while baseline safety remains locked by explicit freeze triggers.
+
 ---
 
 ## 4) Reviewer decision log
