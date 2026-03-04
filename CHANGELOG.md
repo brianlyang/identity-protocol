@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **v1.5.0 release gate hotfix: identity-required-gates workflow reliability**:
+  - pinned workflow lint action to an existing upstream tag:
+    - `.github/workflows/_identity-required-gates.yml` now uses
+      `rhysd/actionlint@v1.7.11` (previous `@v1` alias no longer resolvable)
+  - made upgrade report lookup shellcheck/actionlint compliant by replacing
+    `ls`-based selection with `find + sort` and explicit empty-result fail-closed
+    guard in the required runtime gates loop
+
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:
     - `scripts/validate_identity_tool_installation.py`
