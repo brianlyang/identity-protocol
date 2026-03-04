@@ -2774,6 +2774,18 @@ Audit output requirement:
 
 1. Every architect return must include explicit calculation evidence for unlock formula inputs, not just narrative conclusions.
 
+### 6.5A Office-ops suggestion intake boundary (`review 16.8.75`)
+
+Normative triage rule for office-ops feedback package (`FEEDBACK_BATCH_20260304T041651Z...`):
+
+1. Suggestion #1 (strict report selection run-id anchoring) is accepted as `v1.5 candidate only` and can affect v1.5 release gating only after reproducible strict false-selection replay is demonstrated.
+2. Suggestions #2..#5 are classified as `v1.6 backlog` and must not be treated as unresolved v1.5 `P0` blockers in current unlock formula.
+
+Current replay boundary:
+
+1. office-ops execution reports in this window remain passing (`all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `writeback_status=WRITTEN`).
+2. Therefore this intake does not change section `6.4` row statuses or section `6.5` unlock math in current v1.5 window.
+
 ### 6.6 D-gate audit bridge snapshot (2026-03-03, live replay sync)
 
 This section is the authoritative bridge for D-gate states in section 0.3.

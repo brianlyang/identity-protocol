@@ -5969,6 +5969,41 @@ Decision boundary:
 1. Keep `FIX-008` as immutable historical reject record (audit trail intact).
 2. Treat implementation closure authority as `FIX-010 PASS`; do not reopen `FIX-008` unless a new regression replay reproduces the original strict-fallback defect.
 
+#### 16.8.75 Office-ops upgrade-suggestions triage (`office-ops-expert`, 2026-03-04, scope split to v1.5/v1.6)
+
+Status: `TRIAGED (1x v1.5 candidate + 4x v1.6 backlog)`.
+
+Input package (canonical feedback channel):
+
+1. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
+2. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
+3. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_20260304T041849Z_identity-upgrade-exec-office-ops-expert-1772596487.json`
+4. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/evidence-index/INDEX.md`
+
+Cross-check summary:
+
+1. protocol-feedback archival and split-receipt linkage are green (`PASS_REQUIRED` path confirmed by outbox/index/receipt structure).
+2. current execution reports are stable pass state and do not introduce new v1.5 release blocker:
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772596487.json`
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772596350.json`
+   - key fields: `all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `writeback_status=WRITTEN`.
+
+Triage decision:
+
+1. Keep in v1.5 candidate lane (conditional intake, not automatic blocker):
+   - suggestion #1: strict report selection should prefer run-id binding before mtime fallback.
+   - promotion condition: reproducible same-window false-selection replay under strict lane.
+2. Defer to v1.6 backlog:
+   - suggestion #2: baseline missing-anchor auto phase-A bootstrap (`run_pinned`).
+   - suggestion #3: regression temp-file strategy hardening against `/tmp` template collisions.
+   - suggestion #4: handoff/collab age-only freshness auto-bootstrap.
+   - suggestion #5: atomic protocol-feedback emit helper (batch + index + receipt).
+
+Boundary:
+
+1. This intake does not alter v1.5 unlock math (`6.5`) in current window.
+2. Unless suggestion #1 is reproduced as strict false-blocker, no new v1.5 P0 row is opened from this package.
+
 #### 16.8.24 Roundtable intake: work-layer gate-set split to unblock instance self-drive upgrades (FIX-033, 2026-03-02, docs-only)
 
 Status: `SPEC_READY` (implementation not landed yet).

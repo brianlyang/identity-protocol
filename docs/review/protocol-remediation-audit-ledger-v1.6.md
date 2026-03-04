@@ -57,6 +57,11 @@ Carry-over evidence:
 | FIX16-007 | 2026-03-03 | protocol | release-plane cloud evidence contract (`ASB16-RQ-006`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-008 | 2026-03-03 | protocol | cross-cwd absolute-input runbook (`ASB16-RQ-007`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-009 | 2026-03-03 | protocol | docs bridge consistency automation (`ASB16-RQ-008`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-010 | 2026-03-04 | protocol | run-id anchored strict report selection (`ASB16-RQ-009`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-011 | 2026-03-04 | protocol | baseline phase-A auto-bootstrap (`ASB16-RQ-010`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-012 | 2026-03-04 | protocol | regression temp collision-safe strategy (`ASB16-RQ-011`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-013 | 2026-03-04 | protocol | handoff/collab freshness auto-bootstrap (`ASB16-RQ-012`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-014 | 2026-03-04 | protocol | protocol-feedback atomic emit helper (`ASB16-RQ-013`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -171,6 +176,28 @@ Acceptance target:
 1. consistency checker flags contradictory state pairs.
 2. bridge output includes exact anchors updated in both docs.
 
+### FIX16-010 - office-ops intake triage bridge (`ASB16-RQ-009..013`)
+
+- Status: `SPEC_READY`
+- Goal: register office-ops protocol feedback package into v1.6 backlog with explicit v1.5/v1.6 split boundary.
+
+Source package:
+
+1. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
+2. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
+3. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/SPLIT_RECEIPT_20260304T041849Z_identity-upgrade-exec-office-ops-expert-1772596487.json`
+4. `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/evidence-index/INDEX.md`
+
+Triage decision:
+
+1. suggestion #1 (run-id anchored report selection) is retained as v1.5 candidate carry-over and mirrored into v1.6 as `ASB16-RQ-009` fallback if not landed in v1.5.
+2. suggestions #2..#5 are registered directly in v1.6 (`ASB16-RQ-010..013`).
+
+Cross-check boundary:
+
+1. office-ops current reports stay passing (`all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `writeback_status=WRITTEN`) and do not create a new v1.5 blocker in this window.
+2. this intake is backlog registration only; no protocol code path changed in this docs step.
+
 ---
 
 ## 4) Reviewer decision log
@@ -186,6 +213,11 @@ Acceptance target:
 | FIX16-007 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-008 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-009 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-010 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T04:30:00Z | office-ops package triaged; mapping to `ASB16-RQ-009..013` recorded with v1.5/v1.6 split boundary |
+| FIX16-011 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-012 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-013 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-014 | PENDING_INTAKE | - | - | requires implementation |
 
 ---
 

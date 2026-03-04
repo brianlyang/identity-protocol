@@ -103,6 +103,7 @@ Hard rules:
 | WS-4 | outlet/sidecar anti-regression | P0 | regression matrix for compose/send-time/sidecar across root/tmp/catalog lanes |
 | WS-5 | cross-cwd runbook hardening | P1 | absolute-path invocation profile + deterministic replay recipe |
 | WS-6 | docs bridge automation | P1 | governance/review status bridge template and consistency checker |
+| WS-7 | office-ops deterministic self-drive hardening | P1 | run-id report binding, baseline bootstrap automation, temp/freshness/feedback emit helpers |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -159,6 +160,25 @@ Mandatory runbook note:
 1. non-protocol-root caller must pass absolute `--repo-catalog` for post-execution chain consistency.
 2. runbook examples must include both protocol-root and non-root invocations.
 
+### 4.6 `office_ops_self_drive_determinism_contract_v1` (P1)
+
+Input package boundary:
+
+1. canonical feedback batch:
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
+2. canonical proposal:
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
+
+Mandatory triage split:
+
+1. run-id anchored strict report selection is treated as v1.5 carry-over candidate and can be absorbed by v1.6 only if not landed in v1.5 closure window.
+2. baseline phase-A anchor bootstrap, temp-file collision hardening, handoff/collab age-only bootstrap, and atomic feedback emit helper are v1.6 backlog items by default.
+
+Hard rules:
+
+1. v1.6 intake must not retroactively relabel current v1.5 unlock blockers.
+2. every adopted suggestion must keep canonical protocol-feedback channel and SSOT linkage semantics unchanged.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -171,6 +191,11 @@ Mandatory runbook note:
 | ASB16-RQ-006 | release plane cloud evidence readiness contract | release-plane checks + required gates evidence | P0 | SPEC_READY | current release-plane `NOT_STARTED` |
 | ASB16-RQ-007 | cross-cwd absolute-input runbook contract | review runbook + governance references | P1 | SPEC_READY | review `16.8.47/16.8.48` note |
 | ASB16-RQ-008 | docs bridge consistency automation | governance/review status bridge checker | P1 | SPEC_READY | repeated manual bridge rounds in v1.5 |
+| ASB16-RQ-009 | strict report selection must prefer run-id binding before mtime fallback | strict preflight report resolver + session refresh/version alignment selectors | P0 | SPEC_READY | office-ops intake `16.8.75` (v1.5 candidate carry-over) |
+| ASB16-RQ-010 | baseline missing-anchor should auto-bootstrap phase-A run_pinned before strict phase-B | baseline/session refresh orchestration + update strict lane | P1 | SPEC_READY | office-ops intake `16.8.75` |
+| ASB16-RQ-011 | regression self-drive temp strategy must be collision-safe in `/tmp` | regression scripts + temp allocator helper | P1 | SPEC_READY | office-ops intake `16.8.75` |
+| ASB16-RQ-012 | handoff/collab age-only freshness failures should support deterministic bootstrap auto-rotation | handoff/collab freshness validators + bootstrap receipt writer | P1 | SPEC_READY | office-ops intake `16.8.75` |
+| ASB16-RQ-013 | protocol-feedback atomic emit helper must write batch + index + receipt in one command | feedback emit helper + SSOT index updater + split receipt writer | P1 | SPEC_READY | office-ops intake `16.8.75` |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -197,12 +222,18 @@ Mandatory runbook note:
 | ASB16-RQ-006 | release-plane cloud evidence contract | P0 | SPEC_READY | implementation pending |
 | ASB16-RQ-007 | cross-cwd runbook contract | P1 | SPEC_READY | implementation pending |
 | ASB16-RQ-008 | docs bridge consistency automation | P1 | SPEC_READY | implementation pending |
+| ASB16-RQ-009 | run-id anchored strict report selection | P0 | SPEC_READY | v1.5 carry-over candidate; keep parity with review `16.8.75` |
+| ASB16-RQ-010 | baseline phase-A bootstrap automation | P1 | SPEC_READY | implementation pending |
+| ASB16-RQ-011 | regression temp collision-safe strategy | P1 | SPEC_READY | implementation pending |
+| ASB16-RQ-012 | handoff/collab freshness auto-bootstrap | P1 | SPEC_READY | implementation pending |
+| ASB16-RQ-013 | protocol-feedback atomic emit helper | P1 | SPEC_READY | implementation pending |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
 | Requirement ID | Status delta | Evidence pointer |
 | --- | --- | --- |
 | ASB16-RQ-001..008 | `NEW -> SPEC_READY` | this document kickoff baseline |
+| ASB16-RQ-009..013 | `NEW -> SPEC_READY` | office-ops intake triage bridge (`review v1.5 16.8.75`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
