@@ -5848,7 +5848,7 @@ Boundary:
 1. This promotion is limited to `FIX-056/057/058` and does not auto-promote unrelated pending batches.
 2. `D6` release lock formula in governance `6.5` is unchanged by this scope-limited promotion.
 
-#### 16.8.72 Governance DONE normalization batch-A (`PASS != DONE`, 2026-03-04, docs-only)
+#### 16.8.70 Governance DONE normalization batch-A (`PASS != DONE`, 2026-03-04, docs-only)
 
 Status: `CLOSED_SCOPE_BATCH_A`.
 
@@ -5883,7 +5883,7 @@ Boundary:
 1. This batch does not promote `SPEC_READY` or `IMPL_READY (BLOCKED_BY_AUDIT)` rows.
 2. `D6` remains `LOCKED` until all remaining `P0` rows in governance `6.4` reach `DONE`.
 
-#### 16.8.73 Governance DONE normalization batch-B (`IMPL_READY -> DONE`, 2026-03-04, docs-only)
+#### 16.8.71 Governance DONE normalization batch-B (`IMPL_READY -> DONE`, 2026-03-04, docs-only)
 
 Status: `CLOSED_SCOPE_BATCH_B`.
 
@@ -5946,7 +5946,7 @@ Decision:
    - after core-file edits (`CURRENT_TASK.json`, `IDENTITY_PROMPT.md`), run tuple refresh first, then strict preflight/update;
    - `IP-PVA-001` before refresh should be interpreted as expected stale-alignment fail-safe, not protocol regression.
 
-#### 16.8.70 Historical reject normalization for FIX-008 (`cross-actor inspection routing`, 2026-03-04, docs-only boundary lock)
+#### 16.8.74 Historical reject normalization for FIX-008 (`cross-actor inspection routing`, 2026-03-04, docs-only boundary lock)
 
 Status: `NO_NEW_ACTION_REQUIRED (historical reject retained for traceability; closure is already FIX-010)`.
 

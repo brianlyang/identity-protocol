@@ -2630,7 +2630,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 
 | Requirement ID | Status delta | Evidence pointer |
 | --- | --- | --- |
-| ASB-RQ-003 / ASB-RQ-004 / ASB-RQ-005 | `SPEC_READY -> GATE_READY` | validator scripts landed + creator/readiness/e2e/full-scan/three-plane/CI wiring replayed in review ledger (`FIX-008~FIX-010`, `HOTFIX-P0-002`); `FIX-008` remains a historical reject record and is normatively closed-by `FIX-010 PASS` (see review `16.8.70`) |
+| ASB-RQ-003 / ASB-RQ-004 / ASB-RQ-005 | `SPEC_READY -> GATE_READY` | validator scripts landed + creator/readiness/e2e/full-scan/three-plane/CI wiring replayed in review ledger (`FIX-008~FIX-010`, `HOTFIX-P0-002`); `FIX-008` remains a historical reject record and is normatively closed-by `FIX-010 PASS` (see review `16.8.74`) |
 | ASB-RQ-001 / ASB-RQ-002 / ASB-RQ-009 | `SPEC_READY -> GATE_READY` | actor-scoped canonical session source + mirror compatibility + six-surface wiring replayed in fix-chain evidence (`FIX-009/010/015`, `HOTFIX-P0-002`) |
 | ASB-RQ-006 / ASB-RQ-007 / ASB-RQ-018 / ASB-RQ-019 / ASB-RQ-020 / ASB-RQ-021 | `SPEC_READY -> GATE_READY` | dynamic stamp render/validate + blocker receipt + replay counters (`FIX-004`, `HOTFIX-P0-001`, `HOTFIX-P0-003`) |
 | ASB-RQ-025 / ASB-RQ-026 / ASB-RQ-027 | `SPEC_READY -> GATE_READY` | refresh command + refresh validator + three-plane/full-scan visibility (`HOTFIX-P0-007 prerequisite chain`) |
