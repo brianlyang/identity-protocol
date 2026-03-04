@@ -171,7 +171,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-056 | 2026-03-03 | protocol | D4 single-point blocker closure for experience feedback gate (`ASB-RQ-115`; rulebook/sample path anchor must be CWD-invariant in both direct validator replay and upgrade validator chain) | `e8596da` | DONE | PASS |
 | FIX-057 | 2026-03-04 | protocol | activation switchback hardening for runtime evidence patterns (`identity/runtime/local/...` must resolve to pack-root in runtime contract live revalidation to avoid false hard-switch rollback) | `46a358f` | DONE | PASS |
 | FIX-058 | 2026-03-04 | protocol | activation switch-intent hard gate (`ASB-RQ-116`; actor-bound identity switch must require explicit allow + audited switch-intent receipt, else fail-closed) | `33f6808 / 1de3832` | DONE | PASS |
-| FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
+| FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_OPEN (BLOCKED_BY_ARCH_FIX) |
 
 ---
@@ -4046,6 +4046,40 @@ Acceptance replay template (post-implementation, required for promotion):
 Release-lock implication:
 
 1. `ASB-RQ-117` is added as `P0 SPEC_READY`; until implemented and promoted to `DONE`, `D6` cannot unlock by section `6.5` formula.
+
+#### 16.8.80 Independent re-audit promotion: FIX-059 (`ASB-RQ-014/015/016`, 2026-03-04, protocol, audit lane)
+
+Status: `PASS` (promoted from `PENDING_REAUDIT` to independent closure).
+
+Audit scope:
+
+1. `ASB-RQ-014`: actor-risk health profile quartet must be machine-counted and bound to explicit execution report.
+2. `ASB-RQ-015`: heal replay closure refs (`health_report_ref/heal_report_ref/post_validate_ref`) must be deterministic and validator-enforced.
+3. `ASB-RQ-016`: readiness/e2e closure path must wire explicit execution-report binding for actor-health checks.
+
+Independent replay evidence:
+
+1. `RQ-014` positive/negative:
+   - positive: `/tmp/fix059_reaudit_actor_profile_positive.json` -> `actor_health_profile_status=PASS_REQUIRED`, `report_binding_mode=explicit_report`, `execution_report_ref` equals bound report.
+   - negative: `/tmp/fix059_reaudit_actor_profile_negative.json` -> `FAIL_REQUIRED`, `error_code=IP-HLT-002` (`health_report_execution_ref_mismatch`).
+2. `RQ-015` deterministic refs + validator branch closure:
+   - runtime heal output carries deterministic refs and stable report-id pathing (`/tmp/fix059_reaudit_heal_apply.log`, `/tmp/fix059_reaudit_heal_report_path.txt`);
+   - closure validator positive fixture: `/tmp/fix059_reaudit_heal_fixture_positive.json` -> `PASS_REQUIRED`;
+   - closure validator negative fixture: `/tmp/fix059_reaudit_heal_fixture_negative.json` -> `FAIL_REQUIRED`, `error_code=IP-HEAL-001`.
+3. `RQ-016` bound invocation wiring:
+   - readiness lane command evidence includes explicit execution-report binding in closure path:
+     `/tmp/fix059_release_readiness_passlane.log` (collect-health uses `--execution-report ... --enforce-pass`);
+   - orchestration wiring anchors:
+     `scripts/release_readiness_check.py:1167`,
+     `scripts/release_readiness_check.py:1197`,
+     `scripts/e2e_smoke_test.sh:560`,
+     `scripts/e2e_smoke_test.sh:570`.
+
+Audit decision:
+
+1. Contract-level positive and negative branches for `RQ-014..016` are independently reproducible and machine-auditable.
+2. `FIX-059` is promoted to `DONE/PASS`.
+3. This promotion does not unlock release by itself; current `D6` lock is now attributable to `ASB-RQ-117` only (see governance latest snapshot).
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 

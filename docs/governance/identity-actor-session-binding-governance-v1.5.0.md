@@ -2545,9 +2545,9 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-011 | vendor discovery/solution baseline gates (legacy chain) remain wired and compatible | `validate_identity_vendor_api_discovery.py`, `validate_identity_vendor_api_solution.py`, `validate_required_contract_coverage.py` | P1 | GATE_READY | Existing chain already wired in protocol gates |
 | ASB-RQ-012 | shot-mode/source-tier/spec-hash strict enforcement (vendor reports) | same validators as ASB-RQ-011 | P1 | SPEC_READY | Spec declared in 5.4; current validators not strict on these fields |
 | ASB-RQ-013 | kernel-level capability evolution coverage aggregation | new kernel-level coverage surfaces | P1 | SPEC_READY | Spec declared in 5.5; implementation pending |
-| ASB-RQ-014 | actor-risk health profile coverage (binding/lease/implicit-switch/pointer) is mandatory and machine-counted | `collect_identity_health_report.py`, `validate_identity_actor_health_profile` (new) | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed (`FIX-059`, `2a8c3ee`): actor-risk quartet exported + machine-counted coverage + strict bound-report validator; independent re-audit pending. |
-| ASB-RQ-015 | heal apply supports actor-centric repair branches with deterministic output refs | `identity_creator.py heal`, `validate_identity_heal_replay_closure` (new) | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed (`FIX-059`, `2a8c3ee`): heal report now carries health/heal/post refs and closure validator enforces replay determinism; independent re-audit pending. |
-| ASB-RQ-016 | deterministic report-binding in closure gates (explicit `--report` for health contract checks) | readiness/e2e/CI health-contract invocation surfaces | P0 | IMPL_READY (BLOCKED_BY_AUDIT) | implementation landed (`FIX-059`, `2a8c3ee`): readiness/e2e bound health checks now pass explicit execution-report and enforce report-binding validator; independent re-audit pending. |
+| ASB-RQ-014 | actor-risk health profile coverage (binding/lease/implicit-switch/pointer) is mandatory and machine-counted | `collect_identity_health_report.py`, `validate_identity_actor_health_profile` (new) | P0 | DONE | independent re-audit promoted in review `16.8.80` (`FIX-059`, `2a8c3ee`): actor-risk quartet exported + machine-counted coverage + explicit report-binding positive/negative branches verified. |
+| ASB-RQ-015 | heal apply supports actor-centric repair branches with deterministic output refs | `identity_creator.py heal`, `validate_identity_heal_replay_closure` (new) | P0 | DONE | independent re-audit promoted in review `16.8.80` (`FIX-059`, `2a8c3ee`): deterministic ref emission + closure validator positive/negative branches are machine-reproducible. |
+| ASB-RQ-016 | deterministic report-binding in closure gates (explicit `--report` for health contract checks) | readiness/e2e/CI health-contract invocation surfaces | P0 | DONE | independent re-audit promoted in review `16.8.80` (`FIX-059`, `2a8c3ee`): readiness/e2e bound invocation surfaces enforce explicit execution-report binding. |
 | ASB-RQ-017 | health-heal-validate chain evidence exported in three-plane/full-scan views | `report_three_plane_status.py`, `full_identity_protocol_scan.py` | P1 | SPEC_READY | Visibility semantics declared; implementation pending |
 | ASB-RQ-018 | dynamic response stamp fields are runtime-resolved and non-hardcoded | `render_identity_response_stamp`, `validate_identity_response_stamp` | P0 | DONE | dynamic stamp resolution and replay contracts are closed (`FIX-004`, `HOTFIX-P0-001/003`, `FIX-024`). |
 | ASB-RQ-019 | stamp mismatch must fail-closed with `blocker_receipt` contract | `validate_identity_response_stamp_blocker_receipt` (new), release/e2e gate behavior | P0 | DONE | blocker-receipt fail-closed path is implemented and replay-closed (`FIX-024`, `FIX-054`, `FIX-049`). |
@@ -2824,6 +2824,20 @@ Release boundary after emergency intake:
    - `ASB-RQ-016`
    - `ASB-RQ-117`
 3. `D6` remains `LOCKED` until all four rows are promoted to `DONE` under section `6.5` formula.
+
+### 6.4G Independent re-audit promotion snapshot (`FIX-059`, 2026-03-04)
+
+Snapshot decision:
+
+1. Promote `ASB-RQ-014/015/016` from `IMPL_READY (BLOCKED_BY_AUDIT)` to `DONE` based on independent re-audit closure in review `16.8.80`.
+2. This snapshot supersedes `6.4F` for current unlock arithmetic while preserving `6.4F` as historical emergency-intake baseline.
+
+Release boundary after promotion:
+
+1. `P0_TOTAL=88`, `P0_DONE=87`, `P0_NOT_DONE=1`.
+2. Remaining `P0_NOT_DONE` set:
+   - `ASB-RQ-117` (`SPEC_READY`, architect implementation pending).
+3. `D6` remains `LOCKED` until `ASB-RQ-117` is implemented and promoted to `DONE` under section `6.5` formula.
 
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
