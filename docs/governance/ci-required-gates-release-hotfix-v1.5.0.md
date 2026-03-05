@@ -18,6 +18,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 7. Cross-actor isolation gate must skip strict enforcement when the catalog has no active identities.
 8. Session refresh gate must skip strict enforcement for fixture/demo-only identities.
 9. Send-time reply gate must skip strict synthetic-evidence enforcement for fixture/demo-only identities.
+10. Trigger-regression report discovery must support fixture repository-runtime fallback when pack-local samples are absent.
 
 ## Implementation evidence
 

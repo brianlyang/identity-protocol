@@ -38,6 +38,9 @@
     in CI/strict send-time contexts (`required_contract=false`,
     `send_time_gate_status=SKIPPED_NOT_REQUIRED`) to prevent synthetic evidence
     false-blocking on fixture-only validation paths
+  - `scripts/validate_identity_trigger_regression.py` now resolves fixture
+    report patterns with pack-local first and repository-runtime fallback
+    (fixing `IP-CWD-001` false misses for fixture identities)
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

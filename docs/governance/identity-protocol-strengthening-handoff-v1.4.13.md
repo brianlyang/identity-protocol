@@ -26,6 +26,8 @@ To keep protocol-core release gates fail-closed without false negatives:
      lanes (`required_contract=false`) to prevent false P0 drift alarms.
    - send-time reply gate skips fixture identities in strict/CI lanes to avoid
      synthetic evidence enforcement against demo-only validation paths.
+   - trigger-regression validator resolves fixture sample reports using
+     pack-local first and repository-runtime fallback.
 4. Fixture samples were refreshed to maintain required gate freshness:
    - store-manager prompt principle token presence,
    - store-manager role-binding evidence timestamp,

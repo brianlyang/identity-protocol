@@ -17,6 +17,7 @@ Date: 2026-03-04
 7. Protocol handoff coupling gate required canonical handoff update whenever protocol-core scripts/workflow changed.
 8. Session refresh strict gate flagged fixture identities with false `IP-ASB-RFS-002` failures in CI.
 9. Send-time strict gate (`IP-ASB-STAMP-SESSION-002`) blocked fixture identities using synthetic stamp probes in CI.
+10. Trigger-regression report lookup raised false `IP-CWD-001` under fixture pack-root anchoring.
 
 ## Fixes applied
 

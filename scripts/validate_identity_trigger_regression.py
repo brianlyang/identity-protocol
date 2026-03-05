@@ -101,6 +101,21 @@ def _check_case(case: dict[str, Any], suite: str, idx: int) -> tuple[list[str], 
     return errs, semantically_pass
 
 
+def _report_pattern_candidates(pattern: str, *, pack_root: Path, identity_id: str) -> list[str]:
+    if not pattern:
+        return []
+    candidates: list[str] = [pattern]
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    mapped = ""
+    if pattern.startswith(local_prefix):
+        mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    elif pattern.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    if mapped and mapped not in candidates:
+        candidates.insert(0, mapped)
+    return candidates
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity trigger regression contract")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -162,17 +177,25 @@ def main() -> int:
     else:
         pattern = str(c.get("sample_report_path_pattern", "")).replace("<identity-id>", args.identity_id)
         if pattern:
-            if Path(pattern).is_absolute():
-                matched = sorted(Path(p) for p in glob.glob(pattern))
-            else:
-                matched = sorted(pack_root.glob(pattern))
+            matched: list[Path] = []
+            for candidate in _report_pattern_candidates(pattern, pack_root=pack_root, identity_id=args.identity_id):
+                if Path(candidate).is_absolute():
+                    matched = sorted(Path(p) for p in glob.glob(candidate))
+                else:
+                    matched = sorted(Path(".").glob(candidate))
+                if matched:
+                    break
+            default_pack = (pack_root / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
+            default_repo = (Path("identity") / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
             report_path = (
                 matched[-1]
                 if matched
-                else (pack_root / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
+                else (default_pack if default_pack.exists() else default_repo)
             )
         else:
-            report_path = (pack_root / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
+            default_pack = (pack_root / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
+            default_repo = (Path("identity") / "runtime" / "examples" / f"{args.identity_id}-trigger-regression-sample.json").resolve()
+            report_path = default_pack if default_pack.exists() else default_repo
     if not report_path.exists():
         print(f"[FAIL] IP-CWD-001 missing trigger regression report (pack-root anchored): {report_path}")
         return 1
