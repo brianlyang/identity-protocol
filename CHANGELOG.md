@@ -41,6 +41,9 @@
   - `scripts/validate_identity_trigger_regression.py` now resolves fixture
     report patterns with pack-local first and repository-runtime fallback
     (fixing `IP-CWD-001` false misses for fixture identities)
+  - `scripts/validate_identity_learning_loop.py` now resolves fixture
+    learning report + rulebook paths with repository-runtime fallback when
+    pack-local fixtures are absent
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

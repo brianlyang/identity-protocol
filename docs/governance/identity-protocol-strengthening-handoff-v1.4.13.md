@@ -28,6 +28,8 @@ To keep protocol-core release gates fail-closed without false negatives:
      synthetic evidence enforcement against demo-only validation paths.
    - trigger-regression validator resolves fixture sample reports using
      pack-local first and repository-runtime fallback.
+   - learning-loop validator resolves fixture run-report and rulebook paths
+     using repository-runtime fallback where pack-local assets are absent.
 4. Fixture samples were refreshed to maintain required gate freshness:
    - store-manager prompt principle token presence,
    - store-manager role-binding evidence timestamp,

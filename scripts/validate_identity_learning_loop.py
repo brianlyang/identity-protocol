@@ -59,9 +59,22 @@ def _resolve_run_report(identity_id: str, pack_dir: Path, override: str) -> Path
     preferred = pack_dir / "runtime" / "examples" / f"{identity_id}-learning-sample.json"
     if preferred.exists():
         return preferred
-    # Do not fall back across identities (e.g., store-manager sample).
-    # Missing identity-scoped evidence must fail-fast.
+    fallback_repo = (Path("identity") / "runtime" / "examples" / f"{identity_id}-learning-sample.json").resolve()
+    if fallback_repo.exists():
+        return fallback_repo
+    # Do not fall back across identities; missing identity-scoped evidence must fail-fast.
     return preferred
+
+
+def _resolve_rulebook_path(rulebook_raw: str, *, pack_dir: Path) -> Path:
+    candidate = Path(rulebook_raw).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    repo_relative = candidate.resolve()
+    pack_relative = (pack_dir / candidate).resolve()
+    if repo_relative.exists():
+        return repo_relative
+    return pack_relative
 
 
 def main() -> int:
@@ -137,10 +150,7 @@ def main() -> int:
     else:
         rb_val = str(rb_contract.get("rulebook_path") or "").strip()
         if rb_val:
-            rb_candidate = Path(rb_val).expanduser()
-            if not rb_candidate.is_absolute():
-                rb_candidate = (pack_dir / rb_candidate).resolve()
-            rulebook_path = rb_candidate
+            rulebook_path = _resolve_rulebook_path(rb_val, pack_dir=pack_dir)
         else:
             rulebook_path = pack_dir / "RULEBOOK.jsonl"
     if lvc.get("rulebook_update_required", False):
