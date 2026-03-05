@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **v1.5.x headstamp recurrence closure hardening (hotfix)**:
+  - added strict recurrence closure validator:
+    - `scripts/validate_headstamp_recurrence_closure.py`
+    - enforces explicit actor in strict operations (`IP-ASB-ACTOR-001`)
+    - validates static entrypoint wiring with compose/direct coverage normalization
+    - replays dynamic fail-closed matrix for missing-header / synthetic evidence /
+      non-governed outlet / actor-bound mismatch paths
+  - wired recurrence validator + explicit actor propagation through core release lanes:
+    - `.github/workflows/_identity-required-gates.yml`
+    - `scripts/e2e_smoke_test.sh`
+    - `scripts/identity_creator.py validate`
+    - `scripts/release_readiness_check.py`
+    - `scripts/full_identity_protocol_scan.py`
+    - `scripts/report_three_plane_status.py`
+  - normalized strict send-time/compose invocations to pass actor context explicitly
+    in CI/e2e/readiness/scan paths to reduce actor-drift audit ambiguity.
+
 - **v1.5.0 release gate hotfix: identity-required-gates workflow reliability**:
   - pinned workflow lint action to an existing upstream tag:
     - `.github/workflows/_identity-required-gates.yml` now uses
