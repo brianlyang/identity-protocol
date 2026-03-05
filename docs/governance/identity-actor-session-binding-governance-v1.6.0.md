@@ -508,7 +508,7 @@ Mandatory semantics:
 | ASB16-RQ-014 | initial identity prompt must be bootstrap capability-driver native | identity pack templates + prompt bootstrap contracts + strict update lanes | P0 | SPEC_READY | SRA batch `2026-03-04/002` + architect brief |
 | ASB16-RQ-015 | prompt capability matrix validator must fail-closed on missing requiredized drivers | new prompt capability validator + required gate wiring | P0 | SPEC_READY | SRA batch `2026-03-04/003` |
 | ASB16-RQ-016 | post-core-edit runbook must require refresh->strict and emit business interference matrix | runbook + replay scripts + reporting contracts | P1 | SPEC_READY | SRA batch `2026-03-04/001` + business-impact packet |
-| ASB16-RQ-017 | v1.6 intake for bootstrap capability must include roundtable+vendor+openaidoc+context7 cross-verification | review intake checklist + governance evidence contract | P1 | SPEC_READY | SRA evidence index + vendor scan + OpenAI/context7 anchors |
+| ASB16-RQ-017 | v1.6 intake for bootstrap capability must include roundtable+vendor+openaidoc+context7 cross-verification | review intake checklist + governance evidence contract | P1 | SPEC_READY | SRA evidence index + vendor scan + OpenAI/context7 anchors + final reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-018 | dedup winner selection must be deterministic and monotonic for same `run_id` concurrency windows | serial orchestrator dedup contract + replay validator | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-019 | cross-workflow closure evidence must enforce required schema fields for machine-checkable replay | workflow evidence schema validator + report normalizer | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-020 | skill contract references must be path-valid in active repo/runtime layout before readiness/release acceptance | skill-path integrity validator + readiness/release wiring | P1 | SPEC_READY | office-ops supplemental intake (`review v1.6 FIX16-019`) |
@@ -521,8 +521,8 @@ Mandatory semantics:
 | ASB16-RQ-027 | identity prompts must be kernel-derived artifacts with conformance metadata | prompt compiler + conformance validator + runtime report fields | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
-| ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
-| ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) + architect instance pilot (`review v1.6 FIX16-026`) |
+| ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) + final replay reinforcement (`review v1.6 FIX16-027`) |
+| ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) + architect instance pilot (`review v1.6 FIX16-026`) + final cross-track reinforcement (`review v1.6 FIX16-027`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -569,7 +569,7 @@ Mandatory semantics:
 | ASB16-RQ-014 | prompt bootstrap capability contract | P0 | SPEC_READY | SRA intake pending implementation |
 | ASB16-RQ-015 | prompt capability matrix fail-closed validator | P0 | SPEC_READY | SRA intake pending implementation |
 | ASB16-RQ-016 | refresh->strict + business interference runbook contract | P1 | SPEC_READY | SRA intake pending implementation |
-| ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | SRA intake pending implementation |
+| ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | SRA intake pending implementation; final T1/T2/T3/T4 replay reinforcement in `review FIX16-027` |
 | ASB16-RQ-018 | dedup winner determinism contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
 | ASB16-RQ-019 | cross-workflow evidence schema contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
 | ASB16-RQ-020 | skill-path integrity contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
@@ -582,8 +582,8 @@ Mandatory semantics:
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
-| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE` |
-| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; latest pilot intake in review `FIX16-026` confirms text uplift != executable closure |
+| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE`; reinforced by final replay in `review FIX16-027` |
+| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; pilot (`review FIX16-026`) + final replay (`review FIX16-027`) both confirm text uplift != executable closure |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -591,13 +591,13 @@ Mandatory semantics:
 | --- | --- | --- |
 | ASB16-RQ-001..008 | `NEW -> SPEC_READY` | this document kickoff baseline |
 | ASB16-RQ-009..013 | `NEW -> SPEC_READY` | office-ops intake triage bridge (`review v1.5 16.8.75`) |
-| ASB16-RQ-014..017 | `NEW -> SPEC_READY` | SRA bootstrap capability intake (`review v1.6 FIX16-015`) |
+| ASB16-RQ-014..017 | `NEW -> SPEC_READY` | SRA bootstrap capability intake (`review v1.6 FIX16-015`) + final four-track reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-018..022 | `NEW -> SPEC_READY` | office-ops supplemental replay intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-023..024 | `NEW -> SPEC_READY` | SRA discovery dual-track simulation intake (`review v1.6 FIX16-020`) |
 | ASB16-RQ-025..028 | `NEW -> SPEC_READY` | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | `NEW -> SPEC_READY` | semantic convergence intake (`review v1.6 FIX16-022`) |
-| ASB16-RQ-030 | `NEW -> SPEC_READY` | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
-| ASB16-RQ-031 | `NEW -> SPEC_READY` | self-drive experiment intake (`review v1.6 FIX16-024`) + architect pilot replay (`review v1.6 FIX16-026`) |
+| ASB16-RQ-030 | `NEW -> SPEC_READY` | intake hard-gate reinforcement (`review v1.6 FIX16-023`) + final replay reinforcement (`review v1.6 FIX16-027`) |
+| ASB16-RQ-031 | `NEW -> SPEC_READY` | self-drive experiment intake (`review v1.6 FIX16-024`) + architect pilot replay (`review v1.6 FIX16-026`) + final cross-track replay (`review v1.6 FIX16-027`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
@@ -736,6 +736,54 @@ Deterministic interpretation for `ASB16-RQ-031`:
    - trigger/knowledge/arbitration sample-proof set pass.
 3. Therefore current state remains `SPEC_READY`; pilot intake (`review FIX16-026`) is positive evidence but non-promotional by design.
 
+### 8.4 Final T1/T2/T3/T4 cross-verification reinforcement (2026-03-05, network re-check)
+
+Cross-verification bundle (`v16-final-xverify-20260305-r3`) scope:
+
+1. machine anchor:
+   - `/tmp/v16_final_xverify_bundle_20260305.json`
+2. `T1 roundtable`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+3. `T2 vendor`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+   - `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
+   - `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+   - `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+4. `T3 openai_context`:
+   - `https://developers.openai.com/codex/skills/`
+   - `https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations`
+   - `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+   - `context7:/openai/skills`
+5. `T4 protocol_spec`:
+   - `https://modelcontextprotocol.io/specification/latest`
+   - `https://agentskills.io/specification`
+   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+   - `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+
+Deterministic reinforcement verdict:
+
+1. No external contradiction was found against v1.6 direction (`kernel-first`, `dual-lane`, `fail-close`).
+2. The four-track evidence quorum is materially stronger than checklist-only intake; however, this remains evidence-level reinforcement, not executable closure.
+3. Status consequence remains unchanged:
+   - `ASB16-RQ-015` -> `SPEC_READY` (capability matrix validator not implemented);
+   - `ASB16-RQ-029` -> `SPEC_READY` (semantic convergence validator not implemented);
+   - `ASB16-RQ-030` -> `SPEC_READY` (quorum hard-gate automation not implemented);
+   - `ASB16-RQ-031` -> `SPEC_READY` (prompt-kernel executable coupling + multimodal sample-proof chain not implemented).
+
+Mandatory forward strengthening (v1.6 only):
+
+1. `F1` enforce actor-explicit strict replay for promotion-grade evidence.
+2. `F2` automate `T1..T4` quorum validator and fail-close missing tracks.
+3. `F3` ship semantic single-source convergence comparator + canonical receipt fields.
+4. `F4` bind multimodal sample-proof outputs to kernel->validator mapping fields.
+5. `F5` preserve v1.5 freeze boundary; no status back-projection from v1.6 intake.
+
+Promotion boundary:
+
+1. This section is an evidence-hardening addendum only.
+2. It cannot directly promote any requirement to `DONE`.
+3. Independent executable replay audit remains mandatory before any promotion claim.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
@@ -784,3 +832,13 @@ Deterministic interpretation for `ASB16-RQ-031`:
 44. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
 45. `context7:/openai/skills`
 46. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+47. `/tmp/v16_final_xverify_bundle_20260305.json`
+48. `https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations`
+49. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+50. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role`
+51. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+52. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+53. `https://modelcontextprotocol.io/specification/latest`
+54. `https://agentskills.io/specification`
+55. `context7:/openai/skills`
+56. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`

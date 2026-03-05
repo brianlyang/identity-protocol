@@ -74,6 +74,7 @@ Carry-over evidence:
 | FIX16-024 | 2026-03-05 | protocol | protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`; text import alone is insufficient without validator mapping + multimodal sample-proof closure + explicit actor context) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-026 | 2026-03-05 | protocol | base-repo-architect identity self-drive pilot: protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`), with v1.5/v1.6 boundary normalization | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -672,6 +673,60 @@ Promotion boundary (hard):
 1. `FIX16-026` cannot promote `ASB16-RQ-031` beyond `SPEC_READY` by itself.
 2. Required next step remains protocol-layer implementation for strict-chain actor-context convergence + sample-proof validator mapping, then independent re-audit.
 
+
+### FIX16-027 - final cross-verification reinforcement (`ASB16-RQ-015/017/029/030/031`)
+
+- Status: `SPEC_READY`
+- Goal: execute the final `T1/T2/T3/T4` cross-verification replay (roundtable + vendor + online + protocol/spec) with explicit network re-check, then lock a deterministic v1.6-only positive-strengthening boundary without over-promoting requirement status.
+
+Cross-verification bundle (`v16-final-xverify-20260305-r3`) intake scope:
+
+1. Machine bundle anchor:
+   - `/tmp/v16_final_xverify_bundle_20260305.json`
+2. `T1 roundtable`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+3. `T2 vendor` (local + official web re-check):
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+   - `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
+   - `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+   - `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+4. `T3 openai_context` (official docs + Context7):
+   - `https://developers.openai.com/codex/skills/`
+   - `https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations`
+   - `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+   - `context7:/openai/skills`
+5. `T4 protocol_spec` (official spec + local contract):
+   - `https://modelcontextprotocol.io/specification/latest`
+   - `https://agentskills.io/specification`
+   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+   - `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+
+Cross-track findings (deep cross-check, 2026-03-05):
+
+1. No contradiction found between v1.6 kernel-first/dual-lane direction and external vendor/spec guidance.
+2. Skills governance consistency is reaffirmed:
+   - OpenAI Codex skills and Agent Skills spec both require metadata-first discovery + progressive disclosure + `SKILL.md` contractized body loading.
+3. Strict fail-close semantics are externally aligned:
+   - OpenAI strict function-calling guidance (`strict=true`) and MCP security principles both reinforce explicit schema/control boundaries instead of best-effort inference.
+4. Full-stack runtime separation principle is externally aligned:
+   - Anthropic role/system-prompt guidance and Google AI Studio server-side+secrets guidance both support explicit role context + secret isolation, consistent with v1.6 actor-explicit lane governance.
+5. Remaining gap classification unchanged:
+   - this replay strengthens evidence quality only; executable convergence requirements (`ASB16-RQ-015/029/030/031`) remain implementation-pending.
+
+Positive-strengthening directives (v1.6 forward-only, non-promotional):
+
+1. `F1 actor-explicitness hardening`: strict-path replay must carry explicit actor context in every promotion-grade chain.
+2. `F2 intake automation`: convert `T1..T4` checklist to machine fail-close intake validator (remove checklist-only pass risk).
+3. `F3 semantic convergence`: prioritize canonical semantic receipt + cross-plane comparator before any status promotion claims.
+4. `F4 multimodal sample-proof`: bind trigger/knowledge/arbitration sample outputs to kernel-to-validator mapping fields.
+5. `F5 boundary discipline`: keep v1.5 closure frozen; v1.6 supplements cannot rewrite historical release verdicts.
+
+Deterministic judgment:
+
+1. This fix is a final cross-verification reinforcement intake for v1.6 and is valid as positive evidence hardening.
+2. It does not promote any requirement from `SPEC_READY` by itself.
+3. Any `DONE` claim for `ASB16-RQ-015/017/029/030/031` still requires executable implementation + independent replay audit.
+
 ---
 
 ## 4) Reviewer decision log
@@ -704,6 +759,7 @@ Promotion boundary (hard):
 | FIX16-024 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T10:40:00Z | self-drive A/B replay shows prompt text import alone yields no executable uplift; added `ASB16-RQ-031` for fail-closed executable coupling + multimodal sample-proof closure + explicit actor context in strict lane |
 | FIX16-025 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T12:20:00Z | deep cross-verification package normalized to `T1..T4` taxonomy and replay verdict locked: lane split healthy but `ASB16-RQ-015/029/030` remain implementation-pending; `S0..S4` sequence added as non-regression strengthening path |
 | FIX16-026 | PENDING_INTAKE | base-repo-architect(self-drive) | 2026-03-05T12:58:00Z | runtime self-drive pilot on `base-repo-architect`: protocol-kernel prompt injection + multimodal verification baseline passes; creator strict chain still shows actor-context convergence residual (`IP-ASB-STAMP-SESSION-005`), kept in v1.6 executable-coupling track only |
+| FIX16-027 | PENDING_INTAKE | base-repo-architect | 2026-03-05T14:20:00Z | final T1/T2/T3/T4 cross-verification replay executed with network/vendor/spec re-check; direction reaffirmed, but `ASB16-RQ-015/017/029/030/031` remain `SPEC_READY` pending executable closure |
 
 ---
 
@@ -776,3 +832,13 @@ Promotion boundary (hard):
 53. `/tmp/v16_selfdrive_architect_validation_bundle_20260305.json`
 54. `/tmp/v16_selfdrive_architect_three_plane_20260305.json`
 55. `/tmp/v16_selfdrive_architect_validate_20260305.log`
+56. `/tmp/v16_final_xverify_bundle_20260305.json`
+57. `https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations`
+58. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+59. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role`
+60. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+61. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+62. `https://modelcontextprotocol.io/specification/latest`
+63. `https://agentskills.io/specification`
+64. `context7:/openai/skills`
+65. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
