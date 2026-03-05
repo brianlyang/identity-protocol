@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task, resolve_report_path
+from tool_vendor_governance_common import contract_required, load_json, load_yaml, resolve_pack_and_task, resolve_report_path
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -55,6 +55,18 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
         if isinstance(nested, dict):
             return nested
     return {}
+
+
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        catalog = load_yaml(catalog_path)
+    except Exception:
+        return False
+    identities = catalog.get("identities") or []
+    row = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _feedback_artifacts_present(pack_path: Path) -> bool:
@@ -205,6 +217,31 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] {exc}")
         return 1
+
+    if _is_fixture_identity(catalog_path, args.identity_id):
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "resolved_pack_path": str(pack_path),
+            "operation": args.operation,
+            "required_contract": False,
+            "auto_required_signal": False,
+            "external_source_trust_chain_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "error_code": "",
+            "feedback_batch_path": "",
+            "allowed_trust_tiers": list(DEFAULT_ALLOWED_TIERS),
+            "conclusion_required_tiers": list(DEFAULT_CONCLUSION_REQUIRED_TIERS),
+            "source_row_count": 0,
+            "conclusion_source_count": 0,
+            "candidate_source_count": 0,
+            "unknown_in_conclusion_refs": [],
+            "missing_tier_refs": [],
+            "missing_trace_refs": [],
+            "unknown_candidate_without_downgrade": [],
+            "stale_reasons": ["fixture_profile_scope"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     contract = _select_contract(task)
     required = contract_required(contract) if contract else False

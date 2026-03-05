@@ -23,6 +23,7 @@ Date: 2026-03-04
 13. Agent-handoff validator consumed cross-identity fixture logs and strict stale-age checks, causing false blocking in required-gates despite valid target-identity handoff evidence.
 14. `identity_creator update` defaulted `--scope USER`, which can hard-block fixture/system identities via runtime mode guard in CI where explicit scope is not passed.
 15. Protocol-vendor semantic isolation auto-requiredized fixture protocol-feedback artifacts and raised `IP-SEM-001` fail-closed in CI despite fixture lane being inspection-only.
+16. External-source trust-chain auto-requiredized fixture protocol-feedback artifacts and raised `IP-SRC-003` fail-closed in CI despite fixture lane being inspection-only.
 
 ## Fixes applied
 
@@ -37,6 +38,7 @@ Date: 2026-03-04
 - `2ad0b4a` — canonical handoff addendum to satisfy protocol-core coupling.
 - `this-change-set` — scope handoff evidence to target identity, skip fixture stale-age strictness in handoff/experience governance, and downgrade fixture reply-channel strict gating to inspection-only in CI.
 - `this-change-set` — additionally downgrade fixture protocol-vendor semantic isolation to inspection-only (`SKIPPED_NOT_REQUIRED`) to remove false `IP-SEM-001` CI blockers.
+- `this-change-set` — additionally downgrade fixture external-source trust-chain validation to inspection-only (`SKIPPED_NOT_REQUIRED`) to remove false `IP-SRC-003` CI blockers.
 
 ## Failing run references
 

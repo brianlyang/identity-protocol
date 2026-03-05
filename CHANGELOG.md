@@ -61,6 +61,10 @@
     fixture/demo identities in CI strict lanes (`SKIPPED_NOT_REQUIRED`) to
     avoid protocol-feedback auto-requiredization on fixture sample artifacts
     from falsely triggering `IP-SEM-001` hard failures
+  - `scripts/validate_external_source_trust_chain.py` now skips fixture/demo
+    identities in CI strict lanes (`SKIPPED_NOT_REQUIRED`) to prevent
+    protocol-feedback auto-requiredization from causing false `IP-SRC-003`
+    fail-closed outcomes on fixture samples
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

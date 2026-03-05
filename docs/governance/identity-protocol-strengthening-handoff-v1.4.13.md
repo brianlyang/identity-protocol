@@ -275,6 +275,10 @@ Lifecycle rules:
      identities as inspection-only (`SKIPPED_NOT_REQUIRED`) to prevent
      protocol-feedback sample artifacts from auto-requiredizing semantic
      isolation checks into false `IP-SEM-001` hard failures on CI release lanes.
+   - `validate_external_source_trust_chain.py` now marks fixture/demo
+     identities as inspection-only (`SKIPPED_NOT_REQUIRED`) to prevent
+     protocol-feedback sample artifacts from auto-requiredizing source-trust
+     checks into false `IP-SRC-003` hard failures on CI release lanes.
 
 ## Required validation command set
 
