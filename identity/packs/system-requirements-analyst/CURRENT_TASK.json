@@ -307,7 +307,7 @@
       "confidence",
       "updated_at"
     ],
-    "rulebook_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/RULEBOOK.jsonl"
+    "rulebook_path": "identity/packs/system-requirements-analyst/RULEBOOK.jsonl"
   },
   "learning_verification_contract": {
     "run_id_required": true,
@@ -746,7 +746,7 @@
     "safe_auto_patch_surface": {
       "enforce_path_policy": true,
       "allowlist": [
-        "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/TASK_HISTORY.md",
+        "identity/packs/system-requirements-analyst/TASK_HISTORY.md",
         "identity/packs/system-requirements-analyst/RULEBOOK.jsonl",
         "identity/packs/system-requirements-analyst/TASK_HISTORY.md",
         "identity/packs/system-requirements-analyst/runtime/logs/*",

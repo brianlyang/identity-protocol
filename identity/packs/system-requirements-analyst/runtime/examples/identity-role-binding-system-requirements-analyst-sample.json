@@ -7,7 +7,7 @@
   "runtime_bootstrap": {
     "status": "PASS",
     "validator": "scripts/validate_identity_runtime_contract.py",
-    "evidence": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/packs/system-requirements-analyst/runtime/examples/system-requirements-analyst-bootstrap-runtime-validation-sample.json"
+    "evidence": "identity/packs/system-requirements-analyst/runtime/examples/system-requirements-analyst-bootstrap-runtime-validation-sample.json"
   },
   "switch_guard": {
     "status": "PASS",

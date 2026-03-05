@@ -30,6 +30,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 19. required-gates workflow must call `identity_creator update` with explicit repo catalog binding (`--catalog` + `--repo-catalog` to `identity/catalog/identities.yaml`) to prevent CI home-catalog (`global`) mode drift from tripping runtime mode guard.
 20. for fixture identities running on repo catalog, `identity_creator update` runtime mode guard must use `expect-mode=any` (instead of strict `auto` project/global recognition) to avoid false `mode=custom` aborts.
 21. required-gates mutation/update report-chain validators must run only for mutable runtime identities; fixture/demo identities stay inspection-only and must skip update/report-contract chain execution in CI.
+22. fixture sample contracts must not use workstation-specific absolute paths (for example `/Users/...`) in required runtime evidence fields; fixture artifacts must use repository-relative paths so CI runners can resolve them deterministically.
 
 ## Implementation evidence
 

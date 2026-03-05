@@ -29,6 +29,7 @@ Date: 2026-03-04
 19. required-gates workflow invoked `identity_creator update` without explicit catalog binding, so runner home catalog (`/home/runner/.codex/...`) selected `global` mode and failed runtime mode guard (`pack_within_mode_root=false`) for repo fixture identities.
 20. even with explicit repo-catalog binding, fixture identities resolved as `mode=custom` while runtime mode guard expected `auto` (`project/global`), causing false `expected_mode_match=false` aborts in required-gates.
 21. required-gates executed mutation/update report-chain validators for fixture/demo identities, causing false CI aborts on pre-mutation/update contracts meant for mutable runtime identities.
+22. fixture sample CURRENT_TASK/runtime evidence in `identity/packs/system-requirements-analyst/**` contained workstation-specific absolute paths (`/Users/yangxi/...`), causing rulebook evidence lookup false failures on GitHub runners.
 
 ## Fixes applied
 
@@ -49,6 +50,7 @@ Date: 2026-03-04
 - `this-change-set` — bind `identity_creator update` to repo catalog in required-gates workflow to remove home-catalog mode drift and runtime mode guard false blocks.
 - `this-change-set` — for fixture identities running on repo catalog, override runtime mode guard expectation from `auto` to `any` to prevent false `mode=custom` rejections in CI.
 - `this-change-set` — detect fixture/demo identities in required-gates and skip mutation/update report-chain validators for fixture identities (inspection-only CI lane).
+- `this-change-set` — normalize `system-requirements-analyst` fixture sample paths to repository-relative values to remove runner-specific absolute-path failures in runtime contract validation.
 
 ## Failing run references
 

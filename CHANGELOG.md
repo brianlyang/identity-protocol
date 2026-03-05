@@ -87,6 +87,10 @@
     for those fixture IDs in CI (inspection-only lane), preventing false
     fixture-only aborts from pre-mutation/update contracts that are intended
     for mutable runtime identities
+  - normalized fixture sample paths in
+    `identity/packs/system-requirements-analyst/**` to remove workstation-
+    specific absolute paths (`/Users/yangxi/...`) that caused CI false
+    negatives in `validate_identity_runtime_contract.py` on GitHub runners
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:
