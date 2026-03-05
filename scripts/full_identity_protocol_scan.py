@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from actor_session_common import resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 
 
@@ -165,6 +166,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "reply_identity_context_first_line",
             "layer_intent_resolution",
             "send_time_reply_gate",
+            "headstamp_recurrence_closure",
             "execution_reply_identity_coherence",
             "writeback_continuity",
             "post_execution_mandatory",
@@ -292,6 +294,14 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
+    ap.add_argument(
+        "--actor-id",
+        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        help=(
+            "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
+            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+        ),
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -314,6 +324,7 @@ def main() -> int:
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
+    actor_id = resolve_actor_id(str(args.actor_id or "").strip())
     if args.scan_mode == "target" and not target_set:
         print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
         return 2
@@ -623,6 +634,8 @@ def main() -> int:
                     send_time_reply_gate_blocker_receipt,
                     "--outlet-channel-id",
                     "governed_adapter_v1",
+                    "--actor-id",
+                    actor_id,
                     "--json-only",
                 ],
                 "send_time_reply_gate_validate": [
@@ -647,6 +660,23 @@ def main() -> int:
                     "scan",
                     "--blocker-receipt-out",
                     send_time_reply_gate_blocker_receipt,
+                    "--actor-id",
+                    actor_id,
+                    "--json-only",
+                ],
+                "headstamp_recurrence_closure": [
+                    "python3",
+                    "scripts/validate_headstamp_recurrence_closure.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--actor-id",
+                    actor_id,
                     "--json-only",
                 ],
                 "execution_reply_identity_coherence": [
@@ -1898,6 +1928,19 @@ def main() -> int:
                     ):
                         if k in coherence_doc:
                             check_payload[k] = coherence_doc.get(k)
+                if name == "headstamp_recurrence_closure":
+                    hs_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "headstamp_recurrence_closure_status",
+                        "static_wiring_status",
+                        "dynamic_replay_status",
+                        "error_code",
+                        "missing_wiring_items",
+                        "dynamic_cases",
+                        "stale_reasons",
+                    ):
+                        if k in hs_doc:
+                            check_payload[k] = hs_doc.get(k)
                 if name == "protocol_feedback_reply_channel":
                     channel_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

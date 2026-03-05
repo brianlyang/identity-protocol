@@ -13,6 +13,7 @@ from typing import Any
 
 import yaml
 
+from actor_session_common import resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 
 PROTOCOL_PUBLISH_SCRIPTS = {
@@ -233,6 +234,14 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
+    ap.add_argument(
+        "--actor-id",
+        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        help=(
+            "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
+            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+        ),
+    )
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
@@ -242,6 +251,7 @@ def main() -> int:
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
+    actor_id = resolve_actor_id(str(args.actor_id or "").strip())
     lane_ctx = _resolve_lane_context(
         layer_intent_text=layer_intent_text,
         expected_work_layer=expected_work_layer,
@@ -584,6 +594,8 @@ def main() -> int:
             send_time_reply_gate_blocker_receipt,
             "--outlet-channel-id",
             "governed_adapter_v1",
+            "--actor-id",
+            actor_id,
             "--json-only",
         ],
         [
@@ -608,6 +620,8 @@ def main() -> int:
             "readiness",
             "--blocker-receipt-out",
             send_time_reply_gate_blocker_receipt,
+            "--actor-id",
+            actor_id,
             "--json-only",
         ],
         [
@@ -622,6 +636,21 @@ def main() -> int:
             "--force-check",
             "--receipt",
             send_time_reply_gate_blocker_receipt,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_headstamp_recurrence_closure.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--actor-id",
+            actor_id,
             "--json-only",
         ],
         [

@@ -261,6 +261,7 @@ for ID in $IDS; do
   SEND_TIME_REPLY_FILE="/tmp/identity-send-time-reply-${ID}.txt"
   SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
   EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+  HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
   render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
@@ -305,7 +306,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
   echo "[12.465/30][$ID] compose governed send-time reply sample + preflight"
-  compose_cmd=(python3 scripts/compose_and_validate_governed_reply.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id governed_adapter_v1 --json-only)
+  compose_cmd=(python3 scripts/compose_and_validate_governed_reply.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id governed_adapter_v1 --actor-id "$HEADSTAMP_ACTOR_ID" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     compose_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -318,7 +319,7 @@ for ID in $IDS; do
   "${compose_cmd[@]}"
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
-  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id governed_adapter_v1 --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT")
+  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id governed_adapter_v1 --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     send_time_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -332,6 +333,9 @@ for ID in $IDS; do
 
   echo "[12.467/30][$ID] validate send-time reply gate blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
+
+  echo "[12.468/30][$ID] validate headstamp recurrence closure matrix (v1.5.x hotfix)"
+  python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --json-only
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
   coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")

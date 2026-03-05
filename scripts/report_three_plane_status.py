@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 
@@ -204,6 +205,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     layer_intent_text = str(getattr(args, "layer_intent_text", "") or "").strip()
     expected_work_layer = str(getattr(args, "expected_work_layer", "") or "").strip().lower()
     expected_source_layer = str(getattr(args, "expected_source_layer", "") or "").strip().lower()
+    actor_id = resolve_actor_id(str(getattr(args, "actor_id", "") or "").strip())
     lane_applied_gate_set = _resolve_applied_gate_set(
         layer_intent_text=layer_intent_text,
         expected_work_layer=expected_work_layer,
@@ -615,6 +617,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         send_time_reply_gate_blocker_receipt,
         "--outlet-channel-id",
         "governed_adapter_v1",
+        "--actor-id",
+        actor_id,
         "--json-only",
     ]
     if layer_intent_text:
@@ -657,6 +661,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "three-plane",
         "--blocker-receipt-out",
         send_time_reply_gate_blocker_receipt,
+        "--actor-id",
+        actor_id,
         "--json-only",
     ]
     if layer_intent_text:
@@ -675,6 +681,33 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     send_time_gate_status = str(send_time_gate_payload.get("send_time_gate_status", "")).strip().upper()
     if rc_send_time_gate != 0 or send_time_gate_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    headstamp_recurrence_cmd = [
+        "python3",
+        "scripts/validate_headstamp_recurrence_closure.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--operation",
+        "three-plane",
+        "--actor-id",
+        actor_id,
+        "--json-only",
+    ]
+    rc_headstamp, out_headstamp, err_headstamp = _run(headstamp_recurrence_cmd)
+    headstamp_payload = _parse_json_payload(out_headstamp) or {}
+    validators["headstamp_recurrence_closure"] = {
+        "rc": rc_headstamp,
+        "ok": rc_headstamp == 0,
+        "out": out_headstamp,
+        "err": err_headstamp,
+    }
+    headstamp_status = str(headstamp_payload.get("headstamp_recurrence_closure_status", "")).strip().upper()
+    if rc_headstamp != 0 or headstamp_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     reply_coherence_cmd = [
@@ -2193,6 +2226,14 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
+    ap.add_argument(
+        "--actor-id",
+        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        help=(
+            "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
+            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+        ),
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 

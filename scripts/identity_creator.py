@@ -1124,6 +1124,14 @@ def main() -> int:
     p_validate.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
     p_validate.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     p_validate.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
+    p_validate.add_argument(
+        "--actor-id",
+        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        help=(
+            "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
+            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+        ),
+    )
 
     p_compile = sub.add_parser("compile", help="Compile runtime brief")
     p_compile.add_argument("--check", action="store_true", help="fail if compile output is not stable")
@@ -1350,6 +1358,7 @@ def main() -> int:
 
     if args.command == "validate":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        actor_id_validate = resolve_actor_id(str(args.actor_id or "").strip())
         rc_guard = _runtime_mode_guard(
             args.identity_id,
             args.catalog,
@@ -1451,6 +1460,8 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -1569,6 +1580,8 @@ def main() -> int:
                 send_time_reply_gate_blocker_receipt,
                 "--outlet-channel-id",
                 "governed_adapter_v1",
+                "--actor-id",
+                actor_id_validate,
                 "--json-only",
             ],
             [
@@ -1593,6 +1606,23 @@ def main() -> int:
                 "validate",
                 "--blocker-receipt-out",
                 send_time_reply_gate_blocker_receipt,
+                "--actor-id",
+                actor_id_validate,
+            ],
+            [
+                "python3",
+                "scripts/validate_headstamp_recurrence_closure.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--actor-id",
+                actor_id_validate,
+                "--json-only",
             ],
             [
                 "python3",
