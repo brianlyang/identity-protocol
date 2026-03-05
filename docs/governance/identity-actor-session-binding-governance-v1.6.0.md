@@ -446,15 +446,15 @@ Hard rules:
 Goal:
 
 1. Prevent guess-first requirement intake in v1.6 by enforcing cross-verified evidence quorum before recommendation promotion.
-2. Require every new suggestion to carry explicit roundtable, vendor, online reference, and protocol/spec anchors.
+2. Require every new suggestion to carry explicit `T1..T4` evidence tracks with machine-readable anchors.
 
 Mandatory semantics:
 
 1. Any new v1.6 suggestion item must provide all four tracks before it can move beyond `PENDING_INTAKE`:
-   - roundtable track (local multi-role deliberation with explicit fact/inference split);
-   - vendor track (multi-vendor official guidance with source URLs);
-   - online reference track (live-link citations + retrieval timestamp);
-   - protocol/spec track (`MCP`/`Agent Skills` and relevant OpenAI docs/context extracts).
+   - `T1 roundtable` track (local multi-role deliberation with explicit fact/inference split);
+   - `T2 vendor` track (multi-vendor official guidance with source URLs);
+   - `T3 openai_context` track (OpenAI official docs + Context7 extraction anchors with retrieval timestamp);
+   - `T4 protocol_spec` track (`MCP`/`Agent Skills` + local skill protocol contract references).
 2. Missing any required track keeps item locked at `PENDING_INTAKE` and blocks implementation-promotion.
 3. Every intake section must include:
    - `cross_verification_bundle_id`
@@ -521,7 +521,7 @@ Mandatory semantics:
 | ASB16-RQ-027 | identity prompts must be kernel-derived artifacts with conformance metadata | prompt compiler + conformance validator + runtime report fields | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
-| ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (roundtable + vendor + online refs + protocol/spec anchors) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
+| ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
 | ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
@@ -538,7 +538,7 @@ Mandatory semantics:
 | C8 | promotion to `DONE` only via evidence-backed decision | promotion receipt with commit + evidence + reviewer |
 | C9 | initialization templates are capability-driver complete for requiredized matrix | prompt capability matrix report (`coverage_rate=100` for P0 set) |
 | C10 | post-core-edit replay follows refresh->strict sequence with bounded business interference | paired refresh+strict reports + interference matrix receipt |
-| C11 | cross-verification packet includes roundtable/vendor/openaidoc/context7 | intake checklist marked complete with four-track anchors |
+| C11 | cross-verification packet includes all `T1..T4` evidence tracks (`roundtable/vendor/openai_context/protocol_spec`) | intake checklist marked complete with four-track anchors + normalized track labels |
 | C12 | discovery requiredization trigger semantics stay deterministic (`not_triggered -> optional`, `triggered_no_apply -> FAIL_REQUIRED`) | discovery requiredization report with trigger class + error code (`IP-DREQ-001`) |
 | C13 | apply-time discovery coverage reaches full closure before `PASS_REQUIRED` | same-payload coverage proof (`passed==total`, `coverage_rate=100`) + linked receipt/index |
 | C14 | kernel-first canonicalization holds (`identity/protocol/*` + `identity/catalog/schema/*` are source of base contracts) | kernel-source map report + projection diff check |
@@ -546,7 +546,7 @@ Mandatory semantics:
 | C16 | active identity prompts are derived and metadata-consistent with kernel contracts | prompt conformance report with digest/version linkage |
 | C17 | instance write attempts to protocol-kernel/governance/review paths are fail-closed | boundary validator replay with deterministic error code (`IP-KERNEL-WRITE-001`) |
 | C18 | same-lineage semantic-routing verdict is convergent across update/three-plane/full-scan | convergence report (`mismatch_count=0`) + canonical semantic receipt path |
-| C19 | new v1.6 suggestions pass intake evidence quorum before implementation promotion | cross-verification bundle proof (`roundtable/vendor/online/spec`) + timestamped source set + conflict reconciliation note |
+| C19 | new v1.6 suggestions pass intake evidence quorum before implementation promotion | cross-verification bundle proof (`T1..T4`) + timestamped source set + conflict reconciliation note |
 | C20 | protocol-kernel prompt import produces executable uplift (not text-only) and multimodal sample-proof closure under explicit actor context | paired A/B replay bundle + mapping fields (`kernel_contract_ref`,`validator_ref`,`evidence_ref`) + trigger/knowledge/arbitration sample-proof pass set |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
@@ -582,7 +582,7 @@ Mandatory semantics:
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
-| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires roundtable+vendor+online/spec bundle before leaving `PENDING_INTAKE` |
+| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE` |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
@@ -670,6 +670,52 @@ Evidence bundle required for Phase-B -> Phase-C transition:
 3. write-boundary replay with deterministic fail-close code (`IP-KERNEL-WRITE-001`).
 4. parity replay proof (same inputs, root/tmp equivalent outcomes).
 
+### 8.2 Cross-Verification Verdict and Implementation Hardening (2026-03-05)
+
+Cross-verification bundle (`v16-xverify-20260305-r2`) intake scope:
+
+1. `T1 roundtable`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+2. `T2 vendor`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+3. `T3 openai_context`:
+   - `https://developers.openai.com/codex/security/#sandbox-and-approvals`
+   - `https://developers.openai.com/codex/skills/`
+   - `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+   - `context7:/openai/skills`
+   - `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+4. `T4 protocol_spec`:
+   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+   - `https://modelcontextprotocol.io/specification/latest`
+   - `https://agentskills.io/specification`
+5. Runtime replay anchors:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+   - `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
+   - `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
+
+Deterministic verdict:
+
+1. Direction is confirmed: kernel-first + dual-lane governance remains valid and non-conflicting with vendor/spec tracks.
+2. Execution closure is incomplete: same-lineage replay still shows `update all_ok=true` while three-plane reports semantic block (`IP-SEM-001`) and full-scan summary remains `p0=1`.
+3. Requirement status consequence:
+   - `ASB16-RQ-029` remains `SPEC_READY` until canonical semantic receipt + convergence validator are implemented.
+   - `ASB16-RQ-015` remains `SPEC_READY` until prompt capability matrix fields are produced and wired to fail-close gate.
+   - `ASB16-RQ-030` remains `SPEC_READY` until `T1..T4` quorum has automated hard-blocking (not checklist-only).
+
+Mandatory positive-strengthening sequence (non-regression constrained):
+
+1. `S0 shadow`: add semantic convergence comparator that emits `mismatch_count` and lineage refs without blocking release.
+2. `S1 dual-write`: strict update emits canonical semantic block fields (`semantic_routing_status/error_code/evidence_path/source/reason`) consumed by three-plane/full-scan.
+3. `S2 fail-close`: enable convergence blocker `IP-SEM-CONV-001` only after root/tmp parity replay is stable for two consecutive runs.
+4. `S3 intake hard-gate`: implement validator that blocks promotion when any `T1..T4` track or mandatory metadata field is missing.
+5. `S4 baseline guard`: keep instance/protocol lane split and kernel write-boundary lock unchanged during all S0..S3 phases.
+
+Promotion policy impact:
+
+1. This section upgrades evidence quality and terminology consistency.
+2. It does not promote any P0/P1 row to `DONE` by itself.
+3. Any promotion claim without S0..S3 implementation evidence is invalid.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
@@ -710,3 +756,11 @@ Evidence bundle required for Phase-B -> Phase-C transition:
 36. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
 37. `https://modelcontextprotocol.io/specification/latest`
 38. `https://agentskills.io/specification`
+39. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+40. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+41. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+42. `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
+43. `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
+44. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+45. `context7:/openai/skills`
+46. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`

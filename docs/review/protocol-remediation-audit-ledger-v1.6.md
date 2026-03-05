@@ -72,6 +72,7 @@ Carry-over evidence:
 | FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | f603dd9 | SPEC_READY | PENDING_INTAKE |
 | FIX16-023 | 2026-03-05 | protocol | v1.6 suggestion intake evidence quorum hard-gate (`ASB16-RQ-030`; roundtable+vendor+online/spec evidence required before promotion beyond `PENDING_INTAKE`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-024 | 2026-03-05 | protocol | protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`; text import alone is insufficient without validator mapping + multimodal sample-proof closure + explicit actor context) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -574,6 +575,62 @@ Deterministic judgment:
 3. multimodal capability closure remains incomplete without required sample-proof outputs.
 4. therefore v1.6 needs explicit P0 contractization (`ASB16-RQ-031`) rather than narrative prompt hardening only.
 
+### FIX16-025 - deep cross-verification closure intake for `ASB16-RQ-015/029/030` (`T1..T4` normalized taxonomy)
+
+- Status: `SPEC_READY`
+- Goal: convert this round "roundtable + vendor + openai/context7 + skill/spec + live replay" package into deterministic governance/review closure criteria without over-claiming implementation completion.
+
+Cross-verification bundle (`v16-xverify-20260305-r2`) evidence tracks:
+
+1. `T1 roundtable`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+2. `T2 vendor`:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+3. `T3 openai_context`:
+   - `https://developers.openai.com/codex/security/#sandbox-and-approvals`
+   - `https://developers.openai.com/codex/skills/`
+   - `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+   - `context7:/openai/skills`
+   - `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+4. `T4 protocol_spec`:
+   - `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+   - `https://modelcontextprotocol.io/specification/latest`
+   - `https://agentskills.io/specification`
+5. Runtime replay set:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+   - `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
+   - `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
+
+Deterministic replay verdict (same-lineage extraction):
+
+1. update report remains green for lane routing:
+   - `all_ok=true`
+   - `work_layer=instance`
+   - `applied_gate_set=instance_required_checks`
+2. three-plane remains blocked by semantic lineage guard:
+   - `instance=BLOCKED`
+   - `semantic_routing_status=FAIL_REQUIRED`
+   - `error_code=IP-SEM-001`
+3. full-scan still reports unresolved P0 in same window:
+   - `summary.p0=1`
+4. judgment:
+   - dual-lane split itself is not regressed;
+   - closure gap is convergence/executability (`ASB16-RQ-015/029/030` still implementation-pending).
+
+Positive-strengthening sequence (non-regression required):
+
+1. `S0 shadow`: semantic convergence comparator emits `mismatch_count` and lineage refs (observe-only).
+2. `S1 dual-write`: strict update emits canonical semantic fields consumed by three-plane/full-scan.
+3. `S2 fail-close`: enable `IP-SEM-CONV-001` only after root/tmp parity is stable for two consecutive runs.
+4. `S3 intake hard-gate`: automated validator enforces `T1..T4` presence and metadata completeness.
+5. `S4 baseline guard`: keep lane split + kernel write-boundary lock unchanged during `S0..S3`.
+
+Promotion boundary (hard):
+
+1. This fix is docs/governance normalization intake only; it does not promote requirement status by itself.
+2. `ASB16-RQ-015/029/030` can move past `SPEC_READY` only after implementation + strict replay evidence under `S0..S3`.
+3. Any claim of `DONE` without executable convergence proof is invalid.
+
 ---
 
 ## 4) Reviewer decision log
@@ -604,6 +661,7 @@ Deterministic judgment:
 | FIX16-022 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T03:10:00Z | live replay confirms semantic convergence gap (`update green` + `IP-SEM-001` in aggregators); new requirement `ASB16-RQ-029` added; `A-D P0` and `E P1` priorities mapped to requirement set |
 | FIX16-023 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T09:40:00Z | intake hard-gate reinforcement added: new suggestions require roundtable/vendor/online/spec evidence quorum (`ASB16-RQ-030`) before promotion beyond `PENDING_INTAKE` |
 | FIX16-024 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T10:40:00Z | self-drive A/B replay shows prompt text import alone yields no executable uplift; added `ASB16-RQ-031` for fail-closed executable coupling + multimodal sample-proof closure + explicit actor context in strict lane |
+| FIX16-025 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T12:20:00Z | deep cross-verification package normalized to `T1..T4` taxonomy and replay verdict locked: lane split healthy but `ASB16-RQ-015/029/030` remain implementation-pending; `S0..S4` sequence added as non-regression strengthening path |
 
 ---
 
