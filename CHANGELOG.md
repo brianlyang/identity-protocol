@@ -99,6 +99,12 @@
     from catalog priority (`active -> default_identity -> first catalog row`)
     instead of diff-order-dependent ID resolution, preventing false failures in
     `identity/runtime/IDENTITY_COMPILED.md` freshness checks
+  - finalized release metadata consistency closure for `v1.5.1`:
+    - `README.md` release posture updated to v1.5.1 Full-Go with fixed evidence anchors
+    - `VERSIONING.md` synchronized with v1.5.1 formal release snapshot while preserving
+      release-metadata sync baseline marker (`v1.4.10+`) for validator compatibility
+    - `requirements-dev.txt` release-review context updated for v1.5.1 closure while preserving
+      sync marker format (`release metadata synchronized in v1.4.10 draft`)
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

@@ -93,11 +93,16 @@ To avoid capability overlap and policy conflicts, use this layered model:
 
 Enforcement principle: **Identity governance > Skill procedure > MCP/Tool execution**.
 
-## Current release posture (v1.4.x baseline)
+## Current release posture (v1.5.1 formal baseline)
 
-- **Code-plane**: upgraded with local-runtime boundary + identity-scoped anti-pollution gates.
-- **Release-plane**: **Conditional Go** until cloud `required-gates` is green with the latest workflow changes.
-- Do **not** externally claim `Full Go` before all required cloud checks are green.
+- **Code-plane**: local-runtime boundary + identity-scoped anti-pollution gates are landed and replayed.
+- **Release-plane**: **Full Go (main)** for `v1.5.1` after required cloud gate closure.
+- Release evidence anchors:
+  - tag: `v1.5.1`
+  - main/tag commit: `5d562a0ae1f785102f2d4001583545969ff215c1`
+  - workflow: `identity-protocol-ci`
+  - run-id: `22708478725`
+  - required gate: `required-gates / validate-identity = success`
 
 ### Plane blocking policy (must not mix)
 

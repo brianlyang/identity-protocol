@@ -53,9 +53,19 @@ as explicitly reviewed during release closure.
 Release closure is considered incomplete when any of the three synchronization
 files is stale, even if feature code is already merged.
 
+## Current formal release snapshot (v1.5.1)
+
+- Current production-facing release tag: `v1.5.1`
+- Release target branch: `main`
+- Release-aligned commit: `5d562a0ae1f785102f2d4001583545969ff215c1`
+- Required cloud gate closure evidence:
+  - workflow: `identity-protocol-ci`
+  - run-id: `22708478725`
+  - required check: `required-gates / validate-identity = success`
+
 ## Full-Go declaration rule (mandatory)
 
-For v1.4.x and later:
+For v1.5.x and later:
 
 - If cloud `required-gates` has no latest green run-id for the release head,
   status must remain **Conditional Go**.
