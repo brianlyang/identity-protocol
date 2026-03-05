@@ -73,6 +73,11 @@
     fallback scope `USER -> AUTO` before runtime mode guard, preventing CI
     fixture runs from failing with scope-mismatch guard blocks when
     `IDENTITY_SCOPE=USER` is inherited from environment defaults
+  - `.github/workflows/_identity-required-gates.yml` now calls
+    `identity_creator.py update` with explicit
+    `--catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml`
+    to avoid CI runner home-catalog mode drift (`global`) causing runtime mode
+    guard false blocks for repo fixture identities
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

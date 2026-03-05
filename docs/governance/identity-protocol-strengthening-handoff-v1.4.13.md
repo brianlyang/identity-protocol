@@ -287,6 +287,10 @@ Lifecycle rules:
    - `identity_creator.py update` now normalizes fixture fallback scope
      (`USER -> AUTO`) before runtime mode guard to prevent CI environment scope
      defaults from falsely aborting fixture update execution.
+   - required-gates workflow now passes explicit repo catalog bindings to
+     `identity_creator.py update` (`--catalog` and `--repo-catalog` pointing to
+     `identity/catalog/identities.yaml`) to prevent runner home-catalog mode
+     drift (`global`) from tripping runtime mode guard on repo fixture packs.
 
 ## Required validation command set
 

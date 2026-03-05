@@ -26,6 +26,7 @@ Date: 2026-03-04
 16. External-source trust-chain auto-requiredized fixture protocol-feedback artifacts and raised `IP-SRC-003` fail-closed in CI despite fixture lane being inspection-only.
 17. Protocol data sanitization boundary auto-requiredized fixture protocol-feedback artifacts and raised `IP-DSN-001` fail-closed in CI despite fixture lane being inspection-only.
 18. `identity_creator update` inherited `IDENTITY_SCOPE=USER` in CI and tripped runtime mode guard for fixture identity execution (`scope mismatch`), aborting required-gates with exit code 2.
+19. required-gates workflow invoked `identity_creator update` without explicit catalog binding, so runner home catalog (`/home/runner/.codex/...`) selected `global` mode and failed runtime mode guard (`pack_within_mode_root=false`) for repo fixture identities.
 
 ## Fixes applied
 
@@ -43,6 +44,7 @@ Date: 2026-03-04
 - `this-change-set` — additionally downgrade fixture external-source trust-chain validation to inspection-only (`SKIPPED_NOT_REQUIRED`) to remove false `IP-SRC-003` CI blockers.
 - `this-change-set` — additionally downgrade fixture protocol-data-sanitization validation to inspection-only (`SKIPPED_NOT_REQUIRED`) to remove false `IP-DSN-001` CI blockers.
 - `this-change-set` — normalize fixture update scope fallback (`USER -> AUTO`) before runtime mode guard so CI fixture update runs no longer abort on environment scope leakage.
+- `this-change-set` — bind `identity_creator update` to repo catalog in required-gates workflow to remove home-catalog mode drift and runtime mode guard false blocks.
 
 ## Failing run references
 
