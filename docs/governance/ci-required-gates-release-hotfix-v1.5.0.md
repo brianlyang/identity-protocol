@@ -16,6 +16,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 5. Required runtime contract validators must support both pack-local and repository-relative fixture evidence/rulebook paths.
 6. Protocol-core script/workflow changes must co-change canonical handoff in the same diff range.
 7. Cross-actor isolation gate must skip strict enforcement when the catalog has no active identities.
+8. Session refresh gate must skip strict enforcement for fixture/demo-only identities.
 
 ## Implementation evidence
 

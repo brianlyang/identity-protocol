@@ -22,6 +22,8 @@ To keep protocol-core release gates fail-closed without false negatives:
      `SKIPPED_NOT_REQUIRED` during CI inspection operations.
    - cross-actor isolation validator skips strict enforcement when catalog has
      no active identities (fixture-only catalogs).
+   - session refresh status validator skips fixture identities in strict/CI
+     lanes (`required_contract=false`) to prevent false P0 drift alarms.
 4. Fixture samples were refreshed to maintain required gate freshness:
    - store-manager prompt principle token presence,
    - store-manager role-binding evidence timestamp,

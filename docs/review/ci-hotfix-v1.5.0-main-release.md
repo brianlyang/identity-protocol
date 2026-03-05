@@ -15,6 +15,7 @@ Date: 2026-03-04
 5. Actor-session strict gates treated fixture identities as mutable runtime identities in CI.
 6. Cross-actor isolation strict gate rejected fixture-only catalogs with no active identities.
 7. Protocol handoff coupling gate required canonical handoff update whenever protocol-core scripts/workflow changed.
+8. Session refresh strict gate flagged fixture identities with false `IP-ASB-RFS-002` failures in CI.
 
 ## Fixes applied
 

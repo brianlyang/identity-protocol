@@ -30,6 +30,10 @@
   - `scripts/validate_cross_actor_isolation.py` now returns
     `SKIPPED_NOT_REQUIRED` when catalog has no active identities, and emits
     non-failing `[OK]` messaging for skipped outcomes
+  - `scripts/validate_identity_session_refresh_status.py` now skips fixture
+    identities in CI/strict operations (`required_contract=false`,
+    `session_refresh_status=SKIPPED_NOT_REQUIRED`) to avoid false strict
+    failures for demo-only catalogs
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

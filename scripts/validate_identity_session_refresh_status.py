@@ -7,8 +7,11 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_REFRESH_PAYLOAD = "IP-ASB-RFS-001"
@@ -38,6 +41,22 @@ REQUIRED_FIELDS = (
     "baseline_error_code",
     "lag_commits",
 )
+
+
+def _load_catalog(path: Path) -> dict[str, Any]:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _identity_row(catalog: dict[str, Any], identity_id: str) -> dict[str, Any] | None:
+    rows = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+    return next((x for x in rows if str(x.get("id", "")).strip() == identity_id), None)
+
+
+def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
@@ -145,6 +164,34 @@ def main() -> int:
     if not repo_catalog_path.exists():
         print(f"[FAIL] repo catalog not found: {repo_catalog_path}")
         return 2
+
+    catalog = _load_catalog(catalog_path)
+    if _is_fixture_identity(_identity_row(catalog, args.identity_id)):
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "operation": args.operation,
+            "session_refresh_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "error_code": "",
+            "actor_id": "",
+            "lease_status": "",
+            "pointer_consistency": "",
+            "risk_flags": [],
+            "next_action": "",
+            "baseline_status": "",
+            "baseline_error_code": "",
+            "report_protocol_commit_sha": "",
+            "protocol_head_sha_at_run_start": "",
+            "baseline_reference_mode": "",
+            "current_protocol_head_sha": "",
+            "head_drift_detected": False,
+            "lag_commits": None,
+            "report_selected_path": "",
+            "required_contract": False,
+            "stale_reasons": ["fixture_profile_scope"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     refresh_payload, stale_reasons, refresh_rc = _load_refresh_payload(args)
 
