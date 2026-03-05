@@ -4374,10 +4374,10 @@ Required replay matrix (must all pass before promotion):
 4. Negative D: actor-bound mismatch -> `IP-ASB-STAMP-SESSION-005`.
 5. Positive E: governed compose/send-time payload path -> `PASS_REQUIRED` with channel-coverage proof fields.
 
-Promotion boundary:
+Promotion boundary (intake-time; superseded by implementation intake `16.8.91`):
 
-1. `FIX-062` and `FIX-063` remain `SPEC_READY` until the architect hotfix lands and independent re-audit accepts A/B/C/D/E rows.
-2. No docs-only promotion to `DONE/PASS` is allowed for this recurrence class.
+1. This docs-only snapshot kept `FIX-062`/`FIX-063` at `SPEC_READY` until architect hotfix landing.
+2. After code landing (`611423b / 4b5ea69`), current status is `IMPL_READY (BLOCKED_BY_AUDIT)`; promotion to `DONE/PASS` still requires independent re-audit acceptance of A/B/C/D/E rows.
 
 #### 16.8.88 P1 deep bug intake: actor-role semantic ambiguity and audit drift risk (`FIX-064` / `ASB-RQ-121`, 2026-03-05, docs-only)
 
@@ -4412,10 +4412,11 @@ v1.5.x hardening requirements (must close in v1.5.x, not deferred to v1.6):
    - assistant-channel validation replays use explicit `--actor-id assistant:codex`;
    - manual operator replays are labeled `manual_operator` evidence and cannot directly replace assistant-emission closure proofs.
 
-Promotion boundary:
+Promotion boundary (intake-time; superseded by implementation intake `16.8.91`):
 
-1. `FIX-064` remains `SPEC_READY` until role-partition fields and fail-closed branches are implemented and independently re-audited.
-2. This item is designated for the `v1.5.x` hardening stream and must not be pushed to `v1.6` backlog by default.
+1. This docs-only snapshot kept `FIX-064` at `SPEC_READY` until role-partition fields and fail-closed branches landed.
+2. After code landing (`611423b / 4b5ea69`), current status is `IMPL_READY (BLOCKED_BY_AUDIT)` and independent re-audit is still mandatory before promotion.
+3. This item remains designated for the `v1.5.x` hardening stream and must not be pushed to `v1.6` backlog by default.
 
 #### 16.8.89 P0 strict deep-scan addendum: actor-explicitness and coverage-normalization closure (`FIX-063`, 2026-03-05, docs-only)
 

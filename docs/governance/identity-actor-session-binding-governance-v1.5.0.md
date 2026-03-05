@@ -3014,8 +3014,8 @@ python3 scripts/validate_protocol_ssot_source.py
 
 Snapshot decision:
 
-1. Add recurrence requirement row:
-   - `ASB-RQ-119` (`P0`, status `SPEC_READY (POST_RELEASE_P0_HOTFIX)`).
+1. Add recurrence requirement row (intake-time status):
+   - `ASB-RQ-119` (`P0`, intake status `SPEC_READY (POST_RELEASE_P0_HOTFIX)`, later promoted to `IMPL_READY (BLOCKED_BY_AUDIT)` in `6.4A/6.4` main table).
 2. Root cause is scoped as execution-channel bypass:
    - final assistant reply emitted directly in chat channel without governed outlet artifacts.
 3. This snapshot is non-retroactive to `v1.5.1` historical release closure.
@@ -3034,8 +3034,8 @@ Boundary semantics:
 
 Snapshot decision:
 
-1. Add recurrence requirement row:
-   - `ASB-RQ-120` (`P0`, status `SPEC_READY (POST_RELEASE_P0_HOTFIX)`).
+1. Add recurrence requirement row (intake-time status):
+   - `ASB-RQ-120` (`P0`, intake status `SPEC_READY (POST_RELEASE_P0_HOTFIX)`, later promoted to `IMPL_READY (BLOCKED_BY_AUDIT)` in `6.4A/6.4` main table).
 2. Recurrence is decomposed into two mandatory closure classes:
    - class A `headstamp_missing` (header absent);
    - class B `headstamp_tuple_drift_or_channel_gap` (tuple stale/mismatch or uncovered visible channel).
