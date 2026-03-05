@@ -1229,6 +1229,14 @@ def main() -> int:
     p_update.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     p_update.add_argument("--expected-work-layer", default="", help="optional expected work_layer passthrough")
     p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
+    p_update.add_argument(
+        "--actor-id",
+        default=os.environ.get("CODEX_ACTOR_ID", ""),
+        help=(
+            "optional actor id override for actor-scoped refresh/session validators during update. "
+            "When omitted, runtime fallback resolution is used."
+        ),
+    )
     p_update.add_argument("--why-now", default="", help="pre-mutation disclosure rationale for update")
     p_update.add_argument("--planned-file", action="append", default=[], help="explicit planned mutation file for update")
     p_update.add_argument("--pre-mutation-gate-receipt", default="", help="optional pre-mutation gate receipt path for update")
@@ -1430,6 +1438,8 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
                 "--operation",
                 "validate",
             ],
@@ -1475,6 +1485,8 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
                 "--operation",
                 "validate",
                 "--baseline-policy",
@@ -2160,6 +2172,7 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        actor_id_update = resolve_actor_id(str(args.actor_id or "").strip())
         guard_expect_mode = "auto"
         if _is_fixture_identity_in_catalog(args.catalog, args.identity_id):
             if str(args.scope or "").strip().upper() == "USER":
@@ -2265,6 +2278,8 @@ def main() -> int:
             args.repo_catalog,
             "--identity-id",
             args.identity_id,
+            "--actor-id",
+            actor_id_update,
             "--body-text",
             "PRE_MUTATION_HEADER_FIRST_GATE",
             "--out-reply-file",
@@ -2389,6 +2404,8 @@ def main() -> int:
             args.repo_catalog,
             "--identity-id",
             args.identity_id,
+            "--actor-id",
+            actor_id_update,
             "--operation",
             "update",
             "--baseline-policy",

@@ -118,6 +118,8 @@ if [ -z "$IDS" ]; then
   exit 1
 fi
 
+SESSION_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+
 echo "[10.15/30] validate runtime mode/catalog binding guard (for each target identity)"
 for ID in $IDS; do
   python3 scripts/validate_identity_runtime_mode_guard.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --expect-mode auto
@@ -135,10 +137,10 @@ done
 
 echo "[10.18/30] validate actor-scoped session isolation gates (for each target identity)"
 for ID in $IDS; do
-  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
+  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
-  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e --json-only
+  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --operation e2e --json-only
 done
 
 echo "[10.19/30] validate anytime session refresh status contract (for each target identity)"
@@ -147,6 +149,7 @@ for ID in $IDS; do
     --identity-id "$ID" \
     --catalog "$CATALOG_PATH" \
     --repo-catalog identity/catalog/identities.yaml \
+    --actor-id "$SESSION_ACTOR_ID" \
     --operation e2e \
     --baseline-policy strict
 done
@@ -261,7 +264,7 @@ for ID in $IDS; do
   SEND_TIME_REPLY_FILE="/tmp/identity-send-time-reply-${ID}.txt"
   SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
   EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
-  HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+  HEADSTAMP_ACTOR_ID="${SESSION_ACTOR_ID}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
   render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
@@ -476,7 +479,7 @@ for ID in $IDS; do
 
   echo "[26/30][$ID] execute identity upgrade cycle via identity-creator (review-required)"
   set +e
-  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required
+  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID"
   UPDATE_RC=$?
   set -e
   UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" <<'PY'
