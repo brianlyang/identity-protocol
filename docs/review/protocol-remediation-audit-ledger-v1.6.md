@@ -75,6 +75,8 @@ Carry-over evidence:
 | FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-026 | 2026-03-05 | protocol | base-repo-architect identity self-drive pilot: protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`), with v1.5/v1.6 boundary normalization | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | b2c99fd | SPEC_READY | PENDING_INTAKE |
+| FIX16-028 | 2026-03-05 | protocol | full-repo deep-scan lock inventory (`ASB16-RQ-001..032`): kernel/script lock-state census + architect independent rescan protocol | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -727,6 +729,78 @@ Deterministic judgment:
 2. It does not promote any requirement from `SPEC_READY` by itself.
 3. Any `DONE` claim for `ASB16-RQ-015/017/029/030/031` still requires executable implementation + independent replay audit.
 
+### FIX16-028 - full-repo deep-scan lock inventory (`ASB16-RQ-001..032`)
+
+- Status: `SPEC_READY`
+- Goal: complete full-repo deep scan over `docs/** + scripts/** + identity/protocol/**`, freeze lock-state census for all v1.6 requirements, and make architect-side independent rescan mandatory before promotion.
+
+Scope and lock definition:
+
+1. `KERNEL_LOCKED`: explicit normative requirement anchor under `identity/protocol/*`.
+2. `SCRIPT_LOCKED`: executable gate mapping under `scripts/*` with machine-readable status/error/report fields.
+3. `BRIDGE_LOCKED`: governance + review bridge rows exist and remain status-consistent.
+4. `FULL_LOCKED = KERNEL_LOCKED && SCRIPT_LOCKED && BRIDGE_LOCKED`.
+
+Deep-scan verdict (2026-03-05):
+
+1. `BRIDGE_LOCKED=32/32`.
+2. `KERNEL_LOCKED=0/32` under `ASB16-RQ-*` anchor criterion.
+3. `SCRIPT_LOCKED=0/32` under `ASB16-RQ-*` / v1.6 contract-id executable anchor criterion.
+4. `FULL_LOCKED=0/32`; all rows remain `UNLOCKED` and cannot promote beyond intake without kernel+script lock anchors.
+
+
+Architect independent deep-rescan receipt (executed, 2026-03-05):
+
+1. `/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`
+2. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
+3. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
+4. `/tmp/v16_one_by_one_requirement_review_20260305.md`
+
+Receipt reconciliation summary:
+
+1. inventory cardinality confirmed: `ASB16-RQ-001..032` (`total=32`).
+2. lock-state remained deterministic with independent run: `BRIDGE_LOCKED=32/32`, `KERNEL_LOCKED=0/32`, `SCRIPT_LOCKED=0/32`, `FULL_LOCKED=0/32`.
+3. one-by-one matrix exported for audit row-level review; no requirement qualifies for promotion under current lock tuple.
+
+Mandatory follow-up for promotion eligibility:
+
+1. Use governance section `7.3` as canonical 32-row lock inventory source.
+2. Use governance section `7.4` as architect independent deep-rescan command protocol.
+3. Promotion claims without independent rescan receipt are invalid.
+
+### FIX16-029 - outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`)
+
+- Status: `SPEC_READY`
+- Goal: make headstamp omission impossible at send-time by enforcing transport-level fail-close gate instead of template-only discipline.
+
+Root-cause statement:
+
+1. Prior fixes improved governed compose/send-time chains, but direct/manual reply paths can still bypass headstamp injection.
+2. Therefore the missing-headstamp issue is not fully closed until send-layer gate blocks all outbound paths.
+
+Contractized closure target:
+
+1. Add pre-send validator that runs for every outbound reply path.
+2. Enforce canonical first-line tuple:
+   - `Identity-Context: ...`
+   - `Layer-Context: ...`
+3. Fail-close codes reserved by governance:
+   - `IP-HDSTAMP-001` (`headstamp_missing_or_malformed`)
+   - `IP-HDSTAMP-002` (`headstamp_actor_binding_mismatch`)
+   - `IP-HDSTAMP-003` (`headstamp_receipt_missing`)
+
+Deterministic acceptance matrix:
+
+1. Negative replay A: missing/malformed headstamp -> `FAIL_REQUIRED` + `IP-HDSTAMP-001`.
+2. Negative replay B: actor/canonical mismatch -> `FAIL_REQUIRED` + `IP-HDSTAMP-002`.
+3. Negative replay C: promotion-grade lane with missing receipt -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`.
+4. Positive replay: canonical tuple present and matched -> `PASS_REQUIRED` with machine receipt.
+
+Promotion boundary:
+
+1. This fix is intake only and does not promote `ASB16-RQ-032`.
+2. Promotion requires script implementation + e2e/ci replay evidence + independent architect re-audit.
+
 ---
 
 ## 4) Reviewer decision log
@@ -760,6 +834,8 @@ Deterministic judgment:
 | FIX16-025 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T12:20:00Z | deep cross-verification package normalized to `T1..T4` taxonomy and replay verdict locked: lane split healthy but `ASB16-RQ-015/029/030` remain implementation-pending; `S0..S4` sequence added as non-regression strengthening path |
 | FIX16-026 | PENDING_INTAKE | base-repo-architect(self-drive) | 2026-03-05T12:58:00Z | runtime self-drive pilot on `base-repo-architect`: protocol-kernel prompt injection + multimodal verification baseline passes; creator strict chain still shows actor-context convergence residual (`IP-ASB-STAMP-SESSION-005`), kept in v1.6 executable-coupling track only |
 | FIX16-027 | PENDING_INTAKE | base-repo-architect | 2026-03-05T14:20:00Z | final T1/T2/T3/T4 cross-verification replay executed with network/vendor/spec re-check; direction reaffirmed, but `ASB16-RQ-015/017/029/030/031` remain `SPEC_READY` pending executable closure |
+| FIX16-028 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T22:10:00+08:00 | full-repo lock census + architect independent deep-rescan receipt completed (`/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`, `/tmp/v16_architect_deep_scan_full_repo_20260305.json`, `/tmp/v16_one_by_one_requirement_review_20260305.md`): `BRIDGE_LOCKED=32/32`, `KERNEL_LOCKED=0/32`, `SCRIPT_LOCKED=0/32`, `FULL_LOCKED=0/32`; row-level audit can proceed, promotion remains blocked |
+| FIX16-029 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T16:05:00Z | headstamp recurrence elevated to P0 transport-gate gap: new `ASB16-RQ-032` requires pre-send hard-blocking for all outbound paths with deterministic fail-close (`IP-HDSTAMP-001/002/003`) before promotion |
 
 ---
 
@@ -842,3 +918,7 @@ Deterministic judgment:
 63. `https://agentskills.io/specification`
 64. `context7:/openai/skills`
 65. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+66. `/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`
+67. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
+68. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
+69. `/tmp/v16_one_by_one_requirement_review_20260305.md`

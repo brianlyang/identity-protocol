@@ -488,6 +488,29 @@ Mandatory semantics:
    - B: kernel-imported prompt;
    and verdict must be explained by executable mapping delta, not narrative-only prompt text.
 
+### 4.21 `identity_context_headstamp_pre_send_hard_gate_contract_v1` (P0)
+
+Goal:
+
+1. Eliminate recurrent "missing headstamp on outbound reply" incidents.
+2. Move headstamp enforcement from best-effort template discipline to transport-level fail-close.
+
+Mandatory semantics:
+
+1. Every outbound assistant reply must include canonical first-line headstamp before send:
+   - `Identity-Context: actor_id=...; identity_id=...; scope=...; lock=...; source=...`
+   - `Layer-Context: work_layer=...; source_layer=...`
+2. Pre-send validator must execute regardless of composition path:
+   - governed compose path and direct/manual reply path share the same pre-send gate.
+3. Missing or malformed headstamp is fail-closed:
+   - reserve `IP-HDSTAMP-001` (`headstamp_missing_or_malformed`).
+4. Headstamp tuple must match actor-current binding and canonical identity pointer:
+   - mismatch is fail-closed with `IP-HDSTAMP-002` (`headstamp_actor_binding_mismatch`).
+5. Promotion-grade lanes (`update/readiness/e2e/ci/validate`) require machine receipt:
+   - receipt must include `headstamp_status`, `error_code`, `evidence_ref`, `actor_binding_ref`.
+   - missing receipt is fail-closed with `IP-HDSTAMP-003` (`headstamp_receipt_missing`).
+6. Governance/review templates are advisory only; send decision is controlled exclusively by pre-send validator verdict.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -523,6 +546,7 @@ Mandatory semantics:
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) + final replay reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) + architect instance pilot (`review v1.6 FIX16-026`) + final cross-track reinforcement (`review v1.6 FIX16-027`) |
+| ASB16-RQ-032 | outbound reply must pass canonical identity/layer headstamp pre-send hard gate; missing or mismatched headstamp cannot be sent | pre-send headstamp validator + governed emitter wrapper + negative replay in e2e/ci | P0 | SPEC_READY | headstamp recurrence root-cause intake (`review v1.6 FIX16-029`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -548,6 +572,7 @@ Mandatory semantics:
 | C18 | same-lineage semantic-routing verdict is convergent across update/three-plane/full-scan | convergence report (`mismatch_count=0`) + canonical semantic receipt path |
 | C19 | new v1.6 suggestions pass intake evidence quorum before implementation promotion | cross-verification bundle proof (`T1..T4`) + timestamped source set + conflict reconciliation note |
 | C20 | protocol-kernel prompt import produces executable uplift (not text-only) and multimodal sample-proof closure under explicit actor context | paired A/B replay bundle + mapping fields (`kernel_contract_ref`,`validator_ref`,`evidence_ref`) + trigger/knowledge/arbitration sample-proof pass set |
+| C21 | outbound messages missing canonical `Identity-Context | Layer-Context` headstamp are blocked before send | pre-send negative replay (`missing/malformed headstamp -> FAIL_REQUIRED`, `IP-HDSTAMP-001`) + tuple mismatch replay (`IP-HDSTAMP-002`) + receipt-missing replay (`IP-HDSTAMP-003`) |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -584,6 +609,7 @@ Mandatory semantics:
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE`; reinforced by final replay in `review FIX16-027` |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; pilot (`review FIX16-026`) + final replay (`review FIX16-027`) both confirm text uplift != executable closure |
+| ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | enforce send-blocking when canonical identity/layer headstamp missing, malformed, or actor-mismatched; intake in `review FIX16-029` |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -598,6 +624,7 @@ Mandatory semantics:
 | ASB16-RQ-029 | `NEW -> SPEC_READY` | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | `NEW -> SPEC_READY` | intake hard-gate reinforcement (`review v1.6 FIX16-023`) + final replay reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-031 | `NEW -> SPEC_READY` | self-drive experiment intake (`review v1.6 FIX16-024`) + architect pilot replay (`review v1.6 FIX16-026`) + final cross-track replay (`review v1.6 FIX16-027`) |
+| ASB16-RQ-032 | `NEW -> SPEC_READY` | headstamp recurrence root-cause intake (`review v1.6 FIX16-029`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
@@ -613,6 +640,124 @@ Non-equivalence constraints:
 3. `GATE_READY != VERIFIED`
 4. `VERIFIED != DONE`
 5. Passing subset replays cannot override the formula above.
+
+### 7.3 Deep-Scan lock inventory (`ASB16-RQ-001..032`, 2026-03-05)
+
+Lock tuple definition (deterministic):
+
+1. `KERNEL_LOCKED`: requirement has explicit normative anchor under `identity/protocol/*` (not only governance/review prose).
+2. `SCRIPT_LOCKED`: requirement has executable gate mapping under `scripts/*` with machine-readable status/error/report fields.
+3. `BRIDGE_LOCKED`: requirement appears in governance + review with aligned status semantics.
+4. `FULL_LOCKED = KERNEL_LOCKED && SCRIPT_LOCKED && BRIDGE_LOCKED`.
+
+Deep-scan result (`docs + scripts + identity/protocol`):
+
+1. `BRIDGE_LOCKED = true` for `32/32` requirements (section 5 + review FIX16 rows are present).
+2. `KERNEL_LOCKED = false` for `32/32` requirements (no `ASB16-RQ-*` anchor in `identity/protocol/*`).
+3. `SCRIPT_LOCKED = false` for `32/32` requirements under contract-id lock criterion (`ASB16-RQ-*` / v1.6 contract IDs not anchored in scripts as enforceable keys).
+4. Current `FULL_LOCKED` count is `0/32`; all rows remain `UNLOCKED` until kernel + script anchors are implemented.
+
+| Requirement ID | Priority | Lock target (kernel + scripts) | KERNEL_LOCKED | SCRIPT_LOCKED | FULL_LOCK verdict |
+| --- | --- | --- | --- | --- | --- |
+| ASB16-RQ-001 | P0 | unlock formula canonical anchor + executable unlock computation gate | NO | NO | UNLOCKED |
+| ASB16-RQ-002 | P0 | capability boundary taxonomy anchor + capability classification gates | NO | NO | UNLOCKED |
+| ASB16-RQ-003 | P0 | promotion-state semantics anchor + promotion pipeline checker | NO | NO | UNLOCKED |
+| ASB16-RQ-004 | P0 | outlet matrix contract anchor + compose/send-time regression gates | NO | NO | UNLOCKED |
+| ASB16-RQ-005 | P0 | sidecar invariance contract anchor + passthrough/cwd regression gate | NO | NO | UNLOCKED |
+| ASB16-RQ-006 | P0 | release-plane evidence contract anchor + cloud evidence readiness gate | NO | NO | UNLOCKED |
+| ASB16-RQ-007 | P1 | cross-cwd runbook anchor + absolute-input enforcement utility | NO | NO | UNLOCKED |
+| ASB16-RQ-008 | P1 | docs bridge consistency anchor + governance/review parity checker | NO | NO | UNLOCKED |
+| ASB16-RQ-009 | P0 | run-id strict selector anchor + strict preflight report resolver | NO | NO | UNLOCKED |
+| ASB16-RQ-010 | P1 | phase-A bootstrap anchor + refresh->strict orchestration gate | NO | NO | UNLOCKED |
+| ASB16-RQ-011 | P1 | temp collision strategy anchor + regression temp allocator guard | NO | NO | UNLOCKED |
+| ASB16-RQ-012 | P1 | freshness auto-bootstrap anchor + handoff/collab freshness gate | NO | NO | UNLOCKED |
+| ASB16-RQ-013 | P1 | atomic emit anchor + batch/index/receipt atomic writer | NO | NO | UNLOCKED |
+| ASB16-RQ-014 | P0 | prompt bootstrap capability anchor + template bootstrap gate | NO | NO | UNLOCKED |
+| ASB16-RQ-015 | P0 | prompt capability matrix anchor + fail-closed matrix validator | NO | NO | UNLOCKED |
+| ASB16-RQ-016 | P1 | post-core-edit runbook anchor + interference matrix writer | NO | NO | UNLOCKED |
+| ASB16-RQ-017 | P1 | cross-verification intake anchor + intake evidence packet validator | NO | NO | UNLOCKED |
+| ASB16-RQ-018 | P1 | dedup determinism anchor + same-run monotonic dedup validator | NO | NO | UNLOCKED |
+| ASB16-RQ-019 | P1 | cross-workflow schema anchor + evidence schema validator | NO | NO | UNLOCKED |
+| ASB16-RQ-020 | P1 | skill-path integrity anchor + runtime path integrity gate | NO | NO | UNLOCKED |
+| ASB16-RQ-021 | P1 | route/version pinning anchor + route/workflow version pin gate | NO | NO | UNLOCKED |
+| ASB16-RQ-022 | P1 | fallback enum taxonomy anchor + fallback normalization validator | NO | NO | UNLOCKED |
+| ASB16-RQ-023 | P0 | discovery trigger requiredization anchor + trigger-conditioned fail-close gate | NO | NO | UNLOCKED |
+| ASB16-RQ-024 | P0 | discovery apply coverage anchor + coverage=100 fail-close gate | NO | NO | UNLOCKED |
+| ASB16-RQ-025 | P0 | kernel canonical source anchor + kernel-source projection checker | NO | NO | UNLOCKED |
+| ASB16-RQ-026 | P0 | kernel->validator->doc mapping anchor + mapping coverage checker | NO | NO | UNLOCKED |
+| ASB16-RQ-027 | P0 | derived prompt conformance anchor + prompt derivation validator | NO | NO | UNLOCKED |
+| ASB16-RQ-028 | P0 | instance write boundary anchor + boundary fail-close gate mapping | NO | NO | UNLOCKED |
+| ASB16-RQ-029 | P0 | semantic single-source anchor + cross-plane convergence validator | NO | NO | UNLOCKED |
+| ASB16-RQ-030 | P1 | intake quorum anchor + `T1..T4` hard-blocking gate | NO | NO | UNLOCKED |
+| ASB16-RQ-031 | P0 | prompt import executable-coupling anchor + actor-explicit multimodal proof gates | NO | NO | UNLOCKED |
+| ASB16-RQ-032 | P0 | outbound headstamp pre-send anchor + send-blocking gate with actor/layer tuple checks | NO | NO | UNLOCKED |
+
+### 7.4 Architect independent deep-rescan protocol (mandatory before promotion)
+
+Execution directory:
+
+1. `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local`
+
+Mandatory command pack (all outputs must be archived in one receipt):
+
+```bash
+cd /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local
+
+# 1) baseline snapshot
+git rev-parse --abbrev-ref HEAD
+git rev-parse HEAD
+git status --short
+
+# 2) deep-scan volume baseline
+rg --files docs | wc -l
+rg --files scripts | wc -l
+rg --files identity | wc -l
+
+# 3) RQ anchor coverage in kernel+scripts (must not stay 0 for promoted rows)
+rg -n "ASB16-RQ-[0-9]{3}" identity/protocol scripts
+
+# 4) v1.6 contract-id coverage in kernel+scripts
+rg '^### 4\\.[0-9]+ ' docs/governance/identity-actor-session-binding-governance-v1.6.0.md \
+| sed -n 's/.*`\\([^`]*\\)`.*/\\1/p' \
+| while IFS= read -r c; do
+    s=$(rg -n "$c" scripts | wc -l | tr -d ' ')
+    i=$(rg -n "$c" identity/protocol | wc -l | tr -d ' ')
+    printf "%s\tscripts=%s\tidentity_protocol=%s\n" "$c" "$s" "$i"
+  done
+
+# 5) reserved fail-close error-code coverage
+rg -n "IP-KERNEL-WRITE-001|IP-SEM-CONV-001|IP-PROMPT-CONTRACT-001|IP-ACTOR-CTX-001" \
+  docs/governance/identity-actor-session-binding-governance-v1.6.0.md \
+  docs/review/protocol-remediation-audit-ledger-v1.6.md \
+  scripts identity/protocol
+
+# 6) kernel version/source-map drift check
+nl -ba identity/protocol/IDENTITY_PROTOCOL.md | sed -n '1,40p'
+rg -n "protocol_contract_version|methodology_version" scripts/create_identity_pack.py scripts/identity_installer.py
+
+# 7) document boundary gates
+python3 scripts/docs_command_contract_check.py
+python3 scripts/validate_protocol_ssot_source.py
+```
+
+Receipt acceptance rule:
+
+1. Architect must attach command outputs + SHA + date in review decision log before any row leaves `PENDING_INTAKE`.
+2. Any claim of `FULL_LOCKED` without this independent rescan receipt is invalid.
+
+
+Latest executed independent receipt (2026-03-05, architect):
+
+1. `/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`
+2. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
+3. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
+4. `/tmp/v16_one_by_one_requirement_review_20260305.md`
+
+Receipt reconciliation result:
+
+1. requirement cardinality reconciled to `32` (`ASB16-RQ-001..032`).
+2. lock tuple unchanged after independent rerun: `BRIDGE_LOCKED=32/32`, `KERNEL_LOCKED=0/32`, `SCRIPT_LOCKED=0/32`, `FULL_LOCKED=0/32`.
+3. Therefore no row is promotion-eligible; implementation anchoring in `identity/protocol/*` and `scripts/*` remains mandatory.
 
 ## 8) Anti-Overclaim Policy (Mandatory)
 
@@ -842,3 +987,7 @@ Promotion boundary:
 54. `https://agentskills.io/specification`
 55. `context7:/openai/skills`
 56. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+57. `/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`
+58. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
+59. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
+60. `/tmp/v16_one_by_one_requirement_review_20260305.md`
