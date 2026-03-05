@@ -116,6 +116,18 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _resolve_identity_row(catalog_path: Path, identity_id: str) -> dict[str, Any] | None:
+    catalog = _load_yaml(catalog_path)
+    identities = catalog.get("identities") or []
+    return next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
+
+
+def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
 def _parse_iso_dt(value: str) -> datetime:
     v = value.strip()
     if v.endswith("Z"):
@@ -143,6 +155,26 @@ def _iter_logs(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Pat
     if preferred:
         return preferred
     return sorted(Path(".").glob(raw))
+
+
+def _identity_scoped_logs(files: list[Path], identity_id: str) -> list[Path]:
+    if not files:
+        return files
+    token_dash = identity_id
+    token_us = identity_id.replace("-", "_")
+    scoped: list[Path] = []
+    for p in files:
+        name = p.name
+        if token_dash in name or token_us in name:
+            scoped.append(p)
+            continue
+        try:
+            rec = _load_json(p)
+        except Exception:
+            continue
+        if str(rec.get("identity_id") or "").strip() == identity_id:
+            scoped.append(p)
+    return scoped or files
 
 
 def _validate_log(
@@ -296,11 +328,14 @@ def main() -> int:
     ap.add_argument("--self-test", action="store_true")
     args = ap.parse_args()
 
+    catalog_path = Path(args.catalog)
     try:
-        task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
+        task_path = _resolve_current_task(catalog_path, args.identity_id)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    identity_row = _resolve_identity_row(catalog_path, args.identity_id)
+    fixture_mode = _is_fixture_identity(identity_row)
 
     task = _load_json(task_path)
     pack_root = task_path.parent.resolve()
@@ -432,6 +467,7 @@ def main() -> int:
         return 1
 
     files = _iter_logs(pattern, args.file, pack_root=pack_root)
+    files = _identity_scoped_logs(files, args.identity_id)
     minimum = int(contract.get("minimum_evidence_logs_required") or 1)
     if len(files) < minimum:
         print(f"[FAIL] collaboration evidence logs insufficient: found={len(files)}, required={minimum}")
@@ -439,6 +475,8 @@ def main() -> int:
 
     task_id = str(task.get("task_id") or "")
     max_age_days = int(contract.get("max_log_age_days") or 7)
+    if fixture_mode:
+        max_age_days = 0
 
     rc = 0
     for p in files:

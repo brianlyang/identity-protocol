@@ -20,6 +20,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 9. Send-time reply gate must skip strict synthetic-evidence enforcement for fixture/demo-only identities.
 10. Trigger-regression report discovery must support fixture repository-runtime fallback when pack-local samples are absent.
 11. Learning-loop validator must support fixture repository-runtime fallback for run-report and rulebook references.
+12. Collaboration-trigger validator must avoid cross-identity glob contamination and skip fixture stale-age enforcement.
 
 ## Implementation evidence
 

@@ -19,6 +19,7 @@ Date: 2026-03-04
 9. Send-time strict gate (`IP-ASB-STAMP-SESSION-002`) blocked fixture identities using synthetic stamp probes in CI.
 10. Trigger-regression report lookup raised false `IP-CWD-001` under fixture pack-root anchoring.
 11. Learning-loop validator reported missing run-report/rulebook on fixture pack-root anchoring despite repository samples.
+12. Collaboration-trigger validator failed fixture CI due cross-identity log glob contamination and stale-age checks on sample logs.
 
 ## Fixes applied
 

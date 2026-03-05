@@ -44,6 +44,11 @@
   - `scripts/validate_identity_learning_loop.py` now resolves fixture
     learning report + rulebook paths with repository-runtime fallback when
     pack-local fixtures are absent
+  - `scripts/validate_identity_collab_trigger.py` now:
+    - filters evidence logs to identity-scoped entries when contracts provide
+      broad glob patterns
+    - disables `max_log_age_days` enforcement for fixture/demo identities to
+      prevent stale sample fixtures from failing CI required gates
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

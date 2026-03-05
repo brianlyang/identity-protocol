@@ -30,6 +30,8 @@ To keep protocol-core release gates fail-closed without false negatives:
      pack-local first and repository-runtime fallback.
    - learning-loop validator resolves fixture run-report and rulebook paths
      using repository-runtime fallback where pack-local assets are absent.
+   - collaboration-trigger validator now applies identity-scoped evidence log
+     filtering and fixture-mode age-check suppression.
 4. Fixture samples were refreshed to maintain required gate freshness:
    - store-manager prompt principle token presence,
    - store-manager role-binding evidence timestamp,
