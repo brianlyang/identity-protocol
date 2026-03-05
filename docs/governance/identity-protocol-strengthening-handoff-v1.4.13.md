@@ -24,6 +24,8 @@ To keep protocol-core release gates fail-closed without false negatives:
      no active identities (fixture-only catalogs).
    - session refresh status validator skips fixture identities in strict/CI
      lanes (`required_contract=false`) to prevent false P0 drift alarms.
+   - send-time reply gate skips fixture identities in strict/CI lanes to avoid
+     synthetic evidence enforcement against demo-only validation paths.
 4. Fixture samples were refreshed to maintain required gate freshness:
    - store-manager prompt principle token presence,
    - store-manager role-binding evidence timestamp,

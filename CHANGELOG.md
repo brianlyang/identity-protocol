@@ -34,6 +34,10 @@
     identities in CI/strict operations (`required_contract=false`,
     `session_refresh_status=SKIPPED_NOT_REQUIRED`) to avoid false strict
     failures for demo-only catalogs
+  - `scripts/validate_send_time_reply_gate.py` now skips fixture identities
+    in CI/strict send-time contexts (`required_contract=false`,
+    `send_time_gate_status=SKIPPED_NOT_REQUIRED`) to prevent synthetic evidence
+    false-blocking on fixture-only validation paths
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
 ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
 ERR_OUTLET_GUARD_MISSING = "IP-ASB-STAMP-SESSION-003"
@@ -18,6 +20,18 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 STRICT_SEND_TIME_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate", "send-time"}
+
+
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        data = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return False
+    rows = [x for x in (data.get("identities") or []) if isinstance(x, dict)]
+    row = next((x for x in rows if str(x.get("id", "")).strip() == identity_id), None)
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any]:
@@ -156,6 +170,53 @@ def main() -> int:
     )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
+
+    catalog_path = Path(args.catalog).expanduser().resolve()
+    if catalog_path.exists() and _is_fixture_identity(catalog_path, args.identity_id):
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": False,
+            "send_time_gate_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "error_code": "",
+            "reply_first_line_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "reply_evidence_mode": "fixture_skip",
+            "reply_transport_ref": "",
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": False,
+            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or "governed_adapter_v1",
+            "outlet_preflight_receipt": "",
+            "outlet_bypass_detected": False,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 0,
+            "reply_first_line_missing_refs": [],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "fixture_profile_scope",
+            "fallback_reason": "fixture_profile_scope",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["fixture_profile_scope"],
+            "upstream_validator_rc": 0,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     try:
         reply_text, evidence_mode = _reply_text_from_args(args)
