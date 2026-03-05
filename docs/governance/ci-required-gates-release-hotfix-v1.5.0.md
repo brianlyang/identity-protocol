@@ -23,6 +23,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 12. Collaboration-trigger validator must avoid cross-identity glob contamination and skip fixture stale-age enforcement.
 13. Agent-handoff validator must scope evidence logs to target identity and treat fixture log freshness as inspection-only to avoid stale fixture false failures in CI.
 14. `identity_creator update` must not hard-code `USER` scope in CI paths; default scope must allow catalog-driven arbitration (`${IDENTITY_SCOPE:-""}`) to avoid fixture/system scope false blocks.
+15. Protocol-vendor semantic isolation validator must treat fixture/demo identities as inspection-only to prevent auto-required protocol-feedback artifacts from triggering false `IP-SEM-001` fail-closed outcomes in CI.
 
 ## Implementation evidence
 

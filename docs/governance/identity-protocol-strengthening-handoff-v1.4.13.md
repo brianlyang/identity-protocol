@@ -271,6 +271,10 @@ Lifecycle rules:
    - `identity_creator update` scope default changed from hard-coded `USER` to
      `${IDENTITY_SCOPE:-""}` (auto arbitration) so CI lanes without explicit
      `--scope` do not fail runtime mode guard for fixture/system identities.
+   - `validate_protocol_vendor_semantic_isolation.py` now marks fixture/demo
+     identities as inspection-only (`SKIPPED_NOT_REQUIRED`) to prevent
+     protocol-feedback sample artifacts from auto-requiredizing semantic
+     isolation checks into false `IP-SEM-001` hard failures on CI release lanes.
 
 ## Required validation command set
 

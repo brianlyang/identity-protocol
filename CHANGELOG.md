@@ -57,6 +57,10 @@
   - `scripts/identity_creator.py update` now defaults `--scope` to
     `${IDENTITY_SCOPE:-""}` (auto arbitration) instead of hard-coded `USER`,
     preventing fixture/System identities from failing runtime mode guard in CI
+  - `scripts/validate_protocol_vendor_semantic_isolation.py` now skips
+    fixture/demo identities in CI strict lanes (`SKIPPED_NOT_REQUIRED`) to
+    avoid protocol-feedback auto-requiredization on fixture sample artifacts
+    from falsely triggering `IP-SEM-001` hard failures
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:
