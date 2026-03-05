@@ -69,6 +69,7 @@ Carry-over evidence:
 | FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-020 | 2026-03-04 | protocol | discovery dual-track activation + apply-time coverage fail-close intake (`ASB16-RQ-023..024`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-021 | 2026-03-04 | protocol | kernel-first baseline: contract source canonicalization + mapping + derived prompt lineage (`ASB16-RQ-025..028`) | 6f49040 | SPEC_READY | PENDING_INTAKE |
+| FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -464,6 +465,53 @@ Supplemental cross-verification verdict intake (2026-03-05):
 4. status caveat remains unchanged:
    - these items are still `SPEC_READY/PENDING_INTAKE` until implementation + strict replay evidence promote them to `DONE`.
 
+### FIX16-022 - semantic routing convergence and rollout prioritization intake (`ASB16-RQ-029`)
+
+- Status: `SPEC_READY`
+- Goal: remove same-lineage mixed verdict (`update green` + `cross-plane semantic fail`) by adding canonical semantic-routing source and convergence gate.
+
+Source package:
+
+1. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-instance-next-upgrade-proposals-cross-verified-2026-03-05.md`
+2. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-self-drive-live-replay-deep-extraction-2026-03-05-round2.md`
+3. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-05_001.md`
+4. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/issues/ISSUE_2026-03-05_update-threeplane-semantic-convergence-gap.md`
+5. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/upgrade-proposals/PROPOSAL_2026-03-05_semantic-single-source-and-convergence-gate.md`
+6. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+
+Machine replay extraction (2026-03-05 strict lineage):
+
+1. update report:
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+   - facts:
+     - `all_ok=true`
+     - `work_layer=instance`
+     - `applied_gate_set=instance_required_checks`
+     - no root semantic-routing block present.
+2. three-plane replay:
+   - `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
+   - facts:
+     - `instance_plane_status=BLOCKED`
+     - `instance_plane_detail.semantic_routing_guard.error_code=IP-SEM-001`
+3. full-scan replay:
+   - `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
+   - facts:
+     - runtime profile semantic guard reproduces `FAIL_REQUIRED` + `IP-SEM-001`.
+
+Deterministic judgment:
+
+1. dual-lane split is functioning; defect class is semantic governance convergence.
+2. current v1.6 baseline has no independent P0 requirement enforcing same-lineage semantic verdict convergence across update/three-plane/full-scan.
+3. therefore this intake adds `ASB16-RQ-029` for semantic single-source convergence.
+
+Rollout prioritization absorption (from cross-verified proposal set):
+
+1. `P0-A` semantic-routing single-source convergence -> promoted as new requirement (`ASB16-RQ-029`).
+2. `P0-B` prompt capability matrix hard-close -> mapped to existing `ASB16-RQ-015`.
+3. `P0-C` discovery apply-time `coverage=100` hard-close -> mapped to existing `ASB16-RQ-024`.
+4. `P0-D` kernel-derived prompt + conformance digest lock -> mapped to existing `ASB16-RQ-025..027`.
+5. `P1-E` pending-intake -> done auto-promotion orchestrator -> mapped as implementation extension under existing promotion pipeline requirements (`ASB16-RQ-003` + `ASB16-RQ-008`).
+
 ---
 
 ## 4) Reviewer decision log
@@ -491,6 +539,7 @@ Supplemental cross-verification verdict intake (2026-03-05):
 | FIX16-019 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T06:55:00Z | latest office-ops self-drive replay evidence ingested; new gaps mapped to `ASB16-RQ-018..022` |
 | FIX16-020 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T08:45:00Z | discovery dual-track simulation ingested; apply-time `PASS_REQUIRED` with `0/3` coverage formalized into `ASB16-RQ-023..024` |
 | FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T02:20:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028`; supplemental verdict confirms content-level alignment and keeps status caveat (`SPEC_READY/PENDING_INTAKE`) |
+| FIX16-022 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T03:10:00Z | live replay confirms semantic convergence gap (`update green` + `IP-SEM-001` in aggregators); new requirement `ASB16-RQ-029` added; `A-D P0` and `E P1` priorities mapped to requirement set |
 
 ---
 
@@ -548,3 +597,12 @@ Supplemental cross-verification verdict intake (2026-03-05):
 38. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
 39. `https://modelcontextprotocol.io/specification/latest`
 40. `https://agentskills.io/specification`
+41. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-instance-next-upgrade-proposals-cross-verified-2026-03-05.md`
+42. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-self-drive-live-replay-deep-extraction-2026-03-05-round2.md`
+43. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-05_001.md`
+44. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/issues/ISSUE_2026-03-05_update-threeplane-semantic-convergence-gap.md`
+45. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/upgrade-proposals/PROPOSAL_2026-03-05_semantic-single-source-and-convergence-gate.md`
+46. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+47. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+48. `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
+49. `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`

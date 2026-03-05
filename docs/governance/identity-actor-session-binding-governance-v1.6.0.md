@@ -109,6 +109,7 @@ Hard rules:
 | WS-8 | initial prompt capability bootstrap governance | P0 | capability-driver-native initialization contract + fail-closed matrix validator + business-interference runbook |
 | WS-9 | discovery dual-track requiredization closure | P0 | trigger-conditioned requiredization policy + apply-time coverage fail-close gate + receipt/index evidence lock |
 | WS-10 | identity kernel-first canonicalization | P0 | kernel SSOT contract surface + contract mapping projection + derived prompt compilation + instance write-boundary lock |
+| WS-11 | semantic routing convergence and single-source governance | P0 | canonical semantic receipt contract + update/three-plane/full-scan convergence gate + deterministic mismatch fail-close |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -404,6 +405,40 @@ Hard rules:
 2. evidence must show write-boundary enforcement decision in replay artifacts.
 3. lock policy applies regardless of work-layer narrative claims.
 
+### 4.18 `semantic_routing_single_source_convergence_contract_v1` (P0)
+
+Problem class:
+
+1. update lane can report green (`all_ok=true`) while cross-plane aggregators still produce semantic fail (`IP-SEM-001`) for same lineage.
+2. mixed verdict indicates semantic-routing outcome is not represented as a canonical first-class machine source across planes.
+
+Canonical contract:
+
+1. semantic-routing verdict must be produced in one canonical receipt consumed by:
+   - strict update report,
+   - three-plane aggregation,
+   - full-scan aggregation.
+2. required fields:
+   - `semantic_routing_status`
+   - `semantic_routing_error_code`
+   - `semantic_routing_evidence_path`
+   - `semantic_routing_reason`
+   - `semantic_routing_source`
+
+Convergence gate:
+
+1. same lineage must satisfy:
+   - `update.semantic_routing_status == three_plane.semantic_routing_status == full_scan.semantic_routing_status`.
+2. mismatch is fail-closed with deterministic convergence error code (`IP-SEM-CONV-001`, reserved in v1.6).
+3. strict update cannot remain green when semantic-routing block is required but absent.
+
+Hard rules:
+
+1. semantic-routing verdict must not be privately derived by individual aggregators when canonical receipt is present.
+2. dual-lane separation remains intact:
+   - convergence enforcement must not convert instance update into protocol publish-gate blocking by default.
+3. convergence evidence must be machine-readable and lineage-stable.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -436,6 +471,7 @@ Hard rules:
 | ASB16-RQ-026 | every P0 contract must have machine-readable kernel-to-validator-to-doc mapping | mapping checker + status-promotion gate | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-027 | identity prompts must be kernel-derived artifacts with conformance metadata | prompt compiler + conformance validator + runtime report fields | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
+| ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -458,6 +494,7 @@ Hard rules:
 | C15 | P0 mapping coverage is complete and orphan-free | mapping coverage report (`coverage=100`, `orphan_count=0`) |
 | C16 | active identity prompts are derived and metadata-consistent with kernel contracts | prompt conformance report with digest/version linkage |
 | C17 | instance write attempts to protocol-kernel/governance/review paths are fail-closed | boundary validator replay with deterministic error code (`IP-KERNEL-WRITE-001`) |
+| C18 | same-lineage semantic-routing verdict is convergent across update/three-plane/full-scan | convergence report (`mismatch_count=0`) + canonical semantic receipt path |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -491,6 +528,7 @@ Hard rules:
 | ASB16-RQ-026 | kernel contract mapping projection contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -502,6 +540,7 @@ Hard rules:
 | ASB16-RQ-018..022 | `NEW -> SPEC_READY` | office-ops supplemental replay intake (`review v1.6 FIX16-019`) |
 | ASB16-RQ-023..024 | `NEW -> SPEC_READY` | SRA discovery dual-track simulation intake (`review v1.6 FIX16-020`) |
 | ASB16-RQ-025..028 | `NEW -> SPEC_READY` | kernel-first baseline intake (`review v1.6 FIX16-021`) |
+| ASB16-RQ-029 | `NEW -> SPEC_READY` | semantic convergence intake (`review v1.6 FIX16-022`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
