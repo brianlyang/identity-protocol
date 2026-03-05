@@ -2747,9 +2747,9 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-116 | activation lane must fail-closed on cross-identity actor switch unless explicit switch-intent receipt is supplied (`actor_id + from_identity_id + to_identity_id` tuple bound), preventing execution-time hidden identity mutation | `identity_creator.py activate` switch-intent pre-mutation guard + actor binding resolver + switch report telemetry fields | P0 | DONE | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion completed in review `16.8.68` (P0/P1/P2 rows accepted, including non-root replay and actor-bound tail validator parity). |
 | ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | DONE | implementation landed in `FIX-060` (`50005f0`) and independent re-audit promoted in review `16.8.82`: governed outlet pass path plus fail-closed bypass/missing-guard branches (`IP-ASB-STAMP-SESSION-004` / `IP-ASB-STAMP-SESSION-003`) are accepted. |
 | ASB-RQ-118 | strict governed outlet must remain actor-bound coherent: explicit actor context cannot emit replies for historical/non-current identity bindings, and strict send-time evidence must be file-backed live payload | actor-bound current-binding mismatch guard in compose/first-line validators + strict inline-evidence rejection + actor-bound telemetry surfaces | P0 | DONE | implementation landed in `FIX-061` (`119a421`,`5b54cee`) and independent re-audit promoted in review `16.8.84`: actor-bound mismatch is fail-closed (`IP-ASB-STAMP-SESSION-005`) and strict inline reply-text evidence is denied (`IP-ASB-STAMP-SESSION-002`) with non-governed bypass guard retained (`IP-ASB-STAMP-SESSION-004`). |
-| ASB-RQ-119 | final assistant reply channel must be governed-outlet-only: direct chat emission cannot bypass compose/send-time first-line hard gates | final emission boundary adapter + governed-outlet artifact proof + required recurrence replay matrix gate (3 negatives + 1 positive) | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only intake recorded in review `16.8.86`; architect hotfix required in `v1.5.x` stream before promotion to `DONE`. |
-| ASB-RQ-120 | headstamp recurrence closure must be channel-parity complete: all user-visible channels enforce actor-bound first-line/send-time governed preflight with deterministic proof fields, preventing missing-header and tuple-drift recurrence split | unified user-visible channel pre-send boundary + channel-coverage proof fields + deterministic 4-negative + 1-positive replay matrix gate | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only deep-dive recorded in review `16.8.87` + strict deep-scan addendum `16.8.89`; architect hotfix required in `v1.5.x` stream before promotion to `DONE`. |
-| ASB-RQ-121 | actor-role semantics must be machine-partitioned (`assistant_runtime` vs `manual_operator`) so actor context drift cannot be misclassified as identity switch in strict replay/audit closure | governed outlet + send-time/report telemetry role fields + ambiguous/mixed-evidence fail-closed guards (`IP-ASB-ACTOR-001/002`) | P1 | SPEC_READY (POST_RELEASE_V15X_HARDENING) | docs-only deep bug intake recorded in review `16.8.88`; implementation is required in `v1.5.x` before promotion claims on actor-semantics closure. |
+| ASB-RQ-119 | final assistant reply channel must be governed-outlet-only: direct chat emission cannot bypass compose/send-time first-line hard gates | final emission boundary adapter + governed-outlet artifact proof + required recurrence replay matrix gate (3 negatives + 1 positive) | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only intake recorded in review `16.8.86`; independent audit queue closure recorded in review `16.8.91` (`AUDITED_BLOCKED_BY_IMPL`), architect hotfix still required in `v1.5.x` before promotion to `DONE`. |
+| ASB-RQ-120 | headstamp recurrence closure must be channel-parity complete: all user-visible channels enforce actor-bound first-line/send-time governed preflight with deterministic proof fields, preventing missing-header and tuple-drift recurrence split | unified user-visible channel pre-send boundary + channel-coverage proof fields + deterministic 4-negative + 1-positive replay matrix gate | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only deep-dive recorded in review `16.8.87` + strict deep-scan addendum `16.8.89`; independent audit queue closure recorded in review `16.8.91` (`AUDITED_BLOCKED_BY_IMPL`), architect hotfix still required in `v1.5.x` before promotion to `DONE`. |
+| ASB-RQ-121 | actor-role semantics must be machine-partitioned (`assistant_runtime` vs `manual_operator`) so actor context drift cannot be misclassified as identity switch in strict replay/audit closure | governed outlet + send-time/report telemetry role fields + ambiguous/mixed-evidence fail-closed guards (`IP-ASB-ACTOR-001/002`) | P1 | SPEC_READY (POST_RELEASE_V15X_HARDENING) | docs-only deep bug intake recorded in review `16.8.88`; independent audit queue closure recorded in review `16.8.91` (`AUDITED_BLOCKED_BY_IMPL`), implementation remains required in `v1.5.x` before promotion claims on actor-semantics closure. |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -3493,6 +3493,28 @@ Release boundary:
 
 1. This boundary is non-retroactive to `v1.5.1` historical release snapshot (`6.4J`).
 2. It is mandatory hardening scope for subsequent `v1.5.x` updates until `ASB-RQ-121` reaches `DONE`.
+
+### 6.6L v1.5.x unaudited-residue closure snapshot (`review 16.8.91`)
+
+Purpose:
+
+1. Remove ambiguity on whether `v1.5.x` recurrence/hardening bundle still contains unaudited items.
+
+Deterministic verdict:
+
+1. Post-release `v1.5.x` bundle audit queue is closed:
+   - `ASB-RQ-119` / `FIX-062`: audited, implementation-open.
+   - `ASB-RQ-120` / `FIX-063`: audited, implementation-open.
+   - `ASB-RQ-121` / `FIX-064`: audited, implementation-open.
+2. "No unaudited residue" does not imply release closure:
+   - architect status remains `SPEC_READY` for all three rows.
+   - promotion to `DONE` still requires implementation + replay + independent re-audit acceptance.
+3. Live-session recurrence report ("headstamp missing again") during this audit window is treated as additional P0 recurrence telemetry and reinforces non-promotion for `ASB-RQ-119/120`.
+
+Boundary rule:
+
+1. Any statement equivalent to "`v1.5.x` fully closed" is invalid while section `6.4` keeps `ASB-RQ-119/120` below `DONE`.
+2. This section is audit-queue closure only and cannot change section `6.5` unlock math by itself.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

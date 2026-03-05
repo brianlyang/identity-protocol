@@ -174,9 +174,9 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
 | FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421 / 5b54cee` | DONE | PASS |
-| FIX-062 | 2026-03-05 | protocol | agent direct-emission bypass closure (`ASB-RQ-119`; final assistant reply channel must be governed-outlet-only so direct chat emission cannot skip first-line/send-time hard gates) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_PENDING_HOTFIX |
-| FIX-063 | 2026-03-05 | protocol | headstamp high-frequency dual recurrence eradication package (`ASB-RQ-120`; enforce commentary/final channel coverage parity and deterministic actor-bound stamp fidelity under all user-visible emission paths) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_PENDING_HOTFIX |
-| FIX-064 | 2026-03-05 | protocol | actor-role semantic partition hardening (`ASB-RQ-121`; distinguish assistant emission actor vs manual operator actor to prevent audit misclassification as identity switch) | `DOCS_ONLY_INTAKE` | SPEC_READY | P1_PENDING_V15X_HARDENING |
+| FIX-062 | 2026-03-05 | protocol | agent direct-emission bypass closure (`ASB-RQ-119`; final assistant reply channel must be governed-outlet-only so direct chat emission cannot skip first-line/send-time hard gates) | `611423b / 4b5ea69` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
+| FIX-063 | 2026-03-05 | protocol | headstamp high-frequency dual recurrence eradication package (`ASB-RQ-120`; enforce commentary/final channel coverage parity and deterministic actor-bound stamp fidelity under all user-visible emission paths) | `611423b / 4b5ea69` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
+| FIX-064 | 2026-03-05 | protocol | actor-role semantic partition hardening (`ASB-RQ-121`; distinguish assistant emission actor vs manual operator actor to prevent audit misclassification as identity switch) | `611423b / 4b5ea69` | IMPL_READY (BLOCKED_BY_AUDIT) | PENDING_REAUDIT |
 
 ---
 
@@ -4477,6 +4477,54 @@ Audit promotion boundary:
 1. Until the consolidated predicates are replay-green and independently signed, both P0 rows remain non-promotable.
 2. Docs-only updates cannot promote `FIX-062`/`FIX-063` to `DONE/PASS`.
 3. This bundle is explicitly `v1.5.x` hotfix scope and must not be deferred by default to `v1.6` planning.
+
+#### 16.8.91 v1.5.x implementation intake for recurrence/hardening bundle (`FIX-062/063/064`, 2026-03-05, architect replay)
+
+Status: `IMPL_READY (BLOCKED_BY_AUDIT)`.
+
+Implementation landing (code, non-docs):
+
+1. `611423b` — `fix(v1.5.x): harden headstamp recurrence closure with explicit actor and coverage normalization`
+   - adds `scripts/validate_headstamp_recurrence_closure.py`;
+   - wires recurrence closure into CI / e2e / creator / readiness / full-scan / three-plane.
+2. `4b5ea69` — `fix(v1.5.x): propagate actor-id through actor-session refresh gates`
+   - propagates explicit actor through actor-binding / multibinding / session-refresh validator chains in strict lanes.
+3. `7c51044` — changelog synchronization for required-gates changelog policy (`protocol-ci` run green on head including above code deltas).
+
+Replay evidence (workspace runtime catalog, real instance paths):
+
+1. strict recurrence positive (`user:yangxi` on bound identity):
+   - `/tmp/v15_fix063_user_positive_after_actorpatch.json`
+   - `headstamp_recurrence_closure_status=PASS_REQUIRED`.
+2. strict recurrence actor-missing negative:
+   - `/tmp/v15_fix063_no_actor_after_actorpatch.json`
+   - `error_code=IP-ASB-ACTOR-001` (fail-closed).
+3. strict recurrence actor-bound mismatch negative:
+   - `/tmp/v15_fix063_realcase_assistant_mismatch.json`
+   - composed positive branch fails with `IP-ASB-STAMP-SESSION-005`.
+4. strict recurrence bound positive (`assistant:codex` on bound identity):
+   - `/tmp/v15_fix063_realcase_assistant_positive.json`
+   - A/B/C negatives + positive replay path pass as expected.
+5. creator validate chain (`custom-creative-ecom-analyst`, actor explicit):
+   - `/tmp/v15_fix063_identity_creator_validate_user_after_actorpatch.log`
+   - command exits `rc=0`.
+6. full-scan target replay (`custom-creative-ecom-analyst`, actor explicit):
+   - `/tmp/v15_fix063_fullscan_target_user_after_actorpatch.json`
+   - summary `p0=0,p1=0`.
+7. three-plane replay (`custom-creative-ecom-analyst`, actor explicit):
+   - `/tmp/v15_fix063_three_plane_user_after_actorpatch.json`
+   - `headstamp_recurrence_closure` and actor-scoped session-refresh validators pass.
+
+CI evidence on `main`:
+
+1. `protocol-ci` run `22714849825` — `success` (head `7c51044`, includes code deltas from `611423b` + `4b5ea69`).
+2. `identity-protocol-ci` run `22713654275` — `success` (head path containing `611423b` lineage after changelog sync).
+
+Promotion boundary (unchanged):
+
+1. This section upgrades `FIX-062/063/064` from docs-only `SPEC_READY` to implementation-landed `IMPL_READY (BLOCKED_BY_AUDIT)`.
+2. Independent auditor re-audit is still mandatory before `DONE/PASS` promotion.
+3. No `DONE` claim is made in this section.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
