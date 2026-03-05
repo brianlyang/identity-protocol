@@ -284,6 +284,9 @@ Lifecycle rules:
      protocol-feedback sample artifacts from auto-requiredizing data
      sanitization checks into false `IP-DSN-001` hard failures on CI release
      lanes.
+   - `identity_creator.py update` now normalizes fixture fallback scope
+     (`USER -> AUTO`) before runtime mode guard to prevent CI environment scope
+     defaults from falsely aborting fixture update execution.
 
 ## Required validation command set
 

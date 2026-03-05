@@ -69,6 +69,10 @@
     fixture/demo identities in CI strict lanes (`SKIPPED_NOT_REQUIRED`) to
     avoid auto-required protocol-feedback sample scans producing false
     `IP-DSN-001` fail-closed outcomes
+  - `scripts/identity_creator.py update` now auto-downgrades fixture identity
+    fallback scope `USER -> AUTO` before runtime mode guard, preventing CI
+    fixture runs from failing with scope-mismatch guard blocks when
+    `IDENTITY_SCOPE=USER` is inherited from environment defaults
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

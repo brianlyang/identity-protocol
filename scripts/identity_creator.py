@@ -167,6 +167,18 @@ def _resolve_pack_path(catalog_data: dict, identity_id: str) -> Path:
     return Path(pack_path).expanduser().resolve()
 
 
+def _is_fixture_identity_in_catalog(catalog_path: str, identity_id: str) -> bool:
+    try:
+        catalog = _load_yaml(Path(catalog_path).expanduser().resolve())
+    except Exception:
+        return False
+    identities = catalog.get("identities") or []
+    row = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
 def _resolve_evidence_output_path(pattern: str, identity_id: str, ts: datetime, pack_path: Path) -> Path:
     candidate = pattern.replace("<identity-id>", identity_id).replace("*", str(int(ts.timestamp())))
     local_prefix = f"identity/runtime/local/{identity_id}/"
@@ -2118,6 +2130,12 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        if _is_fixture_identity_in_catalog(args.catalog, args.identity_id):
+            if str(args.scope or "").strip().upper() == "USER":
+                print(
+                    "[INFO] fixture identity detected: overriding scope USER -> AUTO for update runtime guard"
+                )
+                args.scope = ""
         rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
         if rc_guard != 0:
             return rc_guard
