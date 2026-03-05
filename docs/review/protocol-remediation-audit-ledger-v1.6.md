@@ -77,6 +77,7 @@ Carry-over evidence:
 | FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | b2c99fd | SPEC_READY | PENDING_INTAKE |
 | FIX16-028 | 2026-03-05 | protocol | full-repo deep-scan lock inventory (`ASB16-RQ-001..032`): kernel/script lock-state census + architect independent rescan protocol | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | 7e7481d | SPEC_READY | PENDING_INTAKE |
+| FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -801,6 +802,38 @@ Promotion boundary:
 1. This fix is intake only and does not promote `ASB16-RQ-032`.
 2. Promotion requires script implementation + e2e/ci replay evidence + independent architect re-audit.
 
+### FIX16-030 - Batch-1 (`ASB16-RQ-001..005`) strengthening normalization
+
+- Status: `SPEC_READY`
+- Goal: convert Batch-1 from concept-level correctness to non-ambiguous execution predicates, while keeping status non-promotional until implementation anchors exist.
+
+Cross-check basis:
+
+1. Governance/review status is aligned but still intake-only:
+   - `ASB16-RQ-001..005` remain `SPEC_READY` (`docs/governance/...v1.6.0.md` section `5` + section `7`).
+2. Lock inventory confirms `UNLOCKED`:
+   - section `7.3` rows for `ASB16-RQ-001..005` are `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`.
+3. Script baseline is partially available for `RQ-002/004/005` but not contract-locked:
+   - capability chain (`release_readiness/full_scan/three_plane`);
+   - outlet compose/send-time chain;
+   - sidecar/writeback continuity chain.
+
+Mandatory strengthening constraints (P0):
+
+1. `RQ-001`: unlock formula must avoid cyclic predicates (`D1..D5` input, `D6` derived).
+2. `RQ-002`: capability boundary must use explicit error-code mapping + auditable override.
+3. `RQ-003`: promotion receipt must be non-repudiable (`decision_hash`, `input_hash`, reviewer signature reference).
+4. `RQ-004`: outlet matrix must include negative paths and bind to `ASB16-RQ-032`.
+5. `RQ-005`: sidecar/direct equivalence must be normalized hash-based, not raw/noise-sensitive compare.
+6. Mapping lock fields (`kernel/script/full`) must be scanner-computed, not manually filled.
+7. Mapping rows must include ownership and acceptance gate metadata.
+
+Batch-1 decision:
+
+1. Verdict per row: `ACCEPT_WITH_FIX`.
+2. Promotion prohibition: none of `ASB16-RQ-001..005` can leave `SPEC_READY` before five-anchor closure exists (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`).
+3. Evidence pointer: governance section `8.5` is the canonical strengthening profile for this batch.
+
 ---
 
 ## 4) Reviewer decision log
@@ -836,6 +869,7 @@ Promotion boundary:
 | FIX16-027 | PENDING_INTAKE | base-repo-architect | 2026-03-05T14:20:00Z | final T1/T2/T3/T4 cross-verification replay executed with network/vendor/spec re-check; direction reaffirmed, but `ASB16-RQ-015/017/029/030/031` remain `SPEC_READY` pending executable closure |
 | FIX16-028 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T22:10:00+08:00 | full-repo lock census + architect independent deep-rescan receipt completed (`/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`, `/tmp/v16_architect_deep_scan_full_repo_20260305.json`, `/tmp/v16_one_by_one_requirement_review_20260305.md`): `BRIDGE_LOCKED=32/32`, `KERNEL_LOCKED=0/32`, `SCRIPT_LOCKED=0/32`, `FULL_LOCKED=0/32`; row-level audit can proceed, promotion remains blocked |
 | FIX16-029 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T16:05:00Z | headstamp recurrence elevated to P0 transport-gate gap: new `ASB16-RQ-032` requires pre-send hard-blocking for all outbound paths with deterministic fail-close (`IP-HDSTAMP-001/002/003`) before promotion |
+| FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
 
 ---
 

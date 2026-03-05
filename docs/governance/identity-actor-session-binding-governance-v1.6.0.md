@@ -515,11 +515,11 @@ Mandatory semantics:
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
 | --- | --- | --- | --- | --- | --- |
-| ASB16-RQ-001 | automate v1.6 unlock formula computation and output | release readiness + dedicated unlock tool + review bridge | P0 | SPEC_READY | v1.6 kickoff |
-| ASB16-RQ-002 | capability activation boundary classification (`IP-CAP-*` env/auth) | capability validators + full-scan + three-plane | P0 | SPEC_READY | carry-over from v1.5 `16.8.48` |
-| ASB16-RQ-003 | `GATE_READY/VERIFIED -> DONE` promotion contract | governance ledger sync tooling + review decision log | P0 | SPEC_READY | v1.6 kickoff |
-| ASB16-RQ-004 | outlet compose/send-time anti-regression matrix | creator/readiness/e2e/full-scan/three-plane | P0 | SPEC_READY | FIX-054 carry-over hardening |
-| ASB16-RQ-005 | sidecar passthrough/cwd invariance regression lock | sidecar validator + scan/three-plane | P0 | SPEC_READY | FIX-051/FIX-054 carry-over hardening |
+| ASB16-RQ-001 | automate v1.6 unlock formula computation and output | release readiness + dedicated unlock tool + review bridge | P0 | SPEC_READY | v1.6 kickoff + `8.5` batch-1 strengthening profile |
+| ASB16-RQ-002 | capability activation boundary classification (`IP-CAP-*` env/auth) | capability validators + full-scan + three-plane | P0 | SPEC_READY | carry-over from v1.5 `16.8.48` + `8.5` classification hardening |
+| ASB16-RQ-003 | `GATE_READY/VERIFIED -> DONE` promotion contract | governance ledger sync tooling + review decision log | P0 | SPEC_READY | v1.6 kickoff + `8.5` non-repudiation receipt hardening |
+| ASB16-RQ-004 | outlet compose/send-time anti-regression matrix | creator/readiness/e2e/full-scan/three-plane | P0 | SPEC_READY | FIX-054 carry-over hardening + `8.5` negative-path binding (`ASB16-RQ-032`) |
+| ASB16-RQ-005 | sidecar passthrough/cwd invariance regression lock | sidecar validator + scan/three-plane | P0 | SPEC_READY | FIX-051/FIX-054 carry-over hardening + `8.5` normalized parity rule |
 | ASB16-RQ-006 | release plane cloud evidence readiness contract | release-plane checks + required gates evidence | P0 | SPEC_READY | current release-plane `NOT_STARTED` |
 | ASB16-RQ-007 | cross-cwd absolute-input runbook contract | review runbook + governance references | P1 | SPEC_READY | review `16.8.47/16.8.48` note |
 | ASB16-RQ-008 | docs bridge consistency automation | governance/review status bridge checker | P1 | SPEC_READY | repeated manual bridge rounds in v1.5 |
@@ -928,6 +928,50 @@ Promotion boundary:
 1. This section is an evidence-hardening addendum only.
 2. It cannot directly promote any requirement to `DONE`.
 3. Independent executable replay audit remains mandatory before any promotion claim.
+
+### 8.5 Batch-1 row-level strengthening profile (`ASB16-RQ-001..005`, 2026-03-05)
+
+Scope rule:
+
+1. This profile hardens only Batch-1 (`ASB16-RQ-001..005`) after architect+audit cross-review.
+2. Status remains `SPEC_READY` until kernel anchors + script gates + mapping projection are all implemented and replay-proven.
+3. This profile is non-promotional by design; it tightens closure predicates and removes ambiguity.
+
+Mandatory P0 constraints (must all hold together):
+
+1. `RQ-001` unlock formula must be acyclic:
+   - `D1..D5` + `P0` status set are inputs;
+   - `D6` is derived output only, never an input predicate.
+2. `RQ-002` capability boundary must use explicit mapping table:
+   - code-based default mapping + auditable override entry (`override_reason`, `reviewer_ref`, `timestamp`).
+3. `RQ-003` promotion receipts must be non-repudiable:
+   - required: `decision_hash`, `input_hash`, `reviewer_role`, `reviewer_signature_ref`, `evidence_bundle_refs`.
+4. `RQ-004` outlet matrix must include negative paths:
+   - governed pass + bypass/direct/manual fail-close set;
+   - must bind to `ASB16-RQ-032` send-time headstamp gate.
+5. `RQ-005` sidecar/direct equivalence must use normalized payload hash:
+   - compare semantic fields after noise stripping (timestamps/path tails/runtime-only artifacts).
+6. Mapping lock states cannot be hand-filled:
+   - `kernel_locked/script_locked/full_locked` must be scanner-computed.
+7. Every mapping row must include ownership and gate:
+   - `owner_role`, `acceptance_gate`, `implementation_state`.
+
+Batch-1 mapping tuple (mandatory five-link anchor per row):
+
+| Requirement ID | kernel_ref target (v1.6) | runtime_ref target (v1.6) | mapping_ref target (v1.6) | validator_ref target (v1.6 planned) |
+| --- | --- | --- | --- | --- |
+| ASB16-RQ-001 | `rq_001_unlock_formula_contract_v1` | deterministic unlock output profile (`unlock_allowed`, `decision_gates`, `p0_*`, blockers, evidence refs) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-001` | `scripts/validate_v16_unlock_formula.py` |
+| ASB16-RQ-002 | `rq_002_capability_boundary_contract_v1` | capability boundary output profile (`boundary_classification`, `classification_source`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-002` | `scripts/validate_identity_capability_activation.py` (+ v1.6 classification fields) |
+| ASB16-RQ-003 | `rq_003_promotion_evidence_pipeline_contract_v1` | promotion receipt output profile (`decision_hash`, `input_hash`, reviewer fields) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-003` | `scripts/validate_v16_promotion_pipeline.py` |
+| ASB16-RQ-004 | `rq_004_outlet_matrix_contract_v1` | outlet matrix profile (positive + negative + cross-cwd parity lanes) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-004` | `scripts/validate_v16_outlet_matrix.py` |
+| ASB16-RQ-005 | `rq_005_sidecar_cwd_invariance_contract_v1` | sidecar/direct parity profile (`cwd_parity_status`, `passthrough_digest`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-005` | `scripts/validate_v16_sidecar_cwd_parity.py` |
+
+Acceptance boundary for Batch-1:
+
+1. For each row, all five anchors must exist:
+   - `kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`.
+2. `BRIDGE_LOCKED` alone cannot promote status; `KERNEL_LOCKED` and `SCRIPT_LOCKED` must be scanner-verifiable.
+3. Until above conditions are met, all rows remain `UNLOCKED` under section `7.3`.
 
 ## 9) References
 
