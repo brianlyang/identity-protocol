@@ -18,6 +18,19 @@
     - `scripts/report_three_plane_status.py`
   - normalized strict send-time/compose invocations to pass actor context explicitly
     in CI/e2e/readiness/scan paths to reduce actor-drift audit ambiguity.
+  - completed actor explicitness propagation for actor-session refresh/binding checks:
+    - `validate_actor_session_binding.py`
+    - `validate_actor_session_multibinding_concurrency.py`
+    - `validate_identity_session_refresh_status.py`
+    now receive explicit actor context from:
+    - `.github/workflows/_identity-required-gates.yml`
+    - `scripts/e2e_smoke_test.sh`
+    - `scripts/identity_creator.py`
+    - `scripts/release_readiness_check.py`
+    - `scripts/full_identity_protocol_scan.py`
+    - `scripts/report_three_plane_status.py`
+  - `identity_creator.py update` now accepts optional `--actor-id` and forwards it
+    into strict pre-mutation/session-refresh validation calls.
 
 - **v1.5.0 release gate hotfix: identity-required-gates workflow reliability**:
   - pinned workflow lint action to an existing upstream tag:
