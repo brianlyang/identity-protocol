@@ -4527,6 +4527,37 @@ Promotion boundary (unchanged):
 2. Independent auditor re-audit is still mandatory before `DONE/PASS` promotion.
 3. No `DONE` claim is made in this section.
 
+#### 16.8.92 v1.5.x status wording normalization addendum (`a1acd7c`, 2026-03-05, docs-only consistency patch)
+
+Status: `PASS_REQUIRED` (documentation consistency only; non-promotional patch).
+
+Issue context:
+
+1. After `16.8.91` promoted `FIX-062/063/064` to `IMPL_READY (BLOCKED_BY_AUDIT)`, historical docs-only sections (`16.8.87` / `16.8.88`) still contained intake-time phrasing "`remain SPEC_READY`".
+2. This created an avoidable read-order ambiguity: readers could mix "intake-time historical status" with "current table status".
+
+Patch scope (`a1acd7c`):
+
+1. Reword intake-time promotion boundary sentences in `16.8.87` and `16.8.88`:
+   - explicitly labeled as intake-time only,
+   - explicitly marked as superseded by implementation intake `16.8.91`.
+2. Preserve hard boundary: no `DONE/PASS` promotion; only wording normalization and cross-reference correction.
+
+Deterministic interpretation rule (authoritative from this point):
+
+1. Intake snapshots (`16.8.86~16.8.90`) describe historical entry posture.
+2. Current live posture for this bundle is read from:
+   - review summary rows (`FIX-062/063/064`),
+   - review implementation intake `16.8.91`,
+   - governance main table / delta (`ASB-RQ-119/120/121`).
+3. Therefore current status is `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent re-audit, not `SPEC_READY`.
+
+Validation evidence:
+
+1. `python3 scripts/docs_command_contract_check.py` -> `PASS`.
+2. `python3 scripts/validate_protocol_ssot_source.py` -> `OK`.
+3. `protocol-ci` run `22718115247` -> `success`; `identity-protocol-ci` run `22718115256` -> `success`.
+
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
 Status: `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay signoff.

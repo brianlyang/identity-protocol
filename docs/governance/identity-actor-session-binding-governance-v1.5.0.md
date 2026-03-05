@@ -3510,6 +3510,7 @@ Deterministic verdict:
    - architect status remains `IMPL_READY (BLOCKED_BY_AUDIT)` for all three rows.
    - promotion to `DONE` still requires implementation + replay + independent re-audit acceptance.
 3. Live-session recurrence report ("headstamp missing again") during this audit window is treated as additional P0 recurrence telemetry and reinforces non-promotion for `ASB-RQ-119/120`.
+4. Wording normalization for intake-time vs current status is tracked in review `16.8.92`; that addendum is non-promotional and does not alter row states.
 
 Boundary rule:
 
