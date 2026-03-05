@@ -453,6 +453,17 @@ Non-regression closure decision:
 3. any boundary leak, prompt lineage mismatch, or kernel/projection drift is treated as promotion blocker.
 4. therefore, value uplift is accepted while baseline safety remains locked by explicit freeze triggers.
 
+Supplemental cross-verification verdict intake (2026-03-05):
+
+1. source: `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-v1.6-governance-review-cross-verification-verdict-2026-03-05.md`.
+2. verdict confirms content-level alignment for:
+   - lane split governance,
+   - prompt bootstrap capability-native requirement,
+   - four-track cross-verification fail-close policy.
+3. no semantic contradiction found in live replay across roundtable/vendor/openaidoc/context7.
+4. status caveat remains unchanged:
+   - these items are still `SPEC_READY/PENDING_INTAKE` until implementation + strict replay evidence promote them to `DONE`.
+
 ---
 
 ## 4) Reviewer decision log
@@ -479,7 +490,7 @@ Non-regression closure decision:
 | FIX16-018 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-019 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T06:55:00Z | latest office-ops self-drive replay evidence ingested; new gaps mapped to `ASB16-RQ-018..022` |
 | FIX16-020 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T08:45:00Z | discovery dual-track simulation ingested; apply-time `PASS_REQUIRED` with `0/3` coverage formalized into `ASB16-RQ-023..024` |
-| FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T10:15:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028` |
+| FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T02:20:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028`; supplemental verdict confirms content-level alignment and keeps status caveat (`SPEC_READY/PENDING_INTAKE`) |
 
 ---
 
@@ -530,3 +541,10 @@ Non-regression closure decision:
 31. `identity/protocol/IDENTITY_DISCOVERY.md`
 32. `identity/catalog/schema/identities.schema.json`
 33. `identity/catalog/identities.yaml`
+34. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-v1.6-governance-review-cross-verification-verdict-2026-03-05.md`
+35. `https://developers.openai.com/api/reference/resources/responses/`
+36. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+37. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+38. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
+39. `https://modelcontextprotocol.io/specification/latest`
+40. `https://agentskills.io/specification`

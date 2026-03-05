@@ -251,10 +251,18 @@ Cross-verification bundle is valid only when all four tracks are present:
 3. OpenAI docs track (`openaidoc` anchors for strict schema/tool guidance)
 4. Context7 track (OpenAI platform docs extraction, no contradictory guidance)
 
+Vendor track minimum composition:
+
+1. OpenAI official anchors (`strict mode`, `skills`, `security/sandbox-approvals`).
+2. Google official anchors (`AI Studio build/full-stack` guidance).
+3. Anthropic official anchors (`system prompt governance` guidance).
+4. protocol-spec anchors (`MCP specification` and/or `Agent Skills specification`).
+
 Hard rules:
 
 1. if any track is missing, intake status cannot advance beyond `PENDING_INTAKE`.
 2. evidence must remain protocol-only and cannot include business-sensitive runtime payloads.
+3. vendor track without multi-vendor + protocol-spec coverage cannot satisfy `C11`.
 
 ### 4.11 `office_ops_regression_closure_extension_contract_v1` (P1)
 
@@ -599,3 +607,10 @@ Evidence bundle required for Phase-B -> Phase-C transition:
 29. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
 30. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
 31. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+32. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-v1.6-governance-review-cross-verification-verdict-2026-03-05.md`
+33. `https://developers.openai.com/api/reference/resources/responses/`
+34. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+35. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+36. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
+37. `https://modelcontextprotocol.io/specification/latest`
+38. `https://agentskills.io/specification`
