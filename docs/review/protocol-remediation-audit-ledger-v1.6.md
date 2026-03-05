@@ -70,6 +70,7 @@ Carry-over evidence:
 | FIX16-020 | 2026-03-04 | protocol | discovery dual-track activation + apply-time coverage fail-close intake (`ASB16-RQ-023..024`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-021 | 2026-03-04 | protocol | kernel-first baseline: contract source canonicalization + mapping + derived prompt lineage (`ASB16-RQ-025..028`) | 6f49040 | SPEC_READY | PENDING_INTAKE |
 | FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | f603dd9 | SPEC_READY | PENDING_INTAKE |
+| FIX16-023 | 2026-03-05 | protocol | v1.6 suggestion intake evidence quorum hard-gate (`ASB16-RQ-030`; roundtable+vendor+online/spec evidence required before promotion beyond `PENDING_INTAKE`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -512,6 +513,32 @@ Rollout prioritization absorption (from cross-verified proposal set):
 4. `P0-D` kernel-derived prompt + conformance digest lock -> mapped to existing `ASB16-RQ-025..027`.
 5. `P1-E` pending-intake -> done auto-promotion orchestrator -> mapped as implementation extension under existing promotion pipeline requirements (`ASB16-RQ-003` + `ASB16-RQ-008`).
 
+### FIX16-023 - intake evidence quorum hard-gate reinforcement (`ASB16-RQ-030`)
+
+- Status: `SPEC_READY`
+- Goal: ensure future v1.6 suggestions are not admitted by intuition-only narrative and must pass mandatory cross-verification quorum before implementation promotion.
+
+Required quorum (all four tracks mandatory):
+
+1. roundtable track:
+   - multi-role deliberation with fact/inference separation.
+2. vendor track:
+   - multi-vendor official references with URLs.
+3. online reference track:
+   - live-link source set + retrieval timestamp.
+4. protocol/spec track:
+   - MCP/Agent Skills and OpenAI docs/context anchors.
+
+Hard intake rules:
+
+1. if any track is missing, item remains `PENDING_INTAKE` (no implementation promotion).
+2. each intake must include:
+   - `cross_verification_bundle_id`,
+   - `source_url_set`,
+   - `reference_timestamp_utc`,
+   - `conflict_reconciliation_note`.
+3. this rule applies to new v1.6 suggestions and is not a retroactive rewrite of earlier v1.5 closures.
+
 ---
 
 ## 4) Reviewer decision log
@@ -540,6 +567,7 @@ Rollout prioritization absorption (from cross-verified proposal set):
 | FIX16-020 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T08:45:00Z | discovery dual-track simulation ingested; apply-time `PASS_REQUIRED` with `0/3` coverage formalized into `ASB16-RQ-023..024` |
 | FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T02:20:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028`; supplemental verdict confirms content-level alignment and keeps status caveat (`SPEC_READY/PENDING_INTAKE`) |
 | FIX16-022 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T03:10:00Z | live replay confirms semantic convergence gap (`update green` + `IP-SEM-001` in aggregators); new requirement `ASB16-RQ-029` added; `A-D P0` and `E P1` priorities mapped to requirement set |
+| FIX16-023 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T09:40:00Z | intake hard-gate reinforcement added: new suggestions require roundtable/vendor/online/spec evidence quorum (`ASB16-RQ-030`) before promotion beyond `PENDING_INTAKE` |
 
 ---
 

@@ -110,6 +110,7 @@ Hard rules:
 | WS-9 | discovery dual-track requiredization closure | P0 | trigger-conditioned requiredization policy + apply-time coverage fail-close gate + receipt/index evidence lock |
 | WS-10 | identity kernel-first canonicalization | P0 | kernel SSOT contract surface + contract mapping projection + derived prompt compilation + instance write-boundary lock |
 | WS-11 | semantic routing convergence and single-source governance | P0 | canonical semantic receipt contract + update/three-plane/full-scan convergence gate + deterministic mismatch fail-close |
+| WS-12 | intake evidence quorum hard-gate for new v1.6 suggestions | P1 | roundtable+vendor+online-reference+spec anchors required before recommendation promotion beyond `PENDING_INTAKE` |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -439,6 +440,28 @@ Hard rules:
    - convergence enforcement must not convert instance update into protocol publish-gate blocking by default.
 3. convergence evidence must be machine-readable and lineage-stable.
 
+### 4.19 `v16_intake_evidence_quorum_contract_v1` (P1)
+
+Goal:
+
+1. Prevent guess-first requirement intake in v1.6 by enforcing cross-verified evidence quorum before recommendation promotion.
+2. Require every new suggestion to carry explicit roundtable, vendor, online reference, and protocol/spec anchors.
+
+Mandatory semantics:
+
+1. Any new v1.6 suggestion item must provide all four tracks before it can move beyond `PENDING_INTAKE`:
+   - roundtable track (local multi-role deliberation with explicit fact/inference split);
+   - vendor track (multi-vendor official guidance with source URLs);
+   - online reference track (live-link citations + retrieval timestamp);
+   - protocol/spec track (`MCP`/`Agent Skills` and relevant OpenAI docs/context extracts).
+2. Missing any required track keeps item locked at `PENDING_INTAKE` and blocks implementation-promotion.
+3. Every intake section must include:
+   - `cross_verification_bundle_id`
+   - `source_url_set`
+   - `reference_timestamp_utc`
+   - `conflict_reconciliation_note`.
+4. This quorum contract applies to all newly proposed v1.6 requirements after this governance update.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -472,6 +495,7 @@ Hard rules:
 | ASB16-RQ-027 | identity prompts must be kernel-derived artifacts with conformance metadata | prompt compiler + conformance validator + runtime report fields | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
+| ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (roundtable + vendor + online refs + protocol/spec anchors) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -495,6 +519,7 @@ Hard rules:
 | C16 | active identity prompts are derived and metadata-consistent with kernel contracts | prompt conformance report with digest/version linkage |
 | C17 | instance write attempts to protocol-kernel/governance/review paths are fail-closed | boundary validator replay with deterministic error code (`IP-KERNEL-WRITE-001`) |
 | C18 | same-lineage semantic-routing verdict is convergent across update/three-plane/full-scan | convergence report (`mismatch_count=0`) + canonical semantic receipt path |
+| C19 | new v1.6 suggestions pass intake evidence quorum before implementation promotion | cross-verification bundle proof (`roundtable/vendor/online/spec`) + timestamped source set + conflict reconciliation note |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -529,6 +554,7 @@ Hard rules:
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
+| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires roundtable+vendor+online/spec bundle before leaving `PENDING_INTAKE` |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -541,6 +567,7 @@ Hard rules:
 | ASB16-RQ-023..024 | `NEW -> SPEC_READY` | SRA discovery dual-track simulation intake (`review v1.6 FIX16-020`) |
 | ASB16-RQ-025..028 | `NEW -> SPEC_READY` | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | `NEW -> SPEC_READY` | semantic convergence intake (`review v1.6 FIX16-022`) |
+| ASB16-RQ-030 | `NEW -> SPEC_READY` | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
