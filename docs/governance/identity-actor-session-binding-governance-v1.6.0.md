@@ -522,7 +522,7 @@ Mandatory semantics:
 | ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
-| ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) |
+| ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) + architect instance pilot (`review v1.6 FIX16-026`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -583,7 +583,7 @@ Mandatory semantics:
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE` |
-| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion |
+| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; latest pilot intake in review `FIX16-026` confirms text uplift != executable closure |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -597,7 +597,7 @@ Mandatory semantics:
 | ASB16-RQ-025..028 | `NEW -> SPEC_READY` | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | `NEW -> SPEC_READY` | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | `NEW -> SPEC_READY` | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
-| ASB16-RQ-031 | `NEW -> SPEC_READY` | self-drive experiment intake (`review v1.6 FIX16-024`) |
+| ASB16-RQ-031 | `NEW -> SPEC_READY` | self-drive experiment intake (`review v1.6 FIX16-024`) + architect pilot replay (`review v1.6 FIX16-026`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
@@ -715,6 +715,26 @@ Promotion policy impact:
 1. This section upgrades evidence quality and terminology consistency.
 2. It does not promote any P0/P1 row to `DONE` by itself.
 3. Any promotion claim without S0..S3 implementation evidence is invalid.
+
+### 8.3 v1.5 closure boundary vs v1.6 positive supplementation boundary (2026-03-05, normalization)
+
+Boundary matrix:
+
+1. `v1.5` closure lane (frozen historical governance track):
+   - managed only in `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` + corresponding v1.5 review ledger.
+   - no v1.6 section may rewrite v1.5 release verdicts or status rows.
+2. `v1.6` positive supplementation lane (forward-only):
+   - current pilot scope includes `ASB16-RQ-025..031`.
+   - instance-level self-drive prompt strengthening evidence is admissible only as intake/proof-of-direction, not as release-status promotion.
+
+Deterministic interpretation for `ASB16-RQ-031`:
+
+1. Prompt text importing protocol-kernel contracts is required baseline strengthening.
+2. Promotion remains blocked until executable coupling is implemented and replay-convergent:
+   - mapping validator wired,
+   - actor-explicit strict chain convergent,
+   - trigger/knowledge/arbitration sample-proof set pass.
+3. Therefore current state remains `SPEC_READY`; pilot intake (`review FIX16-026`) is positive evidence but non-promotional by design.
 
 ## 9) References
 

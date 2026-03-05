@@ -73,6 +73,7 @@ Carry-over evidence:
 | FIX16-023 | 2026-03-05 | protocol | v1.6 suggestion intake evidence quorum hard-gate (`ASB16-RQ-030`; roundtable+vendor+online/spec evidence required before promotion beyond `PENDING_INTAKE`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-024 | 2026-03-05 | protocol | protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`; text import alone is insufficient without validator mapping + multimodal sample-proof closure + explicit actor context) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-026 | 2026-03-05 | protocol | base-repo-architect identity self-drive pilot: protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`), with v1.5/v1.6 boundary normalization | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -631,6 +632,46 @@ Promotion boundary (hard):
 2. `ASB16-RQ-015/029/030` can move past `SPEC_READY` only after implementation + strict replay evidence under `S0..S3`.
 3. Any claim of `DONE` without executable convergence proof is invalid.
 
+### FIX16-026 - base-repo-architect self-drive pilot for protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`)
+
+- Status: `SPEC_READY`
+- Goal: execute a real runtime self-drive pilot on `base-repo-architect` identity instance, import protocol-kernel contracts into prompt baseline, and verify whether executable lane quality is improved without crossing v1.5 boundary.
+
+Pilot implementation (instance-level, no protocol script mutation in this step):
+
+1. Prompt baseline upgrade:
+   - file: `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-architect/IDENTITY_PROMPT.md`
+   - action: injected `identity/protocol/*` contract sources + explicit multimodal verification policy + actor-explicit strict-lane rule + v1.5/v1.6 scope split clause.
+2. Runtime learning artifacts updated:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-architect/RULEBOOK.jsonl`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-architect/TASK_HISTORY.md`
+
+Self-drive replay evidence:
+
+1. validator bundle:
+   - `/tmp/v16_selfdrive_architect_validation_bundle_20260305.json`
+   - verdict: `prompt_quality/runtime_contract/actor_binding/actor_multibinding/session_refresh/three_plane` all `rc=0`.
+2. three-plane output:
+   - `/tmp/v16_selfdrive_architect_three_plane_20260305.json`
+   - result: `repo_plane_status=CLOSED`, `overall_release_decision=Conditional Go` (release plane not started is expected in this pilot scope).
+3. strict-chain residual (important for v1.6 executable coupling):
+   - `/tmp/v16_selfdrive_architect_validate_20260305.log`
+   - `identity_creator validate` returned `rc=1`; blocker branch shows `IP-ASB-STAMP-SESSION-005` in reply-first-line gate path.
+   - this indicates strict actor-context propagation is still non-convergent in composed validation chain, even when standalone actor/session validators pass.
+
+Deterministic judgment:
+
+1. Prompt-level protocol-kernel import is effective as **baseline capability reinforcement** (quality/contract validators green).
+2. Remaining gap is **executable coupling**, not text quality:
+   - unified creator strict chain still has actor-context convergence residual.
+3. Boundary normalization:
+   - this pilot is a v1.6 positive supplement intake and does not mutate any v1.5 release/audit state.
+
+Promotion boundary (hard):
+
+1. `FIX16-026` cannot promote `ASB16-RQ-031` beyond `SPEC_READY` by itself.
+2. Required next step remains protocol-layer implementation for strict-chain actor-context convergence + sample-proof validator mapping, then independent re-audit.
+
 ---
 
 ## 4) Reviewer decision log
@@ -662,6 +703,7 @@ Promotion boundary (hard):
 | FIX16-023 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T09:40:00Z | intake hard-gate reinforcement added: new suggestions require roundtable/vendor/online/spec evidence quorum (`ASB16-RQ-030`) before promotion beyond `PENDING_INTAKE` |
 | FIX16-024 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T10:40:00Z | self-drive A/B replay shows prompt text import alone yields no executable uplift; added `ASB16-RQ-031` for fail-closed executable coupling + multimodal sample-proof closure + explicit actor context in strict lane |
 | FIX16-025 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T12:20:00Z | deep cross-verification package normalized to `T1..T4` taxonomy and replay verdict locked: lane split healthy but `ASB16-RQ-015/029/030` remain implementation-pending; `S0..S4` sequence added as non-regression strengthening path |
+| FIX16-026 | PENDING_INTAKE | base-repo-architect(self-drive) | 2026-03-05T12:58:00Z | runtime self-drive pilot on `base-repo-architect`: protocol-kernel prompt injection + multimodal verification baseline passes; creator strict chain still shows actor-context convergence residual (`IP-ASB-STAMP-SESSION-005`), kept in v1.6 executable-coupling track only |
 
 ---
 
@@ -728,3 +770,9 @@ Promotion boundary (hard):
 47. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
 48. `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
 49. `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
+50. `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-architect/IDENTITY_PROMPT.md`
+51. `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-architect/RULEBOOK.jsonl`
+52. `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/base-repo-architect/TASK_HISTORY.md`
+53. `/tmp/v16_selfdrive_architect_validation_bundle_20260305.json`
+54. `/tmp/v16_selfdrive_architect_three_plane_20260305.json`
+55. `/tmp/v16_selfdrive_architect_validate_20260305.log`
