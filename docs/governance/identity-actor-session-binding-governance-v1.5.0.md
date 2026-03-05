@@ -2141,6 +2141,61 @@ Mandatory semantics:
    - governed compose/send-time file-backed path passes with `PASS_REQUIRED`.
 4. This contract governs post-release hotfix stream (`v1.5.x`) and is non-retroactive to already published `v1.5.1` historical release evidence.
 
+#### 5.8.45 `headstamp_dual_recurrence_eradication_contract_v1` (P0, FIX-063 intake)
+
+Goal:
+
+1. Eliminate high-frequency recurrence pair where headstamp is either missing or tuple-drifted under fragmented user-visible emission channels.
+2. Enforce deterministic parity between `commentary` and `final` (and equivalent user-visible channels) so one path cannot pass while another bypasses.
+
+Mandatory semantics:
+
+1. One pre-send governed outlet boundary must cover every user-visible emission channel:
+   - `commentary`;
+   - `final`;
+   - any equivalent user-visible transport used by the assistant runtime.
+2. Channel coverage parity is hard-required:
+   - each emitted message must provide machine-readable preflight proof fields for the exact outbound payload.
+3. Actor-bound tuple fidelity is hard-required at send-time:
+   - first-line `Identity-Context` tuple must machine-match runtime actor-bound current identity.
+4. No degraded fallback is allowed:
+   - if governed preflight cannot run on a user-visible channel, emission must fail-closed.
+5. Required replay matrix before promotion:
+   - negative A: missing first-line header -> `IP-ASB-STAMP-SESSION-001`;
+   - negative B: strict inline evidence -> `IP-ASB-STAMP-SESSION-002`;
+   - negative C: non-governed outlet -> `IP-ASB-STAMP-SESSION-004`;
+   - negative D: actor-bound mismatch -> `IP-ASB-STAMP-SESSION-005`;
+   - positive E: governed compose/send-time file-backed path -> `PASS_REQUIRED` with channel-coverage proof.
+6. This contract is post-release hotfix scope for subsequent `v1.5.x` updates and does not retroactively rewrite `v1.5.1` historical closure.
+7. Strict recurrence closure scans must use explicit actor binding (`--actor-id`) and must not rely on host fallback actor identity.
+8. Coverage scanners must deterministically normalize direct vs wrapper paths:
+   - direct `validate_send_time_reply_gate.py` invocation and
+   - compose-wrapper send-time proof
+   are equivalent only when machine-readable proof mapping is complete.
+
+#### 5.8.46 `actor_role_semantic_partition_contract_v1` (P1, FIX-064 intake)
+
+Goal:
+
+1. Eliminate audit ambiguity where `actor_id` drift is misinterpreted as `identity_id` runtime switch.
+2. Enforce machine-readable separation between assistant-emission actor and manual-operator replay actor.
+
+Mandatory semantics:
+
+1. `actor_id` and `identity_id` are non-substitutable:
+   - `actor_id` = execution/emission subject;
+   - `identity_id` = capability pack subject.
+2. Governed outlet/reporting artifacts for user-visible assistant replies must expose role-partition fields:
+   - `emitter_actor_id`
+   - `executor_actor_id`
+   - `runtime_identity_id`
+   - `actor_semantic_role` (`assistant_runtime` / `manual_operator`).
+3. Strict assistant-emission path must fail-closed when role-partition semantics are absent or ambiguous:
+   - `IP-ASB-ACTOR-001` (`actor_semantic_role_missing_or_ambiguous`).
+4. Promotion/re-audit bundles mixing assistant and manual evidence without explicit partition markers must fail-closed:
+   - `IP-ASB-ACTOR-002` (`mixed_actor_evidence_unpartitioned`).
+5. This contract is mandatory in `v1.5.x` hardening stream and is not deferred-by-default to `v1.6`.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2693,6 +2748,8 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | DONE | implementation landed in `FIX-060` (`50005f0`) and independent re-audit promoted in review `16.8.82`: governed outlet pass path plus fail-closed bypass/missing-guard branches (`IP-ASB-STAMP-SESSION-004` / `IP-ASB-STAMP-SESSION-003`) are accepted. |
 | ASB-RQ-118 | strict governed outlet must remain actor-bound coherent: explicit actor context cannot emit replies for historical/non-current identity bindings, and strict send-time evidence must be file-backed live payload | actor-bound current-binding mismatch guard in compose/first-line validators + strict inline-evidence rejection + actor-bound telemetry surfaces | P0 | DONE | implementation landed in `FIX-061` (`119a421`,`5b54cee`) and independent re-audit promoted in review `16.8.84`: actor-bound mismatch is fail-closed (`IP-ASB-STAMP-SESSION-005`) and strict inline reply-text evidence is denied (`IP-ASB-STAMP-SESSION-002`) with non-governed bypass guard retained (`IP-ASB-STAMP-SESSION-004`). |
 | ASB-RQ-119 | final assistant reply channel must be governed-outlet-only: direct chat emission cannot bypass compose/send-time first-line hard gates | final emission boundary adapter + governed-outlet artifact proof + required recurrence replay matrix gate (3 negatives + 1 positive) | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only intake recorded in review `16.8.86`; architect hotfix required in `v1.5.x` stream before promotion to `DONE`. |
+| ASB-RQ-120 | headstamp recurrence closure must be channel-parity complete: all user-visible channels enforce actor-bound first-line/send-time governed preflight with deterministic proof fields, preventing missing-header and tuple-drift recurrence split | unified user-visible channel pre-send boundary + channel-coverage proof fields + deterministic 4-negative + 1-positive replay matrix gate | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only deep-dive recorded in review `16.8.87` + strict deep-scan addendum `16.8.89`; architect hotfix required in `v1.5.x` stream before promotion to `DONE`. |
+| ASB-RQ-121 | actor-role semantics must be machine-partitioned (`assistant_runtime` vs `manual_operator`) so actor context drift cannot be misclassified as identity switch in strict replay/audit closure | governed outlet + send-time/report telemetry role fields + ambiguous/mixed-evidence fail-closed guards (`IP-ASB-ACTOR-001/002`) | P1 | SPEC_READY (POST_RELEASE_V15X_HARDENING) | docs-only deep bug intake recorded in review `16.8.88`; implementation is required in `v1.5.x` before promotion claims on actor-semantics closure. |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2750,6 +2807,8 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-117 | `NEW -> DONE (P0)` | `FIX-060` implementation landed (`50005f0`) and independent re-audit promoted in review `16.8.82`; governed outlet exclusivity and fail-closed bypass/missing-guard branches are accepted. |
 | ASB-RQ-118 | `NEW -> DONE (P0)` | `FIX-061` implementation landed (`119a421`,`5b54cee`) and independent re-audit promoted in review `16.8.84`; actor-bound mismatch fail-closed + strict inline evidence rejection + non-governed bypass guard replay are accepted. |
 | ASB-RQ-119 | `NEW -> SPEC_READY (P0, POST_RELEASE_HOTFIX)` | docs-only recurrence intake in review `16.8.86` classifies `agent_direct_emission_bypass` (direct chat output can skip governed compose/send-time path); architect implementation is required for subsequent `v1.5.x` updates before promotion to `DONE`. |
+| ASB-RQ-120 | `NEW -> SPEC_READY (P0, POST_RELEASE_HOTFIX)` | docs-only deep-dive in review `16.8.87` plus strict deep-scan addendum `16.8.89` classifies high-frequency dual recurrence (`headstamp_missing` + `headstamp_tuple_drift_or_channel_gap`) and requires channel-parity + actor-explicitness hotfix before promotion to `DONE`. |
+| ASB-RQ-121 | `NEW -> SPEC_READY (P1, POST_RELEASE_V15X_HARDENING)` | docs-only deep bug intake in review `16.8.88` formalizes actor-role semantic partition and reserves fail-closed ambiguous/mixed-evidence branches (`IP-ASB-ACTOR-001/002`) for `v1.5.x` implementation. |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2971,6 +3030,31 @@ Boundary semantics:
    - negative C: non-governed outlet -> `IP-ASB-STAMP-SESSION-004`;
    - positive D: governed compose/send-time path -> `PASS_REQUIRED`.
 
+### 6.4M Post-release dual recurrence deep-dive snapshot (`headstamp_missing` + `headstamp_tuple_drift_or_channel_gap`, 2026-03-05)
+
+Snapshot decision:
+
+1. Add recurrence requirement row:
+   - `ASB-RQ-120` (`P0`, status `SPEC_READY (POST_RELEASE_P0_HOTFIX)`).
+2. Recurrence is decomposed into two mandatory closure classes:
+   - class A `headstamp_missing` (header absent);
+   - class B `headstamp_tuple_drift_or_channel_gap` (tuple stale/mismatch or uncovered visible channel).
+3. This snapshot is non-retroactive to `v1.5.1` historical release closure.
+
+Boundary semantics:
+
+1. `v1.5.1` historical release verdict remains anchored to snapshot `6.4J`.
+2. `ASB-RQ-120` is mandatory for subsequent `v1.5.x` updates and must be promoted to `DONE` before claiming recurrence eradication.
+3. Required replay matrix before promotion:
+   - negative A: missing first-line header -> `IP-ASB-STAMP-SESSION-001`;
+   - negative B: strict inline evidence -> `IP-ASB-STAMP-SESSION-002`;
+   - negative C: non-governed outlet -> `IP-ASB-STAMP-SESSION-004`;
+   - negative D: actor-bound mismatch -> `IP-ASB-STAMP-SESSION-005`;
+   - positive E: governed compose/send-time file-backed path -> `PASS_REQUIRED` with channel-coverage proof fields.
+4. Strict deep-scan normalization is mandatory:
+   - recurrence closure commands must carry explicit `--actor-id` in strict mode;
+   - scanner coverage must normalize direct send-time invocation and compose-wrapper proof mapping without introducing false-red ambiguity.
+
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:
@@ -2978,7 +3062,7 @@ Boundary semantics:
 1. `unlock_allowed = true` iff all `P0` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
 2. `P1` rows remain mandatory backlog visibility items and block unlock only when explicitly promoted to `P0`.
 3. Historical `v1.5.1` closure is fixed to snapshot `6.4J` and is not retroactively reclassified by post-release intake snapshots.
-4. Post-release rows marked `POST_RELEASE_P0_HOTFIX` (for example `ASB-RQ-119`) gate subsequent `v1.5.x` updates until promoted to `DONE`.
+4. Post-release rows marked `POST_RELEASE_P0_HOTFIX` (for example `ASB-RQ-119`, `ASB-RQ-120`) gate subsequent `v1.5.x` updates until promoted to `DONE`.
 
 Non-equivalence constraints:
 
@@ -3348,6 +3432,49 @@ Release boundary:
 
 1. This boundary is non-retroactive to `v1.5.1` historical release snapshot (`6.4J`).
 2. It is release-blocking for subsequent `v1.5.x` updates until `ASB-RQ-119` is implemented and independently re-audited.
+
+### 6.6J High-frequency dual recurrence eradication boundary (`review 16.8.87`, `ASB-RQ-120`)
+
+Risk statement:
+
+1. Headstamp recurrence persists as a dual class when either:
+   - header emission is missing on some user-visible path, or
+   - header exists but tuple fidelity/channel coverage is inconsistent across visible channels.
+2. Partial-path replay green is insufficient; closure requires parity across all user-visible channels.
+
+Normative enforcement:
+
+1. All user-visible channels must run governed pre-send preflight on exact outbound payload.
+2. Emission without channel-coverage proof is fail-closed.
+3. Closure requires deterministic 4-negative + 1-positive replay matrix acceptance before promoting `ASB-RQ-120` to `DONE`.
+4. Promotion replay must include strict deep-scan normalization checks:
+   - explicit actor binding in closure scans;
+   - normalized coverage verdict for direct vs wrapper send-time path.
+
+Release boundary:
+
+1. This boundary is non-retroactive to `v1.5.1` historical release snapshot (`6.4J`).
+2. It is release-blocking for subsequent `v1.5.x` updates until `ASB-RQ-120` is implemented and independently re-audited.
+
+### 6.6K Actor-role semantic partition boundary (`review 16.8.88`, `ASB-RQ-121`)
+
+Risk statement:
+
+1. Mixed replay windows can include both assistant emission and manual operator execution evidence.
+2. Without typed actor-role partition, `actor_id` drift can be mistaken for `identity_id` switch and distort audit conclusions.
+
+Normative enforcement:
+
+1. Actor semantics are mandatory split dimensions:
+   - `actor_id` = execution/emission subject;
+   - `identity_id` = capability subject.
+2. User-visible assistant closure artifacts must include role-partition telemetry (`emitter_actor_id`, `executor_actor_id`, `runtime_identity_id`, `actor_semantic_role`).
+3. Ambiguous role semantics or unpartitioned mixed-evidence bundles are fail-closed (`IP-ASB-ACTOR-001/002`).
+
+Release boundary:
+
+1. This boundary is non-retroactive to `v1.5.1` historical release snapshot (`6.4J`).
+2. It is mandatory hardening scope for subsequent `v1.5.x` updates until `ASB-RQ-121` reaches `DONE`.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

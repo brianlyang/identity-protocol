@@ -175,6 +175,8 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
 | FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421 / 5b54cee` | DONE | PASS |
 | FIX-062 | 2026-03-05 | protocol | agent direct-emission bypass closure (`ASB-RQ-119`; final assistant reply channel must be governed-outlet-only so direct chat emission cannot skip first-line/send-time hard gates) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_PENDING_HOTFIX |
+| FIX-063 | 2026-03-05 | protocol | headstamp high-frequency dual recurrence eradication package (`ASB-RQ-120`; enforce commentary/final channel coverage parity and deterministic actor-bound stamp fidelity under all user-visible emission paths) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_PENDING_HOTFIX |
+| FIX-064 | 2026-03-05 | protocol | actor-role semantic partition hardening (`ASB-RQ-121`; distinguish assistant emission actor vs manual operator actor to prevent audit misclassification as identity switch) | `DOCS_ONLY_INTAKE` | SPEC_READY | P1_PENDING_V15X_HARDENING |
 
 ---
 
@@ -4331,6 +4333,122 @@ Audit boundary:
 
 1. This intake does not rewrite historical `v1.5.1` release evidence.
 2. It defines mandatory hotfix closure for subsequent `v1.5.x` updates to prevent recurrence in agent-facing output channels.
+
+#### 16.8.87 P0 deep-dive: high-frequency dual recurrence decomposition and eradication matrix (`FIX-063` / `ASB-RQ-120`, 2026-03-05, docs-only)
+
+Status: `SPEC_READY (P0_PENDING_HOTFIX)`.
+
+Frequent issue pair (explicit decomposition):
+
+1. Recurrence-A (`headstamp_missing`):
+   - user-visible text emitted without first-line `Identity-Context`.
+2. Recurrence-B (`headstamp_tuple_drift_or_channel_gap`):
+   - header exists but actor/identity tuple is stale/mismatched, or some user-visible channels are not covered by governed outlet checks.
+
+Root-cause tree (implementation-neutral):
+
+1. Emission channel fragmentation:
+   - governed outlet chain is enforced for script-driven reply artifacts,
+   - but runtime agent can still emit user-visible text from non-governed channel variants (not all channels share one pre-send gate).
+2. Gate coverage asymmetry:
+   - contracts are defined at validator/script level, not guaranteed at chat-runtime transport boundary.
+3. Promotion asymmetry:
+   - one path can be replay-green while another path remains unguarded, producing "fixed then recurring" behavior.
+
+Eradication requirements for architect (`v1.5.x` hotfix stream):
+
+1. Single pre-send gate for all user-visible channels:
+   - `commentary` and `final` (and any equivalent visible path) must pass one governed outlet preflight.
+2. Deterministic channel-coverage proof:
+   - each emitted message must carry artifact refs proving compose+send-time gate execution on the exact outbound payload.
+3. Tuple fidelity proof:
+   - actor-bound identity tuple in final first-line stamp must be machine-compared with runtime actor binding at send time.
+4. No bypass fallback:
+   - if governed preflight cannot run, emission must fail-closed (no degraded plain-text direct-send mode).
+
+Required replay matrix (must all pass before promotion):
+
+1. Negative A: missing first-line header -> `IP-ASB-STAMP-SESSION-001`.
+2. Negative B: strict inline evidence (`reply_text`) -> `IP-ASB-STAMP-SESSION-002`.
+3. Negative C: non-governed outlet -> `IP-ASB-STAMP-SESSION-004`.
+4. Negative D: actor-bound mismatch -> `IP-ASB-STAMP-SESSION-005`.
+5. Positive E: governed compose/send-time payload path -> `PASS_REQUIRED` with channel-coverage proof fields.
+
+Promotion boundary:
+
+1. `FIX-062` and `FIX-063` remain `SPEC_READY` until the architect hotfix lands and independent re-audit accepts A/B/C/D/E rows.
+2. No docs-only promotion to `DONE/PASS` is allowed for this recurrence class.
+
+#### 16.8.88 P1 deep bug intake: actor-role semantic ambiguity and audit drift risk (`FIX-064` / `ASB-RQ-121`, 2026-03-05, docs-only)
+
+Status: `SPEC_READY (P1_PENDING_V15X_HARDENING)`.
+
+Issue statement (clarified):
+
+1. `actor_id` and `identity_id` are independent semantics:
+   - `actor_id` = execution/emission主体（assistant runtime vs manual operator）；
+   - `identity_id` = capability pack主体（协议身份包）。
+2. In mixed replay windows, actor fallback (`user:$USER`) can appear beside assistant-emission evidence without explicit role partition, which may be misread as hidden identity switching.
+3. This is an audit-attribution and semantic-governance bug class, not runtime identity mutation by itself.
+
+Risk impact:
+
+1. audit replay can misclassify actor context drift as identity hard-switch.
+2. actor-bound strict validators may be interpreted against the wrong responsibility subject in manual replay bundles.
+3. recurrence triage quality degrades when evidence sets mix assistant-emission and operator-replay artifacts without typed actor-role labels.
+
+v1.5.x hardening requirements (must close in v1.5.x, not deferred to v1.6):
+
+1. user-visible governed outlet artifacts must expose role-partition telemetry:
+   - `emitter_actor_id`
+   - `executor_actor_id`
+   - `runtime_identity_id`
+   - `actor_semantic_role` (`assistant_runtime` / `manual_operator`).
+2. strict assistant-emission path must fail-closed when actor-role semantics are missing/ambiguous:
+   - reserve `IP-ASB-ACTOR-001` (`actor_semantic_role_missing_or_ambiguous`).
+3. replay/evidence bridge must mark mixed-source bundles explicitly and block ambiguous promotion:
+   - reserve `IP-ASB-ACTOR-002` (`mixed_actor_evidence_unpartitioned`).
+4. runbook must state:
+   - assistant-channel validation replays use explicit `--actor-id assistant:codex`;
+   - manual operator replays are labeled `manual_operator` evidence and cannot directly replace assistant-emission closure proofs.
+
+Promotion boundary:
+
+1. `FIX-064` remains `SPEC_READY` until role-partition fields and fail-closed branches are implemented and independently re-audited.
+2. This item is designated for the `v1.5.x` hardening stream and must not be pushed to `v1.6` backlog by default.
+
+#### 16.8.89 P0 strict deep-scan addendum: actor-explicitness and coverage-normalization closure (`FIX-063`, 2026-03-05, docs-only)
+
+Status: `SPEC_READY (P0_PENDING_HOTFIX)`; deep-scan confirms recurrence class is real and isolates two instrumentation-level closure gaps that must be fixed together.
+
+Replay evidence (latest local strict scan):
+
+1. `/tmp/fix063_headstamp_scan_architect_actor_codex.json`
+   - `dynamic_replay_status=PASS_REQUIRED` for A/B/C/E matrix when `--actor-id assistant:codex` is explicit.
+2. `/tmp/fix063_headstamp_scan_architect_no_actor.json`
+   - same payload falls to `IP-ASB-STAMP-SESSION-005` in positive branch when actor defaults to host-derived identity (`resolve_actor_id` fallback), demonstrating actor-context drift risk in strict closure scans.
+
+Deep findings (must be addressed as one package):
+
+1. Actor-context explicitness gap:
+   - strict recurrence closure can be misclassified if scanning path omits explicit actor binding and falls back to host actor identity.
+2. Coverage instrumentation gap:
+   - `execute_identity_upgrade.py` relies on compose wrapper for send-time gate, while static scanner variants that only match direct send-time invocation report missing wiring.
+   - this creates instrumentation false-red noise that can mask real recurrence risk.
+
+Architect hotfix work-order (mandatory for promotion):
+
+1. Require explicit `--actor-id` in recurrence closure scans (CI/readiness/full-scan/validate lanes) and reject host-fallback actor in strict closure mode.
+2. Normalize coverage model:
+   - either enforce direct send-time invocation in every mandatory entrypoint, or
+   - treat compose-wrapper send-time proof as first-class equivalent with deterministic telemetry mapping.
+3. Keep recurrence verdict fail-closed:
+   - no relaxation of A/B/C/D/E matrix; only instrumentation ambiguity may be removed.
+
+Audit boundary:
+
+1. This addendum records deep-scan findings and hotfix scope only.
+2. `FIX-063` remains `SPEC_READY` until implementation lands and independent re-audit accepts the normalized matrix.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
