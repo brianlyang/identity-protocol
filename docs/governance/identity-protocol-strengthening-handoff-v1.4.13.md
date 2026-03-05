@@ -39,6 +39,23 @@ To keep protocol-core release gates fail-closed without false negatives:
 
 This addendum is protocol-governance guidance only; release semantics and fail-closed policy remain unchanged.
 
+## 2026-03-05 required-gates fixture update-lane narrowing addendum
+
+To keep required-gates fail-closed while preventing fixture/demo false aborts in CI:
+
+1. `identity_creator.py update` keeps fixture scope arbitration (`USER -> AUTO`) and additionally
+   switches runtime mode guard expectation to `expect-mode=any` when the run is fixture identity
+   on repo catalog (`catalog == repo-catalog`), so repo fixture mode `custom` is no longer falsely
+   rejected by strict `auto` mode-recognition.
+2. `.github/workflows/_identity-required-gates.yml` now performs identity-level fixture/demo
+   classification from catalog row metadata and **skips mutation/update report-chain validators**
+   for fixture identities in CI, preserving inspection-only governance for fixture lanes.
+3. Mutable runtime identities remain unchanged: update + writeback + sidecar + baseline/version
+   validators continue to run fail-closed.
+
+This addendum is coupling-only governance evidence for protocol-core changes in this range and does
+not change release semantics outside fixture CI inspection boundaries.
+
 Execution directive (mandatory):
 
 1. Execute protocol-strengthening items based on this handoff document only.
