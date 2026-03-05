@@ -30,6 +30,7 @@ Date: 2026-03-04
 20. even with explicit repo-catalog binding, fixture identities resolved as `mode=custom` while runtime mode guard expected `auto` (`project/global`), causing false `expected_mode_match=false` aborts in required-gates.
 21. required-gates executed mutation/update report-chain validators for fixture/demo identities, causing false CI aborts on pre-mutation/update contracts meant for mutable runtime identities.
 22. fixture sample CURRENT_TASK/runtime evidence in `identity/packs/system-requirements-analyst/**` contained workstation-specific absolute paths (`/Users/yangxi/...`), causing rulebook evidence lookup false failures on GitHub runners.
+23. experience-feedback validator resolved non-absolute `pack_path` only against catalog directory, which broke fixture identities stored as repository-root-relative paths (`identity/packs/...`) and caused `CURRENT_TASK.json not found` failures in CI.
 
 ## Fixes applied
 
@@ -51,6 +52,7 @@ Date: 2026-03-04
 - `this-change-set` — for fixture identities running on repo catalog, override runtime mode guard expectation from `auto` to `any` to prevent false `mode=custom` rejections in CI.
 - `this-change-set` — detect fixture/demo identities in required-gates and skip mutation/update report-chain validators for fixture identities (inspection-only CI lane).
 - `this-change-set` — normalize `system-requirements-analyst` fixture sample paths to repository-relative values to remove runner-specific absolute-path failures in runtime contract validation.
+- `this-change-set` — update `validate_identity_experience_feedback.py` to resolve fixture `pack_path` with both catalog-dir and protocol-root candidates, removing false `CURRENT_TASK.json not found` failures for `identity/packs/...` identities.
 
 ## Failing run references
 

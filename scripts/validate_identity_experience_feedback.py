@@ -42,13 +42,20 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     if not target:
         raise FileNotFoundError(f"identity id not found in catalog: {identity_id}")
     catalog_dir = catalog_path.expanduser().resolve().parent
+    protocol_root = _protocol_root().resolve()
     pack_path = str((target or {}).get("pack_path", "")).strip()
     if pack_path:
         raw_pack = Path(pack_path).expanduser()
-        pack = raw_pack if raw_pack.is_absolute() else (catalog_dir / raw_pack)
-        p = (pack / "CURRENT_TASK.json").resolve()
-        if p.exists():
-            return p
+        candidate_packs: list[Path] = []
+        if raw_pack.is_absolute():
+            candidate_packs.append(raw_pack.resolve())
+        else:
+            candidate_packs.append((catalog_dir / raw_pack).resolve())
+            candidate_packs.append((protocol_root / raw_pack).resolve())
+        for pack in candidate_packs:
+            p = (pack / "CURRENT_TASK.json").resolve()
+            if p.exists():
+                return p
     legacy = _protocol_root() / "identity" / identity_id / "CURRENT_TASK.json"
     if legacy.exists():
         return legacy

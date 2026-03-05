@@ -91,6 +91,10 @@
     `identity/packs/system-requirements-analyst/**` to remove workstation-
     specific absolute paths (`/Users/yangxi/...`) that caused CI false
     negatives in `validate_identity_runtime_contract.py` on GitHub runners
+  - `validate_identity_experience_feedback.py` current-task resolver now
+    supports both catalog-relative and protocol-root-relative `pack_path`
+    interpretations, fixing fixture pack resolution for
+    `identity/packs/system-requirements-analyst` in CI required-gates
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

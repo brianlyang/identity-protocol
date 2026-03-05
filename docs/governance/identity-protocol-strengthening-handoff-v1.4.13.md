@@ -52,6 +52,10 @@ To keep required-gates fail-closed while preventing fixture/demo false aborts in
    for fixture identities in CI, preserving inspection-only governance for fixture lanes.
 3. Mutable runtime identities remain unchanged: update + writeback + sidecar + baseline/version
    validators continue to run fail-closed.
+4. `validate_identity_experience_feedback.py` current-task resolution now probes both
+   catalog-dir-relative and protocol-root-relative pack candidates for non-absolute
+   `pack_path`, so fixture identities under `identity/packs/...` no longer fail with
+   false `CURRENT_TASK.json not found` in required-gates.
 
 This addendum is coupling-only governance evidence for protocol-core changes in this range and does
 not change release semantics outside fixture CI inspection boundaries.
