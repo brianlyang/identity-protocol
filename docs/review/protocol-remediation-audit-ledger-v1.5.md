@@ -4266,6 +4266,36 @@ Audit decision:
 2. `FIX-061` is promoted to `DONE/PASS` in rolling summary.
 3. This promotion removes the `6.4I` residual `P0` blocker and re-enables `v1.5` unlock arithmetic.
 
+#### 16.8.85 Release metadata surface consistency closure (`v1.5.1`, docs-only bridge, 2026-03-05)
+
+Status: `PASS` (docs-only synchronization completed; no protocol script behavior changes).
+
+Scope and rationale:
+
+1. Align user-facing release posture across root metadata surfaces after `v1.5.1` main/tag closure.
+2. Eliminate external/latest-release ambiguity caused by tag-only publication by ensuring a formal GitHub Release object exists for `v1.5.1`.
+3. Preserve release-metadata validator compatibility by keeping baseline sync marker fields on `v1.4.10` while adding explicit `v1.5.1` release snapshot narrative.
+
+Implementation/evidence anchors:
+
+1. Commit `34e7647` (`docs(release): align v1.5.1 release posture across metadata surfaces`) updates:
+   - `README.md`
+   - `VERSIONING.md`
+   - `requirements-dev.txt`
+   - `CHANGELOG.md`
+2. Formal release object exists and is marked latest:
+   - `https://github.com/brianlyang/identity-protocol/releases/tag/v1.5.1`
+3. Contract checks replayed after metadata sync:
+   - `python3 scripts/validate_release_metadata_sync.py` -> `PASS`
+   - `python3 scripts/docs_command_contract_check.py` -> `PASS`
+   - `python3 scripts/validate_protocol_ssot_source.py` -> `OK`
+
+Boundary:
+
+1. This is a docs-only bridge for release communication consistency.
+2. No `FIX-*` implementation state transition is introduced by this section.
+3. `D1..D6` unlock arithmetic remains governed exclusively by section `6.5` in governance SSOT.
+
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
 Status: `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay signoff.

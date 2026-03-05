@@ -2902,6 +2902,31 @@ Release boundary after promotion:
 2. Remaining `P0_NOT_DONE` set: none.
 3. Section `6.5` formula evaluates `unlock_allowed=true`; `D6` is promoted to `PASS (UNLOCK_ALLOWED)`.
 
+### 6.4K Release metadata surface synchronization snapshot (`v1.5.1`, docs-only, 2026-03-05)
+
+Snapshot decision:
+
+1. Accept docs-only metadata consistency commit `34e7647` after `v1.5.1` main/tag closure:
+   - synchronize root release posture surfaces (`README.md`, `VERSIONING.md`, `requirements-dev.txt`, `CHANGELOG.md`).
+2. Record formal GitHub Release publication for `v1.5.1` to eliminate tag-only latest-release ambiguity:
+   - `https://github.com/brianlyang/identity-protocol/releases/tag/v1.5.1`
+3. Preserve release metadata validator compatibility:
+   - keep baseline sync marker expectations at `v1.4.10` while documenting `v1.5.1` formal release snapshot.
+
+Boundary and non-effects:
+
+1. This snapshot is communication/metadata consistency only; it does not modify protocol script semantics.
+2. No `ASB-RQ-*` row state is changed by this snapshot.
+3. `D1..D6` status remains derived exclusively from section `6.5` unlock formula.
+
+Acceptance commands (post-sync evidence):
+
+```bash
+python3 scripts/validate_release_metadata_sync.py
+python3 scripts/docs_command_contract_check.py
+python3 scripts/validate_protocol_ssot_source.py
+```
+
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:
