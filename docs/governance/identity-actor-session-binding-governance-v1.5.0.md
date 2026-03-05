@@ -3055,6 +3055,24 @@ Boundary semantics:
    - recurrence closure commands must carry explicit `--actor-id` in strict mode;
    - scanner coverage must normalize direct send-time invocation and compose-wrapper proof mapping without introducing false-red ambiguity.
 
+### 6.4N v1.5.x open-P0 consolidation snapshot (`FIX-062/FIX-063`, 2026-03-05)
+
+Snapshot purpose:
+
+1. Provide one authoritative bundle view for all currently open post-release `P0` recurrence items in `v1.5.x`.
+2. Remove ambiguity between "single-lane pass" and "all-visible-channel recurrence closure".
+
+Current open `P0` set:
+
+1. `ASB-RQ-119` (`FIX-062`) — governed outlet exclusivity for final assistant emission.
+2. `ASB-RQ-120` (`FIX-063`) — dual recurrence eradication with actor-explicitness and coverage normalization.
+
+Bundle closure hard rule:
+
+1. `ASB-RQ-119` and `ASB-RQ-120` must be promoted together under independent re-audit acceptance.
+2. Partial promotion is disallowed for `v1.5.x` recurrence-closure claims.
+3. Any unresolved actor-fallback drift or direct-vs-wrapper coverage ambiguity keeps the bundle non-closable.
+
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:

@@ -4450,6 +4450,34 @@ Audit boundary:
 1. This addendum records deep-scan findings and hotfix scope only.
 2. `FIX-063` remains `SPEC_READY` until implementation lands and independent re-audit accepts the normalized matrix.
 
+#### 16.8.90 v1.5.x P0 recurrence closure bundle consolidation (`FIX-062` + `FIX-063`, 2026-03-05, docs-only)
+
+Status: `P0_HOTFIX_BUNDLE_OPEN` (no code override; docs/governance consolidation only).
+
+Bundle scope (the two P0 classes that must be closed together):
+
+1. `FIX-062` / `ASB-RQ-119`:
+   - eliminate direct-emission bypass of governed outlet.
+2. `FIX-063` / `ASB-RQ-120`:
+   - eliminate dual recurrence (`headstamp_missing`, `headstamp_tuple_drift_or_channel_gap`) with actor-explicitness + coverage-normalization.
+
+Consolidated closure predicates (all mandatory):
+
+1. governed outlet exclusivity:
+   - direct user-visible emission path without governed artifacts is impossible/fail-closed.
+2. actor explicitness in strict recurrence closure:
+   - closure scans and strict replay paths must use explicit actor context; host fallback actor cannot satisfy closure proof.
+3. coverage normalization:
+   - direct send-time invocation and compose-wrapper invocation are treated by one deterministic machine-proof model.
+4. deterministic replay matrix:
+   - negatives A/B/C/D and positive E from `16.8.87` + `16.8.89` all pass under independent re-audit.
+
+Audit promotion boundary:
+
+1. Until the consolidated predicates are replay-green and independently signed, both P0 rows remain non-promotable.
+2. Docs-only updates cannot promote `FIX-062`/`FIX-063` to `DONE/PASS`.
+3. This bundle is explicitly `v1.5.x` hotfix scope and must not be deferred by default to `v1.6` planning.
+
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
 Status: `IMPL_READY (BLOCKED_BY_AUDIT)` pending independent replay signoff.
