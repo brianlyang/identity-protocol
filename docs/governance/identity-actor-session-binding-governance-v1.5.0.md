@@ -2119,6 +2119,28 @@ Mandatory semantics:
    - `IP-ASB-STAMP-SESSION-003`
    - `IP-ASB-STAMP-SESSION-004`
 
+#### 5.8.44 `agent_direct_emission_governed_outlet_contract_v1` (P0, FIX-062 intake)
+
+Goal:
+
+1. Eliminate headstamp recurrence caused by assistant final replies emitted directly in chat channel without governed compose/send-time path.
+2. Convert governed outlet from "recommended execution path" into "mandatory final emission boundary".
+
+Mandatory semantics:
+
+1. Any user-visible final assistant reply in strict operations must be produced from governed outlet artifacts:
+   - first-line `Identity-Context` composed by canonical renderer;
+   - send-time gate executed on exact outbound payload;
+   - blocker/preflight receipt available for audit replay.
+2. Direct final emission without governed outlet artifacts is fail-closed:
+   - classify as `agent_direct_emission_bypass` (P0 boundary breach).
+3. Required recurrence replay matrix (all mandatory):
+   - missing first-line header fails with `IP-ASB-STAMP-SESSION-001`;
+   - strict inline evidence (`reply_text`) fails with `IP-ASB-STAMP-SESSION-002`;
+   - non-governed outlet channel fails with `IP-ASB-STAMP-SESSION-004`;
+   - governed compose/send-time file-backed path passes with `PASS_REQUIRED`.
+4. This contract governs post-release hotfix stream (`v1.5.x`) and is non-retroactive to already published `v1.5.1` historical release evidence.
+
 ### 5.9 `semantic_isolation_and_source_trust_contract_v1` (P0)
 
 Goal:
@@ -2670,6 +2692,7 @@ This subsection prevents ambiguity between the baseline rows above and current r
 | ASB-RQ-116 | activation lane must fail-closed on cross-identity actor switch unless explicit switch-intent receipt is supplied (`actor_id + from_identity_id + to_identity_id` tuple bound), preventing execution-time hidden identity mutation | `identity_creator.py activate` switch-intent pre-mutation guard + actor binding resolver + switch report telemetry fields | P0 | DONE | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion completed in review `16.8.68` (P0/P1/P2 rows accepted, including non-root replay and actor-bound tail validator parity). |
 | ASB-RQ-117 | strict-lane user-visible replies must be emitted only through governed outlet adapter; free-form/direct emission bypass is release-blocking fail-closed to prevent headstamp recurrence | governed outlet adapter + compose/send-time preflight bridge + emission receipt telemetry surfaces | P0 | DONE | implementation landed in `FIX-060` (`50005f0`) and independent re-audit promoted in review `16.8.82`: governed outlet pass path plus fail-closed bypass/missing-guard branches (`IP-ASB-STAMP-SESSION-004` / `IP-ASB-STAMP-SESSION-003`) are accepted. |
 | ASB-RQ-118 | strict governed outlet must remain actor-bound coherent: explicit actor context cannot emit replies for historical/non-current identity bindings, and strict send-time evidence must be file-backed live payload | actor-bound current-binding mismatch guard in compose/first-line validators + strict inline-evidence rejection + actor-bound telemetry surfaces | P0 | DONE | implementation landed in `FIX-061` (`119a421`,`5b54cee`) and independent re-audit promoted in review `16.8.84`: actor-bound mismatch is fail-closed (`IP-ASB-STAMP-SESSION-005`) and strict inline reply-text evidence is denied (`IP-ASB-STAMP-SESSION-002`) with non-governed bypass guard retained (`IP-ASB-STAMP-SESSION-004`). |
+| ASB-RQ-119 | final assistant reply channel must be governed-outlet-only: direct chat emission cannot bypass compose/send-time first-line hard gates | final emission boundary adapter + governed-outlet artifact proof + required recurrence replay matrix gate (3 negatives + 1 positive) | P0 | SPEC_READY (POST_RELEASE_P0_HOTFIX) | docs-only intake recorded in review `16.8.86`; architect hotfix required in `v1.5.x` stream before promotion to `DONE`. |
 
 ### 6.4A Requirement status delta snapshot (2026-03-01)
 
@@ -2726,6 +2749,7 @@ This delta snapshot is the authoritative synchronization bridge until the next f
 | ASB-RQ-116 | `NEW -> GATE_READY (P0)` | `FIX-058` landed (`33f6808 / 1de3832`); independent re-audit promotion recorded in review `16.8.68` with P0 guard (`IP-ACT-SWITCH-001/002`) + P1 actor-bound + P2 CWD-invariant rows accepted. |
 | ASB-RQ-117 | `NEW -> DONE (P0)` | `FIX-060` implementation landed (`50005f0`) and independent re-audit promoted in review `16.8.82`; governed outlet exclusivity and fail-closed bypass/missing-guard branches are accepted. |
 | ASB-RQ-118 | `NEW -> DONE (P0)` | `FIX-061` implementation landed (`119a421`,`5b54cee`) and independent re-audit promoted in review `16.8.84`; actor-bound mismatch fail-closed + strict inline evidence rejection + non-governed bypass guard replay are accepted. |
+| ASB-RQ-119 | `NEW -> SPEC_READY (P0, POST_RELEASE_HOTFIX)` | docs-only recurrence intake in review `16.8.86` classifies `agent_direct_emission_bypass` (direct chat output can skip governed compose/send-time path); architect implementation is required for subsequent `v1.5.x` updates before promotion to `DONE`. |
 
 ### 6.4B Independent re-audit closure delta snapshot (2026-03-03)
 
@@ -2927,12 +2951,34 @@ python3 scripts/docs_command_contract_check.py
 python3 scripts/validate_protocol_ssot_source.py
 ```
 
+### 6.4L Post-release recurrence intake snapshot (`agent_direct_emission_bypass`, 2026-03-05)
+
+Snapshot decision:
+
+1. Add recurrence requirement row:
+   - `ASB-RQ-119` (`P0`, status `SPEC_READY (POST_RELEASE_P0_HOTFIX)`).
+2. Root cause is scoped as execution-channel bypass:
+   - final assistant reply emitted directly in chat channel without governed outlet artifacts.
+3. This snapshot is non-retroactive to `v1.5.1` historical release closure.
+
+Boundary semantics:
+
+1. `v1.5.1` historical release verdict remains anchored to snapshot `6.4J`.
+2. `ASB-RQ-119` is mandatory for subsequent `v1.5.x` updates and must be promoted to `DONE` before claiming recurrence closure.
+3. Required replay matrix before promotion:
+   - negative A: missing first-line header -> `IP-ASB-STAMP-SESSION-001`;
+   - negative B: strict inline evidence -> `IP-ASB-STAMP-SESSION-002`;
+   - negative C: non-governed outlet -> `IP-ASB-STAMP-SESSION-004`;
+   - positive D: governed compose/send-time path -> `PASS_REQUIRED`.
+
 ### 6.5 v1.5 unlock formula (release-lock hard rule)
 
 `v1.5` tag unlock condition:
 
 1. `unlock_allowed = true` iff all `P0` rows in section 6.4 are `DONE` and D1~D5 in section 0.3 are `PASS`.
 2. `P1` rows remain mandatory backlog visibility items and block unlock only when explicitly promoted to `P0`.
+3. Historical `v1.5.1` closure is fixed to snapshot `6.4J` and is not retroactively reclassified by post-release intake snapshots.
+4. Post-release rows marked `POST_RELEASE_P0_HOTFIX` (for example `ASB-RQ-119`) gate subsequent `v1.5.x` updates until promoted to `DONE`.
 
 Non-equivalence constraints:
 
@@ -3284,6 +3330,24 @@ Release implication:
 1. Historical blocker effect is preserved in `6.4F/6.4G/6.4H/6.4I`.
 2. Current unlock arithmetic follows `6.4J` where `P0_NOT_DONE=0` and `D6=PASS (UNLOCK_ALLOWED)`.
 3. No docs-only statement can override this boundary; promotion requires implementation + replay + independent audit.
+
+### 6.6I Agent direct-emission bypass boundary (`review 16.8.86`, `ASB-RQ-119`)
+
+Risk statement:
+
+1. Even with governed validator chain available, final assistant chat emission can bypass that chain when output is emitted directly instead of artifact-backed outlet path.
+2. This produces missing headstamp events without runtime identity switch, and must be treated as P0 recurrence class.
+
+Normative enforcement:
+
+1. Final user-visible assistant output must be generated from governed outlet artifacts only.
+2. Direct emission without governed outlet artifact proof is classified as `agent_direct_emission_bypass`.
+3. Closure requires deterministic 3-negative + 1-positive replay matrix acceptance before promoting `ASB-RQ-119` to `DONE`.
+
+Release boundary:
+
+1. This boundary is non-retroactive to `v1.5.1` historical release snapshot (`6.4J`).
+2. It is release-blocking for subsequent `v1.5.x` updates until `ASB-RQ-119` is implemented and independently re-audited.
 
 ## 7) SSOT and Mixed-Source Cleanup Policy
 

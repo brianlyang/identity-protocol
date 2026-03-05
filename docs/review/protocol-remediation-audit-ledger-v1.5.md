@@ -174,6 +174,7 @@ HOTFIX-P0-010 incident note (2026-03-01, newly opened):
 | FIX-059 | 2026-03-04 | protocol | actor-risk health/heal/report-binding closure (`ASB-RQ-014/015/016`; mandatory quartet coverage + deterministic heal refs + explicit execution-report binding in readiness/e2e health closure gates) | `2a8c3ee` | DONE | PASS |
 | FIX-060 | 2026-03-04 | protocol | governed-outlet exclusivity closure (`ASB-RQ-117`; forbid free-form/direct user-visible emission that bypasses compose+send-time preflight, treating headstamp recurrence as release-blocking P0) | `50005f0` | DONE | PASS |
 | FIX-061 | 2026-03-04 | protocol | actor-bound headstamp coherence hardening (`ASB-RQ-118`; strict governed outlet must reject actor/session bound-identity drift and inline synthetic reply-text evidence to prevent hidden identity literal recurrence) | `119a421 / 5b54cee` | DONE | PASS |
+| FIX-062 | 2026-03-05 | protocol | agent direct-emission bypass closure (`ASB-RQ-119`; final assistant reply channel must be governed-outlet-only so direct chat emission cannot skip first-line/send-time hard gates) | `DOCS_ONLY_INTAKE` | SPEC_READY | P0_PENDING_HOTFIX |
 
 ---
 
@@ -4295,6 +4296,41 @@ Boundary:
 1. This is a docs-only bridge for release communication consistency.
 2. No `FIX-*` implementation state transition is introduced by this section.
 3. `D1..D6` unlock arithmetic remains governed exclusively by section `6.5` in governance SSOT.
+
+#### 16.8.86 P0 recurrence intake: agent direct-emission bypass of governed outlet (`FIX-062` / `ASB-RQ-119`, 2026-03-05, docs-only)
+
+Status: `SPEC_READY (P0_PENDING_HOTFIX)`.
+
+Corrected root-cause statement:
+
+1. The missing headstamp event in this session is not a runtime identity switch.
+2. The actual gap is an agent-channel direct emission path: final chat output can be emitted without passing through `compose_and_validate_governed_reply.py` + `validate_send_time_reply_gate.py`.
+3. Therefore, this is a last-mile governance-outlet bypass (`agent_direct_emission_bypass`), not a validator algorithm failure.
+
+Reproduction evidence (same session replay):
+
+1. Negative replay (missing first-line `Identity-Context` must fail-closed):
+   - `/tmp/fix_headstamp_missing_case_gate.json`
+   - observed: `send_time_gate_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SESSION-001`.
+2. Positive replay (governed compose path):
+   - `/tmp/fix_headstamp_pass_case_compose.json`
+   - observed: `send_time_gate_status=PASS_REQUIRED`, `reply_first_line_status=PASS_REQUIRED`.
+
+Architect hotfix requirements (`v1.5.x` stream):
+
+1. Enforce single final emission path for user-visible assistant replies:
+   - governed outlet only (no direct chat-text emission bypass).
+2. Add deterministic recurrence gate in required-gates/scan/readiness:
+   - negative A: missing header text -> `IP-ASB-STAMP-SESSION-001`;
+   - negative B: strict inline evidence (`--reply-text`) -> `IP-ASB-STAMP-SESSION-002`;
+   - negative C: non-governed outlet channel -> `IP-ASB-STAMP-SESSION-004`;
+   - positive D: governed compose/send-time path -> `PASS_REQUIRED`.
+3. Promote only after independent replay signs all 4 rows.
+
+Audit boundary:
+
+1. This intake does not rewrite historical `v1.5.1` release evidence.
+2. It defines mandatory hotfix closure for subsequent `v1.5.x` updates to prevent recurrence in agent-facing output channels.
 
 #### 16.8.33 FIX-034/035/036/038/043 implementation landing replay (`c310ab4`, 2026-03-02, protocol)
 
