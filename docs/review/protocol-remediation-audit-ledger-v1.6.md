@@ -74,7 +74,7 @@ Carry-over evidence:
 | FIX16-024 | 2026-03-05 | protocol | protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`; text import alone is insufficient without validator mapping + multimodal sample-proof closure + explicit actor context) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-026 | 2026-03-05 | protocol | base-repo-architect identity self-drive pilot: protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`), with v1.5/v1.6 boundary normalization | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
-| FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | b2c99fd | SPEC_READY | PENDING_INTAKE |
 
 ---
 
