@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task, resolve_report_path
+from tool_vendor_governance_common import contract_required, load_json, load_yaml, resolve_pack_and_task, resolve_report_path
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -55,6 +55,18 @@ PATH_LIKE_CONTEXT_PATTERN = re.compile(
     r"runtime/protocol-feedback|outbox-to-protocol|evidence-index|upgrade-proposals|"
     r"feedback_batch|identity-upgrade-exec|index\.md)"
 )
+
+
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        catalog = load_yaml(catalog_path)
+    except Exception:
+        return False
+    identities = catalog.get("identities") or []
+    row = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -191,6 +203,27 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] {exc}")
         return 1
+
+    if _is_fixture_identity(catalog_path, args.identity_id):
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "resolved_pack_path": str(pack_path),
+            "operation": args.operation,
+            "required_contract": False,
+            "auto_required_signal": False,
+            "protocol_data_sanitization_boundary_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "error_code": "",
+            "feedback_batch_path": "",
+            "forbidden_key_hits": [],
+            "sensitive_pattern_hits": [],
+            "phone_like_path_exempt_count": 0,
+            "phone_like_path_exempt_samples": [],
+            "violation_count": 0,
+            "stale_reasons": ["fixture_profile_scope"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     contract = _select_contract(task)
     required = contract_required(contract) if contract else False

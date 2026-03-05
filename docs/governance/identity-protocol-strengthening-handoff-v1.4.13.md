@@ -279,6 +279,11 @@ Lifecycle rules:
      identities as inspection-only (`SKIPPED_NOT_REQUIRED`) to prevent
      protocol-feedback sample artifacts from auto-requiredizing source-trust
      checks into false `IP-SRC-003` hard failures on CI release lanes.
+   - `validate_protocol_data_sanitization_boundary.py` now marks fixture/demo
+     identities as inspection-only (`SKIPPED_NOT_REQUIRED`) to prevent
+     protocol-feedback sample artifacts from auto-requiredizing data
+     sanitization checks into false `IP-DSN-001` hard failures on CI release
+     lanes.
 
 ## Required validation command set
 

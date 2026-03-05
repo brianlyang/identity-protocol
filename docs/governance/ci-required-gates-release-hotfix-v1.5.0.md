@@ -25,6 +25,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 14. `identity_creator update` must not hard-code `USER` scope in CI paths; default scope must allow catalog-driven arbitration (`${IDENTITY_SCOPE:-""}`) to avoid fixture/system scope false blocks.
 15. Protocol-vendor semantic isolation validator must treat fixture/demo identities as inspection-only to prevent auto-required protocol-feedback artifacts from triggering false `IP-SEM-001` fail-closed outcomes in CI.
 16. External-source trust-chain validator must treat fixture/demo identities as inspection-only to prevent auto-required protocol-feedback artifacts from triggering false `IP-SRC-003` fail-closed outcomes in CI.
+17. Protocol data sanitization boundary validator must treat fixture/demo identities as inspection-only to prevent auto-required protocol-feedback artifacts from triggering false `IP-DSN-001` fail-closed outcomes in CI.
 
 ## Implementation evidence
 

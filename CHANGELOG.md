@@ -65,6 +65,10 @@
     identities in CI strict lanes (`SKIPPED_NOT_REQUIRED`) to prevent
     protocol-feedback auto-requiredization from causing false `IP-SRC-003`
     fail-closed outcomes on fixture samples
+  - `scripts/validate_protocol_data_sanitization_boundary.py` now skips
+    fixture/demo identities in CI strict lanes (`SKIPPED_NOT_REQUIRED`) to
+    avoid auto-required protocol-feedback sample scans producing false
+    `IP-DSN-001` fail-closed outcomes
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:
