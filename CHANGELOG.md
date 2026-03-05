@@ -27,6 +27,9 @@
     - fixture identities (`profile=fixture` or `runtime_mode=demo_only`) now
       return `SKIPPED_NOT_REQUIRED` instead of strict fail-closed actor-binding
       errors in CI validation paths
+  - `scripts/validate_cross_actor_isolation.py` now returns
+    `SKIPPED_NOT_REQUIRED` when catalog has no active identities, and emits
+    non-failing `[OK]` messaging for skipped outcomes
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

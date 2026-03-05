@@ -13,7 +13,8 @@ Date: 2026-03-04
 3. Changelog gate required `CHANGELOG.md` update for significant workflow changes.
 4. Fixture identities regressed under required runtime gates due pack-local-only path resolution and strict USER-scope assumptions.
 5. Actor-session strict gates treated fixture identities as mutable runtime identities in CI.
-6. Protocol handoff coupling gate required canonical handoff update whenever protocol-core scripts/workflow changed.
+6. Cross-actor isolation strict gate rejected fixture-only catalogs with no active identities.
+7. Protocol handoff coupling gate required canonical handoff update whenever protocol-core scripts/workflow changed.
 
 ## Fixes applied
 

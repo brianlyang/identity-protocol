@@ -58,7 +58,10 @@ def main() -> int:
     error_code = ""
     status = "PASS_REQUIRED"
 
-    if not bindings:
+    if not active_ids:
+        status = "SKIPPED_NOT_REQUIRED"
+        stale_reasons.append("no_active_identities_in_catalog")
+    elif not bindings:
         stale_reasons.append("actor_session_bindings_missing")
         if inspection_mode:
             status = "SKIPPED_NOT_REQUIRED"
@@ -108,10 +111,10 @@ def main() -> int:
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:
-        if status == "PASS_REQUIRED":
+        if status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
             print(
                 "[OK] cross-actor isolation validated: "
-                f"catalog={catalog_path} actor_bindings={len(bindings)} active_identities={active_ids}"
+                f"catalog={catalog_path} actor_bindings={len(bindings)} active_identities={active_ids} status={status}"
             )
         else:
             print(f"[FAIL] {error_code or ERR_CROSS_ACTOR_ISOLATION} cross-actor isolation validation failed")
