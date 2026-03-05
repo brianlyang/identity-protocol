@@ -956,15 +956,21 @@ Mandatory P0 constraints (must all hold together):
 7. Every mapping row must include ownership and gate:
    - `owner_role`, `acceptance_gate`, `implementation_state`.
 
+Implementation guardrail (to avoid false-closure claims):
+
+1. As of this batch (`2026-03-05`), scanner-computed requirement is normative but implementation is pending.
+2. Until scanner script is landed, any lock fields are evidence-only/provisional and cannot be used for promotion.
+3. Promotion eligibility remains blocked unless scanner output is machine-generated and attached as replay receipt.
+
 Batch-1 mapping tuple (mandatory five-link anchor per row):
 
-| Requirement ID | kernel_ref target (v1.6) | runtime_ref target (v1.6) | mapping_ref target (v1.6) | validator_ref target (v1.6 planned) |
-| --- | --- | --- | --- | --- |
-| ASB16-RQ-001 | `rq_001_unlock_formula_contract_v1` | deterministic unlock output profile (`unlock_allowed`, `decision_gates`, `p0_*`, blockers, evidence refs) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-001` | `scripts/validate_v16_unlock_formula.py` |
-| ASB16-RQ-002 | `rq_002_capability_boundary_contract_v1` | capability boundary output profile (`boundary_classification`, `classification_source`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-002` | `scripts/validate_identity_capability_activation.py` (+ v1.6 classification fields) |
-| ASB16-RQ-003 | `rq_003_promotion_evidence_pipeline_contract_v1` | promotion receipt output profile (`decision_hash`, `input_hash`, reviewer fields) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-003` | `scripts/validate_v16_promotion_pipeline.py` |
-| ASB16-RQ-004 | `rq_004_outlet_matrix_contract_v1` | outlet matrix profile (positive + negative + cross-cwd parity lanes) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-004` | `scripts/validate_v16_outlet_matrix.py` |
-| ASB16-RQ-005 | `rq_005_sidecar_cwd_invariance_contract_v1` | sidecar/direct parity profile (`cwd_parity_status`, `passthrough_digest`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-005` | `scripts/validate_v16_sidecar_cwd_parity.py` |
+| Requirement ID | kernel_ref target (v1.6) | runtime_ref target (v1.6) | mapping_ref target (v1.6) | validator_ref target (v1.6 planned) | Anchor state (current batch) |
+| --- | --- | --- | --- | --- | --- |
+| ASB16-RQ-001 | `rq_001_unlock_formula_contract_v1` | deterministic unlock output profile (`unlock_allowed`, `decision_gates`, `p0_*`, blockers, evidence refs) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-001` | `scripts/validate_v16_unlock_formula.py` | `PLANNED_ONLY (file not landed)` |
+| ASB16-RQ-002 | `rq_002_capability_boundary_contract_v1` | capability boundary output profile (`boundary_classification`, `classification_source`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-002` | `scripts/validate_identity_capability_activation.py` (+ v1.6 classification fields) | `PARTIAL (validator exists; v1.6 fields pending)` |
+| ASB16-RQ-003 | `rq_003_promotion_evidence_pipeline_contract_v1` | promotion receipt output profile (`decision_hash`, `input_hash`, reviewer fields) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-003` | `scripts/validate_v16_promotion_pipeline.py` | `PLANNED_ONLY (file not landed)` |
+| ASB16-RQ-004 | `rq_004_outlet_matrix_contract_v1` | outlet matrix profile (positive + negative + cross-cwd parity lanes) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-004` | `scripts/validate_v16_outlet_matrix.py` | `PLANNED_ONLY (aggregator not landed)` |
+| ASB16-RQ-005 | `rq_005_sidecar_cwd_invariance_contract_v1` | sidecar/direct parity profile (`cwd_parity_status`, `passthrough_digest`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-005` | `scripts/validate_v16_sidecar_cwd_parity.py` | `PLANNED_ONLY (file not landed)` |
 
 Acceptance boundary for Batch-1:
 
@@ -972,6 +978,7 @@ Acceptance boundary for Batch-1:
    - `kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`.
 2. `BRIDGE_LOCKED` alone cannot promote status; `KERNEL_LOCKED` and `SCRIPT_LOCKED` must be scanner-verifiable.
 3. Until above conditions are met, all rows remain `UNLOCKED` under section `7.3`.
+4. Any `PLANNED_ONLY` row in this table is non-promotional and must remain `PENDING_INTAKE`.
 
 ## 9) References
 

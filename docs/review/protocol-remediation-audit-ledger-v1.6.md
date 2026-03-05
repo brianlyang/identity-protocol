@@ -77,7 +77,7 @@ Carry-over evidence:
 | FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | b2c99fd | SPEC_READY | PENDING_INTAKE |
 | FIX16-028 | 2026-03-05 | protocol | full-repo deep-scan lock inventory (`ASB16-RQ-001..032`): kernel/script lock-state census + architect independent rescan protocol | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | 7e7481d | SPEC_READY | PENDING_INTAKE |
-| FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 0527d4e | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -833,6 +833,24 @@ Batch-1 decision:
 1. Verdict per row: `ACCEPT_WITH_FIX`.
 2. Promotion prohibition: none of `ASB16-RQ-001..005` can leave `SPEC_READY` before five-anchor closure exists (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`).
 3. Evidence pointer: governance section `8.5` is the canonical strengthening profile for this batch.
+
+Status interpretation guard (mandatory, avoids reader misclassification):
+
+1. `ACCEPT_WITH_FIX` here means design acceptance only; implementation remains pending.
+2. Therefore audit status stays `PENDING_INTAKE` until planned anchors become real files and pass replay checks.
+3. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+Current missing anchors snapshot (2026-03-05):
+
+1. mapping file not yet landed:
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+2. v1.6 validator skeletons not yet landed:
+   - `scripts/validate_v16_unlock_formula.py`
+   - `scripts/validate_v16_promotion_pipeline.py`
+   - `scripts/validate_v16_outlet_matrix.py`
+   - `scripts/validate_v16_sidecar_cwd_parity.py`
+3. scanner-computed lock script anchor not yet landed:
+   - expected class: `scripts/validate_v16_lock_inventory*.py` (name TBD by architect implementation).
 
 ---
 
