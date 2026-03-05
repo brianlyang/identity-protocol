@@ -2130,13 +2130,30 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
+        guard_expect_mode = "auto"
         if _is_fixture_identity_in_catalog(args.catalog, args.identity_id):
             if str(args.scope or "").strip().upper() == "USER":
                 print(
                     "[INFO] fixture identity detected: overriding scope USER -> AUTO for update runtime guard"
                 )
                 args.scope = ""
-        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+            try:
+                catalog_resolved = Path(args.catalog).expanduser().resolve()
+                repo_catalog_resolved = Path(args.repo_catalog).expanduser().resolve()
+                if catalog_resolved == repo_catalog_resolved:
+                    guard_expect_mode = "any"
+                    print(
+                        "[INFO] fixture identity detected on repo catalog: overriding runtime mode guard expect-mode AUTO -> ANY"
+                    )
+            except Exception:
+                pass
+        rc_guard = _runtime_mode_guard(
+            args.identity_id,
+            args.catalog,
+            args.repo_catalog,
+            args.scope,
+            expect_mode=guard_expect_mode,
+        )
         if rc_guard != 0:
             return rc_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)

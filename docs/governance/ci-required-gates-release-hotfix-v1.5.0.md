@@ -28,6 +28,8 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 17. Protocol data sanitization boundary validator must treat fixture/demo identities as inspection-only to prevent auto-required protocol-feedback artifacts from triggering false `IP-DSN-001` fail-closed outcomes in CI.
 18. `identity_creator update` must normalize inherited fallback scope for fixture identities (`USER -> AUTO`) before runtime mode guard to avoid CI aborts from environment-scope leakage.
 19. required-gates workflow must call `identity_creator update` with explicit repo catalog binding (`--catalog` + `--repo-catalog` to `identity/catalog/identities.yaml`) to prevent CI home-catalog (`global`) mode drift from tripping runtime mode guard.
+20. for fixture identities running on repo catalog, `identity_creator update` runtime mode guard must use `expect-mode=any` (instead of strict `auto` project/global recognition) to avoid false `mode=custom` aborts.
+21. required-gates mutation/update report-chain validators must run only for mutable runtime identities; fixture/demo identities stay inspection-only and must skip update/report-contract chain execution in CI.
 
 ## Implementation evidence
 

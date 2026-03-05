@@ -78,6 +78,15 @@
     `--catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml`
     to avoid CI runner home-catalog mode drift (`global`) causing runtime mode
     guard false blocks for repo fixture identities
+  - `identity_creator.py update` now sets runtime mode guard
+    `expect-mode=any` for fixture identities when `catalog == repo-catalog`,
+    preventing repo-fixture CI runs from being rejected as `mode=custom` under
+    strict `auto` mode-recognition checks
+  - `.github/workflows/_identity-required-gates.yml` now detects fixture/demo
+    identities from the catalog and skips mutation/update report-chain checks
+    for those fixture IDs in CI (inspection-only lane), preventing false
+    fixture-only aborts from pre-mutation/update contracts that are intended
+    for mutable runtime identities
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:
