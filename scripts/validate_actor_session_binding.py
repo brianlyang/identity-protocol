@@ -28,6 +28,12 @@ def _identity_row(catalog_path: Path, identity_id: str) -> dict[str, Any] | None
     return next((x for x in rows if str(x.get("id", "")).strip() == identity_id), None)
 
 
+def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate actor-scoped session binding truth source.")
     ap.add_argument("--identity-id", required=True)
@@ -80,6 +86,7 @@ def main() -> int:
     status = str(row.get("status", "")).strip().lower() or "inactive"
     operation = str(args.operation or "validate").strip().lower()
     inspection_mode = operation in INSPECTION_OPS
+    fixture_mode = _is_fixture_identity(row)
     stale_reasons: list[str] = []
     error_code = ""
     actor_binding_status = "PASS_REQUIRED"
@@ -88,7 +95,10 @@ def main() -> int:
     binding_key_mode = str(actor_store.get("binding_key_mode", "")).strip()
     store_stale = [str(x).strip() for x in (actor_store.get("stale_reasons") or []) if str(x).strip()]
 
-    if session_entry_count <= 0:
+    if fixture_mode:
+        actor_binding_status = "SKIPPED_NOT_REQUIRED"
+        stale_reasons.append("fixture_profile_scope")
+    elif session_entry_count <= 0:
         stale_reasons.append("actor_session_binding_missing")
         if inspection_mode:
             actor_binding_status = "SKIPPED_NOT_REQUIRED"

@@ -18,6 +18,8 @@ To keep protocol-core release gates fail-closed without false negatives:
    - repository-relative rulebook path resolution,
    - prompt quality scope arbitration (`--scope AUTO`),
    - role-binding evidence lookup fallback behavior.
+   - actor-session binding validators downgrade fixture identities to
+     `SKIPPED_NOT_REQUIRED` during CI inspection operations.
 4. Fixture samples were refreshed to maintain required gate freshness:
    - store-manager prompt principle token presence,
    - store-manager role-binding evidence timestamp,

@@ -20,6 +20,13 @@
       (or empty) to infer scope from resolver context
     - required-gates workflow now calls prompt quality validator with
       `--scope AUTO` instead of forcing `--scope USER`
+  - actor-session binding validators now honor fixture identities as
+    inspection-only in CI:
+    - `scripts/validate_actor_session_binding.py`
+    - `scripts/validate_actor_session_multibinding_concurrency.py`
+    - fixture identities (`profile=fixture` or `runtime_mode=demo_only`) now
+      return `SKIPPED_NOT_REQUIRED` instead of strict fail-closed actor-binding
+      errors in CI validation paths
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

@@ -12,12 +12,17 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 1. Workflow lint action must reference an existing immutable upstream tag.
 2. Shell command snippets in CI workflows must satisfy actionlint/shellcheck (including SC2012 avoidance).
 3. Significant CI workflow changes must be reflected in `CHANGELOG.md`.
+4. Fixture identities in CI must remain inspection-only for actor/session binding gates.
+5. Required runtime contract validators must support both pack-local and repository-relative fixture evidence/rulebook paths.
+6. Protocol-core script/workflow changes must co-change canonical handoff in the same diff range.
 
 ## Implementation evidence
 
 - Commit `37273f6`
 - Commit `f24a83f`
 - Commit `5be9dc8`
+- Commit `7fdfdd1`
+- Commit `2ad0b4a`
 
 ## Status
 

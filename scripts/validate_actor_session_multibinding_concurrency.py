@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from actor_session_common import (
     LEGACY_BINDING_KEY_MODE,
     actor_session_path,
@@ -39,6 +41,24 @@ RECEIPT_REQUIRED_FIELDS = (
     "approved_by",
     "applied_at",
 )
+
+
+def _load_catalog(path: Path) -> dict[str, Any]:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _identity_row(catalog_path: Path, identity_id: str) -> dict[str, Any] | None:
+    if not identity_id:
+        return None
+    rows = [x for x in (_load_catalog(catalog_path).get("identities") or []) if isinstance(x, dict)]
+    return next((x for x in rows if str(x.get("id", "")).strip() == identity_id), None)
+
+
+def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -93,6 +113,8 @@ def main() -> int:
 
     actor_id = resolve_actor_id(args.actor_id)
     actor_path = actor_session_path(catalog_path, actor_id)
+    identity_id = str(args.identity_id or "").strip()
+    fixture_mode = _is_fixture_identity(_identity_row(catalog_path, identity_id))
 
     raw_payload: dict[str, Any] = {}
     if args.actor_session_json.strip():
@@ -132,6 +154,10 @@ def main() -> int:
     dropped_peer_session_count = 0
     rebind_receipt_status = STATUS_PASS_REQUIRED
     operation = str(args.operation or "validate").strip().lower()
+
+    if fixture_mode:
+        status = STATUS_SKIPPED_NOT_REQUIRED
+        stale_reasons.append("fixture_profile_scope")
 
     if not actor_path.exists() and not raw_payload:
         status = STATUS_SKIPPED_NOT_REQUIRED
@@ -225,7 +251,7 @@ def main() -> int:
         rebind_receipt_status = STATUS_WARN_NON_BLOCKING
 
     payload = {
-        "identity_id": str(args.identity_id or "").strip(),
+        "identity_id": identity_id,
         "catalog_path": str(catalog_path),
         "actor_id": actor_id,
         "operation": operation,
