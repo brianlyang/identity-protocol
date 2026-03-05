@@ -71,6 +71,7 @@ Carry-over evidence:
 | FIX16-021 | 2026-03-04 | protocol | kernel-first baseline: contract source canonicalization + mapping + derived prompt lineage (`ASB16-RQ-025..028`) | 6f49040 | SPEC_READY | PENDING_INTAKE |
 | FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | f603dd9 | SPEC_READY | PENDING_INTAKE |
 | FIX16-023 | 2026-03-05 | protocol | v1.6 suggestion intake evidence quorum hard-gate (`ASB16-RQ-030`; roundtable+vendor+online/spec evidence required before promotion beyond `PENDING_INTAKE`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-024 | 2026-03-05 | protocol | protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`; text import alone is insufficient without validator mapping + multimodal sample-proof closure + explicit actor context) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -539,6 +540,40 @@ Hard intake rules:
    - `conflict_reconciliation_note`.
 3. this rule applies to new v1.6 suggestions and is not a retroactive rewrite of earlier v1.5 closures.
 
+### FIX16-024 - protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`)
+
+- Status: `SPEC_READY`
+- Goal: verify whether importing `identity/protocol/*` into identity prompt actually strengthens executable governance gates in real self-drive runs.
+
+Self-drive replay evidence (base-repo-audit-expert-v3):
+
+1. Baseline validators:
+   - `/tmp/v16_exp_baseline_runtime_contract.log` -> `PASS`.
+   - `/tmp/v16_exp_baseline_trigger_regression.log` -> `FAIL` (`IP-CWD-001`, missing trigger regression sample report).
+   - `/tmp/v16_exp_baseline_knowledge_contract.log` -> `FAIL` (missing knowledge acquisition sample report).
+   - `/tmp/v16_exp_baseline_capability_arbitration.log` -> `FAIL` (missing capability arbitration sample report).
+2. Baseline aggregate replay:
+   - `/tmp/v16_exp_baseline_three_plane.json` and `/tmp/v16_exp_baseline_full_scan.json` -> `summary.p0=1`.
+3. Prompt import experiment:
+   - temporary kernel-import block added to instance prompt and then reverted.
+   - post-import validators:
+     - `/tmp/v16_exp_after_runtime_contract.log` -> still `PASS`.
+     - `/tmp/v16_exp_after_trigger_regression.log` -> still `FAIL` (`IP-CWD-001`).
+     - `/tmp/v16_exp_after_knowledge_contract.log` -> still `FAIL`.
+     - `/tmp/v16_exp_after_capability_arbitration.log` -> still `FAIL`.
+   - post-import aggregate replay:
+     - `/tmp/v16_exp_after_three_plane.json` and `/tmp/v16_exp_after_full_scan.json` -> still `summary.p0=1`.
+4. Strict update lane context finding:
+   - `identity_creator.py update` has no explicit `--actor-id` argument; strict path depends on actor resolution environment.
+   - replay without explicit actor context via env surfaced actor-bound mismatch branch (`IP-ASB-STAMP-SESSION-005`) in pre-mutation compose gate.
+
+Deterministic judgment:
+
+1. protocol-kernel clauses injected into prompt text did not produce executable uplift by themselves.
+2. current stack lacks fail-closed coupling between imported prompt contracts and validator execution mapping.
+3. multimodal capability closure remains incomplete without required sample-proof outputs.
+4. therefore v1.6 needs explicit P0 contractization (`ASB16-RQ-031`) rather than narrative prompt hardening only.
+
 ---
 
 ## 4) Reviewer decision log
@@ -568,6 +603,7 @@ Hard intake rules:
 | FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T02:20:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028`; supplemental verdict confirms content-level alignment and keeps status caveat (`SPEC_READY/PENDING_INTAKE`) |
 | FIX16-022 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T03:10:00Z | live replay confirms semantic convergence gap (`update green` + `IP-SEM-001` in aggregators); new requirement `ASB16-RQ-029` added; `A-D P0` and `E P1` priorities mapped to requirement set |
 | FIX16-023 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T09:40:00Z | intake hard-gate reinforcement added: new suggestions require roundtable/vendor/online/spec evidence quorum (`ASB16-RQ-030`) before promotion beyond `PENDING_INTAKE` |
+| FIX16-024 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T10:40:00Z | self-drive A/B replay shows prompt text import alone yields no executable uplift; added `ASB16-RQ-031` for fail-closed executable coupling + multimodal sample-proof closure + explicit actor context in strict lane |
 
 ---
 

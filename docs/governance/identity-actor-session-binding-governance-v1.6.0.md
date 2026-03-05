@@ -111,6 +111,7 @@ Hard rules:
 | WS-10 | identity kernel-first canonicalization | P0 | kernel SSOT contract surface + contract mapping projection + derived prompt compilation + instance write-boundary lock |
 | WS-11 | semantic routing convergence and single-source governance | P0 | canonical semantic receipt contract + update/three-plane/full-scan convergence gate + deterministic mismatch fail-close |
 | WS-12 | intake evidence quorum hard-gate for new v1.6 suggestions | P1 | roundtable+vendor+online-reference+spec anchors required before recommendation promotion beyond `PENDING_INTAKE` |
+| WS-13 | protocol-kernel prompt import executable coupling + multimodal proof closure | P0 | text import must bind to executable validator mapping + actor-explicit strict lane + sample-evidence closure for trigger/knowledge/arbitration |
 
 ## 4) Protocol Contract Additions (v1.6)
 
@@ -462,6 +463,31 @@ Mandatory semantics:
    - `conflict_reconciliation_note`.
 4. This quorum contract applies to all newly proposed v1.6 requirements after this governance update.
 
+### 4.20 `v16_protocol_kernel_prompt_import_executable_coupling_contract_v1` (P0)
+
+Goal:
+
+1. Prevent "text-only strengthening" where protocol-kernel clauses are added to identity prompts but do not affect executable gates.
+2. Ensure multimodal capability claims are backed by machine-verifiable sample evidence and strict actor-bound execution context.
+
+Mandatory semantics:
+
+1. Prompt import of kernel contracts (`identity/protocol/*`) must be executable-coupled:
+   - runtime must emit machine-readable mapping fields linking `kernel_contract_ref -> validator_ref -> evidence_ref`.
+2. Text import without executable coupling is fail-closed:
+   - reserve `IP-PROMPT-CONTRACT-001` (`prompt_kernel_import_not_executable_coupled`).
+3. Multimodal proof closure is required for self-drive identities:
+   - trigger regression sample report exists and validates;
+   - knowledge acquisition sample report exists and validates;
+   - capability arbitration sample report exists and validates.
+4. Strict update lane actor context must be explicit for protocol-class self-drive:
+   - host-derived fallback actor context is not accepted for promotion-grade replay.
+   - reserve `IP-ACTOR-CTX-001` (`strict_lane_actor_context_not_explicit`).
+5. A/B replay proof is mandatory:
+   - A: baseline prompt;
+   - B: kernel-imported prompt;
+   and verdict must be explained by executable mapping delta, not narrative-only prompt text.
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -496,6 +522,7 @@ Mandatory semantics:
 | ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (roundtable + vendor + online refs + protocol/spec anchors) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
+| ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -520,6 +547,7 @@ Mandatory semantics:
 | C17 | instance write attempts to protocol-kernel/governance/review paths are fail-closed | boundary validator replay with deterministic error code (`IP-KERNEL-WRITE-001`) |
 | C18 | same-lineage semantic-routing verdict is convergent across update/three-plane/full-scan | convergence report (`mismatch_count=0`) + canonical semantic receipt path |
 | C19 | new v1.6 suggestions pass intake evidence quorum before implementation promotion | cross-verification bundle proof (`roundtable/vendor/online/spec`) + timestamped source set + conflict reconciliation note |
+| C20 | protocol-kernel prompt import produces executable uplift (not text-only) and multimodal sample-proof closure under explicit actor context | paired A/B replay bundle + mapping fields (`kernel_contract_ref`,`validator_ref`,`evidence_ref`) + trigger/knowledge/arbitration sample-proof pass set |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -555,6 +583,7 @@ Mandatory semantics:
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires roundtable+vendor+online/spec bundle before leaving `PENDING_INTAKE` |
+| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -568,6 +597,7 @@ Mandatory semantics:
 | ASB16-RQ-025..028 | `NEW -> SPEC_READY` | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-029 | `NEW -> SPEC_READY` | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | `NEW -> SPEC_READY` | intake hard-gate reinforcement (`review v1.6 FIX16-023`) |
+| ASB16-RQ-031 | `NEW -> SPEC_READY` | self-drive experiment intake (`review v1.6 FIX16-024`) |
 
 ### 7.2 v1.6 unlock formula (release-lock hard rule)
 
