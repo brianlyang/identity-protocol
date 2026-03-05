@@ -56,6 +56,9 @@ To keep required-gates fail-closed while preventing fixture/demo false aborts in
    catalog-dir-relative and protocol-root-relative pack candidates for non-absolute
    `pack_path`, so fixture identities under `identity/packs/...` no longer fail with
    false `CURRENT_TASK.json not found` in required-gates.
+5. required-gates compile target identity selection is now deterministic from catalog
+   governance priority (`active -> default_identity -> first catalog row`) and no longer
+   depends on changed-identity ordering from git diff windows.
 
 This addendum is coupling-only governance evidence for protocol-core changes in this range and does
 not change release semantics outside fixture CI inspection boundaries.

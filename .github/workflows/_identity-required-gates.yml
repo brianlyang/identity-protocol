@@ -130,7 +130,34 @@ jobs:
             echo "[FAIL] no identities resolved for required-gates"
             exit 1
           fi
-          PRIMARY_ID="$(printf '%s\n' "${IDS}" | awk '{print $1}')"
+          PRIMARY_ID="$(python3 - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          catalog = yaml.safe_load(Path("identity/catalog/identities.yaml").read_text()) or {}
+          rows = [x for x in (catalog.get("identities") or []) if isinstance(x, dict)]
+          all_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("id", "")).strip()]
+          active_ids = [
+              str(x.get("id", "")).strip()
+              for x in rows
+              if str(x.get("status", "")).strip().lower() == "active" and str(x.get("id", "")).strip()
+          ]
+          default_id = str(catalog.get("default_identity") or "").strip()
+
+          primary = ""
+          if active_ids:
+              primary = active_ids[0]
+          elif default_id and default_id in all_ids:
+              primary = default_id
+          elif all_ids:
+              primary = all_ids[0]
+
+          print(primary)
+          PY
+          )"
+          if [ -z "${PRIMARY_ID}" ]; then
+            PRIMARY_ID="$(printf '%s\n' "${IDS}" | awk '{print $1}')"
+          fi
           echo "IDS=${IDS}" >> "$GITHUB_ENV"
           echo "PRIMARY_ID=${PRIMARY_ID}" >> "$GITHUB_ENV"
           echo "resolved identities: ${IDS}"

@@ -32,6 +32,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 21. required-gates mutation/update report-chain validators must run only for mutable runtime identities; fixture/demo identities stay inspection-only and must skip update/report-contract chain execution in CI.
 22. fixture sample contracts must not use workstation-specific absolute paths (for example `/Users/...`) in required runtime evidence fields; fixture artifacts must use repository-relative paths so CI runners can resolve them deterministically.
 23. experience-feedback validator current-task resolution must support repository-root-relative fixture `pack_path` entries (for example `identity/packs/...`) and must not assume catalog-dir-relative layout only.
+24. required-gates runtime compile target identity must be deterministic across diff windows (active -> default -> first catalog row) and must not depend on changed-file identity ordering.
 
 ## Implementation evidence
 

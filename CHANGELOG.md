@@ -95,6 +95,10 @@
     supports both catalog-relative and protocol-root-relative `pack_path`
     interpretations, fixing fixture pack resolution for
     `identity/packs/system-requirements-analyst` in CI required-gates
+  - required-gates runtime compile now selects a deterministic `PRIMARY_ID`
+    from catalog priority (`active -> default_identity -> first catalog row`)
+    instead of diff-order-dependent ID resolution, preventing false failures in
+    `identity/runtime/IDENTITY_COMPILED.md` freshness checks
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

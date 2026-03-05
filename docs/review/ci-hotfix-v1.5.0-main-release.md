@@ -31,6 +31,7 @@ Date: 2026-03-04
 21. required-gates executed mutation/update report-chain validators for fixture/demo identities, causing false CI aborts on pre-mutation/update contracts meant for mutable runtime identities.
 22. fixture sample CURRENT_TASK/runtime evidence in `identity/packs/system-requirements-analyst/**` contained workstation-specific absolute paths (`/Users/yangxi/...`), causing rulebook evidence lookup false failures on GitHub runners.
 23. experience-feedback validator resolved non-absolute `pack_path` only against catalog directory, which broke fixture identities stored as repository-root-relative paths (`identity/packs/...`) and caused `CURRENT_TASK.json not found` failures in CI.
+24. required-gates compile step used `PRIMARY_ID` derived from diff-ordered identity list, causing `identity/runtime/IDENTITY_COMPILED.md` mismatch failures when changed-identity ordering drifted across runs.
 
 ## Fixes applied
 
@@ -53,6 +54,7 @@ Date: 2026-03-04
 - `this-change-set` — detect fixture/demo identities in required-gates and skip mutation/update report-chain validators for fixture identities (inspection-only CI lane).
 - `this-change-set` — normalize `system-requirements-analyst` fixture sample paths to repository-relative values to remove runner-specific absolute-path failures in runtime contract validation.
 - `this-change-set` — update `validate_identity_experience_feedback.py` to resolve fixture `pack_path` with both catalog-dir and protocol-root candidates, removing false `CURRENT_TASK.json not found` failures for `identity/packs/...` identities.
+- `this-change-set` — make required-gates `PRIMARY_ID` selection deterministic (`active -> default_identity -> first catalog row`) so compile-brief freshness checks are stable across diff windows.
 
 ## Failing run references
 
