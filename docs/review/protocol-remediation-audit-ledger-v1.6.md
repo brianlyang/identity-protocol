@@ -69,7 +69,7 @@ Carry-over evidence:
 | FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-020 | 2026-03-04 | protocol | discovery dual-track activation + apply-time coverage fail-close intake (`ASB16-RQ-023..024`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-021 | 2026-03-04 | protocol | kernel-first baseline: contract source canonicalization + mapping + derived prompt lineage (`ASB16-RQ-025..028`) | 6f49040 | SPEC_READY | PENDING_INTAKE |
-| FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | f603dd9 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
