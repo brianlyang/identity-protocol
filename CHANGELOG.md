@@ -49,6 +49,14 @@
       broad glob patterns
     - disables `max_log_age_days` enforcement for fixture/demo identities to
       prevent stale sample fixtures from failing CI required gates
+  - `scripts/validate_agent_handoff_contract.py` now:
+    - scopes handoff evidence logs to the target identity before strict checks
+      to prevent cross-identity fixture log contamination
+    - disables strict handoff log age enforcement for fixture/demo identities
+      while keeping runtime (non-fixture) age checks fail-closed
+  - `scripts/identity_creator.py update` now defaults `--scope` to
+    `${IDENTITY_SCOPE:-""}` (auto arbitration) instead of hard-coded `USER`,
+    preventing fixture/System identities from failing runtime mode guard in CI
 
 - **v1.4.13 protocol tool/vendor discovery-solution gate wiring (draft)**:
   - added protocol-level contract-first validators:

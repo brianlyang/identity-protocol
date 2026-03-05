@@ -259,6 +259,18 @@ Lifecycle rules:
      prompt-quality + baseline-warn combinations.
    - runtime identities keep strict semantics unchanged; only fixture/demo
      non-runtime paths are downgraded from false-blocking P1 noise to non-blocking visibility.
+11. Agent handoff contract fixture scoping hardening (required-gates release lane)
+   - `validate_agent_handoff_contract.py` now scopes `handoff_log_path_pattern`
+     results to the target identity before strict contract checks, preventing
+     cross-identity fixture logs from producing false task/identity mismatch
+     failures in CI loops.
+   - fixture/demo identities now run handoff freshness in inspection mode
+     (`max_log_age_days=0`) to avoid stale sample fixture timestamps blocking
+     release-lane required-gates while preserving strict age checks for runtime
+     identities.
+   - `identity_creator update` scope default changed from hard-coded `USER` to
+     `${IDENTITY_SCOPE:-""}` (auto arbitration) so CI lanes without explicit
+     `--scope` do not fail runtime mode guard for fixture/system identities.
 
 ## Required validation command set
 

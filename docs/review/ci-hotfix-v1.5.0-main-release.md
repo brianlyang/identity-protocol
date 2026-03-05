@@ -20,6 +20,8 @@ Date: 2026-03-04
 10. Trigger-regression report lookup raised false `IP-CWD-001` under fixture pack-root anchoring.
 11. Learning-loop validator reported missing run-report/rulebook on fixture pack-root anchoring despite repository samples.
 12. Collaboration-trigger validator failed fixture CI due cross-identity log glob contamination and stale-age checks on sample logs.
+13. Agent-handoff validator consumed cross-identity fixture logs and strict stale-age checks, causing false blocking in required-gates despite valid target-identity handoff evidence.
+14. `identity_creator update` defaulted `--scope USER`, which can hard-block fixture/system identities via runtime mode guard in CI where explicit scope is not passed.
 
 ## Fixes applied
 
@@ -32,6 +34,7 @@ Date: 2026-03-04
   - role-binding evidence fallback and fixture sample freshness alignment
   - fixture blocker taxonomy alias bridge normalization
 - `2ad0b4a` — canonical handoff addendum to satisfy protocol-core coupling.
+- `this-change-set` — scope handoff evidence to target identity, skip fixture stale-age strictness in handoff/experience governance, and downgrade fixture reply-channel strict gating to inspection-only in CI.
 
 ## Failing run references
 

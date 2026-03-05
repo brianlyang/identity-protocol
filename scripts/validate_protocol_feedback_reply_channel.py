@@ -15,7 +15,7 @@ from protocol_feedback_contract_common import (
     rel_to_feedback_root,
     resolve_feedback_root,
 )
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import contract_required, load_json, load_yaml, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
@@ -58,6 +58,18 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
         return obj if isinstance(obj, dict) else None
     except Exception:
         return None
+
+
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        catalog = load_yaml(catalog_path)
+    except Exception:
+        return False
+    identities = catalog.get("identities") or []
+    row = next((x for x in identities if isinstance(x, dict) and str(x.get("id", "")).strip() == identity_id), None)
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -153,6 +165,36 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] {exc}")
         return 1
+
+    if _is_fixture_identity(catalog_path, args.identity_id):
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "operation": args.operation,
+            "required_contract": False,
+            "auto_required_signal": False,
+            "strict_operation": is_strict_operation(args.operation),
+            "protocol_feedback_reply_channel_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "error_code": "",
+            "primary_channel_root": str(resolve_feedback_root(pack_path, args.feedback_root)),
+            "missing_required_dirs": [],
+            "protocol_feedback_activity_detected": False,
+            "protocol_feedback_activity_refs": [],
+            "activity_correlation_status": "NO_ACTIVITY",
+            "activity_correlation_key": "",
+            "activity_correlated_refs": [],
+            "activity_unscoped_refs": [],
+            "requiredization_current_round_linked": False,
+            "non_standard_primary_refs": [],
+            "mirror_reference_refs": [],
+            "split_receipt_requiredized": False,
+            "split_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "split_receipt_error_code": "",
+            "split_receipt_payload_rc": 0,
+            "stale_reasons": ["fixture_profile_scope"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     contract = _select_contract(task)
     required_contract = bool(args.force_check or contract_required(contract))

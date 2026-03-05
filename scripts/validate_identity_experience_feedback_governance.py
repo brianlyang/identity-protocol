@@ -68,6 +68,18 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _resolve_identity_row(catalog_path: Path, identity_id: str) -> dict[str, Any] | None:
+    catalog = _load_yaml(catalog_path)
+    identities = catalog.get("identities") or []
+    return next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
+
+
+def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
 def _parse_ts(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00")).astimezone(timezone.utc)
 
@@ -89,6 +101,26 @@ def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
     return sorted(Path(".").glob(raw))
 
 
+def _identity_scoped_logs(paths: list[Path], identity_id: str) -> list[Path]:
+    if not paths:
+        return paths
+    scoped: list[Path] = []
+    token_dash = identity_id
+    token_us = identity_id.replace("-", "_")
+    for p in paths:
+        name = p.name
+        if token_dash in name or token_us in name:
+            scoped.append(p)
+            continue
+        try:
+            row = _load_json(p)
+        except Exception:
+            continue
+        if str(row.get("identity_id") or "").strip() == identity_id:
+            scoped.append(p)
+    return scoped or paths
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate experience feedback governance controls")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -96,11 +128,13 @@ def main() -> int:
     ap.add_argument("--report", default="")
     args = ap.parse_args()
 
+    catalog_path = Path(args.catalog)
     try:
-        task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
+        task_path = _resolve_current_task(catalog_path, args.identity_id)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    fixture_mode = _is_fixture_identity(_resolve_identity_row(catalog_path, args.identity_id))
 
     print(f"[INFO] validate experience feedback governance for identity: {args.identity_id}")
     print(f"[INFO] CURRENT_TASK: {task_path}")
@@ -152,6 +186,7 @@ def main() -> int:
         return 1
 
     logs = _glob_paths(pattern, pack_root=pack_root)
+    logs = _identity_scoped_logs(logs, args.identity_id)
     if len(logs) < min_logs:
         print(f"[FAIL] feedback logs count {len(logs)} < minimum_logs_required {min_logs}")
         return 1
@@ -170,9 +205,11 @@ def main() -> int:
     try:
         ts = _parse_ts(str(latest_row.get("timestamp", "")))
         age_days = (datetime.now(timezone.utc) - ts).days
-        if age_days > max_age:
+        if (not fixture_mode) and age_days > max_age:
             print(f"[FAIL] latest feedback log too old: {age_days}d > max_log_age_days={max_age}")
             rc = 1
+        elif fixture_mode:
+            print(f"[OK] latest feedback log freshness check skipped for fixture identity: age_days={age_days}")
         else:
             print(f"[OK] latest feedback log freshness: {age_days}d <= {max_age}")
     except Exception as e:

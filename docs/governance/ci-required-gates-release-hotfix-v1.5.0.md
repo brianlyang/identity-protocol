@@ -21,6 +21,8 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 10. Trigger-regression report discovery must support fixture repository-runtime fallback when pack-local samples are absent.
 11. Learning-loop validator must support fixture repository-runtime fallback for run-report and rulebook references.
 12. Collaboration-trigger validator must avoid cross-identity glob contamination and skip fixture stale-age enforcement.
+13. Agent-handoff validator must scope evidence logs to target identity and treat fixture log freshness as inspection-only to avoid stale fixture false failures in CI.
+14. `identity_creator update` must not hard-code `USER` scope in CI paths; default scope must allow catalog-driven arbitration (`${IDENTITY_SCOPE:-""}`) to avoid fixture/system scope false blocks.
 
 ## Implementation evidence
 
@@ -29,6 +31,7 @@ Ensure release lane CI remains fail-closed for protocol changes while avoiding s
 - Commit `5be9dc8`
 - Commit `7fdfdd1`
 - Commit `2ad0b4a`
+- Commit `this-change-set`
 
 ## Status
 

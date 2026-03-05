@@ -1172,7 +1172,7 @@ def main() -> int:
     )
     p_update.add_argument("--repo-catalog", default=repo_catalog_default)
     p_update.add_argument("--catalog", default=local_catalog_default)
-    p_update.add_argument("--scope", default=os.environ.get("IDENTITY_SCOPE", "USER"))
+    p_update.add_argument("--scope", default=os.environ.get("IDENTITY_SCOPE", ""))
     p_update.add_argument(
         "--baseline-policy",
         choices=["strict", "warn"],

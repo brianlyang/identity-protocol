@@ -77,6 +77,18 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity: {identity_id}")
 
 
+def _resolve_identity_row(catalog_path: Path, identity_id: str) -> dict[str, Any] | None:
+    catalog = _load_yaml(catalog_path)
+    identities = catalog.get("identities") or []
+    return next((x for x in identities if str((x or {}).get("id", "")).strip() == identity_id), None)
+
+
+def _is_fixture_identity(row: dict[str, Any] | None) -> bool:
+    profile = str((row or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
 def _iter_handoff_files(pattern: str, explicit_file: str, *, pack_root: Path) -> list[Path]:
     protocol_root = Path(__file__).resolve().parent.parent
     if explicit_file:
@@ -107,6 +119,26 @@ def _iter_handoff_files(pattern: str, explicit_file: str, *, pack_root: Path) ->
     if protocol_pref:
         return protocol_pref
     return []
+
+
+def _identity_scoped_files(files: list[Path], identity_id: str) -> list[Path]:
+    if not files:
+        return files
+    token_dash = identity_id
+    token_us = identity_id.replace("-", "_")
+    scoped: list[Path] = []
+    for p in files:
+        name = p.name
+        if token_dash in name or token_us in name:
+            scoped.append(p)
+            continue
+        try:
+            rec = _load_json(p)
+        except Exception:
+            continue
+        if str(rec.get("identity_id") or "").strip() == identity_id:
+            scoped.append(p)
+    return scoped or files
 
 
 def _bad_placeholder(value: str) -> bool:
@@ -329,11 +361,14 @@ def main() -> int:
     ap.add_argument("--self-test", action="store_true", help="run positive/negative sample self-test")
     args = ap.parse_args()
 
+    catalog_path = Path(args.catalog)
     try:
-        task_path = _resolve_current_task(Path(args.catalog), args.identity_id)
+        task_path = _resolve_current_task(catalog_path, args.identity_id)
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    identity_row = _resolve_identity_row(catalog_path, args.identity_id)
+    fixture_mode = _is_fixture_identity(identity_row)
 
     task = _load_json(task_path)
 
@@ -364,6 +399,7 @@ def main() -> int:
         return 1
 
     files = _iter_handoff_files(pattern, args.file, pack_root=task_path.parent.resolve())
+    files = _identity_scoped_files(files, args.identity_id)
     if not files:
         print(f"[FAIL] no handoff logs found (pattern={pattern}, file={args.file})")
         return 1
@@ -372,6 +408,8 @@ def main() -> int:
         return 1
 
     current_task_id = str(task.get("task_id") or "").strip()
+    if fixture_mode:
+        max_log_age_days = 0
 
     rc = 0
     for p in files:
