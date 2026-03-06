@@ -1328,11 +1328,11 @@ Batch-6 strengthening matrix (explicit hook plan, mandatory):
 
 | Requirement ID | Current anchor_state | Kernel contract + mandatory fields | Concrete script hook plan (must all be wired) | Promotion guard |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-017 | `PARTIAL` | add `rq_017_multi_track_cross_verification_contract_v1`; required output fields: `t1_status`, `t2_status`, `t3_status`, `t4_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | new `scripts/validate_v16_cross_verification_tracks.py`; call chain: `scripts/identity_creator.py` (update/validate lane preflight) -> `scripts/release_readiness_check.py` (hard gate) -> `scripts/report_three_plane_status.py` + `scripts/full_identity_protocol_scan.py` (consume canonical track verdict only) -> `scripts/e2e_smoke_test.sh` (negative replay with missing track) | keep `SPEC_READY/PENDING_INTAKE` until four-track quorum + four intake metadata fields are machine-enforced as single fail-close verdict |
+| ASB16-RQ-017 | `PARTIAL` | add `rq_017_multi_track_cross_verification_contract_v1`; required output fields: `t1_status`, `t2_status`, `t3_status`, `t4_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must be single-source: `scripts/validate_v16_intake_evidence_core.py --mode intake_contract`; `scripts/validate_v16_cross_verification_tracks.py` may exist only as wrapper (no independent field parsing); call chain: `scripts/identity_creator.py` (update/validate preflight) -> `scripts/release_readiness_check.py` (hard gate) -> `scripts/report_three_plane_status.py` + `scripts/full_identity_protocol_scan.py` (consume canonical receipt only) -> `scripts/e2e_smoke_test.sh` (negative replay with missing track/metadata) | keep `SPEC_READY/PENDING_INTAKE` until four-track quorum + four intake metadata fields are machine-enforced as single fail-close verdict |
 | ASB16-RQ-018 | `PLANNED_ONLY` | add `rq_018_dedup_monotonic_winner_contract_v1`; required fields: `run_id`, `earliest_claim_ts`, `stable_tiebreaker`, `winner_id`, `winner_reason`, `monotonicity_status` | new `scripts/validate_v16_dedup_monotonicity.py`; integrate dedup receipt production in `scripts/identity_creator.py` and enforce monotonicity in `scripts/release_readiness_check.py`; three-plane/full-scan consume `winner_id` tuple from canonical receipt, not local recomputation; e2e adds parallel-claim replay | keep `SPEC_READY/PENDING_INTAKE` until same-input parallel replay proves deterministic winner tuple across lanes |
 | ASB16-RQ-019 | `PARTIAL` | add `rq_019_cross_workflow_evidence_schema_contract_v1`; required fields: `run_id`, `route_action`, `quality_meta_state`, `dedup_state`, `evidence_hash`, `schema_version` | new `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; wire normalizer into `scripts/identity_creator.py` output path; enforce in readiness and consume in three-plane/full-scan; e2e includes hash-stability replay for unchanged payload | keep `SPEC_READY/PENDING_INTAKE` until cross-workflow schema is canonicalized and hash replay is deterministic |
 | ASB16-RQ-020 | `PARTIAL` | add `rq_020_skill_path_integrity_contract_v1`; required fields: `active_repo_root`, `active_runtime_root`, `layout_mode`, `path_integrity_status`, `path_integrity_error_code` | new `scripts/validate_v16_skill_path_integrity.py`; keep `scripts/validate_identity_capability_activation.py` as data source only; enforce single gate from readiness and consume same verdict in creator/three-plane/full-scan/e2e; reject path fallback outside active layout | keep `SPEC_READY/PENDING_INTAKE` until skill path checks are layout-anchored and fail-close on out-of-layout references |
-| ASB16-RQ-021 | `PLANNED_ONLY` | add `rq_021_route_workflow_version_pinning_contract_v1`; required fields: `route_endpoint`, `workflow_id`, `workflow_publish_version`, `pin_proof_ref`, `pin_status`, `pin_error_code` | new `scripts/validate_v16_route_version_pinning.py`; inputs may reuse `validate_identity_ci_enforcement.py` and `export_route_quality_metrics.py`, but pin verdict must be independent; wire into creator/readiness/three-plane/full-scan/e2e promotion path | keep `SPEC_READY/PENDING_INTAKE` until route endpoint and publish-version pin proofs are machine-verifiable and mismatch fail-close is stable |
+| ASB16-RQ-021 | `PLANNED_ONLY` | add `rq_021_route_workflow_version_pinning_contract_v1`; required fields: `route_endpoint`, `workflow_id`, `workflow_publish_version`, `pin_proof_ref`, `pin_status`, `pin_error_code` | phase order is mandatory: first land receipt emitter (`scripts/emit_v16_route_version_pin_receipt.py`) that outputs `route_endpoint/workflow_id/workflow_publish_version/pin_proof_ref`; then gate with `scripts/validate_v16_route_version_pinning.py`; optional inputs from `validate_identity_ci_enforcement.py` and `export_route_quality_metrics.py` are supplemental only | keep `SPEC_READY/PENDING_INTAKE` until emitter proof source exists and pin mismatch fail-close is replay-proven |
 
 Batch-6 row-level five-link anchors (mandatory, non-optional):
 
@@ -1340,7 +1340,7 @@ Batch-6 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_017_multi_track_cross_verification_contract_v1`
    - `runtime_ref`: four-track canonical quorum receipt consumed by all mandatory lanes
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-017`
-   - `validator_ref`: `scripts/validate_v16_cross_verification_tracks.py`
+   - `validator_ref`: `scripts/validate_v16_intake_evidence_core.py --mode intake_contract` (wrapper alias `scripts/validate_v16_cross_verification_tracks.py` allowed only if parser is delegated)
    - `acceptance_cmd`: four-track quorum replay command set (positive all-present + negative missing-track)
 2. `ASB16-RQ-018`
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_018_dedup_monotonic_winner_contract_v1`
@@ -1370,10 +1370,11 @@ Batch-6 row-level five-link anchors (mandatory, non-optional):
 Batch-6 acceptance command set (normative target, activated after validator refs are implemented):
 
 ```bash
-python3 <RQ017_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --bundle-id <BUNDLE_ID> --operation readiness --json-only
+python3 <INTAKE_EVIDENCE_CORE_VALIDATOR_CMD> --mode intake_contract --catalog <LOCAL_CATALOG> --identity-id <ID> --bundle-id <BUNDLE_ID> --operation readiness --json-only
 python3 <RQ018_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --run-id <RUN_ID> --parallel-claims 5 --json-only
 python3 <RQ019_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --operation three-plane --json-only
 python3 <RQ020_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --json-only
+python3 <RQ021_EMITTER_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --json-only
 python3 <RQ021_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --operation readiness --json-only
 ```
 
@@ -1381,7 +1382,8 @@ Passing criteria:
 
 1. All validators must return `PASS_REQUIRED` on positive replay and deterministic `FAIL_REQUIRED` on matched negative replay.
 2. `report_three_plane_status` and `full_identity_protocol_scan` must consume canonical verdict fields from validator receipts (no local inference forks).
-3. Any missing validator, missing required field, or lane bypass keeps row status at `SPEC_READY/PENDING_INTAKE`.
+3. `validate_required_contract_coverage.py` `TARGETS` and three-plane/full-scan payload extractors must include `RQ-017..021` gates; omission is treated as lock-computation failure.
+4. Any missing validator, missing required field, or lane bypass keeps row status at `SPEC_READY/PENDING_INTAKE`.
 
 ### 8.11 Batch-7 row-level closure profile (`ASB16-RQ-022/030`, 2026-03-06)
 
@@ -1405,8 +1407,8 @@ Batch-7 strengthening matrix (explicit hook plan, mandatory):
 
 | Requirement ID | Current anchor_state | Kernel contract + mandatory fields | Concrete script hook plan (must all be wired) | Promotion guard |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-022 | `PARTIAL` | add `rq_022_fallback_taxonomy_normalization_contract_v1`; required fields: `fallback_reason_raw`, `fallback_reason_class`, `taxonomy_version`, `normalization_status`, `normalization_error_code` | new `scripts/validate_v16_fallback_taxonomy_normalization.py`; add normalization stage at `scripts/response_stamp_common.py` output boundary; enforce in `scripts/release_readiness_check.py`; consume same normalized class in `report_three_plane_status.py`, `full_identity_protocol_scan.py`, and `e2e_smoke_test.sh` | keep `SPEC_READY/PENDING_INTAKE` until all fallback reasons deterministically map to governed enum (`data_missing/model_weak_signal/transport_error/policy_blocked`) |
-| ASB16-RQ-030 | `PARTIAL` | add `rq_030_intake_evidence_quorum_contract_v1`; required fields: `t1_roundtable_status`, `t2_vendor_status`, `t3_openai_context_status`, `t4_protocol_spec_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | new `scripts/validate_v16_intake_evidence_quorum.py`; call chain: `identity_creator` preflight -> readiness hard gate -> three-plane/full-scan promotion gate -> e2e negative replay with missing track/metadata; fail-close must be single entrypoint (no checklist bypass) | keep `SPEC_READY/PENDING_INTAKE` until four-track+four-metadata quorum is automated as promotion blocker across all required lanes |
+| ASB16-RQ-022 | `PARTIAL` | add `rq_022_fallback_taxonomy_normalization_contract_v1`; required fields: `fallback_reason_raw`, `fallback_taxonomy_class`, `taxonomy_version`, `normalization_status`, `normalization_error_code` | new `scripts/validate_v16_fallback_taxonomy_normalization.py`; add normalization stage at `scripts/response_stamp_common.py` output boundary; **namespace separation is mandatory**: fallback taxonomy fields must not overwrite existing blocker taxonomy (`auth_login_required` etc.); enforce in `scripts/release_readiness_check.py`; consume same normalized class in `report_three_plane_status.py`, `full_identity_protocol_scan.py`, and `e2e_smoke_test.sh` | keep `SPEC_READY/PENDING_INTAKE` until all fallback reasons deterministically map to governed enum (`data_missing/model_weak_signal/transport_error/policy_blocked`) without altering blocker taxonomy chain |
+| ASB16-RQ-030 | `PARTIAL` | add `rq_030_intake_evidence_quorum_contract_v1`; required fields: `t1_roundtable_status`, `t2_vendor_status`, `t3_openai_context_status`, `t4_protocol_spec_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must reuse `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` may exist only as delegated mode entry; call chain: `identity_creator` preflight -> readiness hard gate -> three-plane/full-scan promotion gate -> e2e negative replay with missing track/metadata; fail-close must be single entrypoint (no checklist bypass) | keep `SPEC_READY/PENDING_INTAKE` until four-track+four-metadata quorum is automated as promotion blocker across all required lanes |
 
 Batch-7 row-level five-link anchors (mandatory, non-optional):
 
@@ -1414,27 +1416,28 @@ Batch-7 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_022_fallback_taxonomy_normalization_contract_v1`
    - `runtime_ref`: normalized fallback class emission at response stamp boundary
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-022`
-   - `validator_ref`: `scripts/validate_v16_fallback_taxonomy_normalization.py`
+   - `validator_ref`: `scripts/validate_v16_fallback_taxonomy_normalization.py` (must emit `fallback_reason_raw + fallback_taxonomy_class`, never overwrite blocker taxonomy fields)
    - `acceptance_cmd`: taxonomy normalization replay (`positive` mappable set + `negative` unmappable set)
 2. `ASB16-RQ-030`
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_030_intake_evidence_quorum_contract_v1`
    - `runtime_ref`: intake evidence quorum hard gate with four-track/four-metadata receipt
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-030`
-   - `validator_ref`: `scripts/validate_v16_intake_evidence_quorum.py`
+   - `validator_ref`: `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate` (wrapper alias `scripts/validate_v16_intake_evidence_quorum.py` allowed only if parser is delegated)
    - `acceptance_cmd`: quorum replay (`positive` complete bundle + `negative` missing-track/missing-metadata)
 
 Batch-7 acceptance command set (normative target, activated after validator refs are implemented):
 
 ```bash
 python3 <RQ022_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --operation three-plane --json-only
-python3 <RQ030_VALIDATOR_CMD> --catalog <LOCAL_CATALOG> --identity-id <ID> --operation validate --json-only
+python3 <INTAKE_EVIDENCE_CORE_VALIDATOR_CMD> --mode promotion_gate --catalog <LOCAL_CATALOG> --identity-id <ID> --operation validate --json-only
 ```
 
 Passing criteria:
 
 1. `RQ-022`: each fallback sample must map to one governed enum class; unmapped raw reason must deterministically fail-close.
 2. `RQ-030`: promotion gate must fail-close when any T1/T2/T3/T4 track or any intake metadata field is missing.
-3. Positive and negative replay outputs must remain deterministic for unchanged inputs.
+3. `validate_required_contract_coverage.py` `TARGETS` and three-plane/full-scan payload extractors must include `RQ-022` + `RQ-030`; omission is treated as lock-computation failure.
+4. Positive and negative replay outputs must remain deterministic for unchanged inputs.
 
 Roundtable-B6/B7 kickoff package (execution-ready, mandatory before promotion):
 
@@ -1462,6 +1465,32 @@ Batch-6/7 mandatory interpretation guard:
 1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion from Batch-6/7 is blocked until per-row five-link anchors are implemented and replay determinism is proven in required lanes.
+
+Batch-6/7 post-audit blocker hardening addendum (mandatory, 2026-03-06):
+
+1. Mapping asset is a hard prerequisite:
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml` (and parent directory `identity/protocol/mappings`) must be landed before any lock computation for `RQ-017..022/030`.
+   - without this asset, lock-state for this batch is interpreted as `BLOCKED_MAPPING_ASSET_MISSING` and cannot be promoted.
+2. `RQ-017` and `RQ-030` must share one core parser and one canonical field schema:
+   - canonical implementation: `validate_v16_intake_evidence_core.py` with `--mode intake_contract|promotion_gate`;
+   - separate wrappers may exist for ergonomics, but parser logic duplication is prohibited.
+3. `RQ-021` must follow emitter-before-gate order:
+   - first emit publish-version proof receipt (`route_endpoint`, `workflow_id`, `workflow_publish_version`, `pin_proof_ref`);
+   - then enforce pinning gate; gate without emitter proof source is invalid.
+4. `RQ-022` must keep taxonomy namespaces separated:
+   - normalization output is `fallback_reason_raw + fallback_taxonomy_class`;
+   - existing blocker taxonomy fields must remain unchanged and must not be overwritten by fallback normalization.
+5. Coverage aggregation is part of closure, not optional:
+   - new gates (`RQ-017..022/030`) must be added to `validate_required_contract_coverage.py` `TARGETS`;
+   - three-plane/full-scan payload extraction must include corresponding verdict fields for scanner-computed locks.
+
+Batch-6/7 revised execution order (hard sequencing):
+
+1. Land mapping base asset (`identity/protocol/mappings/contract-binding.v1.6.yaml`) with rows for `RQ-017..022/030`.
+2. Implement intake evidence core validator (single parser, dual mode) for `RQ-017` + `RQ-030`.
+3. Implement `RQ-022` fallback taxonomy normalization with dual fields (`raw + class`) and namespace separation from blocker taxonomy.
+4. Implement `RQ-021` publish-version receipt emitter first, then pinning gate.
+5. Wire all seven gates into coverage aggregator + three-plane/full-scan payload extraction before any lock or promotion claim.
 
 ## 9) References
 
