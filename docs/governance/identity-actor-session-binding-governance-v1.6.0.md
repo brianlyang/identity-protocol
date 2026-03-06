@@ -980,6 +980,36 @@ Acceptance boundary for Batch-1:
 3. Until above conditions are met, all rows remain `UNLOCKED` under section `7.3`.
 4. Any `PLANNED_ONLY` row in this table is non-promotional and must remain `PENDING_INTAKE`.
 
+### 8.6 Batch-2A row-level strengthening profile (`ASB16-RQ-006..010`, 2026-03-06)
+
+Scope rule:
+
+1. This section is explicitly `Batch-2A` and covers only `ASB16-RQ-006..010`.
+2. It is intentionally separated from later strengthening batches (`ASB16-RQ-014/015/023` and beyond) to avoid ledger/ownership ambiguity.
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+
+Current lock snapshot (`7.3` binding, non-overridable by prose):
+
+1. `ASB16-RQ-006..010` remain `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`, `FULL_LOCK verdict=UNLOCKED`.
+2. Therefore all rows remain `SPEC_READY` in section `7`, with review state `PENDING_INTAKE`.
+3. Any claim that this section alone enables promotion is invalid.
+
+Batch-2A strengthening matrix:
+
+| Requirement ID | Current anchor_state | Strengthening target (kernel + script) | Homomorphism assertion (mandatory) | Promotion guard |
+| --- | --- | --- | --- | --- |
+| ASB16-RQ-006 | `PARTIAL` | add `rq_006_release_plane_cloud_evidence_contract_v1`; wire release-plane cloud evidence validator into readiness + three-plane + full-scan consumption chain | `release_plane_detail.conditions` key-set must be identical across readiness/three-plane/full-scan outputs for same release evidence payload | keep `SPEC_READY/PENDING_INTAKE` until unified validator wiring + replay receipt |
+| ASB16-RQ-007 | `PARTIAL` | add `rq_007_cross_cwd_absolute_input_contract_v1`; add cross-cwd scanner gate for root/tmp parity + absolute input enforcement | same payload under protocol-root cwd and tmp cwd must produce identical required verdict fields; missing absolute catalog in non-root replay must fail-close with `IP-CWD-004` semantics | keep `SPEC_READY/PENDING_INTAKE` until parity replay + negative fail-close replay are both archived |
+| ASB16-RQ-008 | `PLANNED_ONLY` | add `rq_008_docs_bridge_consistency_contract_v1`; add governance-review parity checker for contradiction pairs and anchor refs | identical docs inputs must generate stable contradiction tuple ordering and stable anchor refs across reruns | keep `SPEC_READY/PENDING_INTAKE` until checker implementation exists and contradiction replay set is deterministic |
+| ASB16-RQ-009 | `PARTIAL` | add `rq_009_run_id_anchored_report_selection_contract_v1`; enforce `run_id -> explicit_report -> binding_match -> mtime_fallback` in shared selector used by freshness/baseline/alignment/readiness/three-plane | for same run-id and candidate set, `report_selected_path` must be identical in freshness + baseline + alignment + readiness + three-plane | keep `SPEC_READY/PENDING_INTAKE` until run-id-first selector is single-sourced and replay-proven under report collision scenarios |
+| ASB16-RQ-010 | `PARTIAL` | add `rq_010_phase_a_bootstrap_before_strict_contract_v1`; align readiness flow with update two-phase orchestration and expose phase trace in three-plane/full-scan | strict recovery pass must prove `phase_a_refresh_applied=true` and `phase_b_strict_revalidate_status=PASS_REQUIRED` for qualifying stale-baseline scenario | keep `SPEC_READY/PENDING_INTAKE` until two-phase parity between update/readiness is replay-proven |
+
+Batch-2A mandatory interpretation guard:
+
+1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

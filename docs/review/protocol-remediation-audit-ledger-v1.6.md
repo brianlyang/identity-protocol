@@ -78,6 +78,7 @@ Carry-over evidence:
 | FIX16-028 | 2026-03-05 | protocol | full-repo deep-scan lock inventory (`ASB16-RQ-001..032`): kernel/script lock-state census + architect independent rescan protocol | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 031e9ba | SPEC_READY | PENDING_INTAKE |
+| FIX16-031 | 2026-03-06 | protocol | Batch-2A (`ASB16-RQ-006..010`) row-level strengthening normalization: release-plane cloud evidence wiring + cross-cwd absolute-input contract + docs bridge checker + run-id-first report selector + phase-A/B parity contract | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -852,6 +853,55 @@ Current missing anchors snapshot (2026-03-05):
 3. scanner-computed lock script anchor not yet landed:
    - expected class: `scripts/validate_v16_lock_inventory*.py` (name TBD by architect implementation).
 
+### FIX16-031 - Batch-2A (`ASB16-RQ-006..010`) strengthening normalization
+
+- Status: `SPEC_READY`
+- Goal: harden Batch-2A from “capability present but partially wired” into deterministic non-ambiguous closure predicates, without promotional drift.
+
+Batch naming normalization (mandatory):
+
+1. This fix is explicitly `Batch-2A` and covers only `ASB16-RQ-006..010`.
+2. This avoids tracker collision with later batches (including `ASB16-RQ-014/015/023`).
+3. Any ledger statement that merges these sets under one batch label is invalid.
+
+Row-level acceptance result:
+
+1. `ASB16-RQ-006..010` are all `ACCEPT_WITH_FIX`.
+2. All rows remain `SPEC_READY / PENDING_INTAKE`.
+3. No row in this fix is promotion-eligible.
+
+Strengthening outcomes required by this fix:
+
+1. `RQ-006` release-plane cloud evidence:
+   - closure validator exists, but required-gate wiring is incomplete;
+   - readiness/three-plane/full-scan must consume one unified release-plane validator output.
+2. `RQ-007` cross-cwd absolute-input:
+   - partial cwd-invariant hardening exists;
+   - contract + scanner replay for root/tmp parity and absolute-catalog negative replay are still required.
+3. `RQ-008` docs bridge consistency:
+   - command contract + SSOT source checks exist;
+   - governance/review state contradiction checker is still missing.
+4. `RQ-009` run-id anchored report selection:
+   - freshness/baseline/readiness selectors still allow mtime-dominant drift;
+   - `report_three_plane_status.py` must join the same run-id-first selector contract.
+5. `RQ-010` phase-A/bootstrap before strict phase-B:
+   - update flow already has two-phase contract trace;
+   - readiness flow must reach equivalent two-phase semantics and expose same phase fields for aggregation.
+
+Homomorphism assertions (mandatory acceptance predicates):
+
+1. `RQ-006`: `release_plane_detail.conditions` key-set must be identical across readiness, three-plane, and full-scan outputs for same release evidence payload.
+2. `RQ-007`: protocol-root cwd and tmp cwd replays must keep required verdict fields equivalent under same payload; non-root missing absolute catalog must fail-close with stable `IP-CWD-004` semantics.
+3. `RQ-008`: contradiction tuples and anchor refs must be deterministic across reruns on unchanged docs.
+4. `RQ-009`: for same run-id and candidate set, `report_selected_path` must be identical in freshness + baseline + alignment + readiness + three-plane chains.
+5. `RQ-010`: qualifying stale-baseline recovery must show `phase_a_refresh_applied=true` and `phase_b_strict_revalidate_status=PASS_REQUIRED`.
+
+Promotion guard (hard):
+
+1. `ACCEPT_WITH_FIX` in this section is design acceptance only.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion requires row-level five-link anchor closure and scanner-computed lock evidence.
+
 ---
 
 ## 4) Reviewer decision log
@@ -888,6 +938,7 @@ Current missing anchors snapshot (2026-03-05):
 | FIX16-028 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T22:10:00+08:00 | full-repo lock census + architect independent deep-rescan receipt completed (`/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`, `/tmp/v16_architect_deep_scan_full_repo_20260305.json`, `/tmp/v16_one_by_one_requirement_review_20260305.md`): `BRIDGE_LOCKED=32/32`, `KERNEL_LOCKED=0/32`, `SCRIPT_LOCKED=0/32`, `FULL_LOCKED=0/32`; row-level audit can proceed, promotion remains blocked |
 | FIX16-029 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T16:05:00Z | headstamp recurrence elevated to P0 transport-gate gap: new `ASB16-RQ-032` requires pre-send hard-blocking for all outbound paths with deterministic fail-close (`IP-HDSTAMP-001/002/003`) before promotion |
 | FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
+| FIX16-031 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T00:00:00Z | Batch-2A (`ASB16-RQ-006..010`) strengthening normalized with naming split and homomorphism assertions; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending kernel/script/mapping closure per governance `8.6` |
 
 ---
 
