@@ -1804,15 +1804,16 @@ Four-track evidence package (architect intake mandatory):
 
 Implementation delta (2026-03-07):
 
-1. added shared temp resolver: `scripts/runtime_temp_path_common.py`.
-2. removed strict-chain fixed `/tmp` literals from:
+1. landing commit evidence: `093496b`.
+2. added shared temp resolver: `scripts/runtime_temp_path_common.py`.
+3. removed strict-chain fixed `/tmp` literals from:
    - `scripts/identity_creator.py`
    - `scripts/release_readiness_check.py`
    - `scripts/report_three_plane_status.py`
    - `scripts/full_identity_protocol_scan.py`
    - `scripts/e2e_smoke_test.sh`
    - `scripts/validate_no_implicit_switch.py`
-3. strict-chain helper outputs are now operation/identity scoped, with optional run token scoping for mutation/e2e flows.
+4. strict-chain helper outputs are now operation/identity scoped, with optional run token scoping for mutation/e2e flows.
 
 Architect handoff inputs (absolute paths):
 
@@ -1868,20 +1869,21 @@ Four-track evidence package (architect intake mandatory):
 
 Implementation delta (2026-03-07):
 
-1. producer/applicability fields added to canonical payloads:
+1. landing commit evidence: `093496b`.
+2. producer/applicability fields added to canonical payloads:
    - `run_profile`
    - `producer_readiness`
    - `requiredization_current_round_linked`
-2. observation-lane applicability handling landed:
+3. observation-lane applicability handling landed:
    - non-applicable required contracts emit `SKIPPED_NOT_REQUIRED` with explicit stale reason,
    - no-fallback-event terminal state emits `no_fallback_event_in_current_run`.
-3. landing scripts:
+4. landing scripts:
    - `scripts/validate_v16_intake_evidence_core.py`
    - `scripts/validate_dedup_monotonicity.py`
    - `scripts/validate_cross_workflow_schema.py`
    - `scripts/validate_route_version_pinning.py`
    - `scripts/validate_fallback_taxonomy_normalization.py`
-4. deterministic dedup invariants remain fixed:
+5. deterministic dedup invariants remain fixed:
    - contract pattern does not hard-lock fallback search,
    - `earliest_claim_ts` normalized to UTC (`Z`) for cross-timezone replay parity.
 
