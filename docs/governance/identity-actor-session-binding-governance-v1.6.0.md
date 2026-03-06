@@ -625,10 +625,10 @@ Mandatory semantics:
 | ASB16-RQ-025 | kernel-first canonical source contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-026 | kernel contract mapping projection contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
-| ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending with explicit non-starvation invariant in `8.12` |
+| ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | boundary + lane telemetry hooks landed; non-starvation replay matrix closure remains pending in `8.12` |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | implementation landed (`single-parser dual-mode`) + lane hooks wired; promotion remains blocked until deterministic required=true replay archive is complete |
-| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; pilot (`review FIX16-026`) + final replay (`review FIX16-027`) both confirm text uplift != executable closure |
+| ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | explicit lane/candidate non-starvation hooks landed with write-boundary addendum; mapping validator + actor-explicit strict lane + multimodal sample-proof closure still required before promotion |
 | ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | enforce send-blocking when canonical identity/layer headstamp missing, malformed, or actor-mismatched; intake in `review FIX16-029` |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
