@@ -1077,6 +1077,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "dedup_monotonicity": [
+                    "python3",
+                    "scripts/validate_dedup_monotonicity.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "writeback_continuity": [
                     "python3",
                     "scripts/validate_writeback_continuity.py",
@@ -1424,6 +1435,29 @@ def main() -> int:
                     ):
                         if k in fn_doc:
                             check_payload[k] = fn_doc.get(k)
+                if name == "dedup_monotonicity":
+                    dedup_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "monotonicity_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "run_id",
+                        "parallel_claims_requested",
+                        "claim_rows_total",
+                        "grouped_run_count",
+                        "candidate_count",
+                        "earliest_claim_ts",
+                        "stable_tiebreaker",
+                        "winner_id",
+                        "winner_reason",
+                        "tie_candidate_count",
+                        "claims_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in dedup_doc:
+                            check_payload[k] = dedup_doc.get(k)
                 if name == "semantic_routing_guard":
                     semantic_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

@@ -962,6 +962,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_fallback_norm != 0 or fallback_norm_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_dedup_mono, out_dedup_mono, err_dedup_mono = _run(
+        [
+            "python3",
+            "scripts/validate_dedup_monotonicity.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    dedup_mono_payload = _parse_json_payload(out_dedup_mono) or {}
+    validators["dedup_monotonicity"] = {
+        "rc": rc_dedup_mono,
+        "ok": rc_dedup_mono == 0,
+        "out": out_dedup_mono,
+        "err": err_dedup_mono,
+    }
+    dedup_mono_status = str(dedup_mono_payload.get("monotonicity_status", "")).strip().upper()
+    if rc_dedup_mono != 0 or dedup_mono_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_herm, out_herm, err_herm = _run(
         [
             "python3",
@@ -1804,6 +1828,25 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "blocker_taxonomy_namespace_preserved": fallback_norm_payload.get("blocker_taxonomy_namespace_preserved"),
             "stale_reasons": fallback_norm_payload.get("stale_reasons", []),
             "evidence_ref": fallback_norm_payload.get("evidence_ref", ""),
+        },
+        "dedup_monotonicity": {
+            "monotonicity_status": dedup_mono_payload.get("monotonicity_status"),
+            "error_code": dedup_mono_payload.get("error_code", ""),
+            "required_contract": dedup_mono_payload.get("required_contract"),
+            "auto_required_signal": dedup_mono_payload.get("auto_required_signal"),
+            "run_id": dedup_mono_payload.get("run_id", ""),
+            "parallel_claims_requested": dedup_mono_payload.get("parallel_claims_requested"),
+            "claim_rows_total": dedup_mono_payload.get("claim_rows_total"),
+            "grouped_run_count": dedup_mono_payload.get("grouped_run_count"),
+            "candidate_count": dedup_mono_payload.get("candidate_count"),
+            "earliest_claim_ts": dedup_mono_payload.get("earliest_claim_ts", ""),
+            "stable_tiebreaker": dedup_mono_payload.get("stable_tiebreaker", ""),
+            "winner_id": dedup_mono_payload.get("winner_id", ""),
+            "winner_reason": dedup_mono_payload.get("winner_reason", ""),
+            "tie_candidate_count": dedup_mono_payload.get("tie_candidate_count"),
+            "claims_path": dedup_mono_payload.get("claims_path", ""),
+            "stale_reasons": dedup_mono_payload.get("stale_reasons", []),
+            "evidence_ref": dedup_mono_payload.get("evidence_ref", ""),
         },
         "e2e_hermetic_runtime_import": {
             "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),

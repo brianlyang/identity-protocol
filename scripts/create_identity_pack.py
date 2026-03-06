@@ -758,6 +758,22 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
         ],
         "validator": "scripts/export_route_quality_metrics.py",
     }
+    task["dedup_monotonic_winner_contract_v1"] = {
+        "required": True,
+        "validator": "scripts/validate_dedup_monotonicity.py",
+        "claims_path_pattern": (
+            f"identity/runtime/local/{identity_id}/reports/{identity_id}-dedup-claims*.json"
+        ),
+        "required_fields": [
+            "run_id",
+            "earliest_claim_ts",
+            "stable_tiebreaker",
+            "winner_id",
+            "winner_reason",
+            "monotonicity_status",
+        ],
+        "fail_action": "block_merge_and_reenter_dedup_orchestration",
+    }
     task["route_workflow_version_pinning_contract_v1"] = {
         "required": True,
         "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
