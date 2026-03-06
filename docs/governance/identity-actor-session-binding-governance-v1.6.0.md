@@ -1156,6 +1156,142 @@ Batch-4 mandatory interpretation guard:
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
 
+Batch-4 actor-id fallback recurrence supplement (mandatory, `RQ-031/RQ-032` coupling):
+
+1. Root-cause decomposition for recurring "hard switch" perception:
+   - governance already requires strict lanes to use explicit actor binding, but some runtime surfaces still permit empty `--actor-id` input;
+   - actor resolver currently remains `explicit actor -> CODEX_ACTOR_ID -> user:$USER` fallback chain;
+   - when fallback resolves to `user:*` actor whose actor-session binding points to a different identity, pre-send gate correctly fails with actor-binding mismatch semantics (currently seen as `IP-ASB-STAMP-SESSION-005` on compatibility path), which is often misread as an identity hard-switch bug.
+2. Non-negotiable closure rule:
+   - promotion-grade lanes must forbid host fallback actor resolution;
+   - explicit `--actor-id` is mandatory for compose/send-time/readiness/full-scan/three-plane strict evidence runs;
+   - missing explicit actor input must fail-close with canonical actor-context contract code (`IP-ACTOR-CTX-001`) before transport-layer send-time verdict emission.
+3. Script anchor convergence target:
+   - `scripts/compose_and_validate_governed_reply.py` must not accept promotion-grade execution with empty `--actor-id`;
+   - shared actor context guard must emit deterministic proof fields (`actor_id_input_mode`, `resolved_actor_id`, `actor_fallback_used`, `actor_binding_identity_id`, `actor_context_explicit_status`);
+   - direct/manual and governed wrapper paths must consume the same actor-context guard output before invoking headstamp send gate.
+4. Compatibility migration rule:
+   - during migration, `IP-ASB-STAMP-SESSION-005` may exist as compatibility alias in legacy traces;
+   - promotion-grade classification must converge to `IP-ACTOR-CTX-001` (actor explicitness fail-close) and canonical `IP-HDSTAMP-*` family for send-time headstamp outcomes.
+5. Mandatory acceptance replay (anti-recurrence):
+   - negative replay A: invoke compose/send-time strict path without `--actor-id`; expected deterministic fail-close (`IP-ACTOR-CTX-001`) and `actor_fallback_used=true`;
+   - negative replay B: invoke strict path with explicit actor that is bound to a different identity; expected deterministic mismatch block and no outbound payload acceptance;
+   - positive replay C: invoke strict path with explicit `--actor-id assistant:codex` bound to target identity; expected `PASS_REQUIRED` and canonical first-line headstamp emission;
+   - homomorphism requirement: unchanged input must keep identical actor-context verdict tuple across creator/readiness/e2e/full-scan/three-plane/ci.
+
+### 8.9 Batch-5 row-level orchestration strengthening profile (`ASB16-RQ-010/011/012/013/016`, 2026-03-06)
+
+Scope rule:
+
+1. This section is explicitly `Batch-5` and covers only:
+   - `ASB16-RQ-010`
+   - `ASB16-RQ-011`
+   - `ASB16-RQ-012`
+   - `ASB16-RQ-013`
+   - `ASB16-RQ-016`
+2. Topic split for this batch:
+   - `P1 orchestration closure`: `RQ-010/011/012/013/016`
+   - `bridge posture`: close execution-lane parity gaps without changing promotion boundary.
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+
+Current lock snapshot (`7.3` binding, non-overridable by prose):
+
+1. `ASB16-RQ-010/011/012/013/016` remain `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`, `FULL_LOCK verdict=UNLOCKED`.
+2. Therefore all rows remain `SPEC_READY` in section `7`, with review state `PENDING_INTAKE`.
+3. Any claim that this section alone enables promotion is invalid.
+
+Four-track intake binding guard (mandatory):
+
+1. `T1 governance` must keep contract clauses + `C10` matrix obligations as normative source.
+2. `T2 review` must keep rolling-summary intake rows and decision log synchronized with this section.
+3. `T3 scripts` must provide executable anchors; prose-only claims cannot close any row.
+4. `T4 external spec/vendor/context` evidence must remain linked through review references and roundtable receipts.
+5. Missing any track blocks promotion beyond `PENDING_INTAKE`.
+6. Runtime audit snapshot must be timestamped and explicit (`observed_head_sha`, `working_tree_dirty`, `observed_at_utc`) to avoid stale “HEAD/clean” replay claims.
+
+Batch-5 strengthening matrix:
+
+| Requirement ID | Current anchor_state | Strengthening target (kernel + script) | Homomorphism assertion (mandatory) | Promotion guard |
+| --- | --- | --- | --- | --- |
+| ASB16-RQ-010 | `PARTIAL` | add `rq_010_phase_a_bootstrap_before_strict_contract_v1`; keep update two-phase semantics and introduce equivalent readiness orchestration (stale baseline must run phase-A refresh then phase-B strict revalidate); expose phase trace in three-plane/full-scan outputs | qualifying stale-baseline replay must deterministically output `phase_a_refresh_applied=true` and `phase_b_strict_revalidate_status=PASS_REQUIRED` across update/readiness/three-plane/full-scan | keep `SPEC_READY/PENDING_INTAKE` until readiness no longer fail-fast exits on baseline strict preflight and phase trace is machine-consumed |
+| ASB16-RQ-011 | `PARTIAL` | add `rq_011_tmp_collision_safe_allocator_contract_v1`; replace identity-only fixed `/tmp` naming in required lanes with allocator-scoped tmp paths (`run_id/correlation_key/lane`), and add collision guard validator replay | same parallel run-set must produce deterministic `collision_count=0`, unique temp artifact paths, and stable digest set across readiness/e2e/three-plane/full-scan | keep `SPEC_READY/PENDING_INTAKE` until allocator + collision guard are landed and concurrent replay receipts are archived |
+| ASB16-RQ-012 | `PARTIAL` | add `rq_012_handoff_collab_freshness_autorotation_contract_v1`; preserve existing age fail-close validators while adding deterministic auto-rotation bootstrap + freshness rotation receipt; remove dangling candidate validator references without implementation | unchanged stale handoff/collab inputs must deterministically produce same rotation decision tuple (`rotation_applied`, `freshness_age_days`, `rotation_receipt_ref`, `freshness_status`) across reruns | keep `SPEC_READY/PENDING_INTAKE` until auto-rotation capability is implemented and replay-verified; age-only fail-close is insufficient for closure |
+| ASB16-RQ-013 | `PARTIAL` | add `rq_013_protocol_feedback_atomic_emit_contract_v1`; implement single-transaction atomic emit for feedback batch + index linkage + receipt output, with rollback semantics and `transaction_id` evidence | same atomic emit payload must produce deterministic `transaction_id`, `batch_ref/index_ref/receipt_ref` tuple and no partial-write leftovers on failure replays | keep `SPEC_READY/PENDING_INTAKE` until atomic helper + validator are wired into readiness/e2e/three-plane/full-scan/ci consumption lanes |
+| ASB16-RQ-016 | `PARTIAL` | add `rq_016_refresh_strict_business_interference_matrix_contract_v1`; introduce machine-readable interference matrix writer + validator and force matrix consumption in update/readiness/three-plane/full-scan | paired replay (`refresh warn` + `strict`) must emit deterministic interference matrix receipt with stable row keys, lane IDs, and verdict tuple | keep `SPEC_READY/PENDING_INTAKE` until matrix fields are machine-emitted and strict replay can be revalidated from receipts |
+
+Batch-5 precision lock (post-audit hardening, mandatory):
+
+1. `RQ-012` missing-script condition is a hard blocker (not weak wiring):
+   - `scripts/create_identity_pack.py` references
+     - `scripts/validate_identity_feedback_freshness.py`
+     - `scripts/validate_identity_feedback_promotion.py`
+   - both files are currently absent; therefore autorotation closure is `BLOCKED_MISSING_VALIDATOR`.
+2. `RQ-016` review-binding correction is fixed as:
+   - requirement mapping target is `FIX16-017` (refresh->strict + business interference),
+   - not `FIX16-016` (prompt capability matrix track).
+3. `RQ-016` is field-gap specific and must not be conflated with `RQ-010` phase fields:
+   - existing `phase_a_refresh_applied/phase_b_strict_revalidate_status` fields prove two-phase baseline behavior only;
+   - they do not satisfy required `business_interference/interference_matrix` output family.
+
+Batch-5 row-level five-link anchors (mandatory, non-optional):
+
+1. `ASB16-RQ-010`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_010_phase_a_bootstrap_before_strict_contract_v1`
+   - `runtime_ref`: readiness + update two-phase parity with explicit phase trace consumption in aggregators
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-010`
+   - `validator_ref`: `scripts/release_readiness_check.py` + phase-parity validator extension
+   - `acceptance_cmd`: stale-baseline paired replay command set requiring phase-A/B tuple convergence
+2. `ASB16-RQ-011`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_011_tmp_collision_safe_allocator_contract_v1`
+   - `runtime_ref`: allocator-scoped tmp artifact generation in readiness/e2e/three-plane/full-scan
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-011`
+   - `validator_ref`: `scripts/validate_v16_tmp_collision_guard.py`
+   - `acceptance_cmd`: parallel replay command set requiring `collision_count=0`
+3. `ASB16-RQ-012`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_012_handoff_collab_freshness_autorotation_contract_v1`
+   - `runtime_ref`: deterministic handoff/collab freshness auto-rotation receipt emission
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-012`
+   - `validator_ref`: `scripts/validate_v16_handoff_collab_freshness_rotation.py`
+   - `acceptance_cmd`: stale log rotation replay command set (`validate` + `update` operations)
+4. `ASB16-RQ-013`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_013_protocol_feedback_atomic_emit_contract_v1`
+   - `runtime_ref`: single-command transactional emit for feedback artifacts
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-013`
+   - `validator_ref`: `scripts/emit_protocol_feedback_atomic.py` + `scripts/validate_v16_protocol_feedback_atomic_emit.py`
+   - `acceptance_cmd`: atomic emit + rollback replay command set with fixed `transaction_id` tuple checks
+5. `ASB16-RQ-016`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_016_refresh_strict_business_interference_matrix_contract_v1`
+   - `runtime_ref`: refresh->strict paired execution with matrix receipt persistence
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-016`
+   - `validator_ref`: `scripts/validate_v16_refresh_strict_business_interference.py`
+   - `acceptance_cmd`: paired refresh/strict replay command set requiring deterministic interference matrix fields
+
+Roundtable-B5 kickoff package (execution-ready, mandatory before implementation promotion):
+
+1. participants:
+   - `base-repo-architect` (owner)
+   - `audit-expert(codex)` (verdict)
+   - `system-requirements-analyst` (runtime replay evidence)
+   - `script owner` (implementation path)
+   - `protocol-spec reviewer` (external spec consistency)
+2. agenda order (`90 min` baseline):
+   - `RQ-010 -> RQ-011 -> RQ-012 -> RQ-013 -> RQ-016`
+3. mandatory output schema:
+   - `rq_id`, `anchor_state`, `kernel_anchor_path`, `script_anchor_path`, `mapping_anchor_path`, `acceptance_command_set`, `promotion_blocker`, `owner`, `target_commit`.
+4. hard exit condition:
+   - any row missing `kernel + script + replay` three-piece closure remains `SPEC_READY/PENDING_INTAKE`;
+   - `ACCEPT_WITH_FIX` remains non-promotional until lock-state becomes scanner-computed and replay receipts are deterministic.
+5. review rubric (three mandatory questions per row):
+   - kernel: are contract fields unique and unambiguous?
+   - script: is there a single fail-close entrypoint with no bypass lane?
+   - receipt: is output machine-replayable (repeatable/comparable/archiveable)?
+
+Batch-5 mandatory interpretation guard:
+
+1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

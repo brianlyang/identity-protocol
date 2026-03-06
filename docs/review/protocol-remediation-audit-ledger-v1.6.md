@@ -80,7 +80,8 @@ Carry-over evidence:
 | FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 031e9ba | SPEC_READY | PENDING_INTAKE |
 | FIX16-031 | 2026-03-06 | protocol | Batch-2A (`ASB16-RQ-006..010`) row-level strengthening normalization: release-plane cloud evidence wiring + cross-cwd absolute-input contract + docs bridge checker + run-id-first report selector + phase-A/B parity contract | 5cb1a14 | SPEC_READY | PENDING_INTAKE |
 | FIX16-032 | 2026-03-06 | protocol | Batch-3B (`ASB16-RQ-024..028`) row-level strengthening normalization: discovery apply coverage hard-close + kernel-first source lock + mapping coverage asset + derived prompt conformance metadata + instance write-boundary canonical code alignment | 3538eb7 | SPEC_READY | PENDING_INTAKE |
-| FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker | 06bcb8a + 140c872 + db72970 + ca14131 + 9c0463e | SPEC_READY | PENDING_INTAKE |
+| FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker + actor-id fallback recurrence supplement | 06bcb8a + 140c872 + db72970 + ca14131 + 9c0463e | SPEC_READY | PENDING_INTAKE |
+| FIX16-034 | 2026-03-06 | protocol | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalization: phase-A/B parity closure + tmp collision-safe allocator + handoff/collab freshness auto-rotation + protocol-feedback atomic emit + refresh->strict interference matrix receipts | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1045,6 +1046,27 @@ Headstamp omission bypass postmortem supplement (detailed, audit-tracked):
    - one positive and three negative cases (`missing-or-malformed`, `binding-mismatch`, `receipt-missing`) must be replayed;
    - all lanes must produce deterministic and homomorphic canonical classification on unchanged inputs.
 
+Actor-id fallback recurrence supplement (`RQ-031/RQ-032` coupling, audit replay on 2026-03-06):
+
+1. Observed deterministic runtime behavior:
+   - strict compose path invoked without explicit `--actor-id` resolved runtime actor to `user:yangxi` through fallback chain;
+   - actor-session binding for `user:yangxi` pointed to `custom-creative-ecom-analyst`, while requested identity was `base-repo-audit-expert-v3`;
+   - pre-send gate correctly blocked with actor-binding mismatch branch (`IP-ASB-STAMP-SESSION-005` compatibility trace), surfaced as perceived "hard switch".
+2. Counter-check replay:
+   - same payload with explicit `--actor-id assistant:codex` passed strict send-time gate and emitted canonical first-line headstamp;
+   - activation switch guard required explicit audited intent receipt (`IP-ACT-SWITCH-001` -> replay with `--allow-identity-switch --switch-intent-receipt` succeeded), confirming guard behavior is fail-closed rather than silent switch.
+3. Gap classification:
+   - policy semantics are already defined in governance, but executable closure is incomplete because strict promotion-grade paths still allow actor fallback entry.
+4. Closure requirement (non-promotional until landed):
+   - strict lanes must require explicit actor context and reject fallback actor resolution before send-time classification;
+   - compatibility `IP-ASB-STAMP-SESSION-005` traces must converge to explicit actor-context contract classification (`IP-ACTOR-CTX-001`) for promotion-grade evidence;
+   - receipt schema must include actor-context proof tuple (`resolved_actor_id`, `actor_fallback_used`, `actor_binding_identity_id`, `actor_context_explicit_status`).
+5. Acceptance command set (mandatory before promotion):
+   - negative A: strict compose/send-time without `--actor-id` must fail-close with actor-context explicitness error;
+   - negative B: strict compose/send-time with mismatched explicit actor binding must fail-close deterministically;
+   - positive C: strict compose/send-time with explicit bound actor must pass and emit canonical headstamp first line;
+   - unchanged payload must preserve verdict homomorphism across creator/readiness/e2e/full-scan/three-plane/ci.
+
 Batch-4 five-link anchor lock (mandatory per row):
 
 1. Required anchor tuple for each row is fixed as:
@@ -1059,6 +1081,100 @@ Homomorphism assertions (mandatory acceptance predicates):
 3. `RQ-032`: identical missing/malformed/mismatch negative cases must map to identical canonical `IP-HDSTAMP-*` codes across creator/readiness/e2e/full-scan/three-plane/ci.
 4. `RQ-007`: same payload replayed under protocol-root and `/tmp` must preserve required verdict fields; non-root relative repo-catalog must fail-close deterministically.
 5. `RQ-008`: unchanged docs must yield identical contradiction tuple ordering and anchor refs across reruns.
+
+Promotion guard (hard):
+
+1. `ACCEPT_WITH_FIX` in this section is design acceptance only.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion requires per-row `kernel + script + replay` closure (`five-link anchors`) and scanner-computed lock-state.
+
+### FIX16-034 - Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalization
+
+- Status: `SPEC_READY`
+- Goal: normalize Batch-5 execution-orchestration cluster into deterministic, machine-auditable closure predicates while preserving non-promotional boundary (`ACCEPT_WITH_FIX` only).
+
+Batch naming/scope lock (mandatory):
+
+1. This fix is explicitly `Batch-5` and covers only `ASB16-RQ-010/011/012/013/016`.
+2. Topic lock:
+   - orchestration parity closure: `RQ-010/011/012/013/016`;
+   - no expansion into `RQ-014/015` or `RQ-024+` scope in this fix.
+3. Any ledger statement that merges unrelated requirements into this fix is invalid.
+
+Four-track evidence binding guard (mandatory):
+
+1. `T1 governance`: contracts + `C10` matrix obligations are normative anchors.
+2. `T2 review`: intake rows + decision log must remain synchronized with this fix.
+3. `T3 scripts`: executable evidence must be script-verifiable; prose-only closure claims are invalid.
+4. `T4 external/vendor/spec`: roundtable + vendor + context/spec links remain mandatory references for policy consistency.
+5. Missing any track blocks promotion beyond `PENDING_INTAKE`.
+6. Runtime replay snapshots must be timestamped (`observed_head_sha`, `working_tree_dirty`, `observed_at_utc`); stale “HEAD/clean” statements are evidence-invalid.
+
+Draft-time replay snapshot (this landing pass, non-promotional evidence metadata):
+
+1. `observed_head_sha=3303bb5`.
+2. `working_tree_dirty=true` (docs-only pending changes in governance/review files for Batch-5 hardening).
+3. This snapshot is for replay traceability only and does not alter row-level status semantics.
+
+Row-level acceptance result:
+
+1. `ASB16-RQ-010/011/012/013/016` are all `ACCEPT_WITH_FIX`.
+2. All rows remain `SPEC_READY / PENDING_INTAKE`.
+3. Lock-state remains `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`, `FULL_LOCK=UNLOCKED` for all five rows.
+4. No row in this fix is promotion-eligible.
+
+Strengthening outcomes required by this fix:
+
+1. `RQ-010` phase-A bootstrap before strict:
+   - update lane already carries two-phase semantics and report fields (`phase_a_refresh_applied`, `phase_b_strict_revalidate_status`);
+   - readiness lane still fail-fast exits on baseline strict preflight;
+   - closure requires readiness parity orchestration plus phase trace consumption in three-plane/full-scan.
+2. `RQ-011` tmp collision-safe allocator:
+   - required lanes still rely on identity-only fixed `/tmp` artifact names;
+   - partial run-id isolation exists in creator path but not as shared allocator contract;
+   - closure requires allocator + concurrency collision validator (`collision_count=0` proof).
+3. `RQ-012` handoff/collab freshness auto-rotation:
+   - current gates perform age-based fail-close checks;
+   - deterministic auto-rotation writer and rotation receipt validator are missing;
+   - candidate validator references in pack creation include files not yet landed, which is a hard blocker:
+     - `scripts/validate_identity_feedback_freshness.py` (missing),
+     - `scripts/validate_identity_feedback_promotion.py` (missing).
+4. `RQ-013` protocol-feedback atomic emit:
+   - bootstrap/index/archival validators exist, but execution remains chained step-wise rather than single-transaction emit;
+   - index linkage helper is append-style and lacks rollback transaction semantics;
+   - closure requires atomic emit helper + transaction validator and lane-wide consumption.
+5. `RQ-016` refresh->strict business interference matrix:
+   - governance contract and C10 requirement exist, but scripts do not emit machine-readable interference matrix fields;
+   - this is a field-level gap distinct from `RQ-010` phase fields (`phase_a_refresh_applied`, `phase_b_strict_revalidate_status`) and cannot be closed by phase outputs;
+   - closure requires matrix writer + validator + paired refresh/strict replay receipts.
+
+Review mapping precision lock (mandatory):
+
+1. `RQ-016` is mapped to `FIX16-017` (`refresh->strict + business interference guard runbook intake`) and must not be relabeled as `FIX16-016`.
+2. Any review note that maps `RQ-016 -> FIX16-016` is treated as ledger drift and blocks promotion evidence acceptance.
+
+Homomorphism assertions (mandatory acceptance predicates):
+
+1. `RQ-010`: stale-baseline recovery replays must deterministically return `phase_a_refresh_applied=true` and `phase_b_strict_revalidate_status=PASS_REQUIRED` across update/readiness/three-plane/full-scan.
+2. `RQ-011`: same parallel run-set must keep unique temp artifact paths and `collision_count=0`.
+3. `RQ-012`: unchanged stale handoff/collab inputs must keep identical rotation decision tuple and receipt refs.
+4. `RQ-013`: identical atomic emit input must keep stable `transaction_id` + (`batch_ref`, `index_ref`, `receipt_ref`) tuple without partial leftovers.
+5. `RQ-016`: paired refresh/strict replay must keep deterministic interference-matrix row keys and verdict tuple.
+
+Roundtable-B5 kickoff package (execution-ready):
+
+1. participants:
+   - `base-repo-architect`, `audit-expert(codex)`, `system-requirements-analyst`, `script owner`, `protocol-spec reviewer`.
+2. agenda:
+   - `RQ-010 -> RQ-011 -> RQ-012 -> RQ-013 -> RQ-016`.
+3. required output fields:
+   - `rq_id`, `anchor_state`, `kernel_anchor_path`, `script_anchor_path`, `mapping_anchor_path`, `acceptance_command_set`, `promotion_blocker`, `owner`, `target_commit`.
+4. exit condition:
+   - rows without `kernel + script + replay` closure stay `SPEC_READY/PENDING_INTAKE`.
+5. per-row review rubric (mandatory three questions):
+   - kernel: is contract field semantics unique and non-ambiguous?
+   - script: is fail-close single-entry and non-bypassable?
+   - receipt: is replay machine-comparable and archiveable?
 
 Promotion guard (hard):
 
@@ -1104,7 +1220,8 @@ Promotion guard (hard):
 | FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
 | FIX16-031 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T00:00:00Z | Batch-2A (`ASB16-RQ-006..010`) strengthening normalized with naming split and homomorphism assertions; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending kernel/script/mapping closure per governance `8.6` |
 | FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T08:30:00Z | Batch-3B (`ASB16-RQ-024..028`) strengthening normalized: RQ-024 error-code semantic deconflict + apply-coverage hard-close default-on requirement; kernel-first source/mapping/prompt-derivation/write-boundary cluster remains `ACCEPT_WITH_FIX` only and non-promotional pending executable closure per governance `8.7` |
-| FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T12:10:00Z | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalized with `T1..T4` evidence guard, row-level homomorphism predicates, and hard-tightening addendum (`RQ-032` canonical `IP-HDSTAMP-*`, `RQ-029` convergence comparator outputs, `RQ-031` compile/runtime metadata + actor-explicit fail-close, `RQ-007` full-chain replay, `RQ-008` checker required); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.8` |
+| FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T14:20:00Z | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalized with `T1..T4` evidence guard, row-level homomorphism predicates, hard-tightening addendum (`RQ-032` canonical `IP-HDSTAMP-*`, `RQ-029` convergence comparator outputs, `RQ-031` compile/runtime metadata + actor-explicit fail-close, `RQ-007` full-chain replay, `RQ-008` checker required), and actor-id fallback recurrence supplement (missing explicit actor can resolve to host `user:*` binding and trigger compatibility mismatch trace); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.8` |
+| FIX16-034 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T16:40:00Z | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalized: readiness two-phase parity requirement + tmp collision-safe allocator contract + handoff/collab auto-rotation closure (missing validator files treated as hard blocker) + protocol-feedback atomic emit transactionality + refresh/strict interference matrix receipts (field-gap lock, mapped to `FIX16-017`); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.9` |
 
 ---
 
