@@ -221,6 +221,16 @@ Cross-check boundary:
 1. office-ops current reports stay passing (`all_ok=true`, `lane_routing_status=PASS_REQUIRED`, `writeback_status=WRITTEN`) and do not create a new v1.5 blocker in this window.
 2. this intake is backlog registration only; no protocol code path changed in this docs step.
 
+Task-6..13 audit synchronization (2026-03-06, codex audit trail):
+
+1. scope correction: this sync follows task-level audit outcomes (`Task-6..13`), not legacy `FIX16-006..013` intake placeholders.
+2. normalized decision:
+   - `Task-6..13` = `PASS_WITH_BLOCKERS` (lane hooks landed; deterministic replay and/or semantic drift blockers remained at audit time).
+   - `Task-15` follow-up closed the dedup path-lock + timezone nondeterminism blockers and governance table drift (`PASS_REQUIRED` on those blocker items).
+3. promotion posture unchanged:
+   - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`;
+   - rows remain non-promotional until required=true replay archive and five-link anchors are complete.
+
 ### FIX16-015 - SRA bootstrap capability packet intake (`ASB16-RQ-014..017`)
 
 - Status: `SPEC_READY`
