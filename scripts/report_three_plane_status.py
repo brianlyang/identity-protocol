@@ -1010,6 +1010,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_xwf_schema != 0 or xwf_schema_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_skill_path, out_skill_path, err_skill_path = _run(
+        [
+            "python3",
+            "scripts/validate_v16_skill_path_integrity.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    skill_path_payload = _parse_json_payload(out_skill_path) or {}
+    validators["skill_path_integrity"] = {
+        "rc": rc_skill_path,
+        "ok": rc_skill_path == 0,
+        "out": out_skill_path,
+        "err": err_skill_path,
+    }
+    skill_path_status = str(skill_path_payload.get("path_integrity_status", "")).strip().upper()
+    if rc_skill_path != 0 or skill_path_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_herm, out_herm, err_herm = _run(
         [
             "python3",
@@ -1886,6 +1910,22 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "hash_consistency_status": xwf_schema_payload.get("hash_consistency_status", ""),
             "stale_reasons": xwf_schema_payload.get("stale_reasons", []),
             "evidence_ref": xwf_schema_payload.get("evidence_ref", ""),
+        },
+        "skill_path_integrity": {
+            "path_integrity_status": skill_path_payload.get("path_integrity_status"),
+            "path_integrity_error_code": skill_path_payload.get("path_integrity_error_code", ""),
+            "required_contract": skill_path_payload.get("required_contract"),
+            "auto_required_signal": skill_path_payload.get("auto_required_signal"),
+            "layout_mode": skill_path_payload.get("layout_mode", ""),
+            "active_repo_root": skill_path_payload.get("active_repo_root", ""),
+            "active_runtime_root": skill_path_payload.get("active_runtime_root", ""),
+            "required_skills": skill_path_payload.get("required_skills", []),
+            "missing_skill_paths": skill_path_payload.get("missing_skill_paths", []),
+            "out_of_layout_skill_paths": skill_path_payload.get("out_of_layout_skill_paths", []),
+            "allowed_skill_roots": skill_path_payload.get("allowed_skill_roots", []),
+            "skill_path_rows": skill_path_payload.get("skill_path_rows", []),
+            "stale_reasons": skill_path_payload.get("stale_reasons", []),
+            "evidence_ref": skill_path_payload.get("evidence_ref", ""),
         },
         "e2e_hermetic_runtime_import": {
             "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),

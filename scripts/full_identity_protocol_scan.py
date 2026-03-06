@@ -1099,6 +1099,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "skill_path_integrity": [
+                    "python3",
+                    "scripts/validate_v16_skill_path_integrity.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "writeback_continuity": [
                     "python3",
                     "scripts/validate_writeback_continuity.py",
@@ -1488,6 +1499,26 @@ def main() -> int:
                     ):
                         if k in xwf_doc:
                             check_payload[k] = xwf_doc.get(k)
+                if name == "skill_path_integrity":
+                    spath_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "path_integrity_status",
+                        "path_integrity_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "layout_mode",
+                        "active_repo_root",
+                        "active_runtime_root",
+                        "required_skills",
+                        "missing_skill_paths",
+                        "out_of_layout_skill_paths",
+                        "allowed_skill_roots",
+                        "skill_path_rows",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in spath_doc:
+                            check_payload[k] = spath_doc.get(k)
                 if name == "semantic_routing_guard":
                     semantic_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

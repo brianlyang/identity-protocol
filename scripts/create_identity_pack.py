@@ -791,6 +791,25 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
         ],
         "fail_action": "block_merge_and_reenter_cross_workflow_schema_alignment",
     }
+    task["skill_path_integrity_contract_v1"] = {
+        "required": True,
+        "validator": "scripts/validate_skill_path_integrity.py",
+        "layout_mode": "active_repo_runtime",
+        "allowed_skill_roots": [
+            "{active_repo_root}/skills",
+            "{active_repo_root}/.codex/skills",
+            "{active_repo_root}/identity-protocol-local/skills",
+            "{active_runtime_root}/skills",
+        ],
+        "required_fields": [
+            "active_repo_root",
+            "active_runtime_root",
+            "layout_mode",
+            "path_integrity_status",
+            "path_integrity_error_code",
+        ],
+        "fail_action": "block_merge_and_reenter_skill_path_integrity_alignment",
+    }
     task["route_workflow_version_pinning_contract_v1"] = {
         "required": True,
         "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
