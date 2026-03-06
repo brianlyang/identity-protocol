@@ -249,12 +249,26 @@ jobs:
             python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_unlock_formula.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_release_plane_cloud_evidence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --target-branch "${GITHUB_REF_NAME:-main}" --release-head-sha "${HEAD_SHA}" --required-gates-run-id "${GITHUB_RUN_ID}" --run-url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --workflow-file-sha "${HEAD_SHA}" --run-head-sha "${HEAD_SHA}" --run-workflow-file-sha "${HEAD_SHA}" --operation ci --json-only
+            python3 scripts/validate_cross_cwd_absolute_input.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog "$(python3 -c 'from pathlib import Path;print(Path(\"identity/catalog/identities.yaml\").resolve())')" --operation ci --json-only
+            python3 scripts/validate_run_id_report_selection.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "${GITHUB_RUN_ID}" --operation ci --json-only
+            python3 scripts/validate_phase_bootstrap_before_strict.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_tmp_collision_safety.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "${GITHUB_RUN_ID}" --operation ci --json-only
+            python3 scripts/validate_handoff_collab_freshness_rotation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_protocol_feedback_atomic_emit.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_boundary_classification.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_promotion_pipeline.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_outlet_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_sidecar_cwd_parity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_docs_bridge_consistency.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_contract_mapping_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_prompt_bootstrap_capability.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_prompt_capability_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_refresh_strict_business_interference.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_kernel_ssot_source.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_prompt_derivation_conformance.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_semantic_convergence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_prompt_kernel_executable_coupling.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --actor-id "${SESSION_ACTOR_ID:-assistant:codex}" --operation ci --json-only
             python3 scripts/validate_v16_cross_verification_tracks.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_route_version_pinning.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only

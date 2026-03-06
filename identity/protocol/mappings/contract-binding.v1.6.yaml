@@ -3,14 +3,15 @@ _meta:
   mapping_version: "v1.6"
   schema_version: 1
   source_layer: protocol
-  lifecycle_state: phase4_batch1_batch2b_batch3b_seed
-  last_updated_utc: "2026-03-07T09:20:00Z"
-  row_count: 18
+  lifecycle_state: phase5_full_fix_landing
+  last_updated_utc: "2026-03-07T16:40:00Z"
+  row_count: 28
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
     - "Phase-3 extension adds Batch-1 unlock-formula mapping row for ASB16-RQ-001."
     - "Phase-4 extension adds Batch-1 (RQ-002/003/004/005) and planned rows (RQ-008/026) mapping seeds."
+    - "Phase-5 extension lands Batch-2A/5/4 kernel rows (RQ-006/007/009/010/011/012/013/016/025/029) with executable validators."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -159,6 +160,257 @@ asb16-rq-005:
     - IP-SIDECWD-003
   mapping_state: phase4_batch1_seed
 
+asb16-rq-006:
+  requirement_id: ASB16-RQ-006
+  kernel_contract_id: rq_006_release_plane_cloud_evidence_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_006_release_plane_cloud_evidence_contract_v1
+  validator_ids:
+    - scripts/validate_release_plane_cloud_evidence.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  report_field_refs:
+    - release_plane_cloud_evidence_status
+    - release_plane_status
+    - conditions
+    - target_branch
+    - release_head_sha
+    - required_gates_run_id
+    - run_url
+  error_code_refs:
+    - IP-RCLOUD-001
+    - IP-RCLOUD-002
+    - IP-RCLOUD-003
+  mapping_state: phase5_landed
+
+asb16-rq-007:
+  requirement_id: ASB16-RQ-007
+  kernel_contract_id: rq_007_cross_cwd_absolute_input_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_007_cross_cwd_absolute_input_contract_v1
+  validator_ids:
+    - scripts/validate_cross_cwd_absolute_input.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  report_field_refs:
+    - cross_cwd_absolute_input_status
+    - cwd_parity_status
+    - repo_catalog_input
+    - repo_catalog_is_absolute
+    - repo_cwd_resolved_repo_catalog
+    - tmp_cwd_resolved_repo_catalog
+  error_code_refs:
+    - IP-CWD-003
+    - IP-CWD-004
+    - IP-CWD-005
+  mapping_state: phase5_landed
+
+asb16-rq-009:
+  requirement_id: ASB16-RQ-009
+  kernel_contract_id: rq_009_run_id_anchored_report_selection_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_009_run_id_anchored_report_selection_contract_v1
+  validator_ids:
+    - scripts/validate_run_id_report_selection.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  report_field_refs:
+    - run_id_report_selection_status
+    - run_id
+    - selection_strategy
+    - report_selected_path
+    - candidate_count
+  error_code_refs:
+    - IP-RSEL-001
+    - IP-RSEL-002
+  mapping_state: phase5_landed
+
+asb16-rq-010:
+  requirement_id: ASB16-RQ-010
+  kernel_contract_id: rq_010_phase_a_bootstrap_before_strict_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_010_phase_a_bootstrap_before_strict_contract_v1
+  validator_ids:
+    - scripts/validate_phase_bootstrap_before_strict.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  report_field_refs:
+    - phase_bootstrap_before_strict_status
+    - phase_a_refresh_applied
+    - phase_b_strict_revalidate_status
+    - phase_trace_status
+    - report_path
+  error_code_refs:
+    - IP-PHASE-001
+    - IP-PHASE-002
+    - IP-PHASE-003
+  mapping_state: phase5_landed
+
+asb16-rq-011:
+  requirement_id: ASB16-RQ-011
+  kernel_contract_id: rq_011_tmp_collision_safe_allocator_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_011_tmp_collision_safe_allocator_contract_v1
+  validator_ids:
+    - scripts/validate_tmp_collision_safety.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - tmp_collision_safety_status
+    - tmp_root
+    - generated_paths
+    - collision_count
+    - unique_path_count
+    - path_scope_guard_status
+  error_code_refs:
+    - IP-TMP-001
+    - IP-TMP-002
+  mapping_state: phase5_landed
+
+asb16-rq-012:
+  requirement_id: ASB16-RQ-012
+  kernel_contract_id: rq_012_handoff_collab_freshness_autorotation_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_012_handoff_collab_freshness_autorotation_contract_v1
+  validator_ids:
+    - scripts/rotate_handoff_collab_freshness.py
+    - scripts/validate_handoff_collab_freshness_rotation.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - handoff_collab_freshness_rotation_status
+    - rotation_applied
+    - freshness_age_days
+    - rotation_receipt_ref
+    - freshness_status
+  error_code_refs:
+    - IP-FRESH-001
+    - IP-FRESH-002
+    - IP-FRESH-003
+  mapping_state: phase5_landed
+
+asb16-rq-013:
+  requirement_id: ASB16-RQ-013
+  kernel_contract_id: rq_013_protocol_feedback_atomic_emit_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_013_protocol_feedback_atomic_emit_contract_v1
+  validator_ids:
+    - scripts/emit_protocol_feedback_atomic.py
+    - scripts/validate_protocol_feedback_atomic_emit.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - protocol_feedback_atomic_emit_status
+    - transaction_id
+    - batch_ref
+    - index_ref
+    - receipt_ref
+  error_code_refs:
+    - IP-PFAT-001
+    - IP-PFAT-002
+    - IP-PFAT-003
+    - IP-PFAT-004
+    - IP-PFAT-005
+  mapping_state: phase5_landed
+
+asb16-rq-016:
+  requirement_id: ASB16-RQ-016
+  kernel_contract_id: rq_016_refresh_strict_business_interference_matrix_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_016_refresh_strict_business_interference_matrix_contract_v1
+  validator_ids:
+    - scripts/emit_business_interference_matrix.py
+    - scripts/validate_refresh_strict_business_interference.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#89-batch-5-row-level-orchestration-strengthening-profile-asb16-rq-010011012013016-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-034---batch-5-asb16-rq-010011012013016-orchestration-strengthening-normalization
+  report_field_refs:
+    - refresh_strict_business_interference_status
+    - refresh_receipt_ref
+    - strict_receipt_ref
+    - refresh_status
+    - strict_status
+    - interference_row_count_refresh
+    - interference_row_count_strict
+  error_code_refs:
+    - IP-INTERF-001
+    - IP-INTERF-002
+    - IP-INTERF-003
+  mapping_state: phase5_landed
+
+asb16-rq-025:
+  requirement_id: ASB16-RQ-025
+  kernel_contract_id: rq_025_kernel_canonical_source_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_025_kernel_canonical_source_contract_v1
+  validator_ids:
+    - scripts/validate_kernel_ssot_source.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-032---batch-3b-asb16-rq-024028-strengthening-normalization
+  report_field_refs:
+    - kernel_ssot_source_status
+    - canonical_source_paths
+    - missing_source_paths
+    - ssot_validator_rc
+    - ssot_validator_tail
+  error_code_refs:
+    - IP-KSSOT-001
+    - IP-KSSOT-002
+  mapping_state: phase5_landed
+
 asb16-rq-008:
   requirement_id: ASB16-RQ-008
   kernel_contract_id: rq_008_docs_bridge_consistency_contract_v1
@@ -213,6 +465,34 @@ asb16-rq-026:
     - IP-MAP-003
     - IP-MAP-004
   mapping_state: phase4_batch3_seed
+
+asb16-rq-029:
+  requirement_id: ASB16-RQ-029
+  kernel_contract_id: rq_029_semantic_single_source_convergence_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_029_semantic_single_source_convergence_contract_v1
+  validator_ids:
+    - scripts/validate_semantic_convergence.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-four-track-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-033---batch-4-asb16-rq-029031032007008-four-track-strengthening-normalization
+  report_field_refs:
+    - semantic_convergence_status
+    - semantic_convergence_error_code
+    - semantic_tuple_update
+    - semantic_tuple_three_plane
+    - semantic_tuple_full_scan
+    - mismatch_count
+    - mismatch_fields
+  error_code_refs:
+    - IP-SEM-CONV-001
+    - IP-SEM-CONV-002
+  mapping_state: phase5_landed
 
 asb16-rq-014:
   requirement_id: ASB16-RQ-014
@@ -270,7 +550,7 @@ asb16-rq-027:
   kernel_source_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_027_derived_prompt_conformance_contract_v1
   validator_ids:
     - scripts/compile_identity_runtime.py
-    - scripts/validate_v16_prompt_derivation_conformance.py
+    - scripts/validate_prompt_derivation_conformance.py
   gate_surfaces:
     - creator
     - readiness
@@ -293,7 +573,7 @@ asb16-rq-031:
   kernel_contract_id: rq_031_prompt_import_executable_coupling_contract_v1
   kernel_source_path: identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1
   validator_ids:
-    - scripts/validate_v16_prompt_kernel_executable_coupling.py
+    - scripts/validate_prompt_kernel_executable_coupling.py
     - scripts/validate_work_layer_gate_set_routing.py
   gate_surfaces:
     - creator

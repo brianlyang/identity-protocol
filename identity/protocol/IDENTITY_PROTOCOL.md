@@ -524,6 +524,40 @@ Hard constraints:
 1. Root and temp execution must produce identical normalized passthrough digest.
 2. CWD-only noise cannot change sidecar verdict semantics.
 
+### rq_006_release_plane_cloud_evidence_contract_v1
+
+Required receipt fields:
+
+- `target_branch`
+- `release_head_sha`
+- `required_gates_run_id`
+- `run_url`
+- `workflow_file_sha`
+- `run_head_sha`
+- `run_workflow_file_sha`
+- `conditions`
+- `release_plane_status`
+
+Hard constraints:
+
+1. Release-plane evidence must bind to one run tuple (`run_id + head + workflow_file_sha`).
+2. Missing cloud evidence under strict lanes must fail-close.
+
+### rq_007_cross_cwd_absolute_input_contract_v1
+
+Required receipt fields:
+
+- `repo_catalog_input`
+- `repo_catalog_is_absolute`
+- `repo_cwd_resolved_repo_catalog`
+- `tmp_cwd_resolved_repo_catalog`
+- `cwd_parity_status`
+
+Hard constraints:
+
+1. Non-absolute `repo_catalog` must fail-close in strict lanes.
+2. Root-cwd and temp-cwd resolution must converge to the same canonical path.
+
 ### rq_008_docs_bridge_consistency_contract_v1
 
 Required receipt fields:
@@ -537,6 +571,104 @@ Hard constraints:
 
 1. Contradiction tuples must be deterministic for unchanged docs inputs.
 2. Bridge checker output must be machine-replayable.
+
+### rq_009_run_id_anchored_report_selection_contract_v1
+
+Required receipt fields:
+
+- `run_id`
+- `selection_strategy`
+- `report_selected_path`
+- `candidate_count`
+
+Hard constraints:
+
+1. If run-id is present, selection must be run-id anchored before mtime fallback.
+2. Same run-id + candidate set must produce stable selected report path.
+
+### rq_010_phase_a_bootstrap_before_strict_contract_v1
+
+Required receipt fields:
+
+- `phase_a_refresh_applied`
+- `phase_b_strict_revalidate_status`
+- `phase_trace_status`
+
+Hard constraints:
+
+1. Strict revalidate must preserve phase-A bootstrap traceability.
+2. Update/readiness/aggregation lanes must consume the same phase tuple semantics.
+
+### rq_011_tmp_collision_safe_allocator_contract_v1
+
+Required receipt fields:
+
+- `tmp_root`
+- `generated_paths`
+- `collision_count`
+- `unique_path_count`
+- `path_scope_guard_status`
+
+Hard constraints:
+
+1. Runtime temp allocation must be run-scoped and collision-safe.
+2. Temp artifacts must remain within runtime temp root (no path escape).
+
+### rq_012_handoff_collab_freshness_autorotation_contract_v1
+
+Required receipt fields:
+
+- `rotation_applied`
+- `freshness_age_days`
+- `rotation_receipt_ref`
+- `freshness_status`
+
+Hard constraints:
+
+1. Freshness decisions must be receipted and replayable.
+2. Stale freshness without rotation closure must fail-close in strict lanes.
+
+### rq_013_protocol_feedback_atomic_emit_contract_v1
+
+Required receipt fields:
+
+- `transaction_id`
+- `batch_ref`
+- `index_ref`
+- `receipt_ref`
+
+Hard constraints:
+
+1. Feedback emit must be atomic across batch/index/receipt.
+2. Partial-write failure must rollback and emit deterministic failure code.
+
+### rq_016_refresh_strict_business_interference_matrix_contract_v1
+
+Required receipt fields:
+
+- `refresh_receipt_ref`
+- `strict_receipt_ref`
+- `interference_row_count_refresh`
+- `interference_row_count_strict`
+
+Hard constraints:
+
+1. Refresh and strict modes must both emit interference matrix receipts.
+2. Missing either replay side invalidates closure.
+
+### rq_025_kernel_canonical_source_contract_v1
+
+Required receipt fields:
+
+- `canonical_source_paths`
+- `missing_source_paths`
+- `kernel_ssot_source_status`
+- `ssot_validator_rc`
+
+Hard constraints:
+
+1. Canonical kernel source set is fixed to protocol/runtime/mapping artifacts.
+2. Any canonical source drift or missing path is fail-close.
 
 ### rq_026_kernel_contract_mapping_projection_contract_v1
 
@@ -553,6 +685,21 @@ Hard constraints:
 
 1. P0 mapping coverage target is `100%`.
 2. Orphan mapping rows must be `0`.
+
+### rq_029_semantic_single_source_convergence_contract_v1
+
+Required receipt fields:
+
+- `semantic_tuple_update`
+- `semantic_tuple_three_plane`
+- `semantic_tuple_full_scan`
+- `mismatch_count`
+- `mismatch_fields`
+
+Hard constraints:
+
+1. Same lineage must converge to identical semantic tuple across lanes.
+2. Tuple mismatch is deterministic fail-close with canonical convergence error code.
 
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 

@@ -1009,7 +1009,7 @@ Scope rule:
 
 1. This section is explicitly `Batch-2A` and covers only `ASB16-RQ-006..010`.
 2. It is intentionally separated from later strengthening batches (`ASB16-RQ-014/015/023` and beyond) to avoid ledger/ownership ambiguity.
-3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (executable validators landed, replay closure pending, non-promotional).
 
 Current lock snapshot (`7.3` binding, non-overridable by prose):
 
@@ -1039,7 +1039,7 @@ Scope rule:
 
 1. This section is explicitly `Batch-3B` and covers only `ASB16-RQ-024..028` (kernel-first cluster).
 2. `Batch-3` label is reserved for `ASB16-RQ-011..015`; future extensions must use suffixed naming (`Batch-3A/3B/...`) to avoid tracker collision.
-3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (partial executable landing, replay closure pending, non-promotional).
 
 Current lock snapshot (`7.3` binding, non-overridable by prose):
 
@@ -1058,7 +1058,7 @@ Batch-3B strengthening matrix:
 | Requirement ID | Current anchor_state | Strengthening target (kernel + script) | Homomorphism assertion (mandatory) | Promotion guard |
 | --- | --- | --- | --- | --- |
 | ASB16-RQ-024 | `PARTIAL` | add `rq_024_discovery_apply_coverage_fail_closed_contract_v1`; enforce apply-time predicate in `validate_discovery_requiredization.py` (`discovery_required_total>0 && discovery_required_passed==discovery_required_total && discovery_required_coverage_rate==100.0`); reserve `IP-DREQ-002` for coverage mismatch only, move receipt-missing to dedicated code; force discovery coverage gate consumption in `update/readiness/e2e/full-scan/three-plane/ci` | for same requiredization payload and trigger state, `discovery_required_total/passed/coverage/status/error_code` must be identical across update/readiness/e2e/full-scan/three-plane/ci outputs | keep `SPEC_READY/PENDING_INTAKE` until error-code semantics are deconflicted and coverage=100 gate is default-on in all required lanes |
-| ASB16-RQ-025 | `PARTIAL` | add `rq_025_kernel_canonical_source_contract_v1`; move v1.6 base-contract origin to `identity/protocol/* + identity/catalog/schema/*`; add `scripts/validate_v16_kernel_ssot_source.py`; keep `validate_protocol_ssot_source.py` as v1.5 compatibility check, not v1.6 replacement | unchanged contract set must yield stable kernel-source census and `unmapped_base_contract_count=0` across reruns | keep `SPEC_READY/PENDING_INTAKE` until kernel-first source rule becomes machine-enforced and docs-projection-only guard is validated |
+| ASB16-RQ-025 | `PARTIAL` | add `rq_025_kernel_canonical_source_contract_v1`; move v1.6 base-contract origin to `identity/protocol/* + identity/catalog/schema/*`; add `scripts/validate_kernel_ssot_source.py`; keep `validate_protocol_ssot_source.py` as compatibility boundary check | unchanged contract set must yield stable kernel-source census and `unmapped_base_contract_count=0` across reruns | keep `SPEC_READY/PENDING_INTAKE` until kernel-first source rule becomes machine-enforced and docs-projection-only guard is validated |
 | ASB16-RQ-026 | `PARTIAL` | machine-readable mapping asset landed (`identity/protocol/mappings/contract-binding.v1.6.yaml`), checker landed (`scripts/validate_contract_mapping_coverage.py`) and wired into creator/readiness/e2e/full-scan/three-plane/ci | mapping checker must output deterministic tuple counts with `coverage_rate=100` and `orphan_count=0` for P0 cluster | keep `SPEC_READY/PENDING_INTAKE` until P0 mapping coverage reaches `100%` with `orphan_count=0` in required=true replay archive |
 | ASB16-RQ-027 | `PARTIAL` | add `rq_027_derived_prompt_conformance_contract_v1`; extend `compile_identity_runtime.py` + conformance validator to require `kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest` | same prompt derivation input must produce identical conformance metadata fields and digest chain across reruns | keep `SPEC_READY/PENDING_INTAKE` until derived prompt metadata is generated and consumed by readiness/e2e/full-scan/three-plane validators |
 | ASB16-RQ-028 | `PARTIAL` | add `rq_028_instance_write_boundary_lock_contract_v1`; align runtime fail-close code to `IP-KERNEL-WRITE-001` (legacy `IP-GOV-BASE-001` may be compatibility alias only); introduce shared pre-write boundary guard in addition to replay validator | identical forbidden write attempts must yield same boundary verdict + canonical error code in creator/readiness/e2e/full-scan/three-plane/ci | keep `SPEC_READY/PENDING_INTAKE` until pre-write guard + replay validator both enforce canonical write-boundary semantics |
@@ -1082,7 +1082,7 @@ Scope rule:
 2. Topic split for this batch:
    - `P0 convergence cluster`: `RQ-029/031/032`
    - `P1 bridge cluster`: `RQ-007/008`
-3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (executable validators landed for `RQ-029/031/007/008`, replay closure pending, non-promotional).
 
 Current lock snapshot (`7.3` binding, non-overridable by prose):
 
@@ -1111,17 +1111,17 @@ Batch-4 strengthening matrix:
 Batch-4 row-level five-link anchors (mandatory, non-optional):
 
 1. `ASB16-RQ-029`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_029_semantic_single_source_convergence_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_029_semantic_single_source_convergence_contract_v1`
    - `runtime_ref`: canonical semantic receipt consumption in `report_three_plane_status.py` + `full_identity_protocol_scan.py`
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-029`
-   - `validator_ref`: `scripts/validate_semantic_routing_guard.py` + `scripts/validate_v16_semantic_convergence.py`
+   - `validator_ref`: `scripts/validate_semantic_routing_guard.py` + `scripts/validate_semantic_convergence.py`
    - `acceptance_cmd`: convergence replay command set for update/three-plane/full-scan same-lineage artifacts
    - required convergence comparator outputs: `mismatch_count`, `lineage_ref`, `semantic_convergence_status`, `semantic_convergence_error_code`
 2. `ASB16-RQ-031`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_031_prompt_import_executable_coupling_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1`
    - `runtime_ref`: strict-lane explicit actor gate in creator/readiness/e2e chains
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-031`
-   - `validator_ref`: `scripts/validate_v16_prompt_kernel_executable_coupling.py`
+   - `validator_ref`: `scripts/validate_prompt_kernel_executable_coupling.py`
    - `acceptance_cmd`: prompt-import executable-coupling replay command set with strict `--actor-id`
    - required compile/runtime hard-gate metadata: `kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest`
    - canonical fail-close codes for this row: `IP-PROMPT-CONTRACT-001` and `IP-ACTOR-CTX-001`
@@ -1133,16 +1133,16 @@ Batch-4 row-level five-link anchors (mandatory, non-optional):
    - `acceptance_cmd`: send-time and compose-path negative replay command set
    - canonical migration rule: `IP-HDSTAMP-*` is v1.6 canonical family; `IP-ASB-STAMP-SESSION-*` is compatibility alias only and cannot be final classification in promotion-grade receipts
 4. `ASB16-RQ-007`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_007_cross_cwd_absolute_input_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_007_cross_cwd_absolute_input_contract_v1`
    - `runtime_ref`: readiness/freshness/baseline/alignment full-chain consumption (not three-plane only)
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-007`
-   - `validator_ref`: `scripts/validate_v16_cross_cwd_input_contract.py`
+   - `validator_ref`: `scripts/validate_cross_cwd_absolute_input.py`
    - `acceptance_cmd`: protocol-root vs `/tmp` parity replay + non-root relative-catalog fail-close replay
 5. `ASB16-RQ-008`:
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_008_docs_bridge_consistency_contract_v1`
    - `runtime_ref`: governance/review contradiction tuples consumed by release/readiness/full-scan reporting surfaces
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-008`
-   - `validator_ref`: `scripts/validate_v16_docs_bridge_consistency.py`
+   - `validator_ref`: `scripts/validate_docs_bridge_consistency.py`
    - `acceptance_cmd`: unchanged-doc deterministic contradiction replay command set
 
 Batch-4 headstamp omission bypass decomposition + fail-close protocol (mandatory, `RQ-032` specific):
@@ -1215,7 +1215,7 @@ Scope rule:
 2. Topic split for this batch:
    - `P1 orchestration closure`: `RQ-010/011/012/013/016`
    - `bridge posture`: close execution-lane parity gaps without changing promotion boundary.
-3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (executable validators landed, replay closure pending, non-promotional).
 
 Current lock snapshot (`7.3` binding, non-overridable by prose):
 
@@ -1244,11 +1244,9 @@ Batch-5 strengthening matrix:
 
 Batch-5 precision lock (post-audit hardening, mandatory):
 
-1. `RQ-012` missing-script condition is a hard blocker (not weak wiring):
-   - `scripts/create_identity_pack.py` references
-     - `scripts/validate_identity_feedback_freshness.py`
-     - `scripts/validate_identity_feedback_promotion.py`
-   - both files are currently absent; therefore autorotation closure is `BLOCKED_MISSING_VALIDATOR`.
+1. `RQ-012` historical missing-script blocker is resolved:
+   - contract now anchors `scripts/rotate_handoff_collab_freshness.py` + `scripts/validate_handoff_collab_freshness_rotation.py`;
+   - missing validator references were removed from pack defaults.
 2. `RQ-016` review-binding correction is fixed as:
    - requirement mapping target is `FIX16-017` (refresh->strict + business interference),
    - not `FIX16-016` (prompt capability matrix track).
@@ -1259,34 +1257,34 @@ Batch-5 precision lock (post-audit hardening, mandatory):
 Batch-5 row-level five-link anchors (mandatory, non-optional):
 
 1. `ASB16-RQ-010`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_010_phase_a_bootstrap_before_strict_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_010_phase_a_bootstrap_before_strict_contract_v1`
    - `runtime_ref`: readiness + update two-phase parity with explicit phase trace consumption in aggregators
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-010`
-   - `validator_ref`: `scripts/release_readiness_check.py` + phase-parity validator extension
+   - `validator_ref`: `scripts/validate_phase_bootstrap_before_strict.py` + lane consumers (`release_readiness_check.py`, `report_three_plane_status.py`, `full_identity_protocol_scan.py`)
    - `acceptance_cmd`: stale-baseline paired replay command set requiring phase-A/B tuple convergence
 2. `ASB16-RQ-011`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_011_tmp_collision_safe_allocator_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_011_tmp_collision_safe_allocator_contract_v1`
    - `runtime_ref`: allocator-scoped tmp artifact generation in readiness/e2e/three-plane/full-scan
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-011`
-   - `validator_ref`: `scripts/validate_v16_tmp_collision_guard.py`
+   - `validator_ref`: `scripts/validate_tmp_collision_safety.py`
    - `acceptance_cmd`: parallel replay command set requiring `collision_count=0`
 3. `ASB16-RQ-012`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_012_handoff_collab_freshness_autorotation_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_012_handoff_collab_freshness_autorotation_contract_v1`
    - `runtime_ref`: deterministic handoff/collab freshness auto-rotation receipt emission
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-012`
-   - `validator_ref`: `scripts/validate_v16_handoff_collab_freshness_rotation.py`
+   - `validator_ref`: `scripts/rotate_handoff_collab_freshness.py` + `scripts/validate_handoff_collab_freshness_rotation.py`
    - `acceptance_cmd`: stale log rotation replay command set (`validate` + `update` operations)
 4. `ASB16-RQ-013`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_013_protocol_feedback_atomic_emit_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_013_protocol_feedback_atomic_emit_contract_v1`
    - `runtime_ref`: single-command transactional emit for feedback artifacts
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-013`
-   - `validator_ref`: `scripts/emit_protocol_feedback_atomic.py` + `scripts/validate_v16_protocol_feedback_atomic_emit.py`
+   - `validator_ref`: `scripts/emit_protocol_feedback_atomic.py` + `scripts/validate_protocol_feedback_atomic_emit.py`
    - `acceptance_cmd`: atomic emit + rollback replay command set with fixed `transaction_id` tuple checks
 5. `ASB16-RQ-016`:
-   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_016_refresh_strict_business_interference_matrix_contract_v1`
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_016_refresh_strict_business_interference_matrix_contract_v1`
    - `runtime_ref`: refresh->strict paired execution with matrix receipt persistence
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-016`
-   - `validator_ref`: `scripts/validate_v16_refresh_strict_business_interference.py`
+   - `validator_ref`: `scripts/emit_business_interference_matrix.py` + `scripts/validate_refresh_strict_business_interference.py`
    - `acceptance_cmd`: paired refresh/strict replay command set requiring deterministic interference matrix fields
 
 Roundtable-B5 kickoff package (execution-ready, mandatory before implementation promotion):

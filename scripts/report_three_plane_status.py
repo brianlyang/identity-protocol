@@ -935,6 +935,196 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_unlock_formula != 0 or unlock_formula_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_release_cloud, out_release_cloud, err_release_cloud = _run(
+        [
+            "python3",
+            "scripts/validate_release_plane_cloud_evidence.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--target-branch",
+            str(args.target_branch or ""),
+            "--release-head-sha",
+            str(args.release_head_sha or ""),
+            "--required-gates-run-id",
+            str(args.required_gates_run_id or ""),
+            "--run-url",
+            str(args.run_url or ""),
+            "--workflow-file-sha",
+            str(args.workflow_file_sha or ""),
+            "--run-head-sha",
+            str(args.run_head_sha or ""),
+            "--run-workflow-file-sha",
+            str(args.run_workflow_file_sha or ""),
+            "--checks-json",
+            str(args.checks_json or ""),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    release_cloud_payload = _parse_json_payload(out_release_cloud) or {}
+    validators["release_plane_cloud_evidence"] = {
+        "rc": rc_release_cloud,
+        "ok": rc_release_cloud == 0,
+        "out": out_release_cloud,
+        "err": err_release_cloud,
+    }
+    release_cloud_status = str(release_cloud_payload.get("release_plane_cloud_evidence_status", "")).strip().upper()
+    if rc_release_cloud != 0 or release_cloud_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_cross_cwd, out_cross_cwd, err_cross_cwd = _run(
+        [
+            "python3",
+            "scripts/validate_cross_cwd_absolute_input.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            str(Path(args.repo_catalog).resolve()),
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    cross_cwd_payload = _parse_json_payload(out_cross_cwd) or {}
+    validators["cross_cwd_absolute_input"] = {
+        "rc": rc_cross_cwd,
+        "ok": rc_cross_cwd == 0,
+        "out": out_cross_cwd,
+        "err": err_cross_cwd,
+    }
+    cross_cwd_status = str(cross_cwd_payload.get("cross_cwd_absolute_input_status", "")).strip().upper()
+    if rc_cross_cwd != 0 or cross_cwd_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_run_selector, out_run_selector, err_run_selector = _run(
+        [
+            "python3",
+            "scripts/validate_run_id_report_selection.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            str(args.required_gates_run_id or ""),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    run_selector_payload = _parse_json_payload(out_run_selector) or {}
+    validators["run_id_report_selection"] = {
+        "rc": rc_run_selector,
+        "ok": rc_run_selector == 0,
+        "out": out_run_selector,
+        "err": err_run_selector,
+    }
+    run_selector_status = str(run_selector_payload.get("run_id_report_selection_status", "")).strip().upper()
+    if rc_run_selector != 0 or run_selector_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_phase_bootstrap, out_phase_bootstrap, err_phase_bootstrap = _run(
+        [
+            "python3",
+            "scripts/validate_phase_bootstrap_before_strict.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    phase_bootstrap_payload = _parse_json_payload(out_phase_bootstrap) or {}
+    validators["phase_bootstrap_before_strict"] = {
+        "rc": rc_phase_bootstrap,
+        "ok": rc_phase_bootstrap == 0,
+        "out": out_phase_bootstrap,
+        "err": err_phase_bootstrap,
+    }
+    phase_bootstrap_status = str(phase_bootstrap_payload.get("phase_bootstrap_before_strict_status", "")).strip().upper()
+    if rc_phase_bootstrap != 0 or phase_bootstrap_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_tmp_collision, out_tmp_collision, err_tmp_collision = _run(
+        [
+            "python3",
+            "scripts/validate_tmp_collision_safety.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            str(args.required_gates_run_id or ""),
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    tmp_collision_payload = _parse_json_payload(out_tmp_collision) or {}
+    validators["tmp_collision_safety"] = {
+        "rc": rc_tmp_collision,
+        "ok": rc_tmp_collision == 0,
+        "out": out_tmp_collision,
+        "err": err_tmp_collision,
+    }
+    tmp_collision_status = str(tmp_collision_payload.get("tmp_collision_safety_status", "")).strip().upper()
+    if rc_tmp_collision != 0 or tmp_collision_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_fresh_rotation, out_fresh_rotation, err_fresh_rotation = _run(
+        [
+            "python3",
+            "scripts/validate_handoff_collab_freshness_rotation.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fresh_rotation_payload = _parse_json_payload(out_fresh_rotation) or {}
+    validators["handoff_collab_freshness_rotation"] = {
+        "rc": rc_fresh_rotation,
+        "ok": rc_fresh_rotation == 0,
+        "out": out_fresh_rotation,
+        "err": err_fresh_rotation,
+    }
+    fresh_rotation_status = str(fresh_rotation_payload.get("handoff_collab_freshness_rotation_status", "")).strip().upper()
+    if rc_fresh_rotation != 0 or fresh_rotation_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_atomic_emit, out_atomic_emit, err_atomic_emit = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_atomic_emit.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    atomic_emit_payload = _parse_json_payload(out_atomic_emit) or {}
+    validators["protocol_feedback_atomic_emit"] = {
+        "rc": rc_atomic_emit,
+        "ok": rc_atomic_emit == 0,
+        "out": out_atomic_emit,
+        "err": err_atomic_emit,
+    }
+    atomic_emit_status = str(atomic_emit_payload.get("protocol_feedback_atomic_emit_status", "")).strip().upper()
+    if rc_atomic_emit != 0 or atomic_emit_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_cap_boundary, out_cap_boundary, err_cap_boundary = _run(
         [
             "python3",
@@ -1081,6 +1271,178 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     mapping_coverage_status = str(mapping_coverage_payload.get("contract_mapping_coverage_status", "")).strip().upper()
     if rc_mapping_coverage != 0 or mapping_coverage_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_bootstrap, out_prompt_bootstrap, err_prompt_bootstrap = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_bootstrap_capability.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_bootstrap_payload = _parse_json_payload(out_prompt_bootstrap) or {}
+    validators["prompt_bootstrap_capability"] = {
+        "rc": rc_prompt_bootstrap,
+        "ok": rc_prompt_bootstrap == 0,
+        "out": out_prompt_bootstrap,
+        "err": err_prompt_bootstrap,
+    }
+    prompt_bootstrap_status = str(prompt_bootstrap_payload.get("prompt_bootstrap_contract_status", "")).strip().upper()
+    if rc_prompt_bootstrap != 0 or prompt_bootstrap_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_matrix, out_prompt_matrix, err_prompt_matrix = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_capability_matrix.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_matrix_payload = _parse_json_payload(out_prompt_matrix) or {}
+    validators["prompt_capability_matrix"] = {
+        "rc": rc_prompt_matrix,
+        "ok": rc_prompt_matrix == 0,
+        "out": out_prompt_matrix,
+        "err": err_prompt_matrix,
+    }
+    prompt_matrix_status = str(prompt_matrix_payload.get("prompt_capability_matrix_status", "")).strip().upper()
+    if rc_prompt_matrix != 0 or prompt_matrix_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_interference, out_interference, err_interference = _run(
+        [
+            "python3",
+            "scripts/validate_refresh_strict_business_interference.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    interference_payload = _parse_json_payload(out_interference) or {}
+    validators["refresh_strict_business_interference"] = {
+        "rc": rc_interference,
+        "ok": rc_interference == 0,
+        "out": out_interference,
+        "err": err_interference,
+    }
+    interference_status = str(interference_payload.get("refresh_strict_business_interference_status", "")).strip().upper()
+    if rc_interference != 0 or interference_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_kernel_ssot, out_kernel_ssot, err_kernel_ssot = _run(
+        [
+            "python3",
+            "scripts/validate_kernel_ssot_source.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    kernel_ssot_payload = _parse_json_payload(out_kernel_ssot) or {}
+    validators["kernel_ssot_source"] = {
+        "rc": rc_kernel_ssot,
+        "ok": rc_kernel_ssot == 0,
+        "out": out_kernel_ssot,
+        "err": err_kernel_ssot,
+    }
+    kernel_ssot_status = str(kernel_ssot_payload.get("kernel_ssot_source_status", "")).strip().upper()
+    if rc_kernel_ssot != 0 or kernel_ssot_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_derivation, out_prompt_derivation, err_prompt_derivation = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_derivation_conformance.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_derivation_payload = _parse_json_payload(out_prompt_derivation) or {}
+    validators["prompt_derivation_conformance"] = {
+        "rc": rc_prompt_derivation,
+        "ok": rc_prompt_derivation == 0,
+        "out": out_prompt_derivation,
+        "err": err_prompt_derivation,
+    }
+    prompt_derivation_status = str(prompt_derivation_payload.get("prompt_derivation_conformance_status", "")).strip().upper()
+    if rc_prompt_derivation != 0 or prompt_derivation_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_semantic_convergence, out_semantic_convergence, err_semantic_convergence = _run(
+        [
+            "python3",
+            "scripts/validate_semantic_convergence.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    semantic_convergence_payload = _parse_json_payload(out_semantic_convergence) or {}
+    validators["semantic_convergence"] = {
+        "rc": rc_semantic_convergence,
+        "ok": rc_semantic_convergence == 0,
+        "out": out_semantic_convergence,
+        "err": err_semantic_convergence,
+    }
+    semantic_convergence_status = str(semantic_convergence_payload.get("semantic_convergence_status", "")).strip().upper()
+    if rc_semantic_convergence != 0 or semantic_convergence_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_prompt_coupling, out_prompt_coupling, err_prompt_coupling = _run(
+        [
+            "python3",
+            "scripts/validate_prompt_kernel_executable_coupling.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--actor-id",
+            args.actor_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    prompt_coupling_payload = _parse_json_payload(out_prompt_coupling) or {}
+    validators["prompt_kernel_executable_coupling"] = {
+        "rc": rc_prompt_coupling,
+        "ok": rc_prompt_coupling == 0,
+        "out": out_prompt_coupling,
+        "err": err_prompt_coupling,
+    }
+    prompt_coupling_status = str(prompt_coupling_payload.get("prompt_kernel_executable_coupling_status", "")).strip().upper()
+    if rc_prompt_coupling != 0 or prompt_coupling_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     rc_cross_verify, out_cross_verify, err_cross_verify = _run(
@@ -2077,6 +2439,91 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "stale_reasons": unlock_formula_payload.get("stale_reasons", []),
             "evidence_ref": unlock_formula_payload.get("evidence_ref", ""),
         },
+        "release_plane_cloud_evidence": {
+            "release_plane_cloud_evidence_status": release_cloud_payload.get("release_plane_cloud_evidence_status"),
+            "error_code": release_cloud_payload.get("error_code", ""),
+            "required_contract": release_cloud_payload.get("required_contract"),
+            "auto_required_signal": release_cloud_payload.get("auto_required_signal"),
+            "release_plane_status": release_cloud_payload.get("release_plane_status", ""),
+            "conditions": release_cloud_payload.get("conditions", {}),
+            "target_branch": release_cloud_payload.get("target_branch", ""),
+            "release_head_sha": release_cloud_payload.get("release_head_sha", ""),
+            "required_gates_run_id": release_cloud_payload.get("required_gates_run_id", ""),
+            "stale_reasons": release_cloud_payload.get("stale_reasons", []),
+            "evidence_ref": release_cloud_payload.get("evidence_ref", ""),
+        },
+        "cross_cwd_absolute_input": {
+            "cross_cwd_absolute_input_status": cross_cwd_payload.get("cross_cwd_absolute_input_status"),
+            "error_code": cross_cwd_payload.get("error_code", ""),
+            "required_contract": cross_cwd_payload.get("required_contract"),
+            "auto_required_signal": cross_cwd_payload.get("auto_required_signal"),
+            "repo_catalog_input": cross_cwd_payload.get("repo_catalog_input", ""),
+            "repo_catalog_is_absolute": cross_cwd_payload.get("repo_catalog_is_absolute"),
+            "repo_cwd_resolved_repo_catalog": cross_cwd_payload.get("repo_cwd_resolved_repo_catalog", ""),
+            "tmp_cwd_resolved_repo_catalog": cross_cwd_payload.get("tmp_cwd_resolved_repo_catalog", ""),
+            "cwd_parity_status": cross_cwd_payload.get("cwd_parity_status", ""),
+            "stale_reasons": cross_cwd_payload.get("stale_reasons", []),
+            "evidence_ref": cross_cwd_payload.get("evidence_ref", ""),
+        },
+        "run_id_report_selection": {
+            "run_id_report_selection_status": run_selector_payload.get("run_id_report_selection_status"),
+            "error_code": run_selector_payload.get("error_code", ""),
+            "required_contract": run_selector_payload.get("required_contract"),
+            "auto_required_signal": run_selector_payload.get("auto_required_signal"),
+            "run_id": run_selector_payload.get("run_id", ""),
+            "selection_strategy": run_selector_payload.get("selection_strategy", ""),
+            "report_selected_path": run_selector_payload.get("report_selected_path", ""),
+            "candidate_count": run_selector_payload.get("candidate_count"),
+            "stale_reasons": run_selector_payload.get("stale_reasons", []),
+            "evidence_ref": run_selector_payload.get("evidence_ref", ""),
+        },
+        "phase_bootstrap_before_strict": {
+            "phase_bootstrap_before_strict_status": phase_bootstrap_payload.get("phase_bootstrap_before_strict_status"),
+            "error_code": phase_bootstrap_payload.get("error_code", ""),
+            "required_contract": phase_bootstrap_payload.get("required_contract"),
+            "auto_required_signal": phase_bootstrap_payload.get("auto_required_signal"),
+            "phase_a_refresh_applied": phase_bootstrap_payload.get("phase_a_refresh_applied"),
+            "phase_b_strict_revalidate_status": phase_bootstrap_payload.get("phase_b_strict_revalidate_status", ""),
+            "phase_trace_status": phase_bootstrap_payload.get("phase_trace_status", ""),
+            "stale_reasons": phase_bootstrap_payload.get("stale_reasons", []),
+            "evidence_ref": phase_bootstrap_payload.get("evidence_ref", ""),
+        },
+        "tmp_collision_safety": {
+            "tmp_collision_safety_status": tmp_collision_payload.get("tmp_collision_safety_status"),
+            "error_code": tmp_collision_payload.get("error_code", ""),
+            "required_contract": tmp_collision_payload.get("required_contract"),
+            "auto_required_signal": tmp_collision_payload.get("auto_required_signal"),
+            "tmp_root": tmp_collision_payload.get("tmp_root", ""),
+            "collision_count": tmp_collision_payload.get("collision_count"),
+            "unique_path_count": tmp_collision_payload.get("unique_path_count"),
+            "generated_paths": tmp_collision_payload.get("generated_paths", []),
+            "stale_reasons": tmp_collision_payload.get("stale_reasons", []),
+            "evidence_ref": tmp_collision_payload.get("evidence_ref", ""),
+        },
+        "handoff_collab_freshness_rotation": {
+            "handoff_collab_freshness_rotation_status": fresh_rotation_payload.get("handoff_collab_freshness_rotation_status"),
+            "error_code": fresh_rotation_payload.get("error_code", ""),
+            "required_contract": fresh_rotation_payload.get("required_contract"),
+            "auto_required_signal": fresh_rotation_payload.get("auto_required_signal"),
+            "rotation_applied": fresh_rotation_payload.get("rotation_applied"),
+            "freshness_age_days": fresh_rotation_payload.get("freshness_age_days"),
+            "freshness_status": fresh_rotation_payload.get("freshness_status", ""),
+            "rotation_receipt_ref": fresh_rotation_payload.get("rotation_receipt_ref", ""),
+            "stale_reasons": fresh_rotation_payload.get("stale_reasons", []),
+            "evidence_ref": fresh_rotation_payload.get("evidence_ref", ""),
+        },
+        "protocol_feedback_atomic_emit": {
+            "protocol_feedback_atomic_emit_status": atomic_emit_payload.get("protocol_feedback_atomic_emit_status"),
+            "error_code": atomic_emit_payload.get("error_code", ""),
+            "required_contract": atomic_emit_payload.get("required_contract"),
+            "auto_required_signal": atomic_emit_payload.get("auto_required_signal"),
+            "transaction_id": atomic_emit_payload.get("transaction_id", ""),
+            "batch_ref": atomic_emit_payload.get("batch_ref", ""),
+            "index_ref": atomic_emit_payload.get("index_ref", ""),
+            "receipt_ref": atomic_emit_payload.get("receipt_ref", ""),
+            "stale_reasons": atomic_emit_payload.get("stale_reasons", []),
+            "evidence_ref": atomic_emit_payload.get("evidence_ref", ""),
+        },
         "capability_boundary_classification": {
             "capability_boundary_status": cap_boundary_payload.get("capability_boundary_status"),
             "error_code": cap_boundary_payload.get("error_code", ""),
@@ -2158,6 +2605,90 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "unmapped_p0_requirements": mapping_coverage_payload.get("unmapped_p0_requirements", []),
             "stale_reasons": mapping_coverage_payload.get("stale_reasons", []),
             "evidence_ref": mapping_coverage_payload.get("evidence_ref", ""),
+        },
+        "prompt_bootstrap_capability": {
+            "prompt_bootstrap_contract_status": prompt_bootstrap_payload.get("prompt_bootstrap_contract_status"),
+            "error_code": prompt_bootstrap_payload.get("error_code", ""),
+            "required_contract": prompt_bootstrap_payload.get("required_contract"),
+            "auto_required_signal": prompt_bootstrap_payload.get("auto_required_signal"),
+            "capability_driver_required_total": prompt_bootstrap_payload.get("capability_driver_required_total"),
+            "capability_driver_present_total": prompt_bootstrap_payload.get("capability_driver_present_total"),
+            "capability_driver_coverage_rate": prompt_bootstrap_payload.get("capability_driver_coverage_rate"),
+            "missing_capability_drivers": prompt_bootstrap_payload.get("missing_capability_drivers", []),
+            "stale_reasons": prompt_bootstrap_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_bootstrap_payload.get("evidence_ref", ""),
+        },
+        "prompt_capability_matrix": {
+            "prompt_capability_matrix_status": prompt_matrix_payload.get("prompt_capability_matrix_status"),
+            "error_code": prompt_matrix_payload.get("error_code", ""),
+            "required_contract": prompt_matrix_payload.get("required_contract"),
+            "auto_required_signal": prompt_matrix_payload.get("auto_required_signal"),
+            "capability_driver_required_total": prompt_matrix_payload.get("capability_driver_required_total"),
+            "capability_driver_present_total": prompt_matrix_payload.get("capability_driver_present_total"),
+            "capability_driver_coverage_rate": prompt_matrix_payload.get("capability_driver_coverage_rate"),
+            "missing_capability_drivers": prompt_matrix_payload.get("missing_capability_drivers", []),
+            "stale_reasons": prompt_matrix_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_matrix_payload.get("evidence_ref", ""),
+        },
+        "refresh_strict_business_interference": {
+            "refresh_strict_business_interference_status": interference_payload.get("refresh_strict_business_interference_status"),
+            "error_code": interference_payload.get("error_code", ""),
+            "required_contract": interference_payload.get("required_contract"),
+            "auto_required_signal": interference_payload.get("auto_required_signal"),
+            "refresh_receipt_ref": interference_payload.get("refresh_receipt_ref", ""),
+            "strict_receipt_ref": interference_payload.get("strict_receipt_ref", ""),
+            "refresh_status": interference_payload.get("refresh_status", ""),
+            "strict_status": interference_payload.get("strict_status", ""),
+            "interference_row_count_refresh": interference_payload.get("interference_row_count_refresh"),
+            "interference_row_count_strict": interference_payload.get("interference_row_count_strict"),
+            "stale_reasons": interference_payload.get("stale_reasons", []),
+            "evidence_ref": interference_payload.get("evidence_ref", ""),
+        },
+        "kernel_ssot_source": {
+            "kernel_ssot_source_status": kernel_ssot_payload.get("kernel_ssot_source_status"),
+            "error_code": kernel_ssot_payload.get("error_code", ""),
+            "required_contract": kernel_ssot_payload.get("required_contract"),
+            "auto_required_signal": kernel_ssot_payload.get("auto_required_signal"),
+            "canonical_source_paths": kernel_ssot_payload.get("canonical_source_paths", []),
+            "missing_source_paths": kernel_ssot_payload.get("missing_source_paths", []),
+            "ssot_validator_rc": kernel_ssot_payload.get("ssot_validator_rc"),
+            "stale_reasons": kernel_ssot_payload.get("stale_reasons", []),
+            "evidence_ref": kernel_ssot_payload.get("evidence_ref", ""),
+        },
+        "prompt_derivation_conformance": {
+            "prompt_derivation_conformance_status": prompt_derivation_payload.get("prompt_derivation_conformance_status"),
+            "error_code": prompt_derivation_payload.get("error_code", ""),
+            "required_contract": prompt_derivation_payload.get("required_contract"),
+            "auto_required_signal": prompt_derivation_payload.get("auto_required_signal"),
+            "kernel_contract_version": prompt_derivation_payload.get("kernel_contract_version", ""),
+            "kernel_contract_digest": prompt_derivation_payload.get("kernel_contract_digest", ""),
+            "derived_from_contract_ids": prompt_derivation_payload.get("derived_from_contract_ids", []),
+            "overlay_digest": prompt_derivation_payload.get("overlay_digest", ""),
+            "stale_reasons": prompt_derivation_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_derivation_payload.get("evidence_ref", ""),
+        },
+        "semantic_convergence": {
+            "semantic_convergence_status": semantic_convergence_payload.get("semantic_convergence_status"),
+            "semantic_convergence_error_code": semantic_convergence_payload.get("semantic_convergence_error_code", ""),
+            "required_contract": semantic_convergence_payload.get("required_contract"),
+            "auto_required_signal": semantic_convergence_payload.get("auto_required_signal"),
+            "lineage_ref": semantic_convergence_payload.get("lineage_ref", ""),
+            "mismatch_count": semantic_convergence_payload.get("mismatch_count"),
+            "mismatch_fields": semantic_convergence_payload.get("mismatch_fields", []),
+            "stale_reasons": semantic_convergence_payload.get("stale_reasons", []),
+            "evidence_ref": semantic_convergence_payload.get("evidence_ref", ""),
+        },
+        "prompt_kernel_executable_coupling": {
+            "prompt_kernel_executable_coupling_status": prompt_coupling_payload.get("prompt_kernel_executable_coupling_status"),
+            "error_code": prompt_coupling_payload.get("error_code", ""),
+            "required_contract": prompt_coupling_payload.get("required_contract"),
+            "auto_required_signal": prompt_coupling_payload.get("auto_required_signal"),
+            "kernel_contract_ref": prompt_coupling_payload.get("kernel_contract_ref", ""),
+            "validator_ref": prompt_coupling_payload.get("validator_ref", ""),
+            "actor_context_explicit": prompt_coupling_payload.get("actor_context_explicit"),
+            "routing_validator_rc": prompt_coupling_payload.get("routing_validator_rc"),
+            "stale_reasons": prompt_coupling_payload.get("stale_reasons", []),
+            "evidence_ref": prompt_coupling_payload.get("evidence_ref", ""),
         },
         "cross_verification_tracks": {
             "cross_verification_tracks_status": cross_verify_payload.get("cross_verification_tracks_status"),

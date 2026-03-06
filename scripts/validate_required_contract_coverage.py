@@ -35,12 +35,26 @@ DISCOVERY_TARGET_NAMES = {
 }
 STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_unlock_formula.py": "unlock_formula_status",
+    "scripts/validate_release_plane_cloud_evidence.py": "release_plane_cloud_evidence_status",
+    "scripts/validate_cross_cwd_absolute_input.py": "cross_cwd_absolute_input_status",
+    "scripts/validate_run_id_report_selection.py": "run_id_report_selection_status",
+    "scripts/validate_phase_bootstrap_before_strict.py": "phase_bootstrap_before_strict_status",
+    "scripts/validate_tmp_collision_safety.py": "tmp_collision_safety_status",
+    "scripts/validate_handoff_collab_freshness_rotation.py": "handoff_collab_freshness_rotation_status",
+    "scripts/validate_protocol_feedback_atomic_emit.py": "protocol_feedback_atomic_emit_status",
     "scripts/validate_capability_boundary_classification.py": "capability_boundary_status",
     "scripts/validate_promotion_pipeline.py": "promotion_pipeline_status",
     "scripts/validate_outlet_matrix.py": "outlet_matrix_status",
     "scripts/validate_sidecar_cwd_parity.py": "sidecar_cwd_parity_status",
     "scripts/validate_docs_bridge_consistency.py": "bridge_consistency_status",
     "scripts/validate_contract_mapping_coverage.py": "contract_mapping_coverage_status",
+    "scripts/validate_prompt_bootstrap_capability.py": "prompt_bootstrap_contract_status",
+    "scripts/validate_prompt_capability_matrix.py": "prompt_capability_matrix_status",
+    "scripts/validate_refresh_strict_business_interference.py": "refresh_strict_business_interference_status",
+    "scripts/validate_kernel_ssot_source.py": "kernel_ssot_source_status",
+    "scripts/validate_prompt_derivation_conformance.py": "prompt_derivation_conformance_status",
+    "scripts/validate_semantic_convergence.py": "semantic_convergence_status",
+    "scripts/validate_prompt_kernel_executable_coupling.py": "prompt_kernel_executable_coupling_status",
     "scripts/validate_semantic_routing_guard.py": "semantic_routing_status",
     "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
     "scripts/validate_vendor_namespace_separation.py": "vendor_namespace_status",
@@ -56,12 +70,26 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
+    "release_plane_cloud_evidence",
+    "cross_cwd_absolute_input",
+    "run_id_report_selection",
+    "phase_bootstrap_before_strict",
+    "tmp_collision_safety",
+    "handoff_collab_freshness_rotation",
+    "protocol_feedback_atomic_emit",
     "capability_boundary_classification",
     "promotion_evidence_pipeline",
     "outlet_regression_matrix",
     "sidecar_cwd_parity",
     "docs_bridge_consistency",
     "contract_mapping_coverage",
+    "prompt_bootstrap_capability",
+    "prompt_capability_matrix",
+    "refresh_strict_business_interference",
+    "kernel_ssot_source",
+    "prompt_derivation_conformance",
+    "semantic_convergence",
+    "prompt_kernel_executable_coupling",
     "semantic_routing_guard",
     "instance_protocol_split_receipt",
     "vendor_namespace_separation",
@@ -86,6 +114,76 @@ TARGETS = (
             "rq_001_unlock_formula_contract_v1",
         ),
         validator_script="scripts/validate_unlock_formula.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="release_plane_cloud_evidence",
+        contract_keys=(
+            "release_plane_cloud_evidence_contract_v1",
+            "release_plane_cloud_evidence_contract",
+            "rq_006_release_plane_cloud_evidence_contract_v1",
+        ),
+        validator_script="scripts/validate_release_plane_cloud_evidence.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="cross_cwd_absolute_input",
+        contract_keys=(
+            "cross_cwd_absolute_input_contract_v1",
+            "cross_cwd_absolute_input_contract",
+            "rq_007_cross_cwd_absolute_input_contract_v1",
+        ),
+        validator_script="scripts/validate_cross_cwd_absolute_input.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="run_id_report_selection",
+        contract_keys=(
+            "run_id_report_selection_contract_v1",
+            "run_id_report_selection_contract",
+            "rq_009_run_id_anchored_report_selection_contract_v1",
+        ),
+        validator_script="scripts/validate_run_id_report_selection.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="phase_bootstrap_before_strict",
+        contract_keys=(
+            "phase_bootstrap_before_strict_contract_v1",
+            "phase_bootstrap_before_strict_contract",
+            "rq_010_phase_a_bootstrap_before_strict_contract_v1",
+        ),
+        validator_script="scripts/validate_phase_bootstrap_before_strict.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="tmp_collision_safety",
+        contract_keys=(
+            "tmp_collision_safe_allocator_contract_v1",
+            "tmp_collision_safe_allocator_contract",
+            "rq_011_tmp_collision_safe_allocator_contract_v1",
+        ),
+        validator_script="scripts/validate_tmp_collision_safety.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="handoff_collab_freshness_rotation",
+        contract_keys=(
+            "handoff_collab_freshness_autorotation_contract_v1",
+            "handoff_collab_freshness_autorotation_contract",
+            "rq_012_handoff_collab_freshness_autorotation_contract_v1",
+        ),
+        validator_script="scripts/validate_handoff_collab_freshness_rotation.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="protocol_feedback_atomic_emit",
+        contract_keys=(
+            "protocol_feedback_atomic_emit_contract_v1",
+            "protocol_feedback_atomic_emit_contract",
+            "rq_013_protocol_feedback_atomic_emit_contract_v1",
+        ),
+        validator_script="scripts/validate_protocol_feedback_atomic_emit.py",
         validator_args=("--json-only",),
     ),
     ContractTarget(
@@ -146,6 +244,66 @@ TARGETS = (
             "rq_026_kernel_contract_mapping_projection_contract_v1",
         ),
         validator_script="scripts/validate_contract_mapping_coverage.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="prompt_bootstrap_capability",
+        contract_keys=(
+            "prompt_bootstrap_capability_contract_v1",
+            "prompt_bootstrap_capability_contract",
+            "rq_014_prompt_bootstrap_capability_contract_v1",
+        ),
+        validator_script="scripts/validate_prompt_bootstrap_capability.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="prompt_capability_matrix",
+        contract_keys=(
+            "prompt_capability_matrix_fail_closed_contract_v1",
+            "prompt_capability_matrix_fail_closed_contract",
+            "rq_015_prompt_capability_matrix_fail_closed_contract_v1",
+        ),
+        validator_script="scripts/validate_prompt_capability_matrix.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="refresh_strict_business_interference",
+        contract_keys=(
+            "refresh_strict_business_interference_matrix_contract_v1",
+            "refresh_strict_business_interference_matrix_contract",
+            "rq_016_refresh_strict_business_interference_matrix_contract_v1",
+        ),
+        validator_script="scripts/validate_refresh_strict_business_interference.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="kernel_ssot_source",
+        contract_keys=(
+            "kernel_canonical_source_contract_v1",
+            "kernel_canonical_source_contract",
+            "rq_025_kernel_canonical_source_contract_v1",
+        ),
+        validator_script="scripts/validate_kernel_ssot_source.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="prompt_derivation_conformance",
+        contract_keys=(
+            "derived_prompt_conformance_contract_v1",
+            "derived_prompt_conformance_contract",
+            "rq_027_derived_prompt_conformance_contract_v1",
+        ),
+        validator_script="scripts/validate_prompt_derivation_conformance.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="semantic_convergence",
+        contract_keys=(
+            "semantic_single_source_convergence_contract_v1",
+            "semantic_single_source_convergence_contract",
+            "rq_029_semantic_single_source_convergence_contract_v1",
+        ),
+        validator_script="scripts/validate_semantic_convergence.py",
         validator_args=("--json-only",),
     ),
     ContractTarget(
@@ -269,6 +427,16 @@ TARGETS = (
         validator_args=("--json-only",),
     ),
     ContractTarget(
+        name="prompt_kernel_executable_coupling",
+        contract_keys=(
+            "prompt_import_executable_coupling_contract_v1",
+            "prompt_import_executable_coupling_contract",
+            "rq_031_prompt_import_executable_coupling_contract_v1",
+        ),
+        validator_script="scripts/validate_prompt_kernel_executable_coupling.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
         name="protocol_lane_headstamp_continuity",
         contract_keys=(
             "protocol_lane_activation_headstamp_contract_v1",
@@ -371,12 +539,26 @@ def _run_validator(
     cmd = ["python3", script, "--catalog", catalog, "--identity-id", identity_id]
     if script in {
         "scripts/validate_unlock_formula.py",
+        "scripts/validate_release_plane_cloud_evidence.py",
+        "scripts/validate_cross_cwd_absolute_input.py",
+        "scripts/validate_run_id_report_selection.py",
+        "scripts/validate_phase_bootstrap_before_strict.py",
+        "scripts/validate_tmp_collision_safety.py",
+        "scripts/validate_handoff_collab_freshness_rotation.py",
+        "scripts/validate_protocol_feedback_atomic_emit.py",
         "scripts/validate_capability_boundary_classification.py",
         "scripts/validate_promotion_pipeline.py",
         "scripts/validate_outlet_matrix.py",
         "scripts/validate_sidecar_cwd_parity.py",
         "scripts/validate_docs_bridge_consistency.py",
         "scripts/validate_contract_mapping_coverage.py",
+        "scripts/validate_prompt_bootstrap_capability.py",
+        "scripts/validate_prompt_capability_matrix.py",
+        "scripts/validate_refresh_strict_business_interference.py",
+        "scripts/validate_kernel_ssot_source.py",
+        "scripts/validate_prompt_derivation_conformance.py",
+        "scripts/validate_semantic_convergence.py",
+        "scripts/validate_prompt_kernel_executable_coupling.py",
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_vendor_namespace_separation.py",
         "scripts/validate_v16_cross_verification_tracks.py",
@@ -394,11 +576,17 @@ def _run_validator(
         cmd += ["--operation", operation, "--repo-catalog", repo_catalog]
     if script == "scripts/validate_protocol_feedback_sidecar_contract.py":
         cmd += ["--repo-catalog", repo_catalog, "--operation", operation]
+    if script == "scripts/validate_cross_cwd_absolute_input.py":
+        cmd += ["--repo-catalog", repo_catalog]
+    if script == "scripts/validate_prompt_kernel_executable_coupling.py":
+        cmd += ["--repo-catalog", repo_catalog]
     if script in {
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_instance_protocol_split_receipt.py",
         "scripts/validate_vendor_namespace_separation.py",
         "scripts/validate_protocol_feedback_sidecar_contract.py",
+        "scripts/validate_prompt_kernel_executable_coupling.py",
+        "scripts/validate_run_id_report_selection.py",
     }:
         if expected_work_layer:
             cmd += ["--expected-work-layer", expected_work_layer]

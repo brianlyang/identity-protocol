@@ -548,6 +548,210 @@ def _contract_mapping_coverage_contract_skeleton() -> dict:
     }
 
 
+def _release_plane_cloud_evidence_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_release_plane_cloud_evidence.py",
+        "required_fields": [
+            "target_branch",
+            "release_head_sha",
+            "required_gates_run_id",
+            "run_url",
+            "workflow_file_sha",
+            "run_head_sha",
+            "run_workflow_file_sha",
+            "conditions",
+            "release_plane_status",
+        ],
+        "fail_action": "block_release_when_cloud_evidence_incomplete",
+    }
+
+
+def _cross_cwd_absolute_input_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_cross_cwd_absolute_input.py",
+        "required_fields": [
+            "repo_catalog_input",
+            "repo_catalog_is_absolute",
+            "repo_cwd_resolved_repo_catalog",
+            "tmp_cwd_resolved_repo_catalog",
+            "cwd_parity_status",
+        ],
+        "fail_action": "block_non_absolute_or_non_parity_repo_catalog_usage",
+    }
+
+
+def _run_id_report_selection_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_run_id_report_selection.py",
+        "required_fields": [
+            "run_id",
+            "selection_strategy",
+            "report_selected_path",
+            "candidate_count",
+        ],
+        "fail_action": "block_strict_lane_when_run_id_selection_not_deterministic",
+    }
+
+
+def _phase_bootstrap_before_strict_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_phase_bootstrap_before_strict.py",
+        "required_fields": [
+            "phase_a_refresh_applied",
+            "phase_b_strict_revalidate_status",
+            "phase_trace_status",
+        ],
+        "fail_action": "block_when_phase_a_phase_b_semantics_not_closed",
+    }
+
+
+def _tmp_collision_safe_allocator_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_tmp_collision_safety.py",
+        "required_fields": [
+            "tmp_root",
+            "generated_paths",
+            "collision_count",
+            "unique_path_count",
+            "path_scope_guard_status",
+        ],
+        "fail_action": "block_when_tmp_paths_collide_or_escape_scope",
+    }
+
+
+def _handoff_collab_freshness_autorotation_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "bootstrap_emitter": "scripts/rotate_handoff_collab_freshness.py",
+        "validator": "scripts/validate_handoff_collab_freshness_rotation.py",
+        "rotation_receipt_pattern": "runtime/reports/handoff-collab-freshness-rotation-*.json",
+        "required_fields": [
+            "rotation_applied",
+            "freshness_age_days",
+            "rotation_receipt_ref",
+            "freshness_status",
+        ],
+        "fail_action": "block_when_freshness_rotation_receipt_missing_or_failed",
+    }
+
+
+def _protocol_feedback_atomic_emit_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "atomic_emitter": "scripts/emit_protocol_feedback_atomic.py",
+        "validator": "scripts/validate_protocol_feedback_atomic_emit.py",
+        "receipt_path_pattern": "runtime/protocol-feedback/atomic/*.receipt.json",
+        "required_fields": [
+            "transaction_id",
+            "batch_ref",
+            "index_ref",
+            "receipt_ref",
+        ],
+        "fail_action": "block_when_atomic_emit_receipt_chain_invalid",
+    }
+
+
+def _prompt_bootstrap_capability_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_bootstrap_capability.py",
+        "required_capability_drivers": [
+            "scripts/validate_identity_tool_installation.py",
+            "scripts/validate_identity_vendor_api_discovery.py",
+            "scripts/validate_identity_vendor_api_solution.py",
+        ],
+        "fail_action": "block_when_prompt_bootstrap_missing_required_drivers",
+    }
+
+
+def _prompt_capability_matrix_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_capability_matrix.py",
+        "required_driver_ids": ["tool_installation", "vendor_api_discovery", "vendor_api_solution"],
+        "required_fields": [
+            "capability_driver_required_total",
+            "capability_driver_present_total",
+            "capability_driver_coverage_rate",
+            "missing_capability_drivers",
+        ],
+        "fail_action": "fail_closed_when_prompt_capability_matrix_incomplete",
+    }
+
+
+def _refresh_strict_business_interference_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "matrix_emitter": "scripts/emit_business_interference_matrix.py",
+        "validator": "scripts/validate_refresh_strict_business_interference.py",
+        "refresh_receipt_pattern": "runtime/reports/business-interference-matrix-*-refresh-*.json",
+        "strict_receipt_pattern": "runtime/reports/business-interference-matrix-*-strict-*.json",
+        "required_fields": [
+            "refresh_receipt_ref",
+            "strict_receipt_ref",
+            "interference_row_count_refresh",
+            "interference_row_count_strict",
+        ],
+        "fail_action": "block_when_refresh_strict_interference_matrix_not_closed",
+    }
+
+
+def _kernel_canonical_source_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_kernel_ssot_source.py",
+        "canonical_source_paths": [
+            "identity/protocol/IDENTITY_PROTOCOL.md",
+            "identity/protocol/IDENTITY_RUNTIME.md",
+            "identity/protocol/mappings/contract-binding.v1.6.yaml",
+        ],
+        "fail_action": "block_when_kernel_source_not_canonical",
+    }
+
+
+def _derived_prompt_conformance_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_derivation_conformance.py",
+        "kernel_contract_version": "v1.6",
+        "derived_from_contract_ids": [
+            "rq_014_prompt_bootstrap_capability_contract_v1",
+            "rq_015_prompt_capability_matrix_fail_closed_contract_v1",
+        ],
+        "fail_action": "block_when_prompt_derivation_metadata_incomplete",
+    }
+
+
+def _semantic_convergence_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_semantic_convergence.py",
+        "required_fields": [
+            "semantic_tuple_update",
+            "semantic_tuple_three_plane",
+            "semantic_tuple_full_scan",
+            "mismatch_count",
+        ],
+        "fail_action": "block_when_semantic_verdict_not_convergent",
+    }
+
+
+def _prompt_kernel_executable_coupling_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_kernel_executable_coupling.py",
+        "kernel_contract_ref": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1",
+        "validator_ref": "scripts/validate_work_layer_gate_set_routing.py",
+        "require_explicit_actor": True,
+        "fail_action": "block_when_prompt_import_not_executable_coupled",
+    }
+
+
 def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
     return {
         "multi_track_cross_verification_contract_v1": {
@@ -708,12 +912,26 @@ def _ensure_intake_p1_contracts(task: dict, identity_id: str) -> dict:
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
         "release_unlock_formula_automation_contract_v1": _release_unlock_formula_contract_skeleton(),
+        "release_plane_cloud_evidence_contract_v1": _release_plane_cloud_evidence_contract_skeleton(),
+        "cross_cwd_absolute_input_contract_v1": _cross_cwd_absolute_input_contract_skeleton(),
+        "run_id_report_selection_contract_v1": _run_id_report_selection_contract_skeleton(),
+        "phase_bootstrap_before_strict_contract_v1": _phase_bootstrap_before_strict_contract_skeleton(),
+        "tmp_collision_safe_allocator_contract_v1": _tmp_collision_safe_allocator_contract_skeleton(),
+        "handoff_collab_freshness_autorotation_contract_v1": _handoff_collab_freshness_autorotation_contract_skeleton(),
+        "protocol_feedback_atomic_emit_contract_v1": _protocol_feedback_atomic_emit_contract_skeleton(),
         "capability_activation_boundary_contract_v2": _capability_boundary_contract_skeleton(),
         "status_promotion_evidence_contract_v1": _promotion_evidence_contract_skeleton(),
         "outbound_reply_outlet_regression_matrix_contract_v1": _outlet_matrix_contract_skeleton(),
         "sidecar_cwd_invariance_contract_v1": _sidecar_cwd_parity_contract_skeleton(),
         "docs_bridge_consistency_contract_v1": _docs_bridge_consistency_contract_skeleton(),
         "contract_mapping_projection_contract_v1": _contract_mapping_coverage_contract_skeleton(),
+        "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
+        "prompt_capability_matrix_fail_closed_contract_v1": _prompt_capability_matrix_contract_skeleton(),
+        "refresh_strict_business_interference_matrix_contract_v1": _refresh_strict_business_interference_contract_skeleton(),
+        "kernel_canonical_source_contract_v1": _kernel_canonical_source_contract_skeleton(),
+        "derived_prompt_conformance_contract_v1": _derived_prompt_conformance_contract_skeleton(),
+        "semantic_single_source_convergence_contract_v1": _semantic_convergence_contract_skeleton(),
+        "prompt_import_executable_coupling_contract_v1": _prompt_kernel_executable_coupling_contract_skeleton(),
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
@@ -922,12 +1140,26 @@ def _legacy_full_contract_current_task(identity_id: str, title: str, description
 def _default_required_checks() -> list[str]:
     return [
         "scripts/validate_unlock_formula.py",
+        "scripts/validate_release_plane_cloud_evidence.py",
+        "scripts/validate_cross_cwd_absolute_input.py",
+        "scripts/validate_run_id_report_selection.py",
+        "scripts/validate_phase_bootstrap_before_strict.py",
+        "scripts/validate_tmp_collision_safety.py",
+        "scripts/validate_handoff_collab_freshness_rotation.py",
+        "scripts/validate_protocol_feedback_atomic_emit.py",
         "scripts/validate_capability_boundary_classification.py",
         "scripts/validate_promotion_pipeline.py",
         "scripts/validate_outlet_matrix.py",
         "scripts/validate_sidecar_cwd_parity.py",
         "scripts/validate_docs_bridge_consistency.py",
         "scripts/validate_contract_mapping_coverage.py",
+        "scripts/validate_prompt_bootstrap_capability.py",
+        "scripts/validate_prompt_capability_matrix.py",
+        "scripts/validate_refresh_strict_business_interference.py",
+        "scripts/validate_kernel_ssot_source.py",
+        "scripts/validate_prompt_derivation_conformance.py",
+        "scripts/validate_semantic_convergence.py",
+        "scripts/validate_prompt_kernel_executable_coupling.py",
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
         "scripts/validate_identity_update_lifecycle.py",

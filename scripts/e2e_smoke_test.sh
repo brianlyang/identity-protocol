@@ -488,6 +488,65 @@ for ID in $IDS; do
     --operation e2e \
     --json-only
 
+  echo "[23.45055/30][$ID] validate release-plane cloud evidence contract (RQ-006)"
+  python3 scripts/validate_release_plane_cloud_evidence.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --target-branch "${TARGET_BRANCH:-main}" \
+    --release-head-sha "${RELEASE_HEAD_SHA:-$(git rev-parse HEAD)}" \
+    --required-gates-run-id "${REQUIRED_GATES_RUN_ID:-local-e2e}" \
+    --run-url "${RUN_URL:-local://e2e}" \
+    --workflow-file-sha "${WORKFLOW_FILE_SHA:-$(git rev-parse HEAD)}" \
+    --run-head-sha "${RUN_HEAD_SHA:-$(git rev-parse HEAD)}" \
+    --run-workflow-file-sha "${RUN_WORKFLOW_FILE_SHA:-$(git rev-parse HEAD)}" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45056/30][$ID] validate cross-cwd absolute-input contract (RQ-007)"
+  python3 scripts/validate_cross_cwd_absolute_input.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog "$(python3 -c 'from pathlib import Path;print(Path(\"identity/catalog/identities.yaml\").resolve())')" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45057/30][$ID] validate run-id anchored report selection contract (RQ-009)"
+  python3 scripts/validate_run_id_report_selection.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "${RUN_ID:-}" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45058/30][$ID] validate phase-A bootstrap before strict contract (RQ-010)"
+  python3 scripts/validate_phase_bootstrap_before_strict.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45059/30][$ID] validate tmp collision-safe allocator contract (RQ-011)"
+  python3 scripts/validate_tmp_collision_safety.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "${RUN_ID:-e2e}" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45060/30][$ID] validate handoff/collab freshness autorotation contract (RQ-012)"
+  python3 scripts/validate_handoff_collab_freshness_rotation.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45061/30][$ID] validate protocol-feedback atomic emit contract (RQ-013)"
+  python3 scripts/validate_protocol_feedback_atomic_emit.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
   echo "[23.4506/30][$ID] validate capability boundary classification contract (RQ-002)"
   python3 scripts/validate_capability_boundary_classification.py \
     --catalog "$CATALOG_PATH" \
@@ -529,6 +588,57 @@ for ID in $IDS; do
   python3 scripts/validate_contract_mapping_coverage.py \
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45115/30][$ID] validate prompt bootstrap capability contract (RQ-014)"
+  python3 scripts/validate_prompt_bootstrap_capability.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45116/30][$ID] validate prompt capability matrix contract (RQ-015)"
+  python3 scripts/validate_prompt_capability_matrix.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45117/30][$ID] validate refresh->strict business interference contract (RQ-016)"
+  python3 scripts/validate_refresh_strict_business_interference.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45118/30][$ID] validate kernel canonical source contract (RQ-025)"
+  python3 scripts/validate_kernel_ssot_source.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45119/30][$ID] validate derived prompt conformance contract (RQ-027)"
+  python3 scripts/validate_prompt_derivation_conformance.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45120/30][$ID] validate semantic convergence contract (RQ-029)"
+  python3 scripts/validate_semantic_convergence.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.45121/30][$ID] validate prompt-kernel executable coupling contract (RQ-031)"
+  python3 scripts/validate_prompt_kernel_executable_coupling.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --actor-id "$SESSION_ACTOR_ID" \
     --operation e2e \
     --json-only
 
