@@ -35,6 +35,13 @@ STRICT_OPERATIONS = {
     "mutation",
 }
 
+OBSERVATION_OPERATIONS = {
+    "scan",
+    "three-plane",
+    "inspection",
+    "validate",
+}
+
 ERR_BUNDLE_MISSING = "IP-INTAKE-EVID-001"
 ERR_TRACK_QUORUM_MISSING = "IP-INTAKE-EVID-002"
 ERR_METADATA_MISSING = "IP-INTAKE-EVID-003"
@@ -515,8 +522,11 @@ def _build_payload_base(args: argparse.Namespace, catalog_path: Path, pack_path:
         "resolved_pack_path": str(pack_path),
         "mode": args.mode,
         "operation": args.operation,
+        "run_profile": "observation" if args.operation in OBSERVATION_OPERATIONS else "enforcement",
         "required_contract": False,
         "auto_required_signal": False,
+        "producer_readiness": False,
+        "requiredization_current_round_linked": False,
         "intake_evidence_core_status": STATUS_SKIPPED_NOT_REQUIRED,
         "cross_verification_tracks_status": STATUS_SKIPPED_NOT_REQUIRED,
         "intake_evidence_quorum_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -611,11 +621,16 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
         required = True
         auto_required = True
     elif args.operation in STRICT_OPERATIONS and _feedback_artifacts_present(pack_path):
-        required = True
-        auto_required = True
+        if args.operation in OBSERVATION_OPERATIONS:
+            # observation lanes should not force requiredization from historical feedback artifacts.
+            auto_required = False
+        else:
+            required = True
+            auto_required = True
 
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
+    payload["requiredization_current_round_linked"] = bool(args.bundle.strip() or args.bundle_id.strip())
 
     if not required:
         _mark_track_status_skipped(payload)
@@ -630,7 +645,17 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
         explicit_bundle=args.bundle,
         bundle_id=args.bundle_id,
     )
+    payload["producer_readiness"] = bundle_path is not None
+    if bundle_path is not None and not payload["requiredization_current_round_linked"]:
+        payload["requiredization_current_round_linked"] = True
     if bundle_path is None:
+        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
+            _mark_track_status_skipped(payload)
+            payload["intake_evidence_core_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload[MODE_STATUS_KEYS[args.mode]] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_evidence_bundle"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["intake_evidence_core_status"] = STATUS_FAIL_REQUIRED
         payload[MODE_STATUS_KEYS[args.mode]] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_BUNDLE_MISSING

@@ -15,6 +15,7 @@ import yaml
 
 from actor_session_common import resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
 PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_changelog_updated.py",
@@ -269,16 +270,65 @@ def main() -> int:
     explicit_catalog = args.catalog.strip()
     env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
     catalog = explicit_catalog or env_catalog
-    stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
-    stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
-    reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-{identity_id}.json"
-    send_time_reply_file = f"/tmp/identity-send-time-reply-{identity_id}.txt"
-    send_time_reply_gate_blocker_receipt = (
-        f"/tmp/identity-send-time-reply-gate-blocker-receipt-{identity_id}.json"
+    stamp_artifact = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-response-stamp-{identity_id}",
+            ext="json",
+        )
     )
-    execution_reply_coherence_blocker_receipt = (
-        f"/tmp/identity-execution-reply-coherence-blocker-receipt-{identity_id}.json"
+    stamp_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-stamp-blocker-receipt-{identity_id}",
+            ext="json",
+        )
     )
+    reply_first_line_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-reply-first-line-blocker-receipt-{identity_id}",
+            ext="json",
+        )
+    )
+    send_time_reply_file = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-send-time-reply-{identity_id}",
+            ext="txt",
+        )
+    )
+    send_time_reply_gate_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-send-time-reply-gate-blocker-receipt-{identity_id}",
+            ext="json",
+        )
+    )
+    execution_reply_coherence_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-execution-reply-coherence-blocker-receipt-{identity_id}",
+            ext="json",
+        )
+    )
+    vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+    capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
+    health_report_dir = str(named_temp_root("identity-health-reports"))
+    upgrade_reports_runtime_root = named_temp_root("identity-runtime")
+    upgrade_reports_named_root = named_temp_root("identity-upgrade-reports")
     if not catalog:
         print("[FAIL] catalog is required (implicit fallback disabled).")
         print("       pass --catalog <path> or set IDENTITY_CATALOG after mode selection.")
@@ -818,7 +868,7 @@ def main() -> int:
             "--operation",
             "readiness",
             "--out-root",
-            "/tmp/vibe-coding-feeding-packs",
+            vibe_pack_out_root,
         ],
         [
             "python3",
@@ -880,7 +930,7 @@ def main() -> int:
             "--operation",
             "readiness",
             "--out-root",
-            "/tmp/capability-fit-matrices",
+            capability_fit_out_root,
         ],
         [
             "python3",
@@ -1101,8 +1151,8 @@ def main() -> int:
         if pack_path is not None:
             roots.append((pack_path / "runtime" / "reports").resolve())
             roots.append((pack_path / "runtime").resolve())
-        roots.append(Path("/tmp/identity-upgrade-reports"))
-        roots.append(Path("/tmp/identity-runtime"))
+        roots.append(upgrade_reports_named_root)
+        roots.append(upgrade_reports_runtime_root)
         if os.environ.get("IDENTITY_HOME", "").strip():
             roots.append(Path(os.environ["IDENTITY_HOME"]).expanduser().resolve())
         candidates: list[Path] = []
@@ -1305,7 +1355,7 @@ def main() -> int:
             "--execution-report",
             execution_report,
             "--out-dir",
-            "/tmp/identity-health-reports",
+            health_report_dir,
             "--enforce-pass",
         ]
     )
@@ -1316,7 +1366,7 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--report-dir",
-            "/tmp/identity-health-reports",
+            health_report_dir,
             "--require-pass",
         ]
     )
@@ -1327,7 +1377,7 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--report-dir",
-            "/tmp/identity-health-reports",
+            health_report_dir,
             "--execution-report",
             execution_report,
             "--operation",

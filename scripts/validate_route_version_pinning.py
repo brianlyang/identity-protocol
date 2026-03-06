@@ -20,6 +20,7 @@ ERR_EXPECTED_BINDING_MISSING = "IP-PIN-004"
 ERR_RECEIPT_PARSE = "IP-PIN-005"
 
 STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation", "scan", "three-plane"}
+OBSERVATION_OPERATIONS = {"scan", "three-plane", "inspection", "validate"}
 
 CONTRACT_KEYS = (
     "route_workflow_version_pinning_contract_v1",
@@ -264,8 +265,11 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(pack_path),
         "operation": args.operation,
+        "run_profile": "observation" if args.operation in OBSERVATION_OPERATIONS else "enforcement",
         "required_contract": False,
         "auto_required_signal": False,
+        "producer_readiness": False,
+        "requiredization_current_round_linked": False,
         "receipt_path": "",
         "evidence_ref": "",
         "route_endpoint": "",
@@ -313,7 +317,14 @@ def main() -> int:
         return 0
 
     receipt_path = _select_receipt_path(explicit_receipt=args.receipt, identity_id=args.identity_id, pack_path=pack_path)
+    payload["producer_readiness"] = receipt_path is not None
+    payload["requiredization_current_round_linked"] = auto_required or receipt_path is not None
     if receipt_path is None:
+        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
+            payload["pin_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_pin_receipt"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["pin_status"] = STATUS_FAIL_REQUIRED
         payload["pin_error_code"] = ERR_RECEIPT_MISSING
         payload["error_code"] = ERR_RECEIPT_MISSING

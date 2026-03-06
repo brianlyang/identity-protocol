@@ -37,6 +37,13 @@ STRICT_OPERATIONS = {
     "mutation",
 }
 
+OBSERVATION_OPERATIONS = {
+    "scan",
+    "three-plane",
+    "inspection",
+    "validate",
+}
+
 CANONICAL_BLOCKER_TYPES = {
     "auth_login_required",
     "anti_automation_challenge_required",
@@ -183,8 +190,12 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(pack_path),
         "operation": args.operation,
+        "run_profile": "observation" if args.operation in OBSERVATION_OPERATIONS else "enforcement",
         "required_contract": False,
         "auto_required_signal": False,
+        "producer_readiness": False,
+        "requiredization_current_round_linked": False,
+        "no_fallback_event_in_current_run": False,
         "fallback_taxonomy_normalization_status": STATUS_SKIPPED_NOT_REQUIRED,
         "normalization_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
@@ -238,6 +249,8 @@ def main() -> int:
 
     reasons = _dedupe_keep_order(reasons)
     payload["fallback_reason_row_count"] = len(reasons)
+    payload["producer_readiness"] = bool(reasons)
+    payload["requiredization_current_round_linked"] = bool(args.fallback_reason or args.report.strip() or report_path is not None or reasons)
 
     blocker_contract = task.get("blocker_taxonomy_contract") or {}
     blocker_types_raw = blocker_contract.get("required_blocker_types") if isinstance(blocker_contract, dict) else []
@@ -250,6 +263,13 @@ def main() -> int:
         return 0
 
     if not reasons:
+        if args.operation in OBSERVATION_OPERATIONS and not args.fallback_reason:
+            payload["fallback_taxonomy_normalization_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["normalization_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["no_fallback_event_in_current_run"] = True
+            payload["stale_reasons"] = ["no_fallback_event_in_current_run"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["fallback_taxonomy_normalization_status"] = STATUS_FAIL_REQUIRED
         payload["normalization_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_REASON_SOURCE_MISSING

@@ -87,7 +87,8 @@ Carry-over evidence:
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + UNCOMMITTED(runtime_temp_path_common strict-chain refactor) | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | UNCOMMITTED(applicability-scoped requiredization landing + replay snapshot) | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1644,7 +1645,7 @@ Promotion guard (hard):
 
 - Status: `SPEC_READY` (hotfix lane intake)
 - Goal: eliminate residual fixed `/tmp` output hardcoding in strict surfaces and restore deterministic, collision-safe replay artifact paths.
-- Audit class: `PENDING_INTAKE` (architect review pending; executable validator/e2e closure not landed).
+- Audit class: `PENDING_INTAKE` (strict-chain runtime refactor landed; replay archive + independent audit closure pending).
 
 Hotfix lane scope lock:
 
@@ -1668,9 +1669,24 @@ Reserved error-code family (for architect contract freeze):
 Four-track evidence package (cross-verified):
 
 1. `T1 governance/spec`: strict-path determinism and replay non-collision policy.
-2. `T2 runtime implementation`: partial cleanup landed (`4179e47`) with residual fixed `/tmp` literals still present in key chains.
-3. `T3 live evidence`: multi-surface scan indicates creator/readiness/three-plane/full-scan/ci residual hardcoding.
+2. `T2 runtime implementation`: strict-chain temp resolver landed (`scripts/runtime_temp_path_common.py`) and wired into creator/readiness/three-plane/full-scan/e2e/no-implicit-switch.
+3. `T3 live evidence`: strict-chain scan confirms fixed `/tmp` literals are removed from the above scripts; runtime temp root is environment-driven (`IDENTITY_RUNTIME_TMP_ROOT` / `RUNNER_TEMP` / `TMPDIR` / system temp).
 4. `T4 protocol feedback`: canonical feedback batch + receipt + evidence-index entries are archived in protocol-feedback channel.
+
+Implementation delta snapshot (2026-03-07):
+
+1. added `scripts/runtime_temp_path_common.py` for scoped temp root/file allocation.
+2. refactored strict-chain scripts:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/validate_no_implicit_switch.py`
+3. verification commands:
+   - `python3 -m py_compile` (strict-chain scripts) → pass.
+   - `bash -n scripts/e2e_smoke_test.sh` → pass.
+   - strict-chain `/tmp` literal grep on refactored scripts → no hits.
 
 Architect handoff artifacts (absolute paths):
 
@@ -1683,7 +1699,82 @@ Promotion guard (hard):
 
 1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
-3. promotion requires resolver implementation + fixed-path detector validator + strict-surface e2e replay closure.
+3. promotion requires independent replay closure:
+   - strict-chain fixed-path detector replay (`zero fixed /tmp literals`),
+   - run/identity/operation scoping replay under concurrent execution,
+   - CI runner-temp parity replay.
+
+### HOTFIX16-P1-004 - emergency hotfix intake (`gate-source convergence + producer-aware requiredization applicability`)
+
+- Status: `SPEC_READY` (hotfix lane intake)
+- Goal: remove protocol-layer false-block windows by enforcing gate-source convergence, producer/applicability-scoped requiredization, and strict context/writeback determinism.
+- Audit class: `PENDING_INTAKE` (applicability refactor landed; convergence replay archive + independent audit closure pending).
+
+Hotfix lane scope lock:
+
+1. this hotfix is isolated from `FIX16-*` and `HOTFIX16-P0/P1-*`; no closure inheritance is allowed.
+2. this hotfix addresses protocol governance semantics only and does not prescribe instance business logic.
+3. lane partition baseline remains unchanged: instance lane remains independent from protocol publish gate while protocol-feedback sidecar path remains mandatory.
+
+Core semantics lock:
+
+1. same-lineage execution must be gate-source convergent across `update`, `three-plane`, and `full-scan`; `update pass + aggregation fail` split is fail-closed.
+2. required contracts must be gated by producer readiness + current-round linkage + run-type applicability; history-only activity cannot force blocking requiredization.
+3. non-applicable contracts must emit explicit `SKIPPED_NOT_REQUIRED` with machine-readable reason (no synthetic missing-evidence failures).
+4. fallback taxonomy must define legal terminal state for "no fallback event in current run" under required surfaces.
+5. strict context surfaces must fail-fast on env/CLI catalog mismatch unless explicit audited override receipt is present.
+6. protocol-feedback primary write failure must use controlled spool/reconcile strategy with machine-verifiable receipt chain; silent drop is forbidden.
+
+Reserved error-code family (for architect contract freeze):
+
+1. `IP-GSRC-001`
+2. `IP-GSRC-002`
+3. `IP-GSRC-003`
+4. `IP-GSRC-004`
+5. `IP-GSRC-005`
+6. `IP-GSRC-006`
+7. `IP-GSRC-007`
+
+Four-track evidence package (cross-verified):
+
+1. `T1 governance/spec`: mandatory matrix closure for `C28..C30` and related fail-close clauses.
+2. `T2 runtime implementation`: applicability-scoped requiredization fields and observation-profile skip semantics are now wired in Batch-6/7 gate validators.
+3. `T3 replay evidence`: target scan/aggregation now emit deterministic `SKIPPED_NOT_REQUIRED` for non-applicable gates with explicit stale reasons, replacing synthetic missing-evidence fail signals.
+4. `T4 protocol feedback`: canonical outbox + upgrade-proposal + evidence-index linkage for this hotfix stream.
+
+Implementation delta snapshot (2026-03-07):
+
+1. requiredization applicability fields added:
+   - `run_profile`
+   - `producer_readiness`
+   - `requiredization_current_round_linked`
+2. no-event legal terminal state added for fallback taxonomy:
+   - `no_fallback_event_in_current_run`.
+3. landing scripts:
+   - `scripts/validate_v16_intake_evidence_core.py`
+   - `scripts/validate_dedup_monotonicity.py`
+   - `scripts/validate_cross_workflow_schema.py`
+   - `scripts/validate_route_version_pinning.py`
+   - `scripts/validate_fallback_taxonomy_normalization.py`
+4. replay snapshot:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect ...`
+   - project/global Batch-6/7 gates converge to `SKIPPED_NOT_REQUIRED` with explicit non-applicable stale reasons.
+
+Architect handoff artifacts (canonical channel pattern):
+
+1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
+2. `runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_*_requiredization_applicability*.md`
+3. `runtime/protocol-feedback/evidence-index/INDEX.md`
+
+Promotion guard (hard):
+
+1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires validator/e2e closure tuple:
+   - same-lineage update/readiness/three-plane/full-scan convergence replay,
+   - producer/applicability positive+negative replay matrix,
+   - strict context mismatch fail-fast replay,
+   - protocol-feedback spool/reconcile replay closure.
 
 ---
 
@@ -1730,7 +1821,8 @@ Promotion guard (hard):
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T20:10:00Z | Write-boundary non-starvation hardening absorbed for `ASB16-RQ-028/031`: lane-scoped boundary semantics locked, protocol-entry liveness channels explicitly preserved, no-silent-downgrade fail-close mapped to canonical lane/candidate code families, telemetry tuple + replay matrix elevated to mandatory promotion gate; remains `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.12` |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:18:54Z | emergency hotfix lane opened for FQG multi-agent × multi-identity blocker (`PF-FQG-20260306-MA-MI-001-V2`): non-negotiable guardrail fixed as "execution-state no hard-switch", `allow_shared_session=true` re-scoped to `gated_switch` only, and mandatory handshake chain (`switch_request -> pre_switch_gate -> switch_apply -> switch_ack -> ack_verify -> dispatch`) requested for architect-level contract freeze; isolated from `FIX16-001..037` normalization batches pending validator/e2e closure |
 | HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:37:07Z | emergency hotfix lane opened for protocol activation deadlock + headstamp continuity gap (`PEP-FQG-20260306-MA-MI-01`): explicit protocol request non-starvation mandated, unresolved protocol-route and silent fallback set to fail-close, and outbound headstamp continuity promoted to mandatory pre-send hard-gate evidence; isolated from previous fix/hotfix streams pending validator/e2e closure |
-| HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T22:00:30Z | emergency hotfix lane opened for strict-surface fixed `/tmp` hardcoding debt (`PF-FQG-20260306-TMPPATH-001`): partial cleanup baseline `4179e47` accepted, residual fixed-path risk escalated to protocol governance closure with resolver + validator + strict replay requirements; isolated from switch/lane hotfix tracks pending executable closure |
+| HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | strict-chain temp-path refactor landed: shared resolver `runtime_temp_path_common.py` wired into creator/readiness/three-plane/full-scan/e2e/no-implicit-switch; strict-chain fixed `/tmp` literals removed and runtime temp root made env-driven. posture remains non-promotional pending independent replay/audit closure (`collision + runner-temp parity`). |
+| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | applicability-scoped requiredization landing absorbed: intake/dedup/schema/pinning/fallback validators now emit `run_profile + producer_readiness + requiredization_current_round_linked`; observation lanes emit deterministic `SKIPPED_NOT_REQUIRED` for non-applicable contracts and legal `no_fallback_event_in_current_run` terminal state. remains non-promotional pending same-lineage convergence replay + independent audit closure. |
 
 ---
 

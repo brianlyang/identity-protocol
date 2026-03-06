@@ -12,6 +12,7 @@ from typing import Any
 from actor_session_common import resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
@@ -90,8 +91,8 @@ def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: st
         roots.append(pack / "runtime")
     roots.extend(
         [
-            Path("/tmp/identity-upgrade-reports"),
-            Path("/tmp/identity-runtime"),
+            named_temp_root("identity-upgrade-reports"),
+            named_temp_root("identity-runtime"),
         ]
     )
     if identity_home.strip():
@@ -438,18 +439,62 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_refresh != 0 or refresh_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    stamp_artifact = f"/tmp/identity-response-stamp-three-plane-{args.identity_id}.json"
-    stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-three-plane-{args.identity_id}.json"
-    reply_first_line_blocker_receipt = (
-        f"/tmp/identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}.json"
+    stamp_artifact = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-response-stamp-three-plane-{args.identity_id}",
+            ext="json",
+        )
     )
-    send_time_reply_file = f"/tmp/identity-send-time-reply-three-plane-{args.identity_id}.txt"
-    send_time_reply_gate_blocker_receipt = (
-        f"/tmp/identity-send-time-reply-gate-blocker-receipt-three-plane-{args.identity_id}.json"
+    stamp_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-stamp-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
     )
-    execution_reply_coherence_blocker_receipt = (
-        f"/tmp/identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}.json"
+    reply_first_line_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-reply-first-line-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
     )
+    send_time_reply_file = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-send-time-reply-three-plane-{args.identity_id}",
+            ext="txt",
+        )
+    )
+    send_time_reply_gate_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-send-time-reply-gate-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
+    )
+    execution_reply_coherence_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            stem=f"identity-execution-reply-coherence-blocker-receipt-three-plane-{args.identity_id}",
+            ext="json",
+        )
+    )
+    vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+    capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
 
     render_cmd = [
         "python3",
@@ -1418,7 +1463,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "--operation",
             "three-plane",
             "--out-root",
-            "/tmp/vibe-coding-feeding-packs",
+            vibe_pack_out_root,
             "--json-only",
         ]
     )
@@ -1558,7 +1603,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "--operation",
             "three-plane",
             "--out-root",
-            "/tmp/capability-fit-matrices",
+            capability_fit_out_root,
             "--json-only",
         ]
     )

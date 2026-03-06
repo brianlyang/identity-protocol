@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 from actor_session_common import resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
 
 @dataclass
@@ -391,16 +392,62 @@ def main() -> int:
 
             is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
             is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
-            stamp_artifact = f"/tmp/identity-response-stamp-scan-{iid}.json"
-            stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-scan-{iid}.json"
-            reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-scan-{iid}.json"
-            send_time_reply_file = f"/tmp/identity-send-time-reply-scan-{iid}.txt"
-            send_time_reply_gate_blocker_receipt = (
-                f"/tmp/identity-send-time-reply-gate-blocker-receipt-scan-{iid}.json"
+            stamp_artifact = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-response-stamp-scan-{iid}",
+                    ext="json",
+                )
             )
-            execution_reply_coherence_blocker_receipt = (
-                f"/tmp/identity-execution-reply-coherence-blocker-receipt-scan-{iid}.json"
+            stamp_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-stamp-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
             )
+            reply_first_line_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-reply-first-line-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            send_time_reply_file = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-send-time-reply-scan-{iid}",
+                    ext="txt",
+                )
+            )
+            send_time_reply_gate_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-send-time-reply-gate-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            execution_reply_coherence_blocker_receipt = str(
+                runtime_temp_file(
+                    channel="response-stamp",
+                    operation="scan",
+                    identity_id=iid,
+                    stem=f"identity-execution-reply-coherence-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+            capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -827,7 +874,7 @@ def main() -> int:
                     "--operation",
                     "scan",
                     "--out-root",
-                    "/tmp/vibe-coding-feeding-packs",
+                    vibe_pack_out_root,
                     "--json-only",
                 ],
                 "capability_fit_optimization": [
@@ -895,7 +942,7 @@ def main() -> int:
                     "--operation",
                     "scan",
                     "--out-root",
-                    "/tmp/capability-fit-matrices",
+                    capability_fit_out_root,
                     "--json-only",
                 ],
                 "vendor_namespace_separation": [

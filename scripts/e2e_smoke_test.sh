@@ -67,6 +67,17 @@ if [ -z "$E2E_WORK_LAYER" ]; then
 fi
 BASE_SHA_GLOBAL="$(git rev-parse HEAD~1)"
 HEAD_SHA_GLOBAL="$(git rev-parse HEAD)"
+TMP_ROOT="${IDENTITY_RUNTIME_TMP_ROOT:-${RUNNER_TEMP:-${TMPDIR:-$(python3 - <<'PY'\nimport tempfile\nprint(tempfile.gettempdir())\nPY\n)}}}"
+E2E_RUN_TOKEN="${E2E_RUN_TOKEN:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
+E2E_RUNTIME_ROOT="${TMP_ROOT%/}/identity-runtime/e2e/${E2E_RUN_TOKEN}"
+HEALTH_REPORT_DIR="${E2E_RUNTIME_ROOT}/identity-health-reports"
+COMPILED_TMP_DIR="${E2E_RUNTIME_ROOT}/identity-compiled-runtime"
+DISCOVERY_CONTRACT_REPORT="${E2E_RUNTIME_ROOT}/identity_discovery_contract.protocol_repo.json"
+VIBE_PACK_OUT_ROOT="${E2E_RUNTIME_ROOT}/vibe-coding-feeding-packs"
+CAPABILITY_FIT_OUT_ROOT="${E2E_RUNTIME_ROOT}/capability-fit-matrices"
+UPGRADE_REPORT_ROOT_A="${E2E_RUNTIME_ROOT}/identity-upgrade-reports"
+UPGRADE_REPORT_ROOT_B="${E2E_RUNTIME_ROOT}/identity-runtime"
+mkdir -p "$HEALTH_REPORT_DIR" "$COMPILED_TMP_DIR" "$VIBE_PACK_OUT_ROOT" "$CAPABILITY_FIT_OUT_ROOT" "$UPGRADE_REPORT_ROOT_A" "$UPGRADE_REPORT_ROOT_B"
 
 echo "[1/30] validate protocol"
 python3 scripts/validate_identity_protocol.py
@@ -219,13 +230,12 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_resolution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir /tmp/identity-health-reports --enforce-pass
-  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --require-pass
-  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --operation e2e --json-only
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
+  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 done
 
 echo "[7/30] compile runtime brief (for each target identity)"
-COMPILED_TMP_DIR="/tmp/identity-compiled-runtime"
 mkdir -p "$COMPILED_TMP_DIR"
 for ID in $IDS; do
   python3 scripts/compile_identity_runtime.py --catalog "$CATALOG_PATH" --identity-id "$ID" --output "${COMPILED_TMP_DIR}/${ID}.md"
@@ -235,7 +245,7 @@ echo "[8/30] validate manifest semantics"
 python3 scripts/validate_identity_manifest.py
 
 echo "[9/30] test discovery contract"
-python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
+python3 scripts/test_identity_discovery_contract.py >"$DISCOVERY_CONTRACT_REPORT"
 
 for ID in $IDS; do
   echo "[10.5/32][$ID] validate identity instance isolation boundary"
@@ -248,9 +258,9 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[10.8/32][$ID] collect + validate health report"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir /tmp/identity-health-reports --enforce-pass
-  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --require-pass
-  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir /tmp/identity-health-reports --operation e2e --json-only
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
+  python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 
   echo "[11/30][$ID] validate runtime ORRLC contract"
   python3 scripts/validate_identity_runtime_contract.py --catalog "$CATALOG_PATH" --identity-id "$ID"
@@ -258,12 +268,14 @@ for ID in $IDS; do
   echo "[12/30][$ID] validate role-binding contract"
   python3 scripts/validate_identity_role_binding.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
-  STAMP_JSON="/tmp/identity-response-stamp-${ID}.json"
-  STAMP_BLOCKER_RECEIPT="/tmp/identity-stamp-blocker-receipt-${ID}.json"
-  REPLY_FIRST_LINE_BLOCKER_RECEIPT="/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
-  SEND_TIME_REPLY_FILE="/tmp/identity-send-time-reply-${ID}.txt"
-  SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
-  EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+  STAMP_DIR="${E2E_RUNTIME_ROOT}/response-stamp/${ID}"
+  mkdir -p "$STAMP_DIR"
+  STAMP_JSON="${STAMP_DIR}/identity-response-stamp-${ID}.json"
+  STAMP_BLOCKER_RECEIPT="${STAMP_DIR}/identity-stamp-blocker-receipt-${ID}.json"
+  REPLY_FIRST_LINE_BLOCKER_RECEIPT="${STAMP_DIR}/identity-reply-first-line-blocker-receipt-${ID}.json"
+  SEND_TIME_REPLY_FILE="${STAMP_DIR}/identity-send-time-reply-${ID}.txt"
+  SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT="${STAMP_DIR}/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
+  EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT="${STAMP_DIR}/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
   HEADSTAMP_ACTOR_ID="${SESSION_ACTOR_ID}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
@@ -439,7 +451,7 @@ for ID in $IDS; do
   python3 scripts/validate_discovery_requiredization.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --json-only
 
   echo "[23.4297/30][$ID] build vibe-coding feeding pack (P1-E non-blocking)"
-  python3 scripts/build_vibe_coding_feeding_pack.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root /tmp/vibe-coding-feeding-packs
+  python3 scripts/build_vibe_coding_feeding_pack.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root "$VIBE_PACK_OUT_ROOT"
 
   echo "[23.4298/30][$ID] validate capability-fit optimization matrix contract (P1-F)"
   python3 scripts/validate_identity_capability_fit_optimization.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
@@ -457,7 +469,7 @@ for ID in $IDS; do
   python3 scripts/trigger_capability_fit_review.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
 
   echo "[23.4303/30][$ID] build capability-fit matrix artifact (P1-H non-blocking)"
-  python3 scripts/build_capability_fit_matrix.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root /tmp/capability-fit-matrices
+  python3 scripts/build_capability_fit_matrix.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e --out-root "$CAPABILITY_FIT_OUT_ROOT"
 
   echo "[23.43/30][$ID] validate vendor namespace separation contract (Track-B)"
   python3 scripts/validate_vendor_namespace_separation.py --catalog "$CATALOG_PATH" --identity-id "$ID" --operation e2e
@@ -538,7 +550,7 @@ for ID in $IDS; do
   CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID"
   UPDATE_RC=$?
   set -e
-  UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" <<'PY'
+  UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" "$UPGRADE_REPORT_ROOT_A" "$UPGRADE_REPORT_ROOT_B" <<'PY'
 import glob,os,sys
 from pathlib import Path
 import yaml
@@ -560,7 +572,7 @@ if catalog_path.exists():
                 roots.append(str(pack / "runtime"))
     except Exception:
         pass
-roots.extend(["/tmp/identity-upgrade-reports","/tmp/identity-runtime"])
+roots.extend([sys.argv[4], sys.argv[5]])
 if identity_home:
     roots.append(identity_home)
 cands=[]
@@ -626,13 +638,13 @@ PY
     --repo-catalog identity/catalog/identities.yaml \
     --operation e2e \
     --execution-report "$UPGRADE_REPORT" \
-    --out-dir /tmp/identity-health-reports \
+    --out-dir "$HEALTH_REPORT_DIR" \
     --enforce-pass
 
   echo "[26.31/30][$ID] validate actor-risk health profile coverage/binding"
   python3 scripts/validate_identity_actor_health_profile.py \
     --identity-id "$ID" \
-    --report-dir /tmp/identity-health-reports \
+    --report-dir "$HEALTH_REPORT_DIR" \
     --execution-report "$UPGRADE_REPORT" \
     --operation e2e \
     --enforce-bound-report \

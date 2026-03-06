@@ -590,6 +590,9 @@ Mandatory semantics:
 | C25 | multi-agent delegated run must not hard-switch identity during execution state | switch-state gate replay (`RUNNING/TOOL_CALLING/STREAMING -> FAIL_REQUIRED`) + mandatory `switch_ack` verification receipt before dispatch |
 | C26 | explicit protocol governance request must not be starved in instance lane; unresolved protocol route and missing headstamp are both fail-closed | lane-activation replay (`requested_lane=protocol`) with deterministic route verdict (`resolved_lane=protocol` or fail-close `IP-LANE-ROUTE-001/IP-LANE-ACT-002`) + send-time headstamp negative replay (`IP-HDSTAMP-001..003`) |
 | C27 | strict surfaces must not hardcode fixed `/tmp` output paths; temp artifacts must be run/identity scoped | static scan + runtime replay proving dynamic temp resolver (`run_id + identity_id + operation`) and CI runner-temp parity (`${RUNNER_TEMP}`) with fail-close `IP-TMPPATH-*` |
+| C28 | update execution verdict and aggregation verdict (`three-plane/full-scan`) must converge on identical gate-source snapshot | same-lineage replay must show `gate_source_ref` parity and `status/error_code` homomorphism; `update_pass + aggregation_fail` split is fail-closed (`IP-GSRC-001`) |
+| C29 | required-contract enforcement must be producer-aware and applicability-scoped (`current-run linked` + run-type profile), not history-only or one-size-fits-all | requiredization receipt must include `producer_readiness`, `requiredization_current_round_linked`, `run_profile`; non-applicable contracts must resolve to `SKIPPED_NOT_REQUIRED` with explicit reason (`IP-GSRC-003/004/005`) |
+| C30 | actor/catalog context drift and protocol-feedback write-path instability must be deterministic fail-close in strict surfaces | strict replay must block env/CLI catalog mismatch unless explicit override receipt is present, and must provide canonical write strategy (`primary protocol-feedback path` + controlled spool/reconcile fallback) with deterministic receipts (`IP-GSRC-006/007`) |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -1777,7 +1780,7 @@ Scope and isolation lock:
 
 1. this is a separate P1 emergency hotfix track and must not be merged into `FIX16-*` or `HOTFIX16-P0-*` closure states.
 2. this track addresses residual fixed `/tmp` output hardcoding in strict surfaces only.
-3. lifecycle posture remains non-promotional until resolver contract + validator/e2e closure are landed.
+3. resolver contract + strict-chain runtime refactor are landed, but lifecycle remains non-promotional until replay archive + independent audit closure are completed.
 
 Hard guardrail:
 
@@ -1795,9 +1798,21 @@ Canonical error-code family (reserved for this hotfix track):
 Four-track evidence package (architect intake mandatory):
 
 1. `T1 governance/spec`: strict-path determinism + replay non-collision requirements.
-2. `T2 runtime implementation`: partial cleanup already landed (`4179e47`) but residual `/tmp` literals remain across core surfaces.
-3. `T3 live evidence`: cross-surface scan still finds fixed `/tmp` references in creator/readiness/three-plane/full-scan/ci chain.
+2. `T2 runtime implementation`: strict-chain temp path resolver landed via `scripts/runtime_temp_path_common.py` and wired into `identity_creator/release_readiness_check/report_three_plane_status/full_identity_protocol_scan/e2e_smoke_test/validate_no_implicit_switch`.
+3. `T3 live evidence`: strict-chain static scan confirms fixed `/tmp` literals removed from the above runtime-critical scripts; replay outputs now resolve from runtime temp root (`IDENTITY_RUNTIME_TMP_ROOT` / `RUNNER_TEMP` / `TMPDIR` / system temp).
 4. `T4 protocol feedback`: canonical feedback batch + receipt + evidence-index entries for this governance gap.
+
+Implementation delta (2026-03-07):
+
+1. added shared temp resolver: `scripts/runtime_temp_path_common.py`.
+2. removed strict-chain fixed `/tmp` literals from:
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/validate_no_implicit_switch.py`
+3. strict-chain helper outputs are now operation/identity scoped, with optional run token scoping for mutation/e2e flows.
 
 Architect handoff inputs (absolute paths):
 
@@ -1810,7 +1825,81 @@ Promotion guard:
 
 1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
-3. promotion requires resolver implementation + fixed-path detector validator + deterministic positive/negative replay on strict surfaces.
+3. promotion requires independent replay/audit closure:
+   - strict-chain fixed-path detector replay (`zero fixed /tmp literals`),
+   - concurrent collision replay (`operation + identity + run scoped temp artifacts`),
+   - CI runner-temp parity replay on at least one hosted runner.
+
+### 8.17 Emergency Hotfix Track - Gate-Source Convergence and Requiredization Applicability (`HOTFIX16-P1-004`, 2026-03-07)
+
+Scope and isolation lock:
+
+1. this is a separate P1 emergency hotfix track and must not be merged into `FIX16-*` or earlier hotfix closure states.
+2. this track addresses protocol-layer governance semantics only: gate-source convergence, producer-aware/applicability-scoped requiredization, and strict context/writeback determinism.
+3. validator deltas are landed in strict-chain scripts, but lifecycle remains non-promotional until replay archive + independent audit closure are completed.
+
+Hard guardrail:
+
+1. lane split itself is not downgraded by this track; instance lane must remain independent from protocol publish gate while preserving protocol-feedback sidecar path.
+2. `update` and aggregation surfaces (`three-plane`/`full-scan`) must consume the same gate-source snapshot for the same lineage and must not produce contradictory verdicts.
+3. required-contract enforcement must be conditioned by producer readiness + current-round linkage + run-type applicability:
+   - history-only activity must not auto-promote a contract into blocking required mode.
+   - non-applicable contracts must resolve to explicit `SKIPPED_NOT_REQUIRED`, not synthetic failure.
+4. fallback taxonomy must include legal terminal state for "no fallback event in current run" under required surfaces.
+5. strict context operations must fail-fast on env/CLI catalog mismatch unless explicit audited override exists.
+6. protocol-feedback primary write failure must use controlled spool/reconcile strategy with machine-verifiable receipt chain; silent drop is forbidden.
+
+Canonical error-code family (reserved for this hotfix track):
+
+1. `IP-GSRC-001` (`gate_source_convergence_mismatch`)
+2. `IP-GSRC-002` (`required_contract_downgraded_by_optional_branch`)
+3. `IP-GSRC-003` (`producer_not_ready_but_required_applied`)
+4. `IP-GSRC-004` (`history_only_activity_requiredization_block`)
+5. `IP-GSRC-005` (`no_fallback_in_run_legal_state_missing`)
+6. `IP-GSRC-006` (`env_cli_catalog_mismatch_without_override`)
+7. `IP-GSRC-007` (`protocol_feedback_primary_write_failed_without_reconcile`)
+
+Four-track evidence package (architect intake mandatory):
+
+1. `T1 governance/spec`: lane partition invariants, requiredization scope invariants, and context/writeback fail-close clauses (`C28..C30`).
+2. `T2 runtime implementation`: applicability-scoped requiredization fields + observation-profile skip semantics are wired in the Batch-6/7 gates (`intake_core`, `dedup`, `cross_workflow_schema`, `route_version_pinning`, `fallback_taxonomy_normalization`).
+3. `T3 replay evidence`: target scan replay now converges to non-failing applicability verdicts (`SKIPPED_NOT_REQUIRED` with machine reasons) instead of synthetic missing-evidence failures on non-current-run inputs.
+4. `T4 protocol feedback`: canonical protocol-feedback outbox + upgrade proposal + evidence-index linkage for this hotfix stream.
+
+Implementation delta (2026-03-07):
+
+1. producer/applicability fields added to canonical payloads:
+   - `run_profile`
+   - `producer_readiness`
+   - `requiredization_current_round_linked`
+2. observation-lane applicability handling landed:
+   - non-applicable required contracts emit `SKIPPED_NOT_REQUIRED` with explicit stale reason,
+   - no-fallback-event terminal state emits `no_fallback_event_in_current_run`.
+3. landing scripts:
+   - `scripts/validate_v16_intake_evidence_core.py`
+   - `scripts/validate_dedup_monotonicity.py`
+   - `scripts/validate_cross_workflow_schema.py`
+   - `scripts/validate_route_version_pinning.py`
+   - `scripts/validate_fallback_taxonomy_normalization.py`
+4. deterministic dedup invariants remain fixed:
+   - contract pattern does not hard-lock fallback search,
+   - `earliest_claim_ts` normalized to UTC (`Z`) for cross-timezone replay parity.
+
+Architect handoff inputs (canonical channel pattern):
+
+1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
+2. `runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_*_requiredization_applicability*.md`
+3. `runtime/protocol-feedback/evidence-index/INDEX.md`
+
+Promotion guard:
+
+1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires executable closure tuple:
+   - same-lineage update/readiness/three-plane/full-scan convergence replay (`status/error_code` homomorphism),
+   - producer/applicability requiredization replay (positive + non-applicable + negative),
+   - strict context mismatch fail-fast replay,
+   - protocol-feedback spool/reconcile replay proof.
 
 ## 9) References
 

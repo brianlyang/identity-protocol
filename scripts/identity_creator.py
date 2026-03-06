@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 
 from actor_session_common import list_actor_bindings, load_actor_binding, load_actor_binding_store, resolve_actor_id
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
     collect_protocol_evidence,
     default_identity_home,
@@ -477,7 +478,7 @@ def _activate_identity(
         if rc != 0:
             raise RuntimeError("post-activation state consistency validation failed")
 
-        switch_dir = Path("/tmp/identity-activation-reports")
+        switch_dir = named_temp_root("identity-activation-reports")
         switch_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc)
         switch_report = switch_dir / f"identity-activation-switch-{identity_id}-{int(ts.timestamp())}.json"
@@ -1281,7 +1282,7 @@ def main() -> int:
     p_heal.add_argument("--canonical-root", default="")
     p_heal.add_argument("--apply", action="store_true", help="execute fixes; otherwise scan-only dry run")
     p_heal.add_argument("--destructive-replace", action="store_true")
-    p_heal.add_argument("--out-dir", default="/tmp/identity-heal-reports")
+    p_heal.add_argument("--out-dir", default=str(named_temp_root("identity-heal-reports")))
 
 
     args = ap.parse_args()
@@ -1325,7 +1326,13 @@ def main() -> int:
         receipt_path = (
             Path(args.pre_mutation_gate_receipt).expanduser().resolve()
             if str(args.pre_mutation_gate_receipt or "").strip()
-            else Path(f"/tmp/identity-pre-mutation-gate-init-{args.id}-{int(datetime.now(timezone.utc).timestamp())}.json")
+            else runtime_temp_file(
+                channel="pre-mutation-gate",
+                operation="init",
+                identity_id=args.id,
+                stem=f"identity-pre-mutation-gate-init-{args.id}-{int(datetime.now(timezone.utc).timestamp())}",
+                ext="json",
+            )
         )
         _write_json(
             receipt_path,
@@ -1395,18 +1402,62 @@ def main() -> int:
         if rc_guard != 0:
             return rc_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
-        stamp_artifact = f"/tmp/identity-response-stamp-{args.identity_id}.json"
-        stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json"
-        reply_first_line_blocker_receipt = (
-            f"/tmp/identity-reply-first-line-blocker-receipt-{args.identity_id}.json"
+        stamp_artifact = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-response-stamp-{args.identity_id}",
+                ext="json",
+            )
         )
-        send_time_reply_file = f"/tmp/identity-send-time-reply-{args.identity_id}.txt"
-        send_time_reply_gate_blocker_receipt = (
-            f"/tmp/identity-send-time-reply-gate-blocker-receipt-{args.identity_id}.json"
+        stamp_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-stamp-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
         )
-        execution_reply_coherence_blocker_receipt = (
-            f"/tmp/identity-execution-reply-coherence-blocker-receipt-{args.identity_id}.json"
+        reply_first_line_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-reply-first-line-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
         )
+        send_time_reply_file = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-send-time-reply-{args.identity_id}",
+                ext="txt",
+            )
+        )
+        send_time_reply_gate_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-send-time-reply-gate-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
+        )
+        execution_reply_coherence_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-execution-reply-coherence-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
+        )
+        vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+        capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
         try:
             _ = resolve_identity(
                 args.identity_id,
@@ -1891,7 +1942,7 @@ def main() -> int:
                 "--operation",
                 "validate",
                 "--out-root",
-                "/tmp/vibe-coding-feeding-packs",
+                vibe_pack_out_root,
             ],
             [
                 "python3",
@@ -1953,7 +2004,7 @@ def main() -> int:
                 "--operation",
                 "validate",
                 "--out-root",
-                "/tmp/capability-fit-matrices",
+                capability_fit_out_root,
             ],
             [
                 "python3",
@@ -2371,9 +2422,25 @@ def main() -> int:
             return rc_boundary
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         pre_mutation_gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        pre_mutation_reply_file = f"/tmp/identity-pre-mutation-reply-{args.identity_id}-{creator_run_id}.txt"
-        pre_mutation_send_time_blocker = (
-            f"/tmp/identity-pre-mutation-send-time-blocker-{args.identity_id}-{creator_run_id}.json"
+        pre_mutation_reply_file = str(
+            runtime_temp_file(
+                channel="pre-mutation",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=creator_run_id,
+                stem=f"identity-pre-mutation-reply-{args.identity_id}-{creator_run_id}",
+                ext="txt",
+            )
+        )
+        pre_mutation_send_time_blocker = str(
+            runtime_temp_file(
+                channel="pre-mutation",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=creator_run_id,
+                stem=f"identity-pre-mutation-send-time-blocker-{args.identity_id}-{creator_run_id}",
+                ext="json",
+            )
         )
         pre_mutation_compose_cmd = [
             "python3",
@@ -2432,7 +2499,14 @@ def main() -> int:
         pre_mutation_gate_receipt = (
             Path(args.pre_mutation_gate_receipt).expanduser().resolve()
             if str(args.pre_mutation_gate_receipt or "").strip()
-            else Path(f"/tmp/identity-pre-mutation-gate-update-{args.identity_id}-{creator_run_id}.json")
+            else runtime_temp_file(
+                channel="pre-mutation-gate",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=creator_run_id,
+                stem=f"identity-pre-mutation-gate-update-{args.identity_id}-{creator_run_id}",
+                ext="json",
+            )
         )
         _write_json(
             pre_mutation_gate_receipt,

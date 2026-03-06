@@ -33,6 +33,13 @@ STRICT_OPERATIONS = {
     "mutation",
 }
 
+OBSERVATION_OPERATIONS = {
+    "scan",
+    "three-plane",
+    "inspection",
+    "validate",
+}
+
 CONTRACT_KEYS = (
     "cross_workflow_evidence_schema_contract_v1",
     "cross_workflow_evidence_schema_contract",
@@ -133,8 +140,11 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(pack_path),
         "operation": args.operation,
+        "run_profile": "observation" if args.operation in OBSERVATION_OPERATIONS else "enforcement",
         "required_contract": False,
         "auto_required_signal": False,
+        "producer_readiness": False,
+        "requiredization_current_round_linked": False,
         "cross_workflow_schema_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "evidence_ref": "",
@@ -188,7 +198,28 @@ def main() -> int:
         identity_id=args.identity_id,
         contract=contract if isinstance(contract, dict) else {},
     )
+    payload["producer_readiness"] = evidence_path is not None
+    payload["requiredization_current_round_linked"] = (
+        any(
+            _nonempty(v)
+            for v in (
+                args.evidence,
+                args.run_id,
+                args.route_action,
+                args.quality_meta_state,
+                args.dedup_state,
+                args.expected_evidence_hash,
+            )
+        )
+        or evidence_path is not None
+    )
     if evidence_path is None:
+        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
+            payload["cross_workflow_schema_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["hash_consistency_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_evidence_source"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["cross_workflow_schema_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_EVIDENCE_SOURCE_MISSING
         payload["hash_consistency_status"] = STATUS_FAIL_REQUIRED
