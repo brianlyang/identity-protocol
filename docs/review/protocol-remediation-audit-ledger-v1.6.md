@@ -1226,7 +1226,7 @@ Row-level cross-check and explicit hook plan:
 | ASB16-RQ-018 | `PLANNED_ONLY` | dedup currently favors mtime/session semantics; required `earliest_claim_ts + stable_tiebreaker` winner logic absent | add `scripts/validate_v16_dedup_monotonicity.py`; wire winner receipt emission in creator and hard gate in readiness; aggregators consume canonical `winner_id`/`winner_reason` only | unchanged concurrent replay keeps identical `winner_id` tuple and `monotonicity_status=PASS_REQUIRED` |
 | ASB16-RQ-019 | `PARTIAL` | required schema fields declared in governance but not emitted as enforced cross-workflow receipt | add `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; enforce in creator/readiness and consume in three-plane/full-scan | `run_id/route_action/quality_meta_state/dedup_state/evidence_hash` always present and hash-stable |
 | ASB16-RQ-020 | `PARTIAL` | current activation checker allows broad path fallback; active-layout strictness missing | add `scripts/validate_v16_skill_path_integrity.py`; keep existing capability-activation checks as source but force single fail-close gate in creator/readiness/aggregators/e2e | any out-of-layout/missing skill path fails deterministically with canonical path-integrity code |
-| ASB16-RQ-021 | `PLANNED_ONLY` | no dedicated route endpoint <-> workflow publish-version pin validator and no publish-version proof emitter in current chain | phase order is mandatory: first land emitter (`scripts/emit_v16_route_version_pin_receipt.py`) for `route_endpoint/workflow_id/workflow_publish_version/pin_proof_ref`, then enforce `scripts/validate_v16_route_version_pinning.py`; optional CI/route metrics are supplemental only | pin proof required for pass; endpoint-version mismatch must fail-close with canonical pin error code |
+| ASB16-RQ-021 | `PLANNED_ONLY` | no dedicated route endpoint <-> workflow publish-version pin validator and no publish-version proof emitter in current chain | phase order is mandatory: first land emitter (`scripts/emit_route_version_pin_receipt.py`) for `route_endpoint/workflow_id/workflow_publish_version/pin_proof_ref`, then enforce `scripts/validate_route_version_pinning.py`; optional CI/route metrics are supplemental only | pin proof required for pass; endpoint-version mismatch must fail-close with canonical pin error code |
 
 Batch-6 five-link anchor lock (mandatory per row):
 
@@ -1265,16 +1265,24 @@ python3 scripts/validate_v16_skill_path_integrity.py \
   --operation readiness \
   --json-only
 
-python3 scripts/emit_v16_route_version_pin_receipt.py \
+python3 scripts/emit_route_version_pin_receipt.py \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
   --operation readiness \
+  --route-endpoint <ROUTE_ENDPOINT> \
+  --workflow-id <WORKFLOW_ID> \
+  --workflow-publish-version <WORKFLOW_PUBLISH_VERSION> \
+  --out <PIN_RECEIPT_PATH> \
   --json-only
 
-python3 scripts/validate_v16_route_version_pinning.py \
+python3 scripts/validate_route_version_pinning.py \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
   --operation readiness \
+  --receipt <PIN_RECEIPT_PATH> \
+  --expected-route-endpoint <ROUTE_ENDPOINT> \
+  --expected-workflow-id <WORKFLOW_ID> \
+  --expected-workflow-publish-version <WORKFLOW_PUBLISH_VERSION> \
   --json-only
 ```
 
@@ -1380,7 +1388,7 @@ Batch-6/7 revised execution order (post-audit hard sequence):
 2. Implement intake evidence core parser:
    - `validate_v16_intake_evidence_core.py` with `--mode intake_contract|promotion_gate`.
 3. Implement `RQ-022` taxonomy normalization with dual fields and namespace isolation.
-4. Implement `RQ-021` emitter (`emit_v16_route_version_pin_receipt.py`) before pinning gate.
+4. Implement `RQ-021` emitter (`emit_route_version_pin_receipt.py`) before pinning gate.
 5. Wire all seven new gates into coverage and aggregator payload extraction before any lock or promotion claim.
 
 ### FIX16-037 - write-boundary non-starvation hardening (`ASB16-RQ-028/031`)

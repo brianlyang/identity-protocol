@@ -1349,7 +1349,7 @@ Batch-6 strengthening matrix (explicit hook plan, mandatory):
 | ASB16-RQ-018 | `PLANNED_ONLY` | add `rq_018_dedup_monotonic_winner_contract_v1`; required fields: `run_id`, `earliest_claim_ts`, `stable_tiebreaker`, `winner_id`, `winner_reason`, `monotonicity_status` | new `scripts/validate_v16_dedup_monotonicity.py`; integrate dedup receipt production in `scripts/identity_creator.py` and enforce monotonicity in `scripts/release_readiness_check.py`; three-plane/full-scan consume `winner_id` tuple from canonical receipt, not local recomputation; e2e adds parallel-claim replay | keep `SPEC_READY/PENDING_INTAKE` until same-input parallel replay proves deterministic winner tuple across lanes |
 | ASB16-RQ-019 | `PARTIAL` | add `rq_019_cross_workflow_evidence_schema_contract_v1`; required fields: `run_id`, `route_action`, `quality_meta_state`, `dedup_state`, `evidence_hash`, `schema_version` | new `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; wire normalizer into `scripts/identity_creator.py` output path; enforce in readiness and consume in three-plane/full-scan; e2e includes hash-stability replay for unchanged payload | keep `SPEC_READY/PENDING_INTAKE` until cross-workflow schema is canonicalized and hash replay is deterministic |
 | ASB16-RQ-020 | `PARTIAL` | add `rq_020_skill_path_integrity_contract_v1`; required fields: `active_repo_root`, `active_runtime_root`, `layout_mode`, `path_integrity_status`, `path_integrity_error_code` | new `scripts/validate_v16_skill_path_integrity.py`; keep `scripts/validate_identity_capability_activation.py` as data source only; enforce single gate from readiness and consume same verdict in creator/three-plane/full-scan/e2e; reject path fallback outside active layout | keep `SPEC_READY/PENDING_INTAKE` until skill path checks are layout-anchored and fail-close on out-of-layout references |
-| ASB16-RQ-021 | `PLANNED_ONLY` | add `rq_021_route_workflow_version_pinning_contract_v1`; required fields: `route_endpoint`, `workflow_id`, `workflow_publish_version`, `pin_proof_ref`, `pin_status`, `pin_error_code` | phase order is mandatory: first land receipt emitter (`scripts/emit_v16_route_version_pin_receipt.py`) that outputs `route_endpoint/workflow_id/workflow_publish_version/pin_proof_ref`; then gate with `scripts/validate_v16_route_version_pinning.py`; optional inputs from `validate_identity_ci_enforcement.py` and `export_route_quality_metrics.py` are supplemental only | keep `SPEC_READY/PENDING_INTAKE` until emitter proof source exists and pin mismatch fail-close is replay-proven |
+| ASB16-RQ-021 | `PLANNED_ONLY` | add `rq_021_route_workflow_version_pinning_contract_v1`; required fields: `route_endpoint`, `workflow_id`, `workflow_publish_version`, `pin_proof_ref`, `pin_status`, `pin_error_code` | phase order is mandatory: first land receipt emitter (`scripts/emit_route_version_pin_receipt.py`) that outputs `route_endpoint/workflow_id/workflow_publish_version/pin_proof_ref`; then gate with `scripts/validate_route_version_pinning.py`; optional inputs from `validate_identity_ci_enforcement.py` and `export_route_quality_metrics.py` are supplemental only | keep `SPEC_READY/PENDING_INTAKE` until emitter proof source exists and pin mismatch fail-close is replay-proven |
 
 Batch-6 row-level five-link anchors (mandatory, non-optional):
 
@@ -1381,7 +1381,7 @@ Batch-6 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_021_route_workflow_version_pinning_contract_v1`
    - `runtime_ref`: route/workflow publish-version pin proof receipt
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-021`
-   - `validator_ref`: `scripts/validate_v16_route_version_pinning.py`
+   - `validator_ref`: `scripts/validate_route_version_pinning.py`
    - `acceptance_cmd`: pinned-positive + mismatch-negative replay set
 
 Batch-6 acceptance command set (normative target, activated after validator refs are implemented):
@@ -1594,16 +1594,7 @@ Machine hard-gate binding (required for lane consumption):
    - `report_three_plane_status`
    - `full_identity_protocol_scan`
    - `e2e_smoke_test`
-5. acceptance replay command (contract gate):
-
-```bash
-python3 scripts/validate_v16_prompt_bootstrap_contract_continuity.py \
-  --catalog <LOCAL_CATALOG> \
-  --identity-id <ID> \
-  --operation validate \
-  --max-age-days 30 \
-  --json-only
-```
+5. acceptance replay hook is reserved as planned validator binding (activate only after script implementation lands in `scripts/` and command-contract checker can resolve it).
 
 Five-link closure requirements:
 

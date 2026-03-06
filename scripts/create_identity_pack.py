@@ -758,6 +758,22 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
         ],
         "validator": "scripts/export_route_quality_metrics.py",
     }
+    task["route_workflow_version_pinning_contract_v1"] = {
+        "required": True,
+        "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
+        "validator": "scripts/validate_route_version_pinning.py",
+        "proof_receipt_path_pattern": (
+            f"identity/runtime/local/{identity_id}/reports/{identity_id}-route-version-pin-receipt*.json"
+        ),
+        "required_fields": [
+            "route_endpoint",
+            "workflow_id",
+            "workflow_publish_version",
+            "pin_proof_ref",
+        ],
+        "expected_bindings": [],
+        "fail_action": "block_merge_and_reenter_route_workflow_version_alignment",
+    }
     task["learning_verification_contract"] = {
         "run_id_required": True,
         "reasoning_trace_required": True,

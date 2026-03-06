@@ -220,8 +220,8 @@ asb16-rq-021:
   kernel_contract_id: rq_021_route_workflow_version_pinning_contract_v1
   kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_021_route_workflow_version_pinning_contract_v1
   validator_ids:
-    - scripts/emit_v16_route_version_pin_receipt.py
-    - scripts/validate_v16_route_version_pinning.py
+    - scripts/emit_route_version_pin_receipt.py
+    - scripts/validate_route_version_pinning.py
   gate_surfaces:
     - creator
     - readiness
