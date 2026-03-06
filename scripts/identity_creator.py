@@ -770,6 +770,24 @@ def _heal_identity(
         _write_heal_report(report, out_dir)
         return rc
 
+    rc = _step(
+        "repair_batch67_contract_backfill",
+        [
+            "python3",
+            "scripts/repair_batch67_contract_backfill.py",
+            "--catalog",
+            str(local_catalog),
+            "--identity-id",
+            identity_id,
+            "--apply",
+            "--json-only",
+        ],
+    )
+    if rc != 0:
+        report["result"] = "FAIL_BATCH67_CONTRACT_BACKFILL"
+        _write_heal_report(report, out_dir)
+        return rc
+
     # Normalize duplicate runtime directories to prevent scope validator hard-fail.
     try:
         resolved_after = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
