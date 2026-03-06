@@ -1110,9 +1110,9 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
-                "batch67_replay_archive": [
+                "replay_archive_contract": [
                     "python3",
-                    "scripts/validate_batch67_replay_archive.py",
+                    "scripts/validate_replay_archive_contract.py",
                     "--catalog",
                     str(catalog),
                     "--identity-id",
@@ -1530,10 +1530,10 @@ def main() -> int:
                     ):
                         if k in spath_doc:
                             check_payload[k] = spath_doc.get(k)
-                if name == "batch67_replay_archive":
+                if name == "replay_archive_contract":
                     replay_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
-                        "batch67_replay_archive_status",
+                        "replay_archive_contract_status",
                         "error_code",
                         "replay_case_total",
                         "replay_case_passed",

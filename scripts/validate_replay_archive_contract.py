@@ -17,9 +17,9 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 
-ERR_EXEC = "IP-B67-REPLAY-001"
-ERR_EXPECTATION = "IP-B67-REPLAY-002"
-ERR_OUTPUT_PARSE = "IP-B67-REPLAY-003"
+ERR_EXEC = "IP-RARCH-001"
+ERR_EXPECTATION = "IP-RARCH-002"
+ERR_OUTPUT_PARSE = "IP-RARCH-003"
 
 
 @dataclass
@@ -158,7 +158,7 @@ def _build_cases(
     _write_json(
         bundle_pos,
         {
-            "cross_verification_bundle_id": "batch67-task14-bundle-pos",
+            "cross_verification_bundle_id": "replay-task14-bundle-pos",
             "source_url_set": [
                 "https://example.com/t1",
                 "https://example.com/t2",
@@ -176,7 +176,7 @@ def _build_cases(
     _write_json(
         bundle_neg_track,
         {
-            "cross_verification_bundle_id": "batch67-task14-bundle-neg-track",
+            "cross_verification_bundle_id": "replay-task14-bundle-neg-track",
             "source_url_set": ["https://example.com/t1"],
             "reference_timestamp_utc": "2026-03-06T12:00:00Z",
             "conflict_reconciliation_note": "missing_t4",
@@ -188,7 +188,7 @@ def _build_cases(
     _write_json(
         bundle_neg_meta,
         {
-            "cross_verification_bundle_id": "batch67-task14-bundle-neg-meta",
+            "cross_verification_bundle_id": "replay-task14-bundle-neg-meta",
             "source_url_set": [
                 "https://example.com/t1",
                 "https://example.com/t2",
@@ -208,19 +208,19 @@ def _build_cases(
         {
             "claims": [
                 {
-                    "run_id": "batch67-task14-run-pos",
+                    "run_id": "replay-task14-run-pos",
                     "earliest_claim_ts": "2026-03-06T10:00:00Z",
                     "stable_tiebreaker": "a",
                     "winner_id": "winner-a",
                 },
                 {
-                    "run_id": "batch67-task14-run-pos",
+                    "run_id": "replay-task14-run-pos",
                     "earliest_claim_ts": "2026-03-06T10:01:00Z",
                     "stable_tiebreaker": "b",
                     "winner_id": "winner-b",
                 },
                 {
-                    "run_id": "batch67-task14-run-pos",
+                    "run_id": "replay-task14-run-pos",
                     "earliest_claim_ts": "2026-03-06T10:02:00Z",
                     "stable_tiebreaker": "c",
                     "winner_id": "winner-c",
@@ -233,13 +233,13 @@ def _build_cases(
         {
             "claims": [
                 {
-                    "run_id": "batch67-task14-run-neg",
+                    "run_id": "replay-task14-run-neg",
                     "earliest_claim_ts": "2026-03-06T10:00:00Z",
                     "stable_tiebreaker": "a",
                     "winner_id": "winner-a",
                 },
                 {
-                    "run_id": "batch67-task14-run-neg",
+                    "run_id": "replay-task14-run-neg",
                     "earliest_claim_ts": "2026-03-06T10:00:00Z",
                     "stable_tiebreaker": "a",
                     "winner_id": "winner-b",
@@ -251,7 +251,7 @@ def _build_cases(
     _write_json(
         xwf_pos,
         {
-            "run_id": "batch67-task14-xwf-pos",
+            "run_id": "replay-task14-xwf-pos",
             "route_action": "route:pinning-check",
             "quality_meta_state": "quality_ok",
             "dedup_state": "dedup_ok",
@@ -261,7 +261,7 @@ def _build_cases(
     _write_json(
         xwf_neg,
         {
-            "run_id": "batch67-task14-xwf-neg",
+            "run_id": "replay-task14-xwf-neg",
             "route_action": "route:pinning-check",
             "quality_meta_state": "quality_ok",
             "schema_version": "v1",
@@ -394,7 +394,7 @@ def _build_cases(
                 "--claims",
                 str(dedup_pos),
                 "--run-id",
-                "batch67-task14-run-pos",
+                "replay-task14-run-pos",
                 "--parallel-claims",
                 "3",
                 "--operation",
@@ -418,7 +418,7 @@ def _build_cases(
                 "--claims",
                 str(dedup_neg),
                 "--run-id",
-                "batch67-task14-run-neg",
+                "replay-task14-run-neg",
                 "--parallel-claims",
                 "2",
                 "--operation",
@@ -535,13 +535,13 @@ def _build_cases(
                 "--operation",
                 operation,
                 "--route-endpoint",
-                "/runtime/batch67/task14",
+                "/runtime/replay/task14",
                 "--workflow-id",
                 "wf-task14",
                 "--workflow-publish-version",
                 "v2026.03.06",
                 "--pin-proof-ref",
-                "proof://batch67/task14",
+                "proof://replay/task14",
                 "--out",
                 str(pin_receipt),
                 "--json-only",
@@ -565,7 +565,7 @@ def _build_cases(
                 "--receipt",
                 str(pin_receipt),
                 "--expected-route-endpoint",
-                "/runtime/batch67/task14",
+                "/runtime/replay/task14",
                 "--expected-workflow-id",
                 "wf-task14",
                 "--expected-workflow-publish-version",
@@ -591,7 +591,7 @@ def _build_cases(
                 "--receipt",
                 str(pin_receipt),
                 "--expected-route-endpoint",
-                "/runtime/batch67/task14-mismatch",
+                "/runtime/replay/task14-mismatch",
                 "--expected-workflow-id",
                 "wf-task14",
                 "--expected-workflow-publish-version",
@@ -669,7 +669,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "operation": args.operation,
-            "batch67_replay_archive_status": STATUS_FAIL_REQUIRED,
+            "replay_archive_contract_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_EXEC,
             "stale_reasons": ["catalog_missing"],
             "cases": [],
@@ -683,7 +683,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "operation": args.operation,
-            "batch67_replay_archive_status": STATUS_FAIL_REQUIRED,
+            "replay_archive_contract_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_EXEC,
             "stale_reasons": ["identity_not_found_in_catalog"],
             "cases": [],
@@ -701,7 +701,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "operation": args.operation,
-            "batch67_replay_archive_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "replay_archive_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
             "error_code": "",
             "stale_reasons": ["fixture_profile_scope"],
             "replay_case_total": 0,
@@ -722,7 +722,7 @@ def main() -> int:
         tmp_root = Path(args.tmp_root).expanduser().resolve()
         tmp_root.mkdir(parents=True, exist_ok=True)
     else:
-        tmp_root = Path(tempfile.mkdtemp(prefix="batch67-replay-"))
+        tmp_root = Path(tempfile.mkdtemp(prefix="replay-archive-"))
 
     python_bin = sys.executable or "python3"
     cases = _build_cases(
@@ -812,7 +812,7 @@ def main() -> int:
         "replay_case_total": len(case_rows),
         "replay_case_passed": pass_count,
         "replay_case_failed": fail_count,
-        "batch67_replay_archive_status": STATUS_PASS_REQUIRED if overall_ok else STATUS_FAIL_REQUIRED,
+        "replay_archive_contract_status": STATUS_PASS_REQUIRED if overall_ok else STATUS_FAIL_REQUIRED,
         "error_code": "" if overall_ok else ERR_EXPECTATION,
         "stale_reasons": [] if overall_ok else [f"failed_case:{cid}" for cid in failed_cases],
         "cases": case_rows,

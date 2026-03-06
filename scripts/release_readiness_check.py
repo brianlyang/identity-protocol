@@ -983,7 +983,7 @@ def main() -> int:
         ],
         [
             "python3",
-            "scripts/validate_batch67_replay_archive.py",
+            "scripts/validate_replay_archive_contract.py",
             "--catalog",
             catalog,
             "--identity-id",

@@ -519,7 +519,7 @@ for ID in $IDS; do
     --json-only
 
   echo "[23.458/30][$ID] validate Batch-6/7 deterministic replay archive gate (RQ-017..022/030)"
-  python3 scripts/validate_batch67_replay_archive.py \
+  python3 scripts/validate_replay_archive_contract.py \
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --operation e2e \

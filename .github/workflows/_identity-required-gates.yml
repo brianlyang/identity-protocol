@@ -255,7 +255,7 @@ jobs:
             python3 scripts/validate_dedup_monotonicity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_v16_cross_workflow_schema.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_v16_skill_path_integrity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
-            python3 scripts/validate_batch67_replay_archive.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_replay_archive_contract.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
             if [ "${IS_FIXTURE_ID}" = "1" ]; then

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from create_identity_pack import _ensure_batch67_contracts
+from create_identity_pack import _ensure_intake_p1_contracts
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -14,7 +14,7 @@ STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 
-REQUIRED_BATCH67_KEYS = (
+REQUIRED_INTAKE_KEYS = (
     "multi_track_cross_verification_contract_v1",
     "intake_evidence_quorum_contract_v1",
     "fallback_taxonomy_normalization_contract_v1",
@@ -51,7 +51,7 @@ def _legacy_path_drift_fields(task: dict[str, Any], identity_id: str) -> list[st
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Backfill Batch-6/7 contracts into CURRENT_TASK.json.")
+    ap = argparse.ArgumentParser(description="Backfill intake contract set into CURRENT_TASK.json.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--apply", action="store_true", help="persist updates to CURRENT_TASK.json")
@@ -71,11 +71,11 @@ def main() -> int:
         return 1
 
     before = json.loads(json.dumps(task_doc))
-    missing_before = [k for k in REQUIRED_BATCH67_KEYS if not isinstance(task_doc.get(k), dict)]
+    missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
-    updated = _ensure_batch67_contracts(task_doc, args.identity_id)
-    missing_after = [k for k in REQUIRED_BATCH67_KEYS if not isinstance(updated.get(k), dict)]
+    updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
+    missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     legacy_drift_after = _legacy_path_drift_fields(updated, args.identity_id)
 
     changed = before != updated
@@ -86,11 +86,11 @@ def main() -> int:
 
     if missing_after:
         status = STATUS_FAIL_REQUIRED
-        error_code = "IP-B67-BACKFILL-001"
+        error_code = "IP-CBKF-001"
         stale_reasons = ["required_contract_keys_missing_after_backfill"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
-        error_code = "IP-B67-BACKFILL-002"
+        error_code = "IP-CBKF-002"
         stale_reasons = ["legacy_contract_path_drift_after_backfill"]
     elif changed:
         status = STATUS_PASS_REQUIRED if applied else STATUS_SKIPPED_NOT_REQUIRED
@@ -106,7 +106,7 @@ def main() -> int:
         "catalog_path": str(catalog),
         "pack_path": str(pack_path),
         "task_path": str(task_path),
-        "batch67_contract_backfill_status": status,
+        "contract_backfill_status": status,
         "error_code": error_code,
         "changed": changed,
         "applied": applied,
@@ -114,7 +114,7 @@ def main() -> int:
         "missing_contract_keys_after": missing_after,
         "legacy_path_drift_fields_before": legacy_drift_before,
         "legacy_path_drift_fields_after": legacy_drift_after,
-        "required_contract_keys": list(REQUIRED_BATCH67_KEYS),
+        "required_contract_keys": list(REQUIRED_INTAKE_KEYS),
         "stale_reasons": stale_reasons,
         "evidence_ref": str(task_path),
     }

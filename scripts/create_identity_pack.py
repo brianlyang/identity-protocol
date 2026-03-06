@@ -385,7 +385,46 @@ def _protocol_feedback_sidecar_contract_skeleton() -> dict:
     }
 
 
-def _batch67_contract_defaults(identity_id: str) -> dict[str, dict]:
+def _gated_switch_guard_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "enforcement_validator": "scripts/validate_gated_switch_guard.py",
+        "safe_switch_states": ["WAITING_INPUT", "DONE_WAITING_INPUT", "IDLE"],
+        "blocked_switch_states": ["RUNNING", "TOOL_CALLING", "STREAMING"],
+        "handshake_timeout_seconds": 90,
+        "mandatory_switch_chain": [
+            "switch_request",
+            "pre_switch_gate",
+            "switch_apply",
+            "switch_ack",
+            "ack_verify",
+            "dispatch",
+        ],
+    }
+
+
+def _protocol_lane_activation_headstamp_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "enforcement_validator": "scripts/validate_protocol_lane_headstamp_continuity.py",
+        "required_lane": "protocol",
+        "route_non_starvation": True,
+        "headstamp_dual_context_required": True,
+        "required_fields": [
+            "requested_lane",
+            "previous_lane",
+            "resolved_lane",
+            "lane_activation_status",
+            "lane_activation_error_code",
+            "route_source_ref",
+            "lane_activation_evidence_ref",
+            "headstamp_continuity_status",
+            "headstamp_error_code",
+        ],
+    }
+
+
+def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
     return {
         "multi_track_cross_verification_contract_v1": {
             "required": True,
@@ -504,7 +543,7 @@ def _batch67_contract_defaults(identity_id: str) -> dict[str, dict]:
     }
 
 
-def _normalize_batch67_legacy_contract_paths(task: dict, identity_id: str) -> dict:
+def _normalize_intake_p1_legacy_contract_paths(task: dict, identity_id: str) -> dict:
     def _legacy_prefix() -> str:
         return f"identity/runtime/local/{identity_id}/reports/"
 
@@ -531,15 +570,15 @@ def _normalize_batch67_legacy_contract_paths(task: dict, identity_id: str) -> di
     return task
 
 
-def _ensure_batch67_contracts(task: dict, identity_id: str) -> dict:
-    defaults = _batch67_contract_defaults(identity_id)
+def _ensure_intake_p1_contracts(task: dict, identity_id: str) -> dict:
+    defaults = _intake_p1_contract_defaults(identity_id)
     for key, default in defaults.items():
         cur = task.get(key)
         if not isinstance(cur, dict):
             task[key] = default
             continue
         task[key] = _deep_merge_defaults(default, cur)
-    return _normalize_batch67_legacy_contract_paths(task, identity_id)
+    return _normalize_intake_p1_legacy_contract_paths(task, identity_id)
 
 
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
@@ -551,6 +590,8 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "instance_protocol_split_receipt_contract_v1": _instance_protocol_split_receipt_contract_skeleton(),
         "protocol_feedback_canonical_reply_channel_contract_v1": _protocol_feedback_reply_channel_contract_skeleton(),
         "protocol_feedback_sidecar_contract_v1": _protocol_feedback_sidecar_contract_skeleton(),
+        "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
+        "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)
@@ -558,7 +599,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
             task[key] = default
             continue
         task[key] = _deep_merge_defaults(default, cur)
-    return _ensure_batch67_contracts(task, identity_id)
+    return _ensure_intake_p1_contracts(task, identity_id)
 
 
 def _default_protocol_review_sample(identity_id: str) -> dict:
@@ -775,7 +816,9 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_dedup_monotonicity.py",
         "scripts/validate_v16_cross_workflow_schema.py",
         "scripts/validate_v16_skill_path_integrity.py",
-        "scripts/validate_batch67_replay_archive.py",
+        "scripts/validate_replay_archive_contract.py",
+        "scripts/validate_gated_switch_guard.py",
+        "scripts/validate_protocol_lane_headstamp_continuity.py",
     ]
 
 
@@ -1255,7 +1298,7 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "handoff_logs_max_age_days": 7,
             "route_metrics_max_age_days": 7,
         },
-        "required_validator_set_label": "v1.2-required-batch67",
+        "required_validator_set_label": "v1.2-required-intake-p1",
         "candidate_validators_v1_2": [
             "scripts/validate_identity_feedback_freshness.py",
             "scripts/validate_identity_feedback_promotion.py",

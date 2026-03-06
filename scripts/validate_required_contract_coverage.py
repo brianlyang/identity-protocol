@@ -45,6 +45,8 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_dedup_monotonicity.py": "monotonicity_status",
     "scripts/validate_v16_cross_workflow_schema.py": "cross_workflow_schema_status",
     "scripts/validate_v16_skill_path_integrity.py": "path_integrity_status",
+    "scripts/validate_gated_switch_guard.py": "gated_switch_guard_status",
+    "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "semantic_routing_guard",
@@ -174,7 +176,48 @@ TARGETS = (
         validator_script="scripts/validate_v16_skill_path_integrity.py",
         validator_args=("--json-only",),
     ),
+    ContractTarget(
+        name="gated_switch_guard",
+        contract_keys=(
+            "gated_switch_guard_contract_v1",
+            "gated_switch_guard_contract",
+        ),
+        validator_script="scripts/validate_gated_switch_guard.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="protocol_lane_headstamp_continuity",
+        contract_keys=(
+            "protocol_lane_activation_headstamp_contract_v1",
+            "protocol_lane_activation_headstamp_contract",
+        ),
+        validator_script="scripts/validate_protocol_lane_headstamp_continuity.py",
+        validator_args=("--json-only",),
+    ),
 )
+
+
+def _resolve_contract_for_target(task: dict[str, Any], target: ContractTarget) -> tuple[dict[str, Any], str]:
+    for key in target.contract_keys:
+        raw = task.get(key)
+        if isinstance(raw, dict):
+            return raw, key
+
+    if target.name == "gated_switch_guard":
+        for key, raw in task.items():
+            if not isinstance(raw, dict):
+                continue
+            token = str(key or "").strip().lower()
+            if "gated_switch" in token and "contract" in token:
+                return raw, str(key)
+    if target.name == "protocol_lane_headstamp_continuity":
+        for key, raw in task.items():
+            if not isinstance(raw, dict):
+                continue
+            token = str(key or "").strip().lower()
+            if "protocol_lane" in token and "headstamp" in token and "contract" in token:
+                return raw, str(key)
+    return {}, target.contract_keys[0]
 
 
 def _extract_reason(out: str, err: str, default_reason: str) -> str:
@@ -253,6 +296,8 @@ def _run_validator(
         "scripts/validate_dedup_monotonicity.py",
         "scripts/validate_v16_cross_workflow_schema.py",
         "scripts/validate_v16_skill_path_integrity.py",
+        "scripts/validate_gated_switch_guard.py",
+        "scripts/validate_protocol_lane_headstamp_continuity.py",
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
@@ -383,16 +428,7 @@ def main() -> int:
         coverage_target_set = "instance_targets"
 
     for target in TARGETS:
-        contract: dict[str, Any] = {}
-        contract_key_used = ""
-        for key in target.contract_keys:
-            raw = task.get(key)
-            if isinstance(raw, dict):
-                contract = raw
-                contract_key_used = key
-                break
-        if not contract_key_used:
-            contract_key_used = target.contract_keys[0]
+        contract, contract_key_used = _resolve_contract_for_target(task, target)
         required = contract_required(contract)
 
         report_pattern = str(contract.get("report_path_pattern", "")).strip()

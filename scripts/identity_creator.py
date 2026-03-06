@@ -771,10 +771,10 @@ def _heal_identity(
         return rc
 
     rc = _step(
-        "repair_batch67_contract_backfill",
+        "repair_contract_backfill",
         [
             "python3",
-            "scripts/repair_batch67_contract_backfill.py",
+            "scripts/repair_contract_backfill.py",
             "--catalog",
             str(local_catalog),
             "--identity-id",
@@ -784,7 +784,7 @@ def _heal_identity(
         ],
     )
     if rc != 0:
-        report["result"] = "FAIL_BATCH67_CONTRACT_BACKFILL"
+        report["result"] = "FAIL_CONTRACT_BACKFILL"
         _write_heal_report(report, out_dir)
         return rc
 
@@ -1809,7 +1809,7 @@ def main() -> int:
             ],
             [
                 "python3",
-                "scripts/validate_batch67_replay_archive.py",
+                "scripts/validate_replay_archive_contract.py",
                 "--catalog",
                 args.catalog,
                 "--identity-id",
@@ -2714,7 +2714,7 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] discovery requiredization validation failed; update blocked")
             return rc
-        batch67_update_gates: list[list[str]] = [
+        intake_update_gates: list[list[str]] = [
             [
                 "python3",
                 "scripts/validate_v16_cross_verification_tracks.py",
@@ -2794,7 +2794,7 @@ def main() -> int:
             ],
             [
                 "python3",
-                "scripts/validate_batch67_replay_archive.py",
+                "scripts/validate_replay_archive_contract.py",
                 "--catalog",
                 args.catalog,
                 "--identity-id",
@@ -2804,7 +2804,7 @@ def main() -> int:
                 "--json-only",
             ],
         ]
-        for gate_cmd in batch67_update_gates:
+        for gate_cmd in intake_update_gates:
             rc_gate = _run(gate_cmd)
             if rc_gate != 0:
                 print(f"[FAIL] batch6/7 gate failed during update: {gate_cmd[1]}")
