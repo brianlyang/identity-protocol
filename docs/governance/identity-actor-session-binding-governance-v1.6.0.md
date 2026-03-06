@@ -1085,6 +1085,43 @@ Batch-4 strengthening matrix:
 | ASB16-RQ-007 | `PARTIAL` | strengthen `rq_007_cross_cwd_absolute_input_contract_v1`; add cross-cwd comparator (`protocol-root` vs `/tmp`) for readiness/freshness/baseline/alignment chains; enforce absolute `--repo-catalog` for non-root replay with stable `IP-CWD-004` semantics | same payload under protocol-root and `/tmp` must preserve required verdict fields; non-root relative-catalog path must fail-close deterministically | keep `SPEC_READY/PENDING_INTAKE` until root/tmp parity + negative replay archive are both complete |
 | ASB16-RQ-008 | `PLANNED_ONLY` | add `rq_008_docs_bridge_consistency_contract_v1`; implement governance/review contradiction checker with deterministic tuple sorting and stable anchor refs (`bridge_consistency_status`, `contradiction_pairs`, `governance_anchor_refs`, `review_anchor_refs`) | unchanged docs must produce identical contradiction tuple ordering and identical anchor refs across reruns | keep `SPEC_READY/PENDING_INTAKE` until checker implementation exists and contradiction replay is deterministic |
 
+Batch-4 row-level five-link anchors (mandatory, non-optional):
+
+1. `ASB16-RQ-029`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_029_semantic_single_source_convergence_contract_v1`
+   - `runtime_ref`: canonical semantic receipt consumption in `report_three_plane_status.py` + `full_identity_protocol_scan.py`
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-029`
+   - `validator_ref`: `scripts/validate_semantic_routing_guard.py` + `scripts/validate_v16_semantic_convergence.py`
+   - `acceptance_cmd`: convergence replay command set for update/three-plane/full-scan same-lineage artifacts
+   - required convergence comparator outputs: `mismatch_count`, `lineage_ref`, `semantic_convergence_status`, `semantic_convergence_error_code`
+2. `ASB16-RQ-031`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_031_prompt_import_executable_coupling_contract_v1`
+   - `runtime_ref`: strict-lane explicit actor gate in creator/readiness/e2e chains
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-031`
+   - `validator_ref`: `scripts/validate_v16_prompt_kernel_executable_coupling.py`
+   - `acceptance_cmd`: prompt-import executable-coupling replay command set with strict `--actor-id`
+   - required compile/runtime hard-gate metadata: `kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest`
+   - canonical fail-close codes for this row: `IP-PROMPT-CONTRACT-001` and `IP-ACTOR-CTX-001`
+3. `ASB16-RQ-032`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_032_headstamp_pre_send_hard_gate_contract_v1`
+   - `runtime_ref`: unified pre-send validator shared by governed + direct/manual outbound paths
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-032`
+   - `validator_ref`: `scripts/validate_send_time_reply_gate.py` + `scripts/validate_reply_identity_context_first_line.py` + `scripts/validate_v16_headstamp_error_family_convergence.py`
+   - `acceptance_cmd`: send-time and compose-path negative replay command set
+   - canonical migration rule: `IP-HDSTAMP-*` is v1.6 canonical family; `IP-ASB-STAMP-SESSION-*` is compatibility alias only and cannot be final classification in promotion-grade receipts
+4. `ASB16-RQ-007`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_007_cross_cwd_absolute_input_contract_v1`
+   - `runtime_ref`: readiness/freshness/baseline/alignment full-chain consumption (not three-plane only)
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-007`
+   - `validator_ref`: `scripts/validate_v16_cross_cwd_input_contract.py`
+   - `acceptance_cmd`: protocol-root vs `/tmp` parity replay + non-root relative-catalog fail-close replay
+5. `ASB16-RQ-008`:
+   - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_008_docs_bridge_consistency_contract_v1`
+   - `runtime_ref`: governance/review contradiction tuples consumed by release/readiness/full-scan reporting surfaces
+   - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-008`
+   - `validator_ref`: `scripts/validate_v16_docs_bridge_consistency.py`
+   - `acceptance_cmd`: unchanged-doc deterministic contradiction replay command set
+
 Batch-4 mandatory interpretation guard:
 
 1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.

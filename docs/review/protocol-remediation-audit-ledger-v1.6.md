@@ -1005,6 +1005,28 @@ Strengthening outcomes required by this fix:
    - command-contract and SSOT checks exist, but contradiction checker is missing;
    - governance-vs-review contradiction tuples and anchor refs must be machine-emitted with deterministic ordering.
 
+Hard-tightening addendum (audit-locked, must hold for closure):
+
+1. `RQ-032` error-family convergence hard rule:
+   - canonical v1.6 runtime family is `IP-HDSTAMP-001/002/003`;
+   - `IP-ASB-STAMP-SESSION-*` may exist only as compatibility alias during migration and cannot be final promotion-grade classification.
+2. `RQ-029` convergence comparator minimum outputs:
+   - `mismatch_count`, `lineage_ref`, `semantic_convergence_status`, `semantic_convergence_error_code` are mandatory fields.
+3. `RQ-031` executable-coupling + actor-explicit hard gate:
+   - canonical fail-close codes `IP-PROMPT-CONTRACT-001` and `IP-ACTOR-CTX-001` must be machine-emitted where applicable;
+   - compile/runtime hard-gate metadata is mandatory: `kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest`.
+4. `RQ-007` must be full-chain, not local patch:
+   - cross-cwd invariance must be validated across readiness/freshness/baseline/alignment in addition to three-plane.
+5. `RQ-008` contradiction checker remains required:
+   - absence of governance/review contradiction checker keeps this row in `PLANNED_ONLY` and blocks promotion.
+
+Batch-4 five-link anchor lock (mandatory per row):
+
+1. Required anchor tuple for each row is fixed as:
+   - `kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance_cmd`.
+2. Missing any element in the tuple keeps the row at `ACCEPT_WITH_FIX` and non-promotional.
+3. `FIX16-033` summary row, detail section, and decision-log row must remain same-batch and same-status synchronized.
+
 Homomorphism assertions (mandatory acceptance predicates):
 
 1. `RQ-029`: same lineage input must return identical semantic verdict tuple across update/three-plane/full-scan; mismatch must deterministically map to `IP-SEM-CONV-001`.
@@ -1057,7 +1079,7 @@ Promotion guard (hard):
 | FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
 | FIX16-031 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T00:00:00Z | Batch-2A (`ASB16-RQ-006..010`) strengthening normalized with naming split and homomorphism assertions; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending kernel/script/mapping closure per governance `8.6` |
 | FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T08:30:00Z | Batch-3B (`ASB16-RQ-024..028`) strengthening normalized: RQ-024 error-code semantic deconflict + apply-coverage hard-close default-on requirement; kernel-first source/mapping/prompt-derivation/write-boundary cluster remains `ACCEPT_WITH_FIX` only and non-promotional pending executable closure per governance `8.7` |
-| FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T12:10:00Z | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalized with `T1..T4` evidence guard and row-level homomorphism predicates; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending canonical error-family/mapping/cross-cwd/docs-bridge executable closure per governance `8.8` |
+| FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T12:10:00Z | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalized with `T1..T4` evidence guard, row-level homomorphism predicates, and hard-tightening addendum (`RQ-032` canonical `IP-HDSTAMP-*`, `RQ-029` convergence comparator outputs, `RQ-031` compile/runtime metadata + actor-explicit fail-close, `RQ-007` full-chain replay, `RQ-008` checker required); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.8` |
 
 ---
 
