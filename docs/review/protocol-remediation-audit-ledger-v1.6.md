@@ -77,7 +77,7 @@ Carry-over evidence:
 | FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | b2c99fd | SPEC_READY | PENDING_INTAKE |
 | FIX16-028 | 2026-03-05 | protocol | full-repo deep-scan lock inventory (`ASB16-RQ-001..032`): kernel/script lock-state census + architect independent rescan protocol | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | 7e7481d | SPEC_READY | PENDING_INTAKE |
-| FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 0527d4e | SPEC_READY | PENDING_INTAKE |
+| FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 031e9ba | SPEC_READY | PENDING_INTAKE |
 
 ---
 
