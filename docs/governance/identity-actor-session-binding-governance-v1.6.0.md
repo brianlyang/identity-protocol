@@ -1424,7 +1424,7 @@ Batch-7 strengthening matrix (explicit hook plan, mandatory):
 
 | Requirement ID | Current anchor_state | Kernel contract + mandatory fields | Concrete script hook plan (must all be wired) | Promotion guard |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-022 | `PARTIAL` | add `rq_022_fallback_taxonomy_normalization_contract_v1`; required fields: `fallback_reason_raw`, `fallback_taxonomy_class`, `taxonomy_version`, `normalization_status`, `normalization_error_code` | new `scripts/validate_v16_fallback_taxonomy_normalization.py`; add normalization stage at `scripts/response_stamp_common.py` output boundary; **namespace separation is mandatory**: fallback taxonomy fields must not overwrite existing blocker taxonomy (`auth_login_required` etc.); enforce in `scripts/release_readiness_check.py`; consume same normalized class in `report_three_plane_status.py`, `full_identity_protocol_scan.py`, and `e2e_smoke_test.sh` | keep `SPEC_READY/PENDING_INTAKE` until all fallback reasons deterministically map to governed enum (`data_missing/model_weak_signal/transport_error/policy_blocked`) without altering blocker taxonomy chain |
+| ASB16-RQ-022 | `PARTIAL` | add `rq_022_fallback_taxonomy_normalization_contract_v1`; required fields: `fallback_reason_raw`, `fallback_taxonomy_class`, `taxonomy_version`, `normalization_status`, `normalization_error_code` | new `scripts/validate_fallback_taxonomy_normalization.py`; add normalization stage at `scripts/response_stamp_common.py` output boundary; **namespace separation is mandatory**: fallback taxonomy fields must not overwrite existing blocker taxonomy (`auth_login_required` etc.); enforce in `scripts/release_readiness_check.py`; consume same normalized class in `report_three_plane_status.py`, `full_identity_protocol_scan.py`, and `e2e_smoke_test.sh` | keep `SPEC_READY/PENDING_INTAKE` until all fallback reasons deterministically map to governed enum (`data_missing/model_weak_signal/transport_error/policy_blocked`) without altering blocker taxonomy chain |
 | ASB16-RQ-030 | `PARTIAL` | add `rq_030_intake_evidence_quorum_contract_v1`; required fields: `t1_roundtable_status`, `t2_vendor_status`, `t3_openai_context_status`, `t4_protocol_spec_status`, `cross_verification_bundle_id`, `source_url_set`, `reference_timestamp_utc`, `conflict_reconciliation_note` | canonical parser must reuse `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` may exist only as delegated mode entry; call chain: `identity_creator` preflight -> readiness hard gate -> three-plane/full-scan promotion gate -> e2e negative replay with missing track/metadata; fail-close must be single entrypoint (no checklist bypass) | keep `SPEC_READY/PENDING_INTAKE` until four-track+four-metadata quorum is automated as promotion blocker across all required lanes |
 
 Batch-7 row-level five-link anchors (mandatory, non-optional):
@@ -1433,7 +1433,7 @@ Batch-7 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_022_fallback_taxonomy_normalization_contract_v1`
    - `runtime_ref`: normalized fallback class emission at response stamp boundary
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-022`
-   - `validator_ref`: `scripts/validate_v16_fallback_taxonomy_normalization.py` (must emit `fallback_reason_raw + fallback_taxonomy_class`, never overwrite blocker taxonomy fields)
+   - `validator_ref`: `scripts/validate_fallback_taxonomy_normalization.py` (must emit `fallback_reason_raw + fallback_taxonomy_class`, never overwrite blocker taxonomy fields)
    - `acceptance_cmd`: taxonomy normalization replay (`positive` mappable set + `negative` unmappable set)
 2. `ASB16-RQ-030`
    - `kernel_ref`: `identity/protocol/IDENTITY_PROTOCOL.md#rq_030_intake_evidence_quorum_contract_v1`
@@ -1572,6 +1572,38 @@ Continuous-update requirements (non-optional):
    - `conflict_reconciliation_note`
 4. prompt-bootstrap kernel source must maintain a full capability-absorption matrix against identity base protocol capability domains; row loss or stale anchor mapping is non-compliant.
 5. prompt-bootstrap kernel source must keep append-only update ledger entries with `updated_at_utc`, `capability_delta`, `validator_delta`, `replay_obligations`, and `commit_sha`.
+
+Machine hard-gate binding (required for lane consumption):
+
+1. continuity constraints in this section must be enforced by dedicated validator:
+   - `scripts/validate_v16_prompt_bootstrap_contract_continuity.py`
+2. validator output fields are canonical and must be emitted without rename:
+   - `prompt_bootstrap_continuity_status`
+   - `error_code`
+   - `missing_matrix_rows`
+   - `stale_ledger`
+   - `dead_anchors`
+   - `evidence_ref`
+3. fail-close classification (deterministic):
+   - matrix incomplete -> `IP-PROMPT-CONT-002`
+   - ledger stale or missing -> `IP-PROMPT-CONT-003`
+   - dead/missing anchor -> `IP-PROMPT-CONT-004`
+4. required lane consumption surfaces:
+   - `identity_creator`
+   - `release_readiness_check`
+   - `report_three_plane_status`
+   - `full_identity_protocol_scan`
+   - `e2e_smoke_test`
+5. acceptance replay command (contract gate):
+
+```bash
+python3 scripts/validate_v16_prompt_bootstrap_contract_continuity.py \
+  --catalog <LOCAL_CATALOG> \
+  --identity-id <ID> \
+  --operation validate \
+  --max-age-days 30 \
+  --json-only
+```
 
 Five-link closure requirements:
 

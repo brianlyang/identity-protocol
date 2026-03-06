@@ -246,7 +246,7 @@ asb16-rq-022:
   kernel_contract_id: rq_022_fallback_taxonomy_normalization_contract_v1
   kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_022_fallback_taxonomy_normalization_contract_v1
   validator_ids:
-    - scripts/validate_v16_fallback_taxonomy_normalization.py
+    - scripts/validate_fallback_taxonomy_normalization.py
   gate_surfaces:
     - creator
     - readiness

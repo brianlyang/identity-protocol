@@ -1315,7 +1315,7 @@ Row-level cross-check and explicit hook plan:
 
 | Requirement ID | Anchor state | Finding (cross-check) | Concrete hook plan (must all land) | Acceptance target |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-022 | `PARTIAL` | existing fallback reasons are heterogeneous/raw and do not match governed 4-enum taxonomy; blocker taxonomy uses a different namespace | add `scripts/validate_v16_fallback_taxonomy_normalization.py`; normalization output must be dual-field (`fallback_reason_raw`, `fallback_taxonomy_class`) and must not overwrite blocker taxonomy fields; enforce in readiness and consume in three-plane/full-scan/e2e | each fallback sample maps to governed class (`data_missing/model_weak_signal/transport_error/policy_blocked`); unmappable value fails deterministically without breaking blocker chain |
+| ASB16-RQ-022 | `PARTIAL` | existing fallback reasons are heterogeneous/raw and do not match governed 4-enum taxonomy; blocker taxonomy uses a different namespace | add `scripts/validate_fallback_taxonomy_normalization.py`; normalization output must be dual-field (`fallback_reason_raw`, `fallback_taxonomy_class`) and must not overwrite blocker taxonomy fields; enforce in readiness and consume in three-plane/full-scan/e2e | each fallback sample maps to governed class (`data_missing/model_weak_signal/transport_error/policy_blocked`); unmappable value fails deterministically without breaking blocker chain |
 | ASB16-RQ-030 | `PARTIAL` | governance/review define hard-gate semantics, but no machine validator enforces four-track + metadata quorum | reuse canonical parser `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; optional wrapper `scripts/validate_v16_intake_evidence_quorum.py` may only delegate; wire single fail-close entrypoint in creator/readiness and promotion gates in three-plane/full-scan/e2e | any missing track (`T1..T4`) or missing metadata (`bundle_id/source_url_set/reference_timestamp_utc/conflict_note`) blocks with deterministic fail code |
 
 Batch-7 five-link anchor lock (mandatory per row):
@@ -1328,7 +1328,7 @@ Batch-7 five-link anchor lock (mandatory per row):
 Batch-7 acceptance command set (normative target):
 
 ```bash
-python3 scripts/validate_v16_fallback_taxonomy_normalization.py \
+python3 scripts/validate_fallback_taxonomy_normalization.py \
   --catalog <LOCAL_CATALOG> \
   --identity-id <ID> \
   --operation three-plane \

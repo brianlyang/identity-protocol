@@ -94,6 +94,43 @@ LAYER_LITERAL_META_TOKENS = (
     "layer-context:",
 )
 
+FALLBACK_TAXONOMY_VERSION = "v1"
+FALLBACK_TAXONOMY_ENUM = {
+    "data_missing",
+    "model_weak_signal",
+    "transport_error",
+    "policy_blocked",
+}
+FALLBACK_REASON_CLASS_MAP = {
+    "intent_text_missing": "data_missing",
+    "no_intent_signal": "data_missing",
+    "zero_action_counters": "data_missing",
+    "instance_intent_low_confidence": "model_weak_signal",
+    "ambiguous_intent_signal": "model_weak_signal",
+    "protocol_trigger_not_met": "policy_blocked",
+    "actor_binding_lock_mismatch": "policy_blocked",
+    "non_governed_outlet_channel": "policy_blocked",
+    "synthetic_reply_evidence_forbidden": "policy_blocked",
+    "reply_outlet_guard_missing": "policy_blocked",
+}
+BLOCKER_TAXONOMY_RESERVED = {
+    "auth_login_required",
+    "anti_automation_challenge_required",
+    "session_reauthentication_required",
+    "manual_verification_required",
+}
+TRANSPORT_ERROR_HINTS = (
+    "transport",
+    "network",
+    "timeout",
+    "connection",
+    "dns",
+    "socket",
+    "unreachable",
+    "http_5",
+    "ioerror",
+)
+
 
 def _has_protocol_lane_directive(text: str) -> bool:
     raw = str(text or "").strip().lower()
@@ -346,6 +383,25 @@ def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
     }
 
 
+def normalize_fallback_taxonomy_class(fallback_reason: str) -> str:
+    raw = str(fallback_reason or "").strip().lower()
+    if not raw:
+        return ""
+    if raw in FALLBACK_REASON_CLASS_MAP:
+        return FALLBACK_REASON_CLASS_MAP[raw]
+    if raw in BLOCKER_TAXONOMY_RESERVED:
+        return "policy_blocked"
+    if any(h in raw for h in TRANSPORT_ERROR_HINTS):
+        return "transport_error"
+    if "missing" in raw:
+        return "data_missing"
+    if any(x in raw for x in ("low_confidence", "weak_signal", "ambiguous", "uncertain")):
+        return "model_weak_signal"
+    if any(x in raw for x in ("blocked", "forbidden", "mismatch", "policy", "not_met", "not_met")):
+        return "policy_blocked"
+    return ""
+
+
 def _sanitize_layer_intent_text(intent_text: str) -> str:
     raw = str(intent_text or "").strip()
     if not raw:
@@ -396,6 +452,8 @@ def resolve_layer_intent(
         protocol_trigger_reasons: list[str] | None = None,
     ) -> dict[str, Any]:
         resolved_work = _normalize_work_layer(work_layer, fallback=fallback_work)
+        fallback_reason_raw = str(fallback_reason or "").strip()
+        fallback_taxonomy_class = normalize_fallback_taxonomy_class(fallback_reason_raw)
         applied_trigger = bool(protocol_triggered and resolved_work in {"protocol", "dual"})
         reasons = sorted(set(protocol_trigger_reasons or [])) if applied_trigger else []
         return {
@@ -403,7 +461,10 @@ def resolve_layer_intent(
             "resolved_source_layer": resolved_source,
             "intent_confidence": confidence,
             "intent_source": intent_source,
-            "fallback_reason": fallback_reason,
+            "fallback_reason": fallback_reason_raw,
+            "fallback_reason_raw": fallback_reason_raw,
+            "fallback_taxonomy_class": fallback_taxonomy_class,
+            "fallback_taxonomy_version": FALLBACK_TAXONOMY_VERSION,
             "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
             "protocol_triggered": applied_trigger,
             "protocol_trigger_reasons": reasons,
