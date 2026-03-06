@@ -1114,7 +1114,8 @@ Draft-time replay snapshot (this landing pass, non-promotional evidence metadata
 
 1. `observed_head_sha=3303bb5`.
 2. `working_tree_dirty=true` (docs-only pending changes in governance/review files for Batch-5 hardening).
-3. This snapshot is for replay traceability only and does not alter row-level status semantics.
+3. `observed_at_utc=2026-03-06T06:38:16Z`.
+4. This snapshot is for replay traceability only and does not alter row-level status semantics.
 
 Row-level acceptance result:
 
