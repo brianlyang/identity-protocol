@@ -1010,6 +1010,42 @@ Batch-2A mandatory interpretation guard:
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
 
+### 8.7 Batch-3B row-level strengthening profile (`ASB16-RQ-024..028`, 2026-03-06)
+
+Scope rule:
+
+1. This section is explicitly `Batch-3B` and covers only `ASB16-RQ-024..028` (kernel-first cluster).
+2. `Batch-3` label is reserved for `ASB16-RQ-011..015`; future extensions must use suffixed naming (`Batch-3A/3B/...`) to avoid tracker collision.
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+
+Current lock snapshot (`7.3` binding, non-overridable by prose):
+
+1. `ASB16-RQ-024..028` remain `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`, `FULL_LOCK verdict=UNLOCKED`.
+2. Therefore all rows remain `SPEC_READY` in section `7`, with review state `PENDING_INTAKE`.
+3. Any claim that this section alone enables promotion is invalid.
+
+Cross-batch output-field normalization guard (mandatory):
+
+1. `ASB16-RQ-014` must define bootstrap driver semantics only; machine output fields must reuse `ASB16-RQ-015` canonical six-field set.
+2. Parallel output families such as `prompt_bootstrap_driver_*` must not replace or fork `ASB16-RQ-015` canonical machine fields.
+3. Field-family drift between governance/runtime/review is non-compliant and blocks promotion.
+
+Batch-3B strengthening matrix:
+
+| Requirement ID | Current anchor_state | Strengthening target (kernel + script) | Homomorphism assertion (mandatory) | Promotion guard |
+| --- | --- | --- | --- | --- |
+| ASB16-RQ-024 | `PARTIAL` | add `rq_024_discovery_apply_coverage_fail_closed_contract_v1`; enforce apply-time predicate in `validate_discovery_requiredization.py` (`discovery_required_total>0 && discovery_required_passed==discovery_required_total && discovery_required_coverage_rate==100.0`); reserve `IP-DREQ-002` for coverage mismatch only, move receipt-missing to dedicated code; force discovery coverage gate consumption in `update/readiness/e2e/full-scan/three-plane/ci` | for same requiredization payload and trigger state, `discovery_required_total/passed/coverage/status/error_code` must be identical across update/readiness/e2e/full-scan/three-plane/ci outputs | keep `SPEC_READY/PENDING_INTAKE` until error-code semantics are deconflicted and coverage=100 gate is default-on in all required lanes |
+| ASB16-RQ-025 | `PARTIAL` | add `rq_025_kernel_canonical_source_contract_v1`; move v1.6 base-contract origin to `identity/protocol/* + identity/catalog/schema/*`; add `scripts/validate_v16_kernel_ssot_source.py`; keep `validate_protocol_ssot_source.py` as v1.5 compatibility check, not v1.6 replacement | unchanged contract set must yield stable kernel-source census and `unmapped_base_contract_count=0` across reruns | keep `SPEC_READY/PENDING_INTAKE` until kernel-first source rule becomes machine-enforced and docs-projection-only guard is validated |
+| ASB16-RQ-026 | `PLANNED_ONLY` | add machine-readable mapping asset `identity/protocol/mappings/contract-binding.v1.6.yaml`; add `scripts/validate_v16_contract_mapping_coverage.py`; wire checker into creator/readiness/e2e/full-scan/three-plane/ci | mapping checker must output deterministic tuple counts with `coverage_rate=100` and `orphan_count=0` for P0 cluster | keep `SPEC_READY/PENDING_INTAKE` until mapping file + checker exist and gate wiring is replay-proven |
+| ASB16-RQ-027 | `PARTIAL` | add `rq_027_derived_prompt_conformance_contract_v1`; extend `compile_identity_runtime.py` + conformance validator to require `kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest` | same prompt derivation input must produce identical conformance metadata fields and digest chain across reruns | keep `SPEC_READY/PENDING_INTAKE` until derived prompt metadata is generated and consumed by readiness/e2e/full-scan/three-plane validators |
+| ASB16-RQ-028 | `PARTIAL` | add `rq_028_instance_write_boundary_lock_contract_v1`; align runtime fail-close code to `IP-KERNEL-WRITE-001` (legacy `IP-GOV-BASE-001` may be compatibility alias only); introduce shared pre-write boundary guard in addition to replay validator | identical forbidden write attempts must yield same boundary verdict + canonical error code in creator/readiness/e2e/full-scan/three-plane/ci | keep `SPEC_READY/PENDING_INTAKE` until pre-write guard + replay validator both enforce canonical write-boundary semantics |
+
+Batch-3B mandatory interpretation guard:
+
+1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

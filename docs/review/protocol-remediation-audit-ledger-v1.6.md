@@ -79,6 +79,7 @@ Carry-over evidence:
 | FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 031e9ba | SPEC_READY | PENDING_INTAKE |
 | FIX16-031 | 2026-03-06 | protocol | Batch-2A (`ASB16-RQ-006..010`) row-level strengthening normalization: release-plane cloud evidence wiring + cross-cwd absolute-input contract + docs bridge checker + run-id-first report selector + phase-A/B parity contract | 5cb1a14 | SPEC_READY | PENDING_INTAKE |
+| FIX16-032 | 2026-03-06 | protocol | Batch-3B (`ASB16-RQ-024..028`) row-level strengthening normalization: discovery apply coverage hard-close + kernel-first source lock + mapping coverage asset + derived prompt conformance metadata + instance write-boundary canonical code alignment | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -902,6 +903,62 @@ Promotion guard (hard):
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion requires row-level five-link anchor closure and scanner-computed lock evidence.
 
+### FIX16-032 - Batch-3B (`ASB16-RQ-024..028`) strengthening normalization
+
+- Status: `SPEC_READY`
+- Goal: convert kernel-first P0 cluster (`ASB16-RQ-024..028`) from intake-level agreement to non-ambiguous executable closure predicates while preserving non-promotional boundary.
+
+Batch naming guard (mandatory):
+
+1. This fix is explicitly `Batch-3B` and covers only `ASB16-RQ-024..028`.
+2. `Batch-3` label remains reserved for `ASB16-RQ-011..015`; extension batches must use suffixed naming (`Batch-3A/3B/...`).
+3. Any ledger statement that merges these scopes under one unsuffixed batch label is invalid.
+
+Row-level acceptance result:
+
+1. `ASB16-RQ-024..028` are all `ACCEPT_WITH_FIX`.
+2. All rows remain `SPEC_READY / PENDING_INTAKE`.
+3. No row in this fix is promotion-eligible.
+
+Strengthening outcomes required by this fix:
+
+1. `RQ-024` discovery apply coverage hard-close:
+   - governance requires `discovery_required_total>0`, `discovery_required_passed==discovery_required_total`, `discovery_required_coverage_rate==100.0`, but implementation still has semantic drift;
+   - `IP-DREQ-002` must be reserved for coverage mismatch only; receipt-missing semantics must use dedicated code;
+   - coverage hard-gate must be default-on and consumed consistently in `update/readiness/e2e/full-scan/three-plane/ci`.
+2. `RQ-025` kernel canonical source:
+   - v1.6 must be kernel-first (`identity/protocol/* + identity/catalog/schema/*`);
+   - v1.5 handoff-based SSOT checks remain compatibility checks only and cannot substitute v1.6 kernel-source validation.
+3. `RQ-026` kernel->validator->doc mapping:
+   - mapping file and checker are currently missing; coverage/orphan claims remain non-machine-verifiable;
+   - implementation must land `contract-binding.v1.6.yaml` plus coverage checker before any promotion claim.
+4. `RQ-027` derived prompt conformance:
+   - runtime compilation currently proves prompt hash existence but not full derivation lineage;
+   - required conformance metadata (`kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest`) must be generated and validator-consumed.
+5. `RQ-028` instance write-boundary lock:
+   - replay validator is wired, but canonical v1.6 fail-close code alignment and pre-write guard unification remain pending;
+   - error-code semantics must converge to `IP-KERNEL-WRITE-001` (legacy code may remain alias only during transition).
+
+Cross-batch normalization constraint (blocking misclassification):
+
+1. `ASB16-RQ-014` must not introduce parallel machine output field family.
+2. Bootstrap driver semantics from `RQ-014` must reuse `ASB16-RQ-015` canonical six-field machine output set.
+3. Any dual field-family interpretation is treated as unresolved drift and blocks promotion.
+
+Homomorphism assertions (mandatory acceptance predicates):
+
+1. `RQ-024`: same requiredization payload must yield identical `discovery_required_* + status + error_code` across update/readiness/e2e/full-scan/three-plane/ci.
+2. `RQ-025`: same contract set must yield stable kernel-source census and `unmapped_base_contract_count=0`.
+3. `RQ-026`: mapping replay must remain deterministic with `coverage_rate=100` and `orphan_count=0`.
+4. `RQ-027`: identical derivation inputs must produce identical conformance metadata digest chain.
+5. `RQ-028`: identical forbidden write attempts must return same boundary verdict and canonical error-code family across lanes.
+
+Promotion guard (hard):
+
+1. `ACCEPT_WITH_FIX` in this section is design acceptance only.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion requires row-level five-link anchor closure and scanner-computed lock evidence.
+
 ---
 
 ## 4) Reviewer decision log
@@ -939,6 +996,7 @@ Promotion guard (hard):
 | FIX16-029 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T16:05:00Z | headstamp recurrence elevated to P0 transport-gate gap: new `ASB16-RQ-032` requires pre-send hard-blocking for all outbound paths with deterministic fail-close (`IP-HDSTAMP-001/002/003`) before promotion |
 | FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
 | FIX16-031 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T00:00:00Z | Batch-2A (`ASB16-RQ-006..010`) strengthening normalized with naming split and homomorphism assertions; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending kernel/script/mapping closure per governance `8.6` |
+| FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T08:30:00Z | Batch-3B (`ASB16-RQ-024..028`) strengthening normalized: RQ-024 error-code semantic deconflict + apply-coverage hard-close default-on requirement; kernel-first source/mapping/prompt-derivation/write-boundary cluster remains `ACCEPT_WITH_FIX` only and non-promotional pending executable closure per governance `8.7` |
 
 ---
 
