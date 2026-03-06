@@ -81,7 +81,7 @@ Carry-over evidence:
 | FIX16-031 | 2026-03-06 | protocol | Batch-2A (`ASB16-RQ-006..010`) row-level strengthening normalization: release-plane cloud evidence wiring + cross-cwd absolute-input contract + docs bridge checker + run-id-first report selector + phase-A/B parity contract | 5cb1a14 | SPEC_READY | PENDING_INTAKE |
 | FIX16-032 | 2026-03-06 | protocol | Batch-3B (`ASB16-RQ-024..028`) row-level strengthening normalization: discovery apply coverage hard-close + kernel-first source lock + mapping coverage asset + derived prompt conformance metadata + instance write-boundary canonical code alignment | 3538eb7 | SPEC_READY | PENDING_INTAKE |
 | FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker + actor-id fallback recurrence supplement | 06bcb8a + 140c872 + db72970 + ca14131 + 9c0463e | SPEC_READY | PENDING_INTAKE |
-| FIX16-034 | 2026-03-06 | protocol | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalization: phase-A/B parity closure + tmp collision-safe allocator + handoff/collab freshness auto-rotation + protocol-feedback atomic emit + refresh->strict interference matrix receipts | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-034 | 2026-03-06 | protocol | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalization: phase-A/B parity closure + tmp collision-safe allocator + handoff/collab freshness auto-rotation + protocol-feedback atomic emit + refresh->strict interference matrix receipts | 4f98bf4 + 84daaee | SPEC_READY | PENDING_INTAKE |
 
 ---
 
