@@ -588,6 +588,7 @@ Mandatory semantics:
 | C23 | protocol-context silent fallback to instance is fail-closed and candidate/inquiry chain is mandatory | negative replay must emit deterministic fail-close (`IP-LAYER-GATE-006/007` or `IP-LAYER-CAND-001..004`) with candidate/inquiry receipts |
 | C24 | lane-scoped routing and boundary telemetry are convergent across update/three-plane/full-scan | same-lineage telemetry tuple parity (`intent_source`, `protocol_context_detected`, `lane_resolution_decision`, `lane_resolution_error_code`, `applied_gate_set`, `base_repo_write_boundary_status`) |
 | C25 | multi-agent delegated run must not hard-switch identity during execution state | switch-state gate replay (`RUNNING/TOOL_CALLING/STREAMING -> FAIL_REQUIRED`) + mandatory `switch_ack` verification receipt before dispatch |
+| C26 | explicit protocol governance request must not be starved in instance lane; unresolved protocol route and missing headstamp are both fail-closed | lane-activation replay (`requested_lane=protocol`) with deterministic route verdict (`resolved_lane=protocol` or fail-close `IP-LANE-ROUTE-001/IP-LANE-ACT-002`) + send-time headstamp negative replay (`IP-HDSTAMP-001..003`) |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -1707,6 +1708,66 @@ Promotion guard:
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. promotion requires architect-approved contracts + validator/e2e required-gates closure with deterministic positive/negative replay.
 
+### 8.15 Emergency Hotfix Track - Protocol Lane Activation Starvation + Headstamp Continuity (`HOTFIX16-P0-002`, 2026-03-06)
+
+Scope and isolation lock:
+
+1. this is a separate P0 emergency hotfix track and must not be merged into `FIX16-001..037` or `HOTFIX16-P0-001` closure state.
+2. this track addresses two coupled runtime blockers only:
+   - explicit protocol-governance request cannot deterministically activate `work_layer=protocol`,
+   - outbound replies can still be observed without canonical dual headstamp.
+3. lifecycle posture remains non-promotional until architect intake + executable validator/e2e closure are landed.
+
+Hard guardrail:
+
+1. explicit protocol governance request must resolve to protocol lane or fail-close with deterministic reason.
+2. unresolved protocol route entry is fail-close; silent fallback to instance lane is prohibited.
+3. canonical dual headstamp is mandatory on every outbound assistant message, regardless of path (`governed compose` and `direct/manual`).
+4. lane activation success without headstamp continuity is invalid for promotion-grade evidence.
+
+Mandatory lane-activation receipt fields (machine-verifiable):
+
+1. `requested_lane`
+2. `previous_lane`
+3. `resolved_lane`
+4. `lane_activation_status`
+5. `lane_activation_error_code`
+6. `route_source_ref`
+7. `lane_activation_evidence_ref`
+
+Canonical error-code family (reserved for this hotfix track):
+
+1. `IP-LANE-ROUTE-001` (`protocol_lane_route_not_configured`)
+2. `IP-LANE-ACT-002` (`explicit_protocol_request_downgraded`)
+3. `IP-LANE-ACT-003` (`lane_activation_receipt_missing`)
+4. `IP-HDSTAMP-001` (`headstamp_missing_or_malformed`)
+5. `IP-HDSTAMP-002` (`headstamp_actor_binding_mismatch`)
+6. `IP-HDSTAMP-003` (`headstamp_receipt_missing`)
+
+Four-track evidence package (architect intake mandatory):
+
+1. `T1 governance/spec`: protocol entry non-starvation + headstamp pre-send hard-gate (`4.21`, `C22..C26`, v1.4.12/v1.4.6 binding clauses).
+2. `T2 runtime implementation`: current route topology lacks protocol-lane determinism under multi-identity shared-session pressure.
+3. `T3 live evidence`: repeated case of `confirmed` delivery while lane/HUD consistency is not guaranteed and headstamp omission incident is recorded.
+4. `T4 escalation package`: protocol escalation pack + lane activation receipt + gated-switch requirement/feedback v2 documents.
+
+Architect handoff inputs (absolute paths):
+
+1. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
+3. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+4. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
+5. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
+6. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+7. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+8. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
+
+Promotion guard:
+
+1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires architect-approved lane-activation contract text + required validator/e2e replay closure on route non-starvation and pre-send headstamp continuity.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
@@ -1769,3 +1830,5 @@ Promotion guard:
 58. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
 59. `/tmp/v16_one_by_one_requirement_review_20260305.md`
 60. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+61. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
+62. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`

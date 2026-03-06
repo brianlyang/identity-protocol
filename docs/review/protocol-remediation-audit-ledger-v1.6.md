@@ -86,6 +86,7 @@ Carry-over evidence:
 | FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f + f63eb55 + e214df9 + 4f4930c + 08c8f89 + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1584,6 +1585,58 @@ Promotion guard (hard):
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. promotion requires architect-approved contract text + validator/e2e required-gates replay closure.
 
+### HOTFIX16-P0-002 - emergency hotfix intake (`protocol lane activation starvation + headstamp continuity`)
+
+- Status: `SPEC_READY` (hotfix lane intake)
+- Goal: close the deadlock where explicit protocol-governance requests cannot deterministically activate protocol lane, and close recurrent outbound headstamp omission risk on send path.
+- Audit class: `PENDING_INTAKE` (architect review pending; executable validator/e2e closure not landed).
+
+Hotfix lane scope lock:
+
+1. this hotfix is isolated from `FIX16-001..037` and from `HOTFIX16-P0-001`; no status inheritance is allowed.
+2. this hotfix targets only lane activation non-starvation and headstamp continuity hard-gate.
+3. this is design hardening intake only; no runtime closure claim is made in this record.
+
+Core semantics lock:
+
+1. explicit protocol request must resolve to protocol lane or fail-close with deterministic error code; silent instance fallback is forbidden.
+2. unresolved protocol route configuration must fail-close (`IP-LANE-ROUTE-001`), not degrade to best-effort delivery semantics.
+3. every outbound assistant reply must pass canonical pre-send headstamp hard-gate (`Identity-Context` + `Layer-Context`).
+4. lane activation without headstamp continuity proof is invalid for promotion-grade replay.
+
+Reserved error-code family (for architect contract freeze):
+
+1. `IP-LANE-ROUTE-001`
+2. `IP-LANE-ACT-002`
+3. `IP-LANE-ACT-003`
+4. `IP-HDSTAMP-001`
+5. `IP-HDSTAMP-002`
+6. `IP-HDSTAMP-003`
+
+Four-track evidence package (cross-verified):
+
+1. `T1 governance/spec`: protocol-entry non-starvation + headstamp pre-send fail-close clauses.
+2. `T2 runtime implementation`: route topology cannot yet guarantee protocol-lane activation under current shared-session pressure.
+3. `T3 live evidence`: `confirmed` delivery can still diverge from lane/HUD consistency, and headstamp omission incident exists.
+4. `T4 escalation package`: protocol escalation pack + lane activation receipt + v2 requirement/feedback package.
+
+Architect handoff artifacts (absolute paths):
+
+1. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
+3. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+4. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
+5. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
+6. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+7. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+8. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
+
+Promotion guard (hard):
+
+1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires architect-approved lane-activation contract text + validator/e2e replay closure for route non-starvation and headstamp continuity.
+
 ---
 
 ## 4) Reviewer decision log
@@ -1628,6 +1681,7 @@ Promotion guard (hard):
 | FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: dual-field taxonomy normalization + intake core promotion mode are implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `f63eb55..47f2f38`; follow-up synchronization (`Task-13/15`, `b258982 + 1beeb88`) aligned status semantics and blocker posture; both rows remain `ACCEPT_WITH_FIX` and non-promotional until required=true replay closure per governance `8.11` |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T20:10:00Z | Write-boundary non-starvation hardening absorbed for `ASB16-RQ-028/031`: lane-scoped boundary semantics locked, protocol-entry liveness channels explicitly preserved, no-silent-downgrade fail-close mapped to canonical lane/candidate code families, telemetry tuple + replay matrix elevated to mandatory promotion gate; remains `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.12` |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:18:54Z | emergency hotfix lane opened for FQG multi-agent × multi-identity blocker (`PF-FQG-20260306-MA-MI-001-V2`): non-negotiable guardrail fixed as "execution-state no hard-switch", `allow_shared_session=true` re-scoped to `gated_switch` only, and mandatory handshake chain (`switch_request -> pre_switch_gate -> switch_apply -> switch_ack -> ack_verify -> dispatch`) requested for architect-level contract freeze; isolated from `FIX16-001..037` normalization batches pending validator/e2e closure |
+| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:37:07Z | emergency hotfix lane opened for protocol activation deadlock + headstamp continuity gap (`PEP-FQG-20260306-MA-MI-01`): explicit protocol request non-starvation mandated, unresolved protocol-route and silent fallback set to fail-close, and outbound headstamp continuity promoted to mandatory pre-send hard-gate evidence; isolated from previous fix/hotfix streams pending validator/e2e closure |
 
 ---
 
@@ -1722,3 +1776,5 @@ Promotion guard (hard):
 75. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
 76. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
 77. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+78. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
+79. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
