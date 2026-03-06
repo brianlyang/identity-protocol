@@ -80,7 +80,7 @@ Carry-over evidence:
 | FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 031e9ba | SPEC_READY | PENDING_INTAKE |
 | FIX16-031 | 2026-03-06 | protocol | Batch-2A (`ASB16-RQ-006..010`) row-level strengthening normalization: release-plane cloud evidence wiring + cross-cwd absolute-input contract + docs bridge checker + run-id-first report selector + phase-A/B parity contract | 5cb1a14 | SPEC_READY | PENDING_INTAKE |
 | FIX16-032 | 2026-03-06 | protocol | Batch-3B (`ASB16-RQ-024..028`) row-level strengthening normalization: discovery apply coverage hard-close + kernel-first source lock + mapping coverage asset + derived prompt conformance metadata + instance write-boundary canonical code alignment | 3538eb7 | SPEC_READY | PENDING_INTAKE |
-| FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker | 06bcb8a | SPEC_READY | PENDING_INTAKE |
+| FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker | 06bcb8a + 140c872 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1019,6 +1019,31 @@ Hard-tightening addendum (audit-locked, must hold for closure):
    - cross-cwd invariance must be validated across readiness/freshness/baseline/alignment in addition to three-plane.
 5. `RQ-008` contradiction checker remains required:
    - absence of governance/review contradiction checker keeps this row in `PLANNED_ONLY` and blocks promotion.
+
+Headstamp omission bypass postmortem supplement (detailed, audit-tracked):
+
+1. Bypass root-cause decomposition (`RQ-032`):
+   - current state is still contract-first and partial wiring, not fully single-source pre-send enforcement;
+   - some outbound paths can emit replies without passing one mandatory validator entrypoint;
+   - mixed legacy error-family traces show migration incompleteness (`IP-ASB-STAMP-SESSION-*` still visible on execution surfaces).
+2. Closure-grade corrective requirement:
+   - missing first-line headstamp => hard block with canonical `IP-HDSTAMP-001`;
+   - malformed first-line headstamp => hard block with canonical `IP-HDSTAMP-002`;
+   - runtime actor/layer mismatch => hard block with canonical `IP-HDSTAMP-003`;
+   - warning-only behavior is explicitly forbidden for promotion-grade lanes.
+3. Mandatory anti-bypass receipt schema:
+   - `pre_send_headstamp_checked`
+   - `pre_send_headstamp_gate_status`
+   - `pre_send_headstamp_error_code`
+   - `pre_send_gate_source`
+   - `pre_send_actor_binding_ref`
+   - `pre_send_checked_at`
+4. Unified gate consumption requirement:
+   - governed compose + direct/manual outbound paths must consume the same pre-send validator output;
+   - route-local custom checks may enrich evidence but may not replace canonical verdict/error family.
+5. Replay proof obligations:
+   - one positive and three negative cases (`missing`, `malformed`, `binding-mismatch`) must be replayed;
+   - all lanes must produce deterministic and homomorphic canonical classification on unchanged inputs.
 
 Batch-4 five-link anchor lock (mandatory per row):
 

@@ -1122,6 +1122,34 @@ Batch-4 row-level five-link anchors (mandatory, non-optional):
    - `validator_ref`: `scripts/validate_v16_docs_bridge_consistency.py`
    - `acceptance_cmd`: unchanged-doc deterministic contradiction replay command set
 
+Batch-4 headstamp omission bypass decomposition + fail-close protocol (mandatory, `RQ-032` specific):
+
+1. Why bypass can still happen before closure:
+   - governance contract exists, but runtime send surfaces are not yet guaranteed to pass through one non-skippable pre-send gate;
+   - validator coverage is currently partial, so some direct/manual output paths can avoid canonical send-time validation;
+   - legacy error-family traces (`IP-ASB-STAMP-SESSION-*`) still appear in execution surfaces, indicating migration not fully converged.
+2. Non-negotiable fail-close policy (v1.6 promotion-grade):
+   - if either required first-line headstamp (`Identity-Context` or `Layer-Context`) is missing, send must be blocked with canonical `IP-HDSTAMP-001`;
+   - if first-line headstamp structure is malformed, send must be blocked with canonical `IP-HDSTAMP-002`;
+   - if actor/layer binding mismatches resolved runtime context, send must be blocked with canonical `IP-HDSTAMP-003`;
+   - no soft-warning mode is allowed for promotion-grade lanes.
+3. Unified enforcement source rule:
+   - governed compose path and direct/manual outbound path must invoke the same pre-send validator source;
+   - route-specific bespoke checks cannot override canonical `IP-HDSTAMP-*` classification.
+4. Mandatory pre-send receipt fields for anti-bypass audit:
+   - `pre_send_headstamp_checked` (bool)
+   - `pre_send_headstamp_gate_status` (`PASS_REQUIRED|FAIL_REQUIRED`)
+   - `pre_send_headstamp_error_code` (canonical `IP-HDSTAMP-*` or empty on pass)
+   - `pre_send_gate_source`
+   - `pre_send_actor_binding_ref`
+   - `pre_send_checked_at`
+5. Promotion-grade replay obligations (anti-bypass proof set):
+   - positive replay: valid dual-headstamp with aligned actor/layer binding must pass on all send surfaces;
+   - negative replay A: missing headstamp must deterministically fail with `IP-HDSTAMP-001`;
+   - negative replay B: malformed headstamp must deterministically fail with `IP-HDSTAMP-002`;
+   - negative replay C: binding mismatch must deterministically fail with `IP-HDSTAMP-003`;
+   - replay outputs must be homomorphic across creator/readiness/e2e/full-scan/three-plane/ci.
+
 Batch-4 mandatory interpretation guard:
 
 1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.
