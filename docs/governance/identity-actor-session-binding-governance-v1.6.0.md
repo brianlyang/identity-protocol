@@ -1576,7 +1576,7 @@ Continuous-update requirements (non-optional):
 Machine hard-gate binding (required for lane consumption):
 
 1. continuity constraints in this section must be enforced by dedicated validator:
-   - `scripts/validate_v16_prompt_bootstrap_contract_continuity.py`
+   - planned validator hook (script path remains reserved until implementation lands in `scripts/`)
 2. validator output fields are canonical and must be emitted without rename:
    - `prompt_bootstrap_continuity_status`
    - `error_code`

@@ -437,3 +437,45 @@ To reduce protocol drift and avoid ad-hoc logic:
 ## Email escalation policy
 
 Email is only for offline blocking actions. Non-blocking updates are routed to logs or dashboards.
+
+## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
+
+The following sections are **kernel anchor placeholders** for v1.6 Batch-6/7 mapping survivability.
+They are intentionally non-promotional until corresponding runtime validators and replay evidence are
+fully wired. Governance/review authority remains in:
+
+- `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` (`8.10`, `8.11`)
+- `docs/review/protocol-remediation-audit-ledger-v1.6.md` (`FIX16-035`, `FIX16-036`)
+
+### rq_017_multi_track_cross_verification_contract_v1
+
+Required receipt fields:
+
+- `t1_status`, `t2_status`, `t3_status`, `t4_status`
+- `cross_verification_bundle_id`
+- `source_url_set`
+- `reference_timestamp_utc`
+- `conflict_reconciliation_note`
+
+### rq_022_fallback_taxonomy_normalization_contract_v1
+
+Required receipt fields:
+
+- `fallback_reason_raw`
+- `fallback_taxonomy_class`
+- `taxonomy_version`
+- `normalization_status`
+- `normalization_error_code`
+
+### rq_030_intake_evidence_quorum_contract_v1
+
+Required receipt fields:
+
+- `t1_roundtable_status`
+- `t2_vendor_status`
+- `t3_openai_context_status`
+- `t4_protocol_spec_status`
+- `cross_verification_bundle_id`
+- `source_url_set`
+- `reference_timestamp_utc`
+- `conflict_reconciliation_note`

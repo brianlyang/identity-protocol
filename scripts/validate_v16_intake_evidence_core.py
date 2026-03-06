@@ -22,7 +22,18 @@ MODE_INTAKE_CONTRACT = "intake_contract"
 MODE_PROMOTION_GATE = "promotion_gate"
 ALLOWED_MODES = (MODE_INTAKE_CONTRACT, MODE_PROMOTION_GATE)
 
-STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
+STRICT_OPERATIONS = {
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "scan",
+    "three-plane",
+    "inspection",
+    "mutation",
+}
 
 ERR_BUNDLE_MISSING = "IP-INTAKE-EVID-001"
 ERR_TRACK_QUORUM_MISSING = "IP-INTAKE-EVID-002"
@@ -533,6 +544,23 @@ def _build_payload_base(args: argparse.Namespace, catalog_path: Path, pack_path:
     }
 
 
+def _mark_track_status_skipped(payload: dict[str, Any]) -> None:
+    payload["t1_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t2_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t3_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t4_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t1_roundtable_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t2_vendor_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t3_openai_context_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["t4_protocol_spec_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["track_status_map"] = {
+        "t1": STATUS_SKIPPED_NOT_REQUIRED,
+        "t2": STATUS_SKIPPED_NOT_REQUIRED,
+        "t3": STATUS_SKIPPED_NOT_REQUIRED,
+        "t4": STATUS_SKIPPED_NOT_REQUIRED,
+    }
+
+
 def _build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description="Validate v1.6 intake evidence core parser (RQ-017/RQ-030 dual-mode).")
     ap.add_argument("--catalog", required=True)
@@ -570,6 +598,7 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
     payload = _build_payload_base(args, catalog_path, pack_path)
 
     if _is_fixture_identity(catalog_path, args.identity_id):
+        _mark_track_status_skipped(payload)
         payload["stale_reasons"] = ["fixture_profile_scope"]
         _emit(payload, json_only=args.json_only)
         return 0
@@ -589,6 +618,7 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
     payload["auto_required_signal"] = auto_required
 
     if not required:
+        _mark_track_status_skipped(payload)
         payload["stale_reasons"] = ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0

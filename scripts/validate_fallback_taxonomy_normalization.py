@@ -24,7 +24,18 @@ ERR_UNMAPPED_REASON = "IP-FBTAX-001"
 ERR_REASON_SOURCE_MISSING = "IP-FBTAX-002"
 ERR_NAMESPACE_CONFLICT = "IP-FBTAX-003"
 
-STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
+STRICT_OPERATIONS = {
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "scan",
+    "three-plane",
+    "inspection",
+    "mutation",
+}
 
 CANONICAL_BLOCKER_TYPES = {
     "auth_login_required",

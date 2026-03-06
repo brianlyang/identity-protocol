@@ -67,3 +67,52 @@ After each high-impact action:
 - update CURRENT_TASK state
 - append TASK_HISTORY entry
 - persist evidence artifact paths
+
+## Batch-6 anchor placeholders (v1.6 intake, non-promotional)
+
+The following sections provide stable kernel anchors for v1.6 Batch-6 mapping rows.
+Execution closure remains governed by v1.6 governance/review and must stay
+`SPEC_READY / PENDING_INTAKE` until validator + replay closure is complete.
+
+### rq_018_dedup_monotonic_winner_contract_v1
+
+Required receipt fields:
+
+- `run_id`
+- `earliest_claim_ts`
+- `stable_tiebreaker`
+- `winner_id`
+- `winner_reason`
+- `monotonicity_status`
+
+### rq_019_cross_workflow_evidence_schema_contract_v1
+
+Required receipt fields:
+
+- `run_id`
+- `route_action`
+- `quality_meta_state`
+- `dedup_state`
+- `evidence_hash`
+- `schema_version`
+
+### rq_020_skill_path_integrity_contract_v1
+
+Required receipt fields:
+
+- `active_repo_root`
+- `active_runtime_root`
+- `layout_mode`
+- `path_integrity_status`
+- `path_integrity_error_code`
+
+### rq_021_route_workflow_version_pinning_contract_v1
+
+Required receipt fields:
+
+- `route_endpoint`
+- `workflow_id`
+- `workflow_publish_version`
+- `pin_proof_ref`
+- `pin_status`
+- `pin_error_code`
