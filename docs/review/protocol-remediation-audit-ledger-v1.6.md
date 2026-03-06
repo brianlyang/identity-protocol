@@ -65,15 +65,15 @@ Carry-over evidence:
 | FIX16-015 | 2026-03-04 | protocol | bootstrap capability-driver intake from SRA packet (`ASB16-RQ-014`) | 13485bb | SPEC_READY | PENDING_INTAKE |
 | FIX16-016 | 2026-03-04 | protocol | prompt capability matrix fail-close validator intake (`ASB16-RQ-015`) | 13485bb | SPEC_READY | PENDING_INTAKE |
 | FIX16-017 | 2026-03-04 | protocol | refresh->strict + business interference guard runbook intake (`ASB16-RQ-016`) | 13485bb | SPEC_READY | PENDING_INTAKE |
-| FIX16-018 | 2026-03-04 | protocol | roundtable/vendor/openaidoc/context7 cross-verification intake (`ASB16-RQ-017`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
-| FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-018 | 2026-03-04 | protocol | roundtable/vendor/openaidoc/context7 cross-verification intake (`ASB16-RQ-017`) | f63eb55 + 47f2f38 + 1beeb88 | SPEC_READY | PENDING_INTAKE |
+| FIX16-019 | 2026-03-04 | protocol | office-ops self-drive regression supplemental intake (`ASB16-RQ-018..022`) | 9e59e0f + 4f4930c + fffc3c3 + 08c8f89 + 1beeb88 + 13485bb | SPEC_READY | PENDING_INTAKE |
 | FIX16-020 | 2026-03-04 | protocol | discovery dual-track activation + apply-time coverage fail-close intake (`ASB16-RQ-023..024`) | 910ec6e | SPEC_READY | PENDING_INTAKE |
 | FIX16-021 | 2026-03-04 | protocol | kernel-first baseline: contract source canonicalization + mapping + derived prompt lineage (`ASB16-RQ-025..028`) | 6f49040 + 13485bb + 910ec6e | SPEC_READY | PENDING_INTAKE |
 | FIX16-022 | 2026-03-05 | protocol | semantic routing single-source convergence intake (`ASB16-RQ-029`) + rollout prioritization replay (`A-D P0`, `E P1`) | f603dd9 + 13485bb + 910ec6e | SPEC_READY | PENDING_INTAKE |
-| FIX16-023 | 2026-03-05 | protocol | v1.6 suggestion intake evidence quorum hard-gate (`ASB16-RQ-030`; roundtable+vendor+online/spec evidence required before promotion beyond `PENDING_INTAKE`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-023 | 2026-03-05 | protocol | v1.6 suggestion intake evidence quorum hard-gate (`ASB16-RQ-030`; roundtable+vendor+online/spec evidence required before promotion beyond `PENDING_INTAKE`) | f63eb55 + 47f2f38 + 1beeb88 | SPEC_READY | PENDING_INTAKE |
 | FIX16-024 | 2026-03-05 | protocol | protocol-kernel prompt import executable-coupling self-drive intake (`ASB16-RQ-031`; text import alone is insufficient without validator mapping + multimodal sample-proof closure + explicit actor context) | 13485bb | SPEC_READY | PENDING_INTAKE |
-| FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
-| FIX16-026 | 2026-03-05 | protocol | base-repo-architect identity self-drive pilot: protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`), with v1.5/v1.6 boundary normalization | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-025 | 2026-03-05 | protocol | deep cross-verification closure intake (`ASB16-RQ-015/029/030`; `T1..T4` evidence taxonomy normalization + deterministic verdict + non-regression strengthening sequence `S0..S4`) | 13485bb + 47f2f38 + 1beeb88 | SPEC_READY | PENDING_INTAKE |
+| FIX16-026 | 2026-03-05 | protocol | base-repo-architect identity self-drive pilot: protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`), with v1.5/v1.6 boundary normalization | evidence_only(self-drive-runtime-replay-bundle) | SPEC_READY | PENDING_INTAKE |
 | FIX16-027 | 2026-03-05 | protocol | final T1/T2/T3/T4 cross-verification replay (`ASB16-RQ-015/017/029/030/031`) with network re-check + vendor/spec consistency hardening (v1.6-only positive supplement) | b2c99fd | SPEC_READY | PENDING_INTAKE |
 | FIX16-028 | 2026-03-05 | protocol | full-repo deep-scan lock inventory (`ASB16-RQ-001..032`): kernel/script lock-state census + architect independent rescan protocol | 7e7481d | SPEC_READY | PENDING_INTAKE |
 | FIX16-029 | 2026-03-05 | protocol | outbound headstamp pre-send hard-gate intake (`ASB16-RQ-032`): block send on missing/malformed/mismatched `Identity-Context|Layer-Context` | 7e7481d + 910ec6e | SPEC_READY | PENDING_INTAKE |
@@ -682,7 +682,7 @@ Deterministic replay verdict (same-lineage extraction):
    - `summary.p0=1`
 4. judgment:
    - dual-lane split itself is not regressed;
-   - closure gap is convergence/executability (`ASB16-RQ-015/029/030` still implementation-pending).
+   - closure gap is deterministic replay/archive closure (`ASB16-RQ-015/029/030` are implemented but still non-promotional until replay closure).
 
 Positive-strengthening sequence (non-regression required):
 
@@ -695,7 +695,7 @@ Positive-strengthening sequence (non-regression required):
 Promotion boundary (hard):
 
 1. This fix is docs/governance normalization intake only; it does not promote requirement status by itself.
-2. `ASB16-RQ-015/029/030` can move past `SPEC_READY` only after implementation + strict replay evidence under `S0..S3`.
+2. `ASB16-RQ-015/029/030` can move past `SPEC_READY` only after strict replay evidence under `S0..S3` is archived and independently audited.
 3. Any claim of `DONE` without executable convergence proof is invalid.
 
 ### FIX16-026 - base-repo-architect self-drive pilot for protocol-kernel prompt injection + multimodal verification uplift (`ASB16-RQ-031`)
@@ -776,7 +776,7 @@ Cross-track findings (deep cross-check, 2026-03-05):
 4. Full-stack runtime separation principle is externally aligned:
    - Anthropic role/system-prompt guidance and Google AI Studio server-side+secrets guidance both support explicit role context + secret isolation, consistent with v1.6 actor-explicit lane governance.
 5. Remaining gap classification unchanged:
-   - this replay strengthens evidence quality only; executable convergence requirements (`ASB16-RQ-015/029/030/031`) remain implementation-pending.
+   - this replay strengthens evidence quality only; executable convergence requirements (`ASB16-RQ-015/029/030/031`) are implemented but remain replay-closure pending.
 
 Positive-strengthening directives (v1.6 forward-only, non-promotional):
 
@@ -1845,7 +1845,7 @@ Promotion guard (hard):
 | FIX16-007 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): release-plane cloud evidence validator + kernel/mapping anchors + lane hooks (creator/readiness/three-plane/full-scan/e2e/ci); remains non-promotional pending strict replay archive |
 | FIX16-008 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): cross-cwd absolute-input validator + kernel/mapping anchors + lane hooks; remains non-promotional pending parity replay archive |
 | FIX16-009 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure reinforced (`08f20ab + 13485bb`): docs bridge checker + mapping/lane homomorphism hooks maintained; remains non-promotional pending deterministic contradiction replay archive |
-| FIX16-010 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T04:30:00Z | office-ops package triaged; mapping to `ASB16-RQ-009..013` recorded with v1.5/v1.6 split boundary |
+| FIX16-010 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | executable closure landed (`13485bb`): run-id anchored selection validator (`scripts/validate_run_id_report_selection.py`) + kernel/mapping anchors + creator/readiness/three-plane/full-scan/e2e/ci hooks; remains non-promotional pending deterministic replay archive |
 | FIX16-011 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): phase-A/phase-B parity validator + kernel/mapping anchors + lane hooks; remains non-promotional pending strict replay archive |
 | FIX16-012 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): tmp collision-safety validator + allocator-scoped temp semantics + lane hooks; remains non-promotional pending concurrency replay archive |
 | FIX16-013 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): freshness rotation emitter+validator + kernel/mapping anchors + lane hooks; remains non-promotional pending positive/negative replay archive |
@@ -1854,18 +1854,18 @@ Promotion guard (hard):
 | FIX16-016 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): prompt capability matrix fail-close validator + kernel/mapping anchors + lane hooks; remains non-promotional pending replay archive |
 | FIX16-017 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`13485bb`): refresh/strict business interference emitter+validator + kernel/mapping anchors + lane hooks; remains non-promotional pending paired replay archive |
 | FIX16-018 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | cross-verification core remains landed (see `FIX16-035` chain); status boundary unchanged pending independent replay sign-off |
-| FIX16-019 | PENDING_INTAKE | audit-expert(codex) | 2026-03-04T06:55:00Z | latest office-ops self-drive replay evidence ingested; new gaps mapped to `ASB16-RQ-018..022` |
+| FIX16-019 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | executable closure landed for Batch-6 (`ASB16-RQ-018..022`) via `Task-6..15` commit chain (`9e59e0f..1beeb88`) including monotonic dedup/schema/path/pinning/fallback validators + lane hooks; remains non-promotional pending deterministic required=true replay archive |
 | FIX16-020 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | discovery dual-track intake preserved; kernel anchors + mapping rows for `RQ-023/024` landed (`910ec6e`) and now machine-projected, while promotion remains blocked pending required=true replay closure |
 | FIX16-021 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | kernel-first intake preserved; executable `RQ-025` canonical-source validator landed (`13485bb`) with mapping anchor sync and lane hooks; non-promotional replay boundary unchanged |
 | FIX16-022 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | semantic convergence requirement preserved; executable convergence validator landed (`13485bb`) and wired to readiness/three-plane/full-scan/e2e/ci, replay closure still pending |
-| FIX16-023 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T09:40:00Z | intake hard-gate reinforcement added: new suggestions require roundtable/vendor/online/spec evidence quorum (`ASB16-RQ-030`) before promotion beyond `PENDING_INTAKE` |
+| FIX16-023 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | intake hard-gate executable closure landed (`f63eb55 + 47f2f38 + 1beeb88`): canonical single-parser dual-mode core (`scripts/validate_v16_intake_evidence_core.py`) + delegated wrappers + lane hooks (`creator/readiness/three-plane/full-scan/e2e/ci`); promotion boundary unchanged pending required=true replay closure |
 | FIX16-024 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | self-drive conclusions preserved; executable coupling validator landed (`13485bb`) with explicit actor gate + lane hooks, while multimodal replay closure remains pending before promotion |
-| FIX16-025 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T12:20:00Z | deep cross-verification package normalized to `T1..T4` taxonomy and replay verdict locked: lane split healthy but `ASB16-RQ-015/029/030` remain implementation-pending; `S0..S4` sequence added as non-regression strengthening path |
+| FIX16-025 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | deep cross-verification package remains valid and executable closures are now landed for `ASB16-RQ-015/029/030`; `S0..S4` sequence remains as replay-hardening path, and promotion is blocked until deterministic replay archive is complete |
 | FIX16-026 | PENDING_INTAKE | base-repo-architect(self-drive) | 2026-03-05T12:58:00Z | runtime self-drive pilot on `base-repo-architect`: protocol-kernel prompt injection + multimodal verification baseline passes; creator strict chain still shows actor-context convergence residual (`IP-ASB-STAMP-SESSION-005`), kept in v1.6 executable-coupling track only |
-| FIX16-027 | PENDING_INTAKE | base-repo-architect | 2026-03-05T14:20:00Z | final T1/T2/T3/T4 cross-verification replay executed with network/vendor/spec re-check; direction reaffirmed, but `ASB16-RQ-015/017/029/030/031` remain `SPEC_READY` pending executable closure |
+| FIX16-027 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | final T1/T2/T3/T4 cross-verification replay direction remains reaffirmed; executable closure for `ASB16-RQ-015/017/029/030/031` is landed and lane-wired, while deterministic replay archive closure remains the sole non-promotional blocker |
 | FIX16-028 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T22:10:00+08:00 | full-repo lock census + architect independent deep-rescan receipt completed (`/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`, `/tmp/v16_architect_deep_scan_full_repo_20260305.json`, `/tmp/v16_one_by_one_requirement_review_20260305.md`): `BRIDGE_LOCKED=32/32`, `KERNEL_LOCKED=0/32`, `SCRIPT_LOCKED=0/32`, `FULL_LOCKED=0/32`; row-level audit can proceed, promotion remains blocked |
 | FIX16-029 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | headstamp hard-gate intake preserved; kernel anchor + mapping projection for `RQ-032` landed (`910ec6e`), promotion still blocked pending strict replay closure |
-| FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
+| FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T18:05:00Z | Batch-1 (`ASB16-RQ-001..005`) executable closure is landed (validators + kernel anchors + mapping rows + lane hooks); row-level decision remains `ACCEPT_WITH_FIX` and non-promotional pending deterministic required=true replay archive |
 | FIX16-031 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | Batch-2A executable closure landed (`13485bb`): validators + kernel anchors + mapping rows + creator/readiness/three-plane/full-scan/e2e/ci wiring; remains non-promotional pending deterministic replay archive |
 | FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Batch-3B reinforcement complete: executable components (`13485bb`) plus full kernel/mapping projection for `RQ-024/028` (`910ec6e`) are landed; non-promotional replay boundary unchanged |
 | FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Batch-4 reinforcement complete: `RQ-029/031/007/008` executable validators (`13485bb`) plus `RQ-032` kernel/mapping projection (`910ec6e`) are synchronized; promotion remains blocked pending replay closure |

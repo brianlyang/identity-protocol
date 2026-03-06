@@ -603,33 +603,33 @@ Mandatory semantics:
 | ASB16-RQ-003 | status promotion evidence pipeline | P0 | SPEC_READY | implementation landed (`scripts/validate_promotion_pipeline.py`) + lane hooks wired; deterministic required=true replay archive pending |
 | ASB16-RQ-004 | outlet regression matrix | P0 | SPEC_READY | implementation landed (`scripts/validate_outlet_matrix.py`) + lane hooks wired; deterministic required=true replay archive pending |
 | ASB16-RQ-005 | sidecar invariance regression lock | P0 | SPEC_READY | implementation landed (`scripts/validate_sidecar_cwd_parity.py`) + lane hooks wired; deterministic required=true replay archive pending |
-| ASB16-RQ-006 | release-plane cloud evidence contract | P0 | SPEC_READY | implementation pending |
-| ASB16-RQ-007 | cross-cwd runbook contract | P1 | SPEC_READY | implementation pending |
+| ASB16-RQ-006 | release-plane cloud evidence contract | P0 | SPEC_READY | implementation landed (`scripts/validate_release_plane_cloud_evidence.py`) + lane hooks wired (`creator/readiness/three-plane/full-scan/e2e/ci`); deterministic required=true replay archive pending |
+| ASB16-RQ-007 | cross-cwd runbook contract | P1 | SPEC_READY | implementation landed (`scripts/validate_cross_cwd_absolute_input.py`) + lane hooks wired; deterministic root/tmp parity replay archive pending |
 | ASB16-RQ-008 | docs bridge consistency automation | P1 | SPEC_READY | implementation landed (`scripts/validate_docs_bridge_consistency.py`) + lane hooks wired; contradiction replay archive pending |
-| ASB16-RQ-009 | run-id anchored strict report selection | P0 | SPEC_READY | v1.5 carry-over candidate; keep parity with review `16.8.75` |
-| ASB16-RQ-010 | baseline phase-A bootstrap automation | P1 | SPEC_READY | implementation pending |
-| ASB16-RQ-011 | regression temp collision-safe strategy | P1 | SPEC_READY | implementation pending |
-| ASB16-RQ-012 | handoff/collab freshness auto-bootstrap | P1 | SPEC_READY | implementation pending |
-| ASB16-RQ-013 | protocol-feedback atomic emit helper | P1 | SPEC_READY | implementation pending |
-| ASB16-RQ-014 | prompt bootstrap capability contract | P0 | SPEC_READY | SRA intake pending implementation |
-| ASB16-RQ-015 | prompt capability matrix fail-closed validator | P0 | SPEC_READY | SRA intake pending implementation |
-| ASB16-RQ-016 | refresh->strict + business interference runbook contract | P1 | SPEC_READY | SRA intake pending implementation |
+| ASB16-RQ-009 | run-id anchored strict report selection | P0 | SPEC_READY | implementation landed (`scripts/validate_run_id_report_selection.py`) + lane hooks wired; deterministic collision replay archive pending |
+| ASB16-RQ-010 | baseline phase-A bootstrap automation | P1 | SPEC_READY | implementation landed (`scripts/validate_phase_bootstrap_before_strict.py`) + lane hooks wired; phase-A/phase-B strict replay archive pending |
+| ASB16-RQ-011 | regression temp collision-safe strategy | P1 | SPEC_READY | implementation landed (`scripts/validate_tmp_collision_safety.py`) + lane hooks wired; deterministic parallel replay archive pending |
+| ASB16-RQ-012 | handoff/collab freshness auto-bootstrap | P1 | SPEC_READY | implementation landed (`scripts/rotate_handoff_collab_freshness.py` + `scripts/validate_handoff_collab_freshness_rotation.py`) + lane hooks wired; deterministic rotation replay archive pending |
+| ASB16-RQ-013 | protocol-feedback atomic emit helper | P1 | SPEC_READY | implementation landed (`scripts/emit_protocol_feedback_atomic.py` + `scripts/validate_protocol_feedback_atomic_emit.py`) + lane hooks wired; transaction replay archive pending |
+| ASB16-RQ-014 | prompt bootstrap capability contract | P0 | SPEC_READY | implementation landed (`scripts/validate_prompt_bootstrap_capability.py`) + lane hooks wired; deterministic required=true replay archive pending |
+| ASB16-RQ-015 | prompt capability matrix fail-closed validator | P0 | SPEC_READY | implementation landed (`scripts/validate_prompt_capability_matrix.py`) + lane hooks wired; deterministic required=true replay archive pending |
+| ASB16-RQ-016 | refresh->strict + business interference runbook contract | P1 | SPEC_READY | implementation landed (`scripts/emit_business_interference_matrix.py` + `scripts/validate_refresh_strict_business_interference.py`) + lane hooks wired; paired refresh/strict replay archive pending |
 | ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | implementation landed + lane hooks wired (`creator/readiness/three-plane/full-scan/e2e/ci`); deterministic required=true replay archive pending |
 | ASB16-RQ-018 | dedup winner determinism contract | P1 | SPEC_READY | implementation landed + lane hooks wired; deterministic required=true replay archive pending (non-promotional) |
 | ASB16-RQ-019 | cross-workflow evidence schema contract | P1 | SPEC_READY | implementation landed + lane hooks wired; deterministic required=true replay archive pending (non-promotional) |
 | ASB16-RQ-020 | skill-path integrity contract | P1 | SPEC_READY | implementation landed + lane hooks wired; deterministic required=true replay archive pending (non-promotional) |
 | ASB16-RQ-021 | route/version pinning contract | P1 | SPEC_READY | implementation landed + lane hooks wired; emitter-before-gate sequence active, deterministic required=true replay archive pending |
 | ASB16-RQ-022 | fallback taxonomy normalization contract | P1 | SPEC_READY | implementation landed + lane hooks wired; required=true replay archive pending and blocker-namespace isolation remains mandatory |
-| ASB16-RQ-023 | discovery trigger-conditioned requiredization contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
-| ASB16-RQ-024 | discovery apply-time coverage fail-close contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
-| ASB16-RQ-025 | kernel-first canonical source contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-023 | discovery trigger-conditioned requiredization contract | P0 | SPEC_READY | implementation landed (`scripts/validate_discovery_requiredization.py`) + lane hooks wired (`creator/readiness/three-plane/full-scan/e2e/ci`); deterministic required=true replay archive pending |
+| ASB16-RQ-024 | discovery apply-time coverage fail-close contract | P0 | SPEC_READY | implementation landed (`scripts/validate_discovery_requiredization.py`) + lane hooks wired; discovery coverage replay archive pending |
+| ASB16-RQ-025 | kernel-first canonical source contract | P0 | SPEC_READY | implementation landed (`scripts/validate_kernel_ssot_source.py`) + lane hooks wired; deterministic required=true replay archive pending |
 | ASB16-RQ-026 | kernel contract mapping projection contract | P0 | SPEC_READY | implementation landed (`scripts/validate_contract_mapping_coverage.py`) + lane hooks wired; full P0 coverage closure pending |
-| ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | implementation landed (`scripts/compile_identity_runtime.py` + `scripts/validate_prompt_derivation_conformance.py`) + lane hooks wired; derivation replay archive pending |
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | boundary + lane telemetry hooks landed; non-starvation replay matrix closure remains pending in `8.12` |
-| ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
+| ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | implementation landed (`scripts/validate_semantic_convergence.py`) + lane hooks wired; same-lineage replay archive closure pending |
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | implementation landed (`single-parser dual-mode`) + lane hooks wired; promotion remains blocked until deterministic required=true replay archive is complete |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | explicit lane/candidate non-starvation hooks landed with write-boundary addendum; mapping validator + actor-explicit strict lane + multimodal sample-proof closure still required before promotion |
-| ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | enforce send-blocking when canonical identity/layer headstamp missing, malformed, or actor-mismatched; intake in `review FIX16-029` |
+| ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | implementation landed (`scripts/validate_send_time_reply_gate.py` + `scripts/validate_headstamp_recurrence_closure.py`) + lane hooks wired; deterministic negative replay archive pending |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -1139,7 +1139,7 @@ Batch-4 row-level five-link anchors (mandatory, non-optional):
    - `kernel_ref`: `identity/protocol/IDENTITY_RUNTIME.md#rq_032_headstamp_pre_send_hard_gate_contract_v1`
    - `runtime_ref`: unified pre-send validator shared by governed + direct/manual outbound paths
    - `mapping_ref`: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-032`
-   - `validator_ref`: `scripts/validate_send_time_reply_gate.py` + `scripts/validate_reply_identity_context_first_line.py` + `scripts/validate_v16_headstamp_error_family_convergence.py`
+   - `validator_ref`: `scripts/validate_send_time_reply_gate.py` + `scripts/validate_reply_identity_context_first_line.py` + `scripts/validate_headstamp_recurrence_closure.py`
    - `acceptance_cmd`: send-time and compose-path negative replay command set
    - canonical migration rule: `IP-HDSTAMP-*` is v1.6 canonical family; `IP-ASB-STAMP-SESSION-*` is compatibility alias only and cannot be final classification in promotion-grade receipts
 4. `ASB16-RQ-007`:
@@ -1444,7 +1444,7 @@ Scope rule:
 2. Topic lock for this batch:
    - fallback taxonomy normalization (`RQ-022`);
    - intake evidence quorum automation (`RQ-030`).
-3. Current decision class for both rows is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+3. Current decision class for both rows is `ACCEPT_WITH_FIX` (implementation landed + replay closure pending, non-promotional).
 
 Current lock snapshot (`7.3` binding, scanner-computed only):
 
