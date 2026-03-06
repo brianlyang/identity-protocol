@@ -385,6 +385,163 @@ def _protocol_feedback_sidecar_contract_skeleton() -> dict:
     }
 
 
+def _batch67_contract_defaults(identity_id: str) -> dict[str, dict]:
+    return {
+        "multi_track_cross_verification_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_v16_intake_evidence_core.py",
+            "validator_mode": "intake_contract",
+            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+            "required_tracks": ["t1", "t2", "t3", "t4"],
+            "required_metadata_fields": [
+                "cross_verification_bundle_id",
+                "source_url_set",
+                "reference_timestamp_utc",
+                "conflict_reconciliation_note",
+            ],
+            "fail_action": "block_merge_and_reenter_cross_verification_intake",
+        },
+        "intake_evidence_quorum_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_v16_intake_evidence_core.py",
+            "validator_mode": "promotion_gate",
+            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+            "required_tracks": [
+                "t1_roundtable_status",
+                "t2_vendor_status",
+                "t3_openai_context_status",
+                "t4_protocol_spec_status",
+            ],
+            "required_metadata_fields": [
+                "cross_verification_bundle_id",
+                "source_url_set",
+                "reference_timestamp_utc",
+                "conflict_reconciliation_note",
+            ],
+            "fail_action": "block_merge_and_reenter_intake_quorum_gate",
+        },
+        "fallback_taxonomy_normalization_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_fallback_taxonomy_normalization.py",
+            "taxonomy_version": "v1",
+            "fallback_taxonomy_enum": [
+                "data_missing",
+                "model_weak_signal",
+                "transport_error",
+                "policy_blocked",
+            ],
+            "namespace_separation_required": True,
+            "protected_blocker_taxonomy_fields": [
+                "auth_login_required",
+                "anti_automation_challenge_required",
+                "session_reauthentication_required",
+                "manual_verification_required",
+            ],
+            "fail_action": "block_merge_and_reenter_fallback_taxonomy_normalization",
+        },
+        "dedup_monotonic_winner_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_dedup_monotonicity.py",
+            "claims_path_pattern": "runtime/reports/**/*dedup*claim*.json",
+            "required_fields": [
+                "run_id",
+                "earliest_claim_ts",
+                "stable_tiebreaker",
+                "winner_id",
+                "winner_reason",
+                "monotonicity_status",
+            ],
+            "fail_action": "block_merge_and_reenter_dedup_orchestration",
+        },
+        "cross_workflow_evidence_schema_contract_v1": {
+            "required": True,
+            "normalizer": "scripts/normalize_cross_workflow_evidence.py",
+            "validator": "scripts/validate_cross_workflow_schema.py",
+            "evidence_path_pattern": f"runtime/reports/identity-upgrade-exec-{identity_id}-*.json",
+            "required_fields": [
+                "run_id",
+                "route_action",
+                "quality_meta_state",
+                "dedup_state",
+                "evidence_hash",
+                "schema_version",
+            ],
+            "fail_action": "block_merge_and_reenter_cross_workflow_schema_alignment",
+        },
+        "skill_path_integrity_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_skill_path_integrity.py",
+            "layout_mode": "active_repo_runtime",
+            "allowed_skill_roots": [
+                "{active_repo_root}/skills",
+                "{active_repo_root}/.codex/skills",
+                "{active_repo_root}/identity-protocol-local/skills",
+                "{active_runtime_root}/skills",
+            ],
+            "required_fields": [
+                "active_repo_root",
+                "active_runtime_root",
+                "layout_mode",
+                "path_integrity_status",
+                "path_integrity_error_code",
+            ],
+            "fail_action": "block_merge_and_reenter_skill_path_integrity_alignment",
+        },
+        "route_workflow_version_pinning_contract_v1": {
+            "required": True,
+            "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
+            "validator": "scripts/validate_route_version_pinning.py",
+            "proof_receipt_path_pattern": "runtime/reports/**/*route-version-pin-receipt*.json",
+            "required_fields": [
+                "route_endpoint",
+                "workflow_id",
+                "workflow_publish_version",
+                "pin_proof_ref",
+            ],
+            "expected_bindings": [],
+            "fail_action": "block_merge_and_reenter_route_workflow_version_alignment",
+        },
+    }
+
+
+def _normalize_batch67_legacy_contract_paths(task: dict, identity_id: str) -> dict:
+    def _legacy_prefix() -> str:
+        return f"identity/runtime/local/{identity_id}/reports/"
+
+    legacy = _legacy_prefix()
+
+    dedup = task.get("dedup_monotonic_winner_contract_v1")
+    if isinstance(dedup, dict):
+        pattern = str(dedup.get("claims_path_pattern", "")).strip()
+        if pattern.startswith(legacy):
+            dedup["claims_path_pattern"] = "runtime/reports/**/*dedup*claim*.json"
+
+    cross = task.get("cross_workflow_evidence_schema_contract_v1")
+    if isinstance(cross, dict):
+        pattern = str(cross.get("evidence_path_pattern", "")).strip()
+        if pattern.startswith(legacy):
+            cross["evidence_path_pattern"] = f"runtime/reports/identity-upgrade-exec-{identity_id}-*.json"
+
+    route = task.get("route_workflow_version_pinning_contract_v1")
+    if isinstance(route, dict):
+        pattern = str(route.get("proof_receipt_path_pattern", "")).strip()
+        if pattern.startswith(legacy):
+            route["proof_receipt_path_pattern"] = "runtime/reports/**/*route-version-pin-receipt*.json"
+
+    return task
+
+
+def _ensure_batch67_contracts(task: dict, identity_id: str) -> dict:
+    defaults = _batch67_contract_defaults(identity_id)
+    for key, default in defaults.items():
+        cur = task.get(key)
+        if not isinstance(cur, dict):
+            task[key] = default
+            continue
+        task[key] = _deep_merge_defaults(default, cur)
+    return _normalize_batch67_legacy_contract_paths(task, identity_id)
+
+
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
@@ -401,7 +558,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
             task[key] = default
             continue
         task[key] = _deep_merge_defaults(default, cur)
-    return task
+    return _ensure_batch67_contracts(task, identity_id)
 
 
 def _default_protocol_review_sample(identity_id: str) -> dict:
