@@ -463,6 +463,97 @@ Hard constraints:
 1. `D6` is derived output only (`D1..D5` + `P0` ledger are the only formula inputs).
 2. Same governance/review inputs must produce stable `formula_input_digest`.
 
+### rq_002_capability_boundary_contract_v1
+
+Required receipt fields:
+
+- `boundary_classification`
+- `classification_source`
+- `capability_activation_status`
+- `capability_activation_error_code`
+
+Hard constraints:
+
+1. `IP-CAP-*` must classify to `env_auth_blocker` by default.
+2. Classification must keep env/auth blockers separate from protocol-code blockers.
+
+### rq_003_promotion_evidence_pipeline_contract_v1
+
+Required receipt fields:
+
+- `decision_hash`
+- `input_hash`
+- `reviewer_role`
+- `reviewer_signature_ref`
+- `evidence_bundle_refs`
+
+Hard constraints:
+
+1. Promotion evidence must be non-repudiable and deterministic for same inputs.
+2. Narrative-only promotion without receipt fields is invalid.
+
+### rq_004_outlet_matrix_contract_v1
+
+Required receipt fields:
+
+- `outlet_matrix_status`
+- `matrix_positive_status`
+- `matrix_negative_status`
+- `cross_cwd_parity_status`
+- `send_time_gate_status`
+- `governed_outlet_enforced`
+- `outlet_channel_id`
+- `outlet_bypass_detected`
+
+Hard constraints:
+
+1. Positive + negative paths are both mandatory.
+2. Bypass/manual/direct outlet drift must be fail-closed.
+
+### rq_005_sidecar_cwd_invariance_contract_v1
+
+Required receipt fields:
+
+- `cwd_parity_status`
+- `passthrough_digest`
+- `sidecar_contract_status`
+- `sidecar_error_code`
+
+Hard constraints:
+
+1. Root and temp execution must produce identical normalized passthrough digest.
+2. CWD-only noise cannot change sidecar verdict semantics.
+
+### rq_008_docs_bridge_consistency_contract_v1
+
+Required receipt fields:
+
+- `bridge_consistency_status`
+- `contradiction_pairs`
+- `governance_anchor_refs`
+- `review_anchor_refs`
+
+Hard constraints:
+
+1. Contradiction tuples must be deterministic for unchanged docs inputs.
+2. Bridge checker output must be machine-replayable.
+
+### rq_026_kernel_contract_mapping_projection_contract_v1
+
+Required receipt fields:
+
+- `total_requirements`
+- `p0_total`
+- `p0_mapped`
+- `p0_coverage_rate`
+- `orphan_count`
+- `unmapped_p0_requirements`
+
+Hard constraints:
+
+1. P0 mapping coverage target is `100%`.
+2. Orphan mapping rows must be `0`.
+
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections are **kernel anchor placeholders** for v1.6 Batch-6/7 mapping survivability.

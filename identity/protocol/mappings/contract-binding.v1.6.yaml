@@ -3,13 +3,14 @@ _meta:
   mapping_version: "v1.6"
   schema_version: 1
   source_layer: protocol
-  lifecycle_state: phase3_batch1_and_batch6_7_seed
-  last_updated_utc: "2026-03-06T17:20:54Z"
-  row_count: 12
+  lifecycle_state: phase4_batch1_batch2b_batch3b_seed
+  last_updated_utc: "2026-03-07T09:20:00Z"
+  row_count: 18
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
     - "Phase-3 extension adds Batch-1 unlock-formula mapping row for ASB16-RQ-001."
+    - "Phase-4 extension adds Batch-1 (RQ-002/003/004/005) and planned rows (RQ-008/026) mapping seeds."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -45,6 +46,173 @@ asb16-rq-001:
     - IP-UNLOCK-003
     - IP-UNLOCK-004
   mapping_state: phase3_batch1_seed
+
+asb16-rq-002:
+  requirement_id: ASB16-RQ-002
+  kernel_contract_id: rq_002_capability_boundary_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_002_capability_boundary_contract_v1
+  validator_ids:
+    - scripts/validate_capability_boundary_classification.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - capability_boundary_status
+    - boundary_classification
+    - classification_source
+    - capability_activation_status
+    - capability_activation_error_code
+  error_code_refs:
+    - IP-CAPBOUND-001
+    - IP-CAPBOUND-002
+    - IP-CAPBOUND-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-003:
+  requirement_id: ASB16-RQ-003
+  kernel_contract_id: rq_003_promotion_evidence_pipeline_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_003_promotion_evidence_pipeline_contract_v1
+  validator_ids:
+    - scripts/validate_promotion_pipeline.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - promotion_pipeline_status
+    - decision_hash
+    - input_hash
+    - reviewer_role
+    - reviewer_signature_ref
+    - evidence_bundle_refs
+  error_code_refs:
+    - IP-PROMO-001
+    - IP-PROMO-002
+    - IP-PROMO-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-004:
+  requirement_id: ASB16-RQ-004
+  kernel_contract_id: rq_004_outlet_matrix_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_004_outlet_matrix_contract_v1
+  validator_ids:
+    - scripts/validate_outlet_matrix.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - outlet_matrix_status
+    - matrix_positive_status
+    - matrix_negative_status
+    - cross_cwd_parity_status
+    - send_time_gate_status
+    - governed_outlet_enforced
+    - outlet_channel_id
+    - outlet_bypass_detected
+  error_code_refs:
+    - IP-OUTLET-001
+    - IP-OUTLET-002
+    - IP-OUTLET-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-005:
+  requirement_id: ASB16-RQ-005
+  kernel_contract_id: rq_005_sidecar_cwd_invariance_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_005_sidecar_cwd_invariance_contract_v1
+  validator_ids:
+    - scripts/validate_sidecar_cwd_parity.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#85-batch-1-row-level-strengthening-profile-asb16-rq-001005-2026-03-05
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-030---batch-1-asb16-rq-001005-strengthening-normalization
+  report_field_refs:
+    - sidecar_cwd_parity_status
+    - cwd_parity_status
+    - passthrough_digest
+    - sidecar_contract_status
+    - sidecar_error_code
+  error_code_refs:
+    - IP-SIDECWD-001
+    - IP-SIDECWD-002
+    - IP-SIDECWD-003
+  mapping_state: phase4_batch1_seed
+
+asb16-rq-008:
+  requirement_id: ASB16-RQ-008
+  kernel_contract_id: rq_008_docs_bridge_consistency_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_008_docs_bridge_consistency_contract_v1
+  validator_ids:
+    - scripts/validate_docs_bridge_consistency.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-four-track-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-033---batch-4-asb16-rq-029031032007008-four-track-strengthening-normalization
+  report_field_refs:
+    - bridge_consistency_status
+    - contradiction_pairs
+    - governance_anchor_refs
+    - review_anchor_refs
+  error_code_refs:
+    - IP-DBRIDGE-001
+    - IP-DBRIDGE-002
+  mapping_state: phase4_batch3_seed
+
+asb16-rq-026:
+  requirement_id: ASB16-RQ-026
+  kernel_contract_id: rq_026_kernel_contract_mapping_projection_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_026_kernel_contract_mapping_projection_contract_v1
+  validator_ids:
+    - scripts/validate_contract_mapping_coverage.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-032---batch-3b-asb16-rq-024028-strengthening-normalization
+  report_field_refs:
+    - contract_mapping_coverage_status
+    - total_requirements
+    - p0_total
+    - p0_mapped
+    - p0_coverage_rate
+    - orphan_count
+    - unmapped_p0_requirements
+  error_code_refs:
+    - IP-MAP-001
+    - IP-MAP-002
+    - IP-MAP-003
+    - IP-MAP-004
+  mapping_state: phase4_batch3_seed
 
 asb16-rq-014:
   requirement_id: ASB16-RQ-014

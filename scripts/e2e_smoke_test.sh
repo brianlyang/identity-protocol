@@ -488,6 +488,50 @@ for ID in $IDS; do
     --operation e2e \
     --json-only
 
+  echo "[23.4506/30][$ID] validate capability boundary classification contract (RQ-002)"
+  python3 scripts/validate_capability_boundary_classification.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4507/30][$ID] validate promotion evidence pipeline contract (RQ-003)"
+  python3 scripts/validate_promotion_pipeline.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4508/30][$ID] validate outlet regression matrix contract (RQ-004)"
+  python3 scripts/validate_outlet_matrix.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4509/30][$ID] validate sidecar cwd parity contract (RQ-005)"
+  python3 scripts/validate_sidecar_cwd_parity.py \
+    --catalog "$CATALOG_PATH" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4510/30][$ID] validate docs bridge consistency contract (RQ-008)"
+  python3 scripts/validate_docs_bridge_consistency.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
+  echo "[23.4511/30][$ID] validate contract mapping coverage contract (RQ-026)"
+  python3 scripts/validate_contract_mapping_coverage.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
   echo "[23.451/30][$ID] validate cross-verification tracks gate (RQ-017)"
   python3 scripts/validate_v16_cross_verification_tracks.py \
     --catalog "$CATALOG_PATH" \

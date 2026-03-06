@@ -935,6 +935,154 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_unlock_formula != 0 or unlock_formula_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_cap_boundary, out_cap_boundary, err_cap_boundary = _run(
+        [
+            "python3",
+            "scripts/validate_capability_boundary_classification.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    cap_boundary_payload = _parse_json_payload(out_cap_boundary) or {}
+    validators["capability_boundary_classification"] = {
+        "rc": rc_cap_boundary,
+        "ok": rc_cap_boundary == 0,
+        "out": out_cap_boundary,
+        "err": err_cap_boundary,
+    }
+    cap_boundary_status = str(cap_boundary_payload.get("capability_boundary_status", "")).strip().upper()
+    if rc_cap_boundary != 0 or cap_boundary_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_promotion_pipeline, out_promotion_pipeline, err_promotion_pipeline = _run(
+        [
+            "python3",
+            "scripts/validate_promotion_pipeline.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    promotion_pipeline_payload = _parse_json_payload(out_promotion_pipeline) or {}
+    validators["promotion_evidence_pipeline"] = {
+        "rc": rc_promotion_pipeline,
+        "ok": rc_promotion_pipeline == 0,
+        "out": out_promotion_pipeline,
+        "err": err_promotion_pipeline,
+    }
+    promotion_pipeline_status = str(promotion_pipeline_payload.get("promotion_pipeline_status", "")).strip().upper()
+    if rc_promotion_pipeline != 0 or promotion_pipeline_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_outlet_matrix, out_outlet_matrix, err_outlet_matrix = _run(
+        [
+            "python3",
+            "scripts/validate_outlet_matrix.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    outlet_matrix_payload = _parse_json_payload(out_outlet_matrix) or {}
+    validators["outlet_regression_matrix"] = {
+        "rc": rc_outlet_matrix,
+        "ok": rc_outlet_matrix == 0,
+        "out": out_outlet_matrix,
+        "err": err_outlet_matrix,
+    }
+    outlet_matrix_status = str(outlet_matrix_payload.get("outlet_matrix_status", "")).strip().upper()
+    if rc_outlet_matrix != 0 or outlet_matrix_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_sidecar_cwd, out_sidecar_cwd, err_sidecar_cwd = _run(
+        [
+            "python3",
+            "scripts/validate_sidecar_cwd_parity.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    sidecar_cwd_payload = _parse_json_payload(out_sidecar_cwd) or {}
+    validators["sidecar_cwd_parity"] = {
+        "rc": rc_sidecar_cwd,
+        "ok": rc_sidecar_cwd == 0,
+        "out": out_sidecar_cwd,
+        "err": err_sidecar_cwd,
+    }
+    sidecar_cwd_status = str(sidecar_cwd_payload.get("sidecar_cwd_parity_status", "")).strip().upper()
+    if rc_sidecar_cwd != 0 or sidecar_cwd_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_docs_bridge, out_docs_bridge, err_docs_bridge = _run(
+        [
+            "python3",
+            "scripts/validate_docs_bridge_consistency.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    docs_bridge_payload = _parse_json_payload(out_docs_bridge) or {}
+    validators["docs_bridge_consistency"] = {
+        "rc": rc_docs_bridge,
+        "ok": rc_docs_bridge == 0,
+        "out": out_docs_bridge,
+        "err": err_docs_bridge,
+    }
+    docs_bridge_status = str(docs_bridge_payload.get("bridge_consistency_status", "")).strip().upper()
+    if rc_docs_bridge != 0 or docs_bridge_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_mapping_coverage, out_mapping_coverage, err_mapping_coverage = _run(
+        [
+            "python3",
+            "scripts/validate_contract_mapping_coverage.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    mapping_coverage_payload = _parse_json_payload(out_mapping_coverage) or {}
+    validators["contract_mapping_coverage"] = {
+        "rc": rc_mapping_coverage,
+        "ok": rc_mapping_coverage == 0,
+        "out": out_mapping_coverage,
+        "err": err_mapping_coverage,
+    }
+    mapping_coverage_status = str(mapping_coverage_payload.get("contract_mapping_coverage_status", "")).strip().upper()
+    if rc_mapping_coverage != 0 or mapping_coverage_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_cross_verify, out_cross_verify, err_cross_verify = _run(
         [
             "python3",
@@ -1928,6 +2076,88 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "formula_input_digest": unlock_formula_payload.get("formula_input_digest", ""),
             "stale_reasons": unlock_formula_payload.get("stale_reasons", []),
             "evidence_ref": unlock_formula_payload.get("evidence_ref", ""),
+        },
+        "capability_boundary_classification": {
+            "capability_boundary_status": cap_boundary_payload.get("capability_boundary_status"),
+            "error_code": cap_boundary_payload.get("error_code", ""),
+            "required_contract": cap_boundary_payload.get("required_contract"),
+            "auto_required_signal": cap_boundary_payload.get("auto_required_signal"),
+            "boundary_classification": cap_boundary_payload.get("boundary_classification", ""),
+            "classification_source": cap_boundary_payload.get("classification_source", ""),
+            "capability_activation_status": cap_boundary_payload.get("capability_activation_status", ""),
+            "capability_activation_error_code": cap_boundary_payload.get("capability_activation_error_code", ""),
+            "stale_reasons": cap_boundary_payload.get("stale_reasons", []),
+            "evidence_ref": cap_boundary_payload.get("evidence_ref", ""),
+        },
+        "promotion_evidence_pipeline": {
+            "promotion_pipeline_status": promotion_pipeline_payload.get("promotion_pipeline_status"),
+            "error_code": promotion_pipeline_payload.get("error_code", ""),
+            "required_contract": promotion_pipeline_payload.get("required_contract"),
+            "auto_required_signal": promotion_pipeline_payload.get("auto_required_signal"),
+            "decision_hash": promotion_pipeline_payload.get("decision_hash", ""),
+            "input_hash": promotion_pipeline_payload.get("input_hash", ""),
+            "reviewer_role": promotion_pipeline_payload.get("reviewer_role", ""),
+            "reviewer_signature_ref": promotion_pipeline_payload.get("reviewer_signature_ref", ""),
+            "evidence_bundle_refs": promotion_pipeline_payload.get("evidence_bundle_refs", []),
+            "receipt_path": promotion_pipeline_payload.get("receipt_path", ""),
+            "stale_reasons": promotion_pipeline_payload.get("stale_reasons", []),
+            "evidence_ref": promotion_pipeline_payload.get("evidence_ref", ""),
+        },
+        "outlet_regression_matrix": {
+            "outlet_matrix_status": outlet_matrix_payload.get("outlet_matrix_status"),
+            "error_code": outlet_matrix_payload.get("error_code", ""),
+            "required_contract": outlet_matrix_payload.get("required_contract"),
+            "auto_required_signal": outlet_matrix_payload.get("auto_required_signal"),
+            "matrix_positive_status": outlet_matrix_payload.get("matrix_positive_status", ""),
+            "matrix_negative_status": outlet_matrix_payload.get("matrix_negative_status", ""),
+            "cross_cwd_parity_status": outlet_matrix_payload.get("cross_cwd_parity_status", ""),
+            "send_time_gate_status": outlet_matrix_payload.get("send_time_gate_status", ""),
+            "governed_outlet_enforced": outlet_matrix_payload.get("governed_outlet_enforced"),
+            "outlet_channel_id": outlet_matrix_payload.get("outlet_channel_id", ""),
+            "outlet_bypass_detected": outlet_matrix_payload.get("outlet_bypass_detected"),
+            "stale_reasons": outlet_matrix_payload.get("stale_reasons", []),
+            "evidence_ref": outlet_matrix_payload.get("evidence_ref", ""),
+        },
+        "sidecar_cwd_parity": {
+            "sidecar_cwd_parity_status": sidecar_cwd_payload.get("sidecar_cwd_parity_status"),
+            "cwd_parity_status": sidecar_cwd_payload.get("cwd_parity_status", ""),
+            "error_code": sidecar_cwd_payload.get("error_code", ""),
+            "required_contract": sidecar_cwd_payload.get("required_contract"),
+            "auto_required_signal": sidecar_cwd_payload.get("auto_required_signal"),
+            "passthrough_digest": sidecar_cwd_payload.get("passthrough_digest", ""),
+            "root_digest": sidecar_cwd_payload.get("root_digest", ""),
+            "temp_digest": sidecar_cwd_payload.get("temp_digest", ""),
+            "sidecar_contract_status": sidecar_cwd_payload.get("sidecar_contract_status", ""),
+            "sidecar_error_code": sidecar_cwd_payload.get("sidecar_error_code", ""),
+            "stale_reasons": sidecar_cwd_payload.get("stale_reasons", []),
+            "evidence_ref": sidecar_cwd_payload.get("evidence_ref", ""),
+        },
+        "docs_bridge_consistency": {
+            "bridge_consistency_status": docs_bridge_payload.get("bridge_consistency_status"),
+            "error_code": docs_bridge_payload.get("error_code", ""),
+            "required_contract": docs_bridge_payload.get("required_contract"),
+            "auto_required_signal": docs_bridge_payload.get("auto_required_signal"),
+            "contradiction_pairs": docs_bridge_payload.get("contradiction_pairs", []),
+            "governance_anchor_refs": docs_bridge_payload.get("governance_anchor_refs", []),
+            "review_anchor_refs": docs_bridge_payload.get("review_anchor_refs", []),
+            "stale_reasons": docs_bridge_payload.get("stale_reasons", []),
+            "evidence_ref": docs_bridge_payload.get("evidence_ref", ""),
+        },
+        "contract_mapping_coverage": {
+            "contract_mapping_coverage_status": mapping_coverage_payload.get("contract_mapping_coverage_status"),
+            "error_code": mapping_coverage_payload.get("error_code", ""),
+            "required_contract": mapping_coverage_payload.get("required_contract"),
+            "auto_required_signal": mapping_coverage_payload.get("auto_required_signal"),
+            "total_requirements": mapping_coverage_payload.get("total_requirements"),
+            "p0_total": mapping_coverage_payload.get("p0_total"),
+            "mapped_total": mapping_coverage_payload.get("mapped_total"),
+            "p0_mapped": mapping_coverage_payload.get("p0_mapped"),
+            "coverage_rate": mapping_coverage_payload.get("coverage_rate"),
+            "p0_coverage_rate": mapping_coverage_payload.get("p0_coverage_rate"),
+            "orphan_count": mapping_coverage_payload.get("orphan_count"),
+            "unmapped_p0_requirements": mapping_coverage_payload.get("unmapped_p0_requirements", []),
+            "stale_reasons": mapping_coverage_payload.get("stale_reasons", []),
+            "evidence_ref": mapping_coverage_payload.get("evidence_ref", ""),
         },
         "cross_verification_tracks": {
             "cross_verification_tracks_status": cross_verify_payload.get("cross_verification_tracks_status"),

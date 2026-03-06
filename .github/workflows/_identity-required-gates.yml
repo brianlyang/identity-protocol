@@ -249,6 +249,12 @@ jobs:
             python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_unlock_formula.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_capability_boundary_classification.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_promotion_pipeline.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_outlet_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_sidecar_cwd_parity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_docs_bridge_consistency.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_contract_mapping_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_v16_cross_verification_tracks.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_route_version_pinning.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only

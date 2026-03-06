@@ -144,6 +144,11 @@ Acceptance target:
 
 - Status: `SPEC_READY`
 - Goal: isolate env/auth blockers from protocol code closure claims.
+- Landing update (`2026-03-07`, non-promotional):
+  - validator landed: `scripts/validate_capability_boundary_classification.py`
+  - mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-002`
+  - lane hooks wired: `creator/readiness/three-plane/full-scan/e2e/ci`
+  - state boundary unchanged: `SPEC_READY / PENDING_INTAKE` until deterministic required=true replay archive is complete.
 
 Acceptance target:
 
@@ -154,6 +159,11 @@ Acceptance target:
 
 - Status: `SPEC_READY`
 - Goal: prevent narrative-only promotion to `DONE`.
+- Landing update (`2026-03-07`, non-promotional):
+  - validator landed: `scripts/validate_promotion_pipeline.py`
+  - mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-003`
+  - lane hooks wired: `creator/readiness/three-plane/full-scan/e2e/ci`
+  - state boundary unchanged: `SPEC_READY / PENDING_INTAKE` until deterministic required=true replay archive is complete.
 
 Acceptance target:
 
@@ -164,6 +174,11 @@ Acceptance target:
 
 - Status: `SPEC_READY`
 - Goal: guarantee compose/send-time invariance across required lanes.
+- Landing update (`2026-03-07`, non-promotional):
+  - validator landed: `scripts/validate_outlet_matrix.py`
+  - mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-004`
+  - lane hooks wired: `creator/readiness/three-plane/full-scan/e2e/ci`
+  - state boundary unchanged: `SPEC_READY / PENDING_INTAKE` until deterministic required=true replay archive is complete.
 
 Acceptance target:
 
@@ -174,6 +189,11 @@ Acceptance target:
 
 - Status: `SPEC_READY`
 - Goal: preserve sidecar passthrough ordering and cwd invariance.
+- Landing update (`2026-03-07`, non-promotional):
+  - validator landed: `scripts/validate_sidecar_cwd_parity.py`
+  - mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-005`
+  - lane hooks wired: `creator/readiness/three-plane/full-scan/e2e/ci`
+  - state boundary unchanged: `SPEC_READY / PENDING_INTAKE` until deterministic required=true replay archive is complete.
 
 Acceptance target:
 
@@ -204,6 +224,11 @@ Acceptance target:
 
 - Status: `SPEC_READY`
 - Goal: prevent governance/review status drift.
+- Landing update (`2026-03-07`, non-promotional):
+  - checker landed: `scripts/validate_docs_bridge_consistency.py`
+  - mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-008`
+  - lane hooks wired: `creator/readiness/three-plane/full-scan/e2e/ci`
+  - state boundary unchanged: `SPEC_READY / PENDING_INTAKE` until deterministic required=true contradiction replay archive is complete.
 
 Acceptance target:
 
@@ -881,10 +906,11 @@ Current missing anchors snapshot (2026-03-05):
 
 1. batch-1 validators partially landed:
    - `scripts/validate_unlock_formula.py` (RQ-001) landed with mapping/kernel anchors and lane hooks.
-2. remaining validator skeletons not yet landed:
-   - `scripts/validate_v16_promotion_pipeline.py`
-   - `scripts/validate_v16_outlet_matrix.py`
-   - `scripts/validate_v16_sidecar_cwd_parity.py`
+2. batch-1 validator set landed:
+   - `scripts/validate_capability_boundary_classification.py` (RQ-002)
+   - `scripts/validate_promotion_pipeline.py` (RQ-003)
+   - `scripts/validate_outlet_matrix.py` (RQ-004)
+   - `scripts/validate_sidecar_cwd_parity.py` (RQ-005)
 3. scanner-computed lock script anchor not yet landed:
    - expected class: `scripts/validate_v16_lock_inventory*.py` (name TBD by architect implementation).
 

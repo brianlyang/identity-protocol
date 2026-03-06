@@ -446,6 +446,108 @@ def _release_unlock_formula_contract_skeleton() -> dict:
     }
 
 
+def _capability_boundary_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_capability_boundary_classification.py",
+        "required_fields": [
+            "boundary_classification",
+            "classification_source",
+            "capability_activation_status",
+            "capability_activation_error_code",
+        ],
+        "classification_rules": {
+            "ip_cap_prefix": "env_auth_blocker",
+            "activated": "protocol_ready",
+            "blocked_non_ip_cap": "protocol_blocker",
+        },
+        "fail_action": "keep_env_protocol_boundary_explicit",
+    }
+
+
+def _promotion_evidence_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_promotion_pipeline.py",
+        "receipt_path_pattern": "runtime/reports/**/*promotion-receipt*.json",
+        "required_fields": [
+            "decision_hash",
+            "input_hash",
+            "reviewer_role",
+            "reviewer_signature_ref",
+            "evidence_bundle_refs",
+        ],
+        "fail_action": "block_done_promotion_without_non_repudiation_receipt",
+    }
+
+
+def _outlet_matrix_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_outlet_matrix.py",
+        "report_path_pattern": "runtime/reports/identity-upgrade-exec-*.json",
+        "required_fields": [
+            "send_time_gate_status",
+            "governed_outlet_enforced",
+            "outlet_channel_id",
+            "outlet_preflight_receipt",
+            "outlet_bypass_detected",
+        ],
+        "negative_path_required": True,
+        "fail_action": "block_outlet_regression_promotion",
+    }
+
+
+def _sidecar_cwd_parity_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_sidecar_cwd_parity.py",
+        "required_fields": [
+            "cwd_parity_status",
+            "passthrough_digest",
+            "sidecar_contract_status",
+            "sidecar_error_code",
+        ],
+        "root_tmp_parity_required": True,
+        "fail_action": "block_sidecar_cwd_parity_regression",
+    }
+
+
+def _docs_bridge_consistency_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "validator": "scripts/validate_docs_bridge_consistency.py",
+        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+        "required_fields": [
+            "bridge_consistency_status",
+            "contradiction_pairs",
+            "governance_anchor_refs",
+            "review_anchor_refs",
+        ],
+        "fail_action": "reenter_docs_bridge_sync",
+    }
+
+
+def _contract_mapping_coverage_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "validator": "scripts/validate_contract_mapping_coverage.py",
+        "mapping_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "required_fields": [
+            "total_requirements",
+            "p0_total",
+            "p0_mapped",
+            "p0_coverage_rate",
+            "orphan_count",
+        ],
+        "target_p0_coverage_rate": 100.0,
+        "target_orphan_count": 0,
+        "fail_action": "block_mapping_lock_claim",
+    }
+
+
 def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
     return {
         "multi_track_cross_verification_contract_v1": {
@@ -606,6 +708,12 @@ def _ensure_intake_p1_contracts(task: dict, identity_id: str) -> dict:
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
         "release_unlock_formula_automation_contract_v1": _release_unlock_formula_contract_skeleton(),
+        "capability_activation_boundary_contract_v2": _capability_boundary_contract_skeleton(),
+        "status_promotion_evidence_contract_v1": _promotion_evidence_contract_skeleton(),
+        "outbound_reply_outlet_regression_matrix_contract_v1": _outlet_matrix_contract_skeleton(),
+        "sidecar_cwd_invariance_contract_v1": _sidecar_cwd_parity_contract_skeleton(),
+        "docs_bridge_consistency_contract_v1": _docs_bridge_consistency_contract_skeleton(),
+        "contract_mapping_projection_contract_v1": _contract_mapping_coverage_contract_skeleton(),
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
@@ -814,6 +922,12 @@ def _legacy_full_contract_current_task(identity_id: str, title: str, description
 def _default_required_checks() -> list[str]:
     return [
         "scripts/validate_unlock_formula.py",
+        "scripts/validate_capability_boundary_classification.py",
+        "scripts/validate_promotion_pipeline.py",
+        "scripts/validate_outlet_matrix.py",
+        "scripts/validate_sidecar_cwd_parity.py",
+        "scripts/validate_docs_bridge_consistency.py",
+        "scripts/validate_contract_mapping_coverage.py",
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
         "scripts/validate_identity_update_lifecycle.py",

@@ -1091,6 +1091,76 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "capability_boundary_classification": [
+                    "python3",
+                    "scripts/validate_capability_boundary_classification.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "promotion_evidence_pipeline": [
+                    "python3",
+                    "scripts/validate_promotion_pipeline.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "outlet_regression_matrix": [
+                    "python3",
+                    "scripts/validate_outlet_matrix.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "sidecar_cwd_parity": [
+                    "python3",
+                    "scripts/validate_sidecar_cwd_parity.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "docs_bridge_consistency": [
+                    "python3",
+                    "scripts/validate_docs_bridge_consistency.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "contract_mapping_coverage": [
+                    "python3",
+                    "scripts/validate_contract_mapping_coverage.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "cross_verification_tracks": [
                     "python3",
                     "scripts/validate_v16_cross_verification_tracks.py",
@@ -1473,6 +1543,112 @@ def main() -> int:
                     ):
                         if k in unlock_doc:
                             check_payload[k] = unlock_doc.get(k)
+                if name == "capability_boundary_classification":
+                    cap_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "capability_boundary_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "boundary_classification",
+                        "classification_source",
+                        "capability_activation_status",
+                        "capability_activation_error_code",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in cap_doc:
+                            check_payload[k] = cap_doc.get(k)
+                if name == "promotion_evidence_pipeline":
+                    promo_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "promotion_pipeline_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "decision_hash",
+                        "input_hash",
+                        "reviewer_role",
+                        "reviewer_signature_ref",
+                        "evidence_bundle_refs",
+                        "receipt_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in promo_doc:
+                            check_payload[k] = promo_doc.get(k)
+                if name == "outlet_regression_matrix":
+                    outlet_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "outlet_matrix_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "matrix_positive_status",
+                        "matrix_negative_status",
+                        "cross_cwd_parity_status",
+                        "send_time_gate_status",
+                        "governed_outlet_enforced",
+                        "outlet_channel_id",
+                        "outlet_bypass_detected",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in outlet_doc:
+                            check_payload[k] = outlet_doc.get(k)
+                if name == "sidecar_cwd_parity":
+                    sidecar_cwd_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "sidecar_cwd_parity_status",
+                        "cwd_parity_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "passthrough_digest",
+                        "root_digest",
+                        "temp_digest",
+                        "sidecar_contract_status",
+                        "sidecar_error_code",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in sidecar_cwd_doc:
+                            check_payload[k] = sidecar_cwd_doc.get(k)
+                if name == "docs_bridge_consistency":
+                    bridge_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "bridge_consistency_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "contradiction_pairs",
+                        "governance_anchor_refs",
+                        "review_anchor_refs",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in bridge_doc:
+                            check_payload[k] = bridge_doc.get(k)
+                if name == "contract_mapping_coverage":
+                    map_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "contract_mapping_coverage_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "total_requirements",
+                        "p0_total",
+                        "mapped_total",
+                        "p0_mapped",
+                        "coverage_rate",
+                        "p0_coverage_rate",
+                        "orphan_count",
+                        "unmapped_p0_requirements",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in map_doc:
+                            check_payload[k] = map_doc.get(k)
                 if name == "cross_verification_tracks":
                     cross_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

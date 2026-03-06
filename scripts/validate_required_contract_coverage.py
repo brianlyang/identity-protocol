@@ -35,6 +35,12 @@ DISCOVERY_TARGET_NAMES = {
 }
 STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_unlock_formula.py": "unlock_formula_status",
+    "scripts/validate_capability_boundary_classification.py": "capability_boundary_status",
+    "scripts/validate_promotion_pipeline.py": "promotion_pipeline_status",
+    "scripts/validate_outlet_matrix.py": "outlet_matrix_status",
+    "scripts/validate_sidecar_cwd_parity.py": "sidecar_cwd_parity_status",
+    "scripts/validate_docs_bridge_consistency.py": "bridge_consistency_status",
+    "scripts/validate_contract_mapping_coverage.py": "contract_mapping_coverage_status",
     "scripts/validate_semantic_routing_guard.py": "semantic_routing_status",
     "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
     "scripts/validate_vendor_namespace_separation.py": "vendor_namespace_status",
@@ -50,6 +56,12 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
+    "capability_boundary_classification",
+    "promotion_evidence_pipeline",
+    "outlet_regression_matrix",
+    "sidecar_cwd_parity",
+    "docs_bridge_consistency",
+    "contract_mapping_coverage",
     "semantic_routing_guard",
     "instance_protocol_split_receipt",
     "vendor_namespace_separation",
@@ -74,6 +86,66 @@ TARGETS = (
             "rq_001_unlock_formula_contract_v1",
         ),
         validator_script="scripts/validate_unlock_formula.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="capability_boundary_classification",
+        contract_keys=(
+            "capability_activation_boundary_contract_v2",
+            "capability_activation_boundary_contract",
+            "rq_002_capability_boundary_contract_v1",
+        ),
+        validator_script="scripts/validate_capability_boundary_classification.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="promotion_evidence_pipeline",
+        contract_keys=(
+            "status_promotion_evidence_contract_v1",
+            "status_promotion_evidence_contract",
+            "rq_003_promotion_evidence_pipeline_contract_v1",
+        ),
+        validator_script="scripts/validate_promotion_pipeline.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="outlet_regression_matrix",
+        contract_keys=(
+            "outbound_reply_outlet_regression_matrix_contract_v1",
+            "outbound_reply_outlet_regression_matrix_contract",
+            "rq_004_outlet_matrix_contract_v1",
+        ),
+        validator_script="scripts/validate_outlet_matrix.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="sidecar_cwd_parity",
+        contract_keys=(
+            "sidecar_cwd_invariance_contract_v1",
+            "sidecar_cwd_invariance_contract",
+            "rq_005_sidecar_cwd_invariance_contract_v1",
+        ),
+        validator_script="scripts/validate_sidecar_cwd_parity.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="docs_bridge_consistency",
+        contract_keys=(
+            "docs_bridge_consistency_contract_v1",
+            "docs_bridge_consistency_contract",
+            "rq_008_docs_bridge_consistency_contract_v1",
+        ),
+        validator_script="scripts/validate_docs_bridge_consistency.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="contract_mapping_coverage",
+        contract_keys=(
+            "contract_mapping_projection_contract_v1",
+            "contract_mapping_projection_contract",
+            "rq_026_kernel_contract_mapping_projection_contract_v1",
+        ),
+        validator_script="scripts/validate_contract_mapping_coverage.py",
         validator_args=("--json-only",),
     ),
     ContractTarget(
@@ -299,6 +371,12 @@ def _run_validator(
     cmd = ["python3", script, "--catalog", catalog, "--identity-id", identity_id]
     if script in {
         "scripts/validate_unlock_formula.py",
+        "scripts/validate_capability_boundary_classification.py",
+        "scripts/validate_promotion_pipeline.py",
+        "scripts/validate_outlet_matrix.py",
+        "scripts/validate_sidecar_cwd_parity.py",
+        "scripts/validate_docs_bridge_consistency.py",
+        "scripts/validate_contract_mapping_coverage.py",
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_vendor_namespace_separation.py",
         "scripts/validate_v16_cross_verification_tracks.py",
