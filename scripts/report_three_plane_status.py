@@ -986,6 +986,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_dedup_mono != 0 or dedup_mono_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_xwf_schema, out_xwf_schema, err_xwf_schema = _run(
+        [
+            "python3",
+            "scripts/validate_v16_cross_workflow_schema.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    xwf_schema_payload = _parse_json_payload(out_xwf_schema) or {}
+    validators["cross_workflow_schema"] = {
+        "rc": rc_xwf_schema,
+        "ok": rc_xwf_schema == 0,
+        "out": out_xwf_schema,
+        "err": err_xwf_schema,
+    }
+    xwf_schema_status = str(xwf_schema_payload.get("cross_workflow_schema_status", "")).strip().upper()
+    if rc_xwf_schema != 0 or xwf_schema_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_herm, out_herm, err_herm = _run(
         [
             "python3",
@@ -1847,6 +1871,21 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "claims_path": dedup_mono_payload.get("claims_path", ""),
             "stale_reasons": dedup_mono_payload.get("stale_reasons", []),
             "evidence_ref": dedup_mono_payload.get("evidence_ref", ""),
+        },
+        "cross_workflow_schema": {
+            "cross_workflow_schema_status": xwf_schema_payload.get("cross_workflow_schema_status"),
+            "error_code": xwf_schema_payload.get("error_code", ""),
+            "required_contract": xwf_schema_payload.get("required_contract"),
+            "auto_required_signal": xwf_schema_payload.get("auto_required_signal"),
+            "run_id": xwf_schema_payload.get("run_id", ""),
+            "route_action": xwf_schema_payload.get("route_action", ""),
+            "quality_meta_state": xwf_schema_payload.get("quality_meta_state", ""),
+            "dedup_state": xwf_schema_payload.get("dedup_state", ""),
+            "evidence_hash": xwf_schema_payload.get("evidence_hash", ""),
+            "schema_version": xwf_schema_payload.get("schema_version", ""),
+            "hash_consistency_status": xwf_schema_payload.get("hash_consistency_status", ""),
+            "stale_reasons": xwf_schema_payload.get("stale_reasons", []),
+            "evidence_ref": xwf_schema_payload.get("evidence_ref", ""),
         },
         "e2e_hermetic_runtime_import": {
             "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),

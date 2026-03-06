@@ -1088,6 +1088,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "cross_workflow_schema": [
+                    "python3",
+                    "scripts/validate_v16_cross_workflow_schema.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "writeback_continuity": [
                     "python3",
                     "scripts/validate_writeback_continuity.py",
@@ -1458,6 +1469,25 @@ def main() -> int:
                     ):
                         if k in dedup_doc:
                             check_payload[k] = dedup_doc.get(k)
+                if name == "cross_workflow_schema":
+                    xwf_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "cross_workflow_schema_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "run_id",
+                        "route_action",
+                        "quality_meta_state",
+                        "dedup_state",
+                        "evidence_hash",
+                        "schema_version",
+                        "hash_consistency_status",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in xwf_doc:
+                            check_payload[k] = xwf_doc.get(k)
                 if name == "semantic_routing_guard":
                     semantic_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

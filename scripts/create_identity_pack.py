@@ -774,6 +774,23 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
         ],
         "fail_action": "block_merge_and_reenter_dedup_orchestration",
     }
+    task["cross_workflow_evidence_schema_contract_v1"] = {
+        "required": True,
+        "normalizer": "scripts/normalize_cross_workflow_evidence.py",
+        "validator": "scripts/validate_cross_workflow_schema.py",
+        "evidence_path_pattern": (
+            f"identity/runtime/local/{identity_id}/reports/identity-upgrade-exec-{identity_id}-*.json"
+        ),
+        "required_fields": [
+            "run_id",
+            "route_action",
+            "quality_meta_state",
+            "dedup_state",
+            "evidence_hash",
+            "schema_version",
+        ],
+        "fail_action": "block_merge_and_reenter_cross_workflow_schema_alignment",
+    }
     task["route_workflow_version_pinning_contract_v1"] = {
         "required": True,
         "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",

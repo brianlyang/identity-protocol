@@ -43,6 +43,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_route_version_pinning.py": "pin_status",
     "scripts/validate_fallback_taxonomy_normalization.py": "fallback_taxonomy_normalization_status",
     "scripts/validate_dedup_monotonicity.py": "monotonicity_status",
+    "scripts/validate_v16_cross_workflow_schema.py": "cross_workflow_schema_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "semantic_routing_guard",
@@ -152,6 +153,16 @@ TARGETS = (
         validator_script="scripts/validate_dedup_monotonicity.py",
         validator_args=("--json-only",),
     ),
+    ContractTarget(
+        name="cross_workflow_schema",
+        contract_keys=(
+            "cross_workflow_evidence_schema_contract_v1",
+            "cross_workflow_evidence_schema_contract",
+            "rq_019_cross_workflow_evidence_schema_contract_v1",
+        ),
+        validator_script="scripts/validate_v16_cross_workflow_schema.py",
+        validator_args=("--json-only",),
+    ),
 )
 
 
@@ -229,6 +240,7 @@ def _run_validator(
         "scripts/validate_route_version_pinning.py",
         "scripts/validate_fallback_taxonomy_normalization.py",
         "scripts/validate_dedup_monotonicity.py",
+        "scripts/validate_v16_cross_workflow_schema.py",
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
