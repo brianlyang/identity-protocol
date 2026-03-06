@@ -587,6 +587,7 @@ Mandatory semantics:
 | C22 | write-boundary lock does not starve protocol entry channels (`explicit protocol`, `session lane lock`, `candidate/direct`) | lane-routing replay with boundary enabled and protocol-entry tuple kept live (`lane_resolution_decision`, `session_lane_lock`, `protocol_entry_decision`) |
 | C23 | protocol-context silent fallback to instance is fail-closed and candidate/inquiry chain is mandatory | negative replay must emit deterministic fail-close (`IP-LAYER-GATE-006/007` or `IP-LAYER-CAND-001..004`) with candidate/inquiry receipts |
 | C24 | lane-scoped routing and boundary telemetry are convergent across update/three-plane/full-scan | same-lineage telemetry tuple parity (`intent_source`, `protocol_context_detected`, `lane_resolution_decision`, `lane_resolution_error_code`, `applied_gate_set`, `base_repo_write_boundary_status`) |
+| C25 | multi-agent delegated run must not hard-switch identity during execution state | switch-state gate replay (`RUNNING/TOOL_CALLING/STREAMING -> FAIL_REQUIRED`) + mandatory `switch_ack` verification receipt before dispatch |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -1639,6 +1640,73 @@ Promotion guard:
 1. adding this kernel source is structural hardening only.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains mandatory until executable closure is replay-proven.
 
+### 8.14 Emergency Hotfix Track - FQG Multi-Agent × Multi-Identity Switch Guard (`HOTFIX16-P0-001`, 2026-03-06)
+
+Scope and isolation lock:
+
+1. this is an emergency hotfix intake track for architect escalation and is intentionally isolated from `FIX16-001..037` batch normalization.
+2. this section does not rewrite or reinterpret existing requirement rows in section `7`; it adds a P0 incident guardrail package for multi-agent multi-identity runtime safety.
+3. lifecycle posture remains non-promotional until architect intake + executable validator/e2e closure are landed.
+4. naming follows v1.5 hotfix-lane convention (`HOTFIX-P0-*`), while using v1.6-specific prefix `HOTFIX16-P0-*` to avoid cross-version ID collision.
+
+Hard guardrail (non-negotiable):
+
+1. execution-state hard identity switch is prohibited.
+2. switch requests during execution states (`RUNNING/TOOL_CALLING/STREAMING` or equivalent) must fail-close.
+3. switch is allowed only in guarded safe states (`WAITING_INPUT` / `DONE_WAITING_INPUT` baseline profile).
+
+`allow_shared_session` semantic lock:
+
+1. `allow_shared_session=true` means "allow entering gated switch mode", not "allow direct shared execution".
+2. shared session without gated switch handshake is invalid.
+3. no business dispatch is allowed before switch handshake verification is complete.
+
+Mandatory switch chain (machine-verifiable):
+
+1. `switch_request` (`from_identity`, `to_identity`, `actor_id`, `session_id`, `request_id`)
+2. `pre_switch_gate` (state/policy validation)
+3. `switch_apply`
+4. `switch_ack` (canonical `Identity-Context` + `Layer-Context` + actor binding tuple)
+5. `ack_verify`
+6. `dispatch`
+
+Fail-close policy:
+
+1. missing `switch_ack` -> fail-close.
+2. mismatched `switch_ack.identity_id` vs target identity -> fail-close.
+3. timeout in handshake window -> fail-close.
+4. policy/state disallow switch -> fail-close.
+
+Canonical error-code family (reserved for this hotfix track):
+
+1. `IP-SWITCH-GATE-001` (`switch_gate_rejected`)
+2. `IP-SWITCH-HS-002` (`switch_handshake_mismatch`)
+3. `IP-SWITCH-TIMEOUT-003` (`switch_handshake_timeout`)
+4. `IP-SWITCH-STATE-004` (`switch_rejected_in_execution_state`)
+5. `IP-SWITCH-POLICY-005` (`shared_session_policy_violation`)
+
+Four-track evidence package (architect intake mandatory):
+
+1. `T1 governance/spec`: explicit binding + switch guard + canonical headstamp fail-close (`v1.6 4.21`, `v1.4.12`, `v1.4.6`).
+2. `T2 runtime implementation`: current bridge confirms delivery/rollout but does not provide `switch_ack` contract semantics.
+3. `T3 live evidence`: same-session multi-identity reuse and identity drift risk replay records.
+4. `T4 hotfix requirement docs`: v2 requirement clarification + v2 protocol-feedback batch package.
+
+Architect handoff inputs (absolute paths):
+
+1. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
+3. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
+4. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+5. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+6. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
+
+Promotion guard:
+
+1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires architect-approved contracts + validator/e2e required-gates closure with deterministic positive/negative replay.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
@@ -1658,47 +1726,46 @@ Promotion guard:
 15. `context7:/websites/developers_openai_api (strict schema/tool docs extraction)`
 16. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
 17. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
-18. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
-19. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
-20. `https://developers.openai.com/codex/skills/`
-21. `https://developers.openai.com/codex/security/`
-22. `context7:/websites/developers_openai (Codex skills/security extraction)`
-23. `https://github.com/brianlyang/identity-protocol/tree/main/identity`
-24. `identity/protocol/IDENTITY_PROTOCOL.md`
-25. `identity/protocol/IDENTITY_RUNTIME.md`
-26. `identity/protocol/IDENTITY_DISCOVERY.md`
-27. `identity/catalog/schema/identities.schema.json`
-28. `identity/catalog/identities.yaml`
-29. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
-30. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
-31. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
-32. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-v1.6-governance-review-cross-verification-verdict-2026-03-05.md`
-33. `https://developers.openai.com/api/reference/resources/responses/`
-34. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
-35. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
-36. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
-37. `https://modelcontextprotocol.io/specification/latest`
-38. `https://agentskills.io/specification`
-39. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
-40. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
-41. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
-42. `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
-43. `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
-44. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
-45. `context7:/openai/skills`
-46. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
-47. `/tmp/v16_final_xverify_bundle_20260305.json`
-48. `https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations`
-49. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
-50. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role`
-51. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
-52. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
-53. `https://modelcontextprotocol.io/specification/latest`
-54. `https://agentskills.io/specification`
-55. `context7:/openai/skills`
-56. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
-57. `/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`
-58. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
-59. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
-60. `/tmp/v16_one_by_one_requirement_review_20260305.md`
-61. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+18. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+19. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
+20. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T210151_fqg_multiagent_multiidentity_blocker.md`
+21. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
+22. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+23. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+24. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
+25. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
+26. `https://developers.openai.com/codex/skills/`
+27. `https://developers.openai.com/codex/security/`
+28. `context7:/websites/developers_openai (Codex skills/security extraction)`
+29. `https://github.com/brianlyang/identity-protocol/tree/main/identity`
+30. `identity/protocol/IDENTITY_PROTOCOL.md`
+31. `identity/protocol/IDENTITY_RUNTIME.md`
+32. `identity/protocol/IDENTITY_DISCOVERY.md`
+33. `identity/catalog/schema/identities.schema.json`
+34. `identity/catalog/identities.yaml`
+35. `docs/references/skill-installer-skill-creator-skill-update-lifecycle.md`
+36. `docs/references/skill-protocol-installer-creator-update-reference-v1.2.5.md`
+37. `docs/references/skill-mcp-tool-collaboration-contract-v1.0.md`
+38. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-v1.6-governance-review-cross-verification-verdict-2026-03-05.md`
+39. `https://developers.openai.com/api/reference/resources/responses/`
+40. `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
+41. `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
+42. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
+43. `https://modelcontextprotocol.io/specification/latest`
+44. `https://agentskills.io/specification`
+45. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+46. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+47. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+48. `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
+49. `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
+50. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
+51. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices#give-claude-a-role`
+52. `context7:/openai/skills`
+53. `context7:/websites/modelcontextprotocol_io_specification_2025-11-25`
+54. `https://developers.openai.com/codex/security/#common-sandbox-and-approval-combinations`
+55. `/tmp/v16_final_xverify_bundle_20260305.json`
+56. `/tmp/v16_architect_independent_deep_rescan_receipt_20260305.log`
+57. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
+58. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
+59. `/tmp/v16_one_by_one_requirement_review_20260305.md`
+60. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`

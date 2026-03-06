@@ -85,6 +85,7 @@ Carry-over evidence:
 | FIX16-035 | 2026-03-06 | protocol | Batch-6 (`ASB16-RQ-017/018/019/020/021`) cross-workflow governance strengthening normalization: four-track contract hardening + dedup monotonic winner + cross-workflow schema gate + skill-path layout integrity + route/workflow publish-version pinning | 0df31f5 + 10c9956 + b80ec1f + 9e59e0f + f63eb55 + e214df9 + 9c0cf0a + 19d02ab + b5a191c + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f + f63eb55 + e214df9 + 4f4930c + 08c8f89 + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1529,6 +1530,60 @@ Promotion guard (hard):
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. promotion remains blocked until replay matrix + telemetry tuple are enforced and consumed across creator/readiness/three-plane/full-scan/e2e.
 
+### HOTFIX16-P0-001 - emergency hotfix intake (`FQG` multi-agent × multi-identity gated switch guard)
+
+- Status: `SPEC_READY` (hotfix lane intake)
+- Goal: enforce the non-negotiable guardrail "no hard identity switch during execution", while preserving controlled switching capability via gated handshake.
+- Audit class: `PENDING_INTAKE` (architect review pending; executable validator/e2e closure not landed).
+
+Hotfix lane scope lock:
+
+1. this hotfix is isolated from `FIX16-001..037` batch streams and must not be merged into earlier fix findings.
+2. naming follows v1.5 hotfix treatment (`HOTFIX-P0-*`) with v1.6-specific ID prefix `HOTFIX16-P0-*`.
+3. this hotfix captures protocol design hardening only; it does not claim code closure in current turn.
+
+Core semantics lock (v2 clarification absorbed):
+
+1. hard guardrail: execution-state identity hard-switch is forbidden.
+2. `allow_shared_session=true` means "allow entering `gated_switch` flow", not direct shared execution.
+3. mandatory machine chain:
+   - `switch_request -> pre_switch_gate -> switch_apply -> switch_ack -> ack_verify -> dispatch`.
+4. fail-close is mandatory on:
+   - missing `switch_ack`,
+   - `switch_ack` mismatch with target identity,
+   - handshake timeout,
+   - policy/state disallow switch.
+
+Reserved error-code family (for architect contract freeze):
+
+1. `IP-SWITCH-GATE-001`
+2. `IP-SWITCH-HS-002`
+3. `IP-SWITCH-TIMEOUT-003`
+4. `IP-SWITCH-STATE-004`
+5. `IP-SWITCH-POLICY-005`
+
+Four-track evidence package (cross-verified):
+
+1. `T1 governance/spec`: explicit identity binding + switch-guard + canonical headstamp fail-close constraints.
+2. `T2 runtime implementation`: current bridge confirms delivery/rollout but does not provide `switch_ack` contract receipts.
+3. `T3 live evidence`: same-session multi-identity reuse and identity-drift risk in live records.
+4. `T4 hotfix requirement docs`: requirement clarification v2 + protocol-feedback v2 package.
+
+Architect handoff artifacts (absolute paths):
+
+1. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
+3. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
+4. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+5. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+6. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
+
+Promotion guard (hard):
+
+1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires architect-approved contract text + validator/e2e required-gates replay closure.
+
 ---
 
 ## 4) Reviewer decision log
@@ -1572,6 +1627,7 @@ Promotion guard (hard):
 | FIX16-035 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-06T19:20:00Z | Batch-6 (`ASB16-RQ-017/018/019/020/021`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: mapping asset, single-parser dual-mode intake core, emitter-before-gate sequencing, and coverage/aggregator wiring are now implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `9e59e0f..47f2f38`; follow-up hardening (`Task-15`, `1beeb88`) closed dedup path-lock + UTC determinism blockers to `PASS_REQUIRED`; batch remains `ACCEPT_WITH_FIX` and non-promotional until deterministic replay archive closure per governance `8.10` |
 | FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: dual-field taxonomy normalization + intake core promotion mode are implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `f63eb55..47f2f38`; follow-up synchronization (`Task-13/15`, `b258982 + 1beeb88`) aligned status semantics and blocker posture; both rows remain `ACCEPT_WITH_FIX` and non-promotional until required=true replay closure per governance `8.11` |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T20:10:00Z | Write-boundary non-starvation hardening absorbed for `ASB16-RQ-028/031`: lane-scoped boundary semantics locked, protocol-entry liveness channels explicitly preserved, no-silent-downgrade fail-close mapped to canonical lane/candidate code families, telemetry tuple + replay matrix elevated to mandatory promotion gate; remains `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.12` |
+| HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:18:54Z | emergency hotfix lane opened for FQG multi-agent × multi-identity blocker (`PF-FQG-20260306-MA-MI-001-V2`): non-negotiable guardrail fixed as "execution-state no hard-switch", `allow_shared_session=true` re-scoped to `gated_switch` only, and mandatory handshake chain (`switch_request -> pre_switch_gate -> switch_apply -> switch_ack -> ack_verify -> dispatch`) requested for architect-level contract freeze; isolated from `FIX16-001..037` normalization batches pending validator/e2e closure |
 
 ---
 
@@ -1660,3 +1716,9 @@ Promotion guard (hard):
 69. `/tmp/v16_one_by_one_requirement_review_20260305.md`
 70. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-protocol-kernel-prompt-file-decision-cross-verification-2026-03-06.md`
 71. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+72. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+73. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
+74. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T210151_fqg_multiagent_multiidentity_blocker.md`
+75. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
+76. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+77. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
