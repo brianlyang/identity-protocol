@@ -656,6 +656,36 @@ Hard constraints:
 1. Refresh and strict modes must both emit interference matrix receipts.
 2. Missing either replay side invalidates closure.
 
+### rq_023_discovery_dual_track_requiredization_activation_contract_v1
+
+Required receipt fields:
+
+- `requiredization_triggered`
+- `trigger_classes`
+- `required_contract_declared`
+- `required_contract`
+- `discovery_requiredization_status`
+
+Hard constraints:
+
+1. Requiredization must be trigger-conditioned (`not_triggered -> optional`, `triggered_no_apply -> fail-close`).
+2. Trigger classification and requiredization status must be deterministic for same inputs.
+
+### rq_024_discovery_apply_coverage_fail_closed_contract_v1
+
+Required receipt fields:
+
+- `discovery_required_total`
+- `discovery_required_passed`
+- `discovery_required_coverage_rate`
+- `discovery_requiredization_status`
+- `error_code`
+
+Hard constraints:
+
+1. Apply-time requiredization cannot pass with partial coverage.
+2. Coverage mismatch must fail-close with canonical discovery error semantics.
+
 ### rq_025_kernel_canonical_source_contract_v1
 
 Required receipt fields:
@@ -686,6 +716,21 @@ Hard constraints:
 1. P0 mapping coverage target is `100%`.
 2. Orphan mapping rows must be `0`.
 
+### rq_028_instance_write_boundary_lock_contract_v1
+
+Required receipt fields:
+
+- `base_repo_write_boundary_status`
+- `error_code`
+- `violation_path`
+- `normalized_violation_path`
+- `evidence_ref`
+
+Hard constraints:
+
+1. Instance lanes must fail-close on protocol/governance/review write attempts.
+2. Canonical boundary classification must stay deterministic across lanes.
+
 ### rq_029_semantic_single_source_convergence_contract_v1
 
 Required receipt fields:
@@ -700,6 +745,20 @@ Hard constraints:
 
 1. Same lineage must converge to identical semantic tuple across lanes.
 2. Tuple mismatch is deterministic fail-close with canonical convergence error code.
+
+### rq_032_headstamp_pre_send_hard_gate_contract_v1
+
+Required receipt fields:
+
+- `headstamp_status`
+- `error_code`
+- `evidence_ref`
+- `actor_binding_ref`
+
+Hard constraints:
+
+1. Missing/malformed/mismatched headstamp must block outbound send.
+2. Governed and direct/manual send paths must share canonical pre-send verdict semantics.
 
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 

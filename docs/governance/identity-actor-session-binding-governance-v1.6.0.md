@@ -1069,6 +1069,16 @@ Batch-3B mandatory interpretation guard:
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
 
+Implementation update (2026-03-07):
+
+1. full requirement projection anchors were added for remaining P0 rows:
+   - `rq_023_discovery_dual_track_requiredization_activation_contract_v1`
+   - `rq_024_discovery_apply_coverage_fail_closed_contract_v1`
+   - `rq_028_instance_write_boundary_lock_contract_v1`
+   - `rq_032_headstamp_pre_send_hard_gate_contract_v1`
+2. mapping asset `identity/protocol/mappings/contract-binding.v1.6.yaml` now projects all `ASB16-RQ-001..032` rows (`row_count=32`), with scanner-verifiable `coverage_rate=100.0` and `p0_coverage_rate=100.0` under forced coverage replay.
+3. promotion boundary remains unchanged (`SPEC_READY/PENDING_INTAKE`) until deterministic required=true replay archive closes.
+
 ### 8.8 Batch-4 row-level strengthening profile (`ASB16-RQ-029/031/032/007/008`, 2026-03-06)
 
 Scope rule:

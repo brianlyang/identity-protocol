@@ -3,15 +3,16 @@ _meta:
   mapping_version: "v1.6"
   schema_version: 1
   source_layer: protocol
-  lifecycle_state: phase5_full_fix_landing
-  last_updated_utc: "2026-03-07T16:40:00Z"
-  row_count: 28
+  lifecycle_state: phase6_full_requirement_projection
+  last_updated_utc: "2026-03-07T17:05:00Z"
+  row_count: 32
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
     - "Phase-3 extension adds Batch-1 unlock-formula mapping row for ASB16-RQ-001."
     - "Phase-4 extension adds Batch-1 (RQ-002/003/004/005) and planned rows (RQ-008/026) mapping seeds."
     - "Phase-5 extension lands Batch-2A/5/4 kernel rows (RQ-006/007/009/010/011/012/013/016/025/029) with executable validators."
+    - "Phase-6 extension completes full requirement projection for P0 rows (RQ-023/024/028/032)."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -746,6 +747,113 @@ asb16-rq-022:
     - normalization_error_code
   error_code_refs: []
   mapping_state: phase1_seed
+
+asb16-rq-023:
+  requirement_id: ASB16-RQ-023
+  kernel_contract_id: rq_023_discovery_dual_track_requiredization_activation_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_023_discovery_dual_track_requiredization_activation_contract_v1
+  validator_ids:
+    - scripts/validate_discovery_requiredization.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#412-discovery_dual_track_requiredization_activation_contract_v1-p0
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-020---discovery-dual-track-activation--apply-time-coverage-fail-close-intake-asb16-rq-023024
+  report_field_refs:
+    - discovery_requiredization_status
+    - requiredization_triggered
+    - trigger_classes
+    - required_contract_declared
+    - required_contract
+    - requiredization_receipt_path
+  error_code_refs:
+    - IP-DREQ-001
+  mapping_state: phase6_landed
+
+asb16-rq-024:
+  requirement_id: ASB16-RQ-024
+  kernel_contract_id: rq_024_discovery_apply_coverage_fail_closed_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_024_discovery_apply_coverage_fail_closed_contract_v1
+  validator_ids:
+    - scripts/validate_discovery_requiredization.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-032---batch-3b-asb16-rq-024028-strengthening-normalization
+  report_field_refs:
+    - discovery_requiredization_status
+    - discovery_required_total
+    - discovery_required_passed
+    - discovery_required_coverage_rate
+    - discovery_required_gate_failed
+    - error_code
+  error_code_refs:
+    - IP-DREQ-002
+    - IP-DREQ-003
+  mapping_state: phase6_landed
+
+asb16-rq-028:
+  requirement_id: ASB16-RQ-028
+  kernel_contract_id: rq_028_instance_write_boundary_lock_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_028_instance_write_boundary_lock_contract_v1
+  validator_ids:
+    - scripts/validate_instance_base_repo_write_boundary.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#87-batch-3b-row-level-strengthening-profile-asb16-rq-024028-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-037---write-boundary-non-starvation-hardening-asb16-rq-028031
+  report_field_refs:
+    - base_repo_write_boundary_status
+    - error_code
+    - violation_path
+    - normalized_violation_path
+    - stale_reasons
+  error_code_refs:
+    - IP-KERNEL-WRITE-001
+  mapping_state: phase6_landed
+
+asb16-rq-032:
+  requirement_id: ASB16-RQ-032
+  kernel_contract_id: rq_032_headstamp_pre_send_hard_gate_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_032_headstamp_pre_send_hard_gate_contract_v1
+  validator_ids:
+    - scripts/validate_send_time_reply_gate.py
+    - scripts/validate_reply_identity_context_first_line.py
+    - scripts/validate_headstamp_recurrence_closure.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-four-track-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-029---outbound-headstamp-pre-send-hard-gate-intake-asb16-rq-032
+  report_field_refs:
+    - headstamp_status
+    - error_code
+    - evidence_ref
+    - actor_binding_ref
+    - pre_send_headstamp_gate_status
+  error_code_refs:
+    - IP-HDSTAMP-001
+    - IP-HDSTAMP-002
+    - IP-HDSTAMP-003
+  mapping_state: phase6_landed
 
 asb16-rq-030:
   requirement_id: ASB16-RQ-030
