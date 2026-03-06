@@ -1110,6 +1110,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "batch67_replay_archive": [
+                    "python3",
+                    "scripts/validate_batch67_replay_archive.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "writeback_continuity": [
                     "python3",
                     "scripts/validate_writeback_continuity.py",
@@ -1519,6 +1530,20 @@ def main() -> int:
                     ):
                         if k in spath_doc:
                             check_payload[k] = spath_doc.get(k)
+                if name == "batch67_replay_archive":
+                    replay_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "batch67_replay_archive_status",
+                        "error_code",
+                        "replay_case_total",
+                        "replay_case_passed",
+                        "replay_case_failed",
+                        "stale_reasons",
+                        "evidence_ref",
+                        "out_path",
+                    ):
+                        if k in replay_doc:
+                            check_payload[k] = replay_doc.get(k)
                 if name == "semantic_routing_guard":
                     semantic_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

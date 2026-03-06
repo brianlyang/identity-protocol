@@ -1034,6 +1034,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_skill_path != 0 or skill_path_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_batch67_replay, out_batch67_replay, err_batch67_replay = _run(
+        [
+            "python3",
+            "scripts/validate_batch67_replay_archive.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    batch67_replay_payload = _parse_json_payload(out_batch67_replay) or {}
+    validators["batch67_replay_archive"] = {
+        "rc": rc_batch67_replay,
+        "ok": rc_batch67_replay == 0,
+        "out": out_batch67_replay,
+        "err": err_batch67_replay,
+    }
+    batch67_replay_status = str(batch67_replay_payload.get("batch67_replay_archive_status", "")).strip().upper()
+    if rc_batch67_replay != 0 or batch67_replay_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_herm, out_herm, err_herm = _run(
         [
             "python3",
@@ -1926,6 +1950,16 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skill_path_rows": skill_path_payload.get("skill_path_rows", []),
             "stale_reasons": skill_path_payload.get("stale_reasons", []),
             "evidence_ref": skill_path_payload.get("evidence_ref", ""),
+        },
+        "batch67_replay_archive": {
+            "batch67_replay_archive_status": batch67_replay_payload.get("batch67_replay_archive_status"),
+            "error_code": batch67_replay_payload.get("error_code", ""),
+            "replay_case_total": batch67_replay_payload.get("replay_case_total"),
+            "replay_case_passed": batch67_replay_payload.get("replay_case_passed"),
+            "replay_case_failed": batch67_replay_payload.get("replay_case_failed"),
+            "stale_reasons": batch67_replay_payload.get("stale_reasons", []),
+            "evidence_ref": batch67_replay_payload.get("evidence_ref", ""),
+            "out_path": batch67_replay_payload.get("out_path", ""),
         },
         "e2e_hermetic_runtime_import": {
             "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),
