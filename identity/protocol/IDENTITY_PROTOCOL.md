@@ -50,6 +50,14 @@ This protocol is scenario-agnostic by design.
 2. Identity prompt layer (role cognition + decision principles)
 3. Runtime task layer (single source of truth state)
 
+### Protocol-side prompt bootstrap source (v1.6 additive)
+
+1. Runtime `IDENTITY_PROMPT.md` is a pack-level artifact and must remain under identity pack paths.
+2. Protocol layer must not add same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+3. Prompt baseline source for protocol-side capability evolution is tracked in:
+   - `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+4. Any update to the bootstrap source must close mapping + validator + replay chain before promotion-grade claims.
+
 ## Required identity pack files
 
 For each identity id `<id>`:

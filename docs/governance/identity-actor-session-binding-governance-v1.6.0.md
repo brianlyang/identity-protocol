@@ -389,6 +389,7 @@ Hard rules:
 4. protocol layer must not introduce same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
 5. protocol-side prompt baseline, if needed, must be expressed as contract source (existing kernel anchors in `identity/protocol/IDENTITY_PROTOCOL.md` / `identity/protocol/IDENTITY_RUNTIME.md` or a dedicated prompt-bootstrap contract file) and then compiled into pack-level `IDENTITY_PROMPT.md`.
 6. any protocol-side prompt baseline source is non-compliant unless mapping + validator + lane consumption are wired (`kernel_ref -> mapping_ref -> validator_ref -> acceptance replay`).
+7. canonical protocol-side prompt baseline contract source for this track is `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`, which must remain continuously updatable with capability-ingestion traceability and replay obligations.
 
 ### 4.17 `instance_protocol_write_boundary_lock_contract_v1` (P0)
 
@@ -1552,6 +1553,37 @@ Promotion guard:
 1. this addendum is non-promotional by itself.
 2. rows remain `SPEC_READY/PENDING_INTAKE` until replay matrix above is implemented and consumed by required lanes.
 
+### 8.13 Prompt Bootstrap Kernel Source Continuity Guard (`ASB16-RQ-014/015/027/031`, 2026-03-06)
+
+Decision lock:
+
+1. protocol layer must not add same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+2. protocol-side prompt baseline source is tracked via `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`.
+3. runtime prompt artifact remains pack-local (`identity/packs/<id>/IDENTITY_PROMPT.md` or resolved runtime pack path).
+
+Continuous-update requirements (non-optional):
+
+1. every update to prompt bootstrap kernel source must include capability-ingestion delta against identity base protocol capability set.
+2. every update must define validator delta + replay obligations before any status promotion claim.
+3. every update must carry four-track evidence metadata:
+   - `cross_verification_bundle_id`
+   - `source_url_set`
+   - `reference_timestamp_utc`
+   - `conflict_reconciliation_note`
+
+Five-link closure requirements:
+
+1. `RQ-014`: bootstrap capability contract source + fail-close coverage validator.
+2. `RQ-015`: canonical six-field capability matrix output and fail-close validator.
+3. `RQ-027`: derived prompt conformance metadata tuple (`kernel_contract_version`, `kernel_contract_digest`, `derived_from_contract_ids`, `overlay_digest`).
+4. `RQ-031`: executable coupling chain (`kernel_contract_ref -> validator_ref -> evidence_ref`) + explicit actor gate.
+5. all four rows must close mapping + validator + lane consumption replay before promotion beyond `PENDING_INTAKE`.
+
+Promotion guard:
+
+1. adding this kernel source is structural hardening only.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains mandatory until executable closure is replay-proven.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
@@ -1614,3 +1646,4 @@ Promotion guard:
 58. `/tmp/v16_architect_deep_scan_full_repo_20260305.json`
 59. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
 60. `/tmp/v16_one_by_one_requirement_review_20260305.md`
+61. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
