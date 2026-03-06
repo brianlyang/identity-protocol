@@ -84,6 +84,7 @@ Carry-over evidence:
 | FIX16-034 | 2026-03-06 | protocol | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalization: phase-A/B parity closure + tmp collision-safe allocator + handoff/collab freshness auto-rotation + protocol-feedback atomic emit + refresh->strict interference matrix receipts | 4f98bf4 + 84daaee | SPEC_READY | PENDING_INTAKE |
 | FIX16-035 | 2026-03-06 | protocol | Batch-6 (`ASB16-RQ-017/018/019/020/021`) cross-workflow governance strengthening normalization: four-track contract hardening + dedup monotonic winner + cross-workflow schema gate + skill-path layout integrity + route/workflow publish-version pinning | 0df31f5 + 10c9956 + b80ec1f | SPEC_READY | PENDING_INTAKE |
 | FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f | SPEC_READY | PENDING_INTAKE |
+| FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1373,6 +1374,98 @@ Batch-6/7 revised execution order (post-audit hard sequence):
 4. Implement `RQ-021` emitter (`emit_v16_route_version_pin_receipt.py`) before pinning gate.
 5. Wire all seven new gates into coverage and aggregator payload extraction before any lock or promotion claim.
 
+### FIX16-037 - write-boundary non-starvation hardening (`ASB16-RQ-028/031`)
+
+- Status: `SPEC_READY`
+- Goal: remove ambiguity between write-boundary enforcement and protocol-lane entry so boundary lock cannot regress into protocol-entry starvation.
+- Audit class: `PASS_WITH_BLOCKERS` (docs hardening accepted; executable lane-wide closure pending).
+
+Scope lock (mandatory):
+
+1. this fix is strictly scoped to `ASB16-RQ-028/031` and does not create a new requirement row.
+2. semantics are additive hardening to v1.6 `4.17` / `8.12` and inherit existing `SPEC_READY/PENDING_INTAKE` posture.
+3. this fix must not alter previously locked constraints for `RQ-032` headstamp gate or Batch-6/7 intake quorum contracts.
+
+Absorbed hardening decisions (normative):
+
+1. write-boundary lock is lane-scoped and write-surface scoped; it cannot rewrite lane resolution outputs.
+2. protocol-entry channels remain live under boundary lock for:
+   - explicit `work_layer=protocol`,
+   - `session_lane_lock=protocol`,
+   - candidate bridge outcomes `PROTOCOL_DIRECT/PROTOCOL_CANDIDATE`.
+3. protocol-context fallback to instance without candidate/inquiry receipt chain is fail-closed.
+4. canonical boundary code remains `IP-KERNEL-WRITE-001`; legacy `IP-GOV-BASE-001` is compatibility alias only.
+5. protocol-entry fallback/candidate failures use canonical current families:
+   - `IP-LAYER-GATE-006/007`,
+   - `IP-LAYER-CAND-001..004`.
+
+Mandatory telemetry tuple (machine receipt):
+
+1. `intent_source`
+2. `protocol_context_detected`
+3. `session_lane_lock`
+4. `lane_resolution_decision`
+5. `lane_resolution_error_code`
+6. `applied_gate_set`
+7. `base_repo_write_boundary_status`
+
+Mandatory replay matrix (promotion hard-gate):
+
+1. positive replay A:
+   - explicit `work_layer=protocol` with boundary enabled must keep `applied_gate_set=protocol_required_checks`.
+2. positive replay B:
+   - `session_lane_lock=protocol` under weak intent signal must still resolve to protocol lane.
+3. positive replay C:
+   - `PROTOCOL_CANDIDATE` path must emit `QUESTION_REQUIRED/EVIDENCE_PENDING` with candidate + inquiry receipts.
+4. negative replay D:
+   - instance forbidden-surface write attempt must fail-close on canonical boundary code.
+5. negative replay E:
+   - protocol-context fallback without candidate/inquiry chain must fail-close with deterministic lane/candidate code.
+6. convergence replay F:
+   - identical lineage input must preserve telemetry tuple parity across update/three-plane/full-scan.
+
+Acceptance command set (normative target):
+
+```bash
+python3 scripts/validate_work_layer_gate_set_routing.py \
+  --catalog <LOCAL_CATALOG> \
+  --identity-id <ID> \
+  --operation update \
+  --source-layer local \
+  --actor-id assistant:codex \
+  --force-check \
+  --json-only
+
+python3 scripts/validate_protocol_entry_candidate_bridge.py \
+  --catalog <LOCAL_CATALOG> \
+  --identity-id <ID> \
+  --operation update \
+  --source-layer local \
+  --force-check \
+  --json-only
+
+python3 scripts/validate_protocol_inquiry_followup_chain.py \
+  --catalog <LOCAL_CATALOG> \
+  --identity-id <ID> \
+  --operation update \
+  --source-layer local \
+  --force-check \
+  --json-only
+
+python3 scripts/validate_instance_base_repo_write_boundary.py \
+  --catalog <LOCAL_CATALOG> \
+  --identity-id <ID> \
+  --operation update \
+  --check-git-diff \
+  --json-only
+```
+
+Promotion guard (hard):
+
+1. this section remains `ACCEPT_WITH_FIX` only.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion remains blocked until replay matrix + telemetry tuple are enforced and consumed across creator/readiness/three-plane/full-scan/e2e.
+
 ---
 
 ## 4) Reviewer decision log
@@ -1415,6 +1508,7 @@ Batch-6/7 revised execution order (post-audit hard sequence):
 | FIX16-034 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T16:40:00Z | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalized: readiness two-phase parity requirement + tmp collision-safe allocator contract + handoff/collab auto-rotation closure (missing validator files treated as hard blocker) + protocol-feedback atomic emit transactionality + refresh/strict interference matrix receipts (field-gap lock, mapped to `FIX16-017`); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.9` |
 | FIX16-035 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T19:20:00Z | Batch-6 (`ASB16-RQ-017/018/019/020/021`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: mapping asset prerequisite locked, `RQ-017/030` unified to single intake core parser with dual mode, `RQ-021` switched to emitter-before-gate sequence, and coverage/aggregator mandatory wiring added; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.10` |
 | FIX16-036 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: `RQ-022` dual-field taxonomy normalization (`fallback_reason_raw + fallback_taxonomy_class`) with blocker-namespace isolation, and `RQ-030` unified to intake core parser promotion mode plus coverage/aggregator mandatory wiring; both rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.11` |
+| FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T20:10:00Z | Write-boundary non-starvation hardening absorbed for `ASB16-RQ-028/031`: lane-scoped boundary semantics locked, protocol-entry liveness channels explicitly preserved, no-silent-downgrade fail-close mapped to canonical lane/candidate code families, telemetry tuple + replay matrix elevated to mandatory promotion gate; remains `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.12` |
 
 ---
 

@@ -405,7 +405,14 @@ Hard rules:
 
 1. forbidden writes fail-closed with dedicated boundary code (`IP-KERNEL-WRITE-001`, reserved in v1.6).
 2. evidence must show write-boundary enforcement decision in replay artifacts.
-3. lock policy applies regardless of work-layer narrative claims.
+3. write-boundary lock is lane-scoped and write-surface scoped:
+   - it must not rewrite routing outputs (`resolved_work_layer`, `protocol_entry_decision`, `applied_gate_set`).
+4. protocol entry channels must remain reachable under boundary lock:
+   - explicit `work_layer=protocol`,
+   - `session_lane_lock=protocol`,
+   - `protocol_entry_decision in {PROTOCOL_DIRECT, PROTOCOL_CANDIDATE}`.
+5. protocol-context downgrade to instance without candidate/inquiry receipt chain is fail-closed:
+   - canonical current-path codes are `IP-LAYER-GATE-006/007` and `IP-LAYER-CAND-001..004`.
 
 ### 4.18 `semantic_routing_single_source_convergence_contract_v1` (P0)
 
@@ -542,7 +549,7 @@ Mandatory semantics:
 | ASB16-RQ-025 | identity kernel surfaces (`identity/protocol/*`, `identity/catalog/schema/*`) must be canonical contract source for v1.6 | kernel contracts + release/docs projection validators | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-026 | every P0 contract must have machine-readable kernel-to-validator-to-doc mapping | mapping checker + status-promotion gate | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
 | ASB16-RQ-027 | identity prompts must be kernel-derived artifacts with conformance metadata | prompt compiler + conformance validator + runtime report fields | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
-| ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) |
+| ASB16-RQ-028 | instance lanes must be blocked from protocol-kernel/governance/review writes by default | write-boundary validator + lane enforcement + fail-close error mapping + protocol-entry non-starvation guard | P0 | SPEC_READY | kernel-first baseline intake (`review v1.6 FIX16-021`) + non-starvation addendum (`review v1.6 FIX16-037`) |
 | ASB16-RQ-029 | semantic-routing verdict must be single-sourced and convergent across update/three-plane/full-scan for same lineage | canonical semantic receipt + convergence validator + strict update schema uplift | P0 | SPEC_READY | semantic convergence intake (`review v1.6 FIX16-022`) |
 | ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) + final replay reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) + architect instance pilot (`review v1.6 FIX16-026`) + final cross-track reinforcement (`review v1.6 FIX16-027`) |
@@ -573,6 +580,9 @@ Mandatory semantics:
 | C19 | new v1.6 suggestions pass intake evidence quorum before implementation promotion | cross-verification bundle proof (`T1..T4`) + timestamped source set + conflict reconciliation note |
 | C20 | protocol-kernel prompt import produces executable uplift (not text-only) and multimodal sample-proof closure under explicit actor context | paired A/B replay bundle + mapping fields (`kernel_contract_ref`,`validator_ref`,`evidence_ref`) + trigger/knowledge/arbitration sample-proof pass set |
 | C21 | outbound messages missing canonical `Identity-Context | Layer-Context` headstamp are blocked before send | pre-send negative replay (`missing/malformed headstamp -> FAIL_REQUIRED`, `IP-HDSTAMP-001`) + tuple mismatch replay (`IP-HDSTAMP-002`) + receipt-missing replay (`IP-HDSTAMP-003`) |
+| C22 | write-boundary lock does not starve protocol entry channels (`explicit protocol`, `session lane lock`, `candidate/direct`) | lane-routing replay with boundary enabled and protocol-entry tuple kept live (`lane_resolution_decision`, `session_lane_lock`, `protocol_entry_decision`) |
+| C23 | protocol-context silent fallback to instance is fail-closed and candidate/inquiry chain is mandatory | negative replay must emit deterministic fail-close (`IP-LAYER-GATE-006/007` or `IP-LAYER-CAND-001..004`) with candidate/inquiry receipts |
+| C24 | lane-scoped routing and boundary telemetry are convergent across update/three-plane/full-scan | same-lineage telemetry tuple parity (`intent_source`, `protocol_context_detected`, `lane_resolution_decision`, `lane_resolution_error_code`, `applied_gate_set`, `base_repo_write_boundary_status`) |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -605,7 +615,7 @@ Mandatory semantics:
 | ASB16-RQ-025 | kernel-first canonical source contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-026 | kernel contract mapping projection contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
-| ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending |
+| ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending with explicit non-starvation invariant in `8.12` |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE`; reinforced by final replay in `review FIX16-027` |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; pilot (`review FIX16-026`) + final replay (`review FIX16-027`) both confirm text uplift != executable closure |
@@ -789,6 +799,7 @@ Baseline invariants (must stay true during all rollout phases):
    - `<instance>/runtime/protocol-feedback/**`
    and does not allow protocol-kernel/governance/review writes.
 3. anti-overclaim and unlock formula in section `7.2` remain authoritative and unmodified by partial implementation progress.
+4. boundary lock must remain write-surface scoped and must not starve protocol entry channels (`explicit protocol`, `session_lane_lock=protocol`, `PROTOCOL_CANDIDATE/PROTOCOL_DIRECT`).
 
 Phased rollout contract (hard order):
 
@@ -807,6 +818,7 @@ Promotion freeze triggers (any hit locks promotion):
 2. mismatch between derived prompt metadata (`digest/version/contract IDs`) and runtime report values.
 3. boundary replay showing instance-side writes outside allowed runtime/protocol-feedback surfaces.
 4. unresolved replay variance between root/tmp runs for the same payload.
+5. protocol-entry starvation under boundary lock (protocol context detected but forced instance fallback without candidate/inquiry receipt chain).
 
 Evidence bundle required for Phase-B -> Phase-C transition:
 
@@ -814,6 +826,7 @@ Evidence bundle required for Phase-B -> Phase-C transition:
 2. prompt derivation conformance report (metadata/hash aligned).
 3. write-boundary replay with deterministic fail-close code (`IP-KERNEL-WRITE-001`).
 4. parity replay proof (same inputs, root/tmp equivalent outcomes).
+5. protocol-entry non-starvation replay proof (explicit protocol/lane-lock/candidate positive path + silent-fallback negative path).
 
 ### 8.2 Cross-Verification Verdict and Implementation Hardening (2026-03-05)
 
@@ -1491,6 +1504,50 @@ Batch-6/7 revised execution order (hard sequencing):
 3. Implement `RQ-022` fallback taxonomy normalization with dual fields (`raw + class`) and namespace separation from blocker taxonomy.
 4. Implement `RQ-021` publish-version receipt emitter first, then pinning gate.
 5. Wire all seven gates into coverage aggregator + three-plane/full-scan payload extraction before any lock or promotion claim.
+
+### 8.12 Write-Boundary Non-Starvation Guard (`ASB16-RQ-028/031`, 2026-03-06)
+
+Scope:
+
+1. this addendum hardens the boundary semantics of `RQ-028` without creating a new requirement line.
+2. purpose is to prevent recurrence of the historical "boundary lock becomes protocol-entry lock" regression class.
+
+Hard rules (normative):
+
+1. boundary lock governs write targets only and must execute after lane resolution.
+2. boundary lock must not mutate `resolved_work_layer`, `applied_gate_set`, or `protocol_entry_decision`.
+3. protocol entry must stay live when any of the following is true:
+   - explicit `work_layer=protocol`;
+   - `session_lane_lock=protocol`;
+   - candidate bridge resolves to `PROTOCOL_DIRECT` or `PROTOCOL_CANDIDATE`.
+4. protocol-context fallback to instance without candidate/inquiry receipt chain is prohibited and fail-closed.
+5. canonical code convergence:
+   - boundary violation canonical code remains `IP-KERNEL-WRITE-001` (legacy `IP-GOV-BASE-001` may remain compatibility alias only);
+   - protocol-entry fallback path uses canonical current validators (`IP-LAYER-GATE-006/007`, `IP-LAYER-CAND-001..004`).
+
+Required telemetry tuple (machine-auditable, lane-consumed):
+
+1. `intent_source`
+2. `protocol_context_detected`
+3. `session_lane_lock`
+4. `lane_resolution_decision`
+5. `lane_resolution_error_code`
+6. `applied_gate_set`
+7. `base_repo_write_boundary_status`
+
+Mandatory replay matrix (hard gate):
+
+1. positive A: explicit `work_layer=protocol` with boundary enabled must produce `applied_gate_set=protocol_required_checks`.
+2. positive B: `session_lane_lock=protocol` under weak signal must still resolve to protocol lane.
+3. positive C: `PROTOCOL_CANDIDATE` must produce `QUESTION_REQUIRED/EVIDENCE_PENDING` chain with candidate/inquiry receipts.
+4. negative D: instance write attempt to forbidden surface must fail-close with canonical boundary code (alias tolerated only during migration).
+5. negative E: protocol-context fallback without candidate/inquiry chain must fail-close with deterministic lane/candidate error code.
+6. convergence F: unchanged lineage input must preserve telemetry tuple parity across update/three-plane/full-scan.
+
+Promotion guard:
+
+1. this addendum is non-promotional by itself.
+2. rows remain `SPEC_READY/PENDING_INTAKE` until replay matrix above is implemented and consumed by required lanes.
 
 ## 9) References
 
