@@ -589,6 +589,7 @@ Mandatory semantics:
 | C24 | lane-scoped routing and boundary telemetry are convergent across update/three-plane/full-scan | same-lineage telemetry tuple parity (`intent_source`, `protocol_context_detected`, `lane_resolution_decision`, `lane_resolution_error_code`, `applied_gate_set`, `base_repo_write_boundary_status`) |
 | C25 | multi-agent delegated run must not hard-switch identity during execution state | switch-state gate replay (`RUNNING/TOOL_CALLING/STREAMING -> FAIL_REQUIRED`) + mandatory `switch_ack` verification receipt before dispatch |
 | C26 | explicit protocol governance request must not be starved in instance lane; unresolved protocol route and missing headstamp are both fail-closed | lane-activation replay (`requested_lane=protocol`) with deterministic route verdict (`resolved_lane=protocol` or fail-close `IP-LANE-ROUTE-001/IP-LANE-ACT-002`) + send-time headstamp negative replay (`IP-HDSTAMP-001..003`) |
+| C27 | strict surfaces must not hardcode fixed `/tmp` output paths; temp artifacts must be run/identity scoped | static scan + runtime replay proving dynamic temp resolver (`run_id + identity_id + operation`) and CI runner-temp parity (`${RUNNER_TEMP}`) with fail-close `IP-TMPPATH-*` |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -1695,12 +1696,14 @@ Four-track evidence package (architect intake mandatory):
 
 Architect handoff inputs (absolute paths):
 
-1. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
-2. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
-3. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
-4. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
-5. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
-6. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
+1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T134224Z_fqg_multiagent_multiidentity_gated_switch_v2.md`
+3. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_20260306T134224Z_fqg_multiagent_multiidentity_gated_switch_v2.json`
+4. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/evidence-index/INDEX.md`
+5. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/custom_switch_live_verify_20260306_202556.md`
+6. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+7. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/office_ops_expert_direct_query_20260306_201211.md`
+8. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
 
 Promotion guard:
 
@@ -1753,13 +1756,13 @@ Four-track evidence package (architect intake mandatory):
 
 Architect handoff inputs (absolute paths):
 
-1. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
-2. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
-3. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
-4. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
-5. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
-6. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
-7. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
+3. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+4. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T134224Z_fqg_multiagent_multiidentity_gated_switch_v2.md`
+5. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/custom_switch_live_verify_20260306_202556.md`
+6. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+7. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/office_ops_expert_direct_query_20260306_201211.md`
 8. runtime route snapshot source (remote): `/root/feiqiao-guard/.runtime/identity_routes.json`
 
 Promotion guard:
@@ -1767,6 +1770,47 @@ Promotion guard:
 1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. promotion requires architect-approved lane-activation contract text + required validator/e2e replay closure on route non-starvation and pre-send headstamp continuity.
+
+### 8.16 Emergency Hotfix Track - Strict-Surface Fixed `/tmp` Path Debt (`HOTFIX16-P1-003`, 2026-03-06)
+
+Scope and isolation lock:
+
+1. this is a separate P1 emergency hotfix track and must not be merged into `FIX16-*` or `HOTFIX16-P0-*` closure states.
+2. this track addresses residual fixed `/tmp` output hardcoding in strict surfaces only.
+3. lifecycle posture remains non-promotional until resolver contract + validator/e2e closure are landed.
+
+Hard guardrail:
+
+1. strict surfaces (`validate/update/readiness/three-plane/full-scan/e2e/ci`) must not rely on fixed `/tmp/<static_name>` defaults.
+2. default temp outputs must be dynamic and scoped by `run_id + identity_id + operation`.
+3. CI flows must use runner-scoped temp root (`${RUNNER_TEMP}` or equivalent), not fixed `/tmp`.
+4. `--out` remains explicit caller override only; absence of `--out` must never imply fixed hardcoded path.
+
+Canonical error-code family (reserved for this hotfix track):
+
+1. `IP-TMPPATH-001` (`fixed_tmp_path_detected_in_strict_surface`)
+2. `IP-TMPPATH-002` (`tmp_path_not_identity_run_scoped`)
+3. `IP-TMPPATH-003` (`ci_temp_root_not_runner_scoped`)
+
+Four-track evidence package (architect intake mandatory):
+
+1. `T1 governance/spec`: strict-path determinism + replay non-collision requirements.
+2. `T2 runtime implementation`: partial cleanup already landed (`4179e47`) but residual `/tmp` literals remain across core surfaces.
+3. `T3 live evidence`: cross-surface scan still finds fixed `/tmp` references in creator/readiness/three-plane/full-scan/ci chain.
+4. `T4 protocol feedback`: canonical feedback batch + receipt + evidence-index entries for this governance gap.
+
+Architect handoff inputs (absolute paths):
+
+1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T140030Z_tmp_hardcoded_path_governance_gap.md`
+2. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_20260306T140030Z_tmp_hardcoded_path_governance_gap.json`
+3. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/evidence-index/INDEX.md`
+4. commit evidence: `4179e47` (partial cleanup baseline)
+
+Promotion guard:
+
+1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion requires resolver implementation + fixed-path detector validator + deterministic positive/negative replay on strict surfaces.
 
 ## 9) References
 
@@ -1787,12 +1831,12 @@ Promotion guard:
 15. `context7:/websites/developers_openai_api (strict schema/tool docs extraction)`
 16. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
 17. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
-18. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
-19. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T211943_fqg_multiagent_multiidentity_blocker_v2_gated_switch.md`
-20. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T210151_fqg_multiagent_multiidentity_blocker.md`
-21. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_switch_live_verify_20260306_202556.md`
-22. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
-23. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/office_ops_expert_direct_query_20260306_201211.md`
+18. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
+19. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T134224Z_fqg_multiagent_multiidentity_gated_switch_v2.md`
+20. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T210151_fqg_multiagent_multiidentity_blocker.md`
+21. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/custom_switch_live_verify_20260306_202556.md`
+22. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/custom_creative_ecom_analyst_direct_query_20260306_202049.md`
+23. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/office_ops_expert_direct_query_20260306_201211.md`
 24. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
 25. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-cross-verification-execution-receipt-2026-03-04-roundtable-vendor-context7-openaidoc-skill.md`
 26. `https://developers.openai.com/codex/skills/`
@@ -1830,5 +1874,8 @@ Promotion guard:
 58. `/tmp/v16_architect_deep_scan_full_repo_20260305.md`
 59. `/tmp/v16_one_by_one_requirement_review_20260305.md`
 60. `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
-61. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
-62. `/Users/yangxi/claude/codex_project/fqsh/artifacts/ops/2026-03-06/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
+61. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
+62. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T213517_protocol_lane_activation_receipt.md`
+63. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T140030Z_tmp_hardcoded_path_governance_gap.md`
+64. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_20260306T140030Z_tmp_hardcoded_path_governance_gap.json`
+65. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/evidence-index/INDEX.md`
