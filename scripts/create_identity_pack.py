@@ -611,6 +611,13 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_identity_experience_feedback_governance.py",
         "scripts/validate_identity_self_upgrade_enforcement.py",
         "scripts/validate_identity_install_provenance.py",
+        "scripts/validate_v16_cross_verification_tracks.py",
+        "scripts/validate_v16_intake_evidence_quorum.py",
+        "scripts/validate_route_version_pinning.py",
+        "scripts/validate_fallback_taxonomy_normalization.py",
+        "scripts/validate_dedup_monotonicity.py",
+        "scripts/validate_v16_cross_workflow_schema.py",
+        "scripts/validate_v16_skill_path_integrity.py",
     ]
 
 
@@ -1092,7 +1099,7 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "handoff_logs_max_age_days": 7,
             "route_metrics_max_age_days": 7,
         },
-        "required_validator_set_label": "v1.1-required",
+        "required_validator_set_label": "v1.2-required-batch67",
         "candidate_validators_v1_2": [
             "scripts/validate_identity_feedback_freshness.py",
             "scripts/validate_identity_feedback_promotion.py",

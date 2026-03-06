@@ -248,6 +248,13 @@ jobs:
             python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root /tmp/capability-fit-matrices --json-only
             python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
+            python3 scripts/validate_v16_cross_verification_tracks.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_route_version_pinning.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_fallback_taxonomy_normalization.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_dedup_monotonicity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_v16_cross_workflow_schema.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/validate_v16_skill_path_integrity.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
             if [ "${IS_FIXTURE_ID}" = "1" ]; then
