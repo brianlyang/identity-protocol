@@ -1651,7 +1651,7 @@ Scope and isolation lock:
 
 1. this is an emergency hotfix intake track for architect escalation and is intentionally isolated from `FIX16-001..037` batch normalization.
 2. this section does not rewrite or reinterpret existing requirement rows in section `7`; it adds a P0 incident guardrail package for multi-agent multi-identity runtime safety.
-3. lifecycle posture remains non-promotional until architect intake + executable validator/e2e closure are landed.
+3. runtime bridge hardening is landed locally, but lifecycle remains non-promotional until independent rollout/audit closure is completed.
 4. naming follows v1.5 hotfix-lane convention (`HOTFIX-P0-*`), while using v1.6-specific prefix `HOTFIX16-P0-*` to avoid cross-version ID collision.
 
 Hard guardrail (non-negotiable):
@@ -1693,9 +1693,21 @@ Canonical error-code family (reserved for this hotfix track):
 Four-track evidence package (architect intake mandatory):
 
 1. `T1 governance/spec`: explicit binding + switch guard + canonical headstamp fail-close (`v1.6 4.21`, `v1.4.12`, `v1.4.6`).
-2. `T2 runtime implementation`: current bridge confirms delivery/rollout but does not provide `switch_ack` contract semantics.
-3. `T3 live evidence`: same-session multi-identity reuse and identity drift risk replay records.
+2. `T2 runtime implementation`: runtime bridge now exposes guarded route metadata (`allow_shared_session`, `switch_ack_ref`, `route_status`, `route_error`) and blocks conflict dispatch with `409` fail-close even under explicit override attempts.
+3. `T3 live evidence`: local bridge tests replay pass (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`) including conflict + override bypass negative cases.
 4. `T4 hotfix requirement docs`: v2 requirement clarification + v2 protocol-feedback batch package.
+
+Implementation delta (2026-03-07):
+
+1. runtime bridge files landed (fqsh workspace):
+   - `src/feiqiao_guard/identity_router.py`
+   - `src/feiqiao_guard/main.py`
+   - `src/feiqiao_guard/models.py`
+   - `src/feiqiao_guard/chat_bridge.py`
+2. route conflict invariants added:
+   - duplicate `session_id`/`codex_home` without gated shared-session semantics -> conflict issue,
+   - inconsistent `switch_ack_ref` under shared mode -> conflict issue.
+3. inbound fail-close now covers all identity-route paths (including explicit override).
 
 Architect handoff inputs (absolute paths):
 
@@ -1712,7 +1724,10 @@ Promotion guard:
 
 1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
-3. promotion requires architect-approved contracts + validator/e2e required-gates closure with deterministic positive/negative replay.
+3. promotion requires independent rollout/audit closure:
+   - deployed route snapshot includes `route_status/route_error` fields,
+   - conflict `409` + non-conflict success replay archived from live endpoint,
+   - switch-ack handshake receipts verified in production pipeline.
 
 ### 8.15 Emergency Hotfix Track - Protocol Lane Activation Starvation + Headstamp Continuity (`HOTFIX16-P0-002`, 2026-03-06)
 
@@ -1722,7 +1737,7 @@ Scope and isolation lock:
 2. this track addresses two coupled runtime blockers only:
    - explicit protocol-governance request cannot deterministically activate `work_layer=protocol`,
    - outbound replies can still be observed without canonical dual headstamp.
-3. lifecycle posture remains non-promotional until architect intake + executable validator/e2e closure are landed.
+3. lane-routing/headstamp guards are landed locally, but lifecycle remains non-promotional until independent rollout/audit closure is completed.
 
 Hard guardrail:
 
@@ -1753,9 +1768,15 @@ Canonical error-code family (reserved for this hotfix track):
 Four-track evidence package (architect intake mandatory):
 
 1. `T1 governance/spec`: protocol entry non-starvation + headstamp pre-send hard-gate (`4.21`, `C22..C26`, v1.4.12/v1.4.6 binding clauses).
-2. `T2 runtime implementation`: current route topology lacks protocol-lane determinism under multi-identity shared-session pressure.
-3. `T3 live evidence`: repeated case of `confirmed` delivery while lane/HUD consistency is not guaranteed and headstamp omission incident is recorded.
+2. `T2 runtime implementation`: lane-routing guard and headstamp continuity validators are wired on strict surfaces; route conflict state is now machine-readable via bridge route payload fields.
+3. `T3 live evidence`: local replay shows deterministic conflict fail-close and unchanged non-conflict dispatch path (`pytest 28 passed` on inbound + bridge suites).
 4. `T4 escalation package`: protocol escalation pack + lane activation receipt + gated-switch requirement/feedback v2 documents.
+
+Implementation delta (2026-03-07):
+
+1. protocol lane conflict is no longer silently downgraded on identity-route paths; conflict emits deterministic block.
+2. route summary now carries explicit route error surface for downstream audit pipelines.
+3. local runtime replay matrix (positive + negative) is executable and passing; production rollout evidence remains required for promotion.
 
 Architect handoff inputs (absolute paths):
 
@@ -1772,7 +1793,10 @@ Promotion guard:
 
 1. this hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
-3. promotion requires architect-approved lane-activation contract text + required validator/e2e replay closure on route non-starvation and pre-send headstamp continuity.
+3. promotion requires independent rollout/audit closure:
+   - live route snapshot confirms non-starvation semantics with canonical route fields,
+   - live headstamp continuity replay archive is complete (`positive + negative`),
+   - protocol-lane activation receipts are reproducible from production endpoint traces.
 
 ### 8.16 Emergency Hotfix Track - Strict-Surface Fixed `/tmp` Path Debt (`HOTFIX16-P1-003`, 2026-03-06)
 

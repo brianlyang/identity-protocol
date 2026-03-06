@@ -85,8 +85,8 @@ Carry-over evidence:
 | FIX16-035 | 2026-03-06 | protocol | Batch-6 (`ASB16-RQ-017/018/019/020/021`) cross-workflow governance strengthening normalization: four-track contract hardening + dedup monotonic winner + cross-workflow schema gate + skill-path layout integrity + route/workflow publish-version pinning | 0df31f5 + 10c9956 + b80ec1f + 9e59e0f + f63eb55 + e214df9 + 9c0cf0a + 19d02ab + b5a191c + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f + f63eb55 + e214df9 + 4f4930c + 08c8f89 + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | 093496b | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b | SPEC_READY | PENDING_INTAKE |
 
@@ -1537,13 +1537,13 @@ Promotion guard (hard):
 
 - Status: `SPEC_READY` (hotfix lane intake)
 - Goal: enforce the non-negotiable guardrail "no hard identity switch during execution", while preserving controlled switching capability via gated handshake.
-- Audit class: `PENDING_INTAKE` (architect review pending; executable validator/e2e closure not landed).
+- Audit class: `PENDING_INTAKE` (runtime bridge closure landed locally; independent rollout/audit closure pending).
 
 Hotfix lane scope lock:
 
 1. this hotfix is isolated from `FIX16-001..037` batch streams and must not be merged into earlier fix findings.
 2. naming follows v1.5 hotfix treatment (`HOTFIX-P0-*`) with v1.6-specific ID prefix `HOTFIX16-P0-*`.
-3. this hotfix captures protocol design hardening only; it does not claim code closure in current turn.
+3. runtime bridge closure is landed locally, but promotion posture remains non-promotional until independent live rollout evidence is archived.
 
 Core semantics lock (v2 clarification absorbed):
 
@@ -1568,9 +1568,19 @@ Reserved error-code family (for architect contract freeze):
 Four-track evidence package (cross-verified):
 
 1. `T1 governance/spec`: explicit identity binding + switch-guard + canonical headstamp fail-close constraints.
-2. `T2 runtime implementation`: current bridge confirms delivery/rollout but does not provide `switch_ack` contract receipts.
-3. `T3 live evidence`: same-session multi-identity reuse and identity-drift risk in live records.
+2. `T2 runtime implementation`: bridge now emits/consumes guarded route metadata (`allow_shared_session`, `switch_ack_ref`, `route_status`, `route_error`) and enforces conflict fail-close on all identity-route paths.
+3. `T3 live evidence`: local runtime replay passes including negative conflict + override-bypass checks (`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest tests/test_chat_inbound.py tests/test_chat_bridge.py -q` => `28 passed`).
 4. `T4 hotfix requirement docs`: requirement clarification v2 + protocol-feedback v2 package.
+
+Implementation delta snapshot (2026-03-07):
+
+1. fqsh bridge runtime files landed:
+   - `src/feiqiao_guard/identity_router.py`
+   - `src/feiqiao_guard/main.py`
+   - `src/feiqiao_guard/models.py`
+   - `src/feiqiao_guard/chat_bridge.py`
+2. conflict routing now fails closed (`HTTP 409`) even when request carries explicit session/codex override.
+3. route summary and `/v1/chat/routes` payload now expose conflict state fields for machine audit.
 
 Architect handoff artifacts (absolute paths):
 
@@ -1587,19 +1597,22 @@ Promotion guard (hard):
 
 1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
-3. promotion requires architect-approved contract text + validator/e2e required-gates replay closure.
+3. promotion requires independent rollout/audit closure:
+   - live route snapshot with canonical route conflict fields,
+   - archived `409` conflict replay + non-conflict success replay,
+   - production switch-ack handshake receipt verification.
 
 ### HOTFIX16-P0-002 - emergency hotfix intake (`protocol lane activation starvation + headstamp continuity`)
 
 - Status: `SPEC_READY` (hotfix lane intake)
 - Goal: close the deadlock where explicit protocol-governance requests cannot deterministically activate protocol lane, and close recurrent outbound headstamp omission risk on send path.
-- Audit class: `PENDING_INTAKE` (architect review pending; executable validator/e2e closure not landed).
+- Audit class: `PENDING_INTAKE` (local lane/headstamp runtime guards landed; independent rollout/audit closure pending).
 
 Hotfix lane scope lock:
 
 1. this hotfix is isolated from `FIX16-001..037` and from `HOTFIX16-P0-001`; no status inheritance is allowed.
 2. this hotfix targets only lane activation non-starvation and headstamp continuity hard-gate.
-3. this is design hardening intake only; no runtime closure claim is made in this record.
+3. local runtime closure is landed, but this record remains non-promotional until live endpoint replay evidence is archived.
 
 Core semantics lock:
 
@@ -1620,9 +1633,15 @@ Reserved error-code family (for architect contract freeze):
 Four-track evidence package (cross-verified):
 
 1. `T1 governance/spec`: protocol-entry non-starvation + headstamp pre-send fail-close clauses.
-2. `T2 runtime implementation`: route topology cannot yet guarantee protocol-lane activation under current shared-session pressure.
-3. `T3 live evidence`: `confirmed` delivery can still diverge from lane/HUD consistency, and headstamp omission incident exists.
+2. `T2 runtime implementation`: lane-routing conflict and route-state surfaces are now machine-verifiable in runtime bridge outputs.
+3. `T3 live evidence`: local replay confirms deterministic conflict handling and preserved non-conflict dispatch behavior (`pytest 28 passed`).
 4. `T4 escalation package`: protocol escalation pack + lane activation receipt + v2 requirement/feedback package.
+
+Implementation delta snapshot (2026-03-07):
+
+1. explicit route conflict now blocks dispatch with deterministic error surface instead of silent downgrade.
+2. route-state fields are emitted for downstream audit consumers (`route_status`, `route_error`).
+3. non-starvation/headstamp closure still requires live endpoint replay archive before promotion.
 
 Architect handoff artifacts (absolute paths):
 
@@ -1639,7 +1658,10 @@ Promotion guard (hard):
 
 1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
-3. promotion requires architect-approved lane-activation contract text + validator/e2e replay closure for route non-starvation and headstamp continuity.
+3. promotion requires independent rollout/audit closure:
+   - live lane activation receipts (`requested_lane -> resolved_lane`) are reproducible,
+   - live headstamp continuity negative/positive replay is archived,
+   - no silent protocol->instance fallback under explicit protocol intent.
 
 ### HOTFIX16-P1-003 - emergency hotfix intake (`strict-surface fixed /tmp path debt`)
 
@@ -1819,8 +1841,8 @@ Promotion guard (hard):
 | FIX16-035 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-06T19:20:00Z | Batch-6 (`ASB16-RQ-017/018/019/020/021`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: mapping asset, single-parser dual-mode intake core, emitter-before-gate sequencing, and coverage/aggregator wiring are now implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `9e59e0f..47f2f38`; follow-up hardening (`Task-15`, `1beeb88`) closed dedup path-lock + UTC determinism blockers to `PASS_REQUIRED`; batch remains `ACCEPT_WITH_FIX` and non-promotional until deterministic replay archive closure per governance `8.10` |
 | FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: dual-field taxonomy normalization + intake core promotion mode are implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `f63eb55..47f2f38`; follow-up synchronization (`Task-13/15`, `b258982 + 1beeb88`) aligned status semantics and blocker posture; both rows remain `ACCEPT_WITH_FIX` and non-promotional until required=true replay closure per governance `8.11` |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:10:00Z | Write-boundary non-starvation runtime hooks are now fully lane-wired (`identity_creator/release_readiness_check/report_three_plane_status/full_identity_protocol_scan/e2e_smoke_test`) with strict-chain temp-path resolver refactor (`093496b`), preserving protocol-entry liveness and telemetry tuple emission while removing fixed `/tmp` strict artifacts; remains `ACCEPT_WITH_FIX` and non-promotional pending replay matrix closure (`A/B/C/D/E/F`) per governance `8.12`. |
-| HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:18:54Z | emergency hotfix lane opened for FQG multi-agent × multi-identity blocker (`PF-FQG-20260306-MA-MI-001-V2`): non-negotiable guardrail fixed as "execution-state no hard-switch", `allow_shared_session=true` re-scoped to `gated_switch` only, and mandatory handshake chain (`switch_request -> pre_switch_gate -> switch_apply -> switch_ack -> ack_verify -> dispatch`) requested for architect-level contract freeze; isolated from `FIX16-001..037` normalization batches pending validator/e2e closure |
-| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T21:37:07Z | emergency hotfix lane opened for protocol activation deadlock + headstamp continuity gap (`PEP-FQG-20260306-MA-MI-01`): explicit protocol request non-starvation mandated, unresolved protocol-route and silent fallback set to fail-close, and outbound headstamp continuity promoted to mandatory pre-send hard-gate evidence; isolated from previous fix/hotfix streams pending validator/e2e closure |
+| HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
+| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening absorbed in local runtime bridge closure: silent downgrade path is blocked by conflict-aware routing surface and canonical route-state fields are emitted for audit. remains non-promotional pending independent live endpoint replay archive (`lane activation receipts + headstamp continuity positive/negative`). |
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | strict-chain temp-path refactor landed: shared resolver `runtime_temp_path_common.py` wired into creator/readiness/three-plane/full-scan/e2e/no-implicit-switch; strict-chain fixed `/tmp` literals removed and runtime temp root made env-driven. posture remains non-promotional pending independent replay/audit closure (`collision + runner-temp parity`). |
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | applicability-scoped requiredization landing absorbed: intake/dedup/schema/pinning/fallback validators now emit `run_profile + producer_readiness + requiredization_current_round_linked`; observation lanes emit deterministic `SKIPPED_NOT_REQUIRED` for non-applicable contracts and legal `no_fallback_event_in_current_run` terminal state. remains non-promotional pending same-lineage convergence replay + independent audit closure. |
 
