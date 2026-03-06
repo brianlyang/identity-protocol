@@ -598,7 +598,7 @@ Mandatory semantics:
 
 | Requirement ID | Requirement summary | Priority | Current status | Notes |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-001 | unlock formula automation | P0 | SPEC_READY | implementation pending |
+| ASB16-RQ-001 | unlock formula automation | P0 | SPEC_READY | implementation landed (`scripts/validate_unlock_formula.py`) + lane hooks wired (`creator/readiness/three-plane/full-scan/e2e/ci`); deterministic required=true replay archive pending |
 | ASB16-RQ-002 | capability boundary classification | P0 | SPEC_READY | implementation pending |
 | ASB16-RQ-003 | status promotion evidence pipeline | P0 | SPEC_READY | implementation pending |
 | ASB16-RQ-004 | outlet regression matrix | P0 | SPEC_READY | implementation pending |
@@ -989,7 +989,7 @@ Batch-1 mapping tuple (mandatory five-link anchor per row):
 
 | Requirement ID | kernel_ref target (v1.6) | runtime_ref target (v1.6) | mapping_ref target (v1.6) | validator_ref target (v1.6 planned) | Anchor state (current batch) |
 | --- | --- | --- | --- | --- | --- |
-| ASB16-RQ-001 | `rq_001_unlock_formula_contract_v1` | deterministic unlock output profile (`unlock_allowed`, `decision_gates`, `p0_*`, blockers, evidence refs) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-001` | `scripts/validate_v16_unlock_formula.py` | `PLANNED_ONLY (file not landed)` |
+| ASB16-RQ-001 | `rq_001_unlock_formula_contract_v1` | deterministic unlock output profile (`unlock_allowed`, `decision_gates`, `p0_*`, blockers, evidence refs) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-001` | `scripts/validate_unlock_formula.py` | `PARTIAL (validator + lane hooks landed; deterministic required=true replay archive pending)` |
 | ASB16-RQ-002 | `rq_002_capability_boundary_contract_v1` | capability boundary output profile (`boundary_classification`, `classification_source`) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-002` | `scripts/validate_identity_capability_activation.py` (+ v1.6 classification fields) | `PARTIAL (validator exists; v1.6 fields pending)` |
 | ASB16-RQ-003 | `rq_003_promotion_evidence_pipeline_contract_v1` | promotion receipt output profile (`decision_hash`, `input_hash`, reviewer fields) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-003` | `scripts/validate_v16_promotion_pipeline.py` | `PLANNED_ONLY (file not landed)` |
 | ASB16-RQ-004 | `rq_004_outlet_matrix_contract_v1` | outlet matrix profile (positive + negative + cross-cwd parity lanes) | `identity/protocol/mappings/contract-binding.v1.6.yaml#ASB16-RQ-004` | `scripts/validate_v16_outlet_matrix.py` | `PLANNED_ONLY (aggregator not landed)` |

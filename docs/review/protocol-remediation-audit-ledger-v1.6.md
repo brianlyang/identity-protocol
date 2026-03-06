@@ -49,7 +49,7 @@ Carry-over evidence:
 | Fix ID | Date (UTC) | Layer | Scope | Commit | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- | --- |
 | FIX16-001 | 2026-03-03 | protocol | v1.6 governance+review document bootstrap | UNCOMMITTED | DONE | PENDING_REVIEW |
-| FIX16-002 | 2026-03-03 | protocol | release unlock formula automation (`ASB16-RQ-001`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
+| FIX16-002 | 2026-03-03 | protocol | release unlock formula automation (`ASB16-RQ-001`) | d0f27bf | SPEC_READY | PENDING_INTAKE |
 | FIX16-003 | 2026-03-03 | protocol | capability boundary governance (`ASB16-RQ-002`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-004 | 2026-03-03 | protocol | status promotion evidence pipeline (`ASB16-RQ-003`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 | FIX16-005 | 2026-03-03 | protocol | outlet regression matrix (`ASB16-RQ-004`) | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
@@ -127,6 +127,13 @@ Carry-over evidence:
 
 - Status: `SPEC_READY`
 - Goal: deterministic machine output of `unlock_allowed` and blocker set.
+- Landing update (`2026-03-07`, non-promotional):
+  - code landing commit: `d0f27bf`
+  - validator landed: `scripts/validate_unlock_formula.py`
+  - kernel anchor landed: `identity/protocol/IDENTITY_PROTOCOL.md#rq_001_unlock_formula_contract_v1`
+  - mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-001`
+  - lane hooks wired: `creator/readiness/three-plane/full-scan/e2e/ci` (via validator chains + coverage aggregator target)
+  - state boundary unchanged: `SPEC_READY / PENDING_INTAKE` until deterministic required=true replay archive is complete.
 
 Acceptance target:
 
@@ -872,10 +879,9 @@ Status interpretation guard (mandatory, avoids reader misclassification):
 
 Current missing anchors snapshot (2026-03-05):
 
-1. mapping file not yet landed:
-   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
-2. v1.6 validator skeletons not yet landed:
-   - `scripts/validate_v16_unlock_formula.py`
+1. batch-1 validators partially landed:
+   - `scripts/validate_unlock_formula.py` (RQ-001) landed with mapping/kernel anchors and lane hooks.
+2. remaining validator skeletons not yet landed:
    - `scripts/validate_v16_promotion_pipeline.py`
    - `scripts/validate_v16_outlet_matrix.py`
    - `scripts/validate_v16_sidecar_cwd_parity.py`
@@ -1805,7 +1811,7 @@ Promotion guard (hard):
 | Fix ID | Audit Decision | Reviewer | Reviewed At (UTC) | Notes |
 | --- | --- | --- | --- | --- |
 | FIX16-001 | PENDING_REVIEW | audit-expert(codex) | - | bootstrap created; waiting command-contract replay |
-| FIX16-002 | PENDING_INTAKE | - | - | requires implementation |
+| FIX16-002 | PENDING_INTAKE | base-repo-architect | 2026-03-07T17:26:00Z | RQ-001 executable closure landed (validator + kernel anchor + mapping row + lane hooks across creator/readiness/three-plane/full-scan/e2e/ci); remains non-promotional pending deterministic required=true replay archive |
 | FIX16-003 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-004 | PENDING_INTAKE | - | - | requires implementation |
 | FIX16-005 | PENDING_INTAKE | - | - | requires implementation |
