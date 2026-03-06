@@ -587,6 +587,13 @@ Deterministic judgment:
 3. multimodal capability closure remains incomplete without required sample-proof outputs.
 4. therefore v1.6 needs explicit P0 contractization (`ASB16-RQ-031`) rather than narrative prompt hardening only.
 
+Cross-track clarification supplement (2026-03-06; final four-track reconciliation):
+
+1. do not add same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+2. protocol-side baseline prompt intent, if needed, must be represented as contract source (kernel anchor section or dedicated prompt-bootstrap contract file) and compiled into pack-level `IDENTITY_PROMPT.md`.
+3. any protocol-side baseline source is invalid unless it closes the machine chain (`kernel_ref -> mapping_ref -> validator_ref -> acceptance replay`) across creator/readiness/e2e/full-scan/three-plane.
+4. this supplement is directional hardening only and does not promote `ASB16-RQ-031` status.
+
 ### FIX16-025 - deep cross-verification closure intake for `ASB16-RQ-015/029/030` (`T1..T4` normalized taxonomy)
 
 - Status: `SPEC_READY`
@@ -1495,7 +1502,7 @@ Promotion guard (hard):
 | FIX16-021 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T02:20:00Z | kernel-first baseline ingested; source-center drift and prompt-lineage gap formalized into `ASB16-RQ-025..028`; supplemental verdict confirms content-level alignment and keeps status caveat (`SPEC_READY/PENDING_INTAKE`) |
 | FIX16-022 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T03:10:00Z | live replay confirms semantic convergence gap (`update green` + `IP-SEM-001` in aggregators); new requirement `ASB16-RQ-029` added; `A-D P0` and `E P1` priorities mapped to requirement set |
 | FIX16-023 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T09:40:00Z | intake hard-gate reinforcement added: new suggestions require roundtable/vendor/online/spec evidence quorum (`ASB16-RQ-030`) before promotion beyond `PENDING_INTAKE` |
-| FIX16-024 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T10:40:00Z | self-drive A/B replay shows prompt text import alone yields no executable uplift; added `ASB16-RQ-031` for fail-closed executable coupling + multimodal sample-proof closure + explicit actor context in strict lane |
+| FIX16-024 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T10:40:00Z | self-drive A/B replay shows prompt text import alone yields no executable uplift; added `ASB16-RQ-031` for fail-closed executable coupling + multimodal sample-proof closure + explicit actor context in strict lane; 2026-03-06 supplement confirms protocol layer should not add same-name `identity/protocol/IDENTITY_PROMPT.md`, and requires contract-source -> compile-chain closure instead |
 | FIX16-025 | PENDING_INTAKE | audit-expert(codex) | 2026-03-05T12:20:00Z | deep cross-verification package normalized to `T1..T4` taxonomy and replay verdict locked: lane split healthy but `ASB16-RQ-015/029/030` remain implementation-pending; `S0..S4` sequence added as non-regression strengthening path |
 | FIX16-026 | PENDING_INTAKE | base-repo-architect(self-drive) | 2026-03-05T12:58:00Z | runtime self-drive pilot on `base-repo-architect`: protocol-kernel prompt injection + multimodal verification baseline passes; creator strict chain still shows actor-context convergence residual (`IP-ASB-STAMP-SESSION-005`), kept in v1.6 executable-coupling track only |
 | FIX16-027 | PENDING_INTAKE | base-repo-architect | 2026-03-05T14:20:00Z | final T1/T2/T3/T4 cross-verification replay executed with network/vendor/spec re-check; direction reaffirmed, but `ASB16-RQ-015/017/029/030/031` remain `SPEC_READY` pending executable closure |

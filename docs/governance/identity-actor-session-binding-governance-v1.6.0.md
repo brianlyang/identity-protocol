@@ -386,6 +386,9 @@ Hard rules:
 1. direct manual prompt mutation without derivation metadata is fail-closed in strict lanes.
 2. prompt hash mismatch between derived metadata and runtime report is fail-closed.
 3. derived prompt conformance is required for P0 release assertions.
+4. protocol layer must not introduce same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+5. protocol-side prompt baseline, if needed, must be expressed as contract source (existing kernel anchors in `identity/protocol/IDENTITY_PROTOCOL.md` / `identity/protocol/IDENTITY_RUNTIME.md` or a dedicated prompt-bootstrap contract file) and then compiled into pack-level `IDENTITY_PROMPT.md`.
+6. any protocol-side prompt baseline source is non-compliant unless mapping + validator + lane consumption are wired (`kernel_ref -> mapping_ref -> validator_ref -> acceptance replay`).
 
 ### 4.17 `instance_protocol_write_boundary_lock_contract_v1` (P0)
 
