@@ -594,6 +594,7 @@ Cross-track clarification supplement (2026-03-06; final four-track reconciliatio
 3. any protocol-side baseline source is invalid unless it closes the machine chain (`kernel_ref -> mapping_ref -> validator_ref -> acceptance replay`) across creator/readiness/e2e/full-scan/three-plane.
 4. this supplement is directional hardening only and does not promote `ASB16-RQ-031` status.
 5. canonical file for this direction is `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`, and it must be continuously updated with capability-ingestion deltas + replay obligations.
+6. canonical file must keep full base-protocol capability absorption matrix and append-only update ledger; stale anchors or missing ledger entry are promotion blockers.
 
 ### FIX16-025 - deep cross-verification closure intake for `ASB16-RQ-015/029/030` (`T1..T4` normalized taxonomy)
 

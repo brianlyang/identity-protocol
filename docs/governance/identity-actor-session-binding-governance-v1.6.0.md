@@ -1570,6 +1570,8 @@ Continuous-update requirements (non-optional):
    - `source_url_set`
    - `reference_timestamp_utc`
    - `conflict_reconciliation_note`
+4. prompt-bootstrap kernel source must maintain a full capability-absorption matrix against identity base protocol capability domains; row loss or stale anchor mapping is non-compliant.
+5. prompt-bootstrap kernel source must keep append-only update ledger entries with `updated_at_utc`, `capability_delta`, `validator_delta`, `replay_obligations`, and `commit_sha`.
 
 Five-link closure requirements:
 
