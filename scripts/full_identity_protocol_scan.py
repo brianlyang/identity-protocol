@@ -1033,6 +1033,50 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "cross_verification_tracks": [
+                    "python3",
+                    "scripts/validate_v16_cross_verification_tracks.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "intake_evidence_quorum": [
+                    "python3",
+                    "scripts/validate_v16_intake_evidence_quorum.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "route_version_pinning": [
+                    "python3",
+                    "scripts/validate_route_version_pinning.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "fallback_taxonomy_normalization": [
+                    "python3",
+                    "scripts/validate_fallback_taxonomy_normalization.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "writeback_continuity": [
                     "python3",
                     "scripts/validate_writeback_continuity.py",
@@ -1306,6 +1350,80 @@ def main() -> int:
                     ):
                         if k in coverage_doc:
                             check_payload[k] = coverage_doc.get(k)
+                if name == "cross_verification_tracks":
+                    cross_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "cross_verification_tracks_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "cross_verification_bundle_id",
+                        "source_url_set",
+                        "reference_timestamp_utc",
+                        "conflict_reconciliation_note",
+                        "missing_tracks",
+                        "missing_metadata_fields",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in cross_doc:
+                            check_payload[k] = cross_doc.get(k)
+                if name == "intake_evidence_quorum":
+                    quorum_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "intake_evidence_quorum_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "cross_verification_bundle_id",
+                        "source_url_set",
+                        "reference_timestamp_utc",
+                        "conflict_reconciliation_note",
+                        "missing_tracks",
+                        "missing_metadata_fields",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in quorum_doc:
+                            check_payload[k] = quorum_doc.get(k)
+                if name == "route_version_pinning":
+                    pin_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "pin_status",
+                        "pin_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "route_endpoint",
+                        "workflow_id",
+                        "workflow_publish_version",
+                        "pin_proof_ref",
+                        "expected_route_endpoint",
+                        "expected_workflow_id",
+                        "expected_workflow_publish_version",
+                        "mismatch_fields",
+                        "receipt_path",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in pin_doc:
+                            check_payload[k] = pin_doc.get(k)
+                if name == "fallback_taxonomy_normalization":
+                    fn_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "fallback_taxonomy_normalization_status",
+                        "normalization_error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "taxonomy_version",
+                        "fallback_reason_row_count",
+                        "fallback_reason_rows",
+                        "unmapped_fallback_reasons",
+                        "blocker_taxonomy_namespace_preserved",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in fn_doc:
+                            check_payload[k] = fn_doc.get(k)
                 if name == "semantic_routing_guard":
                     semantic_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

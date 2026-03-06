@@ -866,6 +866,102 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_cov,
     }
 
+    rc_cross_verify, out_cross_verify, err_cross_verify = _run(
+        [
+            "python3",
+            "scripts/validate_v16_cross_verification_tracks.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    cross_verify_payload = _parse_json_payload(out_cross_verify) or {}
+    validators["cross_verification_tracks"] = {
+        "rc": rc_cross_verify,
+        "ok": rc_cross_verify == 0,
+        "out": out_cross_verify,
+        "err": err_cross_verify,
+    }
+    cross_verify_status = str(cross_verify_payload.get("cross_verification_tracks_status", "")).strip().upper()
+    if rc_cross_verify != 0 or cross_verify_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_intake_quorum, out_intake_quorum, err_intake_quorum = _run(
+        [
+            "python3",
+            "scripts/validate_v16_intake_evidence_quorum.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    intake_quorum_payload = _parse_json_payload(out_intake_quorum) or {}
+    validators["intake_evidence_quorum"] = {
+        "rc": rc_intake_quorum,
+        "ok": rc_intake_quorum == 0,
+        "out": out_intake_quorum,
+        "err": err_intake_quorum,
+    }
+    intake_quorum_status = str(intake_quorum_payload.get("intake_evidence_quorum_status", "")).strip().upper()
+    if rc_intake_quorum != 0 or intake_quorum_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_route_pin, out_route_pin, err_route_pin = _run(
+        [
+            "python3",
+            "scripts/validate_route_version_pinning.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    route_pin_payload = _parse_json_payload(out_route_pin) or {}
+    validators["route_version_pinning"] = {
+        "rc": rc_route_pin,
+        "ok": rc_route_pin == 0,
+        "out": out_route_pin,
+        "err": err_route_pin,
+    }
+    route_pin_status = str(route_pin_payload.get("pin_status", "")).strip().upper()
+    if rc_route_pin != 0 or route_pin_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_fallback_norm, out_fallback_norm, err_fallback_norm = _run(
+        [
+            "python3",
+            "scripts/validate_fallback_taxonomy_normalization.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    fallback_norm_payload = _parse_json_payload(out_fallback_norm) or {}
+    validators["fallback_taxonomy_normalization"] = {
+        "rc": rc_fallback_norm,
+        "ok": rc_fallback_norm == 0,
+        "out": out_fallback_norm,
+        "err": err_fallback_norm,
+    }
+    fallback_norm_status = str(fallback_norm_payload.get("fallback_taxonomy_normalization_status", "")).strip().upper()
+    if rc_fallback_norm != 0 or fallback_norm_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_herm, out_herm, err_herm = _run(
         [
             "python3",
@@ -1650,6 +1746,64 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "cross_verification_tracks": {
+            "cross_verification_tracks_status": cross_verify_payload.get("cross_verification_tracks_status"),
+            "error_code": cross_verify_payload.get("error_code", ""),
+            "required_contract": cross_verify_payload.get("required_contract"),
+            "auto_required_signal": cross_verify_payload.get("auto_required_signal"),
+            "cross_verification_bundle_id": cross_verify_payload.get("cross_verification_bundle_id", ""),
+            "source_url_set": cross_verify_payload.get("source_url_set", []),
+            "reference_timestamp_utc": cross_verify_payload.get("reference_timestamp_utc", ""),
+            "conflict_reconciliation_note": cross_verify_payload.get("conflict_reconciliation_note", ""),
+            "missing_tracks": cross_verify_payload.get("missing_tracks", []),
+            "missing_metadata_fields": cross_verify_payload.get("missing_metadata_fields", []),
+            "stale_reasons": cross_verify_payload.get("stale_reasons", []),
+            "evidence_ref": cross_verify_payload.get("evidence_ref", ""),
+        },
+        "intake_evidence_quorum": {
+            "intake_evidence_quorum_status": intake_quorum_payload.get("intake_evidence_quorum_status"),
+            "error_code": intake_quorum_payload.get("error_code", ""),
+            "required_contract": intake_quorum_payload.get("required_contract"),
+            "auto_required_signal": intake_quorum_payload.get("auto_required_signal"),
+            "cross_verification_bundle_id": intake_quorum_payload.get("cross_verification_bundle_id", ""),
+            "source_url_set": intake_quorum_payload.get("source_url_set", []),
+            "reference_timestamp_utc": intake_quorum_payload.get("reference_timestamp_utc", ""),
+            "conflict_reconciliation_note": intake_quorum_payload.get("conflict_reconciliation_note", ""),
+            "missing_tracks": intake_quorum_payload.get("missing_tracks", []),
+            "missing_metadata_fields": intake_quorum_payload.get("missing_metadata_fields", []),
+            "stale_reasons": intake_quorum_payload.get("stale_reasons", []),
+            "evidence_ref": intake_quorum_payload.get("evidence_ref", ""),
+        },
+        "route_version_pinning": {
+            "pin_status": route_pin_payload.get("pin_status"),
+            "pin_error_code": route_pin_payload.get("pin_error_code", ""),
+            "required_contract": route_pin_payload.get("required_contract"),
+            "auto_required_signal": route_pin_payload.get("auto_required_signal"),
+            "route_endpoint": route_pin_payload.get("route_endpoint", ""),
+            "workflow_id": route_pin_payload.get("workflow_id", ""),
+            "workflow_publish_version": route_pin_payload.get("workflow_publish_version", ""),
+            "pin_proof_ref": route_pin_payload.get("pin_proof_ref", ""),
+            "expected_route_endpoint": route_pin_payload.get("expected_route_endpoint", ""),
+            "expected_workflow_id": route_pin_payload.get("expected_workflow_id", ""),
+            "expected_workflow_publish_version": route_pin_payload.get("expected_workflow_publish_version", ""),
+            "mismatch_fields": route_pin_payload.get("mismatch_fields", []),
+            "receipt_path": route_pin_payload.get("receipt_path", ""),
+            "stale_reasons": route_pin_payload.get("stale_reasons", []),
+            "evidence_ref": route_pin_payload.get("evidence_ref", ""),
+        },
+        "fallback_taxonomy_normalization": {
+            "fallback_taxonomy_normalization_status": fallback_norm_payload.get("fallback_taxonomy_normalization_status"),
+            "normalization_error_code": fallback_norm_payload.get("normalization_error_code", ""),
+            "required_contract": fallback_norm_payload.get("required_contract"),
+            "auto_required_signal": fallback_norm_payload.get("auto_required_signal"),
+            "taxonomy_version": fallback_norm_payload.get("taxonomy_version", ""),
+            "fallback_reason_row_count": fallback_norm_payload.get("fallback_reason_row_count"),
+            "fallback_reason_rows": fallback_norm_payload.get("fallback_reason_rows", []),
+            "unmapped_fallback_reasons": fallback_norm_payload.get("unmapped_fallback_reasons", []),
+            "blocker_taxonomy_namespace_preserved": fallback_norm_payload.get("blocker_taxonomy_namespace_preserved"),
+            "stale_reasons": fallback_norm_payload.get("stale_reasons", []),
+            "evidence_ref": fallback_norm_payload.get("evidence_ref", ""),
         },
         "e2e_hermetic_runtime_import": {
             "e2e_hermetic_runtime_status": herm_payload.get("e2e_hermetic_runtime_status"),

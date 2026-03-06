@@ -38,6 +38,10 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
     "scripts/validate_vendor_namespace_separation.py": "vendor_namespace_status",
     "scripts/validate_protocol_feedback_sidecar_contract.py": "sidecar_contract_status",
+    "scripts/validate_v16_cross_verification_tracks.py": "cross_verification_tracks_status",
+    "scripts/validate_v16_intake_evidence_quorum.py": "intake_evidence_quorum_status",
+    "scripts/validate_route_version_pinning.py": "pin_status",
+    "scripts/validate_fallback_taxonomy_normalization.py": "fallback_taxonomy_normalization_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "semantic_routing_guard",
@@ -93,6 +97,48 @@ TARGETS = (
         name="protocol_feedback_sidecar",
         contract_keys=("protocol_feedback_sidecar_contract_v1", "protocol_feedback_sidecar_contract"),
         validator_script="scripts/validate_protocol_feedback_sidecar_contract.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="cross_verification_tracks",
+        contract_keys=(
+            "multi_track_cross_verification_contract_v1",
+            "multi_track_cross_verification_contract",
+            "cross_verification_tracks_contract_v1",
+            "cross_verification_tracks_contract",
+            "rq_017_multi_track_cross_verification_contract_v1",
+        ),
+        validator_script="scripts/validate_v16_cross_verification_tracks.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="intake_evidence_quorum",
+        contract_keys=(
+            "intake_evidence_quorum_contract_v1",
+            "intake_evidence_quorum_contract",
+            "rq_030_intake_evidence_quorum_contract_v1",
+        ),
+        validator_script="scripts/validate_v16_intake_evidence_quorum.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="route_version_pinning",
+        contract_keys=(
+            "route_workflow_version_pinning_contract_v1",
+            "route_workflow_version_pinning_contract",
+            "rq_021_route_workflow_version_pinning_contract_v1",
+        ),
+        validator_script="scripts/validate_route_version_pinning.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="fallback_taxonomy_normalization",
+        contract_keys=(
+            "fallback_taxonomy_normalization_contract_v1",
+            "fallback_taxonomy_normalization_contract",
+            "rq_022_fallback_taxonomy_normalization_contract_v1",
+        ),
+        validator_script="scripts/validate_fallback_taxonomy_normalization.py",
         validator_args=("--json-only",),
     ),
 )
@@ -167,6 +213,10 @@ def _run_validator(
     if script in {
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_vendor_namespace_separation.py",
+        "scripts/validate_v16_cross_verification_tracks.py",
+        "scripts/validate_v16_intake_evidence_quorum.py",
+        "scripts/validate_route_version_pinning.py",
+        "scripts/validate_fallback_taxonomy_normalization.py",
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
