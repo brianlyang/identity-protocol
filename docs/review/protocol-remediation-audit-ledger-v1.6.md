@@ -1027,9 +1027,9 @@ Headstamp omission bypass postmortem supplement (detailed, audit-tracked):
    - some outbound paths can emit replies without passing one mandatory validator entrypoint;
    - mixed legacy error-family traces show migration incompleteness (`IP-ASB-STAMP-SESSION-*` still visible on execution surfaces).
 2. Closure-grade corrective requirement:
-   - missing first-line headstamp => hard block with canonical `IP-HDSTAMP-001`;
-   - malformed first-line headstamp => hard block with canonical `IP-HDSTAMP-002`;
-   - runtime actor/layer mismatch => hard block with canonical `IP-HDSTAMP-003`;
+   - missing-or-malformed first-line headstamp => hard block with canonical `IP-HDSTAMP-001` (`headstamp_missing_or_malformed`);
+   - runtime actor/layer mismatch => hard block with canonical `IP-HDSTAMP-002` (`headstamp_actor_binding_mismatch`);
+   - promotion-grade lane receipt missing => hard block with canonical `IP-HDSTAMP-003` (`headstamp_receipt_missing`);
    - warning-only behavior is explicitly forbidden for promotion-grade lanes.
 3. Mandatory anti-bypass receipt schema:
    - `pre_send_headstamp_checked`
@@ -1042,7 +1042,7 @@ Headstamp omission bypass postmortem supplement (detailed, audit-tracked):
    - governed compose + direct/manual outbound paths must consume the same pre-send validator output;
    - route-local custom checks may enrich evidence but may not replace canonical verdict/error family.
 5. Replay proof obligations:
-   - one positive and three negative cases (`missing`, `malformed`, `binding-mismatch`) must be replayed;
+   - one positive and three negative cases (`missing-or-malformed`, `binding-mismatch`, `receipt-missing`) must be replayed;
    - all lanes must produce deterministic and homomorphic canonical classification on unchanged inputs.
 
 Batch-4 five-link anchor lock (mandatory per row):

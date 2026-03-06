@@ -1129,9 +1129,9 @@ Batch-4 headstamp omission bypass decomposition + fail-close protocol (mandatory
    - validator coverage is currently partial, so some direct/manual output paths can avoid canonical send-time validation;
    - legacy error-family traces (`IP-ASB-STAMP-SESSION-*`) still appear in execution surfaces, indicating migration not fully converged.
 2. Non-negotiable fail-close policy (v1.6 promotion-grade):
-   - if either required first-line headstamp (`Identity-Context` or `Layer-Context`) is missing, send must be blocked with canonical `IP-HDSTAMP-001`;
-   - if first-line headstamp structure is malformed, send must be blocked with canonical `IP-HDSTAMP-002`;
-   - if actor/layer binding mismatches resolved runtime context, send must be blocked with canonical `IP-HDSTAMP-003`;
+   - if first-line headstamp is missing or malformed, send must be blocked with canonical `IP-HDSTAMP-001` (`headstamp_missing_or_malformed`);
+   - if actor/layer binding mismatches resolved runtime context, send must be blocked with canonical `IP-HDSTAMP-002` (`headstamp_actor_binding_mismatch`);
+   - if promotion-grade lane output is missing pre-send machine receipt, send must be blocked with canonical `IP-HDSTAMP-003` (`headstamp_receipt_missing`);
    - no soft-warning mode is allowed for promotion-grade lanes.
 3. Unified enforcement source rule:
    - governed compose path and direct/manual outbound path must invoke the same pre-send validator source;
@@ -1145,9 +1145,9 @@ Batch-4 headstamp omission bypass decomposition + fail-close protocol (mandatory
    - `pre_send_checked_at`
 5. Promotion-grade replay obligations (anti-bypass proof set):
    - positive replay: valid dual-headstamp with aligned actor/layer binding must pass on all send surfaces;
-   - negative replay A: missing headstamp must deterministically fail with `IP-HDSTAMP-001`;
-   - negative replay B: malformed headstamp must deterministically fail with `IP-HDSTAMP-002`;
-   - negative replay C: binding mismatch must deterministically fail with `IP-HDSTAMP-003`;
+   - negative replay A: missing-or-malformed headstamp must deterministically fail with `IP-HDSTAMP-001`;
+   - negative replay B: actor/layer binding mismatch must deterministically fail with `IP-HDSTAMP-002`;
+   - negative replay C: receipt-missing in promotion-grade lane must deterministically fail with `IP-HDSTAMP-003`;
    - replay outputs must be homomorphic across creator/readiness/e2e/full-scan/three-plane/ci.
 
 Batch-4 mandatory interpretation guard:
