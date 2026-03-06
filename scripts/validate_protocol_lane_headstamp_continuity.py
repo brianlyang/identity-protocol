@@ -143,7 +143,7 @@ def main() -> int:
     contract = _select_contract(task)
     required_contract = contract_required(contract)
     auto_required_signal = args.operation in STRICT_OPERATIONS
-    enforce_required = required_contract or auto_required_signal
+    enforce_required = bool(required_contract)
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
@@ -210,6 +210,9 @@ def main() -> int:
     requested_lane = _norm_lane(explicit_expected_work or intent.get("resolved_work_layer") or "")
     protocol_request_detected = requested_lane == "protocol" or bool(intent.get("protocol_triggered", False))
 
+    if not enforce_required and (protocol_request_detected or bool(stamp_line)):
+        enforce_required = True
+
     resolved_lane = _norm_lane(
         _nonempty(
             report_doc.get("work_layer"),
@@ -234,7 +237,7 @@ def main() -> int:
     payload["protocol_request_detected"] = protocol_request_detected
     payload["evidence_ref"] = report_ref or stamp_ref or str(task_path)
 
-    if not enforce_required and not protocol_request_detected and not stamp_line:
+    if not enforce_required:
         payload["stale_reasons"] = ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0
