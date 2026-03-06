@@ -1,0 +1,193 @@
+_meta:
+  mapping_file: identity/protocol/mappings/contract-binding.v1.6.yaml
+  mapping_version: "v1.6"
+  schema_version: 1
+  source_layer: protocol
+  lifecycle_state: phase1_batch6_7_seed
+  last_updated_utc: "2026-03-06T20:10:00Z"
+  row_count: 7
+  notes:
+    - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
+    - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
+    - "Validator scripts referenced here may be planned-only until implementation commits land."
+
+asb16-rq-017:
+  requirement_id: ASB16-RQ-017
+  kernel_contract_id: rq_017_multi_track_cross_verification_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_017_multi_track_cross_verification_contract_v1
+  validator_ids:
+    - scripts/validate_v16_intake_evidence_core.py::mode=intake_contract
+    - scripts/validate_v16_cross_verification_tracks.py::wrapper_only_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - t1_status
+    - t2_status
+    - t3_status
+    - t4_status
+    - cross_verification_bundle_id
+    - source_url_set
+    - reference_timestamp_utc
+    - conflict_reconciliation_note
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-018:
+  requirement_id: ASB16-RQ-018
+  kernel_contract_id: rq_018_dedup_monotonic_winner_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_018_dedup_monotonic_winner_contract_v1
+  validator_ids:
+    - scripts/validate_v16_dedup_monotonicity.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - run_id
+    - earliest_claim_ts
+    - stable_tiebreaker
+    - winner_id
+    - winner_reason
+    - monotonicity_status
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-019:
+  requirement_id: ASB16-RQ-019
+  kernel_contract_id: rq_019_cross_workflow_evidence_schema_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_019_cross_workflow_evidence_schema_contract_v1
+  validator_ids:
+    - scripts/normalize_v16_cross_workflow_evidence.py
+    - scripts/validate_v16_cross_workflow_schema.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - run_id
+    - route_action
+    - quality_meta_state
+    - dedup_state
+    - evidence_hash
+    - schema_version
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-020:
+  requirement_id: ASB16-RQ-020
+  kernel_contract_id: rq_020_skill_path_integrity_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_020_skill_path_integrity_contract_v1
+  validator_ids:
+    - scripts/validate_v16_skill_path_integrity.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - active_repo_root
+    - active_runtime_root
+    - layout_mode
+    - path_integrity_status
+    - path_integrity_error_code
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-021:
+  requirement_id: ASB16-RQ-021
+  kernel_contract_id: rq_021_route_workflow_version_pinning_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_021_route_workflow_version_pinning_contract_v1
+  validator_ids:
+    - scripts/emit_v16_route_version_pin_receipt.py
+    - scripts/validate_v16_route_version_pinning.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#810-batch-6-row-level-cross-workflow-governance-strengthening-profile-asb16-rq-017018019020021-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-035---batch-6-asb16-rq-017018019020021-cross-workflow-governance-strengthening-normalization
+  report_field_refs:
+    - route_endpoint
+    - workflow_id
+    - workflow_publish_version
+    - pin_proof_ref
+    - pin_status
+    - pin_error_code
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-022:
+  requirement_id: ASB16-RQ-022
+  kernel_contract_id: rq_022_fallback_taxonomy_normalization_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_022_fallback_taxonomy_normalization_contract_v1
+  validator_ids:
+    - scripts/validate_v16_fallback_taxonomy_normalization.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#811-batch-7-row-level-closure-profile-asb16-rq-022030-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-036---batch-7-asb16-rq-022030-closure-strengthening-normalization
+  report_field_refs:
+    - fallback_reason_raw
+    - fallback_taxonomy_class
+    - taxonomy_version
+    - normalization_status
+    - normalization_error_code
+  error_code_refs: []
+  mapping_state: phase1_seed
+
+asb16-rq-030:
+  requirement_id: ASB16-RQ-030
+  kernel_contract_id: rq_030_intake_evidence_quorum_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#rq_030_intake_evidence_quorum_contract_v1
+  validator_ids:
+    - scripts/validate_v16_intake_evidence_core.py::mode=promotion_gate
+    - scripts/validate_v16_intake_evidence_quorum.py::wrapper_only_optional
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#811-batch-7-row-level-closure-profile-asb16-rq-022030-2026-03-06
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-036---batch-7-asb16-rq-022030-closure-strengthening-normalization
+  report_field_refs:
+    - t1_roundtable_status
+    - t2_vendor_status
+    - t3_openai_context_status
+    - t4_protocol_spec_status
+    - cross_verification_bundle_id
+    - source_url_set
+    - reference_timestamp_utc
+    - conflict_reconciliation_note
+  error_code_refs: []
+  mapping_state: phase1_seed
