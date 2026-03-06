@@ -1402,10 +1402,10 @@ Passing criteria:
 3. `validate_required_contract_coverage.py` `TARGETS` and three-plane/full-scan payload extractors must include `RQ-017..021` gates; omission is treated as lock-computation failure.
 4. Any missing validator, missing required field, or lane bypass keeps row status at `SPEC_READY/PENDING_INTAKE`.
 
-Batch-6 execution hook closure snapshot (Task-8..12 code landing):
+Batch-6 execution hook closure snapshot (Task-6..13 + audit sync):
 
 1. landed commits:
-   - `9e59e0f`, `f63eb55`, `e214df9`, `9c0cf0a`, `19d02ab`, `b5a191c`, `fffc3c3`, `08c8f89`, `5f7eb44`, `228ba40`, `b7137e3`, `47f2f38`.
+   - `9e59e0f`, `f63eb55`, `e214df9`, `9c0cf0a`, `19d02ab`, `b5a191c`, `fffc3c3`, `08c8f89`, `5f7eb44`, `228ba40`, `b7137e3`, `47f2f38`, `b258982`, `1beeb88`.
 2. lane hook coverage now includes:
    - `identity_creator.py` (validate/update preflight),
    - `release_readiness_check.py`,
@@ -1413,7 +1413,10 @@ Batch-6 execution hook closure snapshot (Task-8..12 code landing):
    - `full_identity_protocol_scan.py`,
    - `e2e_smoke_test.sh`,
    - `.github/workflows/_identity-required-gates.yml`.
-3. this snapshot does not change promotion posture:
+3. task-level audit results (normalized):
+   - `Task-6..13`: `PASS_WITH_BLOCKERS` (hooks landed; deterministic replay/semantic closure pending at audit time).
+   - follow-up closure (`Task-15`, `1beeb88`): dedup path fallback + UTC receipt determinism + governance status drift correction reached `PASS_REQUIRED` on blocker items.
+4. this snapshot does not change promotion posture:
    - `SPEC_READY/PENDING_INTAKE` remains in force until deterministic positive/negative replay archive is complete.
 
 ### 8.11 Batch-7 row-level closure profile (`ASB16-RQ-022/030`, 2026-03-06)
@@ -1470,12 +1473,15 @@ Passing criteria:
 3. `validate_required_contract_coverage.py` `TARGETS` and three-plane/full-scan payload extractors must include `RQ-022` + `RQ-030`; omission is treated as lock-computation failure.
 4. Positive and negative replay outputs must remain deterministic for unchanged inputs.
 
-Batch-7 execution hook closure snapshot (Task-8..12 code landing):
+Batch-7 execution hook closure snapshot (Task-6..13 + audit sync):
 
 1. landed commits:
-   - `f63eb55`, `e214df9`, `4f4930c`, `08c8f89`, `5f7eb44`, `228ba40`, `b7137e3`, `47f2f38`.
+   - `f63eb55`, `e214df9`, `4f4930c`, `08c8f89`, `5f7eb44`, `228ba40`, `b7137e3`, `47f2f38`, `b258982`, `1beeb88`.
 2. lane hook coverage now includes creator/readiness/three-plane/full-scan/e2e/ci mandatory surfaces.
-3. this snapshot does not change promotion posture:
+3. task-level audit results (normalized):
+   - `Task-6..13`: `PASS_WITH_BLOCKERS` (automation landed; required=true replay archive pending at audit time).
+   - follow-up closure (`Task-15`, `1beeb88`): governance table drift and shared blocker posture synchronized without promotion.
+4. this snapshot does not change promotion posture:
    - rows remain `SPEC_READY/PENDING_INTAKE` until required=true replay archive is deterministic and complete.
 
 Roundtable-B6/B7 kickoff package (execution-ready, mandatory before promotion):
