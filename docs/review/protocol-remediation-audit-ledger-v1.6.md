@@ -82,8 +82,8 @@ Carry-over evidence:
 | FIX16-032 | 2026-03-06 | protocol | Batch-3B (`ASB16-RQ-024..028`) row-level strengthening normalization: discovery apply coverage hard-close + kernel-first source lock + mapping coverage asset + derived prompt conformance metadata + instance write-boundary canonical code alignment | 3538eb7 | SPEC_READY | PENDING_INTAKE |
 | FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker + actor-id fallback recurrence supplement | 06bcb8a + 140c872 + db72970 + ca14131 + 9c0463e | SPEC_READY | PENDING_INTAKE |
 | FIX16-034 | 2026-03-06 | protocol | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalization: phase-A/B parity closure + tmp collision-safe allocator + handoff/collab freshness auto-rotation + protocol-feedback atomic emit + refresh->strict interference matrix receipts | 4f98bf4 + 84daaee | SPEC_READY | PENDING_INTAKE |
-| FIX16-035 | 2026-03-06 | protocol | Batch-6 (`ASB16-RQ-017/018/019/020/021`) cross-workflow governance strengthening normalization: four-track contract hardening + dedup monotonic winner + cross-workflow schema gate + skill-path layout integrity + route/workflow publish-version pinning | 0df31f5 + 10c9956 + b80ec1f | SPEC_READY | PENDING_INTAKE |
-| FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f | SPEC_READY | PENDING_INTAKE |
+| FIX16-035 | 2026-03-06 | protocol | Batch-6 (`ASB16-RQ-017/018/019/020/021`) cross-workflow governance strengthening normalization: four-track contract hardening + dedup monotonic winner + cross-workflow schema gate + skill-path layout integrity + route/workflow publish-version pinning | 0df31f5 + 10c9956 + b80ec1f + 9e59e0f + f63eb55 + e214df9 + 9c0cf0a + 19d02ab + b5a191c + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 | SPEC_READY | PENDING_INTAKE |
+| FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f + f63eb55 + e214df9 + 4f4930c + 08c8f89 + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 | SPEC_READY | PENDING_INTAKE |
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
@@ -1223,10 +1223,10 @@ Row-level cross-check and explicit hook plan:
 | Requirement ID | Anchor state | Finding (cross-check) | Concrete hook plan (must all land) | Acceptance target |
 | --- | --- | --- | --- | --- |
 | ASB16-RQ-017 | `PARTIAL` | governance/review contract exists; scripts only provide distributed checks, not single four-track quorum verdict | canonical parser must be single-source: `scripts/validate_v16_intake_evidence_core.py --mode intake_contract`; optional wrapper `scripts/validate_v16_cross_verification_tracks.py` may only delegate; enforce call chain `identity_creator.py` -> `release_readiness_check.py` -> `report_three_plane_status.py`/`full_identity_protocol_scan.py` -> `e2e_smoke_test.sh`; canonical fields must include `t1_status/t2_status/t3_status/t4_status` + metadata quartet | all tracks + metadata present => `PASS_REQUIRED`; any missing track/metadata => deterministic `FAIL_REQUIRED` |
-| ASB16-RQ-018 | `PLANNED_ONLY` | dedup currently favors mtime/session semantics; required `earliest_claim_ts + stable_tiebreaker` winner logic absent | add `scripts/validate_v16_dedup_monotonicity.py`; wire winner receipt emission in creator and hard gate in readiness; aggregators consume canonical `winner_id`/`winner_reason` only | unchanged concurrent replay keeps identical `winner_id` tuple and `monotonicity_status=PASS_REQUIRED` |
-| ASB16-RQ-019 | `PARTIAL` | required schema fields declared in governance but not emitted as enforced cross-workflow receipt | add `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; enforce in creator/readiness and consume in three-plane/full-scan | `run_id/route_action/quality_meta_state/dedup_state/evidence_hash` always present and hash-stable |
-| ASB16-RQ-020 | `PARTIAL` | current activation checker allows broad path fallback; active-layout strictness missing | add `scripts/validate_v16_skill_path_integrity.py`; keep existing capability-activation checks as source but force single fail-close gate in creator/readiness/aggregators/e2e | any out-of-layout/missing skill path fails deterministically with canonical path-integrity code |
-| ASB16-RQ-021 | `PLANNED_ONLY` | no dedicated route endpoint <-> workflow publish-version pin validator and no publish-version proof emitter in current chain | phase order is mandatory: first land emitter (`scripts/emit_route_version_pin_receipt.py`) for `route_endpoint/workflow_id/workflow_publish_version/pin_proof_ref`, then enforce `scripts/validate_route_version_pinning.py`; optional CI/route metrics are supplemental only | pin proof required for pass; endpoint-version mismatch must fail-close with canonical pin error code |
+| ASB16-RQ-018 | `PARTIAL` | monotonic dedup validator/wrapper landed, but deterministic positive+negative replay evidence for same `run_id` concurrency still missing | keep canonical path `scripts/validate_v16_dedup_monotonicity.py` (delegating to semantic core); keep hooks active in creator/readiness/three-plane/full-scan/e2e/ci; add replay artifacts proving stable winner tuple under repeated parallel claims | unchanged concurrent replay keeps identical `winner_id` tuple and `monotonicity_status=PASS_REQUIRED` |
+| ASB16-RQ-019 | `PARTIAL` | cross-workflow normalizer + schema validator landed and are lane-wired; replay evidence closure still pending | keep canonical pair `scripts/normalize_v16_cross_workflow_evidence.py` + `scripts/validate_v16_cross_workflow_schema.py`; preserve creator/readiness/three-plane/full-scan/e2e/ci consumption on canonical fields only | `run_id/route_action/quality_meta_state/dedup_state/evidence_hash` always present and hash-stable |
+| ASB16-RQ-020 | `PARTIAL` | skill-path integrity validator landed and lane-wired; strict layout replay matrix (in-layout pass/out-of-layout fail) still pending archive closure | keep `scripts/validate_v16_skill_path_integrity.py` as single fail-close gate; retain capability-activation as source-only data; enforce same verdict in creator/readiness/three-plane/full-scan/e2e/ci | any out-of-layout/missing skill path fails deterministically with canonical path-integrity code |
+| ASB16-RQ-021 | `PARTIAL` | emitter-before-gate sequence is now implemented, but full-chain replay evidence for required=true pinning scenarios remains incomplete | keep emitter-first (`scripts/emit_route_version_pin_receipt.py`) then gate (`scripts/validate_route_version_pinning.py`); retain creator/readiness/three-plane/full-scan/e2e/ci hooks; add deterministic mismatch replay archive | pin proof required for pass; endpoint-version mismatch must fail-close with canonical pin error code |
 
 Batch-6 five-link anchor lock (mandatory per row):
 
@@ -1299,6 +1299,25 @@ Batch-6 blocker bundle (must resolve before promotion):
 5. Aggregator extraction gap:
    - `report_three_plane_status.py` and `full_identity_protocol_scan.py` must consume canonical verdict fields from new receipts.
 
+Batch-6 execution hook closure snapshot (Task-8..12 landed, replay pending):
+
+1. landed commits:
+   - `9e59e0f` (mapping seed),
+   - `f63eb55` + `e214df9` (single-parser dual-mode intake core),
+   - `9c0cf0a` (`RQ-018` validator),
+   - `19d02ab` (`RQ-019` normalizer + validator),
+   - `b5a191c` (`RQ-020` validator + scan surfaces),
+   - `fffc3c3` (`RQ-021` emitter + gate),
+   - `08c8f89` (coverage/aggregator extraction),
+   - `5f7eb44` (readiness hook),
+   - `228ba40` (creator validate/update hook),
+   - `b7137e3` (e2e hook),
+   - `47f2f38` (CI required-gates hook).
+2. posture remains non-promotional:
+   - all rows stay `SPEC_READY/PENDING_INTAKE`;
+   - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`;
+   - deterministic positive/negative replay archive is still mandatory before any lock upgrade.
+
 Promotion guard (hard):
 
 1. `ACCEPT_WITH_FIX` in this section is design acceptance only.
@@ -1317,14 +1336,14 @@ Batch naming/scope lock (mandatory):
 2. Topic lock:
    - `RQ-022`: fallback taxonomy normalization to governed enum set;
    - `RQ-030`: four-track intake evidence quorum hard gate with metadata completeness.
-3. Both rows remain non-promotional until script-level hard gate exists.
+3. Both rows remain non-promotional until deterministic required=true replay archive and lock-closure evidence are complete.
 
 Row-level cross-check and explicit hook plan:
 
 | Requirement ID | Anchor state | Finding (cross-check) | Concrete hook plan (must all land) | Acceptance target |
 | --- | --- | --- | --- | --- |
-| ASB16-RQ-022 | `PARTIAL` | existing fallback reasons are heterogeneous/raw and do not match governed 4-enum taxonomy; blocker taxonomy uses a different namespace | add `scripts/validate_fallback_taxonomy_normalization.py`; normalization output must be dual-field (`fallback_reason_raw`, `fallback_taxonomy_class`) and must not overwrite blocker taxonomy fields; enforce in readiness and consume in three-plane/full-scan/e2e | each fallback sample maps to governed class (`data_missing/model_weak_signal/transport_error/policy_blocked`); unmappable value fails deterministically without breaking blocker chain |
-| ASB16-RQ-030 | `PARTIAL` | governance/review define hard-gate semantics, but no machine validator enforces four-track + metadata quorum | reuse canonical parser `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; optional wrapper `scripts/validate_v16_intake_evidence_quorum.py` may only delegate; wire single fail-close entrypoint in creator/readiness and promotion gates in three-plane/full-scan/e2e | any missing track (`T1..T4`) or missing metadata (`bundle_id/source_url_set/reference_timestamp_utc/conflict_note`) blocks with deterministic fail code |
+| ASB16-RQ-022 | `PARTIAL` | fallback taxonomy normalizer is implemented and lane-wired, but required=true replay archive across readiness/e2e/ci paths is not yet complete | keep `scripts/validate_fallback_taxonomy_normalization.py`; preserve dual-field output (`fallback_reason_raw`, `fallback_taxonomy_class`) and blocker-namespace isolation; keep creator/readiness/three-plane/full-scan/e2e/ci consumption aligned | each fallback sample maps to governed class (`data_missing/model_weak_signal/transport_error/policy_blocked`); unmappable value fails deterministically without breaking blocker chain |
+| ASB16-RQ-030 | `PARTIAL` | canonical parser + wrapper + lane hooks landed, but quorum replay evidence for required=true bundles remains incomplete | keep canonical parser `scripts/validate_v16_intake_evidence_core.py --mode promotion_gate`; wrapper `scripts/validate_v16_intake_evidence_quorum.py` delegates only; maintain single fail-close entrypoint in creator/readiness/three-plane/full-scan/e2e/ci | any missing track (`T1..T4`) or missing metadata (`bundle_id/source_url_set/reference_timestamp_utc/conflict_note`) blocks with deterministic fail code |
 
 Batch-7 five-link anchor lock (mandatory per row):
 
@@ -1390,6 +1409,21 @@ Batch-6/7 revised execution order (post-audit hard sequence):
 3. Implement `RQ-022` taxonomy normalization with dual fields and namespace isolation.
 4. Implement `RQ-021` emitter (`emit_route_version_pin_receipt.py`) before pinning gate.
 5. Wire all seven new gates into coverage and aggregator payload extraction before any lock or promotion claim.
+
+Batch-7 execution hook closure snapshot (Task-8..12 landed, replay pending):
+
+1. landed commits:
+   - `f63eb55` + `e214df9` (`RQ-030` core parser + strict-operation alignment),
+   - `4f4930c` (`RQ-022` taxonomy normalizer + namespace separation),
+   - `08c8f89` (coverage/aggregator extraction),
+   - `5f7eb44` (readiness),
+   - `228ba40` (creator),
+   - `b7137e3` (e2e),
+   - `47f2f38` (ci required-gates).
+2. posture remains non-promotional:
+   - both rows stay `SPEC_READY/PENDING_INTAKE`;
+   - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`;
+   - required=true positive/negative replay archive remains mandatory.
 
 ### FIX16-037 - write-boundary non-starvation hardening (`ASB16-RQ-028/031`)
 
@@ -1523,8 +1557,8 @@ Promotion guard (hard):
 | FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T08:30:00Z | Batch-3B (`ASB16-RQ-024..028`) strengthening normalized: RQ-024 error-code semantic deconflict + apply-coverage hard-close default-on requirement; kernel-first source/mapping/prompt-derivation/write-boundary cluster remains `ACCEPT_WITH_FIX` only and non-promotional pending executable closure per governance `8.7` |
 | FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T14:20:00Z | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalized with `T1..T4` evidence guard, row-level homomorphism predicates, hard-tightening addendum (`RQ-032` canonical `IP-HDSTAMP-*`, `RQ-029` convergence comparator outputs, `RQ-031` compile/runtime metadata + actor-explicit fail-close, `RQ-007` full-chain replay, `RQ-008` checker required), and actor-id fallback recurrence supplement (missing explicit actor can resolve to host `user:*` binding and trigger compatibility mismatch trace); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.8` |
 | FIX16-034 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T16:40:00Z | Batch-5 (`ASB16-RQ-010/011/012/013/016`) orchestration strengthening normalized: readiness two-phase parity requirement + tmp collision-safe allocator contract + handoff/collab auto-rotation closure (missing validator files treated as hard blocker) + protocol-feedback atomic emit transactionality + refresh/strict interference matrix receipts (field-gap lock, mapped to `FIX16-017`); all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.9` |
-| FIX16-035 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T19:20:00Z | Batch-6 (`ASB16-RQ-017/018/019/020/021`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: mapping asset prerequisite locked, `RQ-017/030` unified to single intake core parser with dual mode, `RQ-021` switched to emitter-before-gate sequence, and coverage/aggregator mandatory wiring added; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.10` |
-| FIX16-036 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: `RQ-022` dual-field taxonomy normalization (`fallback_reason_raw + fallback_taxonomy_class`) with blocker-namespace isolation, and `RQ-030` unified to intake core parser promotion mode plus coverage/aggregator mandatory wiring; both rows remain `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.11` |
+| FIX16-035 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T19:20:00Z | Batch-6 (`ASB16-RQ-017/018/019/020/021`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: mapping asset, single-parser dual-mode intake core, emitter-before-gate sequencing, and coverage/aggregator wiring are now implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `9e59e0f..47f2f38`; rows remain `ACCEPT_WITH_FIX` and non-promotional until deterministic replay archive closes per governance `8.10` |
+| FIX16-036 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: dual-field taxonomy normalization + intake core promotion mode are implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `f63eb55..47f2f38`; both rows remain `ACCEPT_WITH_FIX` and non-promotional until required=true replay closure per governance `8.11` |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T20:10:00Z | Write-boundary non-starvation hardening absorbed for `ASB16-RQ-028/031`: lane-scoped boundary semantics locked, protocol-entry liveness channels explicitly preserved, no-silent-downgrade fail-close mapped to canonical lane/candidate code families, telemetry tuple + replay matrix elevated to mandatory promotion gate; remains `ACCEPT_WITH_FIX` and non-promotional pending executable closure per governance `8.12` |
 
 ---
