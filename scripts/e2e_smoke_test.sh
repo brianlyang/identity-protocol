@@ -523,7 +523,6 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --operation e2e \
-    --out "/tmp/batch67-replay-archive-${ID}.json" \
     --json-only
 
   echo "[24/30][$ID] validate experience feedback governance"
