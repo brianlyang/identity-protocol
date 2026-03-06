@@ -608,12 +608,12 @@ Mandatory semantics:
 | ASB16-RQ-014 | prompt bootstrap capability contract | P0 | SPEC_READY | SRA intake pending implementation |
 | ASB16-RQ-015 | prompt capability matrix fail-closed validator | P0 | SPEC_READY | SRA intake pending implementation |
 | ASB16-RQ-016 | refresh->strict + business interference runbook contract | P1 | SPEC_READY | SRA intake pending implementation |
-| ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | SRA intake pending implementation; final T1/T2/T3/T4 replay reinforcement in `review FIX16-027` |
-| ASB16-RQ-018 | dedup winner determinism contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
-| ASB16-RQ-019 | cross-workflow evidence schema contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
-| ASB16-RQ-020 | skill-path integrity contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
-| ASB16-RQ-021 | route/version pinning contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
-| ASB16-RQ-022 | fallback taxonomy normalization contract | P1 | SPEC_READY | office-ops supplemental intake pending implementation |
+| ASB16-RQ-017 | roundtable/vendor/openaidoc/context7 cross-verification contract | P1 | SPEC_READY | implementation landed + lane hooks wired (`creator/readiness/three-plane/full-scan/e2e/ci`); deterministic required=true replay archive pending |
+| ASB16-RQ-018 | dedup winner determinism contract | P1 | SPEC_READY | implementation landed + lane hooks wired; deterministic required=true replay archive pending (non-promotional) |
+| ASB16-RQ-019 | cross-workflow evidence schema contract | P1 | SPEC_READY | implementation landed + lane hooks wired; deterministic required=true replay archive pending (non-promotional) |
+| ASB16-RQ-020 | skill-path integrity contract | P1 | SPEC_READY | implementation landed + lane hooks wired; deterministic required=true replay archive pending (non-promotional) |
+| ASB16-RQ-021 | route/version pinning contract | P1 | SPEC_READY | implementation landed + lane hooks wired; emitter-before-gate sequence active, deterministic required=true replay archive pending |
+| ASB16-RQ-022 | fallback taxonomy normalization contract | P1 | SPEC_READY | implementation landed + lane hooks wired; required=true replay archive pending and blocker-namespace isolation remains mandatory |
 | ASB16-RQ-023 | discovery trigger-conditioned requiredization contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
 | ASB16-RQ-024 | discovery apply-time coverage fail-close contract | P0 | SPEC_READY | SRA discovery dual-track intake pending implementation |
 | ASB16-RQ-025 | kernel-first canonical source contract | P0 | SPEC_READY | baseline accepted; implementation pending |
@@ -621,7 +621,7 @@ Mandatory semantics:
 | ASB16-RQ-027 | derived prompt compilation contract | P0 | SPEC_READY | baseline accepted; implementation pending |
 | ASB16-RQ-028 | instance write-boundary lock contract | P0 | SPEC_READY | baseline accepted; implementation pending with explicit non-starvation invariant in `8.12` |
 | ASB16-RQ-029 | semantic single-source convergence contract | P0 | SPEC_READY | live replay mismatch confirmed; implementation pending |
-| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | new suggestion promotion requires `T1..T4` bundle before leaving `PENDING_INTAKE`; reinforced by final replay in `review FIX16-027` |
+| ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | implementation landed (`single-parser dual-mode`) + lane hooks wired; promotion remains blocked until deterministic required=true replay archive is complete |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | requires mapping validator + actor-explicit strict lane + multimodal sample-proof closure before promotion; pilot (`review FIX16-026`) + final replay (`review FIX16-027`) both confirm text uplift != executable closure |
 | ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | enforce send-blocking when canonical identity/layer headstamp missing, malformed, or actor-mismatched; intake in `review FIX16-029` |
 

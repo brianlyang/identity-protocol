@@ -769,9 +769,7 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
     task["dedup_monotonic_winner_contract_v1"] = {
         "required": True,
         "validator": "scripts/validate_dedup_monotonicity.py",
-        "claims_path_pattern": (
-            f"identity/runtime/local/{identity_id}/reports/{identity_id}-dedup-claims*.json"
-        ),
+        "claims_path_pattern": "runtime/reports/**/*dedup*claim*.json",
         "required_fields": [
             "run_id",
             "earliest_claim_ts",

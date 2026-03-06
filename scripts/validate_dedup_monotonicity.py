@@ -5,7 +5,7 @@ import argparse
 import glob
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -66,8 +66,11 @@ def _normalize_iso_utc(value: str) -> tuple[str, str]:
             dt = datetime.fromisoformat(raw[:-1] + "+00:00")
         else:
             dt = datetime.fromisoformat(raw)
-        norm = dt.astimezone().isoformat()
-        sort_key = dt.astimezone().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        utc_dt = dt.astimezone(timezone.utc)
+        norm = utc_dt.isoformat().replace("+00:00", "Z")
+        sort_key = utc_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         return norm, sort_key
     except Exception:
         return "", ""
@@ -119,7 +122,7 @@ def _resolve_claims_path(*, explicit_claims: str, contract: dict[str, Any], pack
         p = Path(explicit_claims).expanduser().resolve()
         return p if p.exists() and p.is_file() else None
 
-    patterns: list[str] = []
+    contract_patterns: list[str] = []
     for key in (
         "claims_path_pattern",
         "report_path_pattern",
@@ -129,25 +132,32 @@ def _resolve_claims_path(*, explicit_claims: str, contract: dict[str, Any], pack
     ):
         v = contract.get(key)
         if isinstance(v, str) and v.strip():
-            patterns.append(v.strip())
+            contract_patterns.append(v.strip())
 
-    if not patterns:
-        patterns = [
-            "runtime/protocol-feedback/**/*dedup*claim*.json",
-            "runtime/protocol-feedback/**/*dedup*.json",
-            "runtime/reports/**/*dedup*.json",
-            "runtime/reports/**/*orchestr*dedup*.json",
-            "resource/reports/**/*dedup*.json",
-        ]
+    fallback_patterns = [
+        "runtime/protocol-feedback/**/*dedup*claim*.json",
+        "runtime/protocol-feedback/**/*dedup*.json",
+        "runtime/reports/**/*dedup*.json",
+        "runtime/reports/**/*orchestr*dedup*.json",
+        "resource/reports/**/*dedup*.json",
+    ]
 
-    hits: list[Path] = []
-    for pat in patterns:
-        hits.extend(_iter_pattern_hits(pack_path, pat))
+    def _collect_hits(patterns: list[str]) -> list[Path]:
+        rows: list[Path] = []
+        for pat in patterns:
+            rows.extend(_iter_pattern_hits(pack_path, pat))
+        dedup_hits: dict[str, Path] = {h.resolve().as_posix(): h.resolve() for h in rows}
+        return list(dedup_hits.values())
+
+    # First prefer contract-declared patterns, but do not hard-lock to them.
+    # If contract patterns are stale/misaligned, fall back to canonical runtime defaults.
+    hits = _collect_hits(contract_patterns) if contract_patterns else []
+    if not hits:
+        hits = _collect_hits(fallback_patterns)
     if not hits:
         return None
 
-    dedup: dict[str, Path] = {h.resolve().as_posix(): h.resolve() for h in hits}
-    rows = list(dedup.values())
+    rows = list(hits)
     if run_id.strip():
         run_hits = [x for x in rows if run_id in x.name]
         if run_hits:
