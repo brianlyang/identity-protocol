@@ -1046,6 +1046,51 @@ Batch-3B mandatory interpretation guard:
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
 
+### 8.8 Batch-4 row-level strengthening profile (`ASB16-RQ-029/031/032/007/008`, 2026-03-06)
+
+Scope rule:
+
+1. This section is explicitly `Batch-4` and covers only:
+   - `ASB16-RQ-029`
+   - `ASB16-RQ-031`
+   - `ASB16-RQ-032`
+   - `ASB16-RQ-007`
+   - `ASB16-RQ-008`
+2. Topic split for this batch:
+   - `P0 convergence cluster`: `RQ-029/031/032`
+   - `P1 bridge cluster`: `RQ-007/008`
+3. Current decision class for all rows in this batch is `ACCEPT_WITH_FIX` (design accepted, implementation pending, non-promotional).
+
+Current lock snapshot (`7.3` binding, non-overridable by prose):
+
+1. `ASB16-RQ-029/031/032/007/008` remain `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`, `FULL_LOCK verdict=UNLOCKED`.
+2. Therefore all rows remain `SPEC_READY` in section `7`, with review state `PENDING_INTAKE`.
+3. Any claim that this section alone enables promotion is invalid.
+
+Four-track intake binding guard (mandatory):
+
+1. `T1 roundtable` evidence must remain linked for semantic convergence rationale and lane-boundary interpretation.
+2. `T2 vendor` evidence must remain linked for external policy consistency of fail-close and role/sandbox boundaries.
+3. `T3 openai_context` evidence must remain linked for strict schema + tool/security guidance alignment.
+4. `T4 protocol_spec` evidence must remain linked for MCP/Agent Skills contract compatibility.
+5. Missing any track blocks promotion beyond `PENDING_INTAKE`.
+
+Batch-4 strengthening matrix:
+
+| Requirement ID | Current anchor_state | Strengthening target (kernel + script) | Homomorphism assertion (mandatory) | Promotion guard |
+| --- | --- | --- | --- | --- |
+| ASB16-RQ-029 | `PARTIAL` | add `rq_029_semantic_single_source_convergence_contract_v1`; implement canonical semantic receipt fields in validator output (`semantic_routing_status`, `semantic_routing_error_code`, `semantic_routing_evidence_path`, `semantic_routing_reason`, `semantic_routing_source`); add convergence comparator (`IP-SEM-CONV-001`) consuming update/three-plane/full-scan same-lineage artifacts | for same lineage, semantic verdict tuple must be identical across update/three-plane/full-scan; mismatches must produce deterministic `IP-SEM-CONV-001` | keep `SPEC_READY/PENDING_INTAKE` until canonical receipt + convergence comparator are implemented and replay-proven |
+| ASB16-RQ-031 | `PARTIAL` | add `rq_031_prompt_import_executable_coupling_contract_v1`; require machine mapping chain (`kernel_contract_ref -> validator_ref -> evidence_ref`) + `actor_context_explicit`; add strict-lane explicit-actor gate (`--actor-id` mandatory for promotion-grade replay) and bind trigger/knowledge/arbitration sample proofs into unified mapping receipt | same prompt-import payload must produce deterministic executable-coupling mapping receipt; text-only uplift without mapping delta must fail-close | keep `SPEC_READY/PENDING_INTAKE` until mapping validator + explicit actor gate + multimodal sample-proof bundle all pass |
+| ASB16-RQ-032 | `PARTIAL` | add `rq_032_headstamp_pre_send_hard_gate_contract_v1`; converge runtime error family to canonical `IP-HDSTAMP-001/002/003` (legacy `IP-ASB-STAMP-SESSION-*` allowed only as compatibility alias during transition); ensure governed + direct/manual paths share one pre-send blocking validator and canonical receipt fields (`headstamp_status`, `error_code`, `evidence_ref`, `actor_binding_ref`) | identical negative cases (missing/malformed/mismatch/receipt-missing) must map to identical canonical `IP-HDSTAMP-*` codes across creator/readiness/e2e/full-scan/three-plane/ci | keep `SPEC_READY/PENDING_INTAKE` until pre-send gate is single-sourced and error-family convergence replay passes |
+| ASB16-RQ-007 | `PARTIAL` | strengthen `rq_007_cross_cwd_absolute_input_contract_v1`; add cross-cwd comparator (`protocol-root` vs `/tmp`) for readiness/freshness/baseline/alignment chains; enforce absolute `--repo-catalog` for non-root replay with stable `IP-CWD-004` semantics | same payload under protocol-root and `/tmp` must preserve required verdict fields; non-root relative-catalog path must fail-close deterministically | keep `SPEC_READY/PENDING_INTAKE` until root/tmp parity + negative replay archive are both complete |
+| ASB16-RQ-008 | `PLANNED_ONLY` | add `rq_008_docs_bridge_consistency_contract_v1`; implement governance/review contradiction checker with deterministic tuple sorting and stable anchor refs (`bridge_consistency_status`, `contradiction_pairs`, `governance_anchor_refs`, `review_anchor_refs`) | unchanged docs must produce identical contradiction tuple ordering and identical anchor refs across reruns | keep `SPEC_READY/PENDING_INTAKE` until checker implementation exists and contradiction replay is deterministic |
+
+Batch-4 mandatory interpretation guard:
+
+1. `ACCEPT_WITH_FIX` is design acceptance only and does not imply implementation closure.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion from this batch is blocked until per-row five-link anchors are implemented (`kernel_ref + runtime_ref + mapping_ref + validator_ref + acceptance command`) and lock-state is scanner-computed.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

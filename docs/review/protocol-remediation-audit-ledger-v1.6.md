@@ -80,6 +80,7 @@ Carry-over evidence:
 | FIX16-030 | 2026-03-05 | protocol | batch-1 (`ASB16-RQ-001..005`) row-level strengthening normalization: acyclic unlock formula + explicit capability mapping + non-repudiation promotion receipt + outlet negative-path matrix + normalized sidecar parity | 031e9ba | SPEC_READY | PENDING_INTAKE |
 | FIX16-031 | 2026-03-06 | protocol | Batch-2A (`ASB16-RQ-006..010`) row-level strengthening normalization: release-plane cloud evidence wiring + cross-cwd absolute-input contract + docs bridge checker + run-id-first report selector + phase-A/B parity contract | 5cb1a14 | SPEC_READY | PENDING_INTAKE |
 | FIX16-032 | 2026-03-06 | protocol | Batch-3B (`ASB16-RQ-024..028`) row-level strengthening normalization: discovery apply coverage hard-close + kernel-first source lock + mapping coverage asset + derived prompt conformance metadata + instance write-boundary canonical code alignment | 3538eb7 | SPEC_READY | PENDING_INTAKE |
+| FIX16-033 | 2026-03-06 | protocol | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization: semantic single-source convergence + prompt import executable-coupling + headstamp canonical error-family convergence + cross-cwd parity replay + docs bridge contradiction checker | UNCOMMITTED | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -959,6 +960,65 @@ Promotion guard (hard):
 2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. Promotion requires row-level five-link anchor closure and scanner-computed lock evidence.
 
+### FIX16-033 - Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalization
+
+- Status: `SPEC_READY`
+- Goal: normalize Batch-4 four-track intake into deterministic row-level strengthening predicates for `P0` convergence (`RQ-029/031/032`) and `P1` bridge alignment (`RQ-007/008`), while keeping non-promotional boundary unchanged.
+
+Batch naming/scope lock (mandatory):
+
+1. This fix is explicitly `Batch-4` and covers only `ASB16-RQ-029/031/032/007/008`.
+2. Topic split is fixed:
+   - `P0 convergence cluster`: `ASB16-RQ-029/031/032`
+   - `P1 bridge cluster`: `ASB16-RQ-007/008`
+3. Any ledger statement that expands this fix to other requirements is invalid.
+
+Four-track evidence binding guard (mandatory):
+
+1. `T1 roundtable`: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+2. `T2 vendor`: `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+3. `T3 openai_context` receipt anchors: governance+review cross-verification record (`docs/review/protocol-remediation-audit-ledger-v1.6.md` row set for cross-verification receipt references).
+4. `T4 protocol_spec` anchors: MCP/tool-collaboration/spec references (`docs/references/skill-mcp-tool-collaboration-contract-v1.0.md` + linked official specs already registered in review references).
+5. Missing any one track blocks promotion beyond `PENDING_INTAKE`.
+
+Row-level acceptance result:
+
+1. `ASB16-RQ-029/031/032/007/008` are all `ACCEPT_WITH_FIX`.
+2. All rows remain `SPEC_READY / PENDING_INTAKE`.
+3. Lock-state remains `KERNEL_LOCKED=NO`, `SCRIPT_LOCKED=NO`, `FULL_LOCK=UNLOCKED` for all five rows.
+4. No row in this fix is promotion-eligible.
+
+Strengthening outcomes required by this fix:
+
+1. `RQ-029` semantic single-source convergence:
+   - canonical receipt field family must be emitted and consumed (`semantic_routing_status/error_code/evidence_path/reason/source`);
+   - convergence comparator must fail-close same-lineage mixed verdicts with stable `IP-SEM-CONV-001`.
+2. `RQ-031` prompt import executable-coupling:
+   - machine mapping chain must be explicit (`kernel_contract_ref -> validator_ref -> evidence_ref`) with `actor_context_explicit`;
+   - strict lane must require explicit `--actor-id`; multimodal proof validators (trigger/knowledge/arbitration) must feed one unified mapping receipt.
+3. `RQ-032` headstamp pre-send hard gate:
+   - runtime error family must converge to canonical `IP-HDSTAMP-001/002/003` (legacy `IP-ASB-STAMP-SESSION-*` alias only during compatibility transition);
+   - governed and direct/manual send paths must use one pre-send fail-close source.
+4. `RQ-007` cross-cwd consistency:
+   - partial three-plane hardening is insufficient; readiness/freshness/baseline/alignment chains must join root/tmp parity replay and absolute-catalog fail-close contract (`IP-CWD-004` stable semantics).
+5. `RQ-008` docs bridge consistency:
+   - command-contract and SSOT checks exist, but contradiction checker is missing;
+   - governance-vs-review contradiction tuples and anchor refs must be machine-emitted with deterministic ordering.
+
+Homomorphism assertions (mandatory acceptance predicates):
+
+1. `RQ-029`: same lineage input must return identical semantic verdict tuple across update/three-plane/full-scan; mismatch must deterministically map to `IP-SEM-CONV-001`.
+2. `RQ-031`: same prompt import payload must generate deterministic executable-coupling mapping receipt and actor-explicit evidence.
+3. `RQ-032`: identical missing/malformed/mismatch negative cases must map to identical canonical `IP-HDSTAMP-*` codes across creator/readiness/e2e/full-scan/three-plane/ci.
+4. `RQ-007`: same payload replayed under protocol-root and `/tmp` must preserve required verdict fields; non-root relative repo-catalog must fail-close deterministically.
+5. `RQ-008`: unchanged docs must yield identical contradiction tuple ordering and anchor refs across reruns.
+
+Promotion guard (hard):
+
+1. `ACCEPT_WITH_FIX` in this section is design acceptance only.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. Promotion requires per-row `kernel + script + replay` closure (`five-link anchors`) and scanner-computed lock-state.
+
 ---
 
 ## 4) Reviewer decision log
@@ -997,6 +1057,7 @@ Promotion guard (hard):
 | FIX16-030 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-05T16:40:00Z | Batch-1 (`ASB16-RQ-001..005`) strengthening normalized into enforceable P0 constraints; row-level decision=`ACCEPT_WITH_FIX` only, pending kernel/script/mapping anchor closure per governance `8.5` |
 | FIX16-031 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T00:00:00Z | Batch-2A (`ASB16-RQ-006..010`) strengthening normalized with naming split and homomorphism assertions; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending kernel/script/mapping closure per governance `8.6` |
 | FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T08:30:00Z | Batch-3B (`ASB16-RQ-024..028`) strengthening normalized: RQ-024 error-code semantic deconflict + apply-coverage hard-close default-on requirement; kernel-first source/mapping/prompt-derivation/write-boundary cluster remains `ACCEPT_WITH_FIX` only and non-promotional pending executable closure per governance `8.7` |
+| FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-06T12:10:00Z | Batch-4 (`ASB16-RQ-029/031/032/007/008`) four-track strengthening normalized with `T1..T4` evidence guard and row-level homomorphism predicates; all rows remain `ACCEPT_WITH_FIX` and non-promotional pending canonical error-family/mapping/cross-cwd/docs-bridge executable closure per governance `8.8` |
 
 ---
 
