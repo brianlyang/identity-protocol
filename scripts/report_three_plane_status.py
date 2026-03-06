@@ -911,6 +911,30 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_cov,
     }
 
+    rc_unlock_formula, out_unlock_formula, err_unlock_formula = _run(
+        [
+            "python3",
+            "scripts/validate_unlock_formula.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    unlock_formula_payload = _parse_json_payload(out_unlock_formula) or {}
+    validators["unlock_formula_automation"] = {
+        "rc": rc_unlock_formula,
+        "ok": rc_unlock_formula == 0,
+        "out": out_unlock_formula,
+        "err": err_unlock_formula,
+    }
+    unlock_formula_status = str(unlock_formula_payload.get("unlock_formula_status", "")).strip().upper()
+    if rc_unlock_formula != 0 or unlock_formula_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_cross_verify, out_cross_verify, err_cross_verify = _run(
         [
             "python3",
@@ -1887,6 +1911,23 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skipped_contract_count": coverage_payload.get("skipped_contract_count"),
             "failed_required_contract_count": coverage_payload.get("failed_required_contract_count"),
             "failed_optional_contract_count": coverage_payload.get("failed_optional_contract_count"),
+        },
+        "unlock_formula_automation": {
+            "unlock_formula_status": unlock_formula_payload.get("unlock_formula_status"),
+            "error_code": unlock_formula_payload.get("error_code", ""),
+            "required_contract": unlock_formula_payload.get("required_contract"),
+            "auto_required_signal": unlock_formula_payload.get("auto_required_signal"),
+            "unlock_allowed": unlock_formula_payload.get("unlock_allowed"),
+            "decision_gates": unlock_formula_payload.get("decision_gates", {}),
+            "p0_total": unlock_formula_payload.get("p0_total"),
+            "p0_done": unlock_formula_payload.get("p0_done"),
+            "p0_not_done_refs": unlock_formula_payload.get("p0_not_done_refs", []),
+            "audit_signoff_status": unlock_formula_payload.get("audit_signoff_status", ""),
+            "env_blockers": unlock_formula_payload.get("env_blockers", []),
+            "protocol_blockers": unlock_formula_payload.get("protocol_blockers", []),
+            "formula_input_digest": unlock_formula_payload.get("formula_input_digest", ""),
+            "stale_reasons": unlock_formula_payload.get("stale_reasons", []),
+            "evidence_ref": unlock_formula_payload.get("evidence_ref", ""),
         },
         "cross_verification_tracks": {
             "cross_verification_tracks_status": cross_verify_payload.get("cross_verification_tracks_status"),

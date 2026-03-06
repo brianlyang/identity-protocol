@@ -956,6 +956,17 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_unlock_formula.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_v16_cross_verification_tracks.py",
             "--catalog",
             catalog,

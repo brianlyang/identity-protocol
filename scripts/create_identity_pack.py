@@ -424,6 +424,28 @@ def _protocol_lane_activation_headstamp_contract_skeleton() -> dict:
     }
 
 
+def _release_unlock_formula_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_unlock_formula.py",
+        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+        "required_fields": [
+            "unlock_allowed",
+            "decision_gates",
+            "p0_total",
+            "p0_done",
+            "p0_not_done_refs",
+            "audit_signoff_status",
+            "env_blockers",
+            "protocol_blockers",
+            "evidence_refs",
+        ],
+        "d6_derived_only": True,
+        "fail_action": "block_release_tag_and_reenter_p0_closure",
+    }
+
+
 def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
     return {
         "multi_track_cross_verification_contract_v1": {
@@ -583,6 +605,7 @@ def _ensure_intake_p1_contracts(task: dict, identity_id: str) -> dict:
 
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
+        "release_unlock_formula_automation_contract_v1": _release_unlock_formula_contract_skeleton(),
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
@@ -790,6 +813,7 @@ def _legacy_full_contract_current_task(identity_id: str, title: str, description
 
 def _default_required_checks() -> list[str]:
     return [
+        "scripts/validate_unlock_formula.py",
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
         "scripts/validate_identity_update_lifecycle.py",

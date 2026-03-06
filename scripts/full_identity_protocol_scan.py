@@ -1080,6 +1080,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "unlock_formula_automation": [
+                    "python3",
+                    "scripts/validate_unlock_formula.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "cross_verification_tracks": [
                     "python3",
                     "scripts/validate_v16_cross_verification_tracks.py",
@@ -1441,6 +1452,27 @@ def main() -> int:
                     ):
                         if k in coverage_doc:
                             check_payload[k] = coverage_doc.get(k)
+                if name == "unlock_formula_automation":
+                    unlock_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "unlock_formula_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "unlock_allowed",
+                        "decision_gates",
+                        "p0_total",
+                        "p0_done",
+                        "p0_not_done_refs",
+                        "audit_signoff_status",
+                        "env_blockers",
+                        "protocol_blockers",
+                        "formula_input_digest",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in unlock_doc:
+                            check_payload[k] = unlock_doc.get(k)
                 if name == "cross_verification_tracks":
                     cross_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

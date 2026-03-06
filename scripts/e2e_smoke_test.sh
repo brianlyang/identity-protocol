@@ -481,6 +481,13 @@ for ID in $IDS; do
     --identity-id "$ID" \
     --operation e2e
 
+  echo "[23.4505/30][$ID] validate release unlock formula contract (RQ-001)"
+  python3 scripts/validate_unlock_formula.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
   echo "[23.451/30][$ID] validate cross-verification tracks gate (RQ-017)"
   python3 scripts/validate_v16_cross_verification_tracks.py \
     --catalog "$CATALOG_PATH" \

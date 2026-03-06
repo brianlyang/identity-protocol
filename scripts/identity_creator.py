@@ -1783,6 +1783,17 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_unlock_formula.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
                 "scripts/validate_v16_cross_verification_tracks.py",
                 "--catalog",
                 args.catalog,
@@ -2789,6 +2800,17 @@ def main() -> int:
             print("[FAIL] discovery requiredization validation failed; update blocked")
             return rc
         intake_update_gates: list[list[str]] = [
+            [
+                "python3",
+                "scripts/validate_unlock_formula.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
             [
                 "python3",
                 "scripts/validate_v16_cross_verification_tracks.py",

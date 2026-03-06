@@ -34,6 +34,7 @@ DISCOVERY_TARGET_NAMES = {
     "vendor_api_solution",
 }
 STATUS_FIELD_BY_SCRIPT = {
+    "scripts/validate_unlock_formula.py": "unlock_formula_status",
     "scripts/validate_semantic_routing_guard.py": "semantic_routing_status",
     "scripts/validate_instance_protocol_split_receipt.py": "instance_protocol_split_status",
     "scripts/validate_vendor_namespace_separation.py": "vendor_namespace_status",
@@ -65,6 +66,16 @@ class ContractTarget:
 
 
 TARGETS = (
+    ContractTarget(
+        name="unlock_formula_automation",
+        contract_keys=(
+            "release_unlock_formula_automation_contract_v1",
+            "release_unlock_formula_automation_contract",
+            "rq_001_unlock_formula_contract_v1",
+        ),
+        validator_script="scripts/validate_unlock_formula.py",
+        validator_args=("--json-only",),
+    ),
     ContractTarget(
         name="tool_installation",
         contract_keys=("tool_installation_contract",),
@@ -287,6 +298,7 @@ def _run_validator(
 ) -> tuple[int, str, str]:
     cmd = ["python3", script, "--catalog", catalog, "--identity-id", identity_id]
     if script in {
+        "scripts/validate_unlock_formula.py",
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_vendor_namespace_separation.py",
         "scripts/validate_v16_cross_verification_tracks.py",

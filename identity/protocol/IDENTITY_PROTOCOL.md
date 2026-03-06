@@ -438,6 +438,31 @@ To reduce protocol drift and avoid ad-hoc logic:
 
 Email is only for offline blocking actions. Non-blocking updates are routed to logs or dashboards.
 
+## Batch-1 anchor placeholders (v1.6 intake, non-promotional)
+
+The following sections provide stable kernel anchors for v1.6 Batch-1 mapping rows.
+Execution closure remains governed by v1.6 governance/review and must stay
+`SPEC_READY / PENDING_INTAKE` until validator + replay closure is complete.
+
+### rq_001_unlock_formula_contract_v1
+
+Required receipt fields:
+
+- `unlock_allowed`
+- `decision_gates`
+- `p0_total`
+- `p0_done`
+- `p0_not_done_refs`
+- `audit_signoff_status`
+- `env_blockers`
+- `protocol_blockers`
+- `evidence_refs`
+
+Hard constraints:
+
+1. `D6` is derived output only (`D1..D5` + `P0` ledger are the only formula inputs).
+2. Same governance/review inputs must produce stable `formula_input_digest`.
+
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections are **kernel anchor placeholders** for v1.6 Batch-6/7 mapping survivability.
