@@ -618,6 +618,7 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_dedup_monotonicity.py",
         "scripts/validate_v16_cross_workflow_schema.py",
         "scripts/validate_v16_skill_path_integrity.py",
+        "scripts/validate_batch67_replay_archive.py",
     ]
 
 
