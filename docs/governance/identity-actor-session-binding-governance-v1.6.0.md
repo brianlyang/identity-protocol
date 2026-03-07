@@ -2936,6 +2936,43 @@ State impact:
 2. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. promotion remains blocked by unresolved protocol-lane residual family (`IP-UPG-002` + `IP-SEM-001`) and remaining A/B determinism convergence.
 
+### 8.35 Round-16 semantic requiredization scope convergence (`HEAD=working-tree+dirty`, 2026-03-08)
+
+Scope lock:
+
+1. this round targets residual protocol-lane blocker family (`IP-SEM-001` / `IP-UPG-002`) under `HOTFIX16-P1-004`.
+2. this is a protocol-layer applicability convergence patch; no lifecycle promotion is granted by this round alone.
+
+Implementation deltas:
+
+1. `scripts/validate_semantic_routing_guard.py`
+   - adds inspection-path applicability short-circuit when required contract is not current-round linked.
+   - prioritizes correlated current-round feedback batch selection before generic pattern fallback.
+2. `scripts/validate_protocol_vendor_semantic_isolation.py`
+   - migrates auto-required decision to lane-aware scope arbitration (`protocol_feedback_lane_common`).
+   - adds current-round correlated batch preference and inspection-path skip for history-only activity.
+3. `scripts/validate_external_source_trust_chain.py`
+   - same lane-aware requiredization scope convergence as above.
+   - same correlated batch preference and history-only inspection skip.
+4. `scripts/validate_protocol_data_sanitization_boundary.py`
+   - same lane-aware requiredization scope convergence as above.
+   - same correlated batch preference and history-only inspection skip.
+
+Replay evidence (local protocol-layer):
+
+1. semantic/vendor/source/sanitization guard probes on `base-repo-architect` (`operation=three-plane`) now converge to deterministic non-blocking applicability result for history-only lane activity:
+   - `SKIPPED_NOT_REQUIRED`
+   - stale reason: `contract_not_required_due_lane_scope_history_only_activity`.
+2. acceptance gate replay:
+   - `python3 -m py_compile scripts/validate_semantic_routing_guard.py scripts/validate_protocol_vendor_semantic_isolation.py scripts/validate_external_source_trust_chain.py scripts/validate_protocol_data_sanitization_boundary.py`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` until independent multi-identity replay confirms `IP-SEM-001` / `IP-UPG-002` residual family is cleared in protocol lane.
+2. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

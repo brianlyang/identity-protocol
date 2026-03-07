@@ -45,6 +45,24 @@ DEFAULT_CONTRACT = {
 }
 
 
+def _select_correlated_feedback_batch(pack_path: Path, correlated_refs: list[str]) -> Path | None:
+    if not correlated_refs:
+        return None
+    root = (pack_path / "runtime" / "protocol-feedback").resolve()
+    candidates: list[Path] = []
+    for rel in correlated_refs:
+        token = str(rel or "").strip().replace("\\", "/")
+        if not token:
+            continue
+        p = (root / token).resolve()
+        if p.is_file() and p.name.startswith("FEEDBACK_BATCH_"):
+            candidates.append(p)
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item.stat().st_mtime)
+    return candidates[-1]
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -248,6 +266,17 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
+    if (
+        args.operation in INSPECTION_OPERATIONS
+        and not bool(payload.get("requiredization_current_round_linked", False))
+        and not str(args.feedback_batch or "").strip()
+    ):
+        payload["semantic_routing_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["error_code"] = ""
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+        _emit(payload, json_only=args.json_only)
+        return 0
+
     missing_contract = [k for k in REQ_CONTRACT_KEYS if k not in contract]
     payload["contract_missing_fields"] = missing_contract
     if missing_contract:
@@ -268,10 +297,12 @@ def main() -> int:
         if p.exists():
             batch_path = p
     else:
+        batch_path = _select_correlated_feedback_batch(pack_path, list(activity.get("activity_correlated_refs", [])))
         pattern = str(contract.get("feedback_batch_path_pattern", "")).strip()
         if not pattern:
             pattern = "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md"
-        batch_path = resolve_report_path(report="", pattern=pattern, pack_root=pack_path)
+        if batch_path is None:
+            batch_path = resolve_report_path(report="", pattern=pattern, pack_root=pack_path)
 
     if batch_path is None:
         payload["error_code"] = ERR_MISSING_CLASSIFICATION
