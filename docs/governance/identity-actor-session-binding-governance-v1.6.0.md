@@ -2044,6 +2044,26 @@ Replay closure requirements (promotion blocker until complete):
 3. process-call replay (`execution_target_kind=process_call`, no `codex_home`) -> deterministic pass with full receipt fields.
 4. same-lineage convergence replay across update/readiness/three-plane/full-scan consuming identical tuple fields and conflict verdict.
 
+Architecture reinforcement verdict (this round):
+
+1. verdict: `POSITIVE_REINFORCEMENT_CONFIRMED`.
+2. rationale:
+   - this requirement generalizes runtime isolation from storage-path coupling (`codex_home`) to canonical execution-target semantics (`kind+key`);
+   - this closes a known architecture blind spot where one-shot process dispatch cannot be represented without forcing pseudo-session artifacts;
+   - this keeps compatibility with existing `session_id/codex_home` routes while defining a non-bypass fail-close superset.
+
+Deep-scan code confirmation snapshot (2026-03-07, base-repo-architect lane):
+
+1. command:
+   - `rg -n "identity_or_session_or_codex_home_required|session_or_codex_home_required|requested_session_id|requested_codex_home|_compute_route_issues|session_id_conflict_requires_switch_ack|codex_home_conflict_requires_switch_ack" /Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/main.py /Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/identity_router.py /Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/models.py`
+2. findings (code anchors):
+   - inbound dispatch still hard-requires `session_id` or `codex_home`: `main.py:118..119`, `main.py:148..149`;
+   - conflict computation is currently keyed by `session_id` and `codex_home` only: `identity_router.py:144..156`, `identity_router.py:158..196`;
+   - route schema does not expose execution-target tuple fields yet (`execution_target_kind`, `execution_target_key` absent): `models.py:133..143`.
+3. regression safety baseline:
+   - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPYCACHEPREFIX=/tmp/pycache-fqsh pytest -p no:cacheprovider tests/test_chat_inbound.py tests/test_chat_bridge.py -q`
+   - observed result: `28 passed, 1 warning` (no regression in current guarded-route behavior before tuple uplift).
+
 State impact:
 
 1. `ASB16-RQ-033` enters v1.6 as `P0 / SPEC_READY`.

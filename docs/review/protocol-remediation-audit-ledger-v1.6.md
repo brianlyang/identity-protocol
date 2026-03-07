@@ -1836,6 +1836,22 @@ Four-track cross-verification package:
 3. `T3 replay`: conflict/no-conflict + override + process-call replays must be deterministic and archivable.
 4. `T4 review bridge`: rolling summary + decision log remain synchronized, and this hotfix stays non-promotional until replay closure.
 
+Architecture posture conclusion:
+
+1. this hotfix is classified as `positive architecture reinforcement` because it upgrades isolation semantics from route-path coupling to execution-target canonicalization without weakening existing fail-close gates.
+
+Deep-scan evidence (code-level confirmation):
+
+1. executed scan command:
+   - `rg -n "identity_or_session_or_codex_home_required|session_or_codex_home_required|requested_session_id|requested_codex_home|_compute_route_issues|session_id_conflict_requires_switch_ack|codex_home_conflict_requires_switch_ack" /Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/main.py /Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/identity_router.py /Users/yangxi/claude/codex_project/fqsh/src/feiqiao_guard/models.py`
+2. confirmed gaps:
+   - dispatch entry still rejects requests without `session_id/codex_home` (`main.py:118..119`, `main.py:148..149`);
+   - route conflict keys remain `session_id` + `codex_home` (`identity_router.py:144..156`, `identity_router.py:158..196`);
+   - route schema still lacks tuple fields (`execution_target_kind`, `execution_target_key`) (`models.py:133..143`).
+3. baseline regression guard re-run:
+   - `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPYCACHEPREFIX=/tmp/pycache-fqsh pytest -p no:cacheprovider tests/test_chat_inbound.py tests/test_chat_bridge.py -q`
+   - result: `28 passed, 1 warning`.
+
 Promotion guard (hard):
 
 1. hotfix remains `ACCEPT_WITH_FIX` only at design level.
@@ -1968,7 +1984,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | strict-chain temp-path refactor landed: shared resolver `runtime_temp_path_common.py` wired into creator/readiness/three-plane/full-scan/e2e/no-implicit-switch; strict-chain fixed `/tmp` literals removed and runtime temp root made env-driven. posture remains non-promotional pending independent replay/audit closure (`collision + runner-temp parity`). |
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T20:15:00Z | applicability-scoped requiredization landing absorbed: intake/dedup/schema/pinning/fallback validators emit `run_profile + producer_readiness + requiredization_current_round_linked`, and non-applicable observation paths resolve to deterministic `SKIPPED_NOT_REQUIRED`; residual blockers remain (`office-ops-expert cross_workflow_schema -> IP-XWF-002`, env/CLI catalog mismatch still warning-only), so convergence/fail-fast closure is still pending. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T20:15:00Z | replay-confirmed gate-chain parser regression: `release_readiness_check` fails with missing `args.target_branch` and `identity_creator validate` fails with missing `args.run_id` before required gates execute; hotfix opened for protocol-layer argparse/runtime alignment plus crash-proof replay closure. |
-| HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T21:05:00Z | tuple-based execution-target isolation requirement opened: dispatch must use `execution_target_kind + execution_target_key` as conflict key, explicit overrides cannot bypass conflict gate, and `process_call` target must be valid without mandatory `codex_home` while emitting complete receipt tuple fields. remains non-promotional pending implementation + replay closure. |
+| HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T21:20:00Z | tuple-based execution-target isolation requirement opened and deep-scan confirmed: dispatch must use `execution_target_kind + execution_target_key` as conflict key, explicit overrides cannot bypass conflict gate, and `process_call` target must be valid without mandatory `codex_home` while emitting complete receipt tuple fields; code-level anchors (`main.py:118..149`, `identity_router.py:144..196`, `models.py:133..143`) and regression baseline (`pytest 28 passed`) are archived. remains non-promotional pending implementation + replay closure. |
 
 ---
 
