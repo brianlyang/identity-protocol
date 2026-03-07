@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding
+from actor_session_common import load_actor_binding, load_actor_binding_store
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -110,7 +110,26 @@ def _extract_reply_samples(reply_log_path: Path) -> list[str]:
                 msg = _message_to_text(row.get("output"))
             if msg:
                 out.append(msg)
-        return out
+    return out
+
+
+def _resolve_actor_binding_with_target(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    target_identity_id: str,
+) -> tuple[dict[str, Any], dict[str, Any], str]:
+    store = load_actor_binding_store(catalog_path, actor_id)
+    selected = load_actor_binding(catalog_path, actor_id, identity_id=target_identity_id)
+    selection_mode = "identity_scoped"
+    if not selected:
+        fallback = load_actor_binding(catalog_path, actor_id)
+        if fallback:
+            selected = fallback
+            selection_mode = "actor_latest_fallback"
+        else:
+            selection_mode = "identity_scoped_missing"
+    return selected, store, selection_mode
 
     if suffix == ".json":
         try:
@@ -400,8 +419,11 @@ def main() -> int:
             error_code = ERR_REPLY_FIRST_LINE
 
     actor_id_effective = str(ctx.actor_id or "").strip()
-    actor_bound_identity = ""
-    actor_binding = load_actor_binding(catalog_path, actor_id_effective)
+    actor_binding, actor_binding_store, actor_binding_selection_mode = _resolve_actor_binding_with_target(
+        catalog_path=catalog_path,
+        actor_id=actor_id_effective,
+        target_identity_id=ctx.identity_id,
+    )
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
     if strict_format_enforced and actor_bound_identity and actor_bound_identity != ctx.identity_id and not error_code:
         stale_reasons.append("actor_bound_identity_mismatch")
@@ -469,6 +491,10 @@ def main() -> int:
         "expected_actor_id": actor_id_effective,
         "reply_first_line_actor_id": parsed_actor_id,
         "actor_bound_identity_id": actor_bound_identity,
+        "actor_binding_selection_mode": actor_binding_selection_mode,
+        "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+        "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+        "actor_binding_session_id": str(actor_binding.get("session_id", "")),
         "expected_lock_state": ctx.lock_state,
         "reply_first_line_lock_state": parsed_lock_state,
         "reply_first_line_missing_count": len(missing_refs),

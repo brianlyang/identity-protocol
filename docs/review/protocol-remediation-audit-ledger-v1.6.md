@@ -1702,6 +1702,23 @@ Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer):
    - strict env/catalog mismatch remains fail-close on strict surfaces;
    - replay-archive contract remains `PASS_REQUIRED` on the replay set.
 
+Round-7 resolver convergence replay (`HEAD=d5f75d7+`, 2026-03-07):
+
+1. replay commands:
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --identity-id <base-repo-architect|base-repo-audit-expert-v3> --actor-id assistant:codex --operation scan --json-only`
+2. convergence result:
+   - both sampled identities now return `headstamp_recurrence_closure_status=PASS_REQUIRED`;
+   - mismatch-negative case remains fail-close with `error_code=IP-ASB-STAMP-SESSION-005`.
+3. resolver tuple is now machine-visible in replay payload:
+   - `binding_selection_mode`, `binding_key_mode`, `binding_compare_token`, `binding_session_id`, `binding_entry_count`.
+4. targeted no-hardcoded-temp replay:
+   - `rg -n "/tmp" scripts/validate_headstamp_recurrence_closure.py scripts/compose_and_validate_governed_reply.py scripts/validate_reply_identity_context_first_line.py` returns no hits.
+5. closure interpretation:
+   - protocol-layer resolver divergence from round-6 is closed;
+   - live endpoint rollout replay archive remains mandatory before promotion.
+
 Architect handoff artifacts (absolute paths):
 
 1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
@@ -2147,7 +2164,7 @@ Promotion guard (hard):
 | FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | Batch-7 strict applicability closure landed in protocol layer: fallback/intake strict lanes no longer synthetic-fail on unlinked rounds; explicit negatives remain fail-close (`IP-FBTAX-001`). Row remains non-promotional pending independent required=true current-round replay archive. |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Write-boundary non-starvation hooks remain lane-wired (`093496b`); this round adds canonical `RQ-028` kernel/mapping projection (`910ec6e`) for full requirement coverage. Promotion boundary unchanged pending replay matrix closure (`A/B/C/D/E/F`). |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
-| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening remains landed, and round-6 replay reconfirmed residual recurrence: sampled identities show asymmetric closure (`IP-ASB-STAMP-SCAN-004` + positive-governed `IP-ASB-STAMP-SESSION-005` on failing branch vs pass on control branch). cross-check points to actor-binding resolver divergence (identity-scoped binding gate vs latest-binding probe). remains non-promotional until single-source resolver + canonical error-family convergence + live lane/headstamp replay archive are complete. |
+| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:27:07Z | protocol-lane starvation/headstamp risk hardening remains landed; round-7 replay closes prior protocol resolver divergence: sampled identities converge to `headstamp_recurrence_closure_status=PASS_REQUIRED` with mismatch-negative still fail-close (`IP-ASB-STAMP-SESSION-005`) and binding selection tuple now machine-emitted. row remains non-promotional pending independent live lane/headstamp replay archive. |
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path residual closure landed: CI required-gates now uses runner/runtime-scoped temp roots and legacy stamp/first-line/coherence blocker defaults use `runtime_temp_file(...)`; targeted static replay shows no fixed `/tmp` literals. status remains non-promotional pending independent replay sign-off. |
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | strict convergence closure landed for this round: `identity_creator` now propagates `--scope` to instance-isolation checks and Batch-6/7 strict non-linked paths emit deterministic `SKIPPED_NOT_REQUIRED` instead of synthetic missing-evidence failures. status remains non-promotional pending independent replay sign-off + current-round evidence archive. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |

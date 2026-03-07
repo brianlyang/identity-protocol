@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import load_actor_binding, load_actor_binding_store, resolve_actor_id
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -18,6 +18,7 @@ from response_stamp_common import (
     resolve_layer_intent,
     resolve_stamp_context,
 )
+from runtime_temp_path_common import runtime_temp_file
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -47,6 +48,25 @@ def _json_payload(raw: str) -> dict[str, Any]:
     except Exception:
         return {}
     return doc if isinstance(doc, dict) else {}
+
+
+def _resolve_actor_binding_with_target(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    target_identity_id: str,
+) -> tuple[dict[str, Any], dict[str, Any], str]:
+    store = load_actor_binding_store(catalog_path, actor_id)
+    selected = load_actor_binding(catalog_path, actor_id, identity_id=target_identity_id)
+    selection_mode = "identity_scoped"
+    if not selected:
+        fallback = load_actor_binding(catalog_path, actor_id)
+        if fallback:
+            selected = fallback
+            selection_mode = "actor_latest_fallback"
+        else:
+            selection_mode = "identity_scoped_missing"
+    return selected, store, selection_mode
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool, composed_reply: str) -> None:
@@ -111,8 +131,11 @@ def main() -> int:
         return 1
 
     actor_id_effective = resolve_actor_id(str(args.actor_id or "").strip())
-    actor_bound_identity = ""
-    actor_binding = load_actor_binding(catalog_path, actor_id_effective)
+    actor_binding, actor_binding_store, actor_binding_selection_mode = _resolve_actor_binding_with_target(
+        catalog_path=catalog_path,
+        actor_id=actor_id_effective,
+        target_identity_id=str(args.identity_id or "").strip(),
+    )
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
 
     if actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
@@ -147,6 +170,10 @@ def main() -> int:
             "context_lock_state": str(ctx.lock_state or "").strip(),
             "resolved_actor_id": actor_id_effective,
             "actor_bound_identity_id": actor_bound_identity,
+            "actor_binding_selection_mode": actor_binding_selection_mode,
+            "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+            "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+            "actor_binding_session_id": str(actor_binding.get("session_id", "")),
         }
         out_json = str(args.out_json or "").strip()
         if out_json:
@@ -183,7 +210,13 @@ def main() -> int:
     out_reply_path = (
         Path(out_reply).expanduser().resolve()
         if out_reply
-        else (Path("/tmp") / f"identity-governed-reply-{args.identity_id}.txt").resolve()
+        else runtime_temp_file(
+            channel="response-stamp",
+            operation="compose",
+            identity_id=args.identity_id,
+            stem=f"identity-governed-reply-{args.identity_id}",
+            ext="txt",
+        ).resolve()
     )
     out_reply_path.parent.mkdir(parents=True, exist_ok=True)
     out_reply_path.write_text(composed_reply, encoding="utf-8")
@@ -223,7 +256,13 @@ def main() -> int:
     proc = subprocess.run(validate_cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     validate_payload = _json_payload(proc.stdout)
 
-    default_preflight_receipt = (Path("/tmp") / f"identity-governed-outlet-preflight-{args.identity_id}.json").resolve()
+    default_preflight_receipt = runtime_temp_file(
+        channel="response-stamp",
+        operation="compose",
+        identity_id=args.identity_id,
+        stem=f"identity-governed-outlet-preflight-{args.identity_id}",
+        ext="json",
+    ).resolve()
     preflight_receipt_path: Path | None = (
         Path(str(args.preflight_receipt_out).strip()).expanduser().resolve()
         if str(args.preflight_receipt_out or "").strip()
@@ -285,6 +324,10 @@ def main() -> int:
         "reply_first_line_missing_count": validate_payload.get("reply_first_line_missing_count"),
         "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),
         "out_reply_file": str(out_reply_path),
+        "actor_binding_selection_mode": actor_binding_selection_mode,
+        "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+        "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+        "actor_binding_session_id": str(actor_binding.get("session_id", "")),
     }
 
     out_json = str(args.out_json or "").strip()

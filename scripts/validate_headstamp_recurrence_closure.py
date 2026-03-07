@@ -11,7 +11,8 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding
+from actor_session_common import load_actor_binding, load_actor_binding_store
+from runtime_temp_path_common import runtime_temp_file
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -208,7 +209,16 @@ def _actor_mismatch_probe(
     blocker_receipt: Path,
 ) -> tuple[bool, dict[str, Any], list[str]]:
     stale_reasons: list[str] = []
-    actor_binding = load_actor_binding(catalog_path, actor_id)
+    actor_binding_store = load_actor_binding_store(catalog_path, actor_id)
+    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
+    binding_selection_mode = "identity_scoped"
+    if not actor_binding:
+        fallback = load_actor_binding(catalog_path, actor_id)
+        if fallback:
+            actor_binding = fallback
+            binding_selection_mode = "actor_latest_fallback"
+        else:
+            binding_selection_mode = "identity_scoped_missing"
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
     if not actor_bound_identity:
         stale_reasons.append("actor_mismatch_probe_skipped_no_binding")
@@ -220,6 +230,11 @@ def _actor_mismatch_probe(
                 "probe_actor_id": actor_id,
                 "actor_bound_identity_id": "",
                 "mismatch_identity_id": "",
+                "binding_selection_mode": binding_selection_mode,
+                "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+                "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+                "binding_session_id": "",
+                "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
             },
             stale_reasons,
         )
@@ -239,6 +254,11 @@ def _actor_mismatch_probe(
                 "probe_actor_id": actor_id,
                 "actor_bound_identity_id": actor_bound_identity,
                 "mismatch_identity_id": "",
+                "binding_selection_mode": binding_selection_mode,
+                "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+                "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+                "binding_session_id": str(actor_binding.get("session_id", "")),
+                "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
             },
             stale_reasons,
         )
@@ -274,6 +294,11 @@ def _actor_mismatch_probe(
         "probe_actor_id": actor_id,
         "mismatch_identity_id": mismatch_identity,
         "target_identity_id": identity_id,
+        "binding_selection_mode": binding_selection_mode,
+        "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+        "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+        "binding_session_id": str(actor_binding.get("session_id", "")),
+        "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
     }
     ok = rc != 0 and case["error_code"] == ERR_ACTOR_BOUND_MISMATCH
     if not ok:
@@ -378,16 +403,69 @@ def main() -> int:
         stale_reasons.append("mandatory_entrypoint_wiring_missing")
         error_code = ERR_STATIC_WIRING
 
-    tmp_prefix = f"/tmp/headstamp-closure-{args.identity_id}"
-    missing_file = Path(f"{tmp_prefix}-missing.txt").resolve()
-    pass_file = Path(f"{tmp_prefix}-pass.txt").resolve()
-    missing_receipt = Path(f"{tmp_prefix}-missing-receipt.json").resolve()
-    inline_receipt = Path(f"{tmp_prefix}-inline-receipt.json").resolve()
-    nongov_receipt = Path(f"{tmp_prefix}-nongov-receipt.json").resolve()
-    compose_receipt = Path(f"{tmp_prefix}-compose-receipt.json").resolve()
-    coverage_receipt = Path(f"{tmp_prefix}-coverage-receipt.json").resolve()
-    mismatch_reply = Path(f"{tmp_prefix}-mismatch-probe.txt").resolve()
-    mismatch_receipt = Path(f"{tmp_prefix}-mismatch-probe-receipt.json").resolve()
+    missing_file = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-missing-{args.identity_id}",
+        ext="txt",
+    ).resolve()
+    pass_file = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-pass-{args.identity_id}",
+        ext="txt",
+    ).resolve()
+    missing_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-missing-receipt-{args.identity_id}",
+        ext="json",
+    ).resolve()
+    inline_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-inline-receipt-{args.identity_id}",
+        ext="json",
+    ).resolve()
+    nongov_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-nongov-receipt-{args.identity_id}",
+        ext="json",
+    ).resolve()
+    compose_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-compose-receipt-{args.identity_id}",
+        ext="json",
+    ).resolve()
+    coverage_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-coverage-receipt-{args.identity_id}",
+        ext="json",
+    ).resolve()
+    mismatch_reply = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-mismatch-probe-{args.identity_id}",
+        ext="txt",
+    ).resolve()
+    mismatch_receipt = runtime_temp_file(
+        channel="headstamp-closure",
+        operation=operation or "validate",
+        identity_id=args.identity_id,
+        stem=f"headstamp-closure-mismatch-probe-receipt-{args.identity_id}",
+        ext="json",
+    ).resolve()
 
     missing_file.write_text(
         "[Audit Receipt] identity-protocol v1.5.1 release on main\nDate: 2026-03-05\nFinal verdict: GO\n",

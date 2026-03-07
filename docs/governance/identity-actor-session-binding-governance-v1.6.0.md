@@ -2311,6 +2311,41 @@ State impact:
 2. `FIX16-035`, `FIX16-036`, `HOTFIX16-P1-003`, `HOTFIX16-P1-004` remain non-promotional pending independent roundtable replay sign-off and required=true current-round evidence archive.
 3. status boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.24 Round-7 Headstamp Resolver Convergence Checkpoint (`HEAD=d5f75d7+`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint addresses protocol-layer residual under `HOTFIX16-P0-002` only:
+   - actor-binding resolver divergence between headstamp recurrence probe and actor-session binding validator.
+2. this checkpoint is protocol-layer only and does not replace required live endpoint replay closure.
+3. no promotional state change is allowed in this section.
+
+Replay commands executed (project-local lineage):
+
+1. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+2. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+3. `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --identity-id <base-repo-architect|base-repo-audit-expert-v3> --actor-id assistant:codex --operation scan --json-only`
+4. `rg -n "/tmp" scripts/validate_headstamp_recurrence_closure.py scripts/compose_and_validate_governed_reply.py scripts/validate_reply_identity_context_first_line.py`
+
+Findings:
+
+1. resolver divergence class is closed in protocol layer:
+   - `validate_headstamp_recurrence_closure.py` now resolves actor binding with identity-scoped lookup first (target identity), with explicit fallback mode annotation.
+   - sampled identities (`base-repo-architect`, `base-repo-audit-expert-v3`) now both return `headstamp_recurrence_closure_status=PASS_REQUIRED`.
+2. mismatch negative remains fail-close and machine-explainable:
+   - dynamic case keeps `error_code=IP-ASB-STAMP-SESSION-005`,
+   - receipt now includes binding tuple metadata (`binding_selection_mode`, `binding_key_mode`, `binding_compare_token`, `binding_session_id`, `binding_entry_count`).
+3. send-time/first-line path tuple metadata is synchronized:
+   - `compose_and_validate_governed_reply.py` and `validate_reply_identity_context_first_line.py` now emit actor-binding selection metadata with identity-scoped precedence.
+4. temp-path hardcoding is further reduced:
+   - headstamp recurrence temp artifacts and compose preflight defaults are migrated to runtime temp resolver; targeted grep shows no fixed `/tmp` literals in the three scripts.
+
+State impact:
+
+1. `HOTFIX16-P0-002` protocol-layer resolver divergence residual is closed.
+2. `HOTFIX16-P0-002` remains `SPEC_READY / PENDING_INTAKE` pending independent live lane/headstamp replay archive.
+3. release boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
