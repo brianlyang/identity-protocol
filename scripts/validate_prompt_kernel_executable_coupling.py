@@ -66,7 +66,7 @@ def main() -> int:
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--expected-work-layer", default="")
-    ap.add_argument("--source-layer", default="auto")
+    ap.add_argument("--source-layer", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -157,7 +157,7 @@ def main() -> int:
         "--operation",
         args.operation,
         "--source-layer",
-        str(args.source_layer or "auto"),
+        str(args.source_layer or "project"),
         "--json-only",
     ]
     if actor_id:

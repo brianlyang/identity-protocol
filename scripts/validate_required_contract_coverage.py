@@ -720,7 +720,7 @@ def main() -> int:
         explicit_source_layer=str(args.expected_source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer="instance",
-        default_source_layer="auto",
+        default_source_layer="project",
     )
     coverage_lane = str(layer_intent.get("resolved_work_layer", "instance")).strip().lower() or "instance"
     if coverage_lane not in {"protocol", "instance", "dual"}:

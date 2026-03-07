@@ -3336,6 +3336,55 @@ State boundary:
 1. This section is protocol-layer hardening only (non-promotional by itself).
 2. Promotion still requires independent replay closure on migrated instance packs.
 
+
+## 8.42 Round-24 Full-Repo Scan Closure (scripts + identity tree, protocol-only)
+
+Scope freeze (this round):
+
+1. Mandatory scan scope expands beyond `scripts/**` to include `identity/**` (especially `identity/protocol/**`) and `README.md`.
+2. Strict runtime semantics remain canonical two-layer only:
+   - `source_layer in {project, global}`
+   - canonical roots: `<project>/.identity/<identity_id>/` and `${CODEX_HOME:-~/.codex}/.identity/<identity_id>/`.
+3. Legacy tokens (`local/repo/env/auto`, `.agents/identity`, `~/.codex/identity`) are allowed only as migration/forbidden markers and must not participate in strict verdict source.
+
+Round-24 implementation closure:
+
+1. Cleared residual `default_source_layer="auto"`/`source_layer ... "auto"` usage in strict validators by converging defaults to `project`:
+   - `scripts/validate_protocol_vendor_semantic_isolation.py`
+   - `scripts/validate_protocol_data_sanitization_boundary.py`
+   - `scripts/validate_semantic_routing_guard.py`
+   - `scripts/validate_external_source_trust_chain.py`
+   - `scripts/validate_vendor_namespace_separation.py`
+   - `scripts/validate_required_contract_coverage.py`
+   - `scripts/validate_protocol_feedback_sidecar_contract.py`
+   - `scripts/validate_prompt_kernel_executable_coupling.py`.
+2. README runtime-path examples are aligned to canonical `.identity` roots (`${CODEX_HOME}/.identity/...`).
+3. `identity/protocol/IDENTITY_PROTOCOL.md` remains aligned with two-layer normative rule and keeps legacy paths as migration-only note.
+
+Scan result (machine replay):
+
+1. `/tmp/v16_round24_full_repo_scan_20260308.json`
+2. `/tmp/v16_round24_full_repo_scan_20260308.md`
+3. Raw census: `total_hits=1415` (legacy tokens are concentrated in archived evidence payloads under `identity/runtime/**`).
+4. Normative closure: `non_compat_normative_hits=0` for strict surfaces (`scripts/** + identity/protocol/** + README.md`).
+5. Governance classification:
+   - archived replay/evidence payloads (`identity/runtime/**`) are immutable audit artifacts and are not rewritten by protocol layer.
+   - instance migration is responsible for future-path normalization of newly generated reports.
+
+Acceptance commands:
+
+1. `rg -n 'default_source_layer="auto"|source_layer or "auto"|--source-layer.*default="auto"' scripts identity README.md`
+2. `python3 -m py_compile scripts/validate_protocol_vendor_semantic_isolation.py scripts/validate_protocol_data_sanitization_boundary.py scripts/validate_semantic_routing_guard.py scripts/validate_external_source_trust_chain.py scripts/validate_vendor_namespace_separation.py scripts/validate_required_contract_coverage.py scripts/validate_protocol_feedback_sidecar_contract.py scripts/validate_prompt_kernel_executable_coupling.py`
+3. `python3 scripts/docs_command_contract_check.py`
+4. `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. This round closes protocol-base residual scan debt for `scripts + identity` normative surfaces.
+2. Lifecycle boundary unchanged: `HOTFIX16-P0-007` remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until independent replay sign-off.
+3. Instance migration/accounting debt remains instance-owned; protocol layer keeps identify/validate/reject boundary only.
+
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
