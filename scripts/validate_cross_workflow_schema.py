@@ -191,7 +191,7 @@ def main() -> int:
     required = contract_required(contract) if contract else False
     auto_required = False
 
-    if any(
+    explicit_current_round_linked = any(
         _nonempty(v)
         for v in (
             args.evidence,
@@ -201,7 +201,8 @@ def main() -> int:
             args.dedup_state,
             args.expected_evidence_hash,
         )
-    ):
+    )
+    if explicit_current_round_linked:
         required = True
         auto_required = True
     elif args.operation in STRICT_OPERATIONS:
@@ -209,6 +210,7 @@ def main() -> int:
 
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
+    payload["requiredization_current_round_linked"] = explicit_current_round_linked
 
     if not required:
         payload["stale_reasons"] = ["contract_not_required"]
@@ -222,25 +224,19 @@ def main() -> int:
         contract=contract if isinstance(contract, dict) else {},
     )
     payload["producer_readiness"] = evidence_path is not None
-    payload["requiredization_current_round_linked"] = (
-        any(
-            _nonempty(v)
-            for v in (
-                args.evidence,
-                args.run_id,
-                args.route_action,
-                args.quality_meta_state,
-                args.dedup_state,
-                args.expected_evidence_hash,
-            )
-        )
-        or evidence_path is not None
-    )
+    if evidence_path is not None:
+        payload["evidence_ref"] = str(evidence_path)
+    if evidence_path is not None and not payload["requiredization_current_round_linked"]:
+        payload["cross_workflow_schema_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["hash_consistency_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+        _emit(payload, json_only=args.json_only)
+        return 0
     if evidence_path is None:
-        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
+        if not payload["requiredization_current_round_linked"] and args.operation in STRICT_OPERATIONS:
             payload["cross_workflow_schema_status"] = STATUS_SKIPPED_NOT_REQUIRED
             payload["hash_consistency_status"] = STATUS_SKIPPED_NOT_REQUIRED
-            payload["stale_reasons"] = ["required_contract_not_applicable_no_evidence_source"]
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
             _emit(payload, json_only=args.json_only)
             return 0
         payload["cross_workflow_schema_status"] = STATUS_FAIL_REQUIRED
@@ -249,8 +245,6 @@ def main() -> int:
         payload["stale_reasons"] = ["evidence_source_missing"]
         _emit(payload, json_only=args.json_only)
         return 1
-
-    payload["evidence_ref"] = str(evidence_path)
 
     try:
         raw = evidence_path.read_text(encoding="utf-8", errors="ignore")

@@ -295,7 +295,7 @@ def main() -> int:
     contract = _select_contract(task)
     required = contract_required(contract) if contract else False
 
-    auto_required = any(
+    explicit_current_round_linked = any(
         _nonempty(v)
         for v in (
             args.receipt,
@@ -305,11 +305,13 @@ def main() -> int:
             args.expected_source,
         )
     )
-    if auto_required and args.operation in STRICT_OPERATIONS:
+    auto_required = explicit_current_round_linked
+    if explicit_current_round_linked and args.operation in STRICT_OPERATIONS:
         required = True
 
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
+    payload["requiredization_current_round_linked"] = explicit_current_round_linked
 
     if not required and not auto_required:
         payload["stale_reasons"] = ["contract_not_required"]
@@ -318,11 +320,18 @@ def main() -> int:
 
     receipt_path = _select_receipt_path(explicit_receipt=args.receipt, identity_id=args.identity_id, pack_path=pack_path)
     payload["producer_readiness"] = receipt_path is not None
-    payload["requiredization_current_round_linked"] = auto_required or receipt_path is not None
+    if receipt_path is not None:
+        payload["receipt_path"] = str(receipt_path)
+        payload["evidence_ref"] = str(receipt_path)
+    if receipt_path is not None and not payload["requiredization_current_round_linked"]:
+        payload["pin_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+        _emit(payload, json_only=args.json_only)
+        return 0
     if receipt_path is None:
-        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
+        if not payload["requiredization_current_round_linked"] and args.operation in STRICT_OPERATIONS:
             payload["pin_status"] = STATUS_SKIPPED_NOT_REQUIRED
-            payload["stale_reasons"] = ["required_contract_not_applicable_no_pin_receipt"]
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
             _emit(payload, json_only=args.json_only)
             return 0
         payload["pin_status"] = STATUS_FAIL_REQUIRED
@@ -331,9 +340,6 @@ def main() -> int:
         payload["stale_reasons"] = ["pin_receipt_missing"]
         _emit(payload, json_only=args.json_only)
         return 1
-
-    payload["receipt_path"] = str(receipt_path)
-    payload["evidence_ref"] = str(receipt_path)
 
     try:
         receipt_doc = _load_json_or_yaml(receipt_path)

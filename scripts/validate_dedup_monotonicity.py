@@ -351,7 +351,8 @@ def main() -> int:
     required = contract_required(contract) if contract else False
     auto_required = False
 
-    if args.claims.strip() or args.run_id.strip() or args.parallel_claims > 0:
+    explicit_current_round_linked = bool(args.claims.strip() or args.run_id.strip() or args.parallel_claims > 0)
+    if explicit_current_round_linked:
         required = True
         auto_required = True
     elif args.operation in STRICT_OPERATIONS:
@@ -360,6 +361,7 @@ def main() -> int:
 
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
+    payload["requiredization_current_round_linked"] = explicit_current_round_linked
 
     if not required:
         payload["stale_reasons"] = ["contract_not_required"]
@@ -373,16 +375,18 @@ def main() -> int:
         run_id=args.run_id,
     )
     payload["producer_readiness"] = claims_path is not None
-    payload["requiredization_current_round_linked"] = (
-        bool(args.claims.strip())
-        or bool(args.run_id.strip())
-        or bool(args.parallel_claims > 0)
-        or claims_path is not None
-    )
+    if claims_path is not None:
+        payload["claims_path"] = str(claims_path)
+        payload["evidence_ref"] = str(claims_path)
+    if claims_path is not None and not payload["requiredization_current_round_linked"]:
+        payload["monotonicity_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+        _emit(payload, json_only=args.json_only)
+        return 0
     if claims_path is None:
-        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
+        if not payload["requiredization_current_round_linked"] and args.operation in STRICT_OPERATIONS:
             payload["monotonicity_status"] = STATUS_SKIPPED_NOT_REQUIRED
-            payload["stale_reasons"] = ["required_contract_not_applicable_no_claims_source"]
+            payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
             _emit(payload, json_only=args.json_only)
             return 0
         payload["monotonicity_status"] = STATUS_FAIL_REQUIRED
@@ -390,9 +394,6 @@ def main() -> int:
         payload["stale_reasons"] = ["claims_source_missing"]
         _emit(payload, json_only=args.json_only)
         return 1
-
-    payload["claims_path"] = str(claims_path)
-    payload["evidence_ref"] = str(claims_path)
 
     doc = _load_claim_doc(claims_path)
     raw_rows = _extract_rows(doc)

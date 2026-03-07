@@ -17,6 +17,7 @@ from response_stamp_common import (
     render_external_stamp,
     resolve_stamp_context,
 )
+from runtime_temp_path_common import runtime_temp_file
 from tool_vendor_governance_common import contract_required, load_json
 
 ERR_STAMP_MISMATCH = "IP-ASB-STAMP-001"
@@ -432,7 +433,13 @@ def main() -> int:
     receipt_path = (
         Path(args.blocker_receipt_out).expanduser().resolve()
         if args.blocker_receipt_out.strip()
-        else Path(f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json").resolve()
+        else runtime_temp_file(
+            channel="response-stamp",
+            operation=args.operation,
+            identity_id=args.identity_id,
+            stem=f"identity-stamp-blocker-receipt-{args.identity_id}",
+            ext="json",
+        ).resolve()
     )
 
     payload = {

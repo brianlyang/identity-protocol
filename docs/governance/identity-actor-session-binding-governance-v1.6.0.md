@@ -1821,6 +1821,45 @@ Implementation delta (2026-03-07):
 2. route summary now carries explicit route error surface for downstream audit pipelines.
 3. local runtime replay matrix (positive + negative) is executable and passing; production rollout evidence remains required for promotion.
 
+Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer only):
+
+1. executable replay commands:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids <IDENTITY_A>,<IDENTITY_B> --project-catalog <PROJECT_CATALOG> --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/hotfix_headstamp_r6_fullscan.json`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_A> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_B> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+2. observed recurrence signal:
+   - one strict-path identity fails with `headstamp_recurrence_closure_status=FAIL_REQUIRED`, `error_code=IP-ASB-STAMP-SCAN-004`;
+   - dynamic positive case fails with compatibility trace `IP-ASB-STAMP-SESSION-005`;
+   - another identity under the same replay suite returns `PASS_REQUIRED`.
+3. cross-check confirms resolver divergence:
+   - `validate_actor_session_binding.py` can pass under `binding_key_mode=actor_id+session_id`;
+   - `validate_headstamp_recurrence_closure.py` mismatch probe currently calls `load_actor_binding(catalog_path, actor_id)` without explicit `identity_id/session_id`, selecting latest actor-binding entry rather than target-lineage binding.
+4. protocol interpretation:
+   - this is not a permitted hard switch;
+   - this is protocol-layer actor-binding source divergence that surfaces as perceived headstamp continuity loss on strict send-time replay.
+
+Positive reinforcement confirmed by this replay:
+
+1. no-hard-switch baseline remains enforced (`IP-ACT-SWITCH-001` class still fail-closes unauthorized switching).
+2. strict context mismatch remains fail-close on strict surfaces (`IP-ENV-003` class).
+3. replay-archive contract remains stable on strict protocol replay set (`PASS_REQUIRED` closure retained).
+
+Architect closure requirements (protocol layer, mandatory):
+
+1. unify actor-binding resolution source for send-time gate and recurrence closure:
+   - single resolver contract must require deterministic selection key (`actor_id + identity_id + session_id` when available);
+   - strict surfaces must reject ambiguous actor binding selection.
+2. extend mandatory telemetry/receipt tuple for headstamp closure:
+   - `actor_binding_resolution_mode`
+   - `actor_binding_session_id`
+   - `actor_binding_compare_token`
+   - `actor_binding_selected_identity_id`
+3. fail-close policy for ambiguous binding:
+   - if multiple actor bindings are present and no deterministic target key is supplied, return explicit actor-context fail-close before send-time headstamp verdict emission.
+4. canonical code convergence remains mandatory:
+   - `IP-ASB-STAMP-SESSION-*` stays compatibility trace only;
+   - promotion-grade receipts must converge to canonical `IP-HDSTAMP-*` + actor-context family.
+
 Architect handoff inputs (absolute paths):
 
 1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
@@ -1839,7 +1878,8 @@ Promotion guard:
 3. promotion requires independent rollout/audit closure:
    - live route snapshot confirms non-starvation semantics with canonical route fields,
    - live headstamp continuity replay archive is complete (`positive + negative`),
-   - protocol-lane activation receipts are reproducible from production endpoint traces.
+   - protocol-lane activation receipts are reproducible from production endpoint traces,
+   - actor-binding resolver is single-sourced across headstamp recurrence closure and strict send-time gate (no latest-binding ambiguity).
 
 ### 8.16 Emergency Hotfix Track - Strict-Surface Fixed `/tmp` Path Debt (`HOTFIX16-P1-003`, 2026-03-06)
 
@@ -1866,21 +1906,24 @@ Four-track evidence package (architect intake mandatory):
 
 1. `T1 governance/spec`: strict-path determinism + replay non-collision requirements.
 2. `T2 runtime implementation`: strict-chain temp path resolver landed via `scripts/runtime_temp_path_common.py` and wired into `identity_creator/release_readiness_check/report_three_plane_status/full_identity_protocol_scan/e2e_smoke_test/validate_no_implicit_switch`.
-3. `T3 live evidence`: strict-chain static scan confirms fixed `/tmp` literals removed from the above runtime-critical scripts; replay outputs now resolve from runtime temp root (`IDENTITY_RUNTIME_TMP_ROOT` / `RUNNER_TEMP` / `TMPDIR` / system temp).
+3. `T3 live evidence`: strict-chain core scripts are migrated to dynamic temp roots, but replay/audit still shows residual fixed `/tmp` paths in CI workflow surfaces and legacy blocker-receipt defaults; this hotfix remains open until those residuals are removed or runner-scoped.
 4. `T4 protocol feedback`: canonical feedback batch + receipt + evidence-index entries for this governance gap.
 
 Implementation delta (2026-03-07):
 
 1. landing commit evidence: `093496b`.
 2. added shared temp resolver: `scripts/runtime_temp_path_common.py`.
-3. removed strict-chain fixed `/tmp` literals from:
+3. removed strict-chain fixed `/tmp` literals from core runtime scripts:
    - `scripts/identity_creator.py`
    - `scripts/release_readiness_check.py`
    - `scripts/report_three_plane_status.py`
    - `scripts/full_identity_protocol_scan.py`
    - `scripts/e2e_smoke_test.sh`
    - `scripts/validate_no_implicit_switch.py`
-4. strict-chain helper outputs are now operation/identity scoped, with optional run token scoping for mutation/e2e flows.
+4. residual fixed `/tmp` debt still exists outside the core runtime set (not closed):
+   - `/.github/workflows/_identity-required-gates.yml` still contains fixed `/tmp/identity-*.json` receipts in required-gates commands.
+   - legacy default receipt outputs in stamp/coherence validators still resolve to `/tmp/...` when no explicit path is provided.
+5. strict-chain helper outputs are now operation/identity scoped, with optional run token scoping for mutation/e2e flows.
 
 Architect handoff inputs (absolute paths):
 
@@ -2168,6 +2211,105 @@ State impact:
 3. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` (applicability closure + strict mismatch fail-close + replay-archive drift fix are landed; independent audit sign-off remains pending).
 4. `HOTFIX16-P0-006` remains `SPEC_READY / PENDING_INTAKE` until required=true tuple replay archive is attached.
 5. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains enforced.
+
+### 8.22 Round-4 Freeze Re-Audit Checkpoint (`HEAD=6a2ef0b`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint audits frozen head `6a2ef0b` only.
+2. this checkpoint remains protocol-layer only and excludes instance business remediation.
+3. this checkpoint revalidates `FIX16-035/036` and `HOTFIX16-P1-003/004/P0-005/P0-006` using executable replay.
+
+Replay commands executed (project-local catalog lineage):
+
+1. `python3 scripts/docs_command_contract_check.py`
+2. `python3 scripts/validate_protocol_ssot_source.py`
+3. `python3 scripts/release_readiness_check.py --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
+4. `python3 scripts/identity_creator.py validate --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
+5. `python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation update --json-only`
+6. `python3 scripts/validate_v16_cross_verification_tracks.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+7. `python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+8. `python3 scripts/validate_route_version_pinning.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+9. `python3 scripts/validate_fallback_taxonomy_normalization.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+10. `python3 scripts/validate_dedup_monotonicity.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+11. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+12. `python3 scripts/validate_replay_archive_contract.py --identity-id <base-repo-architect|base-repo-audit-expert-v3|custom-creative-ecom-analyst> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation scan --json-only`
+13. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/audit_r5_full_scan_project.json`
+
+Findings:
+
+1. parser/runtime crash class remains closed for `HOTFIX16-P0-005` (no missing argparse-field crash in `release_readiness` / `identity_creator validate`).
+2. new strict-scope propagation defect is reproducible (`P1-SCOPE-005`, linked to `HOTFIX16-P1-004`):
+   - `identity_creator.py validate` calls `validate_identity_instance_isolation.py` without forwarding `--scope`, so `store-manager` (`SYSTEM`) falls back to validator default `USER` and fails with scope mismatch.
+3. requiredization applicability is still not converged on strict surfaces (`P1-APPLICABILITY-006`, linked to `HOTFIX16-P1-004`):
+   - for `base-repo-architect`, `update/readiness/ci` return `FAIL_REQUIRED` for six Batch-6/7 gates while `producer_readiness=false` and `requiredization_current_round_linked=false`.
+   - failing contracts/codes: `cross_verification_tracks` (`IP-INTAKE-EVID-001`), `intake_evidence_quorum` (`IP-INTAKE-EVID-001`), `route_version_pinning` (`IP-PIN-001`), `fallback_taxonomy_normalization` (`IP-FBTAX-002`), `dedup_monotonicity` (`IP-DEDUP-001`), `cross_workflow_schema` (`IP-XWF-001`).
+4. intake auto-required inference is still history-sensitive under strict ops:
+   - `validate_v16_intake_evidence_core.py` promotes required mode from historical `runtime/protocol-feedback` presence (`auto_required_signal=true`) even when current-round linkage is false.
+5. replay-archive contract closure remains stable:
+   - `validate_replay_archive_contract.py` returns `PASS_REQUIRED` with `15/15` passing cases for all three audited runtime identities.
+6. strict context fail-fast remains enforced:
+   - env/catalog mismatch still fails with `IP-ENV-003` on strict operations (`readiness` replay).
+7. fixed `/tmp` debt remains open (`P1-TMPPATH-007`, linked to `HOTFIX16-P1-003`):
+   - CI required-gates workflow and legacy default blocker receipt paths still contain fixed `/tmp/...` outputs.
+
+State impact:
+
+1. no row is promoted in this checkpoint.
+2. `FIX16-035` and `FIX16-036` remain `PASS_WITH_BLOCKERS` and non-promotional.
+3. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` until strict-scope forwarding and current-round applicability convergence are replay-closed.
+4. `HOTFIX16-P1-003` remains `SPEC_READY / PENDING_INTAKE` until CI/legacy `/tmp` residuals are removed or runner-scoped with deterministic replay.
+5. `HOTFIX16-P0-005` remains `SPEC_READY / PENDING_INTAKE` (crash class closed, downstream convergence closure pending).
+6. `HOTFIX16-P0-006` remains `SPEC_READY / PENDING_INTAKE` until required=true tuple replay archive is attached.
+7. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains enforced.
+
+### 8.23 Round-6 Three-Point Closure Checkpoint (`HEAD=6a2ef0b+`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint closes only the three protocol-layer residuals from `8.22`:
+   - `P1-SCOPE-005` (`identity_creator` scope propagation),
+   - `P1-APPLICABILITY-006` (strict requiredization over-block),
+   - `P1-TMPPATH-007` (workflow/legacy fixed temp paths).
+2. instance business-side evidence production remains out of scope for this section.
+3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+Replay commands executed (local catalog lineage, non-hardcoded temp roots):
+
+1. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect`
+2. `CAT="${IDENTITY_CATALOG:-$PWD/../.agents/identity/catalog.local.yaml}"`
+3. `python3 scripts/identity_creator.py validate --identity-id store-manager --catalog "$CAT" --scope SYSTEM --actor-id assistant:codex | rg "validate_identity_instance_isolation.py|instance isolation"`
+4. `python3 scripts/validate_required_contract_coverage.py --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only`
+5. `for gate in validate_v16_cross_verification_tracks.py validate_v16_intake_evidence_quorum.py validate_route_version_pinning.py validate_fallback_taxonomy_normalization.py validate_dedup_monotonicity.py validate_v16_cross_workflow_schema.py; do python3 "scripts/${gate}" --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only; done`
+6. `python3 scripts/validate_fallback_taxonomy_normalization.py --catalog "$CAT" --identity-id base-repo-architect --operation update --fallback-reason no_intent_signal --json-only`
+7. `python3 scripts/validate_fallback_taxonomy_normalization.py --catalog "$CAT" --identity-id base-repo-architect --operation update --fallback-reason unknown_vendor_glitch --json-only`
+8. `python3 scripts/validate_dedup_monotonicity.py --catalog "$CAT" --identity-id base-repo-architect --operation update --claims "<positive_claims.json>" --json-only`
+9. `python3 scripts/validate_dedup_monotonicity.py --catalog "$CAT" --identity-id base-repo-architect --operation update --claims "<negative_missing_tiebreaker.json>" --json-only`
+10. `rg -n "/tmp" .github/workflows/_identity-required-gates.yml scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py scripts/validate_execution_reply_identity_coherence.py`
+11. `python3 scripts/docs_command_contract_check.py`
+12. `python3 scripts/validate_protocol_ssot_source.py`
+
+Findings:
+
+1. `P1-SCOPE-005` closed at protocol layer:
+   - `identity_creator` validate/update chains now forward `--scope` into `validate_identity_instance_isolation.py`.
+   - replay on `store-manager --scope SYSTEM` confirms no default-USER fallback drift.
+2. `P1-APPLICABILITY-006` closed for strict non-linked lanes:
+   - Batch-6/7 gates now emit `SKIPPED_NOT_REQUIRED` + `required_contract_not_applicable_no_current_round_evidence_source` when strict surface lacks current-round linkage.
+   - coverage replay (`operation=update`, `base-repo-architect`) reports `failed_required_contract_count=0`, and new gate rows resolve to non-blocking non-applicable state.
+3. `P1-TMPPATH-007` protocol residuals closed:
+   - `/.github/workflows/_identity-required-gates.yml` migrated to runner/runtime-scoped temp roots (`RUNNER_TEMP/TMPDIR/GITHUB_WORKSPACE`) without fixed `/tmp` output bindings.
+   - legacy default blocker-receipt paths in stamp/first-line/coherence validators now use `runtime_temp_file(...)` resolver.
+   - static grep replay for targeted files returns no `/tmp` literals.
+4. fail-close negative controls remain intact after applicability closure:
+   - explicit fallback negative still returns `FAIL_REQUIRED + IP-FBTAX-001`.
+   - explicit dedup missing required field still returns `FAIL_REQUIRED + IP-DEDUP-002`.
+
+State impact:
+
+1. the three protocol residuals from `8.22` are closed at implementation level.
+2. `FIX16-035`, `FIX16-036`, `HOTFIX16-P1-003`, `HOTFIX16-P1-004` remain non-promotional pending independent roundtable replay sign-off and required=true current-round evidence archive.
+3. status boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
 ## 9) References
 

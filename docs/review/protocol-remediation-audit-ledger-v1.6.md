@@ -86,7 +86,7 @@ Carry-over evidence:
 | FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f + f63eb55 + e214df9 + 4f4930c + 08c8f89 + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | 093496b + 910ec6e | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) with round-6 recurrence replay (`actor-binding resolver divergence`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) + audit_replay_20260307_round6_headstamp | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
@@ -1677,6 +1677,27 @@ Implementation delta snapshot (2026-03-07):
 2. route-state fields are emitted for downstream audit consumers (`route_status`, `route_error`).
 3. non-starvation/headstamp closure still requires live endpoint replay archive before promotion.
 
+Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer):
+
+1. replay commands executed:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect,base-repo-audit-expert-v3 --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/hotfix_headstamp_r6_fullscan.json`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+2. observed behavior:
+   - `base-repo-audit-expert-v3`: `FAIL_REQUIRED` (`IP-ASB-STAMP-SCAN-004`), with dynamic positive case failing `IP-ASB-STAMP-SESSION-005`;
+   - `base-repo-architect`: `PASS_REQUIRED` on the same closure suite.
+3. cross-check command:
+   - `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --identity-id <base-repo-audit-expert-v3|base-repo-architect> --actor-id assistant:codex --operation scan --json-only`
+   - both identities return `actor_binding_status=PASS_REQUIRED` under `binding_key_mode=actor_id+session_id`.
+4. audit conclusion:
+   - recurrence root cause is protocol-layer resolver divergence, not allowed hard-switch behavior:
+   - `validate_actor_session_binding.py` resolves binding with explicit target identity;
+   - `validate_headstamp_recurrence_closure.py` mismatch probe reads actor binding without explicit `identity_id/session_id`, so latest actor binding entry can leak into replay context.
+5. architect action remains protocol-only:
+   - unify actor-binding source and require deterministic actor-binding selection tuple for all send-time/closure validators;
+   - add machine receipt fields for binding selection mode/session/compare token;
+   - keep `IP-ASB-STAMP-SESSION-*` as compatibility trace only until canonical family convergence.
+
 Architect handoff artifacts (absolute paths):
 
 1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
@@ -1949,7 +1970,7 @@ Four-track evidence package (cross-verified):
 
 1. `T1 governance/spec`: mandatory matrix closure for `C28..C30` and related fail-close clauses.
 2. `T2 runtime implementation`: applicability-scoped requiredization fields and observation-profile skip semantics are now wired in Batch-6/7 gate validators.
-3. `T3 replay evidence`: target scan/aggregation now emit deterministic `SKIPPED_NOT_REQUIRED` for non-applicable gates with explicit stale reasons, replacing synthetic missing-evidence fail signals.
+3. `T3 replay evidence`: observation profile (`scan`) emits deterministic `SKIPPED_NOT_REQUIRED` for non-applicable gates, but strict profiles (`update/readiness/ci`) still show requiredization over-block when current-round linkage is absent.
 4. `T4 protocol feedback`: canonical outbox + upgrade-proposal + evidence-index linkage for this hotfix stream.
 
 Implementation delta snapshot (2026-03-07):
@@ -2026,6 +2047,42 @@ Round-4 closure replay (2026-03-07):
    - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --project-catalog "${HOME}/.codex/identity/catalog.local.yaml" --actor-id assistant:codex --out /tmp/full_scan_office_fix_round3b.json`
    - replay archive lane emits `replay_archive_contract_status=PASS_REQUIRED`.
 
+Round-5 freeze replay (`HEAD=6a2ef0b`, project catalog lineage, 2026-03-07):
+
+1. replay commands:
+   - `python3 scripts/release_readiness_check.py --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
+   - `python3 scripts/identity_creator.py validate --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
+   - `python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation update --json-only`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/audit_r5_full_scan_project.json`
+2. strict-scope propagation residual (`P1-SCOPE-005`):
+   - `identity_creator validate` still invokes `validate_identity_instance_isolation.py` without `--scope`, causing `store-manager` (`SYSTEM`) to fail with `scope mismatch ... requested=USER`.
+3. Batch-6/7 strict requiredization residual (`P1-APPLICABILITY-006`):
+   - `validate_required_contract_coverage --operation update` reports `failed_required_contract_count=6` for `base-repo-architect`.
+   - failing strict-gate codes: `IP-INTAKE-EVID-001`, `IP-PIN-001`, `IP-FBTAX-002`, `IP-DEDUP-001`, `IP-XWF-001`.
+   - all failures occur with `producer_readiness=false` and `requiredization_current_round_linked=false`.
+4. observation profile remains non-blocking as expected:
+   - `scan` for the same validators returns `SKIPPED_NOT_REQUIRED` with explicit stale reasons.
+5. replay-archive closure remains stable:
+   - `validate_replay_archive_contract.py --operation scan` returns `PASS_REQUIRED`, `15/15` cases passed for `base-repo-architect`, `base-repo-audit-expert-v3`, and `custom-creative-ecom-analyst`.
+6. `/tmp` debt still has residuals:
+   - core strict-chain scripts are migrated, but fixed `/tmp` paths remain in `/.github/workflows/_identity-required-gates.yml` and legacy default blocker-receipt outputs.
+
+Round-6 three-point closure replay (project-local lineage, 2026-03-07):
+
+1. scope propagation closure (`P1-SCOPE-005`):
+   - `python3 scripts/identity_creator.py validate --identity-id store-manager --catalog "$CAT" --scope SYSTEM --actor-id assistant:codex`
+   - validate/update chains now forward `--scope` into `validate_identity_instance_isolation.py`; replay no longer falls back to USER default.
+2. strict applicability closure (`P1-APPLICABILITY-006`):
+   - `python3 scripts/validate_required_contract_coverage.py --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only`
+   - `failed_required_contract_count=0`; Batch-6/7 rows (`cross_verification_tracks/intake_evidence_quorum/route_version_pinning/fallback_taxonomy_normalization/dedup_monotonicity/cross_workflow_schema/skill_path_integrity`) now resolve `SKIPPED_NOT_REQUIRED` when `requiredization_current_round_linked=false`.
+   - direct gate replay (`operation=update`) returns deterministic stale reason: `required_contract_not_applicable_no_current_round_evidence_source`.
+3. temp-path residual closure (`P1-TMPPATH-007`):
+   - static replay `rg -n "/tmp" .github/workflows/_identity-required-gates.yml scripts/validate_identity_response_stamp.py scripts/validate_reply_identity_context_first_line.py scripts/validate_execution_reply_identity_coherence.py` returns no hits.
+   - CI required-gates workflow now uses runner/runtime-scoped temp roots; legacy blocker receipt defaults are switched to `runtime_temp_file(...)`.
+4. non-regression negative controls (explicit evidence path) remain fail-close:
+   - fallback negative: `FAIL_REQUIRED + IP-FBTAX-001`.
+   - dedup missing required field: `FAIL_REQUIRED + IP-DEDUP-002`.
+
 Architect handoff artifacts (canonical channel pattern):
 
 1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
@@ -2082,13 +2139,13 @@ Promotion guard (hard):
 | FIX16-032 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Batch-3B reinforcement complete: executable components (`13485bb`) plus full kernel/mapping projection for `RQ-024/028` (`910ec6e`) are landed; non-promotional replay boundary unchanged |
 | FIX16-033 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Batch-4 reinforcement complete: `RQ-029/031/007/008` executable validators (`13485bb`) plus `RQ-032` kernel/mapping projection (`910ec6e`) are synchronized; promotion remains blocked pending replay closure |
 | FIX16-034 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T16:45:00Z | Batch-5 executable closure landed (`13485bb`): phase/tmp/freshness/atomic/interference validators + emitters + lane hooks + mapping/kernel sync; historical missing-validator blocker resolved, replay closure still required for promotion |
-| FIX16-035 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-07T18:40:00Z | Batch-6 (`ASB16-RQ-017/018/019/020/021`) post-audit hardening remains `PASS_WITH_BLOCKERS`: mapping asset, single-parser dual-mode intake core, emitter-before-gate sequencing, and coverage/aggregator wiring stay lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`); this round closes one additional documentation/mapping drift via `f712dec` by aligning `ASB16-RQ-018` canonical validator path to `scripts/validate_dedup_monotonicity.py` while keeping wrapper compatibility optional. Batch remains `ACCEPT_WITH_FIX` and non-promotional until deterministic replay archive closure per governance `8.10`. |
-| FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-06T19:25:00Z | Batch-7 (`ASB16-RQ-022/030`) post-audit hardening absorbed as `PASS_WITH_BLOCKERS`: dual-field taxonomy normalization + intake core promotion mode are implemented and lane-hooked (`creator/readiness/three-plane/full-scan/e2e/ci`) via commits `f63eb55..47f2f38`; follow-up synchronization (`Task-13/15`, `b258982 + 1beeb88`) aligned status semantics and blocker posture; both rows remain `ACCEPT_WITH_FIX` and non-promotional until required=true replay closure per governance `8.11` |
+| FIX16-035 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | Batch-6 strict applicability closure landed in protocol layer: unlinked strict lanes now emit `SKIPPED_NOT_REQUIRED` with machine reason (`required_contract_not_applicable_no_current_round_evidence_source`) and coverage replay reports `failed_required_contract_count=0`. Row remains non-promotional pending independent required=true current-round replay archive. |
+| FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | Batch-7 strict applicability closure landed in protocol layer: fallback/intake strict lanes no longer synthetic-fail on unlinked rounds; explicit negatives remain fail-close (`IP-FBTAX-001`). Row remains non-promotional pending independent required=true current-round replay archive. |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Write-boundary non-starvation hooks remain lane-wired (`093496b`); this round adds canonical `RQ-028` kernel/mapping projection (`910ec6e`) for full requirement coverage. Promotion boundary unchanged pending replay matrix closure (`A/B/C/D/E/F`). |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
-| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening absorbed in local runtime bridge closure: silent downgrade path is blocked by conflict-aware routing surface and canonical route-state fields are emitted for audit. remains non-promotional pending independent live endpoint replay archive (`lane activation receipts + headstamp continuity positive/negative`). |
-| HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | strict-chain temp-path refactor landed: shared resolver `runtime_temp_path_common.py` wired into creator/readiness/three-plane/full-scan/e2e/no-implicit-switch; strict-chain fixed `/tmp` literals removed and runtime temp root made env-driven. posture remains non-promotional pending independent replay/audit closure (`collision + runner-temp parity`). |
-| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:21:30Z | round-4 replay update: applicability closure (`cross_workflow_schema scan -> SKIPPED_NOT_REQUIRED`) and strict context fail-fast (`IP-ENV-003` on strict operations) remain stable; replay-archive expectation drift is resolved (`validate_replay_archive_contract -> PASS_REQUIRED`), status stays non-promotional pending independent audit sign-off. |
+| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening remains landed, and round-6 replay reconfirmed residual recurrence: `base-repo-audit-expert-v3` fails `IP-ASB-STAMP-SCAN-004` with positive-governed case `IP-ASB-STAMP-SESSION-005` while `base-repo-architect` passes. cross-check points to actor-binding resolver divergence (identity-scoped binding gate vs latest-binding probe). remains non-promotional until single-source resolver + canonical error-family convergence + live lane/headstamp replay archive are complete. |
+| HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path residual closure landed: CI required-gates now uses runner/runtime-scoped temp roots and legacy stamp/first-line/coherence blocker defaults use `runtime_temp_file(...)`; targeted static replay shows no fixed `/tmp` literals. status remains non-promotional pending independent replay sign-off. |
+| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | strict convergence closure landed for this round: `identity_creator` now propagates `--scope` to instance-isolation checks and Batch-6/7 strict non-linked paths emit deterministic `SKIPPED_NOT_REQUIRED` instead of synthetic missing-evidence failures. status remains non-promotional pending independent replay sign-off + current-round evidence archive. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks). round-3 replay across four identities still returns `execution_target_tuple_isolation_status=SKIPPED_NOT_REQUIRED` (`contract_not_required`), so required=true deterministic replay archive and runtime bridge rollout evidence are still pending. |
 

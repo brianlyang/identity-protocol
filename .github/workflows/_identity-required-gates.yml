@@ -170,8 +170,10 @@ jobs:
 
       - name: Validate identity manifest + discovery
         run: |
+          TMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-$PWD}/.tmp-runtime}}"
+          mkdir -p "${TMP_ROOT}"
           python3 scripts/validate_identity_manifest.py
-          python3 scripts/test_identity_discovery_contract.py >/tmp/identity_discovery_contract.protocol_repo.json
+          python3 scripts/test_identity_discovery_contract.py >"${TMP_ROOT}/identity_discovery_contract.protocol_repo.json"
 
       - name: Validate required runtime gates across resolved identities
         run: |
@@ -185,6 +187,17 @@ jobs:
           fi
           CATALOG_PARENT="$(dirname "$(realpath identity/catalog/identities.yaml)")"
           for ID in $IDS; do
+            TMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-$PWD}/.tmp-runtime}}"
+            mkdir -p "${TMP_ROOT}"
+            RUNTIME_TMP_ROOT="${TMP_ROOT}/identity-runtime"
+            STAMP_JSON="${TMP_ROOT}/identity-response-stamp-${ID}.json"
+            STAMP_BLOCKER_RECEIPT="${TMP_ROOT}/identity-stamp-blocker-receipt-${ID}.json"
+            FIRST_LINE_BLOCKER_RECEIPT="${TMP_ROOT}/identity-reply-first-line-blocker-receipt-${ID}.json"
+            SEND_TIME_BLOCKER_RECEIPT="${TMP_ROOT}/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
+            COHERENCE_BLOCKER_RECEIPT="${TMP_ROOT}/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+            VIBE_PACK_ROOT="${TMP_ROOT}/vibe-coding-feeding-packs"
+            CAPABILITY_FIT_ROOT="${TMP_ROOT}/capability-fit-matrices"
+            UPGRADE_REPORT_ROOT="${TMP_ROOT}/identity-upgrade-reports"
             HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
             IS_FIXTURE_ID="$(ID="$ID" python3 -c 'import os,yaml,pathlib; identity_id=os.environ.get("ID","").strip(); doc=yaml.safe_load(pathlib.Path("identity/catalog/identities.yaml").read_text(encoding="utf-8")) or {}; rows=[x for x in (doc.get("identities") or []) if isinstance(x,dict)]; row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), {}); profile=str(row.get("profile","")).strip().lower(); runtime_mode=str(row.get("runtime_mode","")).strip().lower(); print("1" if (profile=="fixture" or runtime_mode=="demo_only") else "0")')"
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
@@ -198,24 +211,24 @@ jobs:
             python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_session_refresh_status.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --operation ci --baseline-policy warn
             python3 scripts/validate_e2e_hermetic_runtime_import.py --operation ci --pythonpath-bootstrap-mode internal_bootstrap --json-only
-            python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --view external --disclosure-level standard --out "/tmp/identity-response-stamp-${ID}.json" --json-only
-            python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "/tmp/identity-response-stamp-${ID}.json" --force-check --enforce-user-visible-gate --operation ci --blocker-receipt-out "/tmp/identity-stamp-blocker-receipt-${ID}.json"
-            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "/tmp/identity-stamp-blocker-receipt-${ID}.json"
-            python3 scripts/validate_reply_identity_context_first_line.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "/tmp/identity-response-stamp-${ID}.json" --force-check --enforce-first-line-gate --operation ci --blocker-receipt-out "/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
-            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "/tmp/identity-reply-first-line-blocker-receipt-${ID}.json"
-            python3 scripts/validate_layer_intent_resolution.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "/tmp/identity-response-stamp-${ID}.json" --force-check --enforce-layer-intent-gate --operation ci --json-only
-            python3 scripts/validate_send_time_reply_gate.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "/tmp/identity-response-stamp-${ID}.json" --force-check --enforce-send-time-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
-            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "/tmp/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
+            python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --view external --disclosure-level standard --out "${STAMP_JSON}" --json-only
+            python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-user-visible-gate --operation ci --blocker-receipt-out "${STAMP_BLOCKER_RECEIPT}"
+            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${STAMP_BLOCKER_RECEIPT}"
+            python3 scripts/validate_reply_identity_context_first_line.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-first-line-gate --operation ci --blocker-receipt-out "${FIRST_LINE_BLOCKER_RECEIPT}"
+            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${FIRST_LINE_BLOCKER_RECEIPT}"
+            python3 scripts/validate_layer_intent_resolution.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-layer-intent-gate --operation ci --json-only
+            python3 scripts/validate_send_time_reply_gate.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-send-time-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "${SEND_TIME_BLOCKER_RECEIPT}"
+            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${SEND_TIME_BLOCKER_RECEIPT}"
             python3 scripts/validate_headstamp_recurrence_closure.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --json-only
-            python3 scripts/validate_execution_reply_identity_coherence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "/tmp/identity-response-stamp-${ID}.json" --force-check --enforce-coherence-gate --operation ci --blocker-receipt-out "/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
-            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "/tmp/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+            python3 scripts/validate_execution_reply_identity_coherence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-coherence-gate --operation ci --blocker-receipt-out "${COHERENCE_BLOCKER_RECEIPT}"
+            python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${COHERENCE_BLOCKER_RECEIPT}"
             python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
             python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
             python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
             python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
             python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
             python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
-            IDENTITY_RUNTIME_OUTPUT_ROOT=/tmp/identity-runtime python3 scripts/export_route_quality_metrics.py --catalog identity/catalog/identities.yaml --identity-id "$ID"
+            IDENTITY_RUNTIME_OUTPUT_ROOT="${RUNTIME_TMP_ROOT}" python3 scripts/export_route_quality_metrics.py --catalog identity/catalog/identities.yaml --identity-id "$ID"
             python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_dialogue_content.py --identity-id "$ID"
             python3 scripts/validate_identity_dialogue_cross_validation.py --identity-id "$ID"
@@ -239,13 +252,13 @@ jobs:
             python3 scripts/validate_protocol_data_sanitization_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/trigger_platform_optimization_discovery.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_discovery_requiredization.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --json-only
-            python3 scripts/build_vibe_coding_feeding_pack.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root /tmp/vibe-coding-feeding-packs
+            python3 scripts/build_vibe_coding_feeding_pack.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root "${VIBE_PACK_ROOT}"
             python3 scripts/validate_identity_capability_fit_optimization.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_composition_before_discovery.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_fit_review_freshness.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_capability_fit_roundtable_evidence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/trigger_capability_fit_review.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
-            python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root /tmp/capability-fit-matrices --json-only
+            python3 scripts/build_capability_fit_matrix.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --out-root "${CAPABILITY_FIT_ROOT}" --json-only
             python3 scripts/validate_vendor_namespace_separation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_unlock_formula.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
@@ -283,8 +296,8 @@ jobs:
             if [ "${IS_FIXTURE_ID}" = "1" ]; then
               echo "[INFO] fixture identity ${ID}: skipping mutation/update report validation chain in required-gates (inspection-only lane)."
             else
-              PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --mode review-required --out-dir /tmp/identity-upgrade-reports --expected-work-layer instance
-              UPGRADE_REPORT="$(find /tmp/identity-upgrade-reports -maxdepth 1 -type f -name "identity-upgrade-exec-${ID}-*.json" -printf '%T@ %p\n' | sort -nr | head -n 1 | cut -d' ' -f2-)"
+              PR_BASE_SHA="${BASE_SHA}" PR_HEAD_SHA="${HEAD_SHA}" CI=true python3 scripts/identity_creator.py update --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --mode review-required --out-dir "${UPGRADE_REPORT_ROOT}" --expected-work-layer instance
+              UPGRADE_REPORT="$(find "${UPGRADE_REPORT_ROOT}" -maxdepth 1 -type f -name "identity-upgrade-exec-${ID}-*.json" -printf '%T@ %p\n' | sort -nr | head -n 1 | cut -d' ' -f2-)"
               if [ -z "${UPGRADE_REPORT}" ]; then
                 echo "[FAIL] missing identity upgrade report for ${ID}"
                 exit 1

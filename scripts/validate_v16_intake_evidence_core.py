@@ -571,6 +571,18 @@ def _mark_track_status_skipped(payload: dict[str, Any]) -> None:
     }
 
 
+def _emit_non_applicable_skip(payload: dict[str, Any], *, mode: str, reason: str, json_only: bool) -> int:
+    _mark_track_status_skipped(payload)
+    payload["intake_evidence_core_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["cross_verification_tracks_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["intake_evidence_quorum_status"] = STATUS_SKIPPED_NOT_REQUIRED
+    payload[MODE_STATUS_KEYS[mode]] = STATUS_SKIPPED_NOT_REQUIRED
+    payload["error_code"] = ""
+    payload["stale_reasons"] = [reason]
+    _emit(payload, json_only=json_only)
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description="Validate v1.6 intake evidence core parser (RQ-017/RQ-030 dual-mode).")
     ap.add_argument("--catalog", required=True)
@@ -616,8 +628,9 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
     contract = _select_contract(task, args.mode)
     required = contract_required(contract) if contract else False
     auto_required = False
+    explicit_current_round_linked = bool(args.bundle.strip() or args.bundle_id.strip())
 
-    if args.bundle.strip() or args.bundle_id.strip():
+    if explicit_current_round_linked:
         required = True
         auto_required = True
     elif args.operation in STRICT_OPERATIONS and _feedback_artifacts_present(pack_path):
@@ -630,7 +643,7 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
 
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
-    payload["requiredization_current_round_linked"] = bool(args.bundle.strip() or args.bundle_id.strip())
+    payload["requiredization_current_round_linked"] = explicit_current_round_linked
 
     if not required:
         _mark_track_status_skipped(payload)
@@ -646,16 +659,24 @@ def main(argv: list[str] | None = None, *, forced_mode: str | None = None) -> in
         bundle_id=args.bundle_id,
     )
     payload["producer_readiness"] = bundle_path is not None
+    if bundle_path is not None:
+        payload["evidence_ref"] = str(bundle_path)
+        payload["evidence_bundle_path"] = str(bundle_path)
     if bundle_path is not None and not payload["requiredization_current_round_linked"]:
-        payload["requiredization_current_round_linked"] = True
+        return _emit_non_applicable_skip(
+            payload,
+            mode=args.mode,
+            reason="required_contract_not_applicable_no_current_round_evidence_source",
+            json_only=args.json_only,
+        )
     if bundle_path is None:
-        if not auto_required and args.operation in OBSERVATION_OPERATIONS:
-            _mark_track_status_skipped(payload)
-            payload["intake_evidence_core_status"] = STATUS_SKIPPED_NOT_REQUIRED
-            payload[MODE_STATUS_KEYS[args.mode]] = STATUS_SKIPPED_NOT_REQUIRED
-            payload["stale_reasons"] = ["required_contract_not_applicable_no_evidence_bundle"]
-            _emit(payload, json_only=args.json_only)
-            return 0
+        if not payload["requiredization_current_round_linked"] and args.operation in STRICT_OPERATIONS:
+            return _emit_non_applicable_skip(
+                payload,
+                mode=args.mode,
+                reason="required_contract_not_applicable_no_current_round_evidence_source",
+                json_only=args.json_only,
+            )
         payload["intake_evidence_core_status"] = STATUS_FAIL_REQUIRED
         payload[MODE_STATUS_KEYS[args.mode]] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_BUNDLE_MISSING

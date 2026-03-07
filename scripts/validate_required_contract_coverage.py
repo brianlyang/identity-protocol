@@ -96,6 +96,13 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "vendor_namespace_separation",
     "protocol_feedback_sidecar",
     "execution_target_tuple_isolation",
+    "cross_verification_tracks",
+    "intake_evidence_quorum",
+    "route_version_pinning",
+    "fallback_taxonomy_normalization",
+    "dedup_monotonicity",
+    "cross_workflow_schema",
+    "skill_path_integrity",
 }
 
 

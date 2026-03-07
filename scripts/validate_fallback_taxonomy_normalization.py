@@ -223,7 +223,8 @@ def main() -> int:
     auto_required = False
 
     report_path = _resolve_report_path(pack_path, args.identity_id, args.report)
-    if args.fallback_reason or args.report.strip() or report_path is not None:
+    explicit_current_round_linked = bool(args.fallback_reason or args.report.strip())
+    if explicit_current_round_linked:
         required = True
         auto_required = True
     elif args.operation in STRICT_OPERATIONS:
@@ -232,6 +233,7 @@ def main() -> int:
 
     payload["required_contract"] = required
     payload["auto_required_signal"] = auto_required
+    payload["requiredization_current_round_linked"] = explicit_current_round_linked
 
     reasons: list[str] = [str(x).strip() for x in (args.fallback_reason or []) if str(x).strip()]
     raw_report = ""
@@ -250,7 +252,6 @@ def main() -> int:
     reasons = _dedupe_keep_order(reasons)
     payload["fallback_reason_row_count"] = len(reasons)
     payload["producer_readiness"] = bool(reasons)
-    payload["requiredization_current_round_linked"] = bool(args.fallback_reason or args.report.strip() or report_path is not None or reasons)
 
     blocker_contract = task.get("blocker_taxonomy_contract") or {}
     blocker_types_raw = blocker_contract.get("required_blocker_types") if isinstance(blocker_contract, dict) else []
@@ -259,6 +260,20 @@ def main() -> int:
 
     if not required:
         payload["stale_reasons"] = ["contract_not_required"]
+        _emit(payload, json_only=args.json_only)
+        return 0
+
+    if report_path is not None and not payload["requiredization_current_round_linked"]:
+        payload["producer_readiness"] = True
+        payload["fallback_taxonomy_normalization_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["normalization_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
+        _emit(payload, json_only=args.json_only)
+        return 0
+    if report_path is None and not payload["requiredization_current_round_linked"] and args.operation in STRICT_OPERATIONS:
+        payload["fallback_taxonomy_normalization_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["normalization_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
         _emit(payload, json_only=args.json_only)
         return 0
 

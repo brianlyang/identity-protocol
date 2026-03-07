@@ -1487,7 +1487,16 @@ def main() -> int:
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", args.catalog],
-            ["python3", "scripts/validate_identity_instance_isolation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            [
+                "python3",
+                "scripts/validate_identity_instance_isolation.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--scope",
+                args.scope,
+            ],
             ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             [
@@ -2847,6 +2856,8 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--scope",
+                args.scope,
             ]
         )
         if rc != 0:
