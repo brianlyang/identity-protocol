@@ -2769,6 +2769,52 @@ State impact:
 2. row remains `SPEC_READY / PENDING_INTAKE` until required=true tuple-parity replay + independent audit replay archive are attached.
 3. lifecycle boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.32 Round-13 UCG Code Landing Wave-2 (`HEAD=af0f684+dirty`, 2026-03-07)
+
+Scope lock:
+
+1. this wave is protocol-layer closure only and extends `HOTFIX16-P0-007` wave-1 lineage; no business-domain contract expansion is introduced.
+2. this wave closes recurrence/tuple parity execution surfaces and payload projection parity; promotion state remains frozen.
+3. this wave also absorbs replay audit findings for `HOTFIX16-P0-005` and `HOTFIX16-P1-004` runtime behavior consistency.
+
+Wave-2 landed deltas:
+
+1. bundle runner receipt persistence:
+   - `scripts/required_gate_bundle_runner.py` now supports `--out` for deterministic receipt file emission in both bundle mode and target-probe mode.
+2. recurrence escalator machine gate:
+   - `scripts/validate_required_gate_recurrence_escalator.py` landed with quantized escalation (`L1/L2/L3`) over error-family recurrence windows and optional hard block mode (`--enforce-blocking`).
+3. strict-surface lineage expansion:
+   - `release_readiness_check`, `identity_creator(validate/update)`, `report_three_plane_status`, `full_identity_protocol_scan`, `e2e_smoke_test.sh`, and required-gates CI now invoke:
+     - bundle runner receipt emission;
+     - recurrence escalator;
+     - tuple parity validator.
+4. drift guard strengthening:
+   - `scripts/validate_required_gate_surface_drift.py` now enforces all three mandatory lineage artifacts (`bundle_runner + recurrence_escalator + tuple_parity`) across six strict surfaces.
+5. scanner/three-plane payload closure:
+   - `report_three_plane_status` and `full_identity_protocol_scan` now project `required_gate_bundle_runner`, `required_gate_recurrence_escalator`, and `required_gate_tuple_parity` fields into machine-readable payloads.
+
+Replay and consistency closure:
+
+1. parser/runtime crash closure remains stable:
+   - no `Namespace` attribute crash observed on `release_readiness_check` (`target_branch`) and `identity_creator validate` (`run_id`) entry path.
+2. runtime mode guard strictness closure:
+   - `validate_identity_runtime_mode_guard.py` strict operation set now includes `scan/three-plane/inspection`; env/catalog drift on these strict surfaces is fail-close unless audited override receipt exists.
+3. observation applicability closure:
+   - `validate_cross_workflow_schema.py` no longer forces `route_action/dedup_state` in observation profile without current-round linkage; non-applicable path returns deterministic `SKIPPED_NOT_REQUIRED`.
+
+Cross-verified residual (not yet promotable):
+
+1. external runtime replay on `system-requirements-analyst` (global lane) still reports:
+   - `IP-UPG-002` (three-plane blocked),
+   - `IP-SEM-001` (`intent_domain`, `intent_confidence`, `classifier_reason` missing).
+2. this is treated as producer-side semantic metadata completeness debt and remains promotion-blocking until protocol-feedback emitter path provides deterministic semantic tuple fields per current round.
+
+State impact:
+
+1. `HOTFIX16-P0-007` stays `SPEC_READY / PENDING_INTAKE`; wave-2 improves enforcement homomorphism but does not satisfy replay-complete promotion threshold.
+2. `HOTFIX16-P0-005` and `HOTFIX16-P1-004` retain non-promotional boundary pending independent replay archive closure on required=true datasets.
+3. lifecycle boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1867,6 +1867,27 @@ Round-12 UCG code landing wave-1 (`HEAD=1deba9d+`, 2026-03-07):
    - tuple parity validator is landed but required=true replay archive across strict surfaces is still pending.
    - row remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until replay matrix closure is independently audited.
 
+Round-13 UCG code landing wave-2 (`HEAD=af0f684+dirty`, 2026-03-07):
+
+1. wave-2 canonical artifact closure:
+   - `scripts/required_gate_bundle_runner.py` adds deterministic `--out` receipt persistence path.
+   - `scripts/validate_required_gate_recurrence_escalator.py` lands quantitative recurrence escalation (`L1/L2/L3`) with optional hard-block (`--enforce-blocking`).
+2. strict-surface wiring expansion:
+   - readiness/creator(validate+update)/three-plane/full-scan/e2e/ci now execute `bundle_runner -> recurrence_escalator -> tuple_parity` as one lineage.
+   - `scripts/validate_required_gate_surface_drift.py` now enforces presence of all three lineage artifacts across six strict surfaces.
+3. payload projection closure:
+   - `report_three_plane_status` and `full_identity_protocol_scan` now emit machine-readable detail for:
+     - `required_gate_bundle_runner`
+     - `required_gate_recurrence_escalator`
+     - `required_gate_tuple_parity`
+4. replay of prior audit blockers:
+   - parser/runtime entry crashes (`release_readiness target_branch`, `identity_creator validate run_id`) remain closed; no pre-gate `AttributeError` replay observed.
+   - runtime mode guard strictness now covers `scan/three-plane/inspection` for env/catalog mismatch fail-close.
+   - cross-workflow schema observation profile no longer forces route/dedup required fields without current-round linkage.
+5. residual blocker kept explicit:
+   - protocol-lane global replay still reports `IP-UPG-002 + IP-SEM-001` on `system-requirements-analyst` due missing semantic tuple fields (`intent_domain`, `intent_confidence`, `classifier_reason`) in feedback batch payload.
+   - row remains non-promotional until required=true replay matrix + semantic tuple completeness replay are independently archived.
+
 ### HOTFIX16-P1-003 - emergency hotfix intake (`strict-surface fixed /tmp path debt`)
 
 - Status: `SPEC_READY` (hotfix lane intake)
@@ -2378,7 +2399,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T09:15:00Z | round-11 protocol-feedback replay confirms routing/channel stability but keeps convergence residuals open: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness, and active semantic blocker shifted to `IP-SEM-001` field-completeness failure (`intent_domain/intent_confidence/classifier_reason`) with `IP-UPG-002` writeback deferral coupling on protocol lane. status remains non-promotional pending same-lineage convergence hardening replay closure (`summary.p0=0`). |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T11:20:00Z | round-12 wave-1 code landing completed under frozen UCG contract: bundle-runner + tuple-parity validator + surface-drift validator are landed, six strict surfaces are migrated to bundle-runner lineage, and CI preflight now checks drift. state remains non-promotional pending required=true tuple-parity replay archive + independent replay audit closure. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T15:45:00Z | round-13 wave-2 extends frozen UCG lineage: bundle receipts now persist via `--out`, recurrence escalator is landed and wired with tuple parity across readiness/creator/three-plane/full-scan/e2e/ci, and drift guard now enforces all three lineage artifacts. residual semantic replay blocker (`IP-UPG-002 + IP-SEM-001`) remains open; promotion stays blocked pending required=true replay archive + semantic tuple completeness closure. |
 
 ---
 

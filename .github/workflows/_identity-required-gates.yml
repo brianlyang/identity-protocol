@@ -196,6 +196,8 @@ jobs:
             FIRST_LINE_BLOCKER_RECEIPT="${TMP_ROOT}/identity-reply-first-line-blocker-receipt-${ID}.json"
             SEND_TIME_BLOCKER_RECEIPT="${TMP_ROOT}/identity-send-time-reply-gate-blocker-receipt-${ID}.json"
             COHERENCE_BLOCKER_RECEIPT="${TMP_ROOT}/identity-execution-reply-coherence-blocker-receipt-${ID}.json"
+            BUNDLE_RUN_TOKEN="${GITHUB_RUN_ID:-ci-local}"
+            REQUIRED_GATE_BUNDLE_RECEIPT="${TMP_ROOT}/required-gate-bundle-${ID}-${BUNDLE_RUN_TOKEN}.json"
             VIBE_PACK_ROOT="${TMP_ROOT}/vibe-coding-feeding-packs"
             CAPABILITY_FIT_ROOT="${TMP_ROOT}/capability-fit-matrices"
             UPGRADE_REPORT_ROOT="${TMP_ROOT}/identity-upgrade-reports"
@@ -283,7 +285,9 @@ jobs:
             python3 scripts/validate_prompt_derivation_conformance.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_semantic_convergence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_prompt_kernel_executable_coupling.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --actor-id "${SESSION_ACTOR_ID:-assistant:codex}" --operation ci --json-only
-            python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
+            python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "$BUNDLE_RUN_TOKEN" --operation ci --out "$REQUIRED_GATE_BUNDLE_RECEIPT" --json-only
+            python3 scripts/validate_required_gate_recurrence_escalator.py --identity-id "$ID" --surface ci --operation ci --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT" --enforce-blocking --json-only
+            python3 scripts/validate_required_gate_tuple_parity.py --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT" --json-only
             python3 scripts/validate_replay_archive_contract.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
             python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"

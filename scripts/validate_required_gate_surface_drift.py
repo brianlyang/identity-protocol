@@ -30,6 +30,13 @@ FORBIDDEN_DIRECT_VALIDATORS: tuple[str, ...] = (
 )
 
 BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
+RECURRENCE_ESCALATOR_SCRIPT = "scripts/validate_required_gate_recurrence_escalator.py"
+TUPLE_PARITY_SCRIPT = "scripts/validate_required_gate_tuple_parity.py"
+MANDATORY_LINEAGE_SCRIPTS: tuple[str, ...] = (
+    BUNDLE_RUNNER_SCRIPT,
+    RECURRENCE_ESCALATOR_SCRIPT,
+    TUPLE_PARITY_SCRIPT,
+)
 
 
 def _read_text(path: Path) -> str:
@@ -48,7 +55,7 @@ def main() -> int:
     repo_root = Path(args.repo_root).expanduser().resolve()
 
     missing_surface_files: list[str] = []
-    missing_bundle_runner_ref: list[str] = []
+    missing_lineage_refs: dict[str, list[str]] = {}
     forbidden_hits: dict[str, list[str]] = {}
 
     for rel in STRICT_SURFACES:
@@ -57,8 +64,9 @@ def main() -> int:
             missing_surface_files.append(rel)
             continue
         text = _read_text(path)
-        if BUNDLE_RUNNER_SCRIPT not in text:
-            missing_bundle_runner_ref.append(rel)
+        missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
+        if missing:
+            missing_lineage_refs[rel] = missing
         hits = [needle for needle in FORBIDDEN_DIRECT_VALIDATORS if needle in text]
         if hits:
             forbidden_hits[rel] = hits
@@ -66,7 +74,7 @@ def main() -> int:
     if missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
-    elif missing_bundle_runner_ref or forbidden_hits:
+    elif missing_lineage_refs or forbidden_hits:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-002"
     else:
@@ -77,10 +85,13 @@ def main() -> int:
         "required_gate_surface_drift_status": status,
         "error_code": error_code,
         "bundle_runner_script": BUNDLE_RUNNER_SCRIPT,
+        "recurrence_escalator_script": RECURRENCE_ESCALATOR_SCRIPT,
+        "tuple_parity_script": TUPLE_PARITY_SCRIPT,
+        "mandatory_lineage_scripts": list(MANDATORY_LINEAGE_SCRIPTS),
         "strict_surfaces": list(STRICT_SURFACES),
         "forbidden_direct_validators": list(FORBIDDEN_DIRECT_VALIDATORS),
         "missing_surface_files": missing_surface_files,
-        "missing_bundle_runner_ref": missing_bundle_runner_ref,
+        "missing_lineage_refs": missing_lineage_refs,
         "forbidden_hits": forbidden_hits,
     }
 
@@ -89,7 +100,7 @@ def main() -> int:
     else:
         print(
             f"[DRIFT] status={status} missing_surface_files={len(missing_surface_files)} "
-            f"missing_bundle_runner_ref={len(missing_bundle_runner_ref)} forbidden_hit_surfaces={len(forbidden_hits)}"
+            f"missing_lineage_surfaces={len(missing_lineage_refs)} forbidden_hit_surfaces={len(forbidden_hits)}"
         )
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 

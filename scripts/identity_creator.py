@@ -1549,6 +1549,17 @@ def main() -> int:
         )
         if rc_actor_binding_entry != 0:
             return rc_actor_binding_entry
+        validate_run_token = str(args.run_id or "").strip() or f"validate-{args.identity_id}"
+        required_gate_bundle_receipt_validate = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="validate",
+                identity_id=args.identity_id,
+                run_token=validate_run_token,
+                stem=f"required-gate-bundle-validate-{args.identity_id}-{validate_run_token}",
+                ext="json",
+            )
+        )
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
@@ -1902,7 +1913,7 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--run-id",
-                args.run_id,
+                validate_run_token,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -1926,7 +1937,7 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--run-id",
-                args.run_id,
+                validate_run_token,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -2111,8 +2122,33 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--run-id",
+                validate_run_token,
                 "--operation",
                 "validate",
+                "--out",
+                required_gate_bundle_receipt_validate,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_recurrence_escalator.py",
+                "--identity-id",
+                args.identity_id,
+                "--surface",
+                "creator_validate",
+                "--operation",
+                "validate",
+                "--receipt",
+                required_gate_bundle_receipt_validate,
+                "--enforce-blocking",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_tuple_parity.py",
+                "--receipt",
+                required_gate_bundle_receipt_validate,
                 "--json-only",
             ],
             [
@@ -3102,6 +3138,17 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] discovery requiredization validation failed; update blocked")
             return rc
+        update_bundle_run_token = str(update_required_gates_run_id or update_run_id or args.identity_id).strip()
+        required_gate_bundle_receipt_update = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=update_bundle_run_token,
+                stem=f"required-gate-bundle-update-{args.identity_id}-{update_bundle_run_token}",
+                ext="json",
+            )
+        )
         intake_update_gates: list[list[str]] = [
             [
                 "python3",
@@ -3371,8 +3418,33 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--run-id",
+                update_bundle_run_token,
                 "--operation",
                 "update",
+                "--out",
+                required_gate_bundle_receipt_update,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_recurrence_escalator.py",
+                "--identity-id",
+                args.identity_id,
+                "--surface",
+                "creator_update",
+                "--operation",
+                "update",
+                "--receipt",
+                required_gate_bundle_receipt_update,
+                "--enforce-blocking",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_tuple_parity.py",
+                "--receipt",
+                required_gate_bundle_receipt_update,
                 "--json-only",
             ],
             [

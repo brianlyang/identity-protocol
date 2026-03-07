@@ -224,6 +224,12 @@ def _collect_run_tuple_fallback(results: list[dict[str, Any]]) -> tuple[str, str
     )
 
 
+def _write_payload_out(out_path: str, payload: dict[str, Any]) -> None:
+    target = Path(out_path).expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run required gate bundle from mapping single-source registry.")
     parser.add_argument("--catalog", required=True)
@@ -236,6 +242,7 @@ def main() -> int:
     parser.add_argument("--send-time-gate-status", default="")
     parser.add_argument("--outlet-bypass-detected", action="store_true")
     parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
+    parser.add_argument("--out", default="", help="optional path to persist JSON receipt")
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -384,12 +391,16 @@ def main() -> int:
         target_payload.setdefault("bundle_contract_id", BUNDLE_CONTRACT_ID)
         target_payload.setdefault("bundle_key", BUNDLE_KEY)
         target_payload.setdefault("bundle_target_name", target_name)
+        if str(args.out or "").strip():
+            _write_payload_out(str(args.out), target_payload)
         if args.json_only:
             print(json.dumps(target_payload, ensure_ascii=False))
         else:
             print(json.dumps(target_payload, ensure_ascii=False, indent=2))
         return 1 if str(target_row.get("status", "")).upper() == STATUS_FAIL_REQUIRED else 0
 
+    if str(args.out or "").strip():
+        _write_payload_out(str(args.out), payload)
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:

@@ -17,6 +17,9 @@ STRICT_OPERATIONS = {
     "e2e",
     "ci",
     "validate",
+    "scan",
+    "three-plane",
+    "inspection",
     "mutation",
 }
 

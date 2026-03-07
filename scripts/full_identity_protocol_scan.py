@@ -195,6 +195,17 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "instance_base_repo_write_boundary",
             "protocol_feedback_ssot_archival",
             "protocol_version_alignment",
+            "required_gate_bundle_runner",
+            "required_gate_recurrence_escalator",
+            "required_gate_tuple_parity",
+            "cross_verification_tracks",
+            "intake_evidence_quorum",
+            "route_version_pinning",
+            "fallback_taxonomy_normalization",
+            "dedup_monotonicity",
+            "cross_workflow_schema",
+            "skill_path_integrity",
+            "execution_target_tuple_isolation",
             "e2e_hermetic_runtime_import",
         )
     )
@@ -443,6 +454,17 @@ def main() -> int:
                     operation="scan",
                     identity_id=iid,
                     stem=f"identity-execution-reply-coherence-blocker-receipt-scan-{iid}",
+                    ext="json",
+                )
+            )
+            required_gate_bundle_run_id = f"scan-{layer}-{iid}"
+            required_gate_bundle_receipt = str(
+                runtime_temp_file(
+                    channel="required-gate-bundle",
+                    operation="scan",
+                    identity_id=iid,
+                    run_token=layer,
+                    stem=f"required-gate-bundle-scan-{layer}-{iid}",
                     ext="json",
                 )
             )
@@ -1321,6 +1343,42 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "required_gate_bundle_runner": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--operation",
+                    "scan",
+                    "--out",
+                    required_gate_bundle_receipt,
+                    "--json-only",
+                ],
+                "required_gate_recurrence_escalator": [
+                    "python3",
+                    "scripts/validate_required_gate_recurrence_escalator.py",
+                    "--identity-id",
+                    iid,
+                    "--surface",
+                    "full_scan",
+                    "--operation",
+                    "scan",
+                    "--receipt",
+                    required_gate_bundle_receipt,
+                    "--enforce-blocking",
+                    "--json-only",
+                ],
+                "required_gate_tuple_parity": [
+                    "python3",
+                    "scripts/validate_required_gate_tuple_parity.py",
+                    "--receipt",
+                    required_gate_bundle_receipt,
+                    "--json-only",
+                ],
                 "cross_verification_tracks": [
                     "python3",
                     "scripts/required_gate_bundle_runner.py",
@@ -2078,6 +2136,66 @@ def main() -> int:
                     ):
                         if k in coupling_doc:
                             check_payload[k] = coupling_doc.get(k)
+                if name == "required_gate_bundle_runner":
+                    bundle_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "bundle_contract_id",
+                        "bundle_key",
+                        "bundle_status",
+                        "error_code",
+                        "identity_id",
+                        "catalog_path",
+                        "operation",
+                        "contract_mapping",
+                        "mapping_errors",
+                        "missing_targets",
+                        "run_id_binding",
+                        "report_selected_path",
+                        "required_contract",
+                        "failed_required_contract_count",
+                        "send_time_gate_status",
+                        "outlet_bypass_detected",
+                        "results",
+                    ):
+                        if k in bundle_doc:
+                            check_payload[k] = bundle_doc.get(k)
+                    if "bundle_status" in bundle_doc:
+                        check_payload["required_gate_bundle_runner_status"] = bundle_doc.get("bundle_status")
+                if name == "required_gate_recurrence_escalator":
+                    rec_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "required_gate_recurrence_status",
+                        "error_code",
+                        "escalation_level",
+                        "identity_id",
+                        "surface",
+                        "operation",
+                        "receipt_path",
+                        "state_path",
+                        "new_event_count",
+                        "tracked_event_count",
+                        "l1_error_families",
+                        "l2_error_families",
+                        "l3_error_families",
+                        "family_metrics",
+                        "stale_reasons",
+                    ):
+                        if k in rec_doc:
+                            check_payload[k] = rec_doc.get(k)
+                if name == "required_gate_tuple_parity":
+                    parity_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "required_gate_tuple_parity_status",
+                        "error_code",
+                        "tuple_names",
+                        "surface_count",
+                        "expected_surface_count",
+                        "receipt_path",
+                        "comparison",
+                        "stale_reasons",
+                    ):
+                        if k in parity_doc:
+                            check_payload[k] = parity_doc.get(k)
                 if name == "cross_verification_tracks":
                     cross_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

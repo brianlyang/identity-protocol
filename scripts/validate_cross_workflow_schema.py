@@ -273,8 +273,14 @@ def main() -> int:
     )
     payload.update(row)
 
-    route_action_required = bool(_nonempty(args.route_action)) or _has_route_signal(doc)
-    dedup_state_required = bool(_nonempty(args.dedup_state)) or _has_dedup_signal(doc)
+    route_action_required = bool(_nonempty(args.route_action))
+    dedup_state_required = bool(_nonempty(args.dedup_state))
+    if args.operation not in OBSERVATION_OPERATIONS:
+        route_action_required = route_action_required or _has_route_signal(doc)
+        dedup_state_required = dedup_state_required or _has_dedup_signal(doc)
+    elif explicit_current_round_linked:
+        route_action_required = route_action_required or _has_route_signal(doc)
+        dedup_state_required = dedup_state_required or _has_dedup_signal(doc)
     payload["route_action_required"] = route_action_required
     payload["dedup_state_required"] = dedup_state_required
 
