@@ -2628,6 +2628,54 @@ Implementation prerequisites (before broader code rollout):
    - when same error-code family reappears across multiple strict surfaces in bounded window, upgrade path is forced to control-plane change track (`HOTFIX16-P0-007`) instead of local patch-only closure.
 4. apply four-track mandatory closure only to control-plane mutations (to avoid deadlock on ordinary business patches).
 
+Implementation-freeze manifest (must be frozen before code landing):
+
+1. canonical UCG artifacts (single-source naming freeze):
+   - control-plane contract id: `hotfix_p0_007_ucg_control_plane_freeze_contract_v1`.
+   - bundle-runner artifact key: `required_gate_bundle_runner` (target file name frozen as `required_gate_bundle_runner.py`, under scripts directory).
+   - registry-source validator artifact key: `required_gate_registry_source_validator` (current canonical script remains `validate_required_contract_coverage.py`).
+   - tuple-parity validator artifact key: `required_gate_tuple_parity_validator` (target file name frozen as `validate_required_gate_tuple_parity.py`, under scripts directory).
+   - CI drift validator artifact key: `required_gate_surface_drift_validator` (target file name frozen as `validate_required_gate_surface_drift.py`, under scripts directory).
+2. mandatory strict-surface migration list (all six must switch to bundle-runner lineage):
+   - `scripts/identity_creator.py` (`validate/update` chains)
+   - `scripts/release_readiness_check.py`
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `.github/workflows/_identity-required-gates.yml`
+3. migration completion rule:
+   - any strict surface still carrying independently maintained required-gate arrays after rollout is treated as convergence failure (`IP-GATE-ENTRY-002` family) and blocks promotion.
+
+Recurrence escalator (quantitative trigger freeze):
+
+1. identity of "same error family":
+   - same prefix pattern up to numeric tail (example: `IP-ASB-STAMP-*`, `IP-GATE-ENTRY-*`).
+2. window + threshold:
+   - `L1` observation: `>=2` hits across `>=2` strict surfaces within rolling `24h` -> open recurrence receipt (non-promotional).
+   - `L2` escalation: `>=3` hits across `>=2` strict surfaces within rolling `72h` -> force upgrade path to `HOTFIX16-P0-007` and require four-track mutation bundle.
+   - `L3` freeze: `>=5` hits or second `L2` event within rolling `7d` -> control-plane merge freeze until tuple-parity replay is archived.
+3. action level:
+   - `L1`: evidence-index append only.
+   - `L2`: mandatory governance/review hotfix mutation row + CI drift checks in required chain.
+   - `L3`: promotion freeze on affected rows (`SPEC_READY / PENDING_INTAKE` lock persists).
+
+UCG operation semantics matrix (required-contract consistency freeze):
+
+| Operation | Run profile | required_contract formula | Legal non-applicable output | required=true failure behavior |
+| --- | --- | --- | --- | --- |
+| `scan` | observation | `mapping_required AND current_round_linked` | `SKIPPED_NOT_REQUIRED` + `required_contract_not_applicable_no_current_round_evidence_source` | `FAIL_REQUIRED` allowed as observational evidence (non-promotion) |
+| `validate` | strict | `mapping_required AND current_round_linked` | `SKIPPED_NOT_REQUIRED` + same machine reason | fail-close gate |
+| `update` | strict | `mapping_required AND current_round_linked` | `SKIPPED_NOT_REQUIRED` + same machine reason | fail-close gate |
+| `readiness` | strict | `mapping_required AND current_round_linked` | `SKIPPED_NOT_REQUIRED` + same machine reason | fail-close gate |
+| `e2e` | strict | `mapping_required AND current_round_linked` | `SKIPPED_NOT_REQUIRED` + same machine reason | fail-close gate |
+| `ci` | strict | `mapping_required AND current_round_linked` | `SKIPPED_NOT_REQUIRED` + same machine reason | fail-close gate |
+
+Send-time canonicalization freeze (pre-code binding):
+
+1. canonical send-time verdict remains single-source and cannot be replaced by per-surface fallback verdict.
+2. strict operations (`validate/update/readiness/e2e/ci`) are not allowed to return `contract_not_required` for canonical send-time gate when `required_contract=true`.
+3. observation (`scan`) may report skip only under matrix-defined non-applicable condition; synthetic skip without machine reason is treated as drift.
+
 State impact:
 
 1. this checkpoint confirms high necessity and feasibility of UCG hardening at protocol layer.

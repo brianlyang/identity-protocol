@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1832,6 +1832,24 @@ Round-10 UCG pre-code readiness reinforcement (`HEAD=30423c5+`, 2026-03-07):
    - this round increases implementation readiness but does not change lifecycle state.
    - `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`, and `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+Round-10 implementation-freeze addendum (mandatory before code rollout):
+
+1. artifact freeze (single-source naming):
+   - control-plane contract id frozen as `hotfix_p0_007_ucg_control_plane_freeze_contract_v1`.
+   - bundle-runner artifact key frozen as `required_gate_bundle_runner` (target file name `required_gate_bundle_runner.py` under scripts directory).
+   - registry-source validator frozen to current canonical implementation (`validate_required_contract_coverage.py`).
+   - tuple-parity validator artifact key frozen as `required_gate_tuple_parity_validator` (target file name `validate_required_gate_tuple_parity.py` under scripts directory).
+2. recurrence escalator quantitative freeze:
+   - `L1`: `>=2` same-family hits across `>=2` strict surfaces within `24h`.
+   - `L2`: `>=3` same-family hits across `>=2` strict surfaces within `72h` -> forced upgrade path to `HOTFIX16-P0-007`.
+   - `L3`: `>=5` hits or second `L2` within `7d` -> control-plane merge freeze until tuple-parity replay closure.
+3. mandatory migration surface list freeze:
+   - `identity_creator (validate/update)`, `release_readiness`, `three-plane`, `full-scan`, `e2e`, and `required-gates CI workflow` must converge to bundle-runner lineage.
+4. operation semantics freeze:
+   - `required_contract` formula is unified as `mapping_required AND current_round_linked` across `scan/validate/readiness/update/e2e/ci`.
+   - non-applicable state must be `SKIPPED_NOT_REQUIRED` with machine reason `required_contract_not_applicable_no_current_round_evidence_source`.
+   - strict operations remain fail-close on required=true failures; observation (`scan`) may remain non-promotional.
+
 ### HOTFIX16-P1-003 - emergency hotfix intake (`strict-surface fixed /tmp path debt`)
 
 - Status: `SPEC_READY` (hotfix lane intake)
@@ -2326,7 +2344,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | multi-source protocol-feedback replay confirms positive reinforcement (parser crash closure, no-hard-switch baseline, SSOT archival integrity), but convergence residuals remain: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness under strict pointer/binding divergence, and semantic residual `IP-SEM-004`. status remains non-promotional pending convergence hardening replay closure. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T09:10:00Z | round-10 pre-code reinforcement confirms UCG control-plane direction (`1门 + 1判 + 1账`) and freezes prerequisites (`single registry source + single bundle-runner lineage + CI drift guard + recurrence escalator`) before new code rollout; state remains non-promotional pending full replay closure across strict surfaces. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T09:45:00Z | round-10 pre-code reinforcement now includes mandatory freeze addendum before code rollout: (`artifact naming freeze for bundle-runner/registry-source/tuple-parity validators` + `quantized recurrence escalator L1/L2/L3` + `six-surface migration manifest` + `operation semantics matrix for required_contract`). state remains non-promotional pending full replay closure across strict surfaces. |
 
 ---
 
