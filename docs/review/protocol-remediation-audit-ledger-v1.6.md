@@ -1680,15 +1680,15 @@ Implementation delta snapshot (2026-03-07):
 Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer):
 
 1. replay commands executed:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect,base-repo-audit-expert-v3 --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/hotfix_headstamp_r6_fullscan.json`
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids <IDENTITY_A>,<IDENTITY_B> --project-catalog <PROJECT_CATALOG> --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/hotfix_headstamp_r6_fullscan.json`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_A> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id <IDENTITY_B> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
 2. observed behavior:
-   - `base-repo-audit-expert-v3`: `FAIL_REQUIRED` (`IP-ASB-STAMP-SCAN-004`), with dynamic positive case failing `IP-ASB-STAMP-SESSION-005`;
-   - `base-repo-architect`: `PASS_REQUIRED` on the same closure suite.
+   - one strict-path identity returns `FAIL_REQUIRED` (`IP-ASB-STAMP-SCAN-004`) with dynamic positive case failing `IP-ASB-STAMP-SESSION-005`;
+   - another identity under the same suite returns `PASS_REQUIRED`.
 3. cross-check command:
-   - `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --identity-id <base-repo-audit-expert-v3|base-repo-architect> --actor-id assistant:codex --operation scan --json-only`
-   - both identities return `actor_binding_status=PASS_REQUIRED` under `binding_key_mode=actor_id+session_id`.
+   - `python3 scripts/validate_actor_session_binding.py --catalog <PROJECT_CATALOG> --identity-id <IDENTITY_A|IDENTITY_B> --actor-id assistant:codex --operation scan --json-only`
+   - both sampled identities return `actor_binding_status=PASS_REQUIRED` under `binding_key_mode=actor_id+session_id`.
 4. audit conclusion:
    - recurrence root cause is protocol-layer resolver divergence, not allowed hard-switch behavior:
    - `validate_actor_session_binding.py` resolves binding with explicit target identity;
@@ -1697,6 +1697,10 @@ Round-6 recurrence replay (`HEAD=6a2ef0b`, 2026-03-07, protocol-layer):
    - unify actor-binding source and require deterministic actor-binding selection tuple for all send-time/closure validators;
    - add machine receipt fields for binding selection mode/session/compare token;
    - keep `IP-ASB-STAMP-SESSION-*` as compatibility trace only until canonical family convergence.
+6. positive reinforcement captured in the same round:
+   - no-hard-switch fail-close behavior remains effective;
+   - strict env/catalog mismatch remains fail-close on strict surfaces;
+   - replay-archive contract remains `PASS_REQUIRED` on the replay set.
 
 Architect handoff artifacts (absolute paths):
 
@@ -2143,7 +2147,7 @@ Promotion guard (hard):
 | FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | Batch-7 strict applicability closure landed in protocol layer: fallback/intake strict lanes no longer synthetic-fail on unlinked rounds; explicit negatives remain fail-close (`IP-FBTAX-001`). Row remains non-promotional pending independent required=true current-round replay archive. |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Write-boundary non-starvation hooks remain lane-wired (`093496b`); this round adds canonical `RQ-028` kernel/mapping projection (`910ec6e`) for full requirement coverage. Promotion boundary unchanged pending replay matrix closure (`A/B/C/D/E/F`). |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
-| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening remains landed, and round-6 replay reconfirmed residual recurrence: `base-repo-audit-expert-v3` fails `IP-ASB-STAMP-SCAN-004` with positive-governed case `IP-ASB-STAMP-SESSION-005` while `base-repo-architect` passes. cross-check points to actor-binding resolver divergence (identity-scoped binding gate vs latest-binding probe). remains non-promotional until single-source resolver + canonical error-family convergence + live lane/headstamp replay archive are complete. |
+| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening remains landed, and round-6 replay reconfirmed residual recurrence: sampled identities show asymmetric closure (`IP-ASB-STAMP-SCAN-004` + positive-governed `IP-ASB-STAMP-SESSION-005` on failing branch vs pass on control branch). cross-check points to actor-binding resolver divergence (identity-scoped binding gate vs latest-binding probe). remains non-promotional until single-source resolver + canonical error-family convergence + live lane/headstamp replay archive are complete. |
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path residual closure landed: CI required-gates now uses runner/runtime-scoped temp roots and legacy stamp/first-line/coherence blocker defaults use `runtime_temp_file(...)`; targeted static replay shows no fixed `/tmp` literals. status remains non-promotional pending independent replay sign-off. |
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | strict convergence closure landed for this round: `identity_creator` now propagates `--scope` to instance-isolation checks and Batch-6/7 strict non-linked paths emit deterministic `SKIPPED_NOT_REQUIRED` instead of synthetic missing-evidence failures. status remains non-promotional pending independent replay sign-off + current-round evidence archive. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
