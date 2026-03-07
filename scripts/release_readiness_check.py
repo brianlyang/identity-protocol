@@ -232,6 +232,14 @@ def main() -> int:
             "(tool_installation/vendor_api_discovery/vendor_api_solution). default disabled."
         ),
     )
+    ap.add_argument("--target-branch", default="")
+    ap.add_argument("--release-head-sha", default="")
+    ap.add_argument("--required-gates-run-id", default="")
+    ap.add_argument("--run-url", default="")
+    ap.add_argument("--workflow-file-sha", default="")
+    ap.add_argument("--run-head-sha", default="")
+    ap.add_argument("--run-workflow-file-sha", default="")
+    ap.add_argument("--checks-json", default="")
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
@@ -247,6 +255,14 @@ def main() -> int:
 
     base = args.base.strip() or _git_rev("HEAD~1")
     head = args.head.strip() or _git_rev("HEAD")
+    target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
+    release_head_sha = str(args.release_head_sha or "").strip() or head
+    required_gates_run_id = str(args.required_gates_run_id or "").strip() or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
+    run_url = str(args.run_url or "").strip()
+    workflow_file_sha = str(args.workflow_file_sha or "").strip() or release_head_sha
+    run_head_sha = str(args.run_head_sha or "").strip() or release_head_sha
+    run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip() or workflow_file_sha
+    checks_json = str(args.checks_json or "").strip()
     identity_id = args.identity_id.strip()
     scope = args.scope.strip().upper()
     layer_intent_text = args.layer_intent_text.strip()
@@ -348,6 +364,8 @@ def main() -> int:
         "identity/catalog/identities.yaml",
         "--expect-mode",
         "auto",
+        "--operation",
+        "readiness",
     ]
     if scope:
         guard_cmd.extend(["--scope", scope])
@@ -973,21 +991,21 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--target-branch",
-            args.target_branch,
+            target_branch,
             "--release-head-sha",
-            args.release_head_sha,
+            release_head_sha,
             "--required-gates-run-id",
-            args.required_gates_run_id,
+            required_gates_run_id,
             "--run-url",
-            args.run_url,
+            run_url,
             "--workflow-file-sha",
-            args.workflow_file_sha,
+            workflow_file_sha,
             "--run-head-sha",
-            args.run_head_sha,
+            run_head_sha,
             "--run-workflow-file-sha",
-            args.run_workflow_file_sha,
+            run_workflow_file_sha,
             "--checks-json",
-            args.checks_json,
+            checks_json,
             "--operation",
             "readiness",
             "--json-only",
@@ -1013,7 +1031,7 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--run-id",
-            args.required_gates_run_id,
+            required_gates_run_id,
             "--operation",
             "readiness",
             "--json-only",
@@ -1037,7 +1055,7 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--run-id",
-            args.required_gates_run_id,
+            required_gates_run_id,
             "--operation",
             "readiness",
             "--json-only",

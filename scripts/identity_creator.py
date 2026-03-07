@@ -108,6 +108,7 @@ def _runtime_mode_guard(
     repo_catalog: str,
     scope: str = "",
     expect_mode: str = "auto",
+    operation: str = "validate",
 ) -> int:
     cmd = [
         "python3",
@@ -120,6 +121,8 @@ def _runtime_mode_guard(
         repo_catalog,
         "--expect-mode",
         str(expect_mode or "auto"),
+        "--operation",
+        str(operation or "validate"),
     ]
     if scope.strip():
         cmd.extend(["--scope", scope.strip()])
@@ -1134,6 +1137,7 @@ def main() -> int:
     p_validate.add_argument("--repo-catalog", default=repo_catalog_default)
     p_validate.add_argument("--catalog", default=local_catalog_default)
     p_validate.add_argument("--scope", default="")
+    p_validate.add_argument("--run-id", default="", help="optional validate run id for run-id anchored validators")
     p_validate.add_argument(
         "--baseline-policy",
         choices=["strict", "warn"],
@@ -1245,6 +1249,15 @@ def main() -> int:
         help="JSON receipt path required when --allow-fixture-runtime is used for fixture mutation",
     )
     p_update.add_argument("--auto-converge-active", action="store_true")
+    p_update.add_argument("--run-id", default="", help="optional update run id for run-id anchored validators")
+    p_update.add_argument("--target-branch", default="")
+    p_update.add_argument("--release-head-sha", default="")
+    p_update.add_argument("--required-gates-run-id", default="")
+    p_update.add_argument("--run-url", default="")
+    p_update.add_argument("--workflow-file-sha", default="")
+    p_update.add_argument("--run-head-sha", default="")
+    p_update.add_argument("--run-workflow-file-sha", default="")
+    p_update.add_argument("--checks-json", default="")
     p_update.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     p_update.add_argument("--expected-work-layer", default="", help="optional expected work_layer passthrough")
     p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
@@ -1398,6 +1411,7 @@ def main() -> int:
             args.repo_catalog,
             args.scope,
             expect_mode="any",
+            operation="validate",
         )
         if rc_guard != 0:
             return rc_guard
@@ -2526,7 +2540,13 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
-        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+        rc_guard = _runtime_mode_guard(
+            args.identity_id,
+            args.catalog,
+            args.repo_catalog,
+            args.scope,
+            operation="activate",
+        )
         if rc_guard != 0:
             return rc_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
@@ -2609,6 +2629,7 @@ def main() -> int:
             args.repo_catalog,
             args.scope,
             expect_mode=guard_expect_mode,
+            operation="update",
         )
         if rc_guard != 0:
             return rc_guard
@@ -2677,6 +2698,33 @@ def main() -> int:
         if rc_boundary != 0:
             return rc_boundary
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+        update_run_id = str(args.run_id or "").strip() or creator_run_id
+        update_target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
+        update_release_head_sha = str(args.release_head_sha or "").strip()
+        if not update_release_head_sha:
+            try:
+                p_head = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if p_head.returncode == 0:
+                    update_release_head_sha = str(p_head.stdout or "").strip()
+            except Exception:
+                update_release_head_sha = ""
+        update_required_gates_run_id = (
+            str(args.required_gates_run_id or "").strip()
+            or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
+            or update_run_id
+        )
+        update_run_url = str(args.run_url or "").strip()
+        update_workflow_file_sha = str(args.workflow_file_sha or "").strip() or update_release_head_sha
+        update_run_head_sha = str(args.run_head_sha or "").strip() or update_release_head_sha
+        update_run_workflow_file_sha = (
+            str(args.run_workflow_file_sha or "").strip() or update_workflow_file_sha
+        )
+        update_checks_json = str(args.checks_json or "").strip()
         pre_mutation_gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         pre_mutation_reply_file = str(
             runtime_temp_file(
@@ -3064,21 +3112,21 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--target-branch",
-                args.target_branch,
+                update_target_branch,
                 "--release-head-sha",
-                args.release_head_sha,
+                update_release_head_sha,
                 "--required-gates-run-id",
-                args.required_gates_run_id,
+                update_required_gates_run_id,
                 "--run-url",
-                args.run_url,
+                update_run_url,
                 "--workflow-file-sha",
-                args.workflow_file_sha,
+                update_workflow_file_sha,
                 "--run-head-sha",
-                args.run_head_sha,
+                update_run_head_sha,
                 "--run-workflow-file-sha",
-                args.run_workflow_file_sha,
+                update_run_workflow_file_sha,
                 "--checks-json",
-                args.checks_json,
+                update_checks_json,
                 "--operation",
                 "update",
                 "--json-only",
@@ -3104,7 +3152,7 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--run-id",
-                args.run_id,
+                update_run_id,
                 "--operation",
                 "update",
                 "--json-only",
@@ -3128,7 +3176,7 @@ def main() -> int:
                 "--identity-id",
                 args.identity_id,
                 "--run-id",
-                args.run_id,
+                update_run_id,
                 "--operation",
                 "update",
                 "--json-only",

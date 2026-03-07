@@ -2123,6 +2123,52 @@ State impact:
 3. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` until applicability + context fail-fast closure is proven.
 4. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains enforced.
 
+### 8.21 Round-3 Head Re-Audit Checkpoint (`HEAD=a0c191e`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint audits the current head only (`a0c191e`) with executable replay evidence.
+2. this checkpoint remains protocol-layer only and does not prescribe instance business remediation.
+3. this checkpoint re-validates previously open blockers (`HOTFIX16-P0-005`, `HOTFIX16-P1-004`) and newly landed machine-lock wiring (`HOTFIX16-P0-006`).
+
+Replay commands executed (non-hardcoded runtime paths):
+
+1. `source ./scripts/use_local_identity_env.sh`
+2. `GLOBAL_CATALOG="${HOME}/.codex/identity/catalog.local.yaml"`
+3. `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog "${IDENTITY_CATALOG}" --scope USER --actor-id assistant:codex`
+4. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog "${IDENTITY_CATALOG}" --scope USER --actor-id assistant:codex`
+5. `IDENTITY_CATALOG="${GLOBAL_CATALOG}" python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog "${GLOBAL_CATALOG}" --scope USER --actor-id assistant:codex`
+6. `IDENTITY_CATALOG="${GLOBAL_CATALOG}" python3 scripts/identity_creator.py update --identity-id office-ops-expert --catalog "${GLOBAL_CATALOG}" --scope USER --mode review-required`
+7. `python3 scripts/validate_cross_workflow_schema.py --identity-id office-ops-expert --catalog "${GLOBAL_CATALOG}" --operation scan --json-only`
+8. `IDENTITY_CATALOG="${IDENTITY_CATALOG}" python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog "${GLOBAL_CATALOG}" --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation validate`
+9. `python3 scripts/validate_replay_archive_contract.py --identity-id office-ops-expert --catalog "${GLOBAL_CATALOG}" --operation scan --json-only`
+10. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --project-catalog "${GLOBAL_CATALOG}" --actor-id assistant:codex --out /tmp/full_scan_office_fix_round3b.json`
+
+Findings:
+
+1. parser drift closure is verified:
+   - `release_readiness_check.py` now declares release-plane pass-through args (`--target-branch`, `--release-head-sha`, `--required-gates-run-id`, `--run-url`, `--workflow-file-sha`, `--run-head-sha`, `--run-workflow-file-sha`, `--checks-json`).
+   - `identity_creator.py validate` now declares `--run-id`.
+2. strict context fail-fast is enforced on strict surfaces:
+   - env/catalog mismatch now fails with `IP-ENV-003` for `validate/readiness/ci` operations.
+   - `scan` operation remains observational (`rc=0` + warning).
+3. `P1-APPLICABILITY-003` is closed on observation profile:
+   - `validate_v16_cross_workflow_schema.py --operation scan` now returns `SKIPPED_NOT_REQUIRED` with `cross_workflow_not_applicable_no_route_or_dedup_signal`.
+4. gate-chain now fails for contract reasons rather than parser/runtime crashes:
+   - with catalog aligned, `identity_creator update` and delegated `release_readiness_check` preflight both progress into downstream contract gates and fail with deterministic business gate codes (for example `IP-EXEC-ORDER-001`, `IP-PVA-003`, `IP-INTAKE-EVID-001` depending on identity evidence state), not `AttributeError`/`NameError`.
+5. replay-archive expectation drift is closed:
+   - `validate_replay_archive_contract.py` now returns `PASS_REQUIRED` after updating `rq019_negative_missing_field` fixture to remain negative under applicability-aware schema extraction (`missing_run_id` + explicit dedup signal).
+6. `HOTFIX16-P0-006` implementation landing is confirmed but required-path replay is still pending:
+   - validator and lane hooks are present, but sample replay on all four audited identities returns `execution_target_tuple_isolation_status=SKIPPED_NOT_REQUIRED` (`contract_not_required`), so required=true deterministic archive is not yet closed.
+
+State impact:
+
+1. no row is promoted in this checkpoint.
+2. `HOTFIX16-P0-005` remains `SPEC_READY / PENDING_INTAKE` (parser/runtime crash closure is verified; crash-class blocker is closed but downstream required-gate replay closure is still pending).
+3. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` (applicability closure + strict mismatch fail-close + replay-archive drift fix are landed; independent audit sign-off remains pending).
+4. `HOTFIX16-P0-006` remains `SPEC_READY / PENDING_INTAKE` until required=true tuple replay archive is attached.
+5. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains enforced.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

@@ -10,6 +10,57 @@ from typing import Any
 
 from resolve_identity_context import resolve_identity
 
+STRICT_OPERATIONS = {
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "mutation",
+}
+
+
+def _load_env_catalog_override_receipt(
+    receipt_path: str,
+    *,
+    catalog_path: Path,
+    env_catalog_path: Path | None,
+) -> tuple[bool, str]:
+    token = str(receipt_path or "").strip()
+    if not token:
+        return False, "override_receipt_missing"
+    path = Path(token).expanduser().resolve()
+    if not path.exists() or not path.is_file():
+        return False, "override_receipt_not_found"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False, "override_receipt_not_json"
+    if not isinstance(payload, dict):
+        return False, "override_receipt_not_object"
+    if not bool(payload.get("allow_env_catalog_mismatch", False)):
+        return False, "override_receipt_not_authorized"
+
+    receipt_catalog = str(payload.get("catalog_path", "")).strip()
+    if receipt_catalog:
+        try:
+            if Path(receipt_catalog).expanduser().resolve() != catalog_path:
+                return False, "override_catalog_path_mismatch"
+        except Exception:
+            return False, "override_catalog_path_invalid"
+
+    if env_catalog_path is not None:
+        receipt_env_catalog = str(payload.get("env_catalog_path", "")).strip()
+        if receipt_env_catalog:
+            try:
+                if Path(receipt_env_catalog).expanduser().resolve() != env_catalog_path:
+                    return False, "override_env_catalog_path_mismatch"
+            except Exception:
+                return False, "override_env_catalog_path_invalid"
+
+    return True, "override_receipt_valid"
+
 
 def _within(path: Path, root: Path) -> bool:
     try:
@@ -67,6 +118,16 @@ def main() -> int:
         choices=["auto", "project", "global", "custom", "any"],
         default="auto",
         help="auto requires catalog to map to project/global canonical mode",
+    )
+    ap.add_argument(
+        "--operation",
+        choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection", "mutation"],
+        default="validate",
+    )
+    ap.add_argument(
+        "--env-catalog-mismatch-override-receipt",
+        default="",
+        help="optional JSON receipt path that explicitly authorizes env/catalog mismatch for strict operations",
     )
     ap.add_argument("--json", action="store_true", help="print full payload as JSON")
     args = ap.parse_args()
@@ -147,6 +208,8 @@ def main() -> int:
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
+        "operation": args.operation,
+        "strict_operation": args.operation in STRICT_OPERATIONS,
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
         "resolved_catalog_path": str(resolved_catalog),
@@ -161,6 +224,12 @@ def main() -> int:
         "checks": checks,
         "env_catalog_path": str(env_catalog_path) if env_catalog_path else "",
         "env_catalog_mismatch": env_catalog_mismatch,
+        "env_catalog_mismatch_override_receipt": str(
+            Path(args.env_catalog_mismatch_override_receipt).expanduser().resolve()
+        )
+        if str(args.env_catalog_mismatch_override_receipt or "").strip()
+        else "",
+        "env_catalog_mismatch_override_status": "not_checked",
         "fix_hint": "source ./scripts/identity_runtime_select.sh project",
     }
 
@@ -187,12 +256,41 @@ def main() -> int:
             print("            source ./scripts/identity_runtime_select.sh project")
         return 2
 
+    strict_operation = args.operation in STRICT_OPERATIONS
+    override_ok = False
+    override_reason = "not_required"
+    if env_catalog_mismatch:
+        override_ok, override_reason = _load_env_catalog_override_receipt(
+            args.env_catalog_mismatch_override_receipt,
+            catalog_path=catalog_path,
+            env_catalog_path=env_catalog_path,
+        )
+    payload["env_catalog_mismatch_override_status"] = override_reason
+
+    if env_catalog_mismatch and strict_operation and not override_ok:
+        print("[FAIL] IP-ENV-003 strict runtime mode guard blocked env/catalog drift")
+        print(
+            "       IDENTITY_CATALOG env differs from requested catalog without authorized override receipt "
+            f"(env={env_catalog_path}, catalog={catalog_path}, operation={args.operation})"
+        )
+        print("       fix: source ./scripts/identity_runtime_select.sh project")
+        print(
+            "       or pass --env-catalog-mismatch-override-receipt <json> "
+            "with allow_env_catalog_mismatch=true for audited emergency bypass"
+        )
+        return 2
+
     print(
         "[OK] runtime mode guard passed: "
         f"identity={args.identity_id} mode={inferred_mode} "
         f"catalog={catalog_path} pack={resolved_pack} scope={resolved_scope}"
     )
-    if env_catalog_mismatch:
+    if env_catalog_mismatch and override_ok:
+        print(
+            "[WARN] IDENTITY_CATALOG env/catalog drift allowed by audited override receipt "
+            f"(status={override_reason}, operation={args.operation})."
+        )
+    elif env_catalog_mismatch:
         print(
             "[WARN] IDENTITY_CATALOG env differs from requested catalog "
             f"(env={env_catalog_path}); explicit --catalog takes precedence."

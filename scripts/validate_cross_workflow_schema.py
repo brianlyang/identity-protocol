@@ -82,6 +82,27 @@ def _nonempty(*vals: Any) -> str:
     return ""
 
 
+def _has_route_signal(doc: Any) -> bool:
+    if not isinstance(doc, dict):
+        return False
+    if _nonempty(doc.get("route_action"), doc.get("route_selected"), doc.get("task_route")):
+        return True
+    route_decision = doc.get("route_decision")
+    if isinstance(route_decision, dict):
+        if _nonempty(route_decision.get("route"), route_decision.get("action"), route_decision.get("route_action")):
+            return True
+        return bool(route_decision)
+    return route_decision is not None
+
+
+def _has_dedup_signal(doc: Any) -> bool:
+    if not isinstance(doc, dict):
+        return False
+    if _nonempty(doc.get("dedup_state")):
+        return True
+    return any(doc.get(k) is not None for k in ("dedup", "dedup_monotonicity", "winner"))
+
+
 def _resolve_evidence_path(*, explicit_evidence: str, pack_path: Path, identity_id: str, contract: dict[str, Any]) -> Path | None:
     if explicit_evidence.strip():
         p = Path(explicit_evidence).expanduser().resolve()
@@ -156,6 +177,8 @@ def main() -> int:
         "evidence_hash": "",
         "expected_evidence_hash": str(args.expected_evidence_hash or "").strip(),
         "hash_consistency_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "route_action_required": False,
+        "dedup_state_required": False,
         "stale_reasons": [],
     }
 
@@ -256,11 +279,24 @@ def main() -> int:
     )
     payload.update(row)
 
-    missing = [
-        k
-        for k in ("run_id", "route_action", "quality_meta_state", "dedup_state", "schema_version", "evidence_hash")
-        if not _nonempty(row.get(k))
-    ]
+    route_action_required = bool(_nonempty(args.route_action)) or _has_route_signal(doc)
+    dedup_state_required = bool(_nonempty(args.dedup_state)) or _has_dedup_signal(doc)
+    payload["route_action_required"] = route_action_required
+    payload["dedup_state_required"] = dedup_state_required
+
+    if (not route_action_required) and (not dedup_state_required) and not auto_required:
+        payload["cross_workflow_schema_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["hash_consistency_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["stale_reasons"] = ["cross_workflow_not_applicable_no_route_or_dedup_signal"]
+        _emit(payload, json_only=args.json_only)
+        return 0
+
+    required_fields = ["run_id", "quality_meta_state", "schema_version", "evidence_hash"]
+    if route_action_required:
+        required_fields.append("route_action")
+    if dedup_state_required:
+        required_fields.append("dedup_state")
+    missing = [k for k in required_fields if not _nonempty(row.get(k))]
     if missing:
         payload["cross_workflow_schema_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_REQUIRED_FIELD_MISSING

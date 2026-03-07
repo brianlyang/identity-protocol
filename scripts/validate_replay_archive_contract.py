@@ -261,9 +261,9 @@ def _build_cases(
     _write_json(
         xwf_neg,
         {
-            "run_id": "replay-task14-xwf-neg",
             "route_action": "route:pinning-check",
             "quality_meta_state": "quality_ok",
+            "dedup": {"strategy": "monotonic"},
             "schema_version": "v1",
         },
     )
