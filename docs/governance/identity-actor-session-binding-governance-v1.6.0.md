@@ -3384,6 +3384,40 @@ State impact:
 2. Lifecycle boundary unchanged: `HOTFIX16-P0-007` remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until independent replay sign-off.
 3. Instance migration/accounting debt remains instance-owned; protocol layer keeps identify/validate/reject boundary only.
 
+## 8.43 Round-25 HUD Egress Mandatory Chain Clarification (protocol-only, communication freeze)
+
+Problem statement (replayed):
+
+1. HUD/Identity-Context can still be missing when user-visible output bypasses canonical compose/send-time gate and is emitted as direct text.
+2. This is a protocol control-plane egress consistency issue, not an instance business capability issue.
+3. Two-layer path convergence alone does not close this class unless reply egress is also frozen to one chain.
+
+Decision freeze (communication baseline):
+
+1. All strict user-visible replies must flow through one canonical egress chain:
+   - `compose_and_validate_governed_reply.py`
+   - `validate_send_time_reply_gate.py`
+   - final emission
+2. Direct text egress outside canonical chain is non-compliant for strict operations and must be fail-close.
+3. Entry tuple and egress tuple must stay consistent on the same run (`actor_id`, `identity_id`, `work_layer`, `source_layer`, `lock_state`).
+4. HUD first line is mandatory protocol output contract, not optional formatting.
+
+Scope and ownership:
+
+1. Protocol layer owns egress chain enforcement and mismatch rejection.
+2. Instance layer does not patch around missing HUD; instance only consumes protocol verdicts.
+
+Acceptance replay (for bilateral communication):
+
+1. `validate`, `three-plane`, and `full-scan` must produce user-visible output with Identity-Context first line present under strict replay.
+2. `reply_first_line_status=PASS_REQUIRED` and `send_time_gate_status=PASS_REQUIRED` must be concurrently true on the same run lineage.
+3. Any direct-output bypass path detected in strict replay is treated as governance regression for `HOTFIX16-P0-007`.
+
+State impact:
+
+1. This section adds communication and enforcement clarity only; no promotional status change.
+2. Lifecycle boundary unchanged: `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`.
+
 
 ## 9) References
 

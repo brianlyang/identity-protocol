@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 + governance_v1.6_section_8.35 + audit_round16_semantic_requiredization_scope_convergence + governance_v1.6_section_8.37 + audit_round18_protocol_lane_residual_convergence | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 + governance_v1.6_section_8.41 + audit_round22_ucg_minimal_control_plane_freeze_20260308 + governance_v1.6_section_8.42 + audit_round24_full_repo_scan_identity_scope_20260308 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 + governance_v1.6_section_8.41 + audit_round22_ucg_minimal_control_plane_freeze_20260308 + governance_v1.6_section_8.42 + audit_round24_full_repo_scan_identity_scope_20260308 + governance_v1.6_section_8.43 + audit_round25_hud_egress_mandatory_chain_20260308 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -2664,6 +2664,27 @@ Decision:
 
 1. Protocol layer scan debt for `scripts + identity` normative surfaces is closed in this round.
 2. Lifecycle boundary unchanged (`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`); `HOTFIX16-P0-007` remains `PENDING_INTAKE` until independent replay sign-off.
+
+---
+
+### Round-25 protocol checkpoint: HUD egress mandatory chain clarification (`direct-output bypass` guard, non-promotional)
+
+1. Objective: stabilize bilateral communication by freezing HUD as mandatory protocol egress contract, not optional formatting.
+2. Confirmed boundary: missing HUD in strict conversations is treated as control-plane egress inconsistency, not instance capability regression.
+3. Mandatory strict egress chain (single path):
+   - `compose_and_validate_governed_reply.py`
+   - `validate_send_time_reply_gate.py`
+   - final user-visible emission
+4. Governance requirement:
+   - strict user-visible output that bypasses canonical egress is non-compliant and should fail-close.
+   - tuple continuity is required across entry->egress (`actor_id`, `identity_id`, `work_layer`, `source_layer`, `lock_state`).
+5. Communication impact:
+   - protocol and architecture side now share the same exchange baseline: "no canonical egress -> no outbound strict reply".
+
+Decision:
+
+1. This round is a control-plane communication freeze and does not change promotion posture.
+2. `HOTFIX16-P0-007` remains `PENDING_INTAKE`.
 
 ---
 
