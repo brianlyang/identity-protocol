@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 + governance_v1.6_section_8.35 + audit_round16_semantic_requiredization_scope_convergence + governance_v1.6_section_8.37 + audit_round18_protocol_lane_residual_convergence | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 + governance_v1.6_section_8.41 + audit_round22_ucg_minimal_control_plane_freeze_20260308 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -2522,6 +2522,30 @@ Round-21 headstamp multibinding + parser convergence replay (`HEAD=13aa0b0+dirty
    - row remains `PENDING_INTAKE` pending independent auditor replay sign-off on latest head.
    - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+Round-22 UCG minimal control-plane decision freeze (`HEAD=13aa0b0+dirty`, 2026-03-08):
+
+1. scope:
+   - this round is governance simplification, not requirement expansion.
+   - objective is to collapse prior branch-heavy guidance into one enforceable control-plane shape.
+2. normative override:
+   - `8.41` becomes authoritative;
+   - `8.38/8.39/8.40` remain replay evidence, not parallel normative branches.
+3. frozen minimal model:
+   - `source_layer` reduced to `{USER, PROJECT, GLOBAL}`;
+   - `local/repo/env/auto` demoted to metadata (`catalog_origin_layer`, `resolution_mode`);
+   - single entry freeze tuple + single canonical egress fail-close.
+4. reduced CI contract (four assertions only):
+   - same-run full tuple equality (`validate` vs `three-plane`);
+   - non-empty `send_time_gate_status`;
+   - illegal `source_layer` hard-fail;
+   - strict-chain missing `--actor-id` hard-fail.
+5. protocol/instance boundary:
+   - protocol backlog accepts only tuple/entry/egress control-plane defects;
+   - instance runtime/path-policy findings are excluded from protocol remediation queue.
+6. state boundary:
+   - `HOTFIX16-P0-007` remains `PENDING_INTAKE`;
+   - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 Architect handoff artifacts (canonical channel pattern):
 
 1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
@@ -2587,7 +2611,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T04:10:00Z | round-18 residual convergence landed: semantic routing guard now provides deterministic inferred semantic tuple fallback for metadata-missing protocol batches, while handoff/collab self-test validators close stale-age false blockers via bounded recent-window validation + self-test age bypass. residual promotion blockers remain gated by independent full-chain replay (`update + three-plane + full-scan`) to clear `IP-UPG-002 + IP-SEM-001` on latest head. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:42:26Z | round-21 replay lands parser + multibinding convergence hardening: first-line evidence extraction now restores `.json/.jsonl/.txt` paths, and headstamp actor-mismatch probe no longer false-fails under `actor_id+session_id` multibinding without explicit session selector (`SKIPPED_INCONCLUSIVE_MULTIBINDING`). target SRA full-scan replay snapshot now shows `{p0:0, ok:1}` with explicit actor context; row remains non-promotional pending independent auditor sign-off. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T13:20:00Z | round-22 decision freeze reduces control-plane governance to a single minimal model (`3-layer source_layer`, single frozen entry tuple, single canonical egress fail-close, four CI hard assertions, strict protocol/instance backlog boundary). this supersedes prior branch-heavy normative paths and keeps row non-promotional pending independent auditor sign-off. |
 
 ---
 
