@@ -1788,6 +1788,9 @@ Hard guardrail:
 2. unresolved protocol route entry is fail-close; silent fallback to instance lane is prohibited.
 3. canonical dual headstamp is mandatory on every outbound assistant message, regardless of path (`governed compose` and `direct/manual`).
 4. lane activation success without headstamp continuity is invalid for promotion-grade evidence.
+5. outbound user-visible reply must have one canonical pre-send decision source:
+   - final dispatch is allowed only after canonical gateway verdict is emitted;
+   - distributed preflight checks may exist, but they cannot replace or bypass the canonical gateway verdict.
 
 Mandatory lane-activation receipt fields (machine-verifiable):
 
@@ -1844,6 +1847,17 @@ Positive reinforcement confirmed by this replay:
 2. strict context mismatch remains fail-close on strict surfaces (`IP-ENV-003` class).
 3. replay-archive contract remains stable on strict protocol replay set (`PASS_REQUIRED` closure retained).
 
+Round-8 four-track convergence residual (`HEAD=f53f36a`, 2026-03-07):
+
+1. `T1` contract intent and `T2` script wiring both state single-source headstamp enforcement.
+2. `T3` replay still reveals applicability drift on direct gateway invocation:
+   - `python3 scripts/validate_send_time_reply_gate.py --identity-id <ID> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+   - observed: `send_time_gate_status=SKIPPED_NOT_REQUIRED`, `required_contract=false`, `stale_reasons=[\"contract_not_required\"]`.
+3. `T4` multi-source protocol-feedback batches independently report recurrence perception under mixed strict/non-strict surfaces.
+4. interpretation:
+   - resolver divergence closure is valid;
+   - single-entry canonical egress enforcement is not yet universally requiredized, so recurrence perception can still appear.
+
 Architect closure requirements (protocol layer, mandatory):
 
 1. unify actor-binding resolution source for send-time gate and recurrence closure:
@@ -1859,6 +1873,14 @@ Architect closure requirements (protocol layer, mandatory):
 4. canonical code convergence remains mandatory:
    - `IP-ASB-STAMP-SESSION-*` stays compatibility trace only;
    - promotion-grade receipts must converge to canonical `IP-HDSTAMP-*` + actor-context family.
+5. enforce single-entry canonical egress gateway:
+   - canonical gateway source is `scripts/validate_send_time_reply_gate.py`;
+   - user-visible outbound operations must set `required_contract=true` for this gateway;
+   - `SKIPPED_NOT_REQUIRED(contract_not_required)` is invalid on promotion-grade replay for outbound headstamp checks;
+   - any send path bypassing canonical gateway must fail-close with `IP-HDSTAMP-004` (`canonical_gateway_bypass`).
+6. scope separation lock:
+   - unified control-plane entrypoint management/wiring governance is tracked independently under `8.27` (`HOTFIX16-P0-007`);
+   - this section (`8.15`) remains lane/headstamp-specific and must not absorb unrelated control-plane closure claims.
 
 Architect handoff inputs (absolute paths):
 
@@ -2392,7 +2414,15 @@ Required protocol-layer hardening (architect lane):
    - `report_selected_path`
    - `run_id_binding`
 3. promote strict session-refresh pointer/binding divergence from warning to fail-close on strict operations unless explicit audited override is present.
-4. keep `SKIPPED_NOT_REQUIRED(contract_not_required)` as legal non-failure for reply-channel validator until contract requiredization is explicit.
+4. split reply-channel applicability from canonical egress gateway applicability:
+   - `validate_protocol_feedback_reply_channel` may remain `SKIPPED_NOT_REQUIRED(contract_not_required)` when contract is not requiredized;
+   - canonical send-time egress gateway (`validate_send_time_reply_gate`) must be requiredized for user-visible outbound strict operations and cannot stay skip-only.
+5. require cross-surface egress tuple parity across creator/readiness/three-plane/full-scan/e2e/ci:
+   - `send_time_gate_enforced`
+   - `required_contract`
+   - `send_time_gate_status`
+   - `governed_outlet_enforced`
+   - `outlet_bypass_detected`
 
 State impact:
 
@@ -2438,6 +2468,115 @@ State impact:
 1. this section adds implementation guidance only and does not assert closure.
 2. `HOTFIX16-P1-003` remains `SPEC_READY / PENDING_INTAKE` until the three-script residuals are code-landed and replay-verified.
 3. release boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.27 Unified Protocol Control-Plane Entrypoint Freeze (`HOTFIX16-P0-007`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint is protocol-layer only and excludes instance business semantics.
+2. this checkpoint targets recurring scattered gate fixes by enforcing one management/wiring entrypoint.
+3. this checkpoint is a control-plane freeze and cannot be used to claim promotion readiness.
+4. this checkpoint is independent from `HOTFIX16-P0-002` (lane/headstamp); no mixed closure is allowed.
+
+Unified control model (mandatory):
+
+1. single registry source-of-truth:
+   - all protocol required-gate definitions must originate from `identity/protocol/mappings/contract-binding.v1.6.yaml`.
+2. single wiring entrypoint:
+   - all required-gate additions/removals must be wired through `scripts/validate_required_contract_coverage.py` first;
+   - direct per-surface ad-hoc gate lists are prohibited unless generated from the same registry tuple.
+3. single strict-surface convergence requirement:
+   - `scripts/release_readiness_check.py`
+   - `scripts/identity_creator.py` (`validate/update`)
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `.github/workflows/_identity-required-gates.yml`
+   - these surfaces must converge from one gate-set lineage and one tuple schema.
+4. single outbound verdict source remains mandatory:
+   - `scripts/validate_send_time_reply_gate.py` is the canonical user-visible outbound hard gate and cannot be bypassed.
+
+Four-track mandatory closure for any control-plane mutation:
+
+1. `T1 governance/spec`: clause + contract-id/version delta.
+2. `T2 wiring`: registry-to-surface propagation proof on all strict surfaces.
+3. `T3 replay`: deterministic `positive + negative + bypass-negative` with same `run_id`.
+4. `T4 protocol-feedback`: canonical outbox batch + evidence-index pointer set.
+5. this four-track bundle is a mutation verification workflow for control-plane changes only; it is not a blanket requirement for every unrelated protocol patch.
+
+Reserved anti-drift error-code family (control-plane):
+
+1. `IP-GATE-ENTRY-001` (`registry_source_missing_or_stale`)
+2. `IP-GATE-ENTRY-002` (`surface_wiring_not_from_registry_tuple`)
+3. `IP-GATE-ENTRY-003` (`cross_surface_tuple_divergence`)
+4. `IP-GATE-ENTRY-004` (`control_plane_mutation_without_four_track_bundle`)
+
+Required replay tuple parity (same lineage, strict surfaces):
+
+1. `run_id_binding`
+2. `report_selected_path`
+3. `failed_required_contract_count`
+4. `required_contract`
+5. `send_time_gate_status`
+6. `outlet_bypass_detected`
+
+Minimum executable acceptance commands:
+
+1. `python3 scripts/validate_required_contract_coverage.py --catalog <CATALOG> --identity-id <ID> --operation update --json-only`
+2. `python3 scripts/report_three_plane_status.py --catalog <CATALOG> --identity-id <ID> --actor-id assistant:codex --json-only`
+3. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids <ID> --project-catalog <CATALOG> --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --json-only`
+4. `python3 scripts/release_readiness_check.py --identity-id <ID> --catalog <CATALOG> --actor-id assistant:codex --json-only`
+5. `python3 scripts/docs_command_contract_check.py`
+6. `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. this section establishes continuous anti-drift governance for protocol control-plane entrypoint management.
+2. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.28 Round-8 Actor-Bound Unified Strict Entry Closure (`HEAD=fc662b8+`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint is protocol-layer only and focuses on strict operation entry semantics (`activate/update/validate` + wave apply path).
+2. this checkpoint addresses canonical active pointer drift impacting default actor semantics at entry, without changing business-level validator rules.
+3. no promotion state change is allowed in this section.
+
+Four-track confirmation (`T1..T4`):
+
+1. `T1 kernel/governance contract`
+   - strict entry must be actor-bound and explicit; implicit actor fallback is disallowed for strict paths.
+   - actor binding validation must run before strict operation chains continue.
+2. `T2 script/runtime closure`
+   - `scripts/identity_creator.py` now requires explicit `--actor-id` for strict `activate/update/validate` entry.
+   - `scripts/identity_creator.py` now runs `validate_actor_session_binding.py` as entry preflight for strict validate/update.
+   - `scripts/execute_identity_upgrade.py` auto header-first preflight now requires explicit actor context.
+   - `scripts/run_protocol_upgrade_wave.py --apply` now requires explicit actor and forwards it into update invocations.
+3. `T3 replay/acceptance behavior`
+   - missing actor on strict entry fails fast with deterministic code `IP-ACTOR-ENTRY-001`;
+   - explicit actor with binding mismatch remains fail-close via actor-session binding guard;
+   - explicit actor with valid binding proceeds into downstream strict gate chain.
+4. `T4 review/ledger synchronization`
+   - review ledger includes this actor-entry convergence replay in hotfix evidence trail and decision row language.
+
+Acceptance commands:
+
+1. `python3 scripts/identity_creator.py validate --identity-id <id> --catalog <catalog> --scope <scope>`
+2. `python3 scripts/identity_creator.py update --identity-id <id> --catalog <catalog> --mode review-required --scope <scope>`
+3. `python3 scripts/identity_creator.py validate --identity-id <id> --catalog <catalog> --scope <scope> --actor-id <actor_id>`
+4. `python3 scripts/run_protocol_upgrade_wave.py --catalog <catalog> --repo-catalog identity/catalog/identities.yaml --apply --actor-id <actor_id>`
+
+Expected outcomes:
+
+1. command (1) and (2) must fail with `IP-ACTOR-ENTRY-001` when actor is not explicit.
+2. command (3) must pass entry guard and then follow normal downstream validator outcomes.
+3. command (4) must reject `--apply` without actor and proceed deterministically with explicit actor.
+
+State impact:
+
+1. strict actor-entry ambiguity is reduced by moving to one explicit actor-bound entry contract.
+2. `HOTFIX16-P0-006` remains `SPEC_READY / PENDING_INTAKE` until required=true tuple replay archive and runtime bridge rollout evidence are attached.
+3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
 ## 9) References
 

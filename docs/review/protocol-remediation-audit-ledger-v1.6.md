@@ -86,11 +86,12 @@ Carry-over evidence:
 | FIX16-036 | 2026-03-06 | protocol | Batch-7 (`ASB16-RQ-022/030`) closure strengthening normalization: fallback taxonomy enum normalization + T1/T2/T3/T4 intake evidence quorum automation with metadata hard gate | 0df31f5 + 10c9956 + b80ec1f + f63eb55 + e214df9 + 4f4930c + 08c8f89 + 5f7eb44 + 228ba40 + b7137e3 + 47f2f38 + b258982 + 1beeb88 | SPEC_READY | PASS_WITH_BLOCKERS |
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | 093496b + 910ec6e | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) with round-6 recurrence replay (`actor-binding resolver divergence`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) + audit_replay_20260307_round6_headstamp | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) with resolver convergence replay + canonical egress applicability replay | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) + audit_replay_20260307_round6_headstamp + audit_replay_20260307_round8_single_egress | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b + audit_round8_preimplementation_tmp_residuals | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1654,6 +1655,7 @@ Core semantics lock:
 2. unresolved protocol route configuration must fail-close (`IP-LANE-ROUTE-001`), not degrade to best-effort delivery semantics.
 3. every outbound assistant reply must pass canonical pre-send headstamp hard-gate (`Identity-Context` + `Layer-Context`).
 4. lane activation without headstamp continuity proof is invalid for promotion-grade replay.
+5. outbound user-visible reply must have one canonical final gate verdict before dispatch; distributed checks cannot substitute canonical gateway decision.
 
 Reserved error-code family (for architect contract freeze):
 
@@ -1719,6 +1721,24 @@ Round-7 resolver convergence replay (`HEAD=d5f75d7+`, 2026-03-07):
    - protocol-layer resolver divergence from round-6 is closed;
    - live endpoint rollout replay archive remains mandatory before promotion.
 
+Round-8 four-track convergence residual (`HEAD=f53f36a`, 2026-03-07):
+
+1. replay probe:
+   - `python3 scripts/validate_send_time_reply_gate.py --identity-id <ID> --catalog <PROJECT_CATALOG> --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+2. observed residual:
+   - `send_time_gate_status=SKIPPED_NOT_REQUIRED`, `required_contract=false`, `stale_reasons=[\"contract_not_required\"]`.
+3. audit interpretation:
+   - resolver divergence closure is valid, but canonical egress requiredization is not yet uniformly enforced across all outbound surfaces.
+4. required protocol correction:
+   - keep reply-channel contract applicability separate from canonical egress applicability;
+   - enforce `required_contract=true` for canonical send-time gateway on user-visible strict operations;
+   - classify canonical gateway bypass as fail-close (`IP-HDSTAMP-004`).
+
+Scope separation note:
+
+1. unified control-plane entrypoint strengthening is tracked independently in `HOTFIX16-P0-007`.
+2. this row (`HOTFIX16-P0-002`) remains focused on lane activation starvation + outbound headstamp continuity only.
+
 Architect handoff artifacts (absolute paths):
 
 1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_ESCALATION_PACK_20260306T213707_multiagent_multiidentity.md`
@@ -1738,6 +1758,57 @@ Promotion guard (hard):
    - live lane activation receipts (`requested_lane -> resolved_lane`) are reproducible,
    - live headstamp continuity negative/positive replay is archived,
    - no silent protocol->instance fallback under explicit protocol intent.
+
+### HOTFIX16-P0-007 - emergency hotfix intake (`unified protocol control-plane entrypoint freeze`)
+
+- Status: `SPEC_READY` (hotfix lane intake)
+- Goal: stop recurring scattered patching by forcing one protocol-layer management/wiring entrypoint for required gates and outbound verdict.
+- Audit class: `PENDING_INTAKE` (design freeze landed in governance/review; executable replay closure pending).
+
+Scope lock:
+
+1. protocol-layer only; instance business behavior remains out of scope.
+2. this hotfix targets control-plane entrypoint governance, not domain-specific validator logic.
+3. no status inheritance from other hotfix lanes is allowed.
+
+Mandatory unified control model:
+
+1. single registry source: `identity/protocol/mappings/contract-binding.v1.6.yaml`.
+2. single wiring entrypoint: `scripts/validate_required_contract_coverage.py` must be the first propagation surface for required-gate tuple changes.
+3. strict-surface convergence from one lineage is required for:
+   - `scripts/release_readiness_check.py`
+   - `scripts/identity_creator.py` (`validate/update`)
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `.github/workflows/_identity-required-gates.yml`
+4. single outbound verdict source remains canonical:
+   - `scripts/validate_send_time_reply_gate.py` on user-visible strict operations.
+
+Reserved anti-drift error-code family:
+
+1. `IP-GATE-ENTRY-001` (`registry_source_missing_or_stale`)
+2. `IP-GATE-ENTRY-002` (`surface_wiring_not_from_registry_tuple`)
+3. `IP-GATE-ENTRY-003` (`cross_surface_tuple_divergence`)
+4. `IP-GATE-ENTRY-004` (`control_plane_mutation_without_four_track_bundle`)
+
+Mandatory four-track replay bundle per control-plane change:
+
+1. `T1`: governance/review clause + contract version tuple.
+2. `T2`: strict-surface wiring propagation proof.
+3. `T3`: deterministic `positive + negative + bypass-negative` replay under same lineage.
+4. `T4`: protocol-feedback outbox batch + evidence-index pointer.
+
+No-deadlock tiering:
+
+1. tier-0 (control-plane mutation) requires full `T1+T2+T3+T4` before promotion.
+2. tier-1 (non-control-plane patch) allows `T1+T2` immediate and deferred `T3+T4` within bounded replay window.
+3. promotion is blocked only by tier-0 incompleteness, tier-1 deferred-window expiration, or unresolved strict egress bypass residuals.
+
+State boundary:
+
+1. this hotfix is executable and enforceable at protocol design level.
+2. row remains non-promotional until tuple parity replay is archived across all strict surfaces.
 
 ### HOTFIX16-P1-003 - emergency hotfix intake (`strict-surface fixed /tmp path debt`)
 
@@ -1971,6 +2042,27 @@ Round-3 replay note (`HEAD=a0c191e`):
 3. audit interpretation:
    - implementation and lane wiring are confirmed,
    - required=true deterministic archive is still missing, so promotion boundary remains unchanged.
+
+Round-8 actor-bound strict-entry convergence replay (`HEAD=fc662b8+`, 2026-03-07):
+
+1. scope:
+   - protocol-layer strict entry semantics only (`activate/update/validate` + wave apply path).
+   - objective: remove canonical-active-pointer-driven default actor ambiguity and converge to one explicit actor-bound entry contract.
+2. implementation evidence:
+   - `scripts/identity_creator.py` strict entry now requires explicit `--actor-id` for `activate/update/validate`;
+   - `scripts/identity_creator.py` now executes actor-session binding preflight before strict validate/update chain progression;
+   - `scripts/execute_identity_upgrade.py` auto header-first preflight now requires explicit actor context;
+   - `scripts/run_protocol_upgrade_wave.py --apply` now requires explicit actor and forwards it into each update command.
+3. replay command set:
+   - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER`
+   - `python3 scripts/identity_creator.py update --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --mode review-required --scope USER`
+   - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+4. replay outcomes:
+   - missing actor on strict entry fails fast with `IP-ACTOR-ENTRY-001` (expected).
+   - explicit actor path passes strict entry guard and reaches downstream validators (downstream pass/fail remains business-evidence dependent).
+5. audit interpretation:
+   - strict entry is now actor-explicit and machine-guarded, reducing repeated canonical-pointer correction churn.
+   - `HOTFIX16-P0-006` remains non-promotional pending required=true tuple replay + runtime bridge rollout evidence.
 
 ### HOTFIX16-P1-004 - emergency hotfix intake (`gate-source convergence + producer-aware requiredization applicability`)
 
@@ -2207,11 +2299,11 @@ Promotion guard (hard):
 | FIX16-036 | PASS_WITH_BLOCKERS | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | Batch-7 strict applicability closure landed in protocol layer: fallback/intake strict lanes no longer synthetic-fail on unlinked rounds; explicit negatives remain fail-close (`IP-FBTAX-001`). Row remains non-promotional pending independent required=true current-round replay archive. |
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Write-boundary non-starvation hooks remain lane-wired (`093496b`); this round adds canonical `RQ-028` kernel/mapping projection (`910ec6e`) for full requirement coverage. Promotion boundary unchanged pending replay matrix closure (`A/B/C/D/E/F`). |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
-| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:27:07Z | protocol-lane starvation/headstamp risk hardening remains landed; round-7 replay closes prior protocol resolver divergence: sampled identities converge to `headstamp_recurrence_closure_status=PASS_REQUIRED` with mismatch-negative still fail-close (`IP-ASB-STAMP-SESSION-005`) and binding selection tuple now machine-emitted. row remains non-promotional pending independent live lane/headstamp replay archive. |
+| HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:27:07Z | protocol-lane starvation/headstamp hardening remains landed; round-7 replay closes resolver divergence (`headstamp_recurrence_closure_status=PASS_REQUIRED` on sampled identities) and keeps mismatch-negative fail-close. round-8 replay still shows canonical send-time gateway applicability drift (`SKIPPED_NOT_REQUIRED(contract_not_required)` on direct scan probe). row remains non-promotional pending strict requiredization closure + independent live lane/headstamp replay archive. |
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path closure remains in-progress: CI + stamp/first-line/coherence paths are resolver-backed, and round-8 pre-implementation sweep has identified remaining fixed `/tmp` fallbacks in `execute_identity_upgrade` + freshness validators as mandatory next landing scope. status remains non-promotional pending full three-script closure replay and independent sign-off. |
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | multi-source protocol-feedback replay confirms positive reinforcement (parser crash closure, no-hard-switch baseline, SSOT archival integrity), but convergence residuals remain: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness under strict pointer/binding divergence, and semantic residual `IP-SEM-004`. status remains non-promotional pending convergence hardening replay closure. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
-| HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks). round-3 replay across four identities still returns `execution_target_tuple_isolation_status=SKIPPED_NOT_REQUIRED` (`contract_not_required`), so required=true deterministic replay archive and runtime bridge rollout evidence are still pending. |
+| HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
 
 ---
 

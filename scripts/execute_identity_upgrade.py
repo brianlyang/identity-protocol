@@ -28,6 +28,7 @@ PROTOCOL_PUBLISH_CHECKS = {
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
+ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 
 
 def _as_bool(raw: str, default: bool = False) -> bool:
@@ -853,6 +854,7 @@ def _run_header_first_gate(
     identity_id: str,
     catalog_path: Path,
     repo_catalog_path: Path,
+    actor_id: str,
     run_id: str,
     layer_intent_text: str,
     expected_work_layer: str,
@@ -883,6 +885,8 @@ def _run_header_first_gate(
         str(repo_catalog_path.expanduser().resolve()),
         "--identity-id",
         identity_id,
+        "--actor-id",
+        str(actor_id or "").strip(),
         "--body-text",
         "PRE_MUTATION_HEADER_FIRST_GATE",
         "--out-reply-file",
@@ -976,6 +980,7 @@ def main() -> int:
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override")
+    ap.add_argument("--actor-id", default="", help="explicit actor id required for auto pre-mutation header gate")
     ap.add_argument("--run-id", default="", help="optional explicit run id for update execution/report binding")
     ap.add_argument("--header-first-gate-status", default="", help="pre-mutation header gate status override")
     ap.add_argument(
@@ -1094,6 +1099,7 @@ def main() -> int:
     if scaffold_consent_gate_status not in {"PASS_REQUIRED", "PASS_NOT_APPLICABLE", "FAIL_REQUIRED"}:
         scaffold_consent_gate_status = "FAIL_REQUIRED"
     header_first_gate_status = str(args.header_first_gate_status or "").strip().upper()
+    actor_id = str(args.actor_id or "").strip()
     pre_mutation_gate_receipt = str(args.pre_mutation_gate_receipt or "").strip()
     governed_outlet_enforced = False
     outlet_channel_id = ""
@@ -1101,28 +1107,36 @@ def main() -> int:
     outlet_bypass_detected = False
     pre_mutation_gate_error_code = ""
     if not header_first_gate_status:
-        header_probe = _run_header_first_gate(
-            identity_id=args.identity_id,
-            catalog_path=Path(args.catalog),
-            repo_catalog_path=Path(args.repo_catalog),
-            run_id=run_id,
-            layer_intent_text=str(args.layer_intent_text or ""),
-            expected_work_layer=str(args.expected_work_layer or ""),
-            expected_source_layer=str(args.expected_source_layer or ""),
-        )
-        if bool(header_probe.get("ok", False)):
-            header_first_gate_status = "PASS_REQUIRED"
-            pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("reply_file", ""))
-        else:
+        if not actor_id:
             header_first_gate_status = "FAIL_REQUIRED"
-            pre_mutation_gate_error_code = str(header_probe.get("error_code", "")).strip() or ERR_EXEC_ORDER_HEADER_FIRST
-            pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("blocker_receipt_path", ""))
-        governed_outlet_enforced = bool(header_probe.get("governed_outlet_enforced", False))
-        outlet_channel_id = str(header_probe.get("outlet_channel_id", "")).strip()
-        outlet_preflight_receipt = (
-            str(header_probe.get("outlet_preflight_receipt", "")).strip() or pre_mutation_gate_receipt
-        )
-        outlet_bypass_detected = bool(header_probe.get("outlet_bypass_detected", False))
+            pre_mutation_gate_error_code = ERR_ACTOR_ENTRY_REQUIRED
+            pre_mutation_gate_receipt = pre_mutation_gate_receipt or ""
+        else:
+            header_probe = _run_header_first_gate(
+                identity_id=args.identity_id,
+                catalog_path=Path(args.catalog),
+                repo_catalog_path=Path(args.repo_catalog),
+                actor_id=actor_id,
+                run_id=run_id,
+                layer_intent_text=str(args.layer_intent_text or ""),
+                expected_work_layer=str(args.expected_work_layer or ""),
+                expected_source_layer=str(args.expected_source_layer or ""),
+            )
+            if bool(header_probe.get("ok", False)):
+                header_first_gate_status = "PASS_REQUIRED"
+                pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("reply_file", ""))
+            else:
+                header_first_gate_status = "FAIL_REQUIRED"
+                pre_mutation_gate_error_code = (
+                    str(header_probe.get("error_code", "")).strip() or ERR_EXEC_ORDER_HEADER_FIRST
+                )
+                pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("blocker_receipt_path", ""))
+            governed_outlet_enforced = bool(header_probe.get("governed_outlet_enforced", False))
+            outlet_channel_id = str(header_probe.get("outlet_channel_id", "")).strip()
+            outlet_preflight_receipt = (
+                str(header_probe.get("outlet_preflight_receipt", "")).strip() or pre_mutation_gate_receipt
+            )
+            outlet_bypass_detected = bool(header_probe.get("outlet_bypass_detected", False))
     elif header_first_gate_status not in {"PASS_REQUIRED", "FAIL_REQUIRED"}:
         header_first_gate_status = "FAIL_REQUIRED"
         pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST

@@ -26,6 +26,7 @@ from resolve_identity_context import (
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
+ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 SCAFFOLD_CONSENT_TOKEN = "I_ACK_IDENTITY_SCAFFOLD_SCOPE_STACK_RUNTIME"
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROTOCOL_ROOT = SCRIPT_DIR.parent
@@ -129,6 +130,54 @@ def _runtime_mode_guard(
     rc = _run(cmd)
     if rc != 0:
         print("[FAIL] runtime mode/catalog binding guard failed; aborting identity operation.")
+    return rc
+
+
+def _resolve_actor_entry_or_fail(
+    actor_id_raw: str,
+    *,
+    operation: str,
+    identity_id: str,
+) -> tuple[str, int]:
+    actor_raw = str(actor_id_raw or "").strip()
+    if not actor_raw:
+        print(
+            f"[FAIL] {ERR_ACTOR_ENTRY_REQUIRED} explicit --actor-id required for strict operation "
+            f"(operation={operation}, identity={identity_id})"
+        )
+        print(
+            "[HINT] pass --actor-id <actor_id> and ensure actor-scoped binding is established "
+            "before validate/update/activate."
+        )
+        return "", 1
+    return resolve_actor_id(actor_raw), 0
+
+
+def _actor_binding_entry_guard(
+    *,
+    identity_id: str,
+    catalog: str,
+    actor_id: str,
+    operation: str,
+) -> int:
+    cmd = [
+        "python3",
+        "scripts/validate_actor_session_binding.py",
+        "--catalog",
+        catalog,
+        "--identity-id",
+        identity_id,
+        "--actor-id",
+        actor_id,
+        "--operation",
+        operation,
+    ]
+    rc = _run(cmd)
+    if rc != 0:
+        print(
+            "[FAIL] actor-bound unified entry guard failed; "
+            "activation/switch acknowledgement may be required before continuing."
+        )
     return rc
 
 
@@ -1149,10 +1198,10 @@ def main() -> int:
     p_validate.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     p_validate.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "required for strict validate entry."
         ),
     )
 
@@ -1166,7 +1215,11 @@ def main() -> int:
     p_activate.add_argument("--scope", default="")
     p_activate.add_argument("--protocol-root", default="")
     p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
-    p_activate.add_argument("--actor-id", default="", help="actor id for actor-scoped session binding")
+    p_activate.add_argument(
+        "--actor-id",
+        default="",
+        help="explicit actor id for actor-scoped session binding (required for strict activate entry)",
+    )
     p_activate.add_argument("--run-id", default="", help="activation run id for audit traceability")
     p_activate.add_argument("--switch-reason", default="explicit_activate", help="reason for activation switch")
     p_activate.add_argument(
@@ -1263,10 +1316,10 @@ def main() -> int:
     p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
     p_update.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", ""),
+        default="",
         help=(
-            "optional actor id override for actor-scoped refresh/session validators during update. "
-            "When omitted, runtime fallback resolution is used."
+            "explicit actor id for actor-scoped refresh/session validators during update. "
+            "required for strict update entry."
         ),
     )
     p_update.add_argument("--why-now", default="", help="pre-mutation disclosure rationale for update")
@@ -1404,7 +1457,13 @@ def main() -> int:
 
     if args.command == "validate":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
-        actor_id_validate = resolve_actor_id(str(args.actor_id or "").strip())
+        actor_id_validate, rc_actor_validate = _resolve_actor_entry_or_fail(
+            str(args.actor_id or ""),
+            operation="validate",
+            identity_id=args.identity_id,
+        )
+        if rc_actor_validate != 0:
+            return rc_actor_validate
         rc_guard = _runtime_mode_guard(
             args.identity_id,
             args.catalog,
@@ -1482,6 +1541,14 @@ def main() -> int:
         except Exception as e:
             print(f"[FAIL] {e}")
             return 1
+        rc_actor_binding_entry = _actor_binding_entry_guard(
+            identity_id=args.identity_id,
+            catalog=args.catalog,
+            actor_id=actor_id_validate,
+            operation="validate",
+        )
+        if rc_actor_binding_entry != 0:
+            return rc_actor_binding_entry
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
@@ -1520,18 +1587,6 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
-                "--operation",
-                "validate",
-            ],
-            [
-                "python3",
-                "scripts/validate_actor_session_binding.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--actor-id",
-                actor_id_validate,
                 "--operation",
                 "validate",
             ],
@@ -2549,6 +2604,13 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
+        actor_id_activate, rc_actor_activate = _resolve_actor_entry_or_fail(
+            str(args.actor_id or ""),
+            operation="activate",
+            identity_id=args.identity_id,
+        )
+        if rc_actor_activate != 0:
+            return rc_actor_activate
         rc_guard = _runtime_mode_guard(
             args.identity_id,
             args.catalog,
@@ -2603,7 +2665,7 @@ def main() -> int:
             args.scope,
             args.protocol_root,
             args.protocol_mode,
-            args.actor_id,
+            actor_id_activate,
             args.run_id,
             args.switch_reason,
             bool(args.allow_identity_switch),
@@ -2614,7 +2676,13 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
-        actor_id_update = resolve_actor_id(str(args.actor_id or "").strip())
+        actor_id_update, rc_actor_update = _resolve_actor_entry_or_fail(
+            str(args.actor_id or ""),
+            operation="update",
+            identity_id=args.identity_id,
+        )
+        if rc_actor_update != 0:
+            return rc_actor_update
         guard_expect_mode = "auto"
         if _is_fixture_identity_in_catalog(args.catalog, args.identity_id):
             if str(args.scope or "").strip().upper() == "USER":
@@ -2680,6 +2748,14 @@ def main() -> int:
         if rc_fixture != 0:
             print("[FAIL] fixture/runtime boundary validation failed; update blocked")
             return rc_fixture
+        rc_actor_binding_entry = _actor_binding_entry_guard(
+            identity_id=args.identity_id,
+            catalog=args.catalog,
+            actor_id=actor_id_update,
+            operation="update",
+        )
+        if rc_actor_binding_entry != 0:
+            return rc_actor_binding_entry
         try:
             resolved = resolve_identity(
                 args.identity_id,
@@ -3487,6 +3563,8 @@ def main() -> int:
             args.protocol_mode,
             "--repo-catalog",
             args.repo_catalog,
+            "--actor-id",
+            actor_id_update,
             "--run-id",
             creator_run_id,
             "--resolved-scope",

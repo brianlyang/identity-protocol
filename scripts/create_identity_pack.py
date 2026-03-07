@@ -1776,7 +1776,7 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             f"identity/packs/{identity_id}/RULEBOOK.jsonl",
         ],
         "required_toolkit_steps": [
-            f"scripts/execute_identity_upgrade.py --identity-id {identity_id} --mode review-required",
+            f"scripts/execute_identity_upgrade.py --identity-id {identity_id} --mode review-required --actor-id <actor_id>",
             f"scripts/validate_identity_upgrade_prereq.py --identity-id {identity_id}",
             f"scripts/validate_identity_runtime_contract.py --identity-id {identity_id}",
             f"scripts/validate_identity_update_lifecycle.py --identity-id {identity_id}",
