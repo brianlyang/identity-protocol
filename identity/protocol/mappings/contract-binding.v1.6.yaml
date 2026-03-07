@@ -628,7 +628,8 @@ asb16-rq-018:
   kernel_contract_id: rq_018_dedup_monotonic_winner_contract_v1
   kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_018_dedup_monotonic_winner_contract_v1
   validator_ids:
-    - scripts/validate_v16_dedup_monotonicity.py
+    - scripts/validate_dedup_monotonicity.py
+    - scripts/validate_v16_dedup_monotonicity.py::wrapper_compatibility_optional
   gate_surfaces:
     - creator
     - readiness
