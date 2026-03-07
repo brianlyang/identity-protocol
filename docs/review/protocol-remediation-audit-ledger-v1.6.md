@@ -48,7 +48,7 @@ Carry-over evidence:
 
 | Fix ID | Date (UTC) | Layer | Scope | Commit | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| FIX16-001 | 2026-03-03 | protocol | v1.6 governance+review document bootstrap | UNCOMMITTED | DONE | PENDING_REVIEW |
+| FIX16-001 | 2026-03-03 | protocol | v1.6 governance+review document bootstrap | UNCOMMITTED | DONE | PENDING_INTAKE |
 | FIX16-002 | 2026-03-03 | protocol | release unlock formula automation (`ASB16-RQ-001`) | d0f27bf | SPEC_READY | PENDING_INTAKE |
 | FIX16-003 | 2026-03-03 | protocol | capability boundary governance (`ASB16-RQ-002`) | 08f20ab + 13485bb | SPEC_READY | PENDING_INTAKE |
 | FIX16-004 | 2026-03-03 | protocol | status promotion evidence pipeline (`ASB16-RQ-003`) | 08f20ab + 13485bb | SPEC_READY | PENDING_INTAKE |
@@ -2437,7 +2437,7 @@ Promotion guard (hard):
 
 | Fix ID | Audit Decision | Reviewer | Reviewed At (UTC) | Notes |
 | --- | --- | --- | --- | --- |
-| FIX16-001 | PENDING_REVIEW | audit-expert(codex) | - | bootstrap created; waiting command-contract replay |
+| FIX16-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T00:55:00Z | bootstrap baseline remains stable; command-contract replay (`docs_command_contract_check`) and SSOT boundary replay (`validate_protocol_ssot_source`) are both passing; row stays non-promotional pending full v1.6 bundle closure. |
 | FIX16-002 | PENDING_INTAKE | base-repo-architect | 2026-03-07T17:26:00Z | RQ-001 executable closure landed (validator + kernel anchor + mapping row + lane hooks across creator/readiness/three-plane/full-scan/e2e/ci); remains non-promotional pending deterministic required=true replay archive |
 | FIX16-003 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`08f20ab + 13485bb`): capability-boundary validator + kernel/mapping anchors + creator/readiness/three-plane/full-scan/e2e/ci hooks; remains non-promotional pending deterministic required=true replay archive |
 | FIX16-004 | PENDING_INTAKE | base-repo-architect | 2026-03-07T16:45:00Z | executable closure landed (`08f20ab + 13485bb`): promotion-pipeline validator + kernel/mapping anchors + lane hooks; remains non-promotional pending replay archive |
