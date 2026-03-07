@@ -373,7 +373,7 @@ def main() -> int:
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
         expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
-        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
     if expected_source_layer_input_invalid and expected_source_layer != expected_source_layer_input:
         source_layer_downgrade_applied = True
 
@@ -521,7 +521,7 @@ def main() -> int:
             first_line_identity = str(parsed_first.get("identity_id", "")).strip()
         next_action = "emit_identity_context_first_line_then_retry"
         if error_code == ERR_INVALID_EXPECTED_SOURCE_LAYER:
-            next_action = "use_valid_expected_source_layer(project|global|env|auto)_then_retry"
+            next_action = "use_valid_expected_source_layer(project|global)_then_retry"
         elif error_code == ERR_RUNTIME_BINDING_MISMATCH:
             next_action = "activate_actor_bound_identity_then_retry"
         receipt = blocker_receipt(

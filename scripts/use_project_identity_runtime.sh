@@ -25,10 +25,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # protocol_root and avoids IP-PATH-001 boundary failures.
 if [[ "$(basename "${REPO_ROOT}")" == "identity-protocol-local" ]]; then
   PROJECT_ROOT_DEFAULT="$(cd "${REPO_ROOT}/.." && pwd)"
-  IDENTITY_HOME_DEFAULT="${PROJECT_ROOT_DEFAULT}/.agents/identity"
+  IDENTITY_HOME_DEFAULT="${PROJECT_ROOT_DEFAULT}/.identity"
 else
   PROJECT_ROOT_DEFAULT="${REPO_ROOT}"
-  IDENTITY_HOME_DEFAULT="/tmp/codex-identity-runtime/${USER}/$(basename "${REPO_ROOT}")"
+  IDENTITY_HOME_DEFAULT="${PROJECT_ROOT_DEFAULT}/.identity"
 fi
 
 PROJECT_ROOT="${PROJECT_ROOT:-${PROJECT_ROOT_DEFAULT}}"

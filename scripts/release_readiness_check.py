@@ -135,10 +135,10 @@ def _resolve_lane_context(*, layer_intent_text: str, expected_work_layer: str, e
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
-    source_layer = str(resolved.get("resolved_source_layer", "global")).strip().lower() or "global"
+    source_layer = str(resolved.get("resolved_source_layer", "project")).strip().lower() or "project"
     if work_layer == "instance":
         applied_gate_set = "instance_required_checks"
     elif work_layer == "protocol":

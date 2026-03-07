@@ -2613,6 +2613,29 @@ Promotion guard (hard):
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
 | HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T13:20:00Z | round-22 decision freeze reduces control-plane governance to a single minimal model (`3-layer source_layer`, single frozen entry tuple, single canonical egress fail-close, four CI hard assertions, strict protocol/instance backlog boundary). this supersedes prior branch-heavy normative paths and keeps row non-promotional pending independent auditor sign-off. |
 
+### Round-23 protocol checkpoint: canonical two-layer path cutover (execution landed, non-promotional)
+
+1. Scope remains protocol base repo only; instance business logic is intentionally unchanged.
+2. Canonical path model is now frozen to two roots:
+   - project: `<project>/.identity/<identity_id>/`
+   - global: `${CODEX_HOME:-~/.codex}/.identity/<identity_id>/`
+3. Strict tuple contract converges to `catalog_path + resolved_pack_path + runtime_root`.
+4. Runtime mode guard now requires `source_layer in {project, global}` and rejects non-canonical legacy roots in strict operations.
+5. Resolver/runtime selectors/full-scan defaults are switched to `.identity` roots; legacy paths are migration-only.
+
+Replay notes (this round):
+
+1. Updated protocol scripts pass `python3 -m py_compile`.
+2. Updated runtime shell selectors pass `bash -n`.
+3. `python3 scripts/docs_command_contract_check.py` => PASS.
+4. `python3 scripts/validate_protocol_ssot_source.py` => OK.
+5. Legacy runtime catalog probe (`.agents/identity`) now fail-closes on runtime mode guard as expected.
+
+Decision:
+
+1. Lifecycle boundary unchanged: non-promotional.
+2. Next closure dependency remains instance-side migration + replay on canonical `.identity` roots.
+
 ---
 
 ## 5) Current release posture snapshot (v1.6 kickoff)

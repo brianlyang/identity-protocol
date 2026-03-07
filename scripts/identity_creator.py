@@ -76,13 +76,13 @@ def _infer_source_domain_from_catalog(catalog: str) -> str:
     try:
         p = Path(catalog).expanduser().resolve()
     except Exception:
-        return "auto"
-    txt = str(p)
-    if "/.agents/" in txt:
         return "project"
-    if "/.codex/" in txt:
+    txt = str(p)
+    if "/.identity/" in txt:
+        return "project"
+    if "/.codex/.identity/" in txt:
         return "global"
-    return "auto"
+    return "project"
 
 
 def _emit_two_phase_trace(
@@ -1029,7 +1029,7 @@ def _write_heal_report(report: dict, out_dir: str, announce: bool = True) -> Pat
 
 def _cleanup_duplicate_instance_dirs(identity_id: str, canonical_pack_path: str) -> tuple[list[str], list[str]]:
     """
-    Quarantine duplicate runtime instance directories under ~/.codex/identity.
+    Quarantine duplicate runtime instance directories under ~/.codex/.identity.
     Returns (moved_paths, skipped_paths).
     """
     moved: list[str] = []
@@ -1469,7 +1469,7 @@ def main() -> int:
             args.catalog,
             args.repo_catalog,
             args.scope,
-            expect_mode="any",
+            expect_mode="auto",
             operation="validate",
         )
         if rc_guard != 0:
@@ -2681,16 +2681,6 @@ def main() -> int:
                     "[INFO] fixture identity detected: overriding scope USER -> AUTO for update runtime guard"
                 )
                 args.scope = ""
-            try:
-                catalog_resolved = Path(args.catalog).expanduser().resolve()
-                repo_catalog_resolved = Path(args.repo_catalog).expanduser().resolve()
-                if catalog_resolved == repo_catalog_resolved:
-                    guard_expect_mode = "any"
-                    print(
-                        "[INFO] fixture identity detected on repo catalog: overriding runtime mode guard expect-mode AUTO -> ANY"
-                    )
-            except Exception:
-                pass
         rc_guard = _runtime_mode_guard(
             args.identity_id,
             args.catalog,

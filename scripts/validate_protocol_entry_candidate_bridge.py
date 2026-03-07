@@ -110,18 +110,18 @@ def _resolve_intent(
             explicit_source_layer=source_layer,
             intent_text=layer_intent_text,
             default_work_layer="instance",
-            default_source_layer="global",
+            default_source_layer="project",
         )
         return {
             "resolved_work_layer": str(resolved.get("resolved_work_layer", "")).strip().lower() or "instance",
-            "resolved_source_layer": str(resolved.get("resolved_source_layer", "")).strip().lower() or "global",
+            "resolved_source_layer": str(resolved.get("resolved_source_layer", "")).strip().lower() or "project",
             "protocol_triggered": bool(resolved.get("protocol_triggered", False)),
             "intent_confidence": float(resolved.get("intent_confidence", 0.0) or 0.0),
             "fallback_reason": str(resolved.get("fallback_reason", "")).strip(),
         }
     return {
         "resolved_work_layer": wl,
-        "resolved_source_layer": str(stamp_doc.get("resolved_source_layer", "")).strip().lower() or "global",
+        "resolved_source_layer": str(stamp_doc.get("resolved_source_layer", "")).strip().lower() or "project",
         "protocol_triggered": bool(stamp_doc.get("protocol_triggered", False)),
         "intent_confidence": float(stamp_doc.get("intent_confidence", 0.0) or 0.0),
         "fallback_reason": str(stamp_doc.get("fallback_reason", "")).strip(),

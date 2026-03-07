@@ -79,7 +79,7 @@ def main() -> int:
     ap.add_argument(
         "--allow-repo-runtime-fallback",
         action="store_true",
-        help="explicitly allow fallback output under <repo>/.codex/identity/runtime for fixture/debug only",
+        help="explicitly allow fallback output under <repo>/.codex/.identity/runtime for fixture/debug only",
     )
     args = ap.parse_args()
 

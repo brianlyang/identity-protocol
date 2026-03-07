@@ -3295,6 +3295,47 @@ State impact:
 2. control-plane governance is now intentionally minimal to prevent recurring branch drift.
 3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+## 8.41 Round-23 Canonical Path Two-Layer Cutover (protocol-only, migration-owned by instances)
+
+Decision freeze (normative):
+
+1. Runtime physical layout is reduced to exactly two canonical roots:
+   - project: `<project>/.identity/<identity_id>/`
+   - global: `${CODEX_HOME:-~/.codex}/.identity/<identity_id>/`
+2. Canonical tuple (strict gate input/output) is frozen to:
+   - `catalog_path`
+   - `resolved_pack_path`
+   - `runtime_root` (must be under `<resolved_pack_path>/runtime`)
+3. `source_layer` strict semantics are reduced to `project|global`.
+4. Legacy tags (`local/repo/env/auto`) are migration metadata only and are non-authoritative for strict verdicts.
+5. Strict lane forbids implicit path fallback (including `/tmp` runtime fallback).
+6. Legacy runtime paths are recognized only for migration diagnosis; after migration window, legacy hits are fail-close.
+
+Protocol/instance responsibility split:
+
+1. Protocol layer: identify / validate / reject only.
+2. Instance layer: migration / debt cleanup / receipt backfill.
+
+Implementation checkpoint (this round, protocol base repo):
+
+1. Runtime selector defaults switched to `.identity` for both project/global mode.
+2. Resolver defaults + scope inference switched to canonical `.identity` roots.
+3. Runtime mode guard upgraded to strict `project|global` mode recognition and tuple checks.
+4. Pack-path canonical validator tightened to canonical roots (fixture exceptions remain explicit).
+5. Full-scan defaults switched to `.identity` catalogs (`project` + `${CODEX_HOME}/.identity`).
+
+Acceptance commands:
+
+1. `python3 -m py_compile scripts/resolve_identity_context.py scripts/validate_identity_runtime_mode_guard.py scripts/full_identity_protocol_scan.py`
+2. `bash -n scripts/identity_runtime_select.sh scripts/use_project_identity_runtime.sh scripts/use_local_identity_env.sh`
+3. `python3 scripts/docs_command_contract_check.py`
+4. `python3 scripts/validate_protocol_ssot_source.py`
+
+State boundary:
+
+1. This section is protocol-layer hardening only (non-promotional by itself).
+2. Promotion still requires independent replay closure on migrated instance packs.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

@@ -197,7 +197,7 @@ def main() -> int:
     if work_layer not in ALLOWED_WORK_LAYERS:
         work_layer = "instance"
     if source_layer not in ALLOWED_SOURCE_LAYERS:
-        source_layer = "auto"
+        source_layer = "project"
 
     stamp_line = render_external_stamp_with_layer_context(
         ctx,

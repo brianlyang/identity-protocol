@@ -30,7 +30,7 @@ def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: st
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
     if work_layer == "protocol":
@@ -132,7 +132,7 @@ def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
     runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
     if profile == "fixture" or runtime_mode == "demo_only":
         return "SYSTEM"
-    if layer == "repo":
+    if layer == "repo_metadata":
         return "SYSTEM"
     return "USER"
 
@@ -324,12 +324,24 @@ def main() -> int:
         print(f"[FAIL] repo catalog not found: {repo_catalog}")
         return 2
 
-    project_catalog = Path(args.project_catalog).expanduser().resolve() if args.project_catalog else (repo_root.parent / ".agents/identity/catalog.local.yaml").resolve()
-    global_catalog = Path(args.global_catalog).expanduser().resolve() if args.global_catalog else (Path.home() / ".codex/identity/catalog.local.yaml").resolve()
+    if args.project_catalog:
+        project_catalog = Path(args.project_catalog).expanduser().resolve()
+    else:
+        project_catalog = (
+            (repo_root.parent / ".identity" / "catalog.local.yaml").resolve()
+            if repo_root.name == "identity-protocol-local"
+            else (repo_root / ".identity" / "catalog.local.yaml").resolve()
+        )
+    codex_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))).expanduser().resolve()
+    global_catalog = (
+        Path(args.global_catalog).expanduser().resolve()
+        if args.global_catalog
+        else (codex_home / ".identity" / "catalog.local.yaml").resolve()
+    )
 
     catalog_list: list[tuple[str, Path]] = []
     if args.include_repo_catalog:
-        catalog_list.append(("repo", repo_catalog))
+        catalog_list.append(("repo_metadata", repo_catalog))
     catalog_list.extend([("project", project_catalog), ("global", global_catalog)])
 
     target_ids = [x.strip() for x in args.identity_ids.replace(",", " ").split() if x.strip()]

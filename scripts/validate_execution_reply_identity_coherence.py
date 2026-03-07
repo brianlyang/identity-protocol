@@ -318,7 +318,7 @@ def main() -> int:
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
         expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
-        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
 
     strict_operation = args.operation in STRICT_OPERATIONS
     lock_boundary_enforced = bool(args.enforce_coherence_gate and strict_operation)

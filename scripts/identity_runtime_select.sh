@@ -29,8 +29,8 @@ fi
 if [[ -z "${MODE}" ]]; then
   if [[ -t 0 ]]; then
     echo "Select identity runtime mode:"
-    echo "  1) project (recommended) -> <repo>/.agents/identity"
-    echo "  2) global                -> ~/.codex/identity"
+    echo "  1) project (recommended) -> <repo>/.identity"
+    echo "  2) global                -> ~/.codex/.identity"
     read -r -p "Enter choice [1/2]: " choice
     case "${choice}" in
       1) MODE="project" ;;

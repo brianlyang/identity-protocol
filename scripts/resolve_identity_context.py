@@ -16,8 +16,8 @@ ScopeName = Literal["EXPLICIT", "REPO", "USER", "ADMIN", "SYSTEM", "FALLBACK", "
 def _default_runtime_config_path() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser() / "identity" / "config" / "runtime-paths.env").resolve()
-    return (Path.home() / ".codex" / "identity" / "config" / "runtime-paths.env").resolve()
+        return (Path(codex_home).expanduser() / ".identity" / "config" / "runtime-paths.env").resolve()
+    return (Path.home() / ".codex" / ".identity" / "config" / "runtime-paths.env").resolve()
 
 
 def _load_runtime_env_defaults(config_path: Path | None = None) -> dict[str, str]:
@@ -71,12 +71,41 @@ def _detect_repo_root(start: Path | None = None) -> Path:
 def _default_user_identity_home() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser() / "identity").resolve()
-    return (Path.home() / ".codex" / "identity").resolve()
+        return (Path(codex_home).expanduser() / ".identity").resolve()
+    return (Path.home() / ".codex" / ".identity").resolve()
 
 
 def _default_repo_identity_home(start: Path | None = None) -> Path:
-    return (_detect_repo_root(start) / ".agents" / "identity").resolve()
+    repo_root = _detect_repo_root(start)
+    if repo_root.name == "identity-protocol-local":
+        return (repo_root.parent / ".identity").resolve()
+    return (repo_root / ".identity").resolve()
+
+
+def _within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _classify_catalog_source_layer(
+    catalog_path: Path,
+    *,
+    repo_root: Path,
+    user_root: Path,
+    repo_catalog_path: Path,
+) -> str:
+    c = catalog_path.expanduser().resolve()
+    project_root = _default_repo_identity_home(repo_root)
+    if _within(c, project_root):
+        return "project"
+    if _within(c, user_root):
+        return "global"
+    if c == repo_catalog_path.expanduser().resolve():
+        return "repo_metadata"
+    return "unknown"
 
 
 def _classify_scope_from_pack_path(
@@ -87,20 +116,15 @@ def _classify_scope_from_pack_path(
     admin_root: Path,
 ) -> ScopeName:
     p = pack_path.expanduser().resolve()
-    repo_scope_root = (repo_root / ".agents" / "identity").resolve()
+    repo_scope_root = _default_repo_identity_home(repo_root)
     try:
         p.relative_to(repo_scope_root)
-        return "REPO"
+        return "USER"
     except Exception:
         pass
     try:
         p.relative_to(user_root)
         return "USER"
-    except Exception:
-        pass
-    try:
-        p.relative_to(admin_root)
-        return "ADMIN"
     except Exception:
         pass
     if str(p).startswith(str((repo_root / "identity").resolve())):
@@ -127,12 +151,10 @@ def default_identity_home() -> Path:
     p = _expand(raw)
     try:
         p.mkdir(parents=True, exist_ok=True)
-        return p
     except Exception:
-        # Never fallback into protocol repo working tree; keep runtime data outside repo by default.
-        fallback = (Path("/tmp") / "codex-identity-runtime" / os.environ.get("USER", "unknown")).resolve()
-        fallback.mkdir(parents=True, exist_ok=True)
-        return fallback
+        # Fail-close behavior: keep canonical target and let callers surface writability error.
+        pass
+    return p
 
 
 def default_local_catalog_path(identity_home: Path | None = None) -> Path:
@@ -142,19 +164,7 @@ def default_local_catalog_path(identity_home: Path | None = None) -> Path:
 
 def default_local_instances_root(identity_home: Path | None = None) -> Path:
     home = identity_home or default_identity_home()
-    canonical = home / "instances"
-    singular_legacy = home / "identity"
-    plural_legacy = home / "identities"
-    legacy = home
-    if canonical.exists():
-        return canonical
-    if singular_legacy.exists():
-        return singular_legacy
-    if plural_legacy.exists():
-        return plural_legacy
-    if legacy.exists():
-        return legacy
-    return canonical
+    return home.resolve()
 
 
 def default_protocol_home() -> Path:
@@ -218,13 +228,13 @@ def merged_catalog(repo_catalog_path: Path, local_catalog_path: Path) -> dict[st
         iid = str(item.get("id", "")).strip()
         if iid:
             d = dict(item)
-            d["_source_layer"] = "repo"
+            d["_source_layer"] = "repo_metadata"
             by_id[iid] = d
     for item in local_identities:
         iid = str(item.get("id", "")).strip()
         if iid:
             d = dict(item)
-            d["_source_layer"] = "local"
+            d["_source_layer"] = "runtime_catalog"
             by_id[iid] = d
 
     default_identity = str(local.get("default_identity", "") or "").strip() or str(
@@ -277,11 +287,22 @@ def resolve_identity(
     repo_root = _detect_repo_root(repo_catalog_path.parent)
     user_root = _default_user_identity_home()
     admin_root = Path("/etc/codex/identity").resolve()
+    local_source_layer = _classify_catalog_source_layer(
+        local_catalog_path,
+        repo_root=repo_root,
+        user_root=user_root,
+        repo_catalog_path=repo_catalog_path,
+    )
+    repo_source_layer = _classify_catalog_source_layer(
+        repo_catalog_path,
+        repo_root=repo_root,
+        user_root=user_root,
+        repo_catalog_path=repo_catalog_path,
+    )
 
     candidates: list[dict[str, Any]] = []
     for source_layer, row, catalog_path in (
-        ("local", local_identity, local_catalog_path),
-        ("repo", repo_identity, repo_catalog_path),
+        (local_source_layer, local_identity, local_catalog_path),
     ):
         if not row:
             continue
@@ -296,8 +317,8 @@ def resolve_identity(
         else:
             scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)
             # P0: avoid UNKNOWN scope entering runtime upgrade chain.
-            # For local-catalog identities, UNKNOWN is coerced to USER semantics.
-            if source_layer == "local" and scope == "UNKNOWN":
+            # For runtime catalogs, UNKNOWN is coerced to USER semantics.
+            if source_layer in {"project", "global"} and scope == "UNKNOWN":
                 scope = "USER"
 
         candidates.append(
@@ -312,7 +333,35 @@ def resolve_identity(
             }
         )
 
+    if repo_identity and (allow_conflict or not local_identity):
+        pack_raw = str((repo_identity or {}).get("pack_path", "")).strip()
+        if pack_raw:
+            pack = Path(pack_raw).expanduser().resolve()
+            profile = str((repo_identity or {}).get("profile", "")).strip().lower()
+            runtime_mode = str((repo_identity or {}).get("runtime_mode", "")).strip().lower()
+            if profile == "fixture" or runtime_mode == "demo_only":
+                scope = "SYSTEM"
+            else:
+                scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)
+                if scope == "UNKNOWN":
+                    scope = "SYSTEM"
+            candidates.append(
+                {
+                    "source_layer": repo_source_layer,
+                    "catalog_path": str(repo_catalog_path),
+                    "pack_path": str(pack),
+                    "status": str((repo_identity or {}).get("status", "")).strip(),
+                    "profile": str((repo_identity or {}).get("profile", "")).strip(),
+                    "runtime_mode": str((repo_identity or {}).get("runtime_mode", "")).strip(),
+                    "scope": scope,
+                }
+            )
+
     if not candidates:
+        if repo_identity and not local_identity:
+            raise FileNotFoundError(
+                f"identity found only in repo metadata catalog; migrate into canonical runtime catalog first: {identity_id}"
+            )
         raise FileNotFoundError(f"identity found but pack_path missing: {identity_id}")
 
     canonical_paths = sorted({c["pack_path"] for c in candidates})
@@ -330,7 +379,7 @@ def resolve_identity(
     elif not conflict_detected:
         chosen = candidates[0]
     else:
-        chosen = next((c for c in candidates if c.get("source_layer") == "local"), candidates[0])
+        chosen = next((c for c in candidates if c.get("source_layer") in {"project", "global"}), candidates[0])
         if not allow_conflict:
             raise RuntimeError(
                 f"identity conflict detected for {identity_id}: multiple pack paths resolved={canonical_paths}. "
@@ -338,16 +387,16 @@ def resolve_identity(
             )
 
     assert chosen is not None
-    source_layer = str(chosen.get("source_layer", "")).strip() or "repo"
+    source_layer = str(chosen.get("source_layer", "")).strip() or "unknown"
     return {
         "identity_id": identity_id,
         "source_layer": source_layer,
         "catalog_path": str(chosen.get("catalog_path", "")),
         "pack_path": str(chosen.get("pack_path", "")),
         "status": str(chosen.get("status", "")).strip(),
-        "profile": str(chosen.get("profile", "")).strip() or ("fixture" if source_layer == "repo" else "runtime"),
+        "profile": str(chosen.get("profile", "")).strip() or ("fixture" if source_layer == "repo_metadata" else "runtime"),
         "runtime_mode": str(chosen.get("runtime_mode", "")).strip()
-        or ("demo_only" if source_layer == "repo" else "local_only"),
+        or ("demo_only" if source_layer == "repo_metadata" else "local_only"),
         "resolved_scope": str(chosen.get("scope", "UNKNOWN")),
         "resolved_pack_path": str(chosen.get("pack_path", "")),
         "conflict_detected": conflict_detected,

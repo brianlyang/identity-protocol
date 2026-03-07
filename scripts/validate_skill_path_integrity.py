@@ -83,10 +83,12 @@ def _dedupe_keep_order(values: list[str]) -> list[str]:
 
 def _detect_layout_mode(catalog_path: Path) -> str:
     p = catalog_path.resolve().as_posix()
-    if "/.agents/identity/" in p:
-        return "project_local"
-    if "/.codex/identity/" in p:
+    if "/.codex/.identity/" in p:
         return "global_codex"
+    if "/.identity/" in p:
+        return "project_local"
+    if "/.agents/identity/" in p or "/.codex/identity/" in p:
+        return "legacy_compat"
     return "custom"
 
 
@@ -281,7 +283,11 @@ def main() -> int:
     )
     ap.add_argument("--active-repo-root", default="")
     ap.add_argument("--active-runtime-root", default="")
-    ap.add_argument("--layout-mode", choices=["auto", "project_local", "global_codex", "custom"], default="auto")
+    ap.add_argument(
+        "--layout-mode",
+        choices=["auto", "project_local", "global_codex", "legacy_compat", "custom"],
+        default="auto",
+    )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 

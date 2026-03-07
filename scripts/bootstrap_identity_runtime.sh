@@ -11,7 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-RUNTIME_ROOT="${1:-${REPO_ROOT}/.agents/identity}"
+RUNTIME_ROOT="${1:-${REPO_ROOT}/.identity}"
 PROTOCOL_ROOT="${2:-${REPO_ROOT}}"
 CONFIG_PATH="${RUNTIME_ROOT}/config/runtime-paths.env"
 

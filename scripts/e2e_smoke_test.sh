@@ -56,7 +56,7 @@ intent = resolve_layer_intent(
     intent_text=str(sys.argv[1] or "").strip(),
     explicit_source_layer=str(sys.argv[2] or "").strip(),
     default_work_layer=DEFAULT_WORK_LAYER,
-    default_source_layer="global",
+    default_source_layer="project",
 )
 print(str(intent.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER)
 PY
@@ -181,7 +181,7 @@ for ID in $IDS; do
   "${lane_cmd[@]}"
 done
 
-if [[ "$CATALOG_PATH" == "$HOME/.codex/identity/"* ]]; then
+if [[ "$CATALOG_PATH" == "$HOME/.codex/.identity/"* ]]; then
   echo "[10.2/30] preflight writeability probe for global runtime targets"
   if ! python3 - "$CATALOG_PATH" "$IDS" <<'PY'
 import os

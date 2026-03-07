@@ -35,8 +35,8 @@ def _resolve_identity_home(explicit_identity_home: str) -> tuple[Path, str]:
         return Path(env_identity_home).expanduser().resolve(), "env:IDENTITY_HOME"
     env_codex_home = os.environ.get("CODEX_HOME", "").strip()
     if env_codex_home:
-        return (Path(env_codex_home).expanduser().resolve() / "identity").resolve(), "env:CODEX_HOME"
-    return (Path.home() / ".codex" / "identity").resolve(), "default:~/.codex/identity"
+        return (Path(env_codex_home).expanduser().resolve() / ".identity").resolve(), "env:CODEX_HOME"
+    return (Path.home() / ".codex" / ".identity").resolve(), "default:~/.codex/.identity"
 
 
 def main() -> int:

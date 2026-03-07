@@ -91,15 +91,15 @@ def _detect_repo_root(start: Path | None = None) -> Path:
 
 def _resolve_project_identity_home(repo_root: Path) -> Path:
     if repo_root.name == "identity-protocol-local":
-        return (repo_root.parent / ".agents" / "identity").resolve()
-    return (repo_root / ".agents" / "identity").resolve()
+        return (repo_root.parent / ".identity").resolve()
+    return (repo_root / ".identity").resolve()
 
 
 def _resolve_global_identity_home() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser().resolve() / "identity").resolve()
-    return (Path.home() / ".codex" / "identity").resolve()
+        return (Path(codex_home).expanduser().resolve() / ".identity").resolve()
+    return (Path.home() / ".codex" / ".identity").resolve()
 
 
 def _infer_runtime_mode(catalog_path: Path, project_identity_home: Path, global_identity_home: Path) -> str:
@@ -107,7 +107,7 @@ def _infer_runtime_mode(catalog_path: Path, project_identity_home: Path, global_
         return "project"
     if _within(catalog_path, global_identity_home):
         return "global"
-    return "custom"
+    return "invalid"
 
 
 def main() -> int:
@@ -118,7 +118,7 @@ def main() -> int:
     ap.add_argument("--scope", default="")
     ap.add_argument(
         "--expect-mode",
-        choices=["auto", "project", "global", "custom", "any"],
+        choices=["auto", "project", "global"],
         default="auto",
         help="auto requires catalog to map to project/global canonical mode",
     )
@@ -179,7 +179,7 @@ def main() -> int:
 
     checks: dict[str, bool] = {
         "catalog_exists": catalog_path.exists(),
-        "resolved_source_local": source_layer == "local",
+        "resolved_source_layer_runtime": source_layer in {"project", "global"},
         "resolved_catalog_matches_requested": resolved_catalog == catalog_path,
         "resolved_scope_known": resolved_scope != "UNKNOWN",
         "pack_exists": resolved_pack.exists(),
@@ -190,15 +190,13 @@ def main() -> int:
     elif inferred_mode == "global":
         checks["pack_within_mode_root"] = _within(resolved_pack, global_identity_home)
     else:
-        checks["pack_within_mode_root"] = True
+        checks["pack_within_mode_root"] = False
+    checks["source_layer_matches_mode"] = source_layer == inferred_mode
 
     expected_mode = args.expect_mode
     if expected_mode == "auto":
         checks["mode_recognized"] = inferred_mode in {"project", "global"}
         checks["expected_mode_match"] = checks["mode_recognized"]
-    elif expected_mode == "any":
-        checks["mode_recognized"] = True
-        checks["expected_mode_match"] = True
     else:
         checks["mode_recognized"] = True
         checks["expected_mode_match"] = inferred_mode == expected_mode

@@ -285,11 +285,11 @@ def main() -> int:
         explicit_source_layer=str(args.source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
 
     work_layer = str(intent.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
-    source_layer = str(intent.get("resolved_source_layer", "global")).strip().lower() or "global"
+    source_layer = str(intent.get("resolved_source_layer", "project")).strip().lower() or "project"
     intent_source = str(intent.get("intent_source", "")).strip() or "default_fallback"
     fallback_reason = str(intent.get("fallback_reason", "")).strip()
     protocol_triggered = bool(intent.get("protocol_triggered", False))

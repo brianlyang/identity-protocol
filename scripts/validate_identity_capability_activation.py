@@ -187,10 +187,14 @@ def _check_gh_auth_status() -> tuple[bool, str]:
 
 def _derive_activation_mode(catalog: Path) -> str:
     p = str(catalog)
-    if "/.agents/identity/" in p:
-        return "project"
-    if "/.codex/identity/" in p:
+    if "/.codex/.identity/" in p:
         return "global"
+    if "/.identity/" in p:
+        return "project"
+    if "/.agents/identity/" in p:
+        return "legacy_project"
+    if "/.codex/identity/" in p:
+        return "legacy_global"
     return "unknown"
 
 

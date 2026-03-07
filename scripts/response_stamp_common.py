@@ -32,7 +32,13 @@ class StampContext:
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
 DEFAULT_DISCLOSURE_LEVEL = "standard"
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
-ALLOWED_SOURCE_LAYERS = {"project", "global", "env", "auto"}
+ALLOWED_SOURCE_LAYERS = {"project", "global"}
+LEGACY_SOURCE_LAYER_ALIASES = {
+    "local": "project",
+    "repo": "global",
+    "env": "global",
+    "auto": "project",
+}
 LAYER_INTENT_STRICT_THRESHOLD = 0.75
 DEFAULT_WORK_LAYER = "instance"
 
@@ -155,15 +161,15 @@ def _detect_repo_root(start: Path | None = None) -> Path:
 
 def _project_identity_home(repo_root: Path) -> Path:
     if repo_root.name == "identity-protocol-local":
-        return (repo_root.parent / ".agents" / "identity").resolve()
-    return (repo_root / ".agents" / "identity").resolve()
+        return (repo_root.parent / ".identity").resolve()
+    return (repo_root / ".identity").resolve()
 
 
 def _global_identity_home() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser().resolve() / "identity").resolve()
-    return (Path.home() / ".codex" / "identity").resolve()
+        return (Path(codex_home).expanduser().resolve() / ".identity").resolve()
+    return (Path.home() / ".codex" / ".identity").resolve()
 
 
 def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint: Path | None = None) -> str:
@@ -182,7 +188,7 @@ def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint
         return "global"
     except Exception:
         pass
-    return "env" if explicit_catalog else "auto"
+    return "project" if explicit_catalog else "global"
 
 
 def _ref_token(path: Path) -> str:
@@ -334,12 +340,16 @@ def _normalize_work_layer(value: str, *, fallback: str = "protocol") -> str:
     return fb if fb in ALLOWED_WORK_LAYERS else "protocol"
 
 
-def _normalize_source_layer(value: str, *, fallback: str = "auto") -> str:
+def _normalize_source_layer(value: str, *, fallback: str = "project") -> str:
     v = str(value or "").strip().lower()
+    if v in LEGACY_SOURCE_LAYER_ALIASES:
+        v = LEGACY_SOURCE_LAYER_ALIASES[v]
     if v in ALLOWED_SOURCE_LAYERS:
         return v
     fb = str(fallback or "").strip().lower()
-    return fb if fb in ALLOWED_SOURCE_LAYERS else "auto"
+    if fb in LEGACY_SOURCE_LAYER_ALIASES:
+        fb = LEGACY_SOURCE_LAYER_ALIASES[fb]
+    return fb if fb in ALLOWED_SOURCE_LAYERS else "project"
 
 
 def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
@@ -432,7 +442,7 @@ def resolve_layer_intent(
     explicit_source_layer: str = "",
     intent_text: str = "",
     default_work_layer: str = DEFAULT_WORK_LAYER,
-    default_source_layer: str = "auto",
+    default_source_layer: str = "project",
 ) -> dict[str, Any]:
     resolved_source = _normalize_source_layer(explicit_source_layer, fallback=default_source_layer)
     fallback_work = _normalize_work_layer(default_work_layer, fallback=DEFAULT_WORK_LAYER)
@@ -503,7 +513,7 @@ def resolve_layer_intent(
         )
 
     m_work = re.search(r"(work[_\-\s]?layer)\s*[:=]\s*(protocol|instance|dual)\b", text)
-    m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|env|auto)\b", text)
+    m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|local|repo|env|auto)\b", text)
     if m_source:
         resolved_source = _normalize_source_layer(m_source.group(2), fallback=resolved_source)
     if m_work:
@@ -883,7 +893,7 @@ def render_external_stamp_with_layer_context(
         wl = DEFAULT_WORK_LAYER
     sl = str(source_layer or "").strip().lower() or ctx.source_domain
     if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
     parts = [
         f"actor_id={ctx.actor_id}",
         f"identity_id={ctx.identity_id}",
@@ -932,7 +942,7 @@ def render_structured_context(
         wl = DEFAULT_WORK_LAYER
     sl = str(source_layer or "").strip().lower() or ctx.source_domain
     if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
     return {
         "actor_id": ctx.actor_id,
         "identity_id": ctx.identity_id,

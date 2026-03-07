@@ -89,7 +89,7 @@ def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
     _push((pack_resolved / "runtime" / "reports").resolve())
     _push((pack_resolved / "runtime").resolve())
     # Cross-repo custom catalog support:
-    # identity pack often lives at <project>/.agents/identity/<id>, while reports are in <project>/resource/reports.
+    # identity pack often lives at <project>/.identity/<id>, while reports are in <project>/resource/reports.
     for parent in [pack_resolved, *pack_resolved.parents]:
         candidate = (parent / "resource" / "reports").resolve()
         _push(candidate)

@@ -253,7 +253,7 @@ def main() -> int:
     ap.add_argument("--enforce-pass", action="store_true", help="return non-zero if any check fails")
     args = ap.parse_args()
 
-    catalog = args.catalog.strip() or str((Path.home() / ".codex" / "identity" / "catalog.local.yaml").resolve())
+    catalog = args.catalog.strip() or str((Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve())
     execution_report = str(args.execution_report or "").strip()
     actor_id = str(args.actor_id or "").strip()
 

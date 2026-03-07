@@ -28,6 +28,7 @@ DEFAULT_DENY_PREFIXES = (
     "identity/protocol/",
 )
 DEFAULT_IGNORE_PREFIXES = (
+    ".identity/",
     ".agents/identity/",
     "identity/runtime/",
 )

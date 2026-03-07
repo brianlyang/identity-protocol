@@ -26,7 +26,7 @@ def main() -> int:
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
     ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="")
     ap.add_argument("--work-layer", default="", help="explicit work layer override (protocol|instance|dual)")
-    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global|env|auto)")
+    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global)")
     ap.add_argument(
         "--layer-intent-text",
         default="",

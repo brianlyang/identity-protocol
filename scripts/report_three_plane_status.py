@@ -45,7 +45,7 @@ def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: st
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
     if work_layer == "protocol":

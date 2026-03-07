@@ -68,10 +68,10 @@ def _lane_context(layer_intent_text: str, expected_work_layer: str, expected_sou
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
-    source_layer = str(resolved.get("resolved_source_layer", "global")).strip().lower() or "global"
+    source_layer = str(resolved.get("resolved_source_layer", "project")).strip().lower() or "project"
     if work_layer == "instance":
         applied_gate_set = "instance_required_checks"
     elif work_layer == "protocol":
@@ -132,9 +132,6 @@ def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:
         p = Path(pack_path)
         if p.exists():
             return p
-    legacy = Path("identity") / identity_id
-    if legacy.exists():
-        return legacy
     raise FileNotFoundError(f"identity pack not found: {identity_id}")
 
 
@@ -146,7 +143,7 @@ def _resolve_prompt_contract(
     resolved_scope: str,
     resolved_pack_path: str,
 ) -> dict[str, Any]:
-    source_layer = "local"
+    source_layer = "project"
     scope = str(resolved_scope or "").strip()
     pack = Path(str(resolved_pack_path or "")).expanduser().resolve() if str(resolved_pack_path or "").strip() else None
     if pack is None:
@@ -157,7 +154,7 @@ def _resolve_prompt_contract(
             preferred_scope=scope,
             allow_conflict=True,
         )
-        source_layer = str(ctx.get("source_layer", "local"))
+        source_layer = str(ctx.get("source_layer", "project"))
         scope = str(ctx.get("resolved_scope", "")).strip()
         pack = Path(str(ctx.get("resolved_pack_path") or ctx.get("pack_path") or "")).expanduser().resolve()
     prompt_path = pack / "IDENTITY_PROMPT.md"
