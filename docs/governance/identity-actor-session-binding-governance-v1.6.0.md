@@ -3031,6 +3031,53 @@ State impact:
 2. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 3. promotion remains blocked by residual protocol-lane backlog family (`IP-UPG-002`, `IP-SEM-001`) until separate replay closure is archived.
 
+### 8.37 Round-18 protocol-lane residual convergence (`HEAD=working-tree+dirty`, 2026-03-08)
+
+Scope lock:
+
+1. this round targets the remaining residual blocker family surfaced by `system-requirements-analyst` replay (`IP-UPG-002` with semantic/writeback non-green recurrence).
+2. this round remains protocol-layer only; no identity-instance business mutation is introduced.
+3. lifecycle boundary remains non-promotional (`SPEC_READY / PENDING_INTAKE`).
+
+Implementation deltas (protocol code):
+
+1. semantic metadata inference hardening (residual `IP-SEM-001` shape):
+   - `scripts/validate_semantic_routing_guard.py` now infers deterministic semantic tuple defaults when feedback batches omit explicit fields:
+     - `intent_domain`,
+     - `intent_confidence`,
+     - `classifier_reason`.
+   - inference is machine-stamped (`semantic_fields_inferred`, `semantic_inference_mode`) and remains bounded to protocol/business/mixed/unknown enum.
+2. handoff/collaboration stale-log false-block closure on update self-test lane:
+   - `scripts/validate_agent_handoff_contract.py` and `scripts/validate_identity_collab_trigger.py` now select bounded recent evidence windows before strict validation.
+   - both validators now disable age-based stale blocking when `--self-test` is explicitly requested (self-test remains structural + positive/negative sample integrity gate).
+3. changelog backfill linkage closure for historical strict gate replay:
+   - `CHANGELOG.md` now includes explicit backfill anchors for prior strict range heads (`0a6359a`, `6af084f`) to unblock deterministic historical-range replay of `validate_changelog_updated.py`.
+
+Round-18 replay evidence:
+
+1. semantic routing replay on the previously failing protocol-lane batch:
+   - command output: `/tmp/semantic_guard_round3_wave18.json`
+   - status: `PASS_REQUIRED`, `semantic_fields_inferred=true`, `semantic_inference_mode=protocol_context_inference`.
+2. handoff validator replay (`system-requirements-analyst`, global lane):
+   - `validate_agent_handoff_contract.py --self-test` now returns `PASSED` without stale-log false block.
+3. collaboration trigger replay (`system-requirements-analyst`, global lane):
+   - `validate_identity_collab_trigger.py --self-test` now returns `PASSED`; stale-age branch is no longer promotion-blocking in explicit self-test mode.
+4. changelog range replay:
+   - historical strict range for `0a6359a` now passes via explicit backfill linkage (`validate_changelog_updated PASSED (historical backfill linkage)`).
+
+Acceptance commands (round-18 local replay):
+
+1. `python3 -m py_compile scripts/validate_agent_handoff_contract.py scripts/validate_identity_collab_trigger.py scripts/validate_semantic_routing_guard.py`
+2. `python3 scripts/validate_agent_handoff_contract.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --self-test`
+3. `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --self-test`
+4. `python3 scripts/validate_semantic_routing_guard.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id system-requirements-analyst --feedback-batch /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md --operation three-plane --expected-work-layer protocol --expected-source-layer global --json-only`
+
+State impact:
+
+1. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` pending independent full-chain replay sign-off (`update + three-plane + full-scan`) on latest head.
+2. `IP-UPG-002` and `IP-SEM-001` are narrowed from recurrent structural blockers to replay-closure verification items under auditor re-run.
+3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

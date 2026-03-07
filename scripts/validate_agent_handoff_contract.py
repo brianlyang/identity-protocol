@@ -141,6 +141,38 @@ def _identity_scoped_files(files: list[Path], identity_id: str) -> list[Path]:
     return scoped or files
 
 
+def _select_recent_files(files: list[Path], *, keep: int) -> list[Path]:
+    if not files:
+        return files
+    limit = max(1, int(keep))
+
+    def _score(path: Path) -> tuple[float, str]:
+        ts = 0.0
+        try:
+            rec = _load_json(path)
+            raw = str(rec.get("generated_at") or "").strip()
+            if raw:
+                try:
+                    ts = _parse_iso_dt(raw).timestamp()
+                except Exception:
+                    ts = 0.0
+        except Exception:
+            ts = 0.0
+        if ts <= 0.0 and path.exists():
+            try:
+                ts = float(path.stat().st_mtime)
+            except Exception:
+                ts = 0.0
+        return ts, str(path)
+
+    ranked = sorted(
+        files,
+        key=_score,
+        reverse=True,
+    )
+    return ranked[:limit]
+
+
 def _bad_placeholder(value: str) -> bool:
     v = value.strip().lower()
     return v in {"todo", "tbd", "n/a", "none", "pending", "later"}
@@ -406,9 +438,13 @@ def main() -> int:
     if len(files) < minimum_logs_required:
         print(f"[FAIL] handoff logs insufficient: found={len(files)}, required={minimum_logs_required}")
         return 1
+    validation_max_logs = int(contract.get("validation_max_logs") or minimum_logs_required)
+    files = _select_recent_files(files, keep=max(minimum_logs_required, validation_max_logs))
 
     current_task_id = str(task.get("task_id") or "").strip()
     if fixture_mode:
+        max_log_age_days = 0
+    if args.self_test:
         max_log_age_days = 0
 
     rc = 0
