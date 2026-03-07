@@ -522,6 +522,33 @@ Mandatory semantics:
    - missing receipt is fail-closed with `IP-HDSTAMP-003` (`headstamp_receipt_missing`).
 6. Governance/review templates are advisory only; send decision is controlled exclusively by pre-send validator verdict.
 
+### 4.22 `execution_target_tuple_isolation_contract_v1` (P0)
+
+Goal:
+
+1. Remove hidden coupling that treats `codex_home` as the only practical runtime isolation key.
+2. Support multi-agent × multi-identity dispatch in both persistent-session mode and one-shot process-call mode without bypass windows.
+
+Mandatory semantics:
+
+1. Every identity-route dispatch must resolve one canonical execution target tuple:
+   - `execution_target_kind` (`tmux_session | codex_home | process_call | worker_queue`)
+   - `execution_target_key` (stable isolation key in target-kind namespace)
+   - `execution_target_ref` (audit/reference payload; may include route file + receipt pointer)
+2. Conflict detection must be keyed by `(execution_target_kind, execution_target_key)` for all enabled routes under same runtime bridge scope.
+3. Explicit request overrides (`session_id` / `codex_home` / direct target fields) must pass the same conflict gate and must not bypass conflict fail-close.
+4. Shared-target mode requires gated handshake invariants:
+   - `allow_shared_session=true` and consistent `switch_ack_ref` for all colliding identities;
+   - missing/inconsistent handshake proof is fail-closed.
+5. `process_call` targets are first-class:
+   - dispatch may omit `codex_home` when `execution_target_kind=process_call`;
+   - request/receipt must include deterministic tuple (`actor_id`, `identity_id`, `run_id`, `invocation_lane_id`, `execution_target_key`).
+6. Fail-close error family (reserved for this contract):
+   - `IP-XTARGET-001` (`execution_target_tuple_missing_or_ambiguous`)
+   - `IP-XTARGET-002` (`execution_target_conflict_requires_switch_ack`)
+   - `IP-XTARGET-003` (`execution_target_override_bypass_forbidden`)
+   - `IP-XTARGET-004` (`process_call_receipt_incomplete`)
+
 ## 5) Requirement Mapping (v1.6)
 
 | Requirement ID | Protocol governance target | Surfaces | Priority | Status | Evidence pointer |
@@ -558,6 +585,7 @@ Mandatory semantics:
 | ASB16-RQ-030 | new v1.6 suggestions must satisfy intake evidence quorum (`T1 roundtable + T2 vendor + T3 openai_context + T4 protocol_spec`) before promotion beyond `PENDING_INTAKE` | intake validator/checklist + governance/review bridge + cross-verification metadata schema | P1 | SPEC_READY | intake hard-gate reinforcement (`review v1.6 FIX16-023`) + final replay reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-031 | protocol-kernel prompt imports must be executable-coupled and produce multimodal sample-proof closure under explicit actor context | prompt-kernel mapping validator + strict-lane actor-context gate + trigger/knowledge/arbitration sample-proof validators + A/B replay harness | P0 | SPEC_READY | self-drive experiment intake (`review v1.6 FIX16-024`) + architect instance pilot (`review v1.6 FIX16-026`) + final cross-track reinforcement (`review v1.6 FIX16-027`) |
 | ASB16-RQ-032 | outbound reply must pass canonical identity/layer headstamp pre-send hard gate; missing or mismatched headstamp cannot be sent | pre-send headstamp validator + governed emitter wrapper + negative replay in e2e/ci | P0 | SPEC_READY | headstamp recurrence root-cause intake (`review v1.6 FIX16-029`) |
+| ASB16-RQ-033 | runtime execution target isolation must be tuple-based (`kind+key`) and process-call compatible; `codex_home` cannot be mandatory for all dispatch paths | identity route resolver + inbound dispatch gate + conflict checker + switch-ack guard + process-call receipt emitter | P0 | SPEC_READY | multi-agent runtime escalation follow-up (`review v1.6 HOTFIX16-P0-006`) |
 
 ## 6) Mandatory Confirmation Matrix (v1.6)
 
@@ -593,6 +621,7 @@ Mandatory semantics:
 | C28 | update execution verdict and aggregation verdict (`three-plane/full-scan`) must converge on identical gate-source snapshot | same-lineage replay must show `gate_source_ref` parity and `status/error_code` homomorphism; `update_pass + aggregation_fail` split is fail-closed (`IP-GSRC-001`) |
 | C29 | required-contract enforcement must be producer-aware and applicability-scoped (`current-run linked` + run-type profile), not history-only or one-size-fits-all | requiredization receipt must include `producer_readiness`, `requiredization_current_round_linked`, `run_profile`; non-applicable contracts must resolve to `SKIPPED_NOT_REQUIRED` with explicit reason (`IP-GSRC-003/004/005`) |
 | C30 | actor/catalog context drift and protocol-feedback write-path instability must be deterministic fail-close in strict surfaces | strict replay must block env/CLI catalog mismatch unless explicit override receipt is present, and must provide canonical write strategy (`primary protocol-feedback path` + controlled spool/reconcile fallback) with deterministic receipts (`IP-GSRC-006/007`) |
+| C31 | multi-agent dispatch conflict isolation must be execution-target tuple based (not `codex_home`-only) and must remain fail-closed under explicit override | replay set must show: `(a)` conflicting tuple without handshake -> fail-close (`IP-XTARGET-002`), `(b)` override-bypass attempt blocked (`IP-XTARGET-003`), `(c)` process-call tuple without `codex_home` passes with complete receipt |
 
 ## 7) v1.6 Requirement Ledger (canonical tracker for unlock)
 
@@ -630,6 +659,7 @@ Mandatory semantics:
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | implementation landed (`single-parser dual-mode`) + lane hooks wired; promotion remains blocked until deterministic required=true replay archive is complete |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | explicit lane/candidate non-starvation hooks landed with write-boundary addendum; mapping validator + actor-explicit strict lane + multimodal sample-proof closure still required before promotion |
 | ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | implementation landed (`scripts/validate_send_time_reply_gate.py` + `scripts/validate_headstamp_recurrence_closure.py`) + lane hooks wired; deterministic negative replay archive pending |
+| ASB16-RQ-033 | execution-target tuple isolation contract | P0 | SPEC_READY | hotfix intake opened (`HOTFIX16-P0-006`): tuple schema + override fail-close + process-call receipt requirements documented; implementation + replay closure pending |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -1934,6 +1964,90 @@ Promotion guard:
    - producer/applicability requiredization replay (positive + non-applicable + negative),
    - strict context mismatch fail-fast replay,
    - protocol-feedback spool/reconcile replay proof.
+
+### 8.18 Full-Fix Replay Audit Checkpoint (`FIX16-001..037 + HOTFIX16-*`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint re-audits all active v1.6 fix streams (`FIX16-001..037`, `HOTFIX16-P0-001..HOTFIX16-P1-004`) using executable evidence only.
+2. this checkpoint is protocol-layer only and does not prescribe instance business remediation.
+3. row-level status synchronization between review rolling summary and review decision log is required and was rechecked in this round.
+4. this checkpoint opens dedicated emergency track `HOTFIX16-P0-005` for gate-chain parser/runtime drift.
+
+Replay evidence commands executed:
+
+1. `python3 scripts/validate_required_contract_coverage.py --catalog ../.agents/identity/catalog.local.yaml --identity-id base-repo-architect --operation validate --json-only`
+2. `python3 scripts/validate_required_contract_coverage.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id office-ops-expert --operation validate --json-only`
+3. `python3 scripts/report_three_plane_status.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex --out <tmp>`
+4. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --actor-id assistant:codex --out <tmp>`
+5. `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+6. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+7. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --scope USER`
+
+Critical findings (protocol-layer only):
+
+1. `P0-GATECHAIN-001` (tracked under `HOTFIX16-P0-005`):
+   - `scripts/release_readiness_check.py` crashes before gate execution because runtime references parser fields that are not declared (`args.target_branch`, `args.release_head_sha`, `args.required_gates_run_id`, `args.run_url`, `args.workflow_file_sha`, `args.run_head_sha`, `args.run_workflow_file_sha`, `args.checks_json`).
+   - Evidence: `scripts/release_readiness_check.py:976`, `scripts/release_readiness_check.py:1966`.
+2. `P0-GATECHAIN-002` (tracked under `HOTFIX16-P0-005`):
+   - `identity_creator validate` crashes because command construction reads `args.run_id` while validate subparser does not declare `--run-id`.
+   - Evidence: `scripts/identity_creator.py:1827`, `scripts/identity_creator.py:1132`.
+3. `P1-APPLICABILITY-003` (remains under `HOTFIX16-P1-004`):
+   - `cross_workflow_schema` still blocks observation runs (`IP-XWF-002`) when `route_action`/`dedup_state` are absent in non-routed, non-dedup current runs.
+   - Evidence: `required_contract_coverage` + `full_identity_protocol_scan` replay for `office-ops-expert`.
+4. `P1-CONTEXT-004` (remains under `HOTFIX16-P1-004`):
+   - env/CLI catalog mismatch is still `WARN` (`rc=0`) in strict surfaces, which is weaker than `C30` fail-close intent.
+   - Evidence: `validate_identity_runtime_mode_guard` mismatch replay above.
+
+Required protocol-layer remediation (no instance-layer scope):
+
+1. `release_readiness_check` must align argparse schema and runtime field usage, then add a mandatory replay proving no pre-gate crash.
+2. `identity_creator validate` must either add `--run-id` to validate subparser or internally derive stable run-id defaults before command assembly.
+3. `validate_cross_workflow_schema.py` must enforce profile-scoped required sets (`core`, `routed`, `dedup`) with deterministic `SKIPPED_NOT_REQUIRED` for non-applicable profiles.
+4. strict context surfaces must enforce catalog mismatch fail-close unless explicit override receipt is present.
+
+State impact:
+
+1. this checkpoint does not promote any row.
+2. `FIX16-035` / `FIX16-036` remain `PASS_WITH_BLOCKERS` (non-promotional).
+3. all other rows remain `SPEC_READY / PENDING_INTAKE` until replay closure and blocker fixes are complete.
+
+### 8.19 Emergency Hotfix Track - Execution Target Tuple Isolation (`HOTFIX16-P0-006`, 2026-03-07)
+
+Scope lock:
+
+1. this is a dedicated P0 hotfix stream and does not inherit closure from `HOTFIX16-P0-001/002/005`.
+2. scope is runtime dispatch contractization only: route resolution, conflict isolation, and machine receipts for process-call targets.
+3. this section defines protocol-layer requirement semantics; instance-specific business rollout remains out of scope.
+
+Why this hotfix is required:
+
+1. current multi-agent workloads include both persistent-session dispatch and one-shot process dispatch; treating `codex_home` as mandatory creates false coupling and bypass pressure.
+2. tuple-based conflict isolation (`kind+key`) is required to prevent "shared route appears valid but actually collides" incidents.
+3. explicit override requests must remain under the same fail-close conflict semantics as normal route path.
+
+Contractized mandatory fields:
+
+1. `execution_target_kind`
+2. `execution_target_key`
+3. `execution_target_ref`
+4. `route_source`
+5. `allow_shared_session`
+6. `switch_ack_ref`
+7. `route_conflict_status`
+8. `route_conflict_error_code`
+
+Replay closure requirements (promotion blocker until complete):
+
+1. conflicting tuple replay (`kind+key` collision, no handshake) -> deterministic fail-close `IP-XTARGET-002`.
+2. explicit override bypass replay -> deterministic fail-close `IP-XTARGET-003`.
+3. process-call replay (`execution_target_kind=process_call`, no `codex_home`) -> deterministic pass with full receipt fields.
+4. same-lineage convergence replay across update/readiness/three-plane/full-scan consuming identical tuple fields and conflict verdict.
+
+State impact:
+
+1. `ASB16-RQ-033` enters v1.6 as `P0 / SPEC_READY`.
+2. lifecycle remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until replay closure + independent audit sign-off.
 
 ## 9) References
 
