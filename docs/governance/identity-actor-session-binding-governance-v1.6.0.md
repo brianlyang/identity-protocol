@@ -2346,6 +2346,99 @@ State impact:
 2. `HOTFIX16-P0-002` remains `SPEC_READY / PENDING_INTAKE` pending independent live lane/headstamp replay archive.
 3. release boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.25 Round-8 Multi-Source Protocol-Feedback Convergence Checkpoint (`HEAD=d5f75d7+`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint ingests protocol-lane evidence only and excludes instance business scenarios.
+2. this checkpoint consolidates three independent protocol-feedback channels under one convergence verdict.
+3. no promotional state change is allowed in this section.
+
+Four-track consolidation (`T1..T4`, protocol layer):
+
+1. `T1` intake batches (protocol lane):
+   - `FEEDBACK_BATCH_20260307T070548Z_v16_upgrade_cross_track_alignment_regression.md`
+   - `FEEDBACK_BATCH_20260307T071111Z_protocol_lane_four_track_crosscheck_sanitized.md`
+   - `FEEDBACK_BATCH_2026-03-07_002_protocol-lane-post-escalation.md`
+2. `T2` channel integrity validators:
+   - `validate_protocol_feedback_ssot_archival -> PASS_REQUIRED`
+   - `validate_protocol_vendor_semantic_isolation -> PASS_REQUIRED`
+   - `validate_protocol_feedback_reply_channel -> SKIPPED_NOT_REQUIRED (contract_not_required; non-failure)`
+3. `T3` replay convergence checks:
+   - run-id selection determinism,
+   - strict-surface requiredization homomorphism (`update/readiness/three-plane/full-scan`),
+   - headstamp/session-refresh strictness and semantic convergence.
+4. `T4` evidence indexing:
+   - each batch is indexed via canonical `runtime/protocol-feedback/evidence-index/INDEX.md` and linked with machine receipts.
+
+Findings (protocol-layer only):
+
+1. positive reinforcement remains confirmed:
+   - no-hard-switch fail-close baseline remains effective,
+   - parser/runtime crash class remains closed on strict chains,
+   - canonical protocol-feedback archival integrity remains healthy.
+2. convergence residuals remain open under `HOTFIX16-P1-004`:
+   - run-id selector still has dual-naming compatibility gap (`identity-upgrade-exec-*.json` vs `<epoch>.json`) and may miss valid lineage.
+   - strict surfaces can still split on same lineage (`update` required-failed non-zero vs `three-plane` required-failed zero).
+   - three-plane may remain `BLOCKED` with `required_failed=0` when stale report fallback enters tuple/version alignment path.
+   - session-refresh pointer/binding divergence still maps to warning-severity branch (`IP-ASB-RFS-002`) on strict paths, which is weaker than desired fail-close semantics.
+   - semantic convergence residual remains visible (`IP-SEM-004` class).
+
+Required protocol-layer hardening (architect lane):
+
+1. unify run-id report selector to support dual report naming with deterministic tie-break in all strict surfaces.
+2. enforce same-lineage convergence tuple parity across `validate_required_contract_coverage`, `report_three_plane_status`, and `full_identity_protocol_scan`:
+   - `failed_required_contract_count`
+   - `report_selected_path`
+   - `run_id_binding`
+3. promote strict session-refresh pointer/binding divergence from warning to fail-close on strict operations unless explicit audited override is present.
+4. keep `SKIPPED_NOT_REQUIRED(contract_not_required)` as legal non-failure for reply-channel validator until contract requiredization is explicit.
+
+State impact:
+
+1. this checkpoint confirms substantial protocol hardening but not closure.
+2. `HOTFIX16-P1-004`, `FIX16-035`, and `FIX16-036` remain non-promotional pending convergence replay closure.
+3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.26 Round-8 Temp-Resolver Residual Pre-Implementation Reinforcement (`HEAD=f53f36a+`, 2026-03-07)
+
+Scope lock:
+
+1. this reinforcement section is protocol-layer only and targets residual fixed temp-root fallback debt.
+2. this section is pre-implementation guidance for code landing; no closure claim is made here.
+3. no promotion state change is allowed from this section.
+
+Residuals identified by cross-check:
+
+1. `scripts/execute_identity_upgrade.py` still contains fixed-path compatibility fallbacks that can bypass runtime temp resolver policy for:
+   - capability report fallback output,
+   - pre-mutation reply/blocker receipt defaults,
+   - legacy output-dir default aliasing.
+2. `scripts/validate_execution_report_freshness.py` still scans hardcoded temp roots in candidate fallback selection.
+3. `scripts/validate_identity_protocol_baseline_freshness.py` still scans hardcoded temp roots in report fallback selection.
+
+Architect hardening requirements before code landing:
+
+1. all three scripts must consume `runtime_temp_path_common` as the sole dynamic temp-root source (`runtime_temp_root`, `runtime_temp_file`, or equivalent helper).
+2. explicit CLI/report overrides remain highest priority, but fallback roots must be runtime/environment-driven and deterministic.
+3. legacy compatibility aliases are allowed only when they resolve through runtime temp resolver semantics (no fixed `/tmp` literals).
+4. replay contract must include both static and runtime verification:
+   - static: targeted grep for `/tmp` literals on the three scripts,
+   - runtime: positive replay with default paths and negative replay with missing-report/missing-candidate scenarios.
+
+Required acceptance commands (post-implementation):
+
+1. `rg -n "/tmp" scripts/execute_identity_upgrade.py scripts/validate_execution_report_freshness.py scripts/validate_identity_protocol_baseline_freshness.py`
+2. `python3 -m py_compile scripts/execute_identity_upgrade.py scripts/validate_execution_report_freshness.py scripts/validate_identity_protocol_baseline_freshness.py`
+3. `python3 scripts/docs_command_contract_check.py`
+4. `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. this section adds implementation guidance only and does not assert closure.
+2. `HOTFIX16-P1-003` remains `SPEC_READY / PENDING_INTAKE` until the three-script residuals are code-landed and replay-verified.
+3. release boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

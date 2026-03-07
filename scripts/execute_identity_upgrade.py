@@ -16,6 +16,7 @@ import yaml
 
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
+from runtime_temp_path_common import runtime_temp_file, runtime_temp_root
 
 PROTOCOL_PUBLISH_CHECKS = {
     "scripts/validate_changelog_updated.py",
@@ -782,9 +783,17 @@ def _resolve_capability_contract(
 ) -> dict[str, Any]:
     payload = _default_capability_contract_payload(identity_id=identity_id, catalog_path=catalog_path)
     out_path: Path | None = None
+    fallback_capability_path = runtime_temp_file(
+        channel="identity-upgrade",
+        operation="capability-activation",
+        identity_id=identity_id,
+        run_token=run_id,
+        stem=f"{identity_id}-{run_id}",
+        ext="json",
+    )
     out_candidates = [
         runtime_output_root / "logs" / "capability" / f"{identity_id}-{run_id}.json",
-        Path("/tmp/identity-runtime") / identity_id / "logs" / "capability" / f"{identity_id}-{run_id}.json",
+        fallback_capability_path,
     ]
     for candidate in out_candidates:
         try:
@@ -849,8 +858,22 @@ def _run_header_first_gate(
     expected_work_layer: str,
     expected_source_layer: str,
 ) -> dict[str, Any]:
-    reply_file = Path("/tmp") / f"identity-pre-mutation-reply-{identity_id}-{run_id}.txt"
-    receipt_file = Path("/tmp") / f"identity-pre-mutation-send-time-blocker-{identity_id}-{run_id}.json"
+    reply_file = runtime_temp_file(
+        channel="identity-upgrade",
+        operation="pre-mutation-header-gate",
+        identity_id=identity_id,
+        run_token=run_id,
+        stem="identity-pre-mutation-reply",
+        ext="txt",
+    )
+    receipt_file = runtime_temp_file(
+        channel="identity-upgrade",
+        operation="pre-mutation-header-gate",
+        identity_id=identity_id,
+        run_token=run_id,
+        stem="identity-pre-mutation-send-time-blocker",
+        ext="json",
+    )
     cmd = [
         "python3",
         "scripts/compose_and_validate_governed_reply.py",
@@ -926,7 +949,11 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
     ap.add_argument("--metrics-path", default="", help="optional route metrics artifact path override")
-    ap.add_argument("--out-dir", default="/tmp/identity-upgrade-reports")
+    ap.add_argument(
+        "--out-dir",
+        default="",
+        help="optional report output directory; empty means resolved_pack_path/runtime/reports",
+    )
     ap.add_argument("--protocol-root", default="")
     ap.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
@@ -996,9 +1023,17 @@ def main() -> int:
     )
     prompt_path = Path(str(prompt_contract.get("identity_prompt_path", ""))).expanduser().resolve()
     runtime_state_target = (prompt_path.parent / "runtime" / "state" / "prompt_contract.json").resolve()
-    out_dir = Path(args.out_dir)
-    if str(out_dir).strip() in {"identity/runtime/reports", "/tmp/identity-upgrade-reports"}:
-        out_dir = runtime_output_root / "reports"
+    out_dir_token = str(args.out_dir or "").strip()
+    default_out_dir = (runtime_output_root / "reports").resolve()
+    legacy_runtime_temp_out_dir = (runtime_temp_root() / "identity-upgrade-reports").resolve()
+    if not out_dir_token:
+        out_dir = default_out_dir
+    else:
+        out_dir_candidate = Path(out_dir_token).expanduser().resolve()
+        if out_dir_token == "identity/runtime/reports" or out_dir_candidate == legacy_runtime_temp_out_dir:
+            out_dir = default_out_dir
+        else:
+            out_dir = out_dir_candidate
     out_dir.mkdir(parents=True, exist_ok=True)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)

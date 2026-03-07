@@ -87,8 +87,8 @@ Carry-over evidence:
 | FIX16-037 | 2026-03-06 | protocol | write-boundary non-starvation hardening (`ASB16-RQ-028/031`): lane-scoped boundary semantics + protocol-entry liveness invariant + no-silent-downgrade fail-close + mandatory telemetry tuple + replay matrix hard-gate | 093496b + 910ec6e | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) with round-6 recurrence replay (`actor-binding resolver divergence`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) + audit_replay_20260307_round6_headstamp | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b + audit_round8_preimplementation_tmp_residuals | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 | SPEC_READY | PENDING_INTAKE |
 
@@ -1786,6 +1786,22 @@ Implementation delta snapshot (2026-03-07):
    - `bash -n scripts/e2e_smoke_test.sh` → pass.
    - strict-chain `/tmp` literal grep on refactored scripts → no hits.
 
+Round-8 pre-implementation residual sweep (`HEAD=f53f36a+`, 2026-03-07):
+
+1. residual scripts confirmed (not yet landed in this subsection):
+   - `scripts/execute_identity_upgrade.py` (`/tmp` fallback in capability report, pre-mutation reply/receipt defaults, and legacy out-dir alias logic),
+   - `scripts/validate_execution_report_freshness.py` (fallback root scan hardcoded to legacy `/tmp` paths),
+   - `scripts/validate_identity_protocol_baseline_freshness.py` (fallback root scan hardcoded to legacy `/tmp` paths).
+2. required implementation contract:
+   - migrate all three scripts to runtime temp resolver semantics (`runtime_temp_root` + `runtime_temp_file` or equivalent),
+   - preserve explicit CLI/report override precedence,
+   - remove fixed `/tmp` literals from these scripts.
+3. planned replay acceptance set (post-implementation):
+   - `rg -n "/tmp" scripts/execute_identity_upgrade.py scripts/validate_execution_report_freshness.py scripts/validate_identity_protocol_baseline_freshness.py`
+   - `python3 -m py_compile scripts/execute_identity_upgrade.py scripts/validate_execution_report_freshness.py scripts/validate_identity_protocol_baseline_freshness.py`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
 Architect handoff artifacts (absolute paths):
 
 1. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T140030Z_tmp_hardcoded_path_governance_gap.md`
@@ -2104,6 +2120,33 @@ Round-6 three-point closure replay (project-local lineage, 2026-03-07):
    - fallback negative: `FAIL_REQUIRED + IP-FBTAX-001`.
    - dedup missing required field: `FAIL_REQUIRED + IP-DEDUP-002`.
 
+Round-7 multi-source protocol-feedback convergence replay (protocol lane only, 2026-03-07):
+
+1. scope lock:
+   - this replay consolidates protocol-layer receipts from three independent protocol-feedback channels.
+   - instance business behavior is out of scope; only protocol gate semantics and cross-surface homomorphism are evaluated.
+2. four-track consolidation (`T1..T4`):
+   - `T1` intake batches: `FEEDBACK_BATCH_20260307T070548Z_v16_upgrade_cross_track_alignment_regression.md`, `FEEDBACK_BATCH_20260307T071111Z_protocol_lane_four_track_crosscheck_sanitized.md`, `FEEDBACK_BATCH_2026-03-07_002_protocol-lane-post-escalation.md`.
+   - `T2` channel integrity validators: `validate_protocol_feedback_ssot_archival -> PASS_REQUIRED`, `validate_protocol_vendor_semantic_isolation -> PASS_REQUIRED`, `validate_protocol_feedback_reply_channel -> SKIPPED_NOT_REQUIRED(contract_not_required)`.
+   - `T3` replay consistency checks: run-id selector, coverage-vs-three-plane convergence, headstamp/session refresh strictness, semantic routing closure.
+   - `T4` evidence indexing: each batch is indexed through canonical `runtime/protocol-feedback/evidence-index/INDEX.md` with replay receipts.
+3. confirmed protocol-layer residuals (no business semantics):
+   - run-id anchored selector still has compatibility gap for dual report naming (`identity-upgrade-exec-*.json` vs `<epoch>.json`) and can return run-id-not-found for valid lineage.
+   - same lineage can still split across strict surfaces: `operation=update` shows required failures while `operation=three-plane` reports zero required failures.
+   - three-plane can stay `BLOCKED` even when `required_failed=0` because report selection falls back to stale tuple/version alignment paths.
+   - send-time/headstamp recurrence family remains visible on pointer/binding divergence branches (`IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004`).
+   - semantic routing convergence residual remains open (`IP-SEM-004`).
+   - session refresh severity is still too soft for strict surfaces on pointer-consistency + actor-binding-missing branches (`IP-ASB-RFS-002` as `WARN_NON_BLOCKING`).
+4. protocol-layer positive reinforcement retained:
+   - parser/runtime crash class is still closed in strict command chains.
+   - no-hard-switch baseline remains enforced.
+   - protocol-feedback canonical archival checks remain healthy (`PASS_REQUIRED` on SSOT archival and vendor semantic isolation).
+5. required architect closure (protocol only):
+   - unify run-id report selector source with dual-naming compatibility and deterministic tie-break.
+   - enforce same-lineage convergence tuple across strict surfaces: (`failed_required_contract_count`, `report_selected_path`, `run_id_binding`).
+   - promote session refresh pointer/binding divergence from warning to strict fail-close when strict operations are requested.
+   - keep reply-channel `SKIPPED_NOT_REQUIRED(contract_not_required)` as legal non-failure unless contract is requiredized.
+
 Architect handoff artifacts (canonical channel pattern):
 
 1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
@@ -2165,8 +2208,8 @@ Promotion guard (hard):
 | FIX16-037 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:10:00Z | Write-boundary non-starvation hooks remain lane-wired (`093496b`); this round adds canonical `RQ-028` kernel/mapping projection (`910ec6e`) for full requirement coverage. Promotion boundary unchanged pending replay matrix closure (`A/B/C/D/E/F`). |
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
 | HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:27:07Z | protocol-lane starvation/headstamp risk hardening remains landed; round-7 replay closes prior protocol resolver divergence: sampled identities converge to `headstamp_recurrence_closure_status=PASS_REQUIRED` with mismatch-negative still fail-close (`IP-ASB-STAMP-SESSION-005`) and binding selection tuple now machine-emitted. row remains non-promotional pending independent live lane/headstamp replay archive. |
-| HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path residual closure landed: CI required-gates now uses runner/runtime-scoped temp roots and legacy stamp/first-line/coherence blocker defaults use `runtime_temp_file(...)`; targeted static replay shows no fixed `/tmp` literals. status remains non-promotional pending independent replay sign-off. |
-| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | strict convergence closure landed for this round: `identity_creator` now propagates `--scope` to instance-isolation checks and Batch-6/7 strict non-linked paths emit deterministic `SKIPPED_NOT_REQUIRED` instead of synthetic missing-evidence failures. status remains non-promotional pending independent replay sign-off + current-round evidence archive. |
+| HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path closure remains in-progress: CI + stamp/first-line/coherence paths are resolver-backed, and round-8 pre-implementation sweep has identified remaining fixed `/tmp` fallbacks in `execute_identity_upgrade` + freshness validators as mandatory next landing scope. status remains non-promotional pending full three-script closure replay and independent sign-off. |
+| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | multi-source protocol-feedback replay confirms positive reinforcement (parser crash closure, no-hard-switch baseline, SSOT archival integrity), but convergence residuals remain: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness under strict pointer/binding divergence, and semantic residual `IP-SEM-004`. status remains non-promotional pending convergence hardening replay closure. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks). round-3 replay across four identities still returns `execution_target_tuple_isolation_status=SKIPPED_NOT_REQUIRED` (`contract_not_required`), so required=true deterministic replay archive and runtime bridge rollout evidence are still pending. |
 

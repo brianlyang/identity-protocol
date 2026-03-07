@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from resolve_identity_context import resolve_identity
+from runtime_temp_path_common import runtime_temp_root
 
 
 ERROR_STALE = "IP-REL-001"
@@ -75,7 +76,14 @@ def _collect_candidates(identity_id: str, preferred_pack: Path | None, report: s
     if preferred_rows:
         return preferred_rows
 
-    fallback_roots: list[Path] = [Path("/tmp/identity-upgrade-reports"), Path("/tmp/identity-runtime")]
+    runtime_tmp_root = runtime_temp_root()
+    fallback_roots: list[Path] = [
+        (runtime_tmp_root / "identity-upgrade-reports").resolve(),
+        (runtime_tmp_root / "identity-runtime").resolve(),
+    ]
+    runtime_output_root = os.environ.get("IDENTITY_RUNTIME_OUTPUT_ROOT", "").strip()
+    if runtime_output_root:
+        fallback_roots.append(Path(runtime_output_root).expanduser().resolve())
     identity_home = os.environ.get("IDENTITY_HOME", "").strip()
     if identity_home:
         fallback_roots.append(Path(identity_home).expanduser().resolve())
