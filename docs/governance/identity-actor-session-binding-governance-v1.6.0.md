@@ -3337,19 +3337,46 @@ State boundary:
 2. Promotion still requires independent replay closure on migrated instance packs.
 
 
-## 8.42 Round-24 Full-Repo Scan Closure (scripts + identity tree, protocol-only)
+## 8.42 Round-24 Two-Layer Canonical Hard-Fail Closure (2026-03-08)
 
-Scope freeze (this round):
+### Decision Freeze (Narrowed Model)
 
-1. Mandatory scan scope expands beyond `scripts/**` to include `identity/**` (especially `identity/protocol/**`) and `README.md`.
-2. Strict runtime semantics remain canonical two-layer only:
-   - `source_layer in {project, global}`
-   - canonical roots: `<project>/.identity/<identity_id>/` and `${CODEX_HOME:-~/.codex}/.identity/<identity_id>/`.
-3. Legacy tokens (`local/repo/env/auto`, `.agents/identity`, `~/.codex/identity`) are allowed only as migration/forbidden markers and must not participate in strict verdict source.
+本轮冻结为最小稳定模型，不再扩展层级语义：
 
-Round-24 implementation closure:
+1. canonical `source_layer` 仅允许 `project` / `global` 进入 strict 判定。
+2. protocol 层职责仅为 `识别` / `校验` / `拒绝`，不承担历史兼容兜底迁移。
+3. instance 层职责为路径迁移、历史清债、报告回填；未迁移实例可被 protocol 严格拒绝。
 
-1. Cleared residual `default_source_layer="auto"`/`source_layer ... "auto"` usage in strict validators by converging defaults to `project`:
+### Canonical Path Contract
+
+1. project 模式：`<project>/.identity/<identity_id>/`
+2. global 模式：`${CODEX_HOME:-~/.codex}/.identity/<identity_id>/`
+3. 非 canonical 路径（如 `.agents/identity`、`~/.codex/identity`）在 strict operation 中必须 fail-close。
+
+### Mandatory Controls (Round-24)
+
+1. Source-Domain Determinism
+   - `render/compose/first-line/send-time/coherence` 的 `source_layer` 必须来自同一 resolver 结果。
+   - 禁止将 non-canonical catalog 通过 fallback 渲染为 `project/global` 的语义洗白。
+
+2. Strict Surface Unified Preflight
+   - 以下 strict surface 统一前置 `validate_identity_runtime_mode_guard`，guard 未通过不得继续执行后续 validator：
+     - `identity_creator`
+     - `report_three_plane_status`
+     - `full_identity_protocol_scan`
+     - `release_readiness_check`
+     - `e2e_smoke_test.sh`
+
+3. Expected Layer End-to-End Pass-through
+   - `expected_work_layer/expected_source_layer` 必须从入口透传到 `render_identity_response_stamp` 与后续 strict reply gates。
+   - 禁止同一 run 内出现 `expected=protocol` 但 render 输出 `instance` 的链路分叉。
+
+4. No Compatibility Fallback in Protocol Lane
+   - protocol lane 对 legacy source tokens 与 legacy runtime path 仅可标记为 migration metadata，不可作为 strict 判定真值来源。
+
+### Round-24 Implementation Closure (protocol base repo)
+
+1. strict requiredization/sanitization/routing 家族 validators 已从 `default_source_layer="auto"` 收敛到 `project`：
    - `scripts/validate_protocol_vendor_semantic_isolation.py`
    - `scripts/validate_protocol_data_sanitization_boundary.py`
    - `scripts/validate_semantic_routing_guard.py`
@@ -3357,66 +3384,40 @@ Round-24 implementation closure:
    - `scripts/validate_vendor_namespace_separation.py`
    - `scripts/validate_required_contract_coverage.py`
    - `scripts/validate_protocol_feedback_sidecar_contract.py`
-   - `scripts/validate_prompt_kernel_executable_coupling.py`.
-2. README runtime-path examples are aligned to canonical `.identity` roots (`${CODEX_HOME}/.identity/...`).
-3. `identity/protocol/IDENTITY_PROTOCOL.md` remains aligned with two-layer normative rule and keeps legacy paths as migration-only note.
+   - `scripts/validate_prompt_kernel_executable_coupling.py`
+2. three-plane / full-scan 增补 runtime mode guard 预检，guard 失败即停止该 strict 链路执行。
+3. `render_identity_response_stamp` 与 strict reply 链路完成 `expected_work_layer/expected_source_layer` 透传收口。
+4. response stamp 与 structured context 不再把 non-canonical source 自动降级渲染为 `project`。
 
-Scan result (machine replay):
+### Replay Acceptance (Protocol Layer Only)
+
+以下条件全部满足才可标记本节闭环：
+
+1. legacy catalog 输入在 strict surface 统一前置被拒绝（同一错误族、同一 fail-close 行为）。
+2. non-canonical catalog 不再在头显中渲染为 `source_layer=project/global`。
+3. validate/three-plane/full-scan 在同 run 上的 layer tuple 一致（至少包含 `work_layer`、`source_layer`）。
+4. 状态边界保持：`SPEC_READY / PENDING_INTAKE`，`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+### Scan & Replay Evidence
 
 1. `/tmp/v16_round24_full_repo_scan_20260308.json`
 2. `/tmp/v16_round24_full_repo_scan_20260308.md`
-3. Raw census: `total_hits=1415` (legacy tokens are concentrated in archived evidence payloads under `identity/runtime/**`).
-4. Normative closure: `non_compat_normative_hits=0` for strict surfaces (`scripts/** + identity/protocol/** + README.md`).
-5. Governance classification:
-   - archived replay/evidence payloads (`identity/runtime/**`) are immutable audit artifacts and are not rewritten by protocol layer.
-   - instance migration is responsible for future-path normalization of newly generated reports.
+3. raw census: `total_hits=1415`（legacy tokens 主要来自 `identity/runtime/**` 历史证据归档）。
+4. strict-normative closure: `non_compat_normative_hits=0`（`scripts/** + identity/protocol/** + README.md`）。
 
-Acceptance commands:
+### Acceptance Commands
 
 1. `rg -n 'default_source_layer="auto"|source_layer or "auto"|--source-layer.*default="auto"' scripts identity README.md`
-2. `python3 -m py_compile scripts/validate_protocol_vendor_semantic_isolation.py scripts/validate_protocol_data_sanitization_boundary.py scripts/validate_semantic_routing_guard.py scripts/validate_external_source_trust_chain.py scripts/validate_vendor_namespace_separation.py scripts/validate_required_contract_coverage.py scripts/validate_protocol_feedback_sidecar_contract.py scripts/validate_prompt_kernel_executable_coupling.py`
-3. `python3 scripts/docs_command_contract_check.py`
-4. `python3 scripts/validate_protocol_ssot_source.py`
+2. `python3 -m py_compile scripts/response_stamp_common.py scripts/render_identity_response_stamp.py scripts/report_three_plane_status.py scripts/full_identity_protocol_scan.py scripts/release_readiness_check.py scripts/validate_reply_identity_context_first_line.py scripts/validate_execution_reply_identity_coherence.py scripts/validate_protocol_vendor_semantic_isolation.py scripts/validate_protocol_data_sanitization_boundary.py scripts/validate_semantic_routing_guard.py scripts/validate_external_source_trust_chain.py scripts/validate_vendor_namespace_separation.py scripts/validate_required_contract_coverage.py scripts/validate_protocol_feedback_sidecar_contract.py scripts/validate_prompt_kernel_executable_coupling.py`
+3. `bash -n scripts/e2e_smoke_test.sh`
+4. `python3 scripts/docs_command_contract_check.py`
+5. `python3 scripts/validate_protocol_ssot_source.py`
 
-State impact:
+### State impact
 
-1. This round closes protocol-base residual scan debt for `scripts + identity` normative surfaces.
-2. Lifecycle boundary unchanged: `HOTFIX16-P0-007` remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until independent replay sign-off.
-3. Instance migration/accounting debt remains instance-owned; protocol layer keeps identify/validate/reject boundary only.
-
-## 8.43 Round-25 HUD Egress Mandatory Chain Clarification (protocol-only, communication freeze)
-
-Problem statement (replayed):
-
-1. HUD/Identity-Context can still be missing when user-visible output bypasses canonical compose/send-time gate and is emitted as direct text.
-2. This is a protocol control-plane egress consistency issue, not an instance business capability issue.
-3. Two-layer path convergence alone does not close this class unless reply egress is also frozen to one chain.
-
-Decision freeze (communication baseline):
-
-1. All strict user-visible replies must flow through one canonical egress chain:
-   - `compose_and_validate_governed_reply.py`
-   - `validate_send_time_reply_gate.py`
-   - final emission
-2. Direct text egress outside canonical chain is non-compliant for strict operations and must be fail-close.
-3. Entry tuple and egress tuple must stay consistent on the same run (`actor_id`, `identity_id`, `work_layer`, `source_layer`, `lock_state`).
-4. HUD first line is mandatory protocol output contract, not optional formatting.
-
-Scope and ownership:
-
-1. Protocol layer owns egress chain enforcement and mismatch rejection.
-2. Instance layer does not patch around missing HUD; instance only consumes protocol verdicts.
-
-Acceptance replay (for bilateral communication):
-
-1. `validate`, `three-plane`, and `full-scan` must produce user-visible output with Identity-Context first line present under strict replay.
-2. `reply_first_line_status=PASS_REQUIRED` and `send_time_gate_status=PASS_REQUIRED` must be concurrently true on the same run lineage.
-3. Any direct-output bypass path detected in strict replay is treated as governance regression for `HOTFIX16-P0-007`.
-
-State impact:
-
-1. This section adds communication and enforcement clarity only; no promotional status change.
-2. Lifecycle boundary unchanged: `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`.
+1. 本节为 protocol 控制面收口，仍为 non-promotional。
+2. `HOTFIX16-P0-007` 状态维持 `SPEC_READY / PENDING_INTAKE`。
+3. instance 迁移债务继续由实例层承担；协议层保持识别/校验/拒绝边界。
 
 
 ## 9) References

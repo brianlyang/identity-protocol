@@ -288,6 +288,12 @@ for ID in $IDS; do
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     render_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
+  if [ -n "$EXPECTED_WORK_LAYER" ]; then
+    render_cmd+=(--work-layer "$EXPECTED_WORK_LAYER")
+  fi
+  if [ -n "$EXPECTED_SOURCE_LAYER" ]; then
+    render_cmd+=(--source-layer "$EXPECTED_SOURCE_LAYER")
+  fi
   "${render_cmd[@]}"
 
   echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"

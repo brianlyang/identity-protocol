@@ -373,7 +373,7 @@ def main() -> int:
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
         expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
-        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
+        expected_source_layer = str(ctx.source_domain or "").strip().lower() or "unknown"
     if expected_source_layer_input_invalid and expected_source_layer != expected_source_layer_input:
         source_layer_downgrade_applied = True
 

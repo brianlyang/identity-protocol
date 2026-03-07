@@ -188,7 +188,7 @@ def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint
         return "global"
     except Exception:
         pass
-    return "project" if explicit_catalog else "global"
+    return "unknown"
 
 
 def _ref_token(path: Path) -> str:
@@ -264,11 +264,15 @@ def resolve_stamp_context(
     pointer = _session_data(catalog_path, actor, identity_id)
     lock_state = _lock_state(identity_id, pointer)
     lease_id = _lease_id(pointer)
-    source = _source_domain(
-        catalog_path,
-        explicit_catalog=explicit_catalog,
-        repo_root_hint=repo_catalog_path.parent,
-    )
+    resolved_source = str(resolved.get("source_layer", "")).strip().lower()
+    if resolved_source:
+        source = resolved_source
+    else:
+        source = _source_domain(
+            catalog_path,
+            explicit_catalog=explicit_catalog,
+            repo_root_hint=repo_catalog_path.parent,
+        )
     return StampContext(
         actor_id=actor,
         identity_id=identity_id,
@@ -349,7 +353,12 @@ def _normalize_source_layer(value: str, *, fallback: str = "project") -> str:
     fb = str(fallback or "").strip().lower()
     if fb in LEGACY_SOURCE_LAYER_ALIASES:
         fb = LEGACY_SOURCE_LAYER_ALIASES[fb]
-    return fb if fb in ALLOWED_SOURCE_LAYERS else "project"
+    if fb in ALLOWED_SOURCE_LAYERS:
+        return fb
+    raw_fallback = str(fallback or "").strip().lower()
+    if raw_fallback:
+        return raw_fallback
+    return "unknown"
 
 
 def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
@@ -891,9 +900,7 @@ def render_external_stamp_with_layer_context(
     wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
         wl = DEFAULT_WORK_LAYER
-    sl = str(source_layer or "").strip().lower() or ctx.source_domain
-    if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
+    sl = str(source_layer or "").strip().lower() or str(ctx.source_domain or "").strip().lower() or "unknown"
     parts = [
         f"actor_id={ctx.actor_id}",
         f"identity_id={ctx.identity_id}",
@@ -940,9 +947,7 @@ def render_structured_context(
     wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
         wl = DEFAULT_WORK_LAYER
-    sl = str(source_layer or "").strip().lower() or ctx.source_domain
-    if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "project"
+    sl = str(source_layer or "").strip().lower() or str(ctx.source_domain or "").strip().lower() or "unknown"
     return {
         "actor_id": ctx.actor_id,
         "identity_id": ctx.identity_id,

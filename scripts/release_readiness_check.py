@@ -1927,12 +1927,22 @@ def main() -> int:
                 and "--work-layer" not in cmd
             ):
                 cmd.extend(["--work-layer", expected_work_layer])
+            if (
+                cmd[1] == "scripts/render_identity_response_stamp.py"
+                and "--work-layer" not in cmd
+            ):
+                cmd.extend(["--work-layer", expected_work_layer])
     if expected_source_layer:
         for cmd in seq:
             if len(cmd) < 2:
                 continue
             if (
                 cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                and "--source-layer" not in cmd
+            ):
+                cmd.extend(["--source-layer", expected_source_layer])
+            if (
+                cmd[1] == "scripts/render_identity_response_stamp.py"
                 and "--source-layer" not in cmd
             ):
                 cmd.extend(["--source-layer", expected_source_layer])

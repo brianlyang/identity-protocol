@@ -2611,7 +2611,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T04:10:00Z | round-18 residual convergence landed: semantic routing guard now provides deterministic inferred semantic tuple fallback for metadata-missing protocol batches, while handoff/collab self-test validators close stale-age false blockers via bounded recent-window validation + self-test age bypass. residual promotion blockers remain gated by independent full-chain replay (`update + three-plane + full-scan`) to clear `IP-UPG-002 + IP-SEM-001` on latest head. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T19:10:00Z | round-24 adds full-repo normative scan closure (`scripts/** + identity/** + README`) and clears residual `default_source_layer=auto` literals in strict validators; only compatibility/forbidden-note legacy markers remain. control-plane governance stays non-promotional pending independent auditor replay sign-off. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T19:40:00Z | round-24 addendum confirms two-layer hard-fail closure on protocol control-plane: source-domain whitewash removed, strict surface runtime-mode preflight unified, expected layer pass-through completed, and instance migration debt remains instance-owned. remains non-promotional pending independent replay sign-off. |
 
 ### Round-23 protocol checkpoint: canonical two-layer path cutover (execution landed, non-promotional)
 
@@ -2639,31 +2639,50 @@ Decision:
 ---
 
 
-### Round-24 protocol checkpoint: full-repo scan closure (`scripts + identity`, non-promotional)
+### Round-24 Audit Addendum (2026-03-08): Two-Layer Hard-Fail Closure
 
-1. Scan scope explicitly includes `scripts/**`, `identity/**` (with `identity/protocol/**` as mandatory), and `README.md`.
-2. Machine replay artifacts:
-   - `/tmp/v16_round24_full_repo_scan_20260308.json`
-   - `/tmp/v16_round24_full_repo_scan_20260308.md`
-3. Replay summary:
-   - raw census: `total_hits=1415` (legacy tokens mainly from archived evidence payloads under `identity/runtime/**`).
-   - `normative_hits=8`, all classified as expected compatibility/forbidden markers.
-   - `non_compat_normative_hits=0`.
-4. Residual closure landed this round:
-   - strict validator defaults converge from `default_source_layer="auto"` to `project` for protocol requiredization/sanitization/routing family.
-   - `validate_prompt_kernel_executable_coupling` no longer injects `source_layer="auto"` fallback.
-   - README runtime path examples converge to `.identity` roots.
-5. Expected remaining legacy markers are explicitly non-authoritative:
-   - `scripts/validate_skill_path_integrity.py`
-   - `scripts/validate_identity_capability_activation.py`
-   - `scripts/validate_instance_base_repo_write_boundary.py`
-   - `identity/protocol/IDENTITY_PROTOCOL.md`
-   - `README.md` forbidden fallback note.
+#### Scope
 
-Decision:
+仅覆盖 protocol 控制面，不涉及实例业务能力。
 
-1. Protocol layer scan debt for `scripts + identity` normative surfaces is closed in this round.
-2. Lifecycle boundary unchanged (`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`); `HOTFIX16-P0-007` remains `PENDING_INTAKE` until independent replay sign-off.
+#### Replayed Findings (Cross-validated)
+
+1. P0: non-canonical catalog 语义洗白风险（已在本轮代码侧收口）。
+   - 原现象：resolver 判定 `source_layer=unknown`，stamp 渲染为 `source_layer=project`。
+   - 本轮修复后：non-canonical source 不再自动降级渲染为 `project/global`。
+
+2. P0: strict surface 预检不一致（本轮补齐）。
+   - 已补齐 `report_three_plane_status` 与 `full_identity_protocol_scan` 的 `validate_identity_runtime_mode_guard` 前置预检。
+   - guard 未通过时禁止继续该 strict 链路 validator。
+
+3. P1: expected layer 透传不完整（本轮补齐）。
+   - `expected_work_layer/expected_source_layer` 已透传到 `render_identity_response_stamp`（three-plane/full-scan/release/e2e 链路）。
+
+4. P1: 两层切换后历史实例路径债务显性化（符合职责边界）。
+   - `project/.identity` 与历史实例落点不一致会被 guard 阻断。
+   - 该迁移债务归 instance 层，不由 protocol 兼容兜底。
+
+#### Evidence (machine replay refs)
+
+1. `/tmp/v16_round24_full_repo_scan_20260308.json`
+2. `/tmp/v16_round24_full_repo_scan_20260308.md`
+3. `/tmp/audit_mode_guard_project_catalog_store_manager_20260308.log`
+4. `/tmp/audit_resolve_legacy_base_repo_architect_20260308.json`
+5. `/tmp/audit_render_legacy_base_repo_architect_20260308.json`
+6. `/tmp/audit_three_plane_legacy_catalog_20260308.log`
+7. `/tmp/audit_full_scan_legacy_catalog_20260308.log`
+8. `/tmp/audit_three_plane_custom_legacy_with_report_20260308.json`
+
+#### Decision
+
+1. 接受“两层 canonical 收缩”方向，判定为必要收敛。
+2. 当前状态维持 `SPEC_READY / PENDING_INTAKE`，不提级。
+3. Wave-next 仅保留四项控制面闭环边界：
+   - source-domain 单判定源
+   - strict surface 统一 preflight
+   - expected layer 全链透传
+   - protocol/instance 职责硬边界执行
+
 
 ---
 

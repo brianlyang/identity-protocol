@@ -536,6 +536,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         render_cmd.extend(["--layer-intent-text", layer_intent_text])
+    if expected_work_layer:
+        render_cmd.extend(["--work-layer", expected_work_layer])
+    if expected_source_layer:
+        render_cmd.extend(["--source-layer", expected_source_layer])
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(render_cmd)
     stamp_render_payload = _parse_json_payload(out_stamp_render) or {}
     validators["response_stamp_render"] = {
@@ -3692,6 +3696,31 @@ def main() -> int:
         )
         return 2
     args.repo_catalog = str(repo_catalog_path)
+
+    mode_guard_cmd = [
+        "python3",
+        "scripts/validate_identity_runtime_mode_guard.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        str(repo_catalog_path),
+        "--expect-mode",
+        "auto",
+        "--operation",
+        "three-plane",
+    ]
+    if str(args.scope or "").strip():
+        mode_guard_cmd.extend(["--scope", str(args.scope).strip()])
+    rc_mode_guard, out_mode_guard, err_mode_guard = _run(mode_guard_cmd)
+    if rc_mode_guard != 0:
+        print("[FAIL] runtime mode guard preflight blocked three-plane execution")
+        if out_mode_guard:
+            print(out_mode_guard)
+        if err_mode_guard:
+            print(err_mode_guard)
+        return rc_mode_guard or 2
 
     try:
         resolved = resolve_identity(

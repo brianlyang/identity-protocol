@@ -154,6 +154,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "scope_resolution",
             "scope_isolation",
             "scope_persistence",
+            "runtime_mode_guard",
             "runtime_contract",
             "identity_home_catalog_alignment",
             "fixture_runtime_boundary",
@@ -413,6 +414,41 @@ def main() -> int:
                 item["source_layer"] = data.get("source_layer")
                 item["conflict_detected"] = data.get("conflict_detected")
                 resolved_scope = str(data.get("resolved_scope", "")).upper() or scan_scope_hint
+
+            mode_guard_cmd = [
+                "python3",
+                "scripts/validate_identity_runtime_mode_guard.py",
+                "--identity-id",
+                iid,
+                "--catalog",
+                str(catalog),
+                "--repo-catalog",
+                str(repo_catalog),
+                "--expect-mode",
+                "auto",
+                "--operation",
+                "scan",
+            ]
+            if str(scan_scope_hint or "").strip():
+                mode_guard_cmd.extend(["--scope", str(scan_scope_hint).strip()])
+            mode_guard = _run(mode_guard_cmd, cwd=repo_root)
+            item["checks"]["runtime_mode_guard"] = {
+                "rc": mode_guard.rc,
+                "ok": mode_guard.ok,
+                "tail": mode_guard.tail,
+            }
+            if not mode_guard.ok:
+                item["runtime_mode_guard_blocked"] = True
+                item["severity"] = _severity_for_row(item)
+                payload["summary"]["total_identities"] += 1
+                if item["severity"] == "P0":
+                    payload["summary"]["p0"] += 1
+                elif item["severity"] == "P1":
+                    payload["summary"]["p1"] += 1
+                else:
+                    payload["summary"]["ok"] += 1
+                layer_out["identities"].append(item)
+                continue
 
             is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
             is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
@@ -1634,6 +1670,7 @@ def main() -> int:
                 ):
                     checks[key].extend(["--layer-intent-text", layer_intent_text])
             if expected_work_layer:
+                checks["response_stamp_render"].extend(["--work-layer", expected_work_layer])
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
@@ -1647,6 +1684,7 @@ def main() -> int:
                     checks[key].extend(["--expected-work-layer", expected_work_layer])
                 checks["send_time_reply_gate"].extend(["--work-layer", expected_work_layer])
             if expected_source_layer:
+                checks["response_stamp_render"].extend(["--source-layer", expected_source_layer])
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
