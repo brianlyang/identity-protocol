@@ -2578,6 +2578,62 @@ State impact:
 2. `HOTFIX16-P0-006` remains `SPEC_READY / PENDING_INTAKE` until required=true tuple replay archive and runtime bridge rollout evidence are attached.
 3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.29 Round-10 UCG Pre-Code Readiness Reinforcement (`HEAD=30423c5+`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint is discussion-only (no code landing claim) and prepares protocol-layer implementation for unified control-plane hardening.
+2. this checkpoint addresses recurring control-plane regressions (`identity hard switch`, `headstamp loss`, `protocol lane entry split`) as one root-cause family.
+3. no promotion state change is allowed from this section.
+
+Observed baseline alignment (pre-code snapshot):
+
+1. protocol repo snapshot is clean at checkpoint capture (`git status --short` empty).
+2. prior separation remains intact:
+   - lane/headstamp continuity track (`HOTFIX16-P0-002`) remains scoped to canonical egress/lane continuity.
+   - unified control-plane entrypoint track (`HOTFIX16-P0-007`) remains independent and is not merged into lane/headstamp row semantics.
+
+Four-track cross-check conclusion (`T1..T4`):
+
+1. `T1 roundtable/governance`:
+   - existing roundtable consensus confirms semantic verdict is not yet single-source and requires canonical contract convergence.
+2. `T2 base-repo code audit`:
+   - repeated gate wiring remains multi-surface and drift-prone when lists are maintained per surface.
+   - send-time applicability still splits by operation class (`scan` vs strict operations), proving that script presence alone is insufficient without unified enforcement entry.
+3. `T3 vendor trajectory`:
+   - vendor scan posture supports layered governance with centralized control-plane boundaries, not scattered per-surface control mutation.
+4. `T4 online references`:
+   - zero-trust and policy-plane references support centralized decision/enforcement boundaries and unified audit chain (`NIST ZTA`, `OPA discovery/decision logs`, `Envoy ext_authz`, `MCP lifecycle`).
+
+Unified control model (UCG) confirmed for implementation planning:
+
+1. `1门` (`Single Entry Door`):
+   - strict operations must enter through one actor-bound/lane-bound preflight entry and emit one entry receipt tuple.
+2. `1判` (`Single Final Verdict`):
+   - user-visible outbound path must consume one canonical egress verdict; bypass and side-channel verdict substitution are fail-close.
+3. `1账` (`Single Machine Ledger`):
+   - all strict surfaces must emit and consume one shared machine tuple contract for replay parity:
+     - `run_id_binding`
+     - `report_selected_path`
+     - `required_contract`
+     - `failed_required_contract_count`
+     - `send_time_gate_status`
+     - `outlet_bypass_detected`
+
+Implementation prerequisites (before broader code rollout):
+
+1. move strict-surface gate-set execution to one bundle runner (surfaces no longer own independent hardcoded gate arrays as control source).
+2. keep mapping registry as single control-source and enforce CI drift detection against per-surface divergence.
+3. add recurrence escalator:
+   - when same error-code family reappears across multiple strict surfaces in bounded window, upgrade path is forced to control-plane change track (`HOTFIX16-P0-007`) instead of local patch-only closure.
+4. apply four-track mandatory closure only to control-plane mutations (to avoid deadlock on ordinary business patches).
+
+State impact:
+
+1. this checkpoint confirms high necessity and feasibility of UCG hardening at protocol layer.
+2. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE` until bundle-runner + tuple-parity + CI hard-gate replay are archived.
+3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
