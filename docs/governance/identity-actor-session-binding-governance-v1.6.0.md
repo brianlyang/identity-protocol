@@ -2404,7 +2404,7 @@ Findings (protocol-layer only):
    - strict surfaces can still split on same lineage (`update` required-failed non-zero vs `three-plane` required-failed zero).
    - three-plane may remain `BLOCKED` with `required_failed=0` when stale report fallback enters tuple/version alignment path.
    - session-refresh pointer/binding divergence still maps to warning-severity branch (`IP-ASB-RFS-002`) on strict paths, which is weaker than desired fail-close semantics.
-   - semantic convergence residual remains visible (`IP-SEM-004` class).
+   - semantic convergence residual remains visible; latest protocol-feedback rounds show active blocker shape has shifted from legacy `IP-SEM-004` trace to `IP-SEM-001` field-completeness failure (`intent_domain/intent_confidence/classifier_reason` missing under `ACTIVITY_UNSCOPED`).
 
 Required protocol-layer hardening (architect lane):
 
@@ -2423,12 +2423,57 @@ Required protocol-layer hardening (architect lane):
    - `send_time_gate_status`
    - `governed_outlet_enforced`
    - `outlet_bypass_detected`
+6. enforce semantic metadata completeness contract on protocol-feedback path:
+   - strict protocol-lane semantic guard must emit deterministic `intent_domain`, `intent_confidence`, and `classifier_reason`;
+   - if activity correlation is not scoped, emit explicit correlated blocker receipt with recovery key instead of silently degrading semantic tuple completeness.
 
 State impact:
 
 1. this checkpoint confirms substantial protocol hardening but not closure.
 2. `HOTFIX16-P1-004`, `FIX16-035`, and `FIX16-036` remain non-promotional pending convergence replay closure.
 3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.30 Round-11 Protocol-Feedback Semantic Regression Convergence Checkpoint (`HEAD=5c3dda4+`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint ingests protocol-lane feedback only and excludes business-domain semantics.
+2. this checkpoint targets recurrent semantic convergence blockers under `HOTFIX16-P1-004`.
+3. no promotional state change is allowed from this section.
+
+Cross-source intake (`T1..T4`, protocol layer):
+
+1. `T1` protocol feedback batches:
+   - `FEEDBACK_BATCH_20260307T090934Z_protocol_fix_reverify_semantic_routing_sanitized.md` (`custom-creative-ecom-analyst` protocol lane reverify).
+   - `FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md` (`system-requirements-analyst` protocol lane regression round3).
+2. `T2` channel/index integrity:
+   - both batches are indexed in canonical `runtime/protocol-feedback/evidence-index/INDEX.md` with paired validation/review artifacts.
+3. `T3` machine evidence replay:
+   - `custom-creative-ecom-analyst`: send-time/first-line/headstamp/actor-bound checks pass, but semantic guard remains `FAIL_REQUIRED` with `IP-SEM-001`.
+   - `system-requirements-analyst`: lane routing remains protocol-correct, yet update remains non-green (`all_ok=false`, `writeback_status=DEFERRED_VALIDATION_FAILED`), three-plane remains `BLOCKED` (`IP-UPG-002`), and semantic guard remains `IP-SEM-001`.
+4. `T4` externalized receipts:
+   - absolute-path evidence references and canonical outbox/index linkage are present for both streams.
+
+Findings (protocol-layer only):
+
+1. semantic blocker family is now deterministically field-completeness-driven:
+   - active strict blocker: `IP-SEM-001`;
+   - missing semantic tuple fields: `intent_domain`, `intent_confidence`, `classifier_reason`;
+   - activity correlation status frequently presents as `ACTIVITY_UNSCOPED`.
+2. this is a protocol control-plane convergence issue, not a lane-routing failure:
+   - protocol lane routing can be `PASS_REQUIRED` while semantic/writeback closure still blocks release.
+3. convergence remains non-promotional until same-lineage strict surfaces consume identical semantic tuple outcomes.
+
+Required protocol hardening (architect lane):
+
+1. make semantic metadata tuple mandatory on protocol-feedback path for strict protocol operations.
+2. when correlation cannot be scoped, emit deterministic blocker receipt + recovery key (no silent tuple omission).
+3. tie writeback green state to semantic tuple completeness so `DEFERRED_VALIDATION_FAILED` (`IP-UPG-002`) cannot persist with unresolved `IP-SEM-001`.
+
+State impact:
+
+1. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` with updated active blocker shape (`IP-SEM-001`).
+2. lifecycle boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
 ### 8.26 Round-8 Temp-Resolver Residual Pre-Implementation Reinforcement (`HEAD=f53f36a+`, 2026-03-07)
 
@@ -2681,6 +2726,48 @@ State impact:
 1. this checkpoint confirms high necessity and feasibility of UCG hardening at protocol layer.
 2. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE` until bundle-runner + tuple-parity + CI hard-gate replay are archived.
 3. lifecycle boundary remains unchanged: `SPEC_READY / PENDING_INTAKE`, `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.31 Round-12 UCG Code Landing Wave-1 (`HEAD=1deba9d+`, 2026-03-07)
+
+Scope lock:
+
+1. this wave implements control-plane wiring convergence only; it does not claim promotion closure.
+2. this wave is constrained to `HOTFIX16-P0-007` implementation-freeze manifest and does not alter business-domain contracts.
+3. non-promotional boundary remains mandatory.
+
+Landed canonical artifacts (`single-source naming freeze`):
+
+1. bundle-runner landed:
+   - `scripts/required_gate_bundle_runner.py`
+   - supports full bundle execution (`RQ-017/018/019/020/021/022/030/033`) and target-probe compatibility mode (`--target-name`) under same registry lineage.
+2. tuple parity validator landed:
+   - `scripts/validate_required_gate_tuple_parity.py`
+   - tuple contract fields: `run_id_binding`, `report_selected_path`, `required_contract`, `failed_required_contract_count`, `send_time_gate_status`, `outlet_bypass_detected`.
+3. surface drift validator landed:
+   - `scripts/validate_required_gate_surface_drift.py`
+   - blocks direct per-surface validator drift and enforces bundle-runner reference on strict surfaces.
+
+Strict-surface migration closure (wave-1 wiring):
+
+1. `scripts/identity_creator.py` (`validate/update`) now executes bundle-runner lineage for Batch-6/7 + execution-target gates.
+2. `scripts/release_readiness_check.py` now executes bundle-runner lineage instead of per-validator direct wiring.
+3. `scripts/report_three_plane_status.py` now resolves target checks through bundle-runner target-probe mode.
+4. `scripts/full_identity_protocol_scan.py` now resolves target checks through bundle-runner target-probe mode.
+5. `scripts/e2e_smoke_test.sh` now calls bundle-runner lineage for the same gate cluster.
+6. `.github/workflows/_identity-required-gates.yml` now calls bundle-runner lineage and executes surface-drift validation preflight.
+7. `scripts/create_identity_pack.py` default required-check set now points to bundle-runner lineage (removes direct per-validator list drift).
+
+Replay posture (wave-1):
+
+1. bundle-runner local probe (`operation=scan`) is executable and returns deterministic target rows.
+2. surface drift validator returns `PASS_REQUIRED` after six-surface migration.
+3. tuple parity validator is executable; required-chain mandatory replay archive remains pending before promotion.
+
+State impact:
+
+1. `HOTFIX16-P0-007` progresses from design freeze to executable wave-1 wiring closure.
+2. row remains `SPEC_READY / PENDING_INTAKE` until required=true tuple-parity replay + independent audit replay archive are attached.
+3. lifecycle boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
 ## 9) References
 

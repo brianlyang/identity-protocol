@@ -1203,17 +1203,10 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_identity_experience_feedback_governance.py",
         "scripts/validate_identity_self_upgrade_enforcement.py",
         "scripts/validate_identity_install_provenance.py",
-        "scripts/validate_v16_cross_verification_tracks.py",
-        "scripts/validate_v16_intake_evidence_quorum.py",
-        "scripts/validate_route_version_pinning.py",
-        "scripts/validate_fallback_taxonomy_normalization.py",
-        "scripts/validate_dedup_monotonicity.py",
-        "scripts/validate_v16_cross_workflow_schema.py",
-        "scripts/validate_v16_skill_path_integrity.py",
+        "scripts/required_gate_bundle_runner.py",
         "scripts/validate_replay_archive_contract.py",
         "scripts/validate_gated_switch_guard.py",
         "scripts/validate_protocol_lane_headstamp_continuity.py",
-        "scripts/validate_execution_target_tuple_isolation.py",
     ]
 
 

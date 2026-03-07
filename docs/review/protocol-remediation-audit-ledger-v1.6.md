@@ -88,10 +88,10 @@ Carry-over evidence:
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) with resolver convergence replay + canonical egress applicability replay | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) + audit_replay_20260307_round6_headstamp + audit_replay_20260307_round8_single_egress | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b + audit_round8_preimplementation_tmp_residuals | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1850,6 +1850,23 @@ Round-10 implementation-freeze addendum (mandatory before code rollout):
    - non-applicable state must be `SKIPPED_NOT_REQUIRED` with machine reason `required_contract_not_applicable_no_current_round_evidence_source`.
    - strict operations remain fail-close on required=true failures; observation (`scan`) may remain non-promotional.
 
+Round-12 UCG code landing wave-1 (`HEAD=1deba9d+`, 2026-03-07):
+
+1. landed canonical artifacts:
+   - `scripts/required_gate_bundle_runner.py` (bundle mode + target-probe compatibility mode).
+   - `scripts/validate_required_gate_tuple_parity.py` (tuple parity machine gate).
+   - `scripts/validate_required_gate_surface_drift.py` (strict-surface drift machine gate).
+2. strict-surface migration closure:
+   - migrated to bundle-runner lineage: `identity_creator(validate/update)`, `release_readiness_check`, `report_three_plane_status`, `full_identity_protocol_scan`, `e2e_smoke_test.sh`, `required-gates CI workflow`.
+   - `create_identity_pack` default required-check list now converges to bundle-runner lineage.
+3. executable probe evidence:
+   - bundle-runner full probe (`operation=scan`) returns deterministic 8-target receipt rows.
+   - bundle-runner target-probe mode returns legacy-compatible payload fields (`*_status` + `required_contract`).
+   - surface drift validator reports `PASS_REQUIRED` after six-surface migration.
+4. residual closure boundary:
+   - tuple parity validator is landed but required=true replay archive across strict surfaces is still pending.
+   - row remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until replay matrix closure is independently audited.
+
 ### HOTFIX16-P1-003 - emergency hotfix intake (`strict-surface fixed /tmp path debt`)
 
 - Status: `SPEC_READY` (hotfix lane intake)
@@ -2267,7 +2284,7 @@ Round-7 multi-source protocol-feedback convergence replay (protocol lane only, 2
    - same lineage can still split across strict surfaces: `operation=update` shows required failures while `operation=three-plane` reports zero required failures.
    - three-plane can stay `BLOCKED` even when `required_failed=0` because report selection falls back to stale tuple/version alignment paths.
    - send-time/headstamp recurrence family remains visible on pointer/binding divergence branches (`IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004`).
-   - semantic routing convergence residual remains open (`IP-SEM-004`).
+   - semantic routing convergence residual remains open; latest protocol-feedback regression rounds show active blocker shape has shifted from legacy `IP-SEM-004` trace to `IP-SEM-001` field-completeness failure (`intent_domain`, `intent_confidence`, `classifier_reason`).
    - session refresh severity is still too soft for strict surfaces on pointer-consistency + actor-binding-missing branches (`IP-ASB-RFS-002` as `WARN_NON_BLOCKING`).
 4. protocol-layer positive reinforcement retained:
    - parser/runtime crash class is still closed in strict command chains.
@@ -2278,6 +2295,23 @@ Round-7 multi-source protocol-feedback convergence replay (protocol lane only, 2
    - enforce same-lineage convergence tuple across strict surfaces: (`failed_required_contract_count`, `report_selected_path`, `run_id_binding`).
    - promote session refresh pointer/binding divergence from warning to strict fail-close when strict operations are requested.
    - keep reply-channel `SKIPPED_NOT_REQUIRED(contract_not_required)` as legal non-failure unless contract is requiredized.
+   - enforce semantic metadata tuple completeness on strict protocol-feedback path (`intent_domain`, `intent_confidence`, `classifier_reason`) and require deterministic correlated blocker receipt when activity is unscoped.
+
+Round-11 protocol-feedback semantic regression refresh (`HEAD=5c3dda4+`, 2026-03-07):
+
+1. scope:
+   - protocol-lane replay evidence only; business-domain semantics remain out of scope.
+2. intake set (`T1/T2`):
+   - `custom-creative-ecom-analyst` batch: `FEEDBACK_BATCH_20260307T090934Z_protocol_fix_reverify_semantic_routing_sanitized.md` + `PROTOCOL_FIX_REVERIFY_20260307T090934Z.json`.
+   - `system-requirements-analyst` batch: `FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md` + `SESSION_REVIEW_2026-03-07_protocol-lane-regression-round3.md`.
+   - both are indexed in canonical protocol-feedback evidence indices.
+3. machine replay signals (`T3`):
+   - `custom-creative-ecom-analyst`: send-time/first-line/headstamp/actor-bound probes are passing or expected fail-closed, while semantic guard remains `FAIL_REQUIRED` + `IP-SEM-001`.
+   - `system-requirements-analyst`: protocol lane routing remains correct, but update is still non-green (`all_ok=false`, `writeback_status=DEFERRED_VALIDATION_FAILED`), three-plane remains `BLOCKED` (`IP-UPG-002`), and semantic guard remains `IP-SEM-001`.
+4. protocol interpretation (`T4`):
+   - active blocker family is semantic tuple completeness under unscoped activity correlation (`ACTIVITY_UNSCOPED`), not lane routing collapse.
+5. closure requirement update:
+   - promotion remains blocked until strict same-lineage replay removes `IP-SEM-001` and reaches `summary.p0=0` on protocol target scans.
 
 Architect handoff artifacts (canonical channel pattern):
 
@@ -2341,10 +2375,10 @@ Promotion guard (hard):
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
 | HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:27:07Z | protocol-lane starvation/headstamp hardening remains landed; round-7 replay closes resolver divergence (`headstamp_recurrence_closure_status=PASS_REQUIRED` on sampled identities) and keeps mismatch-negative fail-close. round-8 replay still shows canonical send-time gateway applicability drift (`SKIPPED_NOT_REQUIRED(contract_not_required)` on direct scan probe). row remains non-promotional pending strict requiredization closure + independent live lane/headstamp replay archive. |
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | temp-path closure remains in-progress: CI + stamp/first-line/coherence paths are resolver-backed, and round-8 pre-implementation sweep has identified remaining fixed `/tmp` fallbacks in `execute_identity_upgrade` + freshness validators as mandatory next landing scope. status remains non-promotional pending full three-script closure replay and independent sign-off. |
-| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:04:25Z | multi-source protocol-feedback replay confirms positive reinforcement (parser crash closure, no-hard-switch baseline, SSOT archival integrity), but convergence residuals remain: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness under strict pointer/binding divergence, and semantic residual `IP-SEM-004`. status remains non-promotional pending convergence hardening replay closure. |
+| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T09:15:00Z | round-11 protocol-feedback replay confirms routing/channel stability but keeps convergence residuals open: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness, and active semantic blocker shifted to `IP-SEM-001` field-completeness failure (`intent_domain/intent_confidence/classifier_reason`) with `IP-UPG-002` writeback deferral coupling on protocol lane. status remains non-promotional pending same-lineage convergence hardening replay closure (`summary.p0=0`). |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T09:45:00Z | round-10 pre-code reinforcement now includes mandatory freeze addendum before code rollout: (`artifact naming freeze for bundle-runner/registry-source/tuple-parity validators` + `quantized recurrence escalator L1/L2/L3` + `six-surface migration manifest` + `operation semantics matrix for required_contract`). state remains non-promotional pending full replay closure across strict surfaces. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T11:20:00Z | round-12 wave-1 code landing completed under frozen UCG contract: bundle-runner + tuple-parity validator + surface-drift validator are landed, six strict surfaces are migrated to bundle-runner lineage, and CI preflight now checks drift. state remains non-promotional pending required=true tuple-parity replay archive + independent replay audit closure. |
 
 ---
 

@@ -1448,11 +1448,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_cross_verify, out_cross_verify, err_cross_verify = _run(
         [
             "python3",
-            "scripts/validate_v16_cross_verification_tracks.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "cross_verification_tracks",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1472,11 +1474,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_intake_quorum, out_intake_quorum, err_intake_quorum = _run(
         [
             "python3",
-            "scripts/validate_v16_intake_evidence_quorum.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "intake_evidence_quorum",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1496,11 +1500,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_route_pin, out_route_pin, err_route_pin = _run(
         [
             "python3",
-            "scripts/validate_route_version_pinning.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "route_version_pinning",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1520,11 +1526,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_fallback_norm, out_fallback_norm, err_fallback_norm = _run(
         [
             "python3",
-            "scripts/validate_fallback_taxonomy_normalization.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "fallback_taxonomy_normalization",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1544,11 +1552,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_dedup_mono, out_dedup_mono, err_dedup_mono = _run(
         [
             "python3",
-            "scripts/validate_dedup_monotonicity.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "dedup_monotonicity",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1568,11 +1578,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_xwf_schema, out_xwf_schema, err_xwf_schema = _run(
         [
             "python3",
-            "scripts/validate_v16_cross_workflow_schema.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "cross_workflow_schema",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1592,11 +1604,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_skill_path, out_skill_path, err_skill_path = _run(
         [
             "python3",
-            "scripts/validate_v16_skill_path_integrity.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "skill_path_integrity",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1616,11 +1630,13 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     rc_exec_target_tuple, out_exec_target_tuple, err_exec_target_tuple = _run(
         [
             "python3",
-            "scripts/validate_execution_target_tuple_isolation.py",
+            "scripts/required_gate_bundle_runner.py",
             "--catalog",
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--target-name",
+            "execution_target_tuple_isolation",
             "--operation",
             "three-plane",
             "--json-only",
