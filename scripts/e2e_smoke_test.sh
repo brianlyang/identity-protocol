@@ -691,6 +691,13 @@ for ID in $IDS; do
     --operation e2e \
     --json-only
 
+  echo "[23.4571/30][$ID] validate execution-target tuple isolation gate (RQ-033)"
+  python3 scripts/validate_execution_target_tuple_isolation.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --operation e2e \
+    --json-only
+
   echo "[23.458/30][$ID] validate Batch-6/7 deterministic replay archive gate (RQ-017..022/030)"
   python3 scripts/validate_replay_archive_contract.py \
     --catalog "$CATALOG_PATH" \

@@ -88,9 +88,9 @@ Carry-over evidence:
 | HOTFIX16-P0-001 | 2026-03-06 | protocol | emergency hotfix intake: FQG multi-agent × multi-identity gated-switch guard (`execution-state no-hard-switch` + `allow_shared_session` semantics clarification + mandatory `switch_ack` handshake chain) | de313a0 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-002 | 2026-03-06 | protocol | emergency hotfix intake: protocol-lane activation starvation + outbound headstamp continuity gap (`explicit protocol request must not silently fallback` + `missing headstamp must fail-close`) | PEP-FQG-20260306-MA-MI-01 + PF-FQG-20260306-LANE-003 + local_bridge_runtime_landed(pytest:28-pass) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P1-003 | 2026-03-06 | protocol | emergency hotfix intake: strict-surface fixed `/tmp` path debt (`dynamic temp resolver + runner-temp parity + fixed-path detector fail-close`) | PF-FQG-20260306-TMPPATH-001 + 4179e47 + 093496b | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 (`release_readiness`/`identity_creator` tracebacks) | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 (`release_readiness`/`identity_creator` tracebacks) | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1783,11 +1783,27 @@ Core failure evidence (replay verified):
    - traceback: `AttributeError: 'Namespace' object has no attribute 'run_id'`
    - code refs: `scripts/identity_creator.py:1827`, `scripts/identity_creator.py:1132`.
 
+Round-2 replay reconfirmation (2026-03-07):
+
+1. crash signatures remain deterministic on multiple identities:
+   - `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+   - `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+   - both runs fail with `AttributeError: Namespace has no attribute target_branch`.
+2. validate-chain parser drift also remains deterministic across identities:
+   - `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+   - `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+   - both runs fail with `AttributeError: Namespace has no attribute run_id`.
+3. replay artifacts:
+   - `/tmp/release_readiness_office_round2.log`
+   - `/tmp/release_readiness_arch_round2.log`
+   - `/tmp/identity_creator_validate_office_round2.log`
+   - `/tmp/identity_creator_validate_arch_round2.log`
+
 Four-track cross-verification:
 
 1. `T1 governance/spec`: this crash violates executable hard-gate intent behind `C28..C30` (gate-source convergence + strict determinism).
 2. `T2 implementation`: Task-9/10 added gate hooks, but parser-field drift prevents runtime entry into those hooks.
-3. `T3 replay`: both failures reproduce deterministically on current HEAD (`4d85661`) with explicit command traces.
+3. `T3 replay`: both failures reproduce deterministically on current HEAD (`9617b2a`) with explicit command traces.
 4. `T4 review consistency`: rolling summary + decision-log rows stay synchronized while audit status remains non-promotional.
 
 Required protocol-layer fix closure (for architect lane):
@@ -1806,7 +1822,7 @@ Promotion guard (hard):
 
 - Status: `SPEC_READY` (hotfix lane intake)
 - Goal: remove hidden `codex_home`-only coupling by enforcing tuple-based execution target isolation and adding first-class process-call dispatch contract.
-- Audit class: `PENDING_INTAKE` (requirement semantics locked; implementation/replay closure pending).
+- Audit class: `PENDING_INTAKE` (protocol-layer machine-lock landed; runtime bridge rollout + replay archive closure pending).
 
 Hotfix lane scope lock:
 
@@ -1860,6 +1876,21 @@ Promotion guard (hard):
    - tuple conflict fail-close (`IP-XTARGET-002`),
    - override bypass block (`IP-XTARGET-003`),
    - process-call positive replay with full receipt tuple fields.
+
+Protocol-layer closure update (2026-03-07, local protocol repo):
+
+1. kernel anchor landed: `identity/protocol/IDENTITY_RUNTIME.md#rq_033_execution_target_tuple_isolation_contract_v1`.
+2. mapping row landed: `identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-033`.
+3. validator landed: `scripts/validate_execution_target_tuple_isolation.py`.
+4. lane hooks landed in:
+   - `scripts/identity_creator.py` (`validate/update` intake gates),
+   - `scripts/release_readiness_check.py`,
+   - `scripts/report_three_plane_status.py`,
+   - `scripts/full_identity_protocol_scan.py`,
+   - `scripts/e2e_smoke_test.sh`,
+   - `.github/workflows/_identity-required-gates.yml`,
+   - `scripts/validate_required_contract_coverage.py`.
+5. non-promotional boundary remains unchanged until runtime bridge rollout evidence and deterministic required=true replay archive are both attached.
 
 ### HOTFIX16-P1-004 - emergency hotfix intake (`gate-source convergence + producer-aware requiredization applicability`)
 
@@ -1919,6 +1950,25 @@ Implementation delta snapshot (2026-03-07):
 5. residual blockers from this round:
    - `office-ops-expert` still shows `cross_workflow_schema_status=FAIL_REQUIRED` (`IP-XWF-002`, missing `route_action` + `dedup_state`) in observation profile replay.
    - env/CLI catalog mismatch remains warning-only (`validate_identity_runtime_mode_guard` returns `rc=0` with `[WARN]`), so `C30` fail-fast closure is not complete.
+
+Round-2 replay sweep (global four-identity sample, 2026-03-07):
+
+1. replay commands:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --actor-id assistant:codex --out /tmp/v16_full_scan_office-ops-expert_20260307_round2.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --actor-id assistant:codex --out /tmp/v16_full_scan_base-repo-architect_20260307_round2.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --actor-id assistant:codex --out /tmp/v16_full_scan_custom-creative-ecom-analyst_20260307_round2.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --actor-id assistant:codex --out /tmp/v16_full_scan_system-requirements-analyst_20260307_round2.json`
+2. protocol-layer blockers observed:
+   - `office-ops-expert`: `IP-XWF-002` (`cross_workflow_schema` observation applicability residual).
+   - `base-repo-architect`: `IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004`.
+   - `custom-creative-ecom-analyst`: `IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004`.
+   - `system-requirements-analyst`: `IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004`, `IP-SEM-004`.
+3. applicability/context residuals remain unchanged:
+   - `P1-APPLICABILITY-003`: `IP-XWF-002` still reproducible (`/tmp/xwf_office_round2.json`).
+   - `P1-CONTEXT-004`: catalog mismatch still warning-only (`/tmp/runtime_mode_guard_mismatch_round2.log`).
+4. hard-switch guard behavior remains intact and is not treated as regression:
+   - non-bound activation without switch-intent receipt fails with `IP-ACT-SWITCH-001`.
+   - this confirms `no-hard-switch` contract is still enforced while replaying multi-identity scans.
 
 Architect handoff artifacts (canonical channel pattern):
 
@@ -1982,9 +2032,9 @@ Promotion guard (hard):
 | HOTFIX16-P0-001 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | runtime bridge closure landed locally (fqsh): guarded route metadata + conflict resolver + inbound `409` fail-close (including explicit override path) are active in source, and local replay suite passes (`tests/test_chat_inbound.py`, `tests/test_chat_bridge.py`, `28 passed`). remains non-promotional pending independent live rollout evidence (`route snapshot + conflict/non-conflict replay archive`). |
 | HOTFIX16-P0-002 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T07:40:00Z | protocol-lane starvation/headstamp risk hardening absorbed in local runtime bridge closure: silent downgrade path is blocked by conflict-aware routing surface and canonical route-state fields are emitted for audit. remains non-promotional pending independent live endpoint replay archive (`lane activation receipts + headstamp continuity positive/negative`). |
 | HOTFIX16-P1-003 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:20:00Z | strict-chain temp-path refactor landed: shared resolver `runtime_temp_path_common.py` wired into creator/readiness/three-plane/full-scan/e2e/no-implicit-switch; strict-chain fixed `/tmp` literals removed and runtime temp root made env-driven. posture remains non-promotional pending independent replay/audit closure (`collision + runner-temp parity`). |
-| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T20:15:00Z | applicability-scoped requiredization landing absorbed: intake/dedup/schema/pinning/fallback validators emit `run_profile + producer_readiness + requiredization_current_round_linked`, and non-applicable observation paths resolve to deterministic `SKIPPED_NOT_REQUIRED`; residual blockers remain (`office-ops-expert cross_workflow_schema -> IP-XWF-002`, env/CLI catalog mismatch still warning-only), so convergence/fail-fast closure is still pending. |
-| HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T20:15:00Z | replay-confirmed gate-chain parser regression: `release_readiness_check` fails with missing `args.target_branch` and `identity_creator validate` fails with missing `args.run_id` before required gates execute; hotfix opened for protocol-layer argparse/runtime alignment plus crash-proof replay closure. |
-| HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T21:20:00Z | tuple-based execution-target isolation requirement opened and deep-scan confirmed: dispatch must use `execution_target_kind + execution_target_key` as conflict key, explicit overrides cannot bypass conflict gate, and `process_call` target must be valid without mandatory `codex_home` while emitting complete receipt tuple fields; code-level anchors (`main.py:118..149`, `identity_router.py:144..196`, `models.py:133..143`) and regression baseline (`pytest 28 passed`) are archived. remains non-promotional pending implementation + replay closure. |
+| HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T04:52:00Z | round-2 replay sweep absorbed: four global identities re-scanned with deterministic blocker matrix (`office-ops-expert: IP-XWF-002`, `base/custom/system: IP-ASB-STAMP-SESSION-005 + IP-ASB-STAMP-SCAN-004`, `system: IP-SEM-004`); applicability/context residuals remain unresolved (`IP-XWF-002` observation-profile strictness and env/CLI catalog mismatch warning-only), so convergence/fail-fast closure is still pending. |
+| HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T04:52:00Z | round-2 replay reconfirmed parser/runtime drift on multiple identities: `release_readiness_check` still crashes on missing `args.target_branch` and `identity_creator validate` still crashes on missing `args.run_id` before required gates execute; hotfix remains blocked until argparse/runtime alignment and crash-proof replay closure land. |
+| HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T23:15:00Z | protocol-layer machine-lock closure is landed: kernel anchor (`rq_033`), mapping row (`asb16-rq-033`), validator (`scripts/validate_execution_target_tuple_isolation.py`), and lane hooks (`creator/readiness/three-plane/full-scan/e2e/ci`) are now wired; deep-scan runtime evidence still confirms live bridge drift (`main.py:118..149`, `identity_router.py:144..196`, `models.py:133..143`). remains non-promotional pending runtime rollout + deterministic replay closure. |
 
 ---
 

@@ -116,3 +116,29 @@ Required receipt fields:
 - `pin_proof_ref`
 - `pin_status`
 - `pin_error_code`
+
+### rq_033_execution_target_tuple_isolation_contract_v1
+
+Required receipt fields:
+
+- `execution_target_tuple_isolation_status`
+- `execution_target_kind`
+- `execution_target_key`
+- `execution_target_ref`
+- `route_conflict_status`
+- `route_conflict_error_code`
+- `conflict_key_mode`
+- `override_non_bypass_status`
+- `process_call_support_status`
+- `evidence_ref`
+
+Hard semantics:
+
+1. Conflict keying must be tuple-first (`execution_target_kind + execution_target_key`) and must not silently downgrade to `codex_home`-only mode.
+2. Explicit override paths (`session_id`/`codex_home`/direct tuple overrides) are governed by the same conflict gate and cannot bypass fail-close.
+3. `process_call` targets are valid without mandatory `codex_home`, but receipt tuple fields must be complete and deterministic.
+4. Reserved fail-close family:
+   - `IP-XTARGET-001`
+   - `IP-XTARGET-002`
+   - `IP-XTARGET-003`
+   - `IP-XTARGET-004`

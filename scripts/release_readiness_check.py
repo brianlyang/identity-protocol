@@ -1294,6 +1294,17 @@ def main() -> int:
         ],
         [
             "python3",
+            "scripts/validate_execution_target_tuple_isolation.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
             "scripts/validate_replay_archive_contract.py",
             "--catalog",
             catalog,

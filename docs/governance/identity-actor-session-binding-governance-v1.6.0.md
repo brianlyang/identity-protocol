@@ -659,7 +659,7 @@ Mandatory semantics:
 | ASB16-RQ-030 | intake evidence quorum hard-gate contract | P1 | SPEC_READY | implementation landed (`single-parser dual-mode`) + lane hooks wired; promotion remains blocked until deterministic required=true replay archive is complete |
 | ASB16-RQ-031 | protocol-kernel prompt import executable coupling contract | P0 | SPEC_READY | explicit lane/candidate non-starvation hooks landed with write-boundary addendum; mapping validator + actor-explicit strict lane + multimodal sample-proof closure still required before promotion |
 | ASB16-RQ-032 | outbound headstamp pre-send hard-gate contract | P0 | SPEC_READY | implementation landed (`scripts/validate_send_time_reply_gate.py` + `scripts/validate_headstamp_recurrence_closure.py`) + lane hooks wired; deterministic negative replay archive pending |
-| ASB16-RQ-033 | execution-target tuple isolation contract | P0 | SPEC_READY | hotfix intake opened (`HOTFIX16-P0-006`): tuple schema + override fail-close + process-call receipt requirements documented; implementation + replay closure pending |
+| ASB16-RQ-033 | execution-target tuple isolation contract | P0 | SPEC_READY | implementation landed (`scripts/validate_execution_target_tuple_isolation.py`) + lane hooks wired (`creator/readiness/three-plane/full-scan/e2e/ci`) with kernel+mapping anchor closure; deterministic replay archive + runtime bridge rollout evidence pending |
 
 ### 7.1 v1.6 status delta snapshot (2026-03-03 kickoff)
 
@@ -692,6 +692,11 @@ Non-equivalence constraints:
 5. Passing subset replays cannot override the formula above.
 
 ### 7.3 Deep-Scan lock inventory (`ASB16-RQ-001..032`, 2026-03-05)
+
+Historical-snapshot clarification:
+
+1. this inventory is the pre-`RQ-033` deep-scan baseline captured on `2026-03-05`.
+2. `ASB16-RQ-033` and later hotfix rows are governed by subsequent sections (`8.19+`) and do not retroactively alter the 2026-03-05 snapshot counts.
 
 Lock tuple definition (deterministic):
 
@@ -1106,8 +1111,8 @@ Implementation update (2026-03-07):
    - `rq_024_discovery_apply_coverage_fail_closed_contract_v1`
    - `rq_028_instance_write_boundary_lock_contract_v1`
    - `rq_032_headstamp_pre_send_hard_gate_contract_v1`
-2. mapping asset `identity/protocol/mappings/contract-binding.v1.6.yaml` now projects all `ASB16-RQ-001..032` rows (`row_count=32`), with scanner-verifiable `coverage_rate=100.0` and `p0_coverage_rate=100.0` under forced coverage replay.
-3. promotion boundary remains unchanged (`SPEC_READY/PENDING_INTAKE`) until deterministic required=true replay archive closes.
+2. mapping asset `identity/protocol/mappings/contract-binding.v1.6.yaml` now projects all `ASB16-RQ-001..033` rows (`row_count=33`), with scanner-verifiable `coverage_rate=100.0` and `p0_coverage_rate=100.0` under forced coverage replay.
+3. post-hotfix extension includes `rq_033_execution_target_tuple_isolation_contract_v1` kernel anchor + mapping row + lane hooks, while promotion boundary remains unchanged (`SPEC_READY/PENDING_INTAKE`) until deterministic required=true replay archive closes.
 
 ### 8.8 Batch-4 row-level strengthening profile (`ASB16-RQ-029/031/032/007/008`, 2026-03-06)
 
@@ -2066,8 +2071,57 @@ Deep-scan code confirmation snapshot (2026-03-07, base-repo-architect lane):
 
 State impact:
 
-1. `ASB16-RQ-033` enters v1.6 as `P0 / SPEC_READY`.
-2. lifecycle remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until replay closure + independent audit sign-off.
+1. `ASB16-RQ-033` enters v1.6 as `P0 / SPEC_READY`, and protocol-layer machine-lock closure is landed (`kernel anchor + mapping row + validator + lane wiring`).
+2. lifecycle remains non-promotional (`SPEC_READY / PENDING_INTAKE`) until replay closure + independent audit sign-off + runtime bridge rollout evidence are complete.
+
+### 8.20 Round-2 Multi-Identity Replay Sweep (`FIX16-001..037 + HOTFIX16-*`, 2026-03-07)
+
+Scope lock:
+
+1. this sweep replays protocol-layer gates only; instance business remediation remains out of scope.
+2. replay targets are global-catalog active identities: `office-ops-expert`, `base-repo-architect`, `custom-creative-ecom-analyst`, `system-requirements-analyst`.
+3. all findings in this section are executable-replay derived; no speculative promotion statements are allowed.
+
+Replay commands executed:
+
+1. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --actor-id assistant:codex --out /tmp/v16_full_scan_office-ops-expert_20260307_round2.json`
+2. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --actor-id assistant:codex --out /tmp/v16_full_scan_base-repo-architect_20260307_round2.json`
+3. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --actor-id assistant:codex --out /tmp/v16_full_scan_custom-creative-ecom-analyst_20260307_round2.json`
+4. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --actor-id assistant:codex --out /tmp/v16_full_scan_system-requirements-analyst_20260307_round2.json`
+5. `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+6. `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+7. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+8. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+9. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
+10. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto`
+
+Protocol-layer findings (round-2):
+
+1. `P0-GATECHAIN-001` remains open (`HOTFIX16-P0-005`):
+   - `release_readiness_check.py` still crashes on missing argparse field `args.target_branch` before downstream required gates execute.
+2. `P0-GATECHAIN-002` remains open (`HOTFIX16-P0-005`):
+   - `identity_creator.py validate` still crashes on missing argparse field `args.run_id` before downstream required gates execute.
+3. `P1-APPLICABILITY-003` remains open (`HOTFIX16-P1-004`):
+   - `office-ops-expert` observation replay still returns `cross_workflow_schema_status=FAIL_REQUIRED`, `error_code=IP-XWF-002`.
+4. `P1-CONTEXT-004` remains open (`HOTFIX16-P1-004`):
+   - env/CLI catalog mismatch still resolves to warning-only (`rc=0`, `[WARN]`) instead of fail-close.
+5. actor-switch hard-gate behavior is confirmed and not regressed:
+   - activation attempts for non-bound identities fail with `IP-ACT-SWITCH-001` when explicit switch-intent receipt is absent.
+   - non-bound identity scans surface `IP-ASB-STAMP-SESSION-005` due actor-binding mismatch, consistent with no-hard-switch baseline.
+
+Per-identity protocol blocker matrix:
+
+1. `office-ops-expert`: `IP-XWF-002` (`cross_workflow_schema` observation applicability residual).
+2. `base-repo-architect`: `IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004` (actor-binding mismatch under shared actor replay).
+3. `custom-creative-ecom-analyst`: `IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004` (actor-binding mismatch under shared actor replay).
+4. `system-requirements-analyst`: `IP-ASB-STAMP-SESSION-005`, `IP-ASB-STAMP-SCAN-004`, `IP-SEM-004`.
+
+State impact:
+
+1. no row is promoted in this sweep.
+2. `HOTFIX16-P0-005` remains `SPEC_READY / PENDING_INTAKE` until crash-free replay is proven.
+3. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` until applicability + context fail-fast closure is proven.
+4. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` remains enforced.
 
 ## 9) References
 

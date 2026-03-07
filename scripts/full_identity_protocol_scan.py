@@ -1398,6 +1398,17 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "execution_target_tuple_isolation": [
+                    "python3",
+                    "scripts/validate_execution_target_tuple_isolation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "replay_archive_contract": [
                     "python3",
                     "scripts/validate_replay_archive_contract.py",
@@ -2187,6 +2198,28 @@ def main() -> int:
                     ):
                         if k in spath_doc:
                             check_payload[k] = spath_doc.get(k)
+                if name == "execution_target_tuple_isolation":
+                    xtuple_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "execution_target_tuple_isolation_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "execution_target_kind",
+                        "execution_target_key",
+                        "execution_target_ref",
+                        "route_conflict_status",
+                        "route_conflict_error_code",
+                        "conflict_key_mode",
+                        "override_non_bypass_status",
+                        "process_call_support_status",
+                        "tuple_fields_present",
+                        "tuple_fields_missing",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in xtuple_doc:
+                            check_payload[k] = xtuple_doc.get(k)
                 if name == "replay_archive_contract":
                     replay_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

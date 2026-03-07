@@ -68,6 +68,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_v16_skill_path_integrity.py": "path_integrity_status",
     "scripts/validate_gated_switch_guard.py": "gated_switch_guard_status",
     "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
+    "scripts/validate_execution_target_tuple_isolation.py": "execution_target_tuple_isolation_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -94,6 +95,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "instance_protocol_split_receipt",
     "vendor_namespace_separation",
     "protocol_feedback_sidecar",
+    "execution_target_tuple_isolation",
 }
 
 
@@ -445,6 +447,16 @@ TARGETS = (
         validator_script="scripts/validate_protocol_lane_headstamp_continuity.py",
         validator_args=("--json-only",),
     ),
+    ContractTarget(
+        name="execution_target_tuple_isolation",
+        contract_keys=(
+            "execution_target_tuple_isolation_contract_v1",
+            "execution_target_tuple_isolation_contract",
+            "rq_033_execution_target_tuple_isolation_contract_v1",
+        ),
+        validator_script="scripts/validate_execution_target_tuple_isolation.py",
+        validator_args=("--json-only",),
+    ),
 )
 
 
@@ -467,6 +479,13 @@ def _resolve_contract_for_target(task: dict[str, Any], target: ContractTarget) -
                 continue
             token = str(key or "").strip().lower()
             if "protocol_lane" in token and "headstamp" in token and "contract" in token:
+                return raw, str(key)
+    if target.name == "execution_target_tuple_isolation":
+        for key, raw in task.items():
+            if not isinstance(raw, dict):
+                continue
+            token = str(key or "").strip().lower()
+            if "execution_target_tuple" in token and "contract" in token:
                 return raw, str(key)
     return {}, target.contract_keys[0]
 
@@ -570,6 +589,7 @@ def _run_validator(
         "scripts/validate_v16_skill_path_integrity.py",
         "scripts/validate_gated_switch_guard.py",
         "scripts/validate_protocol_lane_headstamp_continuity.py",
+        "scripts/validate_execution_target_tuple_isolation.py",
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":

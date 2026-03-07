@@ -424,6 +424,29 @@ def _protocol_lane_activation_headstamp_contract_skeleton() -> dict:
     }
 
 
+def _execution_target_tuple_isolation_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "validator": "scripts/validate_execution_target_tuple_isolation.py",
+        "runtime_bridge_root_env": "IDENTITY_RUNTIME_BRIDGE_ROOT",
+        "required_fields": [
+            "execution_target_kind",
+            "execution_target_key",
+            "execution_target_ref",
+            "route_conflict_status",
+            "route_conflict_error_code",
+        ],
+        "target_kind_enum": ["tmux_session", "codex_home", "process_call", "worker_queue"],
+        "error_code_family": [
+            "IP-XTARGET-001",
+            "IP-XTARGET-002",
+            "IP-XTARGET-003",
+            "IP-XTARGET-004",
+        ],
+        "fail_action": "block_when_execution_target_tuple_isolation_violated",
+    }
+
+
 def _release_unlock_formula_contract_skeleton() -> dict:
     return {
         "required": True,
@@ -941,6 +964,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "protocol_feedback_sidecar_contract_v1": _protocol_feedback_sidecar_contract_skeleton(),
         "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
+        "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)
@@ -1189,6 +1213,7 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_replay_archive_contract.py",
         "scripts/validate_gated_switch_guard.py",
         "scripts/validate_protocol_lane_headstamp_continuity.py",
+        "scripts/validate_execution_target_tuple_isolation.py",
     ]
 
 

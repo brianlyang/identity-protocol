@@ -1613,6 +1613,32 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_skill_path != 0 or skill_path_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_exec_target_tuple, out_exec_target_tuple, err_exec_target_tuple = _run(
+        [
+            "python3",
+            "scripts/validate_execution_target_tuple_isolation.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    exec_target_tuple_payload = _parse_json_payload(out_exec_target_tuple) or {}
+    validators["execution_target_tuple_isolation"] = {
+        "rc": rc_exec_target_tuple,
+        "ok": rc_exec_target_tuple == 0,
+        "out": out_exec_target_tuple,
+        "err": err_exec_target_tuple,
+    }
+    exec_target_tuple_status = str(
+        exec_target_tuple_payload.get("execution_target_tuple_isolation_status", "")
+    ).strip().upper()
+    if rc_exec_target_tuple != 0 or exec_target_tuple_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_replay_archive, out_replay_archive, err_replay_archive = _run(
         [
             "python3",
@@ -2797,6 +2823,24 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "skill_path_rows": skill_path_payload.get("skill_path_rows", []),
             "stale_reasons": skill_path_payload.get("stale_reasons", []),
             "evidence_ref": skill_path_payload.get("evidence_ref", ""),
+        },
+        "execution_target_tuple_isolation": {
+            "execution_target_tuple_isolation_status": exec_target_tuple_payload.get("execution_target_tuple_isolation_status"),
+            "error_code": exec_target_tuple_payload.get("error_code", ""),
+            "required_contract": exec_target_tuple_payload.get("required_contract"),
+            "auto_required_signal": exec_target_tuple_payload.get("auto_required_signal"),
+            "execution_target_kind": exec_target_tuple_payload.get("execution_target_kind", ""),
+            "execution_target_key": exec_target_tuple_payload.get("execution_target_key", ""),
+            "execution_target_ref": exec_target_tuple_payload.get("execution_target_ref", ""),
+            "route_conflict_status": exec_target_tuple_payload.get("route_conflict_status", ""),
+            "route_conflict_error_code": exec_target_tuple_payload.get("route_conflict_error_code", ""),
+            "conflict_key_mode": exec_target_tuple_payload.get("conflict_key_mode", ""),
+            "override_non_bypass_status": exec_target_tuple_payload.get("override_non_bypass_status", ""),
+            "process_call_support_status": exec_target_tuple_payload.get("process_call_support_status", ""),
+            "tuple_fields_present": exec_target_tuple_payload.get("tuple_fields_present", []),
+            "tuple_fields_missing": exec_target_tuple_payload.get("tuple_fields_missing", []),
+            "stale_reasons": exec_target_tuple_payload.get("stale_reasons", []),
+            "evidence_ref": exec_target_tuple_payload.get("evidence_ref", ""),
         },
         "replay_archive_contract": {
             "replay_archive_contract_status": replay_archive_payload.get("replay_archive_contract_status"),
