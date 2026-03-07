@@ -507,10 +507,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     required_gate_bundle_receipt_shadow = str(
         runtime_temp_file(
             channel="required-gate-bundle",
-            operation="three-plane",
+            operation="scan",
             identity_id=args.identity_id,
-            run_token=f"{bundle_run_token}-shadow",
-            stem=f"required-gate-bundle-three-plane-shadow-{args.identity_id}-{bundle_run_token}",
+            run_token=f"{bundle_run_token}-scan-probe",
+            stem=f"required-gate-bundle-three-plane-scan-probe-{args.identity_id}-{bundle_run_token}",
             ext="json",
         )
     )
@@ -816,7 +816,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "err": err_reply_coherence,
     }
     reply_coherence_status = str(reply_coherence_payload.get("coherence_status", "")).strip().upper()
-    if rc_reply_coherence != 0 or reply_coherence_status == "FAIL_REQUIRED":
+    if rc_reply_coherence != 0 or reply_coherence_status in {"FAIL_REQUIRED", "WARN_NON_BLOCKING"}:
         hard_boundary = True
 
     rc_prompt, out_prompt, err_prompt = _run(
@@ -1507,9 +1507,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "--run-id",
             bundle_run_token,
             "--surface-label",
-            "three_plane_shadow",
+            "three_plane_scan_probe",
             "--operation",
-            "three-plane",
+            "scan",
             "--out",
             required_gate_bundle_receipt_shadow,
             "--json-only",
@@ -1561,6 +1561,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             required_gate_bundle_receipt,
             "--receipt",
             required_gate_bundle_receipt_shadow,
+            "--require-distinct-operations",
             "--json-only",
         ]
     )

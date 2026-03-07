@@ -27,7 +27,7 @@ ERR_TUPLE_MISMATCH = "IP-ASB-CTX-001"
 ERR_REPLY_TUPLE_MISSING = "IP-ASB-CTX-002"
 ERR_DUAL_CATALOG_AMBIGUITY = "IP-ASB-CTX-003"
 
-STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
+STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate", "three-plane", "ci"}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:

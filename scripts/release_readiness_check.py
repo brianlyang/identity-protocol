@@ -351,13 +351,13 @@ def main() -> int:
             ext="json",
         )
     )
-    required_gate_bundle_receipt_shadow = str(
+    required_gate_bundle_receipt_probe = str(
         runtime_temp_file(
             channel="required-gate-bundle",
-            operation="readiness",
+            operation="scan",
             identity_id=identity_id,
-            run_token=f"{bundle_run_token}-shadow",
-            stem=f"required-gate-bundle-readiness-shadow-{identity_id}-{bundle_run_token}",
+            run_token=f"{bundle_run_token}-scan-probe",
+            stem=f"required-gate-bundle-readiness-scan-probe-{identity_id}-{bundle_run_token}",
             ext="json",
         )
     )
@@ -1281,11 +1281,11 @@ def main() -> int:
             "--run-id",
             bundle_run_token,
             "--surface-label",
-            "release_readiness_shadow",
+            "release_readiness_scan_probe",
             "--operation",
-            "readiness",
+            "scan",
             "--out",
-            required_gate_bundle_receipt_shadow,
+            required_gate_bundle_receipt_probe,
             "--json-only",
         ],
         [
@@ -1308,7 +1308,8 @@ def main() -> int:
             "--receipt",
             required_gate_bundle_receipt,
             "--receipt",
-            required_gate_bundle_receipt_shadow,
+            required_gate_bundle_receipt_probe,
+            "--require-distinct-operations",
             "--json-only",
         ],
         [

@@ -2973,6 +2973,64 @@ State impact:
 1. `HOTFIX16-P1-004` remains `SPEC_READY / PENDING_INTAKE` until independent multi-identity replay confirms `IP-SEM-001` / `IP-UPG-002` residual family is cleared in protocol lane.
 2. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.36 Round-17 UCG wave-3.1 hard-boundary replay (`HEAD=working-tree+dirty`, 2026-03-08)
+
+Scope lock:
+
+1. this round only addresses the remaining wave-3 control-plane residuals reported in fixed audit conclusion (`P0 coherence non-blocking leak` + `P1 drift alias bypass` + `P1 same-surface shadow parity`).
+2. no requirement expansion and no lifecycle promotion are introduced by this round.
+3. protocol-layer boundary remains strict (`SPEC_READY / PENDING_INTAKE`).
+
+Implementation deltas (protocol code):
+
+1. coherence strictness closure (P0):
+   - `scripts/validate_execution_reply_identity_coherence.py` strict operations now include `three-plane` and `ci`.
+   - `scripts/report_three_plane_status.py` now hard-blocks on both `FAIL_REQUIRED` and `WARN_NON_BLOCKING` for coherence verdict projection.
+2. drift alias-bypass closure (P1):
+   - `scripts/validate_required_gate_surface_drift.py` now derives forbidden direct-validator set from mapping lineage plus deterministic alias expansion:
+     - versioned wrapper alias (`validate_vXX_* -> validate_*`, `normalize_vXX_* -> normalize_*`),
+     - wrapper delegate import alias (`from <module> import main`).
+   - this closes the previously reproducible mapping-external direct-call gap (`validate_skill_path_integrity.py` style bypass).
+3. tuple parity cross-operation closure (P1):
+   - `scripts/validate_required_gate_tuple_parity.py` adds `--require-distinct-operations`.
+   - strict surfaces now feed parity with operation-diverse receipts (no same-operation shadow-only parity):
+     - `identity_creator.py` (`validate/update` vs `scan_probe`),
+     - `release_readiness_check.py` (`readiness` vs `scan_probe`),
+     - `report_three_plane_status.py` (`three-plane` vs `scan_probe`),
+     - `full_identity_protocol_scan.py` (`scan` vs `validate_probe`),
+     - `e2e_smoke_test.sh` (`e2e` vs `scan_probe`),
+     - `.github/workflows/_identity-required-gates.yml` now enforces operation-diverse parity contract explicitly.
+
+Round-17 replay evidence (machine-replay):
+
+1. coherence strict replay (negative):
+   - command emits `FAIL_REQUIRED` for tuple mismatch under `operation=three-plane`:
+   - evidence: `/tmp/coh_three_plane_now.json` (`coherence_status=FAIL_REQUIRED`, `strict_operation=true`).
+2. drift bypass replay (negative):
+   - injected direct alias (`scripts/validate_skill_path_integrity.py`) on strict surface now fails drift gate.
+   - evidence: `/tmp/ucg_wave31_drift_repro.json` (`required_gate_surface_drift_status=FAIL_REQUIRED`, `IP-GATE-ENTRY-002`).
+3. tuple parity distinct-operation replay:
+   - duplicate operation receipts now fail with deterministic reason (`distinct_operations_not_met`).
+   - operation-diverse receipts pass.
+   - evidence: `/tmp/tp_same_now.json` (fail), `/tmp/tp_diff_now.json` (pass), `/tmp/rg_parity_wave31.json` (pass).
+4. strict-surface scan replay (non-crash + payload projection):
+   - `full_identity_protocol_scan.py` target replay remained executable after operation-diverse parity wiring.
+   - evidence: `/tmp/full_scan_wave31.json`.
+
+Acceptance commands (round-17 local replay):
+
+1. `python3 -m py_compile scripts/validate_execution_reply_identity_coherence.py scripts/validate_required_gate_surface_drift.py scripts/validate_required_gate_tuple_parity.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/report_three_plane_status.py scripts/full_identity_protocol_scan.py`
+2. `bash -n scripts/e2e_smoke_test.sh`
+3. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+4. `python3 scripts/docs_command_contract_check.py`
+5. `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`; this round closes the reported wave-3.1 P0/P1 residual classes in protocol code-path, pending independent auditor replay sign-off.
+2. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion remains blocked by residual protocol-lane backlog family (`IP-UPG-002`, `IP-SEM-001`) until separate replay closure is archived.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

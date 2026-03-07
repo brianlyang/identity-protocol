@@ -2415,6 +2415,32 @@ Round-16 semantic requiredization scope convergence (`HEAD=working-tree+dirty`, 
 5. state boundary:
    - row remains `PENDING_INTAKE` pending independent multi-identity replay confirmation on protocol lane (especially `system-requirements-analyst` residual pair `IP-UPG-002 + IP-SEM-001`).
 
+Round-17 UCG wave-3.1 residual closure replay (`HEAD=working-tree+dirty`, 2026-03-08):
+
+1. scope:
+   - this replay closes fixed-audit residuals for `HOTFIX16-P0-007`: (`P0 coherence non-blocking leak`, `P1 drift alias bypass`, `P1 same-surface parity shadow`).
+2. landed protocol deltas:
+   - `scripts/validate_execution_reply_identity_coherence.py`: strict operations include `three-plane` + `ci`.
+   - `scripts/report_three_plane_status.py`: coherence `WARN_NON_BLOCKING` is now hard-boundary on three-plane.
+   - `scripts/validate_required_gate_surface_drift.py`: mapping-derived forbidden set now includes deterministic alias/delegate expansion (`validate_vXX_*` wrappers and `from <module> import main` delegates).
+   - `scripts/validate_required_gate_tuple_parity.py`: new `--require-distinct-operations` contract.
+   - strict surfaces (`identity_creator`, `release_readiness_check`, `report_three_plane_status`, `full_identity_protocol_scan`, `e2e`, required-gates CI) now emit operation-diverse parity receipts instead of same-operation shadow-only comparisons.
+3. replay evidence:
+   - coherence strict replay: `/tmp/coh_three_plane_now.json` (`FAIL_REQUIRED`, strict=true on three-plane mismatch).
+   - drift alias bypass replay: `/tmp/ucg_wave31_drift_repro.json` (`FAIL_REQUIRED`, `IP-GATE-ENTRY-002` after injected alias direct-call).
+   - tuple parity operation contract replay:
+     - fail: `/tmp/tp_same_now.json` (`distinct_operations_not_met`, `operation_not_unique`);
+     - pass: `/tmp/tp_diff_now.json`, `/tmp/rg_parity_wave31.json`.
+   - non-regression executable replay: `/tmp/full_scan_wave31.json` (full-scan remains executable with operation-diverse parity wiring).
+4. gate replay:
+   - `python3 -m py_compile scripts/validate_execution_reply_identity_coherence.py scripts/validate_required_gate_surface_drift.py scripts/validate_required_gate_tuple_parity.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/report_three_plane_status.py scripts/full_identity_protocol_scan.py`
+   - `bash -n scripts/e2e_smoke_test.sh`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+5. state boundary:
+   - `HOTFIX16-P0-007` remains `PENDING_INTAKE` (protocol replay delta landed, independent auditor replay sign-off pending).
+   - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 Architect handoff artifacts (canonical channel pattern):
 
 1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
@@ -2480,7 +2506,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T00:40:00Z | round-16 applicability convergence landed: semantic/vendor/source/sanitization guards now share lane-aware requiredization scope and inspection-path history-only skip semantics, with correlated feedback batch preference for current-round evidence. residual promotion blockers remain open pending independent multi-identity replay archive clearing `IP-UPG-002 + IP-SEM-001` on protocol lane. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:35:00Z | round-15 wave-3 hardening landed: `C(entry tuple freeze)=CLOSED_FOR_WAVE3`, `D(ci cross-surface tuple equality)=CLOSED_FOR_WAVE3`; `A/B` remain `PARTIAL` with deterministic strengthening on strict surfaces only. replay evidence (`/tmp/ucg_wave3_bundle_badmap.json`, `/tmp/ucg_wave3_tuple_dup.json`, `/tmp/ucg_wave3_tuple_cross_surface.json`, `/tmp/ucg_wave3_sendtime_three_plane.json`, `/tmp/ucg_wave3_drift_mapping_derived.json`) keeps row non-promotional pending remaining A/B convergence + protocol-lane residual closure (`IP-UPG-002`, `IP-SEM-001`). |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T03:05:00Z | round-17 wave-3.1 residual closure landed in protocol layer: three-plane/ci coherence strict fail-close, three-plane hard boundary on coherence warnings, drift alias-bypass closure via mapping+alias/delegate expansion, and operation-diverse tuple parity enforcement across strict surfaces. replay evidence (`/tmp/coh_three_plane_now.json`, `/tmp/ucg_wave31_drift_repro.json`, `/tmp/tp_same_now.json`, `/tmp/tp_diff_now.json`, `/tmp/rg_parity_wave31.json`, `/tmp/full_scan_wave31.json`) keeps row non-promotional pending independent auditor replay sign-off + protocol-lane residual family closure (`IP-UPG-002`, `IP-SEM-001`). |
 
 ---
 

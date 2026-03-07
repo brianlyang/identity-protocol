@@ -45,6 +45,11 @@ def main() -> int:
         action="store_true",
         help="require each compared receipt to carry distinct surface_label values",
     )
+    parser.add_argument(
+        "--require-distinct-operations",
+        action="store_true",
+        help="require each compared receipt to carry distinct operation values",
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -68,6 +73,8 @@ def main() -> int:
     parity_contract_reasons: list[str] = []
     missing_surface_labels: list[str] = []
     duplicate_surface_labels: dict[str, list[str]] = {}
+    missing_operations: list[str] = []
+    duplicate_operations: dict[str, list[str]] = {}
 
     min_receipts = max(1, int(args.min_receipts))
     if not load_errors and len(receipts) < min_receipts:
@@ -93,6 +100,28 @@ def main() -> int:
             parity_contract_reasons.append(f"distinct_surface_labels_not_met:{distinct_labels}/{min_receipts}")
         if duplicate_surface_labels and min_receipts > 1:
             parity_contract_reasons.append("surface_label_not_unique")
+
+    require_distinct_operations = bool(args.require_distinct_operations)
+    if not load_errors and require_distinct_operations:
+        operation_to_paths: dict[str, list[str]] = {}
+        for item in receipts:
+            payload = item.get("payload") or {}
+            operation = str(payload.get("operation", "")).strip()
+            path = str(item.get("path", ""))
+            if not operation:
+                missing_operations.append(path)
+                continue
+            operation_to_paths.setdefault(operation, []).append(path)
+        duplicate_operations = {
+            operation: paths for operation, paths in operation_to_paths.items() if len(paths) > 1
+        }
+        if missing_operations:
+            parity_contract_reasons.append("operation_missing")
+        distinct_operations = len(operation_to_paths)
+        if distinct_operations < min_receipts:
+            parity_contract_reasons.append(f"distinct_operations_not_met:{distinct_operations}/{min_receipts}")
+        if duplicate_operations and min_receipts > 1:
+            parity_contract_reasons.append("operation_not_unique")
 
     if not load_errors and receipts and not parity_contract_reasons:
         baseline_payload = receipts[0]["payload"]
@@ -135,9 +164,16 @@ def main() -> int:
         ],
         "min_receipts": min_receipts,
         "require_distinct_surface_labels": require_distinct_labels,
+        "require_distinct_operations": require_distinct_operations,
         "parity_contract_reasons": parity_contract_reasons,
         "missing_surface_labels": missing_surface_labels,
         "duplicate_surface_labels": duplicate_surface_labels,
+        "operations_checked": [
+            {"path": item["path"], "operation": str((item["payload"] or {}).get("operation", "")).strip()}
+            for item in receipts
+        ],
+        "missing_operations": missing_operations,
+        "duplicate_operations": duplicate_operations,
         "load_errors": load_errors,
         "missing_fields": missing_fields,
         "mismatches": mismatches,

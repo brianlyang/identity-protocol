@@ -469,13 +469,13 @@ def main() -> int:
                     ext="json",
                 )
             )
-            required_gate_bundle_receipt_shadow = str(
+            required_gate_bundle_receipt_probe = str(
                 runtime_temp_file(
                     channel="required-gate-bundle",
-                    operation="scan",
+                    operation="validate",
                     identity_id=iid,
-                    run_token=f"{layer}-shadow",
-                    stem=f"required-gate-bundle-scan-shadow-{layer}-{iid}",
+                    run_token=f"{layer}-validate-probe",
+                    stem=f"required-gate-bundle-scan-validate-probe-{layer}-{iid}",
                     ext="json",
                 )
             )
@@ -1381,11 +1381,11 @@ def main() -> int:
                     "--run-id",
                     required_gate_bundle_run_id,
                     "--surface-label",
-                    f"full_scan_{layer}_shadow",
+                    f"full_scan_{layer}_validate_probe",
                     "--operation",
-                    "scan",
+                    "validate",
                     "--out",
-                    required_gate_bundle_receipt_shadow,
+                    required_gate_bundle_receipt_probe,
                     "--json-only",
                 ],
                 "required_gate_recurrence_escalator": [
@@ -1408,7 +1408,8 @@ def main() -> int:
                     "--receipt",
                     required_gate_bundle_receipt,
                     "--receipt",
-                    required_gate_bundle_receipt_shadow,
+                    required_gate_bundle_receipt_probe,
+                    "--require-distinct-operations",
                     "--json-only",
                 ],
                 "cross_verification_tracks": [

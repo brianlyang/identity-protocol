@@ -1560,13 +1560,13 @@ def main() -> int:
                 ext="json",
             )
         )
-        required_gate_bundle_receipt_validate_shadow = str(
+        required_gate_bundle_receipt_validate_probe = str(
             runtime_temp_file(
                 channel="required-gate-bundle",
-                operation="validate",
+                operation="scan",
                 identity_id=args.identity_id,
-                run_token=f"{validate_run_token}-shadow",
-                stem=f"required-gate-bundle-validate-shadow-{args.identity_id}-{validate_run_token}",
+                run_token=f"{validate_run_token}-scan-probe",
+                stem=f"required-gate-bundle-validate-scan-probe-{args.identity_id}-{validate_run_token}",
                 ext="json",
             )
         )
@@ -2152,11 +2152,11 @@ def main() -> int:
                 "--run-id",
                 validate_run_token,
                 "--surface-label",
-                "creator_validate_shadow",
+                "creator_validate_scan_probe",
                 "--operation",
-                "validate",
+                "scan",
                 "--out",
-                required_gate_bundle_receipt_validate_shadow,
+                required_gate_bundle_receipt_validate_probe,
                 "--json-only",
             ],
             [
@@ -2179,7 +2179,8 @@ def main() -> int:
                 "--receipt",
                 required_gate_bundle_receipt_validate,
                 "--receipt",
-                required_gate_bundle_receipt_validate_shadow,
+                required_gate_bundle_receipt_validate_probe,
+                "--require-distinct-operations",
                 "--json-only",
             ],
             [
@@ -3180,13 +3181,13 @@ def main() -> int:
                 ext="json",
             )
         )
-        required_gate_bundle_receipt_update_shadow = str(
+        required_gate_bundle_receipt_update_probe = str(
             runtime_temp_file(
                 channel="required-gate-bundle",
-                operation="update",
+                operation="scan",
                 identity_id=args.identity_id,
-                run_token=f"{update_bundle_run_token}-shadow",
-                stem=f"required-gate-bundle-update-shadow-{args.identity_id}-{update_bundle_run_token}",
+                run_token=f"{update_bundle_run_token}-scan-probe",
+                stem=f"required-gate-bundle-update-scan-probe-{args.identity_id}-{update_bundle_run_token}",
                 ext="json",
             )
         )
@@ -3479,11 +3480,11 @@ def main() -> int:
                 "--run-id",
                 update_bundle_run_token,
                 "--surface-label",
-                "creator_update_shadow",
+                "creator_update_scan_probe",
                 "--operation",
-                "update",
+                "scan",
                 "--out",
-                required_gate_bundle_receipt_update_shadow,
+                required_gate_bundle_receipt_update_probe,
                 "--json-only",
             ],
             [
@@ -3506,7 +3507,8 @@ def main() -> int:
                 "--receipt",
                 required_gate_bundle_receipt_update,
                 "--receipt",
-                required_gate_bundle_receipt_update_shadow,
+                required_gate_bundle_receipt_update_probe,
+                "--require-distinct-operations",
                 "--json-only",
             ],
             [

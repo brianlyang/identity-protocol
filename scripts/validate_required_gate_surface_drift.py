@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,9 @@ BUNDLE_REQUIREMENT_KEYS: tuple[str, ...] = (
     "asb16-rq-033",
 )
 
+VERSIONED_SCRIPT_ALIAS_RE = re.compile(r"^(?P<prefix>validate|normalize|emit)_v\d+_(?P<tail>.+)\.py$")
+WRAPPER_MAIN_IMPORT_RE = re.compile(r"^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+main\s*$", re.MULTILINE)
+
 
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
     mapping_dir = repo_root / "identity" / "protocol" / "mappings"
@@ -65,7 +69,32 @@ def _parse_validator_entry(raw_entry: str) -> str:
     return token
 
 
-def _load_forbidden_direct_validators(mapping_path: Path) -> tuple[list[str], list[str]]:
+def _derive_alias_candidates(repo_root: Path, script_path: str) -> set[str]:
+    aliases: set[str] = set()
+    base_name = Path(script_path).name
+
+    m = VERSIONED_SCRIPT_ALIAS_RE.match(base_name)
+    if m:
+        alias_name = f"{m.group('prefix')}_{m.group('tail')}.py"
+        alias_script = f"scripts/{alias_name}"
+        if alias_script != script_path:
+            aliases.add(alias_script)
+
+    script_file = repo_root / script_path
+    if script_file.exists():
+        text = _read_text(script_file)
+        for module_name in WRAPPER_MAIN_IMPORT_RE.findall(text):
+            leaf = str(module_name or "").strip().split(".")[-1].strip()
+            if not leaf:
+                continue
+            alias_script = f"scripts/{leaf}.py"
+            if alias_script != script_path:
+                aliases.add(alias_script)
+
+    return aliases
+
+
+def _load_forbidden_direct_validators(*, repo_root: Path, mapping_path: Path) -> tuple[list[str], list[str]]:
     if not mapping_path.exists():
         return [], [f"contract_mapping_missing:{mapping_path}"]
     try:
@@ -91,6 +120,7 @@ def _load_forbidden_direct_validators(mapping_path: Path) -> tuple[list[str], li
             if not script:
                 continue
             discovered.add(script)
+            discovered.update(_derive_alias_candidates(repo_root, script))
 
     forbidden = sorted(
         script
@@ -114,7 +144,10 @@ def main() -> int:
         if str(args.contract_mapping or "").strip()
         else _resolve_default_contract_mapping(repo_root)
     )
-    forbidden_direct_validators, mapping_errors = _load_forbidden_direct_validators(mapping_path)
+    forbidden_direct_validators, mapping_errors = _load_forbidden_direct_validators(
+        repo_root=repo_root,
+        mapping_path=mapping_path,
+    )
 
     missing_surface_files: list[str] = []
     missing_lineage_refs: dict[str, list[str]] = {}
