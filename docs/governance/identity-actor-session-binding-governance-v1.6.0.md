@@ -3420,6 +3420,65 @@ State boundary:
 3. instance 迁移债务继续由实例层承担；协议层保持识别/校验/拒绝边界。
 
 
+## 8.43 Round-26 Uncovered Scope Deep-Scan Closure (2026-03-08)
+
+### Scope Clarification
+
+1. Round-24 扫描范围是 `scripts/** + identity/** + README.md`，并非全仓闭环。
+2. 本轮新增目标是对 Round-24 未覆盖目录做机器分层，明确哪些必须进入 strict 治理闭环，哪些属于归档/元数据面。
+
+### Uncovered Root Classification (machine-audited)
+
+1. must-close-now（执行面）：
+   - `.github/**`
+2. should-close-this-wave（规范面）：
+   - `docs/**`
+   - `skills/**`
+   - `CHANGELOG.md`
+   - `VERSIONING.md`
+3. archive-or-meta（非 strict 规范面）：
+   - `.codex/**`
+   - `.identity-protocol/**`
+   - `.tmp-fixtures/**`
+   - `.gitignore`
+   - `requirements-dev.txt`
+
+### P0 Residual Found in Uncovered Execution Surface
+
+1. CI strict HUD 链路存在显式 actor 透传缺口：
+   - `.github/workflows/_identity-required-gates.yml:218`
+   - `.github/workflows/_identity-required-gates.yml:221`
+   - `.github/workflows/_identity-required-gates.yml:227`
+2. 上述三处仍未显式传递 actor 参数，会触发 actor fallback 链。
+3. fallback 来源仍可落到环境 actor：
+   - `scripts/actor_session_common.py:17`
+   - `scripts/actor_session_common.py:25`
+4. 这类缺口不被当前 drift 检查器捕获（现有 drift 只校验接线，不校验关键参数一致性）：
+   - `scripts/validate_required_gate_surface_drift.py:156`
+   - `scripts/validate_required_gate_surface_drift.py:167`
+
+### Governance Strengthening (Round-26 Freeze)
+
+1. Round-26 起将 `.github/**` 纳入 required scan scope（执行面不再允许遗漏）。
+2. strict HUD egress 链新增参数合同：render/first-line/coherence 在 CI 路径必须显式使用同一 actor tuple。
+3. drift guard 从“接线存在性”扩展到“关键参数合同一致性”。
+4. `docs/**` 与 `skills/**` 进入“规范面扫描”，但与 `.codex/**`、`.identity-protocol/**` 的归档面隔离审计，避免历史证据噪声污染 strict 结论。
+
+### Round-26 Evidence
+
+1. `/tmp/v16_round26_uncovered_scope_audit_20260308.json`
+2. `/tmp/v16_round26_uncovered_scope_audit_20260308.md`
+3. `python3 scripts/validate_required_gate_surface_drift.py --json-only`（当前返回 PASS，不代表参数合同已闭环）
+4. `python3 scripts/docs_command_contract_check.py`（PASS）
+5. `python3 scripts/validate_protocol_ssot_source.py`（OK）
+
+### State Boundary
+
+1. 本节为协议层治理补强，不涉及实例业务能力提级。
+2. `HOTFIX16-P0-007` 继续保持 `SPEC_READY / PENDING_INTAKE`。
+3. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` 约束不变。
+
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

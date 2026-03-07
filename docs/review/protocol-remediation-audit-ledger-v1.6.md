@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 + governance_v1.6_section_8.35 + audit_round16_semantic_requiredization_scope_convergence + governance_v1.6_section_8.37 + audit_round18_protocol_lane_residual_convergence | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 + governance_v1.6_section_8.41 + audit_round22_ucg_minimal_control_plane_freeze_20260308 + governance_v1.6_section_8.42 + audit_round24_full_repo_scan_identity_scope_20260308 + governance_v1.6_section_8.43 + audit_round25_hud_egress_mandatory_chain_20260308 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 + governance_v1.6_section_8.41 + audit_round22_ucg_minimal_control_plane_freeze_20260308 + governance_v1.6_section_8.42 + audit_round24_full_repo_scan_identity_scope_20260308 + governance_v1.6_section_8.43 + audit_round25_hud_egress_mandatory_chain_20260308 + audit_round26_uncovered_scope_audit_20260308 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -2611,7 +2611,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T04:10:00Z | round-18 residual convergence landed: semantic routing guard now provides deterministic inferred semantic tuple fallback for metadata-missing protocol batches, while handoff/collab self-test validators close stale-age false blockers via bounded recent-window validation + self-test age bypass. residual promotion blockers remain gated by independent full-chain replay (`update + three-plane + full-scan`) to clear `IP-UPG-002 + IP-SEM-001` on latest head. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T19:40:00Z | round-24 addendum confirms two-layer hard-fail closure on protocol control-plane: source-domain whitewash removed, strict surface runtime-mode preflight unified, expected layer pass-through completed, and instance migration debt remains instance-owned. remains non-promotional pending independent replay sign-off. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T19:40:00Z | round-26 addendum confirms Round-24 scope gap is now machine-classified: `.github/**` is promoted to must-close-now execution surface; uncovered-scope audit identifies CI strict HUD actor pass-through residual (`_identity-required-gates.yml` render/first-line/coherence calls), while state boundary remains non-promotional pending independent replay sign-off. |
 
 ### Round-23 protocol checkpoint: canonical two-layer path cutover (execution landed, non-promotional)
 
@@ -2704,6 +2704,31 @@ Decision:
 
 1. This round is a control-plane communication freeze and does not change promotion posture.
 2. `HOTFIX16-P0-007` remains `PENDING_INTAKE`.
+
+---
+
+### Round-26 protocol checkpoint: uncovered-scope deep scan and closure classification (`execution-surface first`, non-promotional)
+
+1. Objective:
+   - close Round-24 blind spots by machine-classifying uncovered roots and separating execution-risk scope from archive noise.
+2. Scope baseline:
+   - Round-24 scanned `scripts/** + identity/** + README.md`.
+   - uncovered roots are now classified into `must_close_now / should_close_this_wave / archive_or_meta`.
+3. Classified closure set:
+   - must-close-now: `.github/**`.
+   - should-close-this-wave: `docs/**`, `skills/**`, `CHANGELOG.md`, `VERSIONING.md`.
+   - archive-or-meta: `.codex/**`, `.identity-protocol/**`, `.tmp-fixtures/**`, `.gitignore`, `requirements-dev.txt`.
+4. P0 residual confirmed on uncovered execution surface:
+   - CI strict HUD chain still has actor pass-through gaps in `.github/workflows/_identity-required-gates.yml` (`render_identity_response_stamp.py`, `validate_reply_identity_context_first_line.py`, `validate_execution_reply_identity_coherence.py` calls).
+   - this can still trigger actor fallback semantics (`scripts/actor_session_common.py`), so drift status PASS does not imply parameter-contract closure.
+5. Evidence:
+   - `/tmp/v16_round26_uncovered_scope_audit_20260308.json`
+   - `/tmp/v16_round26_uncovered_scope_audit_20260308.md`
+
+Decision:
+
+1. accept Round-26 as governance-strengthening addendum under `HOTFIX16-P0-007`.
+2. keep lifecycle boundary unchanged: `PENDING_INTAKE`, non-promotional.
 
 ---
 
