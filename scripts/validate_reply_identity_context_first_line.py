@@ -119,26 +119,7 @@ def _extract_reply_samples(reply_log_path: Path) -> list[str]:
                 msg = _message_to_text(row.get("output"))
             if msg:
                 out.append(msg)
-    return out
-
-
-def _resolve_actor_binding_with_target(
-    *,
-    catalog_path: Path,
-    actor_id: str,
-    target_identity_id: str,
-) -> tuple[dict[str, Any], dict[str, Any], str]:
-    store = load_actor_binding_store(catalog_path, actor_id)
-    selected = load_actor_binding(catalog_path, actor_id, identity_id=target_identity_id)
-    selection_mode = "identity_scoped"
-    if not selected:
-        fallback = load_actor_binding(catalog_path, actor_id)
-        if fallback:
-            selected = fallback
-            selection_mode = "actor_latest_fallback"
-        else:
-            selection_mode = "identity_scoped_missing"
-    return selected, store, selection_mode
+        return out
 
     if suffix == ".json":
         try:
@@ -179,6 +160,25 @@ def _resolve_actor_binding_with_target(
     if chunks:
         return chunks
     return [x.strip() for x in text.splitlines() if x.strip()]
+
+
+def _resolve_actor_binding_with_target(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    target_identity_id: str,
+) -> tuple[dict[str, Any], dict[str, Any], str]:
+    store = load_actor_binding_store(catalog_path, actor_id)
+    selected = load_actor_binding(catalog_path, actor_id, identity_id=target_identity_id)
+    selection_mode = "identity_scoped"
+    if not selected:
+        fallback = load_actor_binding(catalog_path, actor_id)
+        if fallback:
+            selected = fallback
+            selection_mode = "actor_latest_fallback"
+        else:
+            selection_mode = "identity_scoped_missing"
+    return selected, store, selection_mode
 
 
 def _first_nonempty_line(text: str) -> str:

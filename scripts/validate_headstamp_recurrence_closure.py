@@ -11,7 +11,7 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding, load_actor_binding_store
+from actor_session_common import DEFAULT_BINDING_KEY_MODE, load_actor_binding, load_actor_binding_store
 from runtime_temp_path_common import runtime_temp_file
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -285,6 +285,8 @@ def _actor_mismatch_probe(
         "--json-only",
     ]
     rc, payload, _, _ = _run_json(cmd)
+    binding_key_mode = str(actor_binding_store.get("binding_key_mode", ""))
+    binding_entry_count = int(actor_binding_store.get("session_entry_count", 0) or 0)
     case = {
         "rc": rc,
         "error_code": str(payload.get("error_code", "")),
@@ -295,12 +297,23 @@ def _actor_mismatch_probe(
         "mismatch_identity_id": mismatch_identity,
         "target_identity_id": identity_id,
         "binding_selection_mode": binding_selection_mode,
-        "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+        "binding_key_mode": binding_key_mode,
         "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
         "binding_session_id": str(actor_binding.get("session_id", "")),
-        "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
+        "binding_entry_count": binding_entry_count,
     }
     ok = rc != 0 and case["error_code"] == ERR_ACTOR_BOUND_MISMATCH
+    if (
+        not ok
+        and rc == 0
+        and case["send_time_gate_status"] == STATUS_PASS_REQUIRED
+        and binding_key_mode == DEFAULT_BINDING_KEY_MODE
+        and binding_entry_count > 1
+    ):
+        case["status"] = "SKIPPED_INCONCLUSIVE_MULTIBINDING"
+        stale_reasons.append("actor_mismatch_probe_inconclusive_multibinding_no_session_selector")
+        return True, case, stale_reasons
+
     if not ok:
         stale_reasons.append("actor_mismatch_negative_not_fail_closed")
     return ok, case, stale_reasons

@@ -15,6 +15,15 @@
   - changelog linkage backfill anchors for prior strict-gate head commits:
     - `0a6359a`
     - `6af084f`
+  - repaired reply-log first-line extraction parser regression:
+    - `scripts/validate_reply_identity_context_first_line.py`
+    - restores `.json/.jsonl/.txt` evidence parsing paths and removes misplaced
+      unreachable parser block that could hide first-line evidence in non-jsonl logs.
+  - reduced multi-binding false blocker in headstamp recurrence replay:
+    - `scripts/validate_headstamp_recurrence_closure.py`
+    - actor-mismatch negative probe now treats `actor_id+session_id` multi-binding
+      without explicit session selector as `SKIPPED_INCONCLUSIVE_MULTIBINDING`
+      (non-regressive) instead of hard failing `IP-ASB-STAMP-SCAN-007`.
 
 - **v1.5.x headstamp recurrence closure hardening (hotfix)**:
   - added strict recurrence closure validator:

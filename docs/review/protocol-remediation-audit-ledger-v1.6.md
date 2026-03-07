@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 + governance_v1.6_section_8.35 + audit_round16_semantic_requiredization_scope_convergence + governance_v1.6_section_8.37 + audit_round18_protocol_lane_residual_convergence | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 + governance_v1.6_section_8.38 + audit_round19_ucg_tuple_source_convergence_20260308 + governance_v1.6_section_8.39 + audit_round20_multi_instance_protocol_boundary_20260308 + governance_v1.6_section_8.40 + audit_round21_headstamp_multibinding_parser_convergence_20260308 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -2458,6 +2458,70 @@ Round-18 protocol-lane residual convergence replay (`HEAD=working-tree+dirty`, 2
    - `HOTFIX16-P1-004` remains `PENDING_INTAKE` pending independent auditor full-chain replay on latest head (`update + three-plane + full-scan`).
    - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+Round-19 UCG tuple-source convergence replay (`HEAD=6af084f+dirty`, 2026-03-08):
+
+1. scope:
+   - this replay is protocol-layer only and targets recurring control-plane drift (`headstamp missing`, `identity drift`, `protocol lane split`) under `HOTFIX16-P0-007`.
+2. four-track replay set:
+   - runtime evidence: `/tmp/audit_ctx_resolve_base_repo_architect_20260308_r2.json`, `/tmp/audit_ctx_render_base_repo_architect_20260308_r2.json`, `/tmp/audit_validate_latest_20260308.log`, `/tmp/tuple_parity_gap_result_r2.json`, `/tmp/audit_compose_reply.txt`.
+   - canonical pointer evidence: `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/active_identity.json`.
+   - strict bundle projection evidence:
+     - `/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-runtime/required-gate-bundle/three-plane/base-repo-architect/three-plane-base-repo-architect/required-gate-bundle-three-plane-base-repo-architect-three-plane-base-repo-architect.json`
+     - `/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-runtime/required-gate-bundle/scan/base-repo-architect/three-plane-base-repo-architect-scan-probe/required-gate-bundle-three-plane-scan-probe-base-repo-architect-three-plane-base-repo-architect.json`
+3. confirmed residuals:
+   - source-layer taxonomy split is still reproducible (`resolve_identity_context -> local`, response stamp -> `project`).
+   - strict headstamp chain still contains `--actor-id` propagation gaps on render/first-line/coherence call edges.
+   - `LOCK_MATCH` can still be emitted from historical binding selection while canonical pointer is another identity.
+   - tuple parity still excludes HUD core tuple fields (`identity_id`, `actor_id`, `resolved_work_layer`, `resolved_source_layer`, `lock_state`), so synthetic drift can pass.
+   - strict bundle parity path still allows empty `send_time_gate_status` to pass.
+4. required protocol closure (wave-4):
+   - shared tuple resolver across validate/three-plane/reply compose.
+   - canonical egress gate strict fail-close on tuple mismatch (no non-blocking downgrade).
+   - entry freeze (`run_id + tuple`) with egress-only frozen tuple consumption.
+   - CI same-run full tuple equality between validate and three-plane receipts.
+5. state boundary:
+   - `HOTFIX16-P0-007` remains `PENDING_INTAKE`; unified entrypoint exists but convergence contract is still incomplete.
+   - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+Round-20 multi-instance protocol-boundary replay (`HEAD=6af084f+dirty`, 2026-03-08):
+
+1. scope:
+   - this replay audits two new runtime batches (`custom-creative-ecom-analyst`, `office-ops-expert`) and enforces protocol-vs-instance boundary segregation.
+2. replay evidence:
+   - `/tmp/cca_validate_accept_posthead_20260308.log`, `/tmp/cca_full_scan_accept_posthead_20260308.json`, `/tmp/cca_three_plane_accept_posthead_20260308.json`
+   - `/tmp/cca_update_instance_after_protocol_fix_20260308.log`, `/tmp/cca_update_instance_review_required_20260308.log`, `/tmp/cca_update_instance_review_required_rerun_20260308.log`, `/tmp/cca_heal_apply_20260308.log`
+   - `/tmp/three_plane_office_postfix_1772901986.json`
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772901986.json`
+3. confirmed protocol residual:
+   - `custom-creative-ecom-analyst` still reproduces strict first-line tuple mismatch (`IP-ASB-STAMP-SESSION-001`, expected `protocol/env`, observed `instance/project`).
+4. corrected root-cause split:
+   - this batch `IP-GATE-ENTRY-001` is produced by required-row hard failure (`skill_path_integrity -> IP-SPATH-002`), not by `SKIPPED_NOT_REQUIRED` rows.
+   - safe-auto/review/heal blocks (`blocked_by_safe_auto_path_policy`, `IP-HEAL-003`, report freshness `IP-REL-001`) are instance-side closure items and stay outside protocol fix queue.
+5. non-regression signal:
+   - office replay keeps `instance_plane_status=CLOSED` with `repo/release` blocked; no new protocol entrypoint regression is indicated.
+6. state boundary:
+   - `HOTFIX16-P0-007` remains `PENDING_INTAKE`; protocol scope keeps wave-4 tuple-source closure and rejects instance-only findings from protocol backlog promotion.
+   - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+Round-21 headstamp multibinding + parser convergence replay (`HEAD=13aa0b0+dirty`, 2026-03-08):
+
+1. scope:
+   - protocol-layer-only closure for two recurring replay false blockers (`first-line parser path drift`, `headstamp actor-mismatch false fail under multibinding`) in `HOTFIX16-P0-007`.
+2. landed protocol deltas:
+   - `scripts/validate_reply_identity_context_first_line.py`: restored `.json/.jsonl/.txt` first-line extraction path and removed misplaced unreachable parser segment.
+   - `scripts/validate_headstamp_recurrence_closure.py`: actor-mismatch negative probe now yields `SKIPPED_INCONCLUSIVE_MULTIBINDING` when `binding_key_mode=actor_id+session_id` and no explicit session selector is available.
+3. replay evidence:
+   - `/tmp/headstamp_sra_scan_useryangxi_after.json` -> `headstamp_recurrence_closure_status=PASS_REQUIRED`.
+   - `/tmp/full_scan_sra_round19_after.json` -> summary `{p0:0, p1:0, ok:1}` for target `system-requirements-analyst` with explicit actor context.
+   - `/tmp/reply_first_line_probe_out.json` confirms non-jsonl parser path executes without runtime crash.
+4. gate replay:
+   - `python3 -m py_compile scripts/validate_reply_identity_context_first_line.py scripts/validate_headstamp_recurrence_closure.py`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+5. state boundary:
+   - row remains `PENDING_INTAKE` pending independent auditor replay sign-off on latest head.
+   - lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 Architect handoff artifacts (canonical channel pattern):
 
 1. `runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*_gate_source_convergence*.md`
@@ -2523,7 +2587,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T04:10:00Z | round-18 residual convergence landed: semantic routing guard now provides deterministic inferred semantic tuple fallback for metadata-missing protocol batches, while handoff/collab self-test validators close stale-age false blockers via bounded recent-window validation + self-test age bypass. residual promotion blockers remain gated by independent full-chain replay (`update + three-plane + full-scan`) to clear `IP-UPG-002 + IP-SEM-001` on latest head. |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-08T03:05:00Z | round-17 wave-3.1 residual closure landed in protocol layer: three-plane/ci coherence strict fail-close, three-plane hard boundary on coherence warnings, drift alias-bypass closure via mapping+alias/delegate expansion, and operation-diverse tuple parity enforcement across strict surfaces. replay evidence (`/tmp/coh_three_plane_now.json`, `/tmp/ucg_wave31_drift_repro.json`, `/tmp/tp_same_now.json`, `/tmp/tp_diff_now.json`, `/tmp/rg_parity_wave31.json`, `/tmp/full_scan_wave31.json`) keeps row non-promotional pending independent auditor replay sign-off + protocol-lane residual family closure (`IP-UPG-002`, `IP-SEM-001`). |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:42:26Z | round-21 replay lands parser + multibinding convergence hardening: first-line evidence extraction now restores `.json/.jsonl/.txt` paths, and headstamp actor-mismatch probe no longer false-fails under `actor_id+session_id` multibinding without explicit session selector (`SKIPPED_INCONCLUSIVE_MULTIBINDING`). target SRA full-scan replay snapshot now shows `{p0:0, ok:1}` with explicit actor context; row remains non-promotional pending independent auditor sign-off. |
 
 ---
 

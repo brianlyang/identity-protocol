@@ -3078,6 +3078,223 @@ State impact:
 2. `IP-UPG-002` and `IP-SEM-001` are narrowed from recurrent structural blockers to replay-closure verification items under auditor re-run.
 3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.38 Round-19 UCG tuple-source convergence audit (`HEAD=6af084f+dirty`, 2026-03-08)
+
+Scope lock:
+
+1. this round is protocol-layer audit reinforcement for recurring control-plane defects (`headstamp drift`, `identity drift`, `protocol lane split`) under `HOTFIX16-P0-007`.
+2. this round is docs-only intake; no protocol code mutation is introduced in this checkpoint.
+3. lifecycle boundary remains non-promotional (`SPEC_READY / PENDING_INTAKE`).
+
+Four-track cross-verification (`T1..T4`):
+
+1. `T1 runtime replay`:
+   - `/tmp/audit_ctx_resolve_base_repo_architect_20260308_r2.json`
+   - `/tmp/audit_ctx_render_base_repo_architect_20260308_r2.json`
+   - `/tmp/audit_validate_latest_20260308.log`
+   - `/tmp/tuple_parity_gap_result_r2.json`
+   - `/tmp/audit_compose_reply.txt`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/active_identity.json`
+2. `T2 code-path replay anchors`:
+   - source-layer normalization split:
+     - `scripts/resolve_identity_context.py:221`
+     - `scripts/resolve_identity_context.py:341`
+     - `scripts/response_stamp_common.py:337`
+     - `scripts/response_stamp_common.py:437`
+   - strict chain actor propagation surfaces:
+     - `scripts/identity_creator.py:1665`
+     - `scripts/identity_creator.py:1713`
+     - `scripts/identity_creator.py:1835`
+     - `scripts/report_three_plane_status.py:522`
+     - `scripts/report_three_plane_status.py:605`
+     - `scripts/report_three_plane_status.py:787`
+     - `scripts/release_readiness_check.py:594`
+     - `scripts/full_identity_protocol_scan.py:622`
+   - historical binding fallback surface:
+     - `scripts/compose_and_validate_governed_reply.py:53`
+     - `scripts/compose_and_validate_governed_reply.py:63`
+     - `scripts/response_stamp_common.py:199`
+     - `scripts/actor_session_common.py:231`
+   - tuple parity contract surface:
+     - `scripts/validate_required_gate_tuple_parity.py:12`
+3. `T3 strict-surface bundle projection check`:
+   - `/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-runtime/required-gate-bundle/three-plane/base-repo-architect/three-plane-base-repo-architect/required-gate-bundle-three-plane-base-repo-architect-three-plane-base-repo-architect.json`
+   - `/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-runtime/required-gate-bundle/scan/base-repo-architect/three-plane-base-repo-architect-scan-probe/required-gate-bundle-three-plane-scan-probe-base-repo-architect-three-plane-base-repo-architect.json`
+4. `T4 governance/review parity`:
+   - this round requires synchronized update across governance section `8.38`, review rolling summary `HOTFIX16-P0-007`, review detail, and decision log row.
+
+Round-19 confirmed residuals (protocol only):
+
+1. source-layer taxonomy split remains reproducible:
+   - resolver reports `source_layer=local` while response-stamp path normalizes to `source_layer=project`.
+2. strict headstamp chain still has actor propagation gap:
+   - strict surfaces call render/first-line/coherence paths without explicit `--actor-id`, which permits fallback actor resolution drift.
+3. `LOCK_MATCH` can be produced from non-canonical historical binding path:
+   - composed stamp can show `identity_id=base-repo-architect; lock=LOCK_MATCH` while canonical session pointer is `base-repo-audit-expert-v3`.
+4. tuple parity contract is still partial:
+   - parity checks currently cover only six fields (`run_id_binding`, `report_selected_path`, `required_contract`, `failed_required_contract_count`, `send_time_gate_status`, `outlet_bypass_detected`), allowing tuple drift (`identity_id`, `actor_id`, `work_layer`, `source_layer`, `lock_state`) to pass.
+5. bundle receipt projection remains under-constrained on strict surfaces:
+   - `send_time_gate_status` can remain empty in compared receipts and still pass parity.
+
+Mandatory protocol closure target (UCG wave-4, control-plane only):
+
+1. `validate` / `three-plane` / `compose-governed-reply` must consume one shared tuple resolver (single function + same field schema + same priority).
+2. all user-visible replies must pass one canonical egress gate; tuple mismatch on (`identity_id`, `actor_id`, `work_layer`, `source_layer`, `lock_state`) must fail-close (`FAIL_REQUIRED`) with no non-blocking downgrade.
+3. entry gate must freeze `run_id + tuple`; egress and strict validators must consume frozen tuple only (no late fallback re-resolution).
+4. CI must enforce same-run tuple full equality between `validate` and `three-plane` receipts.
+5. parity contract must include full HUD tuple and require non-empty `send_time_gate_status` for strict operations.
+
+Acceptance commands (round-19 auditor replay):
+
+1. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect --repo-catalog identity/catalog/identities.yaml --local-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
+2. `python3 scripts/render_identity_response_stamp.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-architect --view external --disclosure-level standard --work-layer protocol --source-layer local --json-only`
+3. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --actor-id assistant:codex --baseline-policy warn --expected-work-layer protocol --expected-source-layer local`
+4. `python3 scripts/validate_required_gate_tuple_parity.py --receipt /tmp/tuple_parity_gap_a_r2.json --receipt /tmp/tuple_parity_gap_b_r2.json --min-receipts 2 --require-distinct-operations --json-only`
+
+State impact:
+
+1. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`; unified control entrypoint is landed but tuple-source convergence is not yet closed.
+2. this round confirms recurrence root cause as control-plane contract incompleteness, not business-domain behavior.
+3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.39 Round-20 multi-instance protocol-boundary audit (`HEAD=6af084f+dirty`, 2026-03-08)
+
+Scope lock:
+
+1. this round absorbs two fresh runtime feedback batches (`custom-creative-ecom-analyst`, `office-ops-expert`) with protocol-layer-only triage.
+2. this is evidence-boundary reinforcement only; no instance business payload is ingested into protocol governance.
+3. lifecycle boundary remains non-promotional (`SPEC_READY / PENDING_INTAKE`).
+
+Four-track replay evidence (`T1..T4`):
+
+1. custom-creative protocol-lane replay:
+   - `/tmp/cca_validate_accept_posthead_20260308.log`
+   - `/tmp/cca_full_scan_accept_posthead_20260308.json`
+   - `/tmp/cca_three_plane_accept_posthead_20260308.json`
+2. custom-creative upgrade/heal execution traces (boundary classification only):
+   - `/tmp/cca_update_instance_after_protocol_fix_20260308.log`
+   - `/tmp/cca_update_instance_review_required_20260308.log`
+   - `/tmp/cca_update_instance_review_required_rerun_20260308.log`
+   - `/tmp/cca_heal_apply_20260308.log`
+3. office post-fix replay:
+   - `/tmp/three_plane_office_postfix_1772901986.json`
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772901986.json`
+4. office runtime summary handoff:
+   - `/Users/yangxi/claude/codex_project/ddm/docs/governance/office-ops-instance-upgrade-and-live-regression-2026-03-08.md`
+
+Round-20 confirmed protocol-layer residuals:
+
+1. `custom-creative-ecom-analyst` validate lane still reproduces `IP-ASB-STAMP-SESSION-001` with first-line tuple mismatch (`expected protocol/env`, observed `instance/project`), showing unresolved tuple-source convergence on strict entry chain.
+2. `required_gate_bundle_runner` failure in this batch is fail-close by design (`IP-GATE-ENTRY-001`) and is driven by one required row `skill_path_integrity -> IP-SPATH-002`, not by `SKIPPED_NOT_REQUIRED` rows.
+3. current bundle semantics remain consistent with round-17/18 hardening:
+   - history-only `required_contract=true` rows can emit `SKIPPED_NOT_REQUIRED` without automatic bundle failure;
+   - bundle failure is tied to required row hard fail (`FAIL_REQUIRED`) and row contract errors.
+
+Round-20 boundary segregation (protocol vs instance):
+
+1. protocol-owned closure:
+   - stamp/tuple consistency residual (`IP-ASB-STAMP-SESSION-001`) stays in `HOTFIX16-P0-007` control-plane wave-4 scope.
+2. instance-owned closure (recorded, not promoted into protocol fix queue):
+   - out-of-layout skill path (`IP-SPATH-002`) and local safe-auto/heal path policy blocks (`blocked_by_safe_auto_path_policy`, `IP-HEAL-003`).
+3. non-regression signal:
+   - office replay shows `instance_plane_status=CLOSED` while `repo/release` remain blocked; this does not indicate new protocol entrypoint regression.
+
+Mandatory protocol closure carry-forward:
+
+1. keep wave-4 requirements from `8.38` unchanged:
+   - shared tuple resolver,
+   - canonical egress strict fail-close,
+   - entry freeze (`run_id + tuple`) with frozen tuple consumption,
+   - CI same-run full tuple equality.
+2. add boundary guardrail:
+   - protocol backlog intake must reject instance-only path policy findings unless accompanied by protocol tuple/egress evidence.
+
+State impact:
+
+1. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`.
+2. this round reduces false routing of instance blockers into protocol remediation queue.
+3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.40 Round-21 headstamp multibinding + parser convergence replay (`HEAD=13aa0b0+dirty`, 2026-03-08)
+
+Scope lock:
+
+1. protocol-layer-only hotfix closure for recurring replay false blockers under `HOTFIX16-P0-007`.
+2. this round lands code + governance/review synchronization; no instance business logic mutation is introduced.
+3. lifecycle boundary remains non-promotional (`SPEC_READY / PENDING_INTAKE`).
+
+Round-21 landed protocol deltas:
+
+1. `scripts/validate_reply_identity_context_first_line.py`:
+   - restored deterministic reply evidence parsing across `.jsonl/.json/.txt` payloads.
+   - removed misplaced unreachable parser block that could suppress non-jsonl first-line extraction.
+2. `scripts/validate_headstamp_recurrence_closure.py`:
+   - actor-mismatch negative probe now recognizes `actor_id+session_id` multibinding without explicit session selector as `SKIPPED_INCONCLUSIVE_MULTIBINDING`.
+   - avoids false fail-close escalation (`IP-ASB-STAMP-SCAN-007`) for catalogs where one actor legitimately binds multiple identities across session entries.
+
+Replay evidence (protocol-layer):
+
+1. direct recurrence replay:
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id system-requirements-analyst --operation scan --actor-id user:yangxi --json-only`
+   - receipt: `/tmp/headstamp_sra_scan_useryangxi_after.json` (`headstamp_recurrence_closure_status=PASS_REQUIRED`).
+2. full-scan target replay:
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --actor-id user:yangxi --out /tmp/full_scan_sra_round19_after.json`
+   - summary: `p0=0`, `ok=1`.
+3. command gates:
+   - `python3 -m py_compile scripts/validate_reply_identity_context_first_line.py scripts/validate_headstamp_recurrence_closure.py`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. residual `IP-SEM-001/IP-UPG-002` replay blockers are no longer reproduced in the SRA target full-scan path used for this round (`p0=0` in replay artifact above).
+2. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE` until independent auditor replay signs off on latest head.
+3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.41 Round-22 UCG minimal control-plane decision freeze (`HEAD=13aa0b0+dirty`, 2026-03-08)
+
+Decision priority:
+
+1. this section is normative and supersedes design-branch complexity in `8.38/8.39/8.40`.
+2. previous rounds remain as replay evidence only; implementation must follow this minimal model.
+
+Final protocol control shape (authoritative):
+
+1. source-layer model is fixed to three values only:
+   - `source_layer ∈ {USER, PROJECT, GLOBAL}`.
+2. non-layer tokens are demoted to metadata and are non-gating:
+   - `catalog_origin_layer ∈ {LOCAL, REPO}`,
+   - `resolution_mode ∈ {EXPLICIT, ENV, AUTO}`.
+3. single entry freeze tuple (computed once, immutable in-run):
+   - `actor_id`, `identity_id`, `work_layer`, `source_layer`, `scope`, `lock_state`, `run_id`, `session_id`.
+4. single canonical egress gate:
+   - user-visible reply must compare against frozen tuple;
+   - any mismatch is `FAIL_REQUIRED`;
+   - `WARN_NON_BLOCKING` cannot bypass egress for strict operations.
+5. CI hard assertions are reduced to four only:
+   - same-run full tuple equality (`validate` vs `three-plane`);
+   - `send_time_gate_status` is non-empty on strict surfaces;
+   - illegal `source_layer` token is fail-close;
+   - missing explicit `--actor-id` on strict chain is fail-close.
+
+Protocol/instance boundary (hard):
+
+1. protocol backlog only accepts tuple/entry/egress control-plane defects.
+2. instance runtime/path policy defects (for example `IP-SPATH-*`, local safe-auto/heal policy) stay in instance backlog and are not promoted into protocol hotfix scope.
+
+Acceptance commands (decision-freeze verification):
+
+1. `python3 scripts/docs_command_contract_check.py`
+2. `python3 scripts/validate_protocol_ssot_source.py`
+3. `python3 scripts/validate_required_gate_tuple_parity.py --receipt <validate_receipt> --receipt <three_plane_receipt> --min-receipts 2 --require-distinct-operations --json-only`
+4. `python3 scripts/validate_send_time_reply_gate.py ... --operation three-plane --json-only` (must emit non-empty `send_time_gate_status`)
+
+State impact:
+
+1. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`.
+2. control-plane governance is now intentionally minimal to prevent recurring branch drift.
+3. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
