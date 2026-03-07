@@ -25,7 +25,16 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_REPLY_FIRST_LINE = "IP-ASB-STAMP-SESSION-001"
 ERR_INVALID_EXPECTED_SOURCE_LAYER = "IP-SOURCE-LAYER-001"
 ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
-STRICT_LOCK_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
+STRICT_LOCK_OPERATIONS = {
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:

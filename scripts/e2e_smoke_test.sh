@@ -280,6 +280,7 @@ for ID in $IDS; do
   BUNDLE_RECEIPT_DIR="${E2E_RUNTIME_ROOT}/required-gate-bundle/${ID}/${BUNDLE_RUN_TOKEN}"
   mkdir -p "$BUNDLE_RECEIPT_DIR"
   REQUIRED_GATE_BUNDLE_RECEIPT="${BUNDLE_RECEIPT_DIR}/required-gate-bundle-e2e-${ID}-${BUNDLE_RUN_TOKEN}.json"
+  REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW="${BUNDLE_RECEIPT_DIR}/required-gate-bundle-e2e-shadow-${ID}-${BUNDLE_RUN_TOKEN}.json"
   HEADSTAMP_ACTOR_ID="${SESSION_ACTOR_ID}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
@@ -651,8 +652,18 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --run-id "$BUNDLE_RUN_TOKEN" \
+    --surface-label "e2e" \
     --operation e2e \
     --out "$REQUIRED_GATE_BUNDLE_RECEIPT" \
+    --json-only
+
+  python3 scripts/required_gate_bundle_runner.py \
+    --catalog "$CATALOG_PATH" \
+    --identity-id "$ID" \
+    --run-id "$BUNDLE_RUN_TOKEN" \
+    --surface-label "e2e_shadow" \
+    --operation e2e \
+    --out "$REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW" \
     --json-only
 
   echo "[23.4511/30][$ID] validate required-gate recurrence escalator (UCG L1/L2/L3)"
@@ -667,6 +678,7 @@ for ID in $IDS; do
   echo "[23.4512/30][$ID] validate required-gate tuple parity receipt"
   python3 scripts/validate_required_gate_tuple_parity.py \
     --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT" \
+    --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW" \
     --json-only
 
   echo "[23.458/30][$ID] validate Batch-6/7 deterministic replay archive gate (RQ-017..022/030)"

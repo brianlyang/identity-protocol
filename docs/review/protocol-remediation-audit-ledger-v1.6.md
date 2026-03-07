@@ -91,7 +91,7 @@ Carry-over evidence:
 | HOTFIX16-P1-004 | 2026-03-07 | protocol | emergency hotfix intake: gate-source convergence + producer-aware requiredization applicability (`update/aggregation homomorphism` + `history-only requiredization block` + `strict context/writeback determinism`) | 093496b + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_replay_20260307_round7_multisource_feedback + governance_v1.6_section_8.30 + audit_replay_20260307_round11_protocol_feedback_sem001 | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-005 | 2026-03-07 | protocol | emergency hotfix intake: gate-chain CLI parser regression (`release_readiness` + `identity_creator validate` pre-gate crash on missing argparse fields) | audit_replay_20260307 + audit_replay_20260307_round2 + audit_replay_20260307_round3 + audit_replay_20260307_round4 (`parser/runtime crash closure replay`) | SPEC_READY | PENDING_INTAKE |
 | HOTFIX16-P0-006 | 2026-03-07 | protocol | emergency hotfix intake: execution-target tuple isolation (`kind+key` conflict gate + explicit-override non-bypass + process-call receipt completeness) | runtime_escalation_20260307 (`multi-agent dispatch gap` cross-verify) + protocol_machine_lock_rq033 (`kernel+mapping+validator+lane-hooks`) + audit_replay_20260307_round3 + audit_replay_20260307_round4 + audit_round8_actor_entry_unification | SPEC_READY | PENDING_INTAKE |
-| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 | SPEC_READY | PENDING_INTAKE |
+| HOTFIX16-P0-007 | 2026-03-07 | protocol | emergency hotfix intake: unified protocol control-plane entrypoint freeze (`single registry source` + `single wiring entrypoint` + `single outbound verdict source` + `mandatory four-track mutation bundle`) | governance_v1.6_section_8.27 + audit_designfreeze_20260307_round9_unified_control_plane + governance_v1.6_section_8.29 + audit_designfreeze_20260307_round10_ucg_precode + audit_designfreeze_20260307_round10_ucg_precode_freeze_manifest + governance_v1.6_section_8.31 + ucg_runner_wave1_20260307 + governance_v1.6_section_8.32 + ucg_runner_wave2_20260307 + governance_v1.6_section_8.33 + audit_round14_ucg_fourpoint_roundtable_reconciliation + governance_v1.6_section_8.34 + ucg_runner_wave3_20260307 | SPEC_READY | PENDING_INTAKE |
 
 ---
 
@@ -1888,6 +1888,68 @@ Round-13 UCG code landing wave-2 (`HEAD=af0f684+dirty`, 2026-03-07):
    - protocol-lane global replay still reports `IP-UPG-002 + IP-SEM-001` on `system-requirements-analyst` due missing semantic tuple fields (`intent_domain`, `intent_confidence`, `classifier_reason`) in feedback batch payload.
    - row remains non-promotional until required=true replay matrix + semantic tuple completeness replay are independently archived.
 
+Round-14 UCG four-point roundtable reconciliation (`HEAD=af0f684+dirty`, 2026-03-07):
+
+1. scope lock:
+   - protocol-layer only; this round is implementation-vs-contract reconciliation for recurring control-plane defects.
+   - no business-domain validator scope is added.
+2. four-track cross-verification evidence:
+   - `T1` governance contract lock (`1门 + 1判 + 1账`) remains unchanged.
+   - `T2` code-path anchors:
+     - `scripts/required_gate_bundle_runner.py:185-199,202-224,321-340`
+     - `scripts/validate_reply_identity_context_first_line.py:28,325,389-414`
+     - `scripts/validate_send_time_reply_gate.py:21,228,242`
+     - `.github/workflows/_identity-required-gates.yml:288-290`
+   - `T3` executable negatives:
+     - `/tmp/ucg_bundle_badmap_now2.json` (bundle false-green window: row execution failure downgraded optional while bundle remains pass).
+     - `/tmp/ucg_drift_gap_now.json` (drift guard static-list bypass under direct-validator alias).
+   - `T4` runtime convergence replay:
+     - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260307T144051Z_v16_protocol_fix_post_verification.md` + `/tmp/office_ops_protocol_fix_verification_20260307.json` (`run_id_not_found`, `Conditional Go`, `IP-PVA-003`).
+     - `/tmp/cca_validate_protocol_handoff_20260307.log` vs `/tmp/cca_three_plane_protocol_handoff_20260307.log` (same-lineage layer/headstamp strictness split).
+     - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md` (`IP-UPG-002 + IP-SEM-001` residual shape).
+3. four-point verdict:
+   - point-A (`shared tuple resolver across validate/three-plane/compose`): `PARTIAL`.
+   - point-B (`single canonical egress verdict fail-close, no non-blocking tail`): `PARTIAL`.
+   - point-C (`entry tuple freeze with no fallback semantics`): `NOT_CLOSED`.
+   - point-D (`CI same-run cross-surface tuple equality`): `PARTIAL`.
+4. mandatory wave-3 closure actions (protocol-layer):
+   - unify strictness policy for `validate` and `three-plane` on first-line/send-time tuple mismatch handling.
+   - close bundle false-green class: execution failure with missing/invalid payload contract must fail-close on UCG lane.
+   - upgrade tuple parity validator contract to require multi-receipt cross-surface comparison.
+   - wire required-gates CI parity with multi-surface same-lineage receipts.
+   - migrate drift guard from static forbidden list to mapping-derived forbidden set.
+5. anti-deadlock boundary:
+   - this strict four-track escalation applies to recurring control-plane mutation class (`HOTFIX16-P0-007`) only; non-control-plane lanes keep tiered closure policy.
+6. state boundary:
+   - row remains non-promotional until point-C and point-D are closed and point-A/B move from partial to deterministic pass.
+
+Round-15 UCG wave-3 code hardening replay (`HEAD=working-tree+dirty`, 2026-03-07):
+
+1. code landing scope:
+   - protocol-layer wave-3 mandatory items only (no lifecycle promotion, no business validator expansion).
+2. landed closure (`C + D`):
+   - `scripts/required_gate_bundle_runner.py` now fail-closes row payload contract violations and non-zero validator rc (`payload_contract_issues`, `row_contract_error_count`, `surface_label`).
+   - `scripts/validate_required_gate_tuple_parity.py` now enforces multi-receipt + distinct surface labels.
+   - required-gates CI now feeds tuple parity with same-lineage dual receipts (`ci_validate`, `ci_three_plane`).
+3. landed strengthening (`A + B` partial uplift):
+   - first-line/send-time strict operation sets now include `three-plane` + `ci`.
+   - invalid-input send-time branch now follows strict-context fail-close.
+   - three-plane/full-scan payload now projects dual bundle receipts and parity details.
+4. replay evidence package:
+   - `/tmp/ucg_wave3_badmap.yaml`
+   - `/tmp/ucg_wave3_bundle_badmap.json`
+   - `/tmp/ucg_wave3_tuple_dup.json`
+   - `/tmp/ucg_wave3_tuple_cross_surface.json`
+   - `/tmp/ucg_wave3_sendtime_three_plane.json`
+   - `/tmp/ucg_wave3_drift_mapping_derived.json`
+5. replay verdict:
+   - bundle false-green class closed in wave-3 lane (`IP-GATE-ENTRY-002` fail-close hit on bad mapping probe).
+   - tuple parity contract now blocks duplicate/missing surface labels and passes cross-surface same-lineage replay.
+   - strict send-time `three-plane` now fail-closes missing live evidence (`IP-ASB-STAMP-SESSION-002`).
+6. boundary decision:
+   - `HOTFIX16-P0-007` remains non-promotional (`SPEC_READY / PENDING_INTAKE`).
+   - residual promotion blockers unchanged: `IP-UPG-002 + IP-SEM-001` plus remaining A/B determinism convergence debt.
+
 ### HOTFIX16-P1-003 - emergency hotfix intake (`strict-surface fixed /tmp path debt`)
 
 - Status: `SPEC_READY` (hotfix lane intake)
@@ -2399,7 +2461,7 @@ Promotion guard (hard):
 | HOTFIX16-P1-004 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T09:15:00Z | round-11 protocol-feedback replay confirms routing/channel stability but keeps convergence residuals open: run-id selector dual-naming gap, strict-surface split (`update` vs `three-plane`), `IP-ASB-RFS-002` severity softness, and active semantic blocker shifted to `IP-SEM-001` field-completeness failure (`intent_domain/intent_confidence/classifier_reason`) with `IP-UPG-002` writeback deferral coupling on protocol lane. status remains non-promotional pending same-lineage convergence hardening replay closure (`summary.p0=0`). |
 | HOTFIX16-P0-005 | PENDING_INTAKE | audit-expert(codex) | 2026-03-07T06:21:30Z | parser/runtime crash closure is confirmed (no missing `target_branch/run_id` crashes); aligned-catalog replay now fails only on deterministic downstream business gates (`IP-EXEC-ORDER-001` / `IP-PVA-003` / `IP-INTAKE-EVID-001` by evidence state), and delegated `release_readiness` preflight stays crash-free. |
 | HOTFIX16-P0-006 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T06:02:07Z | machine-lock implementation remains landed (`rq_033` kernel+mapping+validator+lane-hooks) and round-8 strict actor-entry unification now enforces explicit actor-bound entry on `activate/update/validate` and wave apply path (`IP-ACTOR-ENTRY-001` fail-fast on missing actor). required=true tuple replay archive + runtime bridge rollout evidence remain pending. |
-| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T15:45:00Z | round-13 wave-2 extends frozen UCG lineage: bundle receipts now persist via `--out`, recurrence escalator is landed and wired with tuple parity across readiness/creator/three-plane/full-scan/e2e/ci, and drift guard now enforces all three lineage artifacts. residual semantic replay blocker (`IP-UPG-002 + IP-SEM-001`) remains open; promotion stays blocked pending required=true replay archive + semantic tuple completeness closure. |
+| HOTFIX16-P0-007 | PENDING_INTAKE | base-repo-architect + audit-expert(codex) | 2026-03-07T17:35:00Z | round-15 wave-3 hardening landed: `C(entry tuple freeze)=CLOSED_FOR_WAVE3`, `D(ci cross-surface tuple equality)=CLOSED_FOR_WAVE3`; `A/B` remain `PARTIAL` with deterministic strengthening on strict surfaces only. replay evidence (`/tmp/ucg_wave3_bundle_badmap.json`, `/tmp/ucg_wave3_tuple_dup.json`, `/tmp/ucg_wave3_tuple_cross_surface.json`, `/tmp/ucg_wave3_sendtime_three_plane.json`, `/tmp/ucg_wave3_drift_mapping_derived.json`) keeps row non-promotional pending remaining A/B convergence + protocol-lane residual closure (`IP-UPG-002`, `IP-SEM-001`). |
 
 ---
 

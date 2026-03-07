@@ -189,39 +189,29 @@ def _classify_status(*, target_name: str, rc: int, payload: dict[str, Any]) -> t
         STATUS_PASS_REQUIRED,
         STATUS_SKIPPED_NOT_REQUIRED,
         STATUS_FAIL_REQUIRED,
-        STATUS_FAIL_OPTIONAL,
     }:
         return status_value, status_field
+    if status_value == STATUS_FAIL_OPTIONAL:
+        return STATUS_FAIL_REQUIRED, status_field
 
-    required_contract = bool(payload.get("required_contract", False))
     if rc != 0:
-        return STATUS_FAIL_REQUIRED if required_contract else STATUS_FAIL_OPTIONAL, status_field
+        return STATUS_FAIL_REQUIRED, status_field
+    if status_field not in payload:
+        return STATUS_FAIL_REQUIRED, status_field
+    required_contract = bool(payload.get("required_contract", False))
     return (STATUS_PASS_REQUIRED if required_contract else STATUS_SKIPPED_NOT_REQUIRED), status_field
 
 
-def _collect_run_tuple_fallback(results: list[dict[str, Any]]) -> tuple[str, str, bool, str, bool]:
-    run_id_binding = ""
-    report_selected_path = ""
-    required_contract = False
-    send_time_gate_status = ""
-    outlet_bypass_detected = False
-    for row in results:
-        payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
-        if not run_id_binding:
-            run_id_binding = str(payload.get("run_id", "")).strip() or str(payload.get("run_id_binding", "")).strip()
-        if not report_selected_path:
-            report_selected_path = str(payload.get("report_selected_path", "")).strip()
-        required_contract = required_contract or bool(payload.get("required_contract", False))
-        if not send_time_gate_status:
-            send_time_gate_status = str(payload.get("send_time_gate_status", "")).strip().upper()
-        outlet_bypass_detected = outlet_bypass_detected or bool(payload.get("outlet_bypass_detected", False))
-    return (
-        run_id_binding,
-        report_selected_path,
-        required_contract,
-        send_time_gate_status,
-        outlet_bypass_detected,
-    )
+def _validate_row_payload_contract(*, payload: dict[str, Any], status_field: str) -> list[str]:
+    issues: list[str] = []
+    if not isinstance(payload, dict) or not payload:
+        issues.append("payload_missing_or_not_object")
+        return issues
+    if status_field not in payload:
+        issues.append("status_field_missing")
+    if "required_contract" not in payload:
+        issues.append("required_contract_missing")
+    return issues
 
 
 def _write_payload_out(out_path: str, payload: dict[str, Any]) -> None:
@@ -241,6 +231,7 @@ def main() -> int:
     parser.add_argument("--report-selected-path", default="")
     parser.add_argument("--send-time-gate-status", default="")
     parser.add_argument("--outlet-bypass-detected", action="store_true")
+    parser.add_argument("--surface-label", default="")
     parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
     parser.add_argument("--out", default="", help="optional path to persist JSON receipt")
     parser.add_argument("--json-only", action="store_true")
@@ -263,9 +254,14 @@ def main() -> int:
     mapping_errors.extend(spec_errors)
     result_rows: list[dict[str, Any]] = []
     failure_count = 0
+    row_contract_error_count = 0
+    surface_label = str(args.surface_label or "").strip() or str(args.operation or "").strip().replace("-", "_") or "unknown_surface"
 
     if mapping_errors:
         failure_count += len(mapping_errors)
+    if not target_name and not str(args.run_id or "").strip():
+        mapping_errors.append("run_id_binding_missing")
+        failure_count += 1
 
     for spec in specs:
         cmd = [
@@ -283,7 +279,15 @@ def main() -> int:
         rc, out, err = _run(cmd)
         payload = _parse_payload(out)
         status_value, status_field = _classify_status(target_name=spec.target_name, rc=rc, payload=payload)
+        payload_contract_issues = _validate_row_payload_contract(payload=payload, status_field=status_field)
+        if rc != 0:
+            payload_contract_issues.append("validator_rc_nonzero")
+        if payload_contract_issues:
+            status_value = STATUS_FAIL_REQUIRED
+            row_contract_error_count += 1
         error_code = _extract_error_code(payload, err)
+        if payload_contract_issues and not error_code:
+            error_code = "IP-GATE-ENTRY-002"
 
         required_contract = bool(payload.get("required_contract", False))
         if status_value == STATUS_FAIL_REQUIRED:
@@ -303,8 +307,10 @@ def main() -> int:
                 "error_code": error_code,
                 "required_contract": required_contract,
                 "auto_required_signal": bool(payload.get("auto_required_signal", False)),
+                "surface_label": surface_label,
                 "stale_reasons": list(payload.get("stale_reasons") or []),
                 "evidence_ref": str(payload.get("evidence_ref", "")).strip(),
+                "payload_contract_issues": payload_contract_issues,
                 "payload": payload,
                 "stderr_tail": (err.splitlines()[-1] if err else ""),
             }
@@ -318,18 +324,16 @@ def main() -> int:
     if missing_targets:
         failure_count += len(missing_targets)
 
-    fallback_run_id, fallback_report_path, fallback_required_contract, fallback_send_time_status, fallback_outlet_bypass = _collect_run_tuple_fallback(result_rows)
-
-    run_id_binding = str(args.run_id or "").strip() or fallback_run_id
-    report_selected_path = str(args.report_selected_path or "").strip() or fallback_report_path
-    required_contract_any = any(bool(row.get("required_contract", False)) for row in result_rows) or fallback_required_contract
+    run_id_binding = str(args.run_id or "").strip()
+    report_selected_path = str(args.report_selected_path or "").strip()
+    required_contract_any = any(bool(row.get("required_contract", False)) for row in result_rows)
     failed_required_contract_count = sum(
         1
         for row in result_rows
         if str(row.get("status", "")).upper() == STATUS_FAIL_REQUIRED
     )
 
-    if mapping_errors or missing_targets:
+    if mapping_errors or missing_targets or row_contract_error_count > 0:
         bundle_status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
     elif failed_required_contract_count > 0:
@@ -351,12 +355,14 @@ def main() -> int:
         "mapping_errors": mapping_errors,
         "missing_targets": missing_targets,
         "results": result_rows,
+        "surface_label": surface_label,
         "run_id_binding": run_id_binding,
         "report_selected_path": report_selected_path,
         "required_contract": required_contract_any,
         "failed_required_contract_count": failed_required_contract_count,
-        "send_time_gate_status": (str(args.send_time_gate_status or "").strip().upper() or fallback_send_time_status),
-        "outlet_bypass_detected": bool(args.outlet_bypass_detected or fallback_outlet_bypass),
+        "send_time_gate_status": str(args.send_time_gate_status or "").strip().upper(),
+        "outlet_bypass_detected": bool(args.outlet_bypass_detected),
+        "row_contract_error_count": row_contract_error_count,
     }
 
     if target_name:
@@ -391,6 +397,7 @@ def main() -> int:
         target_payload.setdefault("bundle_contract_id", BUNDLE_CONTRACT_ID)
         target_payload.setdefault("bundle_key", BUNDLE_KEY)
         target_payload.setdefault("bundle_target_name", target_name)
+        target_payload.setdefault("surface_label", surface_label)
         if str(args.out or "").strip():
             _write_payload_out(str(args.out), target_payload)
         if args.json_only:

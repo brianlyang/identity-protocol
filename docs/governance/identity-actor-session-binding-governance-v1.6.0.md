@@ -2815,6 +2815,127 @@ State impact:
 2. `HOTFIX16-P0-005` and `HOTFIX16-P1-004` retain non-promotional boundary pending independent replay archive closure on required=true datasets.
 3. lifecycle boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
 
+### 8.33 Round-14 UCG Four-Point Roundtable Reconciliation (`HEAD=af0f684+dirty`, 2026-03-07)
+
+Scope lock:
+
+1. this checkpoint is protocol-layer only and targets recurring control-plane defects (`identity hard switch perception`, `headstamp loss recurrence`, `protocol lane split verdict`).
+2. this checkpoint is an implementation-vs-contract reconciliation pass for UCG (`1门 + 1判 + 1账`), not a business-domain validator expansion.
+3. this checkpoint does not upgrade lifecycle state; it tightens wave-3 mutation requirements.
+
+Four-track cross-verification anchors (`T1..T4`):
+
+1. `T1 governance contract`: UCG contract remains `single entry + single final verdict + single machine tuple`, with replay tuple parity as mandatory closure.
+2. `T2 code-path inspection` (current head):
+   - `scripts/required_gate_bundle_runner.py:185-199,202-224,321-340`
+   - `scripts/validate_reply_identity_context_first_line.py:28,325,389-414`
+   - `scripts/validate_send_time_reply_gate.py:21,228,242`
+   - `.github/workflows/_identity-required-gates.yml:288-290`
+3. `T3 executable negative replay`:
+   - `/tmp/ucg_bundle_badmap_now2.json` confirms bundle false-green window (`validator_rc=2`, row=`FAIL_OPTIONAL`, bundle=`PASS_REQUIRED`).
+   - `/tmp/ucg_drift_gap_now.json` confirms drift detector bypass for non-listed direct validator alias.
+4. `T4 runtime convergence replay`:
+   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260307T144051Z_v16_protocol_fix_post_verification.md` + `/tmp/office_ops_protocol_fix_verification_20260307.json` confirms `run_id_not_found`, `Conditional Go`, and `IP-PVA-003` tuple residuals.
+   - `/tmp/cca_validate_protocol_handoff_20260307.log` vs `/tmp/cca_three_plane_protocol_handoff_20260307.log` confirms same-lineage layer-context divergence (`validate` fail-close vs `three-plane` non-blocking mismatch tails).
+   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md` confirms `IP-UPG-002 + IP-SEM-001` protocol-lane residual blocker shape.
+
+Roundtable verdict by the four mandatory control points:
+
+1. control point A (`shared tuple resolver`): `PARTIAL`
+   - tuple/layer/headstamp resolution is not yet single-function single-source across validate/three-plane/compose.
+   - `three-plane` is still outside strict first-line operation set in current validator semantics.
+2. control point B (`single canonical egress fail-close`): `PARTIAL`
+   - canonical send-time path is present, but `WARN_NON_BLOCKING`/non-blocking mismatch branches remain reachable.
+3. control point C (`entry tuple freeze: no fallback`): `NOT_CLOSED`
+   - bundle runner still admits fallback tuple synthesis and optional failure downgrade when payload contract is absent.
+4. control point D (`CI same-run cross-surface tuple equality`): `PARTIAL`
+   - tuple parity validator is wired, but current CI invocation passes a single receipt and cannot prove cross-surface equality (`validate` vs `three-plane` vs `full-scan`).
+
+Wave-3 required protocol-layer strengthening (mandatory for recurrence family):
+
+1. enforce strict-operation homomorphism for headstamp tuple checks:
+   - `validate` and `three-plane` must consume identical strictness policy for (`work_layer`, `source_layer`, `identity_id`, `actor_id`) mismatch handling.
+2. close bundle false-green class:
+   - validator execution failure with missing/invalid payload contract must fail-close under UCG control-plane track (no implicit optional downgrade).
+3. harden tuple parity contract:
+   - tuple parity validator must require at least two receipts from distinct strict surfaces and include surface labels in receipt schema.
+4. harden CI parity replay:
+   - required-gates CI must feed tuple parity with multi-surface receipts for same lineage token.
+5. harden drift detection:
+   - forbidden direct-validator set must be derived from mapping registry lineage rather than static script-name tuple.
+
+Anti-deadlock guard (explicit):
+
+1. four-track mandatory closure at this strict level applies only to recurring control-plane mutation class (`HOTFIX16-P0-007`) and its escalated recurrence windows.
+2. non-control-plane updates keep tiered closure policy and are not forced into full freeze by default.
+
+State impact:
+
+1. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE`; round-14 confirms wave-2 is partially closed but not enforcement-complete.
+2. promotion remains blocked until wave-3 closes control points `C` and `D`, and upgrades `A/B` from partial to deterministic pass.
+3. lifecycle boundary remains unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+### 8.34 Round-15 UCG Wave-3 code hardening replay (`HEAD=working-tree+dirty`, 2026-03-07)
+
+Scope lock:
+
+1. this round implements round-14 mandatory wave-3 closure list only (no requirement expansion, no lifecycle promotion).
+2. this round keeps protocol-layer boundary and preserves `SPEC_READY / PENDING_INTAKE`.
+3. this round targets four control points `A/B/C/D` with executable replay evidence.
+
+Implementation deltas (protocol code):
+
+1. control point C (`entry tuple freeze`) closure:
+   - `scripts/required_gate_bundle_runner.py` now enforces fail-close on row payload contract violations and validator non-zero return (`payload_contract_issues`, `row_contract_error_count`, `surface_label`, no tuple fallback synthesis).
+2. control point D (`ci cross-surface tuple equality`) closure:
+   - `scripts/validate_required_gate_tuple_parity.py` now requires multi-receipt parity (`--min-receipts`, distinct `surface_label` contract).
+   - `.github/workflows/_identity-required-gates.yml` now feeds tuple parity with same-lineage dual receipts (`ci_validate` + `ci_three_plane`) instead of single receipt.
+3. control point B strengthening (`canonical egress fail-close` on strict surfaces):
+   - `scripts/validate_reply_identity_context_first_line.py` strict operation set now includes `three-plane` and `ci`.
+   - `scripts/validate_send_time_reply_gate.py` strict operation set now includes `three-plane` and `ci`, and invalid-input branch now follows strict-context fail-close semantics.
+4. control point A strengthening (`shared tuple resolver`) supporting hardening:
+   - `scripts/report_three_plane_status.py` and `scripts/full_identity_protocol_scan.py` now emit/consume dual bundle receipts with explicit `surface_label` projection and parity payload fields.
+5. drift guard closure:
+   - `scripts/validate_required_gate_surface_drift.py` forbidden direct-validator set now derives from mapping registry rows (`identity/protocol/mappings/contract-binding.v1.6.yaml`) rather than static list.
+
+Round-15 replay evidence (machine-replay):
+
+1. bundle false-green closure replay:
+   - `/tmp/ucg_wave3_badmap.yaml`
+   - `/tmp/ucg_wave3_bundle_badmap.json`
+   - observed result: target probe returns `FAIL_REQUIRED` + `IP-GATE-ENTRY-002` under invalid validator path.
+2. tuple parity strict contract replay:
+   - negative (`duplicate surface_label`) => `/tmp/ucg_wave3_tuple_dup.json` (`FAIL_REQUIRED`, `IP-GATE-ENTRY-003`).
+   - positive (`cross-surface labels`) => `/tmp/ucg_wave3_tuple_cross_surface.json` (`PASS_REQUIRED`).
+3. send-time strictness homomorphism replay:
+   - `/tmp/ucg_wave3_sendtime_three_plane.json` confirms `three-plane` now fail-closes (`IP-ASB-STAMP-SESSION-002`) when strict send-time evidence is missing.
+4. drift validator replay:
+   - `/tmp/ucg_wave3_drift_mapping_derived.json` confirms mapping-derived forbidden-validator set and six-surface lineage pass.
+5. bundle receipt dual-surface replay:
+   - `/tmp/wave3-required-bundle-three-plane.json`
+   - `/tmp/wave3-required-bundle-validate.json`
+
+Control-point verdict update (after wave-3 landing):
+
+1. control point A (`shared tuple resolver`): `PARTIAL` (strengthened; single-source function unification remains follow-up work).
+2. control point B (`single canonical egress fail-close`): `PARTIAL` (strict surfaces aligned; non-strict observational operations intentionally preserved).
+3. control point C (`entry tuple freeze: no fallback`): `CLOSED_FOR_WAVE3`.
+4. control point D (`CI same-run cross-surface tuple equality`): `CLOSED_FOR_WAVE3`.
+
+Acceptance commands (round-15 local replay):
+
+1. `python3 -m py_compile scripts/required_gate_bundle_runner.py scripts/validate_required_gate_surface_drift.py scripts/validate_required_gate_tuple_parity.py scripts/release_readiness_check.py scripts/identity_creator.py scripts/report_three_plane_status.py scripts/full_identity_protocol_scan.py scripts/validate_reply_identity_context_first_line.py scripts/validate_send_time_reply_gate.py`
+2. `bash -n scripts/e2e_smoke_test.sh`
+3. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+4. `python3 scripts/docs_command_contract_check.py`
+5. `python3 scripts/validate_protocol_ssot_source.py`
+
+State impact:
+
+1. `HOTFIX16-P0-007` remains `SPEC_READY / PENDING_INTAKE` (wave-3 C/D closure landed; A/B still partial by design boundary).
+2. lifecycle boundary unchanged: `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+3. promotion remains blocked by unresolved protocol-lane residual family (`IP-UPG-002` + `IP-SEM-001`) and remaining A/B determinism convergence.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

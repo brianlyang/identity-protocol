@@ -351,6 +351,16 @@ def main() -> int:
             ext="json",
         )
     )
+    required_gate_bundle_receipt_shadow = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="readiness",
+            identity_id=identity_id,
+            run_token=f"{bundle_run_token}-shadow",
+            stem=f"required-gate-bundle-readiness-shadow-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
     vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
     capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
     health_report_dir = str(named_temp_root("identity-health-reports"))
@@ -1253,10 +1263,29 @@ def main() -> int:
             identity_id,
             "--run-id",
             bundle_run_token,
+            "--surface-label",
+            "release_readiness",
             "--operation",
             "readiness",
             "--out",
             required_gate_bundle_receipt,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/required_gate_bundle_runner.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--surface-label",
+            "release_readiness_shadow",
+            "--operation",
+            "readiness",
+            "--out",
+            required_gate_bundle_receipt_shadow,
             "--json-only",
         ],
         [
@@ -1278,6 +1307,8 @@ def main() -> int:
             "scripts/validate_required_gate_tuple_parity.py",
             "--receipt",
             required_gate_bundle_receipt,
+            "--receipt",
+            required_gate_bundle_receipt_shadow,
             "--json-only",
         ],
         [

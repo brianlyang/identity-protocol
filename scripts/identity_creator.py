@@ -1560,6 +1560,16 @@ def main() -> int:
                 ext="json",
             )
         )
+        required_gate_bundle_receipt_validate_shadow = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="validate",
+                identity_id=args.identity_id,
+                run_token=f"{validate_run_token}-shadow",
+                stem=f"required-gate-bundle-validate-shadow-{args.identity_id}-{validate_run_token}",
+                ext="json",
+            )
+        )
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
@@ -2124,10 +2134,29 @@ def main() -> int:
                 args.identity_id,
                 "--run-id",
                 validate_run_token,
+                "--surface-label",
+                "creator_validate",
                 "--operation",
                 "validate",
                 "--out",
                 required_gate_bundle_receipt_validate,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/required_gate_bundle_runner.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                validate_run_token,
+                "--surface-label",
+                "creator_validate_shadow",
+                "--operation",
+                "validate",
+                "--out",
+                required_gate_bundle_receipt_validate_shadow,
                 "--json-only",
             ],
             [
@@ -2149,6 +2178,8 @@ def main() -> int:
                 "scripts/validate_required_gate_tuple_parity.py",
                 "--receipt",
                 required_gate_bundle_receipt_validate,
+                "--receipt",
+                required_gate_bundle_receipt_validate_shadow,
                 "--json-only",
             ],
             [
@@ -3149,6 +3180,16 @@ def main() -> int:
                 ext="json",
             )
         )
+        required_gate_bundle_receipt_update_shadow = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=f"{update_bundle_run_token}-shadow",
+                stem=f"required-gate-bundle-update-shadow-{args.identity_id}-{update_bundle_run_token}",
+                ext="json",
+            )
+        )
         intake_update_gates: list[list[str]] = [
             [
                 "python3",
@@ -3420,10 +3461,29 @@ def main() -> int:
                 args.identity_id,
                 "--run-id",
                 update_bundle_run_token,
+                "--surface-label",
+                "creator_update",
                 "--operation",
                 "update",
                 "--out",
                 required_gate_bundle_receipt_update,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/required_gate_bundle_runner.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                update_bundle_run_token,
+                "--surface-label",
+                "creator_update_shadow",
+                "--operation",
+                "update",
+                "--out",
+                required_gate_bundle_receipt_update_shadow,
                 "--json-only",
             ],
             [
@@ -3445,6 +3505,8 @@ def main() -> int:
                 "scripts/validate_required_gate_tuple_parity.py",
                 "--receipt",
                 required_gate_bundle_receipt_update,
+                "--receipt",
+                required_gate_bundle_receipt_update_shadow,
                 "--json-only",
             ],
             [

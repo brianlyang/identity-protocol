@@ -504,6 +504,16 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             ext="json",
         )
     )
+    required_gate_bundle_receipt_shadow = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="three-plane",
+            identity_id=args.identity_id,
+            run_token=f"{bundle_run_token}-shadow",
+            stem=f"required-gate-bundle-three-plane-shadow-{args.identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
     vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
     capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
 
@@ -1466,6 +1476,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--run-id",
             bundle_run_token,
+            "--surface-label",
+            "three_plane",
             "--operation",
             "three-plane",
             "--out",
@@ -1482,6 +1494,36 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     }
     required_bundle_status = str(required_bundle_payload.get("bundle_status", "")).strip().upper()
     if rc_required_bundle != 0 or required_bundle_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_required_bundle_shadow, out_required_bundle_shadow, err_required_bundle_shadow = _run(
+        [
+            "python3",
+            "scripts/required_gate_bundle_runner.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--surface-label",
+            "three_plane_shadow",
+            "--operation",
+            "three-plane",
+            "--out",
+            required_gate_bundle_receipt_shadow,
+            "--json-only",
+        ]
+    )
+    required_bundle_shadow_payload = _parse_json_payload(out_required_bundle_shadow) or {}
+    validators["required_gate_bundle_runner_shadow"] = {
+        "rc": rc_required_bundle_shadow,
+        "ok": rc_required_bundle_shadow == 0,
+        "out": out_required_bundle_shadow,
+        "err": err_required_bundle_shadow,
+    }
+    required_bundle_shadow_status = str(required_bundle_shadow_payload.get("bundle_status", "")).strip().upper()
+    if rc_required_bundle_shadow != 0 or required_bundle_shadow_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     rc_recurrence, out_recurrence, err_recurrence = _run(
@@ -1517,6 +1559,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "scripts/validate_required_gate_tuple_parity.py",
             "--receipt",
             required_gate_bundle_receipt,
+            "--receipt",
+            required_gate_bundle_receipt_shadow,
             "--json-only",
         ]
     )
@@ -1541,6 +1585,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "cross_verification_tracks",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1567,6 +1613,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "intake_evidence_quorum",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1593,6 +1641,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "route_version_pinning",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1619,6 +1669,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "fallback_taxonomy_normalization",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1645,6 +1697,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "dedup_monotonicity",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1671,6 +1725,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "cross_workflow_schema",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1697,6 +1753,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "skill_path_integrity",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -1723,6 +1781,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--target-name",
             "execution_target_tuple_isolation",
+            "--surface-label",
+            "three_plane_target_probe",
             "--operation",
             "three-plane",
             "--json-only",
@@ -2823,8 +2883,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "error_code": required_bundle_payload.get("error_code", ""),
             "bundle_contract_id": required_bundle_payload.get("bundle_contract_id", ""),
             "bundle_key": required_bundle_payload.get("bundle_key", ""),
+            "surface_label": required_bundle_payload.get("surface_label", ""),
             "required_contract": required_bundle_payload.get("required_contract"),
             "failed_required_contract_count": required_bundle_payload.get("failed_required_contract_count"),
+            "row_contract_error_count": required_bundle_payload.get("row_contract_error_count"),
             "run_id_binding": required_bundle_payload.get("run_id_binding", ""),
             "report_selected_path": required_bundle_payload.get("report_selected_path", ""),
             "send_time_gate_status": required_bundle_payload.get("send_time_gate_status", ""),
@@ -2833,6 +2895,22 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "missing_targets": required_bundle_payload.get("missing_targets", []),
             "contract_mapping": required_bundle_payload.get("contract_mapping", ""),
             "result_rows": required_bundle_payload.get("results", []),
+        },
+        "required_gate_bundle_runner_shadow": {
+            "required_gate_bundle_runner_shadow_status": required_bundle_shadow_payload.get("bundle_status"),
+            "error_code": required_bundle_shadow_payload.get("error_code", ""),
+            "surface_label": required_bundle_shadow_payload.get("surface_label", ""),
+            "required_contract": required_bundle_shadow_payload.get("required_contract"),
+            "failed_required_contract_count": required_bundle_shadow_payload.get("failed_required_contract_count"),
+            "row_contract_error_count": required_bundle_shadow_payload.get("row_contract_error_count"),
+            "run_id_binding": required_bundle_shadow_payload.get("run_id_binding", ""),
+            "report_selected_path": required_bundle_shadow_payload.get("report_selected_path", ""),
+            "send_time_gate_status": required_bundle_shadow_payload.get("send_time_gate_status", ""),
+            "outlet_bypass_detected": required_bundle_shadow_payload.get("outlet_bypass_detected"),
+            "mapping_errors": required_bundle_shadow_payload.get("mapping_errors", []),
+            "missing_targets": required_bundle_shadow_payload.get("missing_targets", []),
+            "contract_mapping": required_bundle_shadow_payload.get("contract_mapping", ""),
+            "result_rows": required_bundle_shadow_payload.get("results", []),
         },
         "required_gate_recurrence_escalator": {
             "required_gate_recurrence_status": recurrence_payload.get("required_gate_recurrence_status"),
@@ -2853,11 +2931,17 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "required_gate_tuple_parity": {
             "required_gate_tuple_parity_status": tuple_parity_payload.get("required_gate_tuple_parity_status"),
             "error_code": tuple_parity_payload.get("error_code", ""),
-            "tuple_names": tuple_parity_payload.get("tuple_names", []),
-            "surface_count": tuple_parity_payload.get("surface_count"),
-            "expected_surface_count": tuple_parity_payload.get("expected_surface_count"),
-            "comparison": tuple_parity_payload.get("comparison", {}),
-            "receipt_path": tuple_parity_payload.get("receipt_path", ""),
+            "tuple_fields": tuple_parity_payload.get("tuple_fields", []),
+            "receipts_checked": tuple_parity_payload.get("receipts_checked", []),
+            "surface_labels_checked": tuple_parity_payload.get("surface_labels_checked", []),
+            "min_receipts": tuple_parity_payload.get("min_receipts"),
+            "require_distinct_surface_labels": tuple_parity_payload.get("require_distinct_surface_labels"),
+            "parity_contract_reasons": tuple_parity_payload.get("parity_contract_reasons", []),
+            "missing_surface_labels": tuple_parity_payload.get("missing_surface_labels", []),
+            "duplicate_surface_labels": tuple_parity_payload.get("duplicate_surface_labels", {}),
+            "load_errors": tuple_parity_payload.get("load_errors", []),
+            "missing_fields": tuple_parity_payload.get("missing_fields", {}),
+            "mismatches": tuple_parity_payload.get("mismatches", {}),
             "stale_reasons": tuple_parity_payload.get("stale_reasons", []),
         },
         "cross_verification_tracks": {

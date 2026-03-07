@@ -39,6 +39,12 @@ def _normalize_value(value: Any) -> Any:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate tuple parity across bundle receipts.")
     parser.add_argument("--receipt", action="append", required=True, help="path to bundle receipt JSON; pass multiple times")
+    parser.add_argument("--min-receipts", type=int, default=2, help="minimum receipt count required for tuple parity")
+    parser.add_argument(
+        "--require-distinct-surface-labels",
+        action="store_true",
+        help="require each compared receipt to carry distinct surface_label values",
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -54,12 +60,41 @@ def main() -> int:
         except Exception as exc:
             load_errors.append(f"invalid_receipt:{path}:{exc}")
             continue
-        receipts.append({"path": str(path), "payload": payload})
+        surface_label = str(payload.get("surface_label", "")).strip()
+        receipts.append({"path": str(path), "payload": payload, "surface_label": surface_label})
 
     mismatches: dict[str, list[dict[str, Any]]] = {}
     missing_fields: dict[str, list[str]] = {}
+    parity_contract_reasons: list[str] = []
+    missing_surface_labels: list[str] = []
+    duplicate_surface_labels: dict[str, list[str]] = {}
 
-    if not load_errors and receipts:
+    min_receipts = max(1, int(args.min_receipts))
+    if not load_errors and len(receipts) < min_receipts:
+        parity_contract_reasons.append(f"min_receipts_not_met:{len(receipts)}/{min_receipts}")
+
+    require_distinct_labels = bool(args.require_distinct_surface_labels) or min_receipts > 1
+    if not load_errors and require_distinct_labels:
+        label_to_paths: dict[str, list[str]] = {}
+        for item in receipts:
+            label = str(item.get("surface_label", "")).strip()
+            path = str(item.get("path", ""))
+            if not label:
+                missing_surface_labels.append(path)
+                continue
+            label_to_paths.setdefault(label, []).append(path)
+        duplicate_surface_labels = {
+            label: paths for label, paths in label_to_paths.items() if len(paths) > 1
+        }
+        if missing_surface_labels:
+            parity_contract_reasons.append("surface_label_missing")
+        distinct_labels = len(label_to_paths)
+        if distinct_labels < min_receipts:
+            parity_contract_reasons.append(f"distinct_surface_labels_not_met:{distinct_labels}/{min_receipts}")
+        if duplicate_surface_labels and min_receipts > 1:
+            parity_contract_reasons.append("surface_label_not_unique")
+
+    if not load_errors and receipts and not parity_contract_reasons:
         baseline_payload = receipts[0]["payload"]
         for field in TUPLE_FIELDS:
             baseline_value = _normalize_value(baseline_payload.get(field))
@@ -82,7 +117,7 @@ def main() -> int:
     if load_errors:
         parity_status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
-    elif missing_fields or mismatches:
+    elif parity_contract_reasons or missing_fields or mismatches:
         parity_status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-003"
     else:
@@ -94,6 +129,15 @@ def main() -> int:
         "error_code": error_code,
         "tuple_fields": list(TUPLE_FIELDS),
         "receipts_checked": [item["path"] for item in receipts],
+        "surface_labels_checked": [
+            {"path": item["path"], "surface_label": item.get("surface_label", "")}
+            for item in receipts
+        ],
+        "min_receipts": min_receipts,
+        "require_distinct_surface_labels": require_distinct_labels,
+        "parity_contract_reasons": parity_contract_reasons,
+        "missing_surface_labels": missing_surface_labels,
+        "duplicate_surface_labels": duplicate_surface_labels,
         "load_errors": load_errors,
         "missing_fields": missing_fields,
         "mismatches": mismatches,

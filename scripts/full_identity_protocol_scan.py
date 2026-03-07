@@ -196,6 +196,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_feedback_ssot_archival",
             "protocol_version_alignment",
             "required_gate_bundle_runner",
+            "required_gate_bundle_runner_shadow",
             "required_gate_recurrence_escalator",
             "required_gate_tuple_parity",
             "cross_verification_tracks",
@@ -465,6 +466,16 @@ def main() -> int:
                     identity_id=iid,
                     run_token=layer,
                     stem=f"required-gate-bundle-scan-{layer}-{iid}",
+                    ext="json",
+                )
+            )
+            required_gate_bundle_receipt_shadow = str(
+                runtime_temp_file(
+                    channel="required-gate-bundle",
+                    operation="scan",
+                    identity_id=iid,
+                    run_token=f"{layer}-shadow",
+                    stem=f"required-gate-bundle-scan-shadow-{layer}-{iid}",
                     ext="json",
                 )
             )
@@ -1352,10 +1363,29 @@ def main() -> int:
                     iid,
                     "--run-id",
                     required_gate_bundle_run_id,
+                    "--surface-label",
+                    f"full_scan_{layer}",
                     "--operation",
                     "scan",
                     "--out",
                     required_gate_bundle_receipt,
+                    "--json-only",
+                ],
+                "required_gate_bundle_runner_shadow": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--surface-label",
+                    f"full_scan_{layer}_shadow",
+                    "--operation",
+                    "scan",
+                    "--out",
+                    required_gate_bundle_receipt_shadow,
                     "--json-only",
                 ],
                 "required_gate_recurrence_escalator": [
@@ -1377,6 +1407,8 @@ def main() -> int:
                     "scripts/validate_required_gate_tuple_parity.py",
                     "--receipt",
                     required_gate_bundle_receipt,
+                    "--receipt",
+                    required_gate_bundle_receipt_shadow,
                     "--json-only",
                 ],
                 "cross_verification_tracks": [
@@ -1388,6 +1420,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "cross_verification_tracks",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1401,6 +1435,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "intake_evidence_quorum",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1414,6 +1450,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "route_version_pinning",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1427,6 +1465,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "fallback_taxonomy_normalization",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1440,6 +1480,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "dedup_monotonicity",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1453,6 +1495,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "cross_workflow_schema",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1466,6 +1510,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "skill_path_integrity",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1479,6 +1525,8 @@ def main() -> int:
                     iid,
                     "--target-name",
                     "execution_target_tuple_isolation",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
                     "--operation",
                     "scan",
                     "--json-only",
@@ -2149,10 +2197,12 @@ def main() -> int:
                         "contract_mapping",
                         "mapping_errors",
                         "missing_targets",
+                        "surface_label",
                         "run_id_binding",
                         "report_selected_path",
                         "required_contract",
                         "failed_required_contract_count",
+                        "row_contract_error_count",
                         "send_time_gate_status",
                         "outlet_bypass_detected",
                         "results",
@@ -2161,6 +2211,33 @@ def main() -> int:
                             check_payload[k] = bundle_doc.get(k)
                     if "bundle_status" in bundle_doc:
                         check_payload["required_gate_bundle_runner_status"] = bundle_doc.get("bundle_status")
+                if name == "required_gate_bundle_runner_shadow":
+                    bundle_shadow_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "bundle_contract_id",
+                        "bundle_key",
+                        "bundle_status",
+                        "error_code",
+                        "identity_id",
+                        "catalog_path",
+                        "operation",
+                        "contract_mapping",
+                        "mapping_errors",
+                        "missing_targets",
+                        "surface_label",
+                        "run_id_binding",
+                        "report_selected_path",
+                        "required_contract",
+                        "failed_required_contract_count",
+                        "row_contract_error_count",
+                        "send_time_gate_status",
+                        "outlet_bypass_detected",
+                        "results",
+                    ):
+                        if k in bundle_shadow_doc:
+                            check_payload[k] = bundle_shadow_doc.get(k)
+                    if "bundle_status" in bundle_shadow_doc:
+                        check_payload["required_gate_bundle_runner_shadow_status"] = bundle_shadow_doc.get("bundle_status")
                 if name == "required_gate_recurrence_escalator":
                     rec_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -2187,11 +2264,17 @@ def main() -> int:
                     for k in (
                         "required_gate_tuple_parity_status",
                         "error_code",
-                        "tuple_names",
-                        "surface_count",
-                        "expected_surface_count",
-                        "receipt_path",
-                        "comparison",
+                        "tuple_fields",
+                        "receipts_checked",
+                        "surface_labels_checked",
+                        "min_receipts",
+                        "require_distinct_surface_labels",
+                        "parity_contract_reasons",
+                        "missing_surface_labels",
+                        "duplicate_surface_labels",
+                        "load_errors",
+                        "missing_fields",
+                        "mismatches",
                         "stale_reasons",
                     ):
                         if k in parity_doc:

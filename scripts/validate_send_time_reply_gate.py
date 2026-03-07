@@ -19,7 +19,17 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
-STRICT_SEND_TIME_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate", "send-time"}
+STRICT_SEND_TIME_OPERATIONS = {
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+    "send-time",
+}
 
 
 def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
@@ -170,6 +180,7 @@ def main() -> int:
     )
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
+    strict_context_hint = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
 
     catalog_path = Path(args.catalog).expanduser().resolve()
     if catalog_path.exists() and _is_fixture_identity(catalog_path, args.identity_id):
@@ -225,7 +236,7 @@ def main() -> int:
             "identity_id": args.identity_id,
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
             "operation": args.operation,
-            "send_time_gate_status": STATUS_FAIL_REQUIRED if args.enforce_send_time_gate else STATUS_WARN_NON_BLOCKING,
+            "send_time_gate_status": STATUS_FAIL_REQUIRED if strict_context_hint else STATUS_WARN_NON_BLOCKING,
             "error_code": ERR_SEND_TIME_GATE,
             "reply_evidence_mode": "invalid_input",
             "reply_transport_ref": "invalid_input",
