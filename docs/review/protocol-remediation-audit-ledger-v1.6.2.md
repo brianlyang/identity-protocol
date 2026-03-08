@@ -228,8 +228,9 @@ Pending:
 
 ### 9.3 Updated judgment
 
-1. Multimodal protocol-control-plane wiring is closed for v1.6.2.
-2. Remaining non-green signals are outside RQ-034 wiring itself (instance freshness churn / dirty baseline).
-3. Posture remains non-promotional:
+1. Multimodal protocol-control-plane strict wiring (bundle/drift/validator/full-scan) is closed for v1.6.2.
+2. Release-readiness projection parity remains pending; treat stream as partially closed, non-promotional.
+3. Remaining non-green signals are outside RQ-034 strict wiring itself (instance freshness churn / dirty baseline).
+4. Posture remains non-promotional:
    - `SPEC_READY / PENDING_INTAKE`
    - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`

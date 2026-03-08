@@ -368,8 +368,9 @@ Closure replay set to retain:
 
 ### 11.4 Current closure judgment
 
-1. RQ-034 protocol wiring and strict entry controls are closed for this stream.
-2. Remaining non-green signal is instance report freshness churn (`IP-REL-001`) and workspace dirty baseline, not multimodal plugin wiring regression.
-3. Governance boundary remains unchanged:
+1. RQ-034 strict bundle/drift/validator/full-scan wiring is closed in this round.
+2. Release-readiness projection parity remains pending (see §1.1 / §7 item-9); this stream is not promotion-ready.
+3. Remaining non-green signal also includes instance report freshness churn (`IP-REL-001`) and workspace dirty baseline; these are outside multimodal plugin wiring regression scope.
+4. Governance boundary remains unchanged:
    - protocol layer: identify/validate/reject
    - instance layer: migration/backfill/debt cleanup

@@ -47,6 +47,12 @@ def _is_allowed_context(*, rel: str, line: str, token: str) -> bool:
     return False
 
 
+def _contains_canonical_root_literal(line: str) -> bool:
+    # Boundary-strict canonical root literal check.
+    # Must include trailing "/" to prevent prefix confusion, e.g. plugins_bad.
+    return "identity/protocol/plugins/" in str(line or "")
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -101,7 +107,7 @@ def main() -> int:
                 if CANONICAL_PLUGIN_ROOT in line:
                     continue
                 # allow dynamic references to canonical root variable patterns
-                if "CANONICAL_PLUGIN_ROOT" in line or "identity/protocol/plugins" in line:
+                if "CANONICAL_PLUGIN_ROOT" in line or _contains_canonical_root_literal(line):
                     continue
                 if _is_allowed_context(rel=rel, line=raw_line, token=token):
                     continue

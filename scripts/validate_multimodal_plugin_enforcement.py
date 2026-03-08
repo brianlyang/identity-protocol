@@ -469,6 +469,7 @@ def main() -> int:
         if missing_required_bindings:
             payload["provider_config_status"] = STATUS_FAIL_REQUIRED
             stale_reasons.append("provider_binding_required_plugin_missing")
+            error_code = error_code or ERR_CONF_PROFILE
             payload["missing_required_binding_plugins"] = missing_required_bindings
 
     if selected_profile_id:
