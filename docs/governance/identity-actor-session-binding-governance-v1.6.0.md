@@ -4157,7 +4157,8 @@ Machine report artifacts:
 
 1. `scripts/collect_identity_health_report.py` 新增 `outlet_matrix` 检查（调用 `validate_outlet_matrix.py`）。
 2. 在 strict operation（`validate/readiness/e2e/ci/three-plane`）下：
-   - 若 `outlet_matrix_status=SKIPPED_NOT_REQUIRED`，健康检查不再视作静默通过，而是上报 `WARN` 并给出升级命令。
+   - 自动透传 `--force-required` 给 `validate_outlet_matrix.py`，强制进入 required_contract 分支；
+   - 不再允许 strict health 面以 `SKIPPED_NOT_REQUIRED` 作为静默结论。
 3. `self_upgrade_plan.commands` 新增强制项：
    - `python3 scripts/validate_outlet_matrix.py ... --operation validate --force-required --json-only`
 4. 健康报告新增可观测字段：
@@ -4169,17 +4170,22 @@ Machine report artifacts:
 #### Replay evidence (this round)
 
 1. `/private/tmp/health-final-emit-round291/identity-health-base-repo-architect-1772976720.json`
+   - `final_emit_only_mode_required=true`（strict operation）
+   - `checks[outlet_matrix].status=WARN`（旧行为：未强制 required 的对照样本）
+2. `/private/tmp/health-selftest-round292/identity-health-base-repo-architect-1772977142.json`
    - `final_emit_only_mode_required=true`
-   - `final_emit_only_mode_status=SKIPPED_NOT_REQUIRED`
-   - `checks[outlet_matrix].status=WARN`
+   - `final_emit_only_mode_status=PASS_REQUIRED`
+   - `final_emit_only_mode_enforced=true`
+   - `checks[outlet_matrix].status=PASS`
 2. `/tmp/health_final_emit_round291_validate_console.log`
-   - 明确输出 `warn:outlet_matrix`；
-   - `trigger:outlet_matrix` 已进入 `self_upgrade_plan`；
-   - command chain 已包含 `validate_outlet_matrix --force-required`。
+   - 旧行为样本中 `warn:outlet_matrix` 已出现并进入升级链。
+3. `/tmp/round292_health_after_patch.log`
+   - strict health 回放后不再出现 `warn:outlet_matrix`；
+   - 升级链仍保留 `validate_outlet_matrix --force-required` 作为强制复核项。
 
 #### Acceptance
 
-1. 实例执行 health check（strict operation）时，若 final emit 未 requiredized，不得再“看起来全绿”。
+1. 实例执行 health check（strict operation）时，必须强制 required_contract 校验，不得再 `SKIPPED_NOT_REQUIRED`。
 2. 必须输出可执行升级命令链，且包含 final egress 合同校验命令。
 3. 当实例完成升级并提供新 execution report 后，`outlet_matrix_status` 应达到 `PASS_REQUIRED`（或在非 strict operation 下明确标注为非 required 场景）。
 

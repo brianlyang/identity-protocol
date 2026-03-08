@@ -466,6 +466,8 @@ def main() -> int:
             cmd += ["--catalog", catalog]
             if execution_report:
                 cmd += ["--report", execution_report]
+            if args.operation in {"validate", "readiness", "e2e", "ci", "three-plane"}:
+                cmd += ["--force-required"]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
             if args.scope:

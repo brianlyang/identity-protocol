@@ -3410,7 +3410,7 @@ Scope:
 Cross-verified changes:
 
 1. `scripts/collect_identity_health_report.py` 新增 `outlet_matrix` 检查位。
-2. strict operation 下，`outlet_matrix_status=SKIPPED_NOT_REQUIRED` 从“静默 PASS”升级为 `WARN`。
+2. strict operation 下自动透传 `--force-required` 到 `validate_outlet_matrix.py`，不再允许 `SKIPPED_NOT_REQUIRED` 作为 strict health 结论。
 3. `self_upgrade_plan` 增补强制命令：
    - `python3 scripts/validate_outlet_matrix.py ... --operation validate --force-required --json-only`
 4. 健康报告新增 final egress 观测字段：
@@ -3422,13 +3422,16 @@ Cross-verified changes:
 Replay evidence:
 
 1. `/private/tmp/health-final-emit-round291/identity-health-base-repo-architect-1772976720.json`
-   - `final_emit_only_mode_required=true`
-   - `final_emit_only_mode_status=SKIPPED_NOT_REQUIRED`
-   - `checks[outlet_matrix].status=WARN`
+   - 旧行为对照：`final_emit_only_mode_status=SKIPPED_NOT_REQUIRED`，`checks[outlet_matrix].status=WARN`
 2. `/tmp/health_final_emit_round291_validate_console.log`
-   - `warn:outlet_matrix` 已出现；
-   - `trigger:outlet_matrix` 已纳入 `upgrade_plan_status=ACTION_REQUIRED`；
-   - 升级命令链包含 `validate_outlet_matrix --force-required`。
+   - 对照样本中 `warn:outlet_matrix` 已出现并进入升级命令链。
+3. `/private/tmp/health-selftest-round292/identity-health-base-repo-architect-1772977142.json`
+   - `final_emit_only_mode_required=true`
+   - `final_emit_only_mode_status=PASS_REQUIRED`
+   - `final_emit_only_mode_enforced=true`
+   - `checks[outlet_matrix].status=PASS`
+4. `/tmp/round292_health_after_patch.log`
+   - strict health 回放中 outlet_matrix 警告已消失（按 required_contract 强制复核通过）。
 
 Decision:
 
