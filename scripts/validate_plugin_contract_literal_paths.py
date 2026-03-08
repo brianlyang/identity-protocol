@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
+import re
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -47,10 +48,44 @@ def _is_allowed_context(*, rel: str, line: str, token: str) -> bool:
     return False
 
 
-def _contains_canonical_root_literal(line: str) -> bool:
-    # Boundary-strict canonical root literal check.
-    # Must include trailing "/" to prevent prefix confusion, e.g. plugins_bad.
-    return "identity/protocol/plugins/" in str(line or "")
+def _extract_literal_path_candidates(*, line: str, token: str) -> list[str]:
+    text = str(line or "")
+    out: list[str] = []
+    # quoted strings
+    for m in re.finditer(r'["\']([^"\']+)["\']', text):
+        raw = str(m.group(1) or "")
+        if token in raw:
+            out.append(raw)
+    # markdown/code-ish bare paths (fallback for docs lines without quotes)
+    bare_pat = re.compile(
+        re.escape(CANONICAL_PLUGIN_ROOT) + r"[^\s`'\"<>]*" + re.escape(token)
+    )
+    for m in bare_pat.finditer(text):
+        out.append(str(m.group(0) or ""))
+    return out
+
+
+def _is_canonical_literal_path(*, candidate: str, token: str) -> bool:
+    text = str(candidate or "").replace("\\", "/").strip()
+    if not text or token not in text:
+        return False
+    if not text.startswith(CANONICAL_PLUGIN_ROOT):
+        return False
+    # Must end at the governed token file name.
+    if not text.endswith(token):
+        return False
+    # Path traversal/dot-segment is forbidden even if prefix looks canonical.
+    parts = list(PurePosixPath(text).parts)
+    if ".." in parts or "." in parts:
+        return False
+    return True
+
+
+def _contains_canonical_root_literal(*, line: str, token: str) -> bool:
+    for candidate in _extract_literal_path_candidates(line=line, token=token):
+        if _is_canonical_literal_path(candidate=candidate, token=token):
+            return True
+    return False
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -104,10 +139,8 @@ def main() -> int:
             for token in TOKENS:
                 if token not in line:
                     continue
-                if CANONICAL_PLUGIN_ROOT in line:
-                    continue
                 # allow dynamic references to canonical root variable patterns
-                if "CANONICAL_PLUGIN_ROOT" in line or _contains_canonical_root_literal(line):
+                if "CANONICAL_PLUGIN_ROOT" in line or _contains_canonical_root_literal(line=line, token=token):
                     continue
                 if _is_allowed_context(rel=rel, line=raw_line, token=token):
                     continue
