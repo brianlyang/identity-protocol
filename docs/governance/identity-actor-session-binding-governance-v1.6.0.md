@@ -3774,6 +3774,198 @@ Machine report artifacts:
 4. 生命周期边界不变：`SPEC_READY / PENDING_INTAKE`，`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
 
 
+### 8.49 Round-26.6 Two-layer source determinism + target-scan de-inflation closure (2026-03-08)
+
+#### Closure scope (protocol control-plane only)
+
+1. 关闭 `resolve_identity_context` 在 monorepo root 下将 project catalog 误判为 `source_layer=unknown` 的控制面残口。
+2. 关闭 `full_scan --scan-mode target` 默认 project/global 双层并扫导致的 target severity 膨胀。
+3. 关闭 sidecar 在“本轮无相关 key”场景下长期 `ACTIVITY_UNSCOPED` 噪声复发。
+4. 对 `session_refresh` 增加“非变更 strict 操作”的 baseline-mode 容错，避免 `IP-PBL-006` 历史报告模式直接卡死 validate/readiness/e2e。
+
+#### Code closure
+
+1. `scripts/resolve_identity_context.py`
+   - 新增基于 `repo_catalog` 的 project root 推断（`_project_identity_home_from_repo_catalog`）；
+   - `source_layer` 与 scope 统一以 canonical project/global triplet 判定，不再受外层 git root 偏移影响。
+2. `scripts/full_identity_protocol_scan.py`
+   - 新增 `--target-source-layer {auto,project,global,both}`；
+   - target mode 默认 `auto`：优先 `expected_source_layer`，其次 `IDENTITY_CATALOG` 绑定层，最后 fail-safe 到 `project`；
+   - 输出新增 `target_source_layer_mode/target_source_layer_effective`，避免双层重叠 max-severity 膨胀。
+3. `scripts/validate_protocol_feedback_sidecar_contract.py`
+   - 新增 `--current-round-anchor-utc` 显式本轮锚点；
+   - sidecar 活动采集新增 `activity_ignored_missing_correlation_key_refs` 观测字段。
+4. `scripts/protocol_feedback_lane_common.py`
+   - 在缺失 correlation keys 时不再把历史噪声计为 `ACTIVITY_UNSCOPED`；
+   - 该类条目进入 ignored 集合，仅做观测，不触发 sidecar 噪声升级。
+5. `scripts/report_three_plane_status.py` / `scripts/full_identity_protocol_scan.py`
+   - sidecar 调用统一透传 `--current-round-anchor-utc`；
+   - projection 补齐 `activity_ignored_missing_correlation_key_refs`。
+6. `scripts/validate_identity_session_refresh_status.py`
+   - 对 `validate/readiness/e2e`（非变更 strict 操作）且未显式 execution-report 的 `IP-PBL-005/006` 场景降级为 `WARN_NON_BLOCKING`；
+   - `ci/update/activate/mutation` 仍维持 strict fail-close。
+
+#### Replay anchors
+
+1. source-layer determinism:
+   - `/tmp/resolve_context_recheck_final_20260308.json`（`source_layer=project`）。
+2. target scan de-inflation:
+   - `/tmp/full_scan_recheck_final3_20260308.json`（`target_source_layer_effective=project`）。
+3. sidecar unscoped closure:
+   - `/tmp/three_plane_recheck_final2_20260308.json`（sidecar=`NO_ACTIVITY/SKIPPED_NOT_REQUIRED`）。
+   - `/tmp/sidecar_recheck_final_braudit_20260308.json`（standalone replay 同口径）。
+4. gate sanity:
+   - `/tmp/surface_drift_recheck_final2_20260308.json`（`PASS_REQUIRED`）；
+   - `/tmp/docs_contract_recheck_final3_20260308.log`（PASS）；
+   - `/tmp/ssot_recheck_final3_20260308.log`（OK）。
+5. e2e lane pass-through replay:
+   - `/tmp/e2e_recheck_final2_20260308.log`（`work_layer_gate_set_routing_status=PASS_REQUIRED`，不再 `IP-LAYER-GATE-006`）。
+
+#### Boundary
+
+1. 本节仅收口协议控制面，不宣称实例历史债务（`IP-WRB-003/004` 等）已清零。
+2. 状态边界维持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+
+### 8.50 Round-26.7 Health self-upgrade playbook emission (2026-03-08)
+
+#### Decision
+
+1. 对“实例债务由实例自行迁移修复”的治理原则进行可执行化：健康检查报告必须输出可直接执行的升级回放命令链。
+2. 协议层职责不变：仅识别/校验/拒绝；实例层按 playbook 自主完成 update + writeback + mandatory + alignment 修复闭环。
+
+#### Code closure
+
+1. `scripts/collect_identity_health_report.py` 新增 `self_upgrade_plan`：
+   - `plan_status` (`NOT_REQUIRED` / `ACTION_REQUIRED`)；
+   - `trigger_checks` + `trigger_error_codes`；
+   - `upgrade_report_dir`；
+   - `commands`（逐条可执行，覆盖 update / writeback / post_execution / alignment / re-health）。
+2. 控制台输出新增 `[UPGRADE]` 段：
+   - 当健康检查存在升级触发项时，直接打印完整命令链，供实例 owner 原地执行。
+
+#### Replay anchors
+
+1. `/tmp/health-upgrade-test/identity-health-base-repo-audit-expert-v3-1772958922.json`
+   - 包含 `self_upgrade_plan.plan_status=ACTION_REQUIRED` 与完整 `commands`。
+2. `/tmp/health-upgrade-test/identity-health-base-repo-audit-expert-v3-1772958922.json` 对应控制台回放：
+   - `[UPGRADE] instance self-upgrade plan is required before next health pass.`
+   - `$ python3 scripts/identity_creator.py update ...`
+   - `$ python3 scripts/validate_writeback_continuity.py ...`
+   - `$ python3 scripts/validate_post_execution_mandatory.py ...`
+   - `$ python3 scripts/validate_identity_protocol_version_alignment.py ...`
+   - `$ python3 scripts/collect_identity_health_report.py ... --enforce-pass`
+
+#### Boundary
+
+1. 本节只增加“实例自愈说明与执行链路输出”，不改变 strict gate fail-close 语义。
+
+
+### 8.51 Round-28 Multi-Agent × Multi-Identity semantics closure (2026-03-08)
+
+#### Roundtable decision (protocol control-plane)
+
+1. 本节冻结多 agent × 多 identity 的唯一语义键：`(actor_id, session_id) -> identity_id`。
+2. `switch_intent_receipt` 的强制触发条件从“actor 全局最新绑定”收口到“同 actor + 同 session 发生 identity 切换”。
+3. 保留兼容闸门：`--switch-guard-scope actor_global` 可显式启用 legacy actor-wide 守卫（用于回放旧口径）。
+4. 头显（HUD）控制面新增严格入口约束：`three-plane/full-scan` 禁止隐式 actor/session fallback，未显式 `--actor-id` 或 `--session-id` 一律 fail-close（`IP-ACTOR-ENTRY-001` / `IP-ASB-SESSION-ENTRY-001`）。
+
+#### Code closure
+
+1. `scripts/identity_creator.py`
+   - activate 新增参数：
+     - `--session-id`（默认 `run:<run_id>`）
+     - `--switch-guard-scope {actor_session,actor_global}`（默认 `actor_session`）
+   - switch 守卫改为按 guard scope 选择绑定源：
+     - `actor_session`：仅检查同 actor+session 绑定；
+     - `actor_global`：保持 legacy actor-wide 检查。
+   - activation switch report 补齐观测字段：
+     - `session_id` / `session_id_source`
+     - `switch_guard_scope`
+     - `switch_guard_binding_ref`
+2. `scripts/report_three_plane_status.py`
+   - `--actor-id` / `--session-id` 改为 strict 必填；缺失直接 fail-close。
+3. `scripts/full_identity_protocol_scan.py`
+   - `--actor-id` / `--session-id` 改为 strict 必填；缺失直接 fail-close。
+
+#### Cross-verification replay (roundtable + vendor + reference)
+
+1. Roundtable replay（同 actor 同 session 切换必须 receipt）：
+   - `/tmp/round28_activate_alpha_seed.log`（session alpha 首次绑定 PASS）
+   - `/tmp/round28_activate_alpha_no_receipt.log`（同 session 切换 -> `IP-ACT-SWITCH-001`）
+   - `/tmp/round28_activate_alpha_with_receipt.log`（补 receipt 后 PASS）
+2. Multi-session replay（同 actor 不同 session 并行绑定允许）：
+   - `/tmp/round28_activate_beta_parallel.log`（session beta 并行绑定 PASS）
+3. Legacy compatibility replay（actor_global 仍保持旧闸门）：
+   - `/tmp/round28_activate_global_no_receipt.log`（跨 session 仍触发 `IP-ACT-SWITCH-001`）
+4. HUD strict-entry replay：
+   - `/tmp/round28_three_plane_no_actor.log`（`IP-ACTOR-ENTRY-001`）
+   - `/tmp/round28_three_plane_no_session.log`（`IP-ASB-SESSION-ENTRY-001`）
+   - `/tmp/round28_full_scan_no_actor.log`（`IP-ACTOR-ENTRY-001`）
+   - `/tmp/round28_full_scan_no_session.log`（`IP-ASB-SESSION-ENTRY-001`）
+   - `/tmp/round28_three_plane_with_actor.json`（explicit actor 可执行）
+   - `/tmp/round28_full_scan_with_actor.json`（explicit actor 可执行）
+
+#### Vendor/reference alignment verdict
+
+1. MCP lifecycle（session/initialization 协商）与本节 `actor+session` 绑定键一致，不支持隐式跨会话真值漂移。
+2. Codex 安全与审批模型（显式输入、集中控制面）与本节“strict actor entry + fail-close”一致。
+3. Agent Skills 元数据/契约模型（显式输入输出、可测试触发）与本节“无 actor 不执行 strict surface”一致。
+
+#### Boundary
+
+1. 本节收口“语义键与 strict 入口”两类控制面缺口，不宣称实例历史债务（`IP-WRB-*`, prompt lifecycle）已清零。
+2. 生命周期边界保持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+### 8.52 Round-28.1 Protocol tuple-parity optimization handoff (2026-03-08)
+
+#### Decision (architect-facing)
+
+1. 实例侧自修复已达可复放基线：
+   - `identity_creator validate` 已 PASS（`/tmp/fixrun27_identity_validate.log`）。
+   - `full_identity_protocol_scan --scan-mode target` 已 `p0=0`（`/tmp/fixrun25_full_scan_target.json`）。
+2. 当前剩余主阻断已收敛到协议控制面：
+   - `release_readiness_check` 与 `e2e_smoke_test.sh` 同步失败于 `IP-GATE-ENTRY-003`。
+   - 失败根因为 tuple parity 将 `update/e2e` 与 `scan-probe` 两类 receipt 直接做 `required_contract` 全等比对，触发结构性误阻断。
+3. 本节定义 v1.6 的协议优化执行单，仅用于指导架构师改协议，不回退到实例兼容兜底。
+
+#### Cross-verified evidence
+
+1. `release_readiness_check` 的 parity 阻断：
+   - `/tmp/fixrun27_release_readiness.log`（`required_gate_tuple_parity_status=FAIL_REQUIRED`, `error_code=IP-GATE-ENTRY-003`）。
+2. `e2e_smoke_test.sh` 的 parity 阻断：
+   - `/tmp/fixrun28_e2e.log`（`required_gate_tuple_parity_status=FAIL_REQUIRED`, `error_code=IP-GATE-ENTRY-003`）。
+3. mismatch 字段可复放：
+   - 两条 receipt 操作分别为 `update/e2e` 与 `scan`，`mismatches.required_contract` 显式为 `true vs false`。
+4. e2e 非阻断噪声：
+   - `/tmp/fixrun28_e2e.log` 出现 `validate_cross_cwd_absolute_input` 的 `python -c` quoting `SyntaxError`，当前为 `SKIPPED_NOT_REQUIRED` 分支噪声，但会污染审计可读性。
+
+#### Protocol optimization directives (must-do)
+
+1. 在 `scripts/validate_required_gate_tuple_parity.py` 引入分层 tuple 合同：
+   - `invariant_tuple`：跨 operation 必须全等（`run_id_binding`, `identity_id`, `actor_id`, `resolved_work_layer`, `resolved_source_layer`, `lock_state`）。
+   - `operation_scoped_tuple`：仅同 operation 组内比较，不跨组全等（至少包含 `required_contract`）。
+2. 对 `*_scan_probe` receipt 增加显式语义标记并写入 parity 判定上下文（建议字段：`parity_operation_scope=scan_probe`），禁止隐式按 baseline operation 推断。
+3. `required_gate_bundle_runner.py` 与 parity 联动：
+   - 若 receipt 标记 `operation=scan` 且 `surface_label` 以 `_scan_probe` 结尾，必须输出 `required_contract=false` 的显式原因字段；
+   - parity 读取该原因后执行“可比性降阶”，而非直接 `FAIL_REQUIRED`。
+4. `scripts/e2e_smoke_test.sh` / `scripts/validate_cross_cwd_absolute_input.py` 修复 `python -c` 引号构造，消除 `SyntaxError` 审计噪声。
+
+#### Acceptance gates (architect replay checklist)
+
+1. `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog <project>/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project --json-only`
+   - 期望：RC=0；`required_gate_tuple_parity_status=PASS_REQUIRED`。
+2. `IDENTITY_ID=base-repo-audit-expert-v3 CATALOG_PATH=<project>/.identity/catalog.local.yaml ACTOR_ID=assistant:codex EXPECTED_WORK_LAYER=protocol EXPECTED_SOURCE_LAYER=project bash scripts/e2e_smoke_test.sh`
+   - 期望：RC=0；无 `IP-GATE-ENTRY-003`；无 quoting `SyntaxError`。
+3. 负向探针保留：
+   - 构造 `invariant_tuple` 漂移（如 `actor_id` 不同）时，parity 必须继续 `FAIL_REQUIRED`。
+
+#### Boundary
+
+1. 本节仅定义协议控制面优化，不改变实例层“路径迁移/历史清债”的职责切分。
+2. 生命周期边界保持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

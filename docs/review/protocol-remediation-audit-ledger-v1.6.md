@@ -3095,6 +3095,162 @@ Decision:
 ---
 
 
+### Round-26.6 addendum: two-layer source determinism + target-scan de-inflation replay (2026-03-08)
+
+Scope:
+
+1. 仅覆盖协议控制面残口（resolver/source-layer、target scan 口径、sidecar 活动锚点、session_refresh 非变更容错）。
+2. 不覆盖实例历史债务清零（writeback/post_execution/prompt lifecycle）。
+
+Cross-verified findings (closed in control-plane):
+
+1. `resolve_identity_context` project catalog 误判 `unknown` 已关闭：
+   - 通过 repo-catalog 导出的 canonical project root 统一判定 source-layer/scope。
+2. full-scan target 双层膨胀口径已关闭：
+   - 新增 `--target-source-layer`；
+   - target mode 默认 `auto` 收敛到单层（优先 expected/env，fallback project）。
+3. sidecar `ACTIVITY_UNSCOPED` 历史噪声复发已关闭：
+   - 新增 `--current-round-anchor-utc`；
+   - 缺 correlation key 的活动仅保留 ignored 观测，不再判定 unscoped 告警。
+4. `session_refresh` 对非变更 strict 操作的 baseline-mode 卡死已降级：
+   - `validate/readiness/e2e` 在 `IP-PBL-005/006` 且无显式 execution-report 时改为 `WARN_NON_BLOCKING`；
+   - `ci/update/activate/mutation` 仍 strict fail-close（无放宽）。
+
+Replay evidence:
+
+1. `/tmp/resolve_context_recheck_final_20260308.json`
+2. `/tmp/full_scan_recheck_final3_20260308.json`
+3. `/tmp/three_plane_recheck_final2_20260308.json`
+4. `/tmp/sidecar_recheck_final_braudit_20260308.json`
+5. `/tmp/surface_drift_recheck_final2_20260308.json`
+6. `/tmp/docs_contract_recheck_final3_20260308.log`
+7. `/tmp/ssot_recheck_final3_20260308.log`
+8. `/tmp/e2e_recheck_final2_20260308.log`（lane pass-through replay，`work_layer_gate_set_routing_status=PASS_REQUIRED`）
+
+Decision:
+
+1. 控制面新增残口判定为已收口（Round-26.6）。
+2. 发布态仍保持 `SPEC_READY / PENDING_INTAKE`：实例债务与 dirty baseline 未在本加段闭环。
+
+---
+
+### Round-26.7 addendum: health self-upgrade playbook emission (2026-03-08)
+
+Scope:
+
+1. 将“实例债务由实例自行修复”转为机器可执行输出：health report 自动给出 upgrade command chain。
+
+Code closure:
+
+1. `scripts/collect_identity_health_report.py` 输出 `self_upgrade_plan`（trigger checks / error codes / commands）。
+2. 当检测到 writeback/post-execution/baseline/alignment 等升级触发项时，控制台打印 `[UPGRADE]` 命令链，避免人工拼装。
+
+Replay evidence:
+
+1. `/tmp/health-upgrade-test/identity-health-base-repo-audit-expert-v3-1772958922.json`
+   - `self_upgrade_plan.plan_status=ACTION_REQUIRED`
+   - `commands` 覆盖 update + targeted validators + re-health enforce pass。
+
+Decision:
+
+1. 协议层确认“健康检查提供实例自愈升级说明”已落地。
+2. 该加段不代表实例债务清零，仅提供标准化自愈执行路径。
+
+---
+
+### Round-28 addendum: multi-agent × multi-identity switch guard semantics + HUD strict-entry (2026-03-08)
+
+Scope:
+
+1. 仅收口两类控制面复发点：
+   - switch-intent 守卫语义被误解为 actor 单绑定；
+   - strict HUD 执行面允许 actor 隐式回退。
+2. 不涉及实例业务债务清零。
+
+Cross-verified findings (closed in control-plane):
+
+1. activate 切换守卫已改为显式 scope：
+   - `actor_session`（默认）：同 actor+session 切换才需要 receipt；
+   - `actor_global`：保留 legacy actor-wide 口径（兼容回放）。
+2. activation switch report 观测字段补齐：
+   - `session_id`, `session_id_source`, `switch_guard_scope`, `switch_guard_binding_ref`。
+3. strict HUD 入口封口：
+   - `report_three_plane_status.py` 缺 `--actor-id` / `--session-id` -> fail-close；
+   - `full_identity_protocol_scan.py` 缺 `--actor-id` / `--session-id` -> fail-close。
+
+Replay evidence:
+
+1. 同 session 切换（receipt required）：
+   - `/tmp/round28_activate_alpha_seed.log`
+   - `/tmp/round28_activate_alpha_no_receipt.log`（`IP-ACT-SWITCH-001`）
+   - `/tmp/round28_activate_alpha_with_receipt.log`
+2. 跨 session 并行绑定（multi-identity allowed）：
+   - `/tmp/round28_activate_beta_parallel.log`
+3. legacy actor-global compatibility：
+   - `/tmp/round28_activate_global_no_receipt.log`（`IP-ACT-SWITCH-001`）
+4. HUD strict-entry：
+   - `/tmp/round28_three_plane_no_actor.log`（`IP-ACTOR-ENTRY-001`）
+   - `/tmp/round28_three_plane_no_session.log`（`IP-ASB-SESSION-ENTRY-001`）
+   - `/tmp/round28_full_scan_no_actor.log`（`IP-ACTOR-ENTRY-001`）
+   - `/tmp/round28_full_scan_no_session.log`（`IP-ASB-SESSION-ENTRY-001`）
+   - `/tmp/round28_three_plane_with_actor.json`
+   - `/tmp/round28_full_scan_with_actor.json`
+
+Decision:
+
+1. “多对多语义键混淆 + actor fallback 窗口”两项控制面缺口判定已收口。
+2. 发布口径保持不变：`SPEC_READY / PENDING_INTAKE`（实例债务与 clean baseline 仍未闭环）。
+3. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` 边界保持。
+
+---
+
+### Round-28.1 addendum: tuple parity scope mismatch (IP-GATE-ENTRY-003) protocol optimization handoff (2026-03-08)
+
+Scope:
+
+1. 目标是把“实例修复后仍被协议门禁误阻断”的问题收口到架构师可执行清单。
+2. 本加段只覆盖协议控制面（parity 合同与 e2e 执行链），不回退实例兼容兜底。
+
+Cross-verified findings:
+
+1. 实例侧已通过关键基线：
+   - `/tmp/fixrun27_identity_validate.log`（validate PASS）。
+   - `/tmp/fixrun25_full_scan_target.json`（target scan `p0=0`, `ok=1`）。
+2. 发布链仍被 parity 阻断：
+   - `/tmp/fixrun27_release_readiness.log` 命中 `required_gate_tuple_parity_status=FAIL_REQUIRED`，`error_code=IP-GATE-ENTRY-003`。
+   - `/tmp/fixrun28_e2e.log` 同样命中 `IP-GATE-ENTRY-003`。
+3. 可复放根因：
+   - parity 当前将 `update/e2e` baseline receipt 与 `scan-probe` receipt 直接比较 `required_contract`；
+   - `mismatches.required_contract` 固定出现 `baseline=true` vs `scan=false`，形成结构性 fail-close。
+4. 附加噪声：
+   - `/tmp/fixrun28_e2e.log` 中 `validate_cross_cwd_absolute_input` 出现 `python -c` quoting `SyntaxError`，虽不构成当前 blocking root-cause，但降低审计可读性。
+
+Architect execution directives (protocol only):
+
+1. `scripts/validate_required_gate_tuple_parity.py` 升级为“双层比较合同”：
+   - 跨 operation 强一致：`run_id_binding`, `identity_id`, `actor_id`, `resolved_work_layer`, `resolved_source_layer`, `lock_state`；
+   - operation-scope 字段（至少 `required_contract`）改为组内比较，不跨 `scan_probe` 与执行面直接全等。
+2. `scripts/required_gate_bundle_runner.py` 增强 receipt 语义：
+   - `scan_probe` receipt 输出显式 `parity_operation_scope` 与 `required_contract_reason`；
+   - parity 必须消费该字段，不再依赖 `surface_label` 推测。
+3. `scripts/e2e_smoke_test.sh` 与 `scripts/validate_cross_cwd_absolute_input.py` 修复 `python -c` 引号拼接，清理噪声错误。
+
+Acceptance replay (must pass):
+
+1. `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog <project>/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project --json-only`
+   - 期望：RC=0，`IP-GATE-ENTRY-003` 消失。
+2. `IDENTITY_ID=base-repo-audit-expert-v3 CATALOG_PATH=<project>/.identity/catalog.local.yaml ACTOR_ID=assistant:codex EXPECTED_WORK_LAYER=protocol EXPECTED_SOURCE_LAYER=project bash scripts/e2e_smoke_test.sh`
+   - 期望：RC=0，`required_gate_tuple_parity_status=PASS_REQUIRED`，无 quoting `SyntaxError`。
+3. 负向探针：
+   - 构造 `invariant tuple` 漂移（如 `actor_id` 不同）时仍必须 `FAIL_REQUIRED`（避免回归成假绿）。
+
+Decision:
+
+1. Round-28.1 判定为“协议优化待执行”状态，已形成可直接转交架构师的执行单。
+2. 状态边界维持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+---
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).
