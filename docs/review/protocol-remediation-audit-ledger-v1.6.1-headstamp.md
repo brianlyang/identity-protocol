@@ -29,7 +29,7 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 
 | Fix ID | Date (UTC) | Layer | Scope | Commit | Architect Status | Audit Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| HS16-101 | 2026-03-08 | protocol | open v1.6.1 dedicated headstamp/HUD governance stream + freeze v1.6 scattered updates | pending_commit | SPEC_READY | PENDING_INTAKE |
+| HS16-101 | 2026-03-08 | protocol | open v1.6.1 dedicated headstamp/HUD governance stream + freeze v1.6 scattered updates | 06e551c | SPEC_READY | PENDING_INTAKE |
 
 ## 3) Current blocker map (headstamp only)
 
