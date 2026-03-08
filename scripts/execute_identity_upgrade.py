@@ -164,6 +164,26 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_active_execution_report_pointer(*, pack_path: Path, report_path: Path, run_id: str) -> None:
+    pointer_path = (pack_path.resolve() / "runtime" / "state" / "active_execution_report.json").resolve()
+    pointer_path.parent.mkdir(parents=True, exist_ok=True)
+    pointer = {
+        "run_id": str(run_id or "").strip(),
+        "report_path": str(report_path.resolve()),
+        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    pointer_path.write_text(json.dumps(pointer, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_path: Path, run_id: str) -> None:
+    _write_json(report_path, data)
+    try:
+        _write_active_execution_report_pointer(pack_path=pack_path, report_path=report_path, run_id=run_id)
+    except Exception:
+        # Report write must remain authoritative; pointer is best-effort metadata.
+        pass
+
+
 def _resolve_pack(catalog_path: Path, identity_id: str) -> Path:
     catalog = _load_yaml(catalog_path)
     identities = catalog.get("identities") or []
@@ -1419,7 +1439,7 @@ def main() -> int:
             dict.fromkeys([*list(report.get("actions_taken") or []), f"patch_plan_written:{plan_path}"])
         )
         report["artifacts"] = list(dict.fromkeys([*list(report.get("artifacts") or []), str(plan_path)]))
-        _write_json(report_path, report)
+        _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
         print("all_ok=False")
@@ -1576,7 +1596,7 @@ def main() -> int:
         )
         report["artifacts"] = list(dict.fromkeys([*list(report.get("artifacts") or []), str(plan_path)]))
         report_path = out_dir / f"{run_id}.json"
-        _write_json(report_path, report)
+        _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
         print("all_ok=False")
@@ -1727,7 +1747,7 @@ def main() -> int:
             )
         )
         report_path = out_dir / f"{run_id}.json"
-        _write_json(report_path, report)
+        _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
         print("all_ok=False")
@@ -1849,7 +1869,7 @@ def main() -> int:
             )
         )
         report_path = out_dir / f"{run_id}.json"
-        _write_json(report_path, report)
+        _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
         print("all_ok=False")
@@ -2081,7 +2101,7 @@ def main() -> int:
                     )
                 )
                 report_path = out_dir / f"{run_id}.json"
-                _write_json(report_path, report)
+                _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
                 print(f"report={report_path}")
                 print("upgrade_required=True")
                 print("all_ok=False")
@@ -2470,7 +2490,7 @@ def main() -> int:
         }
     )
     report_path = out_dir / f"{run_id}.json"
-    _write_json(report_path, report)
+    _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
 
     print(f"report={report_path}")
     print(f"upgrade_required={upgrade_required}")
