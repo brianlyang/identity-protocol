@@ -24,6 +24,14 @@ Purpose: Central place for architect + audit-expert planning, implementation rep
    - residual risks
 6. `v1.6` tag remains locked until governance unlock formula is satisfied.
 
+### 0.1A Headstamp/HUD stream extraction (v1.6.1)
+
+1. As-of `2026-03-08`, all new headstamp/HUD review records move to:
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md`
+2. Governance SSOT for extracted stream:
+   - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`
+3. Existing headstamp entries in this v1.6 ledger remain historical and must not be used for new normative closure decisions.
+
 ---
 
 ## 1) v1.6 kickoff intake (carry-over from v1.5)
@@ -3505,6 +3513,48 @@ Decision:
 
 1. 接受本轮补强：default binding 与 sidecar anchor 的协议控制面稳定性显著提升。
 2. remaining blocker 继续留在实例债务域（尤其 `custom-creative-ecom-analyst` 的 `IP-SID-002` 链路）。
+
+---
+
+### Round-29.4 addendum: update-lane prompt contract auto-wiring hard-close (2026-03-08)
+
+Scope:
+
+1. 仅覆盖 protocol update lane 的 prompt 合同接线，不涉及实例业务内容修复。
+2. 目标是消除“合同缺失导致 validators 进入 `SKIPPED_NOT_REQUIRED`”的结构性窗口。
+
+Cross-verified changes:
+
+1. `scripts/execute_identity_upgrade.py`
+   - 新增 `_ensure_prompt_contract_auto_wiring()`，在 update 执行前自动补齐四个 canonical prompt 合同键；
+   - 对已有但被降级的合同强制 `required=true`；
+   - 将自动接线失败纳入 pre-mutation fail-close，错误码族：
+     - `IP-PROMPT-WIRE-001`（task write failure）
+     - `IP-PROMPT-WIRE-002`（required prompt contracts still missing）
+     - `IP-PROMPT-WIRE-003`（invalid prompt contract payload）
+2. 报告新增可观测字段：
+   - `prompt_contract_auto_wire_status`
+   - `prompt_contract_auto_wire_error_code`
+   - `prompt_contract_auto_wire_missing_before/after`
+   - `prompt_contract_auto_wire_forced_required_keys`
+
+Replay evidence:
+
+1. `base-repo-architect` self-run：
+   - `/tmp/prompt_wire_execute_upgrade_replay.log`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect/runtime/reports/identity-upgrade-exec-base-repo-architect-1772980888.json`
+2. 关键字段：
+   - `prompt_contract_auto_wire_status=PASS_REQUIRED`
+   - `prompt_contract_auto_wire_missing_before` 包含四个 prompt 合同键
+   - `prompt_contract_auto_wire_missing_after=[]`
+3. 回放边界：
+   - 本次执行仍可能因实例环境能力前置 (`IP-CAP-003`) 阻断升级闭环；
+   - 该阻断不再归因于 prompt 合同接线缺口。
+
+Decision:
+
+1. 判定 Round-29.4 为协议层正向补强：prompt 合同接线已从“人工修补”升级为“update lane 自动接线 + fail-close”。
+2. 发布姿态仍保持非提级边界（`SPEC_READY / PENDING_INTAKE`）。
 
 ---
 

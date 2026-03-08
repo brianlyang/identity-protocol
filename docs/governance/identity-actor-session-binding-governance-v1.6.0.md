@@ -22,6 +22,14 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
 3. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` remains the authoritative v1.5 closure record and historical baseline.
 4. v1.6 governance updates must not rewrite historical v1.5 evidence; only carry-over boundaries may be referenced.
 
+### 0.2A Headstamp/HUD extraction freeze (v1.6.1 handoff)
+
+1. As-of `2026-03-08`, headstamp/HUD governance is extracted to:
+   - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`
+2. This v1.6.0 file keeps headstamp content as historical traceability baseline only.
+3. New normative headstamp/HUD clauses, status promotion, and acceptance decisions must be written in v1.6.1 stream.
+4. If v1.6.0 and v1.6.1 differ on headstamp/HUD semantics, v1.6.1 is authoritative.
+
 ### 0.3 Release lock table (`v1.6` tag hard-locked)
 
 | Decision Gate | Unlock condition | Current state |
@@ -500,6 +508,11 @@ Mandatory semantics:
    and verdict must be explained by executable mapping delta, not narrative-only prompt text.
 
 ### 4.21 `identity_context_headstamp_pre_send_hard_gate_contract_v1` (P0)
+
+Extraction note (`2026-03-08`):
+
+1. This section is frozen as v1.6.0 historical baseline.
+2. Active governance execution moved to `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`.
 
 Goal:
 
@@ -4272,6 +4285,51 @@ Machine report artifacts:
 
 1. 本节解决“默认绑定/锚点/扫描污染”协议控制面问题；
 2. 不等于实例历史债务清零（例如 custom-creative-ecom-analyst 当前仍有 `IP-SID-002` 链路阻断，需实例升级与债务回填）。
+
+### 8.59 Round-29.4 Prompt contract auto-wiring closure in update lane (2026-03-08)
+
+#### Why this addendum is required
+
+1. Round-28.3 明确了“prompt contract null/missing = protocol wiring failure”，但代码侧仍缺“update lane 自动接线 + fail-close 错误码”闭环。
+2. 本节只补协议层接线能力，不替代实例业务债务修复。
+
+#### Landed protocol changes
+
+1. `scripts/execute_identity_upgrade.py`
+   - 新增 `_ensure_prompt_contract_auto_wiring()`：
+     - 在 update 执行前自动补齐四个 canonical prompt 合同键：
+       - `prompt_bootstrap_capability_contract_v1`
+       - `prompt_capability_matrix_fail_closed_contract_v1`
+       - `derived_prompt_conformance_contract_v1`
+       - `prompt_import_executable_coupling_contract_v1`
+     - 对已存在但被降级的合同强制回写 `required=true`（禁止静默降级为非 required）。
+   - 新增错误码族并接入 pre-mutation fail-close：
+     - `IP-PROMPT-WIRE-001`：合同写回失败（I/O）
+     - `IP-PROMPT-WIRE-002`：自动接线后仍缺失必需合同
+     - `IP-PROMPT-WIRE-003`：合同结构非法/不可执行
+2. update 报告新增机器可观测字段：
+   - `prompt_contract_auto_wire_status`
+   - `prompt_contract_auto_wire_error_code`
+   - `prompt_contract_auto_wire_missing_before/after`
+   - `prompt_contract_auto_wire_forced_required_keys`
+
+#### Replay evidence (architect self-run)
+
+1. `python3 scripts/execute_identity_upgrade.py ... --identity-id base-repo-architect --actor-id assistant:codex ...`
+   - 产物：`/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect/runtime/reports/identity-upgrade-exec-base-repo-architect-1772980888.json`
+   - 关键字段：
+     - `prompt_contract_auto_wire_status=PASS_REQUIRED`
+     - `prompt_contract_auto_wire_missing_before` 含四个 prompt 合同键
+     - `prompt_contract_auto_wire_missing_after=[]`
+2. update 后 CURRENT_TASK 合同实态（同 identity）：
+   - 四个 prompt 合同键均存在，`required=true`，validator 路径完整。
+3. 边界一致性：
+   - 本次回放仍可能命中实例环境阻断（如 `IP-CAP-003`），但 prompt 接线不再是跳过型阻断源。
+
+#### Boundary
+
+1. 本节只关闭“update lane prompt 合同自动接线”协议缺口。
+2. 不宣称实例能力驱动内容已达标；能力缺失仍应由实例升级与回填解决。
 
 
 ## 9) References
