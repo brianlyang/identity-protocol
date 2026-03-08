@@ -3237,9 +3237,9 @@ Architect execution directives (protocol only):
 
 Acceptance replay (must pass):
 
-1. `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog <project>/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project --json-only`
+1. `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog <project>/.identity/catalog.local.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project`
    - 期望：RC=0，`IP-GATE-ENTRY-003` 消失。
-2. `IDENTITY_ID=base-repo-audit-expert-v3 CATALOG_PATH=<project>/.identity/catalog.local.yaml ACTOR_ID=assistant:codex EXPECTED_WORK_LAYER=protocol EXPECTED_SOURCE_LAYER=project bash scripts/e2e_smoke_test.sh`
+2. `IDENTITY_IDS=base-repo-audit-expert-v3 CATALOG_PATH=<project>/.identity/catalog.local.yaml ACTOR_ID=assistant:codex EXPECTED_WORK_LAYER=protocol EXPECTED_SOURCE_LAYER=project bash scripts/e2e_smoke_test.sh`
    - 期望：RC=0，`required_gate_tuple_parity_status=PASS_REQUIRED`，无 quoting `SyntaxError`。
 3. 负向探针：
    - 构造 `invariant tuple` 漂移（如 `actor_id` 不同）时仍必须 `FAIL_REQUIRED`（避免回归成假绿）。
@@ -3301,6 +3301,55 @@ Decision:
 
 1. Round-28.2 定性为“去重治理完成，主根因未闭环”。
 2. 继续维持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+---
+
+### Round-28.3 addendum: prompt-contract null means protocol wiring failure (must-auto-wire, 2026-03-08)
+
+Scope:
+
+1. 回应“prompt 合同为 null/缺失导致 validators 跳过”的反复问题，给出协议层 hard requirement。
+2. 明确禁止“每次靠实例人工定向命令补 CURRENT_TASK”这种运行方式。
+
+Replay result (cross-verified):
+
+1. `before wiring`：四个 prompt validator 全部 `SKIPPED_NOT_REQUIRED`，且 `stale_reasons=required_contract_disabled_or_missing`。
+2. `after controlled wiring`：四个 prompt validator 进入 `required_contract=true` 并全部 `PASS_REQUIRED`。
+3. 结论：问题根因是“合同接线缺失”，不是 validator 不可执行。
+
+Evidence:
+
+1. Before:
+   - `/tmp/prompt_bootstrap_now_20260308.json`
+   - `/tmp/prompt_cap_matrix_now_20260308.json`
+   - `/tmp/prompt_kernel_coupling_now_20260308.json`
+   - `/tmp/prompt_derivation_now_20260308.json`
+2. After:
+   - `/tmp/prompt_bootstrap_after_wire_20260308.json`
+   - `/tmp/prompt_cap_matrix_after_wire_20260308.json`
+   - `/tmp/prompt_kernel_coupling_after_wire_20260308.json`
+   - `/tmp/prompt_derivation_after_wire_20260308.json`
+3. Freshness:
+   - `/tmp/execution_report_freshness_after_upgrade_20260308.json`
+
+Protocol execution directive (P0, architecture-side):
+
+1. 在 `identity_creator init/update` 与 `execute_identity_upgrade` 中内置 prompt 合同自动接线，不允许实例手工补丁作为常态。
+2. 缺失四个 prompt 合同键时必须 auto-wire + receipt；失败即 `FAIL_REQUIRED`，不允许降级为 `SKIPPED_NOT_REQUIRED`。
+3. 协议需保证“单入口命令可完成接线 + 复核”，避免每个实例要求不同命令组合。
+4. `compile_identity_runtime` 与 upgrade/freshness 的 prompt hash 语义需统一（文件字节 hash），消除口径漂移。
+
+Acceptance (gate for closing this addendum):
+
+1. 从缺失合同的实例起步，执行单入口升级命令后：
+   - RQ-014/015/027/031 全部 `PASS_REQUIRED`。
+2. 不再出现 `required_contract_disabled_or_missing`。
+3. freshness 必须 `PASS`（`report_newer_than_key_inputs=true`）。
+
+Decision:
+
+1. Round-28.3 记录为协议层 P0 增强要求，已落入 v1.6 审计账本。
+2. 状态边界保持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
 
 ---
 

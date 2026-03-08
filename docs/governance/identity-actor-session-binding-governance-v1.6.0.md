@@ -3953,9 +3953,9 @@ Machine report artifacts:
 
 #### Acceptance gates (architect replay checklist)
 
-1. `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog <project>/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project --json-only`
+1. `python3 scripts/release_readiness_check.py --identity-id base-repo-audit-expert-v3 --catalog <project>/.identity/catalog.local.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project`
    - 期望：RC=0；`required_gate_tuple_parity_status=PASS_REQUIRED`。
-2. `IDENTITY_ID=base-repo-audit-expert-v3 CATALOG_PATH=<project>/.identity/catalog.local.yaml ACTOR_ID=assistant:codex EXPECTED_WORK_LAYER=protocol EXPECTED_SOURCE_LAYER=project bash scripts/e2e_smoke_test.sh`
+2. `IDENTITY_IDS=base-repo-audit-expert-v3 CATALOG_PATH=<project>/.identity/catalog.local.yaml ACTOR_ID=assistant:codex EXPECTED_WORK_LAYER=protocol EXPECTED_SOURCE_LAYER=project bash scripts/e2e_smoke_test.sh`
    - 期望：RC=0；无 `IP-GATE-ENTRY-003`；无 quoting `SyntaxError`。
 3. 负向探针保留：
    - 构造 `invariant_tuple` 漂移（如 `actor_id` 不同）时，parity 必须继续 `FAIL_REQUIRED`。
@@ -4024,6 +4024,63 @@ Machine report artifacts:
 #### Boundary
 
 1. 本节为“去重治理 + 单剩余闭环项”声明，不宣称 `RC-HUD-001` 已代码关闭。
+2. 生命周期边界不变：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+### 8.54 Round-28.3 Prompt Contract Auto-Wiring Hard Requirement (2026-03-08)
+
+#### Problem statement (must-close)
+
+1. 本轮深扫确认：当实例 `CURRENT_TASK.json` 缺失 prompt 合同键时，RQ-014/015/027/031 validators 会稳定落到 `SKIPPED_NOT_REQUIRED`，形成“执行过但未接线”的假收敛。
+2. 该现象不允许继续依赖“定向人工命令 + 手工改实例文件”修复；v1.6 必须将其收口为协议层默认行为。
+3. 冻结结论：`prompt contract null/missing = protocol wiring failure`，按 P0 控制面缺口处理。
+
+#### Protocol-layer hardening directive (mandatory)
+
+1. `identity_creator init/update`、`execute_identity_upgrade(review-required/safe-auto)`、`heal --apply` 必须内置 prompt 合同自动接线器；缺失即自动写入 canonical defaults，不允许静默跳过。
+2. canonical defaults 来源固定为 `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md` 与协议映射，不允许实例私有模板漂移。
+3. 自动接线覆盖面固定四项（全部 `required=true`）：
+   - `prompt_bootstrap_capability_contract_v1`
+   - `prompt_capability_matrix_fail_closed_contract_v1`
+   - `prompt_import_executable_coupling_contract_v1`
+   - `derived_prompt_conformance_contract_v1`
+4. 自动接线完成后，协议层必须同步维护 prompt validators 显式驱动集合（不得依赖隐式推断），确保 RQ-014/015 进入 required 分支。
+5. 自动接线失败时必须 `FAIL_REQUIRED` 并输出专用错误码族（建议 `IP-PROMPT-WIRE-001..003`）；禁止降级为 `SKIPPED_NOT_REQUIRED`。
+6. `compile_identity_runtime`、`execution_report_freshness` 与 upgrade report 需形成一致的 prompt hash 语义（文件字节 hash）；不得出现 trim-text 与 file-bytes 双口径。
+
+#### Command contract (single explicit entrypoint)
+
+1. 协议层必须提供单条可复放入口用于实例升级接线，不需要实例维护者追加定向手工参数链。
+2. 该入口最少满足：
+   - 一次执行即可触发 prompt 合同自动接线；
+   - 输出可审计 receipt；
+   - 后续四个 prompt validators 可直接进入 `PASS_REQUIRED`。
+
+#### Acceptance (must all pass)
+
+1. 对“缺失四个 prompt 合同键”的实例执行单入口升级命令后：
+   - RQ-014/015/027/031 全部 `required_contract=true` 且 `PASS_REQUIRED`。
+2. 不允许再出现 `required_contract_disabled_or_missing` 或 `SKIPPED_NOT_REQUIRED(contract_not_required)`。
+3. `validate_execution_report_freshness.py` 必须 `freshness_status=PASS` 且 `report_newer_than_key_inputs=true`。
+4. 负向探针：关闭或删除任一必需 prompt 合同键时，必须 `FAIL_REQUIRED`（而非跳过）。
+
+#### This-round replay evidence (gap proof + closure target)
+
+1. Gap proof (`before wiring`):
+   - `/tmp/prompt_bootstrap_now_20260308.json`
+   - `/tmp/prompt_cap_matrix_now_20260308.json`
+   - `/tmp/prompt_kernel_coupling_now_20260308.json`
+   - `/tmp/prompt_derivation_now_20260308.json`
+2. Wiring proof (`after controlled wiring`):
+   - `/tmp/prompt_bootstrap_after_wire_20260308.json`
+   - `/tmp/prompt_cap_matrix_after_wire_20260308.json`
+   - `/tmp/prompt_kernel_coupling_after_wire_20260308.json`
+   - `/tmp/prompt_derivation_after_wire_20260308.json`
+3. Freshness proof:
+   - `/tmp/execution_report_freshness_after_upgrade_20260308.json`
+
+#### Boundary
+
+1. 本节将“prompt 合同接线”责任固定在协议层；实例层仅负责业务内容与历史债务，不负责协议合同结构补丁。
 2. 生命周期边界不变：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
 
 
