@@ -173,9 +173,9 @@ Mandatory runbook note:
 Input package boundary:
 
 1. canonical feedback batch:
-   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
+   - `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260304T041651Z_office_ops_protocol_upgrade_suggestions.md`
 2. canonical proposal:
-   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
+   - `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/upgrade-proposals/PROTOCOL_UPGRADE_PROPOSAL_20260304T041651Z_office_ops_self_drive.md`
 
 Mandatory triage split:
 
@@ -191,9 +191,9 @@ Hard rules:
 
 Input package boundary:
 
-1. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
-2. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
-3. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
+1. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+2. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
+3. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
 4. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-brief-2026-03-04-initial-prompt-base-contract-capability-and-business-impact.md`
 5. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
 
@@ -296,7 +296,7 @@ Hard rules:
 
 Input package boundary:
 
-1. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
+1. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
 2. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
 3. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-discovery-dual-track-simulation-receipt-2026-03-04.md`
 
@@ -878,9 +878,9 @@ Evidence bundle required for Phase-B -> Phase-C transition:
 Cross-verification bundle (`v16-xverify-20260305-r2`) intake scope:
 
 1. `T1 roundtable`:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
 2. `T2 vendor`:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
 3. `T3 openai_context`:
    - `https://developers.openai.com/codex/security/#sandbox-and-approvals`
    - `https://developers.openai.com/codex/skills/`
@@ -892,7 +892,7 @@ Cross-verification bundle (`v16-xverify-20260305-r2`) intake scope:
    - `https://modelcontextprotocol.io/specification/latest`
    - `https://agentskills.io/specification`
 5. Runtime replay anchors:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
    - `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
    - `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
 
@@ -946,9 +946,9 @@ Cross-verification bundle (`v16-final-xverify-20260305-r3`) scope:
 1. machine anchor:
    - `/tmp/v16_final_xverify_bundle_20260305.json`
 2. `T1 roundtable`:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
 3. `T2 vendor`:
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
    - `https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/system-prompts`
    - `https://ai.google.dev/gemini-api/docs/aistudio-build-mode`
    - `https://ai.google.dev/gemini-api/docs/aistudio-fullstack`
@@ -2046,13 +2046,13 @@ Scope lock:
 
 Replay evidence commands executed:
 
-1. `python3 scripts/validate_required_contract_coverage.py --catalog ../.agents/identity/catalog.local.yaml --identity-id base-repo-architect --operation validate --json-only`
-2. `python3 scripts/validate_required_contract_coverage.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id office-ops-expert --operation validate --json-only`
-3. `python3 scripts/report_three_plane_status.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex --out <tmp>`
-4. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --actor-id assistant:codex --out <tmp>`
-5. `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-6. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-7. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --scope USER`
+1. `python3 scripts/validate_required_contract_coverage.py --catalog ../.identity/catalog.local.yaml --identity-id base-repo-architect --operation validate --json-only`
+2. `python3 scripts/validate_required_contract_coverage.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --identity-id office-ops-expert --operation validate --json-only`
+3. `python3 scripts/report_three_plane_status.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex --out <tmp>`
+4. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --actor-id assistant:codex --out <tmp>`
+5. `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+6. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+7. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --scope USER`
 
 Critical findings (protocol-layer only):
 
@@ -2153,12 +2153,12 @@ Replay commands executed:
 2. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --actor-id assistant:codex --out /tmp/v16_full_scan_base-repo-architect_20260307_round2.json`
 3. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids custom-creative-ecom-analyst --actor-id assistant:codex --out /tmp/v16_full_scan_custom-creative-ecom-analyst_20260307_round2.json`
 4. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --actor-id assistant:codex --out /tmp/v16_full_scan_system-requirements-analyst_20260307_round2.json`
-5. `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-6. `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-7. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-8. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
-9. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --operation scan --json-only`
-10. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto`
+5. `python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+6. `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+7. `python3 scripts/identity_creator.py validate --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+8. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex`
+9. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation scan --json-only`
+10. `IDENTITY_CATALOG=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml python3 scripts/validate_identity_runtime_mode_guard.py --identity-id office-ops-expert --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto`
 
 Protocol-layer findings (round-2):
 
@@ -2246,17 +2246,17 @@ Replay commands executed (project-local catalog lineage):
 
 1. `python3 scripts/docs_command_contract_check.py`
 2. `python3 scripts/validate_protocol_ssot_source.py`
-3. `python3 scripts/release_readiness_check.py --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
-4. `python3 scripts/identity_creator.py validate --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
-5. `python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation update --json-only`
-6. `python3 scripts/validate_v16_cross_verification_tracks.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-7. `python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-8. `python3 scripts/validate_route_version_pinning.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-9. `python3 scripts/validate_fallback_taxonomy_normalization.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-10. `python3 scripts/validate_dedup_monotonicity.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-11. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
-12. `python3 scripts/validate_replay_archive_contract.py --identity-id <base-repo-architect|base-repo-audit-expert-v3|custom-creative-ecom-analyst> --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --operation scan --json-only`
-13. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/audit_r5_full_scan_project.json`
+3. `python3 scripts/release_readiness_check.py --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
+4. `python3 scripts/identity_creator.py validate --identity-id <store-manager|base-repo-audit-expert-v3|custom-creative-ecom-analyst|base-repo-architect> --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --scope <SYSTEM|USER> --actor-id assistant:codex`
+5. `python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation update --json-only`
+6. `python3 scripts/validate_v16_cross_verification_tracks.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+7. `python3 scripts/validate_v16_intake_evidence_quorum.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+8. `python3 scripts/validate_route_version_pinning.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+9. `python3 scripts/validate_fallback_taxonomy_normalization.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+10. `python3 scripts/validate_dedup_monotonicity.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+11. `python3 scripts/validate_v16_cross_workflow_schema.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation <scan|update|readiness|ci> --json-only`
+12. `python3 scripts/validate_replay_archive_contract.py --identity-id <base-repo-architect|base-repo-audit-expert-v3|custom-creative-ecom-analyst> --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --operation scan --json-only`
+13. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --global-catalog /tmp/nonexistent-catalog.yaml --actor-id assistant:codex --out /tmp/audit_r5_full_scan_project.json`
 
 Findings:
 
@@ -2299,7 +2299,7 @@ Scope lock:
 Replay commands executed (local catalog lineage, non-hardcoded temp roots):
 
 1. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect`
-2. `CAT="${IDENTITY_CATALOG:-$PWD/../.agents/identity/catalog.local.yaml}"`
+2. `CAT="${IDENTITY_CATALOG:-$PWD/../.identity/catalog.local.yaml}"`
 3. `python3 scripts/identity_creator.py validate --identity-id store-manager --catalog "$CAT" --scope SYSTEM --actor-id assistant:codex | rg "validate_identity_instance_isolation.py|instance isolation"`
 4. `python3 scripts/validate_required_contract_coverage.py --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only`
 5. `for gate in validate_v16_cross_verification_tracks.py validate_v16_intake_evidence_quorum.py validate_route_version_pinning.py validate_fallback_taxonomy_normalization.py validate_dedup_monotonicity.py validate_v16_cross_workflow_schema.py; do python3 "scripts/${gate}" --catalog "$CAT" --identity-id base-repo-architect --operation update --json-only; done`
@@ -2344,9 +2344,9 @@ Scope lock:
 
 Replay commands executed (project-local lineage):
 
-1. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
-2. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
-3. `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --identity-id <base-repo-architect|base-repo-audit-expert-v3> --actor-id assistant:codex --operation scan --json-only`
+1. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+2. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --operation scan --json-only`
+3. `python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id <base-repo-architect|base-repo-audit-expert-v3> --actor-id assistant:codex --operation scan --json-only`
 4. `rg -n "/tmp" scripts/validate_headstamp_recurrence_closure.py scripts/compose_and_validate_governed_reply.py scripts/validate_reply_identity_context_first_line.py`
 
 Findings:
@@ -2835,9 +2835,9 @@ Four-track cross-verification anchors (`T1..T4`):
    - `/tmp/ucg_bundle_badmap_now2.json` confirms bundle false-green window (`validator_rc=2`, row=`FAIL_OPTIONAL`, bundle=`PASS_REQUIRED`).
    - `/tmp/ucg_drift_gap_now.json` confirms drift detector bypass for non-listed direct validator alias.
 4. `T4 runtime convergence replay`:
-   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260307T144051Z_v16_protocol_fix_post_verification.md` + `/tmp/office_ops_protocol_fix_verification_20260307.json` confirms `run_id_not_found`, `Conditional Go`, and `IP-PVA-003` tuple residuals.
+   - `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260307T144051Z_v16_protocol_fix_post_verification.md` + `/tmp/office_ops_protocol_fix_verification_20260307.json` confirms `run_id_not_found`, `Conditional Go`, and `IP-PVA-003` tuple residuals.
    - `/tmp/cca_validate_protocol_handoff_20260307.log` vs `/tmp/cca_three_plane_protocol_handoff_20260307.log` confirms same-lineage layer-context divergence (`validate` fail-close vs `three-plane` non-blocking mismatch tails).
-   - `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md` confirms `IP-UPG-002 + IP-SEM-001` protocol-lane residual blocker shape.
+   - `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md` confirms `IP-UPG-002 + IP-SEM-001` protocol-lane residual blocker shape.
 
 Roundtable verdict by the four mandatory control points:
 
@@ -3068,9 +3068,9 @@ Round-18 replay evidence:
 Acceptance commands (round-18 local replay):
 
 1. `python3 -m py_compile scripts/validate_agent_handoff_contract.py scripts/validate_identity_collab_trigger.py scripts/validate_semantic_routing_guard.py`
-2. `python3 scripts/validate_agent_handoff_contract.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --self-test`
-3. `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --self-test`
-4. `python3 scripts/validate_semantic_routing_guard.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --identity-id system-requirements-analyst --feedback-batch /Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md --operation three-plane --expected-work-layer protocol --expected-source-layer global --json-only`
+2. `python3 scripts/validate_agent_handoff_contract.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --self-test`
+3. `python3 scripts/validate_identity_collab_trigger.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --self-test`
+4. `python3 scripts/validate_semantic_routing_guard.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --identity-id system-requirements-analyst --feedback-batch /Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-07_003_protocol-lane-regression-round3.md --operation three-plane --expected-work-layer protocol --expected-source-layer global --json-only`
 
 State impact:
 
@@ -3094,7 +3094,7 @@ Four-track cross-verification (`T1..T4`):
    - `/tmp/audit_validate_latest_20260308.log`
    - `/tmp/tuple_parity_gap_result_r2.json`
    - `/tmp/audit_compose_reply.txt`
-   - `/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/session/active_identity.json`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.identity/session/active_identity.json`
 2. `T2 code-path replay anchors`:
    - source-layer normalization split:
      - `scripts/resolve_identity_context.py:221`
@@ -3126,7 +3126,7 @@ Four-track cross-verification (`T1..T4`):
 Round-19 confirmed residuals (protocol only):
 
 1. source-layer taxonomy split remains reproducible:
-   - resolver reports `source_layer=local` while response-stamp path normalizes to `source_layer=project`.
+   - resolver reports `source_layer=project` while response-stamp path normalizes to `source_layer=project`.
 2. strict headstamp chain still has actor propagation gap:
    - strict surfaces call render/first-line/coherence paths without explicit `--actor-id`, which permits fallback actor resolution drift.
 3. `LOCK_MATCH` can be produced from non-canonical historical binding path:
@@ -3146,9 +3146,9 @@ Mandatory protocol closure target (UCG wave-4, control-plane only):
 
 Acceptance commands (round-19 auditor replay):
 
-1. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect --repo-catalog identity/catalog/identities.yaml --local-catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml`
-2. `python3 scripts/render_identity_response_stamp.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-architect --view external --disclosure-level standard --work-layer protocol --source-layer local --json-only`
-3. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml --scope USER --actor-id assistant:codex --baseline-policy warn --expected-work-layer protocol --expected-source-layer local`
+1. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect --repo-catalog identity/catalog/identities.yaml --local-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`
+2. `python3 scripts/render_identity_response_stamp.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-architect --view external --disclosure-level standard --work-layer protocol --source-layer project --json-only`
+3. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --scope USER --actor-id assistant:codex --baseline-policy warn --expected-work-layer protocol --expected-source-layer project`
 4. `python3 scripts/validate_required_gate_tuple_parity.py --receipt /tmp/tuple_parity_gap_a_r2.json --receipt /tmp/tuple_parity_gap_b_r2.json --min-receipts 2 --require-distinct-operations --json-only`
 
 State impact:
@@ -3178,7 +3178,7 @@ Four-track replay evidence (`T1..T4`):
    - `/tmp/cca_heal_apply_20260308.log`
 3. office post-fix replay:
    - `/tmp/three_plane_office_postfix_1772901986.json`
-   - `/Users/yangxi/.codex/identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772901986.json`
+   - `/Users/yangxi/.codex/.identity/instances-canonical/office-ops-expert/runtime/reports/identity-upgrade-exec-office-ops-expert-1772901986.json`
 4. office runtime summary handoff:
    - `/Users/yangxi/claude/codex_project/ddm/docs/governance/office-ops-instance-upgrade-and-live-regression-2026-03-08.md`
 
@@ -3235,10 +3235,10 @@ Round-21 landed protocol deltas:
 Replay evidence (protocol-layer):
 
 1. direct recurrence replay:
-   - `python3 scripts/validate_headstamp_recurrence_closure.py --catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id system-requirements-analyst --operation scan --actor-id user:yangxi --json-only`
+   - `python3 scripts/validate_headstamp_recurrence_closure.py --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id system-requirements-analyst --operation scan --actor-id user:yangxi --json-only`
    - receipt: `/tmp/headstamp_sra_scan_useryangxi_after.json` (`headstamp_recurrence_closure_status=PASS_REQUIRED`).
 2. full-scan target replay:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --actor-id user:yangxi --out /tmp/full_scan_sra_round19_after.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids system-requirements-analyst --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --actor-id user:yangxi --out /tmp/full_scan_sra_round19_after.json`
    - summary: `p0=0`, `ok=1`.
 3. command gates:
    - `python3 -m py_compile scripts/validate_reply_identity_context_first_line.py scripts/validate_headstamp_recurrence_closure.py`
@@ -3260,18 +3260,21 @@ Decision priority:
 
 Final protocol control shape (authoritative):
 
-1. source-layer model is fixed to three values only:
-   - `source_layer ∈ {USER, PROJECT, GLOBAL}`.
-2. non-layer tokens are demoted to metadata and are non-gating:
+1. strict source-layer model is fixed to two values only:
+   - `source_layer ∈ {project, global}`.
+2. scope is the separate actor-intent axis:
+   - `scope ∈ {REPO, USER, ADMIN, SYSTEM}`.
+3. non-layer tokens are demoted to migration metadata and are non-gating:
    - `catalog_origin_layer ∈ {LOCAL, REPO}`,
-   - `resolution_mode ∈ {EXPLICIT, ENV, AUTO}`.
-3. single entry freeze tuple (computed once, immutable in-run):
+   - `resolution_mode ∈ {EXPLICIT, ENV, AUTO}`,
+   - legacy source tokens do not participate in strict gate verdicts.
+4. single entry freeze tuple (computed once, immutable in-run):
    - `actor_id`, `identity_id`, `work_layer`, `source_layer`, `scope`, `lock_state`, `run_id`, `session_id`.
-4. single canonical egress gate:
+5. single canonical egress gate:
    - user-visible reply must compare against frozen tuple;
    - any mismatch is `FAIL_REQUIRED`;
    - `WARN_NON_BLOCKING` cannot bypass egress for strict operations.
-5. CI hard assertions are reduced to four only:
+6. CI hard assertions are reduced to four only:
    - same-run full tuple equality (`validate` vs `three-plane`);
    - `send_time_gate_status` is non-empty on strict surfaces;
    - illegal `source_layer` token is fail-close;
@@ -3478,6 +3481,298 @@ State boundary:
 2. `HOTFIX16-P0-007` 继续保持 `SPEC_READY / PENDING_INTAKE`。
 3. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION` 约束不变。
 
+### 8.44 Round-26.1 Execution-Surface Parameter Contract Closure (2026-03-08)
+
+#### Closure scope (code + runtime migration)
+
+1. strict HUD 链路 actor 参数透传已收口到执行面：
+   - `.github/workflows/_identity-required-gates.yml` 的 render / first-line / send-time / coherence 均显式 `--actor-id`.
+   - `scripts/e2e_smoke_test.sh` 对同链路命令补齐显式 `--actor-id`.
+   - `scripts/report_three_plane_status.py`、`scripts/full_identity_protocol_scan.py`、`scripts/release_readiness_check.py`、`scripts/identity_creator.py` 同步补齐并保留 fail-close。
+2. drift 守卫升级为“接线 + 参数合同”双重校验：
+   - `scripts/validate_required_gate_surface_drift.py` 新增 actor 参数合同检查；若 strict surface 命中目标脚本但缺失 `--actor-id`，返回 `IP-GATE-ENTRY-003`.
+3. project runtime 迁移残余收口：
+   - `.identity/*/CURRENT_TASK.json`、`.identity/session/*`、`.identity/config/runtime-paths.env`、`.identity/*/runtime/{state,metrics}` 完成 `.agents/identity -> .identity` 收口；
+   - canonical triplet 保持 project/global 双层模型，不新增兼容层。
+
+#### Round-26.1 replay anchors
+
+1. `python3 scripts/validate_required_gate_surface_drift.py --json-only` → `PASS_REQUIRED`（`actor_id_passthrough_missing={}`）
+2. `python3 scripts/docs_command_contract_check.py` → `PASS`
+3. `python3 scripts/validate_protocol_ssot_source.py` → `OK`
+4. `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-audit-expert-v3 --local-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml` → source/canonical tuple anchored on project `.identity`.
+
+#### Decision boundary
+
+1. Round-26.1 完成“执行面参数合同缺口”修复，属于 HOTFIX16-P0-007 下的 required closure 子项。
+2. Promotion posture 不变：继续 `SPEC_READY / PENDING_INTAKE`，等待审计回放矩阵统一签收后再提级。
+
+### 8.45 Round-26.2 Base-Repo-Architect self-run full-chain closure replay (2026-03-08)
+
+#### Code closures landed in this round
+
+1. `collect_identity_health_report` strict-operation 参数注入收口：
+   - `scripts/collect_identity_health_report.py` 增加 `OPERATION_AWARE_CHECKS`，只对支持 `--operation` 的校验器透传，消除 `argparse` 预检崩溃。
+2. release-readiness capability gate 语义收口：
+   - `scripts/release_readiness_check.py` 为 `collect_identity_health_report` 显式透传 `--actor-id`；
+   - `validate_identity_capability_activation` 终态校验改为基于 catalog + activation policy 的实时判定，避免旧 report `BLOCKED` 状态导致假阻断。
+3. e2e strict chain actor 透传与时序收口：
+   - `scripts/e2e_smoke_test.sh` 所有 `collect_identity_health_report` 调用显式 `--actor-id`；
+   - capability arbitration 前新增 route metrics 刷新，避免 `metrics/threshold linkage` 因陈旧指标误阻断。
+4. handoff/export 运行面路径收口：
+   - `scripts/validate_agent_handoff_contract.py` 的 self-test sample 路径新增 `identity/runtime/**` 候选映射；
+   - `scripts/export_route_quality_metrics.py` 支持 pack-root `runtime/**` handoff log 映射，并允许 project canonical `.identity/**` 输出（不再误判为 repo 污染路径）。
+5. update fail-fast evidence completeness 收口：
+   - `scripts/execute_identity_upgrade.py` 在 pre-mutation/lane-routing 早退分支也强制落盘 `<run_id>-patch-plan.json`，消除 `validate_identity_self_upgrade_enforcement` 对应的 patch-plan 缺失阻断。
+
+#### Runtime evidence backfill (base-repo-architect, project mode)
+
+1. `runtime/examples/base-repo-architect-trigger-regression-sample.json`
+2. `runtime/logs/collaboration/base-repo-architect-20260308T041046Z.json`
+3. `runtime/logs/handoff/base-repo-architect-20260308T041623Z.json`
+4. `runtime/examples/base-repo-architect-knowledge-acquisition-sample.json`
+5. `runtime/rulebooks/{positive,negative}.jsonl`
+6. `runtime/examples/base-repo-architect-experience-feedback-sample.json`
+
+#### Replay matrix (self-run, actor-bound)
+
+1. `resolve_context` PASS
+2. `docs_command_contract_check` PASS
+3. `validate_protocol_ssot_source` OK
+4. `validate_required_gate_surface_drift --json-only` PASS_REQUIRED
+5. `identity_creator.py validate` PASS
+6. `report_three_plane_status.py` PASS
+7. `full_identity_protocol_scan.py --scan-mode target` PASS
+8. `release_readiness_check.py` PASS
+9. `e2e_smoke_test.sh` PASS（protocol lane, project source-layer, actor=`assistant:codex`）
+
+Machine report artifacts:
+
+1. `.identity/base-repo-architect/runtime/reports/identity-protocol-self-run-20260308T045542Z.json`
+2. `.identity/base-repo-architect/runtime/reports/identity-protocol-self-run-20260308T045542Z.md`
+
+#### State boundary
+
+1. 本轮完成的是“代码执行面 + 实例回放证据”闭环，不改变 v1.6 审计生命周期边界。
+2. 提级口径保持不变：`SPEC_READY / PENDING_INTAKE`，待审计专家按同命令回放签收后推进状态。
+
+### 8.46 Round-26.3 Expected-layer pass-through closure for validate chain (2026-03-08)
+
+#### Problem replay (strict expected layer mismatch)
+
+1. 在 `identity_creator.py validate` 显式传入 `--expected-work-layer protocol --expected-source-layer project` 时，
+   strict first-line gate 可出现 `reply_first_line_work_layer=instance`，导致 `IP-ASB-STAMP-SESSION-001`。
+2. 根因是 validate 链只把 expected tuple 传给后续 validators，没有把同一 tuple 传入 stamp renderer，
+   使 render 与 validator 判定源分叉。
+
+#### Code closure
+
+1. `scripts/identity_creator.py` validate 链补齐 renderer 透传：
+   - 当存在 `expected_work_layer` 时，`render_identity_response_stamp.py` 显式追加 `--work-layer`.
+   - 当存在 `expected_source_layer` 时，`render_identity_response_stamp.py` 显式追加 `--source-layer`.
+2. 收口后，render/first-line/send-time/coherence 共享同一 expected tuple 输入，消除“validator strict、renderer fallback”分叉。
+
+#### Replay evidence
+
+1. `source ../scripts/use_local_identity_env.sh`
+2. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --expected-work-layer protocol --expected-source-layer project --layer-intent-text 'protocol full validation replay'`
+3. replay output: `/tmp/base_repo_architect_identity_validate_now.log`（`rc=0`）。
+4. cross-surface sanity:
+   - `/tmp/base_repo_architect_three_plane_now.log`（`rc=0`）
+   - `/tmp/base_repo_architect_full_scan_now.log`（`rc=0`）
+5. machine report:
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-self-run-round26_3-20260308T051524Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-self-run-round26_3-20260308T051524Z.md`
+
+#### Boundary
+
+1. 本节属于 UCG 参数合同补完，不新增模型层级，不改变 project/global 双层 canonical 约束。
+2. 状态边界维持：`SPEC_READY / PENDING_INTAKE`，继续等待独立审计回放签收。
+
+### 8.47 Round-26.4 HUD tuple hardening + actor strict-entry closure (2026-03-08)
+
+#### Closure scope (protocol control-plane only)
+
+1. tuple parity 从“最小 6 字段”升级为 HUD 核心 tuple 合同：
+   - `scripts/validate_required_gate_tuple_parity.py` 新增 core/conditional 字段组与别名解析；
+   - 核心字段新增 `identity_id`，条件字段新增 `actor_id`、`resolved_work_layer`、`resolved_source_layer`、`lock_state`；
+   - 当条件字段在任一 receipt 出现时，要求跨 receipt 全等，否则 `FAIL_REQUIRED`.
+2. governed-reply 入口升级为显式 actor 必填：
+   - `scripts/compose_and_validate_governed_reply.py` 在缺失 `--actor-id` 时 fail-close (`IP-ACTOR-ENTRY-001`)，禁止脚本内隐式 actor 回退进入 strict send-time path。
+3. source-layer 推断修正：
+   - `scripts/identity_creator.py` 的 `_infer_source_domain_from_catalog` 调整匹配顺序，优先识别 `/.codex/.identity/` 为 `global`，避免被 `/.identity/` 前缀误判为 `project`.
+4. strict bundle runner 参数合同补齐：
+   - `scripts/required_gate_bundle_runner.py` 增加 `actor_id/resolved_work_layer/resolved_source_layer/lock_state` 载荷字段与 `--outlet-bypass-detected true|false` 显式布尔解析；
+   - strict surface 调用补齐 `--run-id/--send-time-gate-status/--outlet-bypass-detected` 参数（`report_three_plane_status/full_identity_protocol_scan/identity_creator/release_readiness_check/e2e/_identity-required-gates.yml`）。
+5. three-plane/full-scan 可观测性补齐：
+   - parity 投影新增 `operations_checked/duplicate_operations/require_distinct_operations`；
+   - sidecar 投影新增 `requiredization_scope_reason/activity_correlation_status` 等关键字段，避免“raw 有值、summary 丢失”。
+   - full-scan `required_gate_bundle_runner(_shadow)` 投影补齐 HUD tuple 关键字段（`actor_id/resolved_work_layer/resolved_source_layer/lock_state`），避免 audit 侧出现“bundle raw 有值但 summary 丢失”的观测断层。
+6. drift guard 参数合同补齐：
+   - `scripts/validate_required_gate_surface_drift.py` 新增 bundle-runner 关键参数合同检查（`run-id/send-time-gate-status/outlet-bypass/actor/work/source/lock`）；
+   - strict surface 任一 bundle 调用缺参即 `FAIL_REQUIRED` (`IP-GATE-ENTRY-004`)。
+7. target probe 入口收口：
+   - `scripts/required_gate_bundle_runner.py` 对 `--target-name` 场景同样强制 `run_id`；
+   - 禁止 “target probe 无 run_id 仍 PASS” 的旁路（无 run_id -> `IP-GATE-ENTRY-001`）。
+8. sidecar 可观测升级（非阻断）：
+   - `scripts/validate_protocol_feedback_sidecar_contract.py` 在 `ACTIVITY_UNSCOPED` + history-only 场景下由 `SKIPPED_NOT_REQUIRED` 升级为 `WARN_NON_BLOCKING` + `IP-SID-004`；
+   - 新增 `activity_unscoped_count / observability_alert_level / observability_escalation_required`，用于稳定告警而非直接 release 阻断。
+9. target full-scan 统计收口：
+   - `scripts/full_identity_protocol_scan.py` 新增 `summary_unique_targets`，按 identity 去重输出 P0/P1/OK 计数，避免 project/global 双层行统计导致误判膨胀。
+
+#### Replay anchors
+
+1. parity 负向探针（核心 tuple 漂移应 fail-close）：
+   - `python3 scripts/validate_required_gate_tuple_parity.py --receipt /tmp/tuple_gap_a_roundtable.json --receipt /tmp/tuple_gap_b_roundtable.json --min-receipts 2 --require-distinct-operations --json-only`
+   - evidence: `/tmp/tuple_gap_roundtable_recheck_20260308.json`（`FAIL_REQUIRED`）。
+2. compose 无 actor 探针（应 fail-close）：
+   - evidence: `/tmp/compose_probe_no_actor_roundtable_custom_recheck.json`（`IP-ACTOR-ENTRY-001`）。
+3. source 推断探针：
+   - evidence: `/tmp/source_infer_recheck_20260308.log`（`global`）。
+4. projection 探针：
+   - evidence: `/tmp/three_plane_projection_recheck_20260308.json`（parity/sidecar 关键字段可见）。
+   - evidence: `/tmp/full_scan_projection_recheck2_20260308.json`（full-scan checks 投影可见 bundle HUD tuple 字段与 parity/sidecar 扩展字段）。
+5. bundle 参数合同静态复核：
+   - evidence: `/tmp/audit_recheck_bundle_args_20260308.json`（missing `run-id/send-time/outlet` = `0/0/0`）。
+   - evidence: `/tmp/audit_recheck_bundle_args_surface_20260308.json`（strict six surfaces bundle 参数合同缺口全零，含 actor/work/source/lock 透传）。
+   - evidence: `/tmp/surface_drift_recheck6_20260308.json`（drift gate 已内建参数合同校验且回放 `PASS_REQUIRED`）。
+6. target probe run-id 收口探针：
+   - evidence: `/tmp/target_probe_no_runid_recheck4_20260308.json`（`FAIL_REQUIRED` + `IP-GATE-ENTRY-001`）。
+7. sidecar 非阻断可观测升级探针：
+   - evidence: `/tmp/three_plane_sidecar_recheck8_20260308.json`（`sidecar_contract_status=WARN_NON_BLOCKING`，`sidecar_error_code=IP-SID-004`，`observability_alert_level=L1`）。
+8. full-scan target 去重统计探针：
+   - evidence: `/tmp/full_scan_target3_recheck8_20260308.json`（新增 `summary_unique_targets`）。
+9. gate 复检：
+   - evidence: `/tmp/surface_drift_recheck9_20260308.json`（`PASS_REQUIRED`）；
+   - evidence: `/tmp/docs_contract_recheck9_20260308.log`（PASS）；
+   - evidence: `/tmp/ssot_recheck9_20260308.log`（OK）。
+6. round report:
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_4-closure-20260308T060901Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_4-closure-20260308T060901Z.md`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_5-closure-20260308T062918Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_5-closure-20260308T062918Z.md`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_6-final-20260308T063322Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_6-final-20260308T063322Z.md`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_7-fullmatrix-20260308T063748Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_7-fullmatrix-20260308T063748Z.md`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_8-residual-closure-20260308T065529Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_8-residual-closure-20260308T065529Z.md`
+
+#### Boundary
+
+1. 本节仅收口协议控制面，实例历史债务（如 session_refresh/writeback）仍按实例层清债链路处理。
+2. 状态边界维持：`SPEC_READY / PENDING_INTAKE`，`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+### 8.48 Round-26.5 Lane-lock deterministic pass-through closure (2026-03-08)
+
+#### Closure scope (protocol control-plane only)
+
+1. 本节仅处理“lane-lock 已存在但执行面仍 default fallback 到 instance”的控制面残口，不扩展实例业务逻辑。
+2. 目标是让 `full_scan` 与 `three_plane` 在“无显式 expected tuple”情况下仍使用同一 deterministic tuple 来源，避免 `IP-LAYER-GATE-006` 反复出现。
+
+#### Code closure
+
+1. `scripts/full_identity_protocol_scan.py`
+   - 新增 per-identity `effective_expected_work_layer/effective_expected_source_layer` 计算；
+   - 当无显式 `--expected-work-layer` 且检测到 protocol lane lock 时，自动将 `effective_expected_work_layer=protocol`；
+   - `work_layer_gate_set_routing`、`required_gate_bundle_runner(_shadow)` 与 `three_plane` 调用统一消费 effective tuple；
+   - scan output 显式投影 `effective_expected_*` 与 `detected_session_lane_lock`，用于审计复放。
+2. `scripts/report_three_plane_status.py`
+   - `_instance_plane_status` 新增 lane-lock 感知逻辑（actor binding + lane lock receipts）；
+   - 在未显式传入 expected tuple 时，按 `resolved source_layer + lane lock` 生成 effective tuple 并贯穿 render/first-line/layer-intent/send-time/coherence/lane-routing/bundle；
+   - instance detail 新增 `effective_expected_work_layer/effective_expected_source_layer/detected_session_lane_lock`。
+
+#### Replay evidence
+
+1. full-scan lane closure replay:
+   - `/tmp/full_scan_projection_recheck3_20260308.json`
+   - 关键结果：`work_layer_gate_set_routing_status=PASS_REQUIRED`，`error_code=""`，`work_layer=protocol`，`session_lane_lock=protocol`（project layer）。
+2. three-plane lane closure replay:
+   - `/tmp/three_plane_sidecar_recheck11_20260308.json`
+   - 关键结果：`instance_plane_detail.effective_expected_work_layer=protocol`，lane routing `PASS_REQUIRED`（不再 `IP-LAYER-GATE-006`）。
+3. sidecar non-blocking observability continuity:
+   - `/tmp/three_plane_sidecar_recheck11_20260308.json`
+   - 关键结果：`sidecar_contract_status=WARN_NON_BLOCKING`，`sidecar_error_code=IP-SID-004`，`activity_correlation_status=ACTIVITY_UNSCOPED`，`observability_alert_level=L1`。
+4. gate sanity:
+   - `/tmp/surface_drift_recheck11_20260308.json`（`PASS_REQUIRED`）
+   - `/tmp/docs_contract_recheck11_20260308.log`（PASS）
+   - `/tmp/ssot_recheck11_20260308.log`（OK）
+5. round report:
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_9-lane-pass-through-20260308T072635Z.json`
+   - `.identity/base-repo-architect/runtime/reports/identity-protocol-round26_9-lane-pass-through-20260308T072635Z.md`
+
+#### Boundary
+
+1. 本节关闭的是 lane fallback 的协议控制面残口；实例层残余阻断（如 `IP-WRB-003`）仍按实例迁移/清债链路处理。
+2. 基线状态仍非单 SHA clean replay（worktree 仍有并行改动）；本节维持 `SPEC_READY / PENDING_INTAKE`，不宣称 promotion 就绪。
+
+### 8.49 Round-27 v1.6 auditable sweep and review-status promotion (2026-03-08)
+
+#### Scope
+
+1. 本轮仅做审计复放与文档状态更新，不改协议代码。
+2. 审计目标是把“可机器复放且通过”的 v1.6 条目从 `PENDING_INTAKE` 提升到 `PASS_WITH_BLOCKERS`，并保持非提级边界。
+
+#### Replayed anchors
+
+1. docs/ssot baseline:
+   - `/tmp/deepscan_docs_contract_refresh_20260308.log`（PASS）
+   - `/tmp/deepscan_ssot_refresh_20260308.log`（OK）
+2. strict UCG entrypoint contract:
+   - `/tmp/deepscan_surface_drift_refresh_20260308.json`（`PASS_REQUIRED`）
+   - `/tmp/deepscan_bundle_arg_contract_exec_only_20260308.json`（执行位点参数缺口为 0）
+3. HUD tuple + actor strict-entry:
+   - `/tmp/deepscan_tuple_probe_result2_20260308.json`（tuple 漂移 fail-close）
+   - `/tmp/deepscan_compose_no_actor_probe_20260308.json`（缺 actor fail-close）
+4. validate expected-layer pass-through:
+   - `/tmp/round27_validate_bra_expected_layers_20260308.log`（`reply_first_line_status=PASS_REQUIRED`，`send_time_gate_status=PASS_REQUIRED`）
+5. residual blocker anchors (non-control-plane):
+   - `/tmp/deepscan_e2e_braudit_20260308.log`（`IP-ASB-RFS-004` + `IP-PBL-006`）
+   - `/tmp/deepscan_three_plane_matrix_v3_20260308.json`（4/4 `Conditional Go`）
+   - `/tmp/deepscan_required_coverage_matrix_20260308.json`
+   - `/tmp/deepscan_project_global_overlap_yaml_v2_20260308.json`
+
+#### Governance decision
+
+1. 允许在 review ledger 中将以下条目审计状态提升为 `PASS_WITH_BLOCKERS`：
+   - `FIX16-001`
+   - `HOTFIX16-P0-005`
+   - `HOTFIX16-P0-007`
+   - `HOTFIX16-P1-009`
+   - `HOTFIX16-P0-010`
+2. 上述状态提升仅代表“对应协议控制面条目复放通过”，不代表 release 可放行。
+3. v1.6 tag lock 条件不变：任一 `P0` requirement 未到 `DONE` 且审计未 `PASS`，`v1.6` 继续锁定。
+4. 生命周期边界保持：`SPEC_READY / PENDING_INTAKE` 主边界不变，`ACCEPT_WITH_FIX != READY_FOR_PROMOTION` 不变。
+
+### 8.50 Round-27.1 auditable-scope completion replay (2026-03-08)
+
+#### Scope
+
+1. 在 `8.49` 状态提升后，对 remaining auditable `PENDING_INTAKE` 条目做补充独立复跑（不改代码）。
+2. 本轮目标是确认是否存在“遗漏可升状态”条目，并确保 review decision-log 全量对齐。
+
+#### Replayed anchors
+
+1. baseline sanity:
+   - `/tmp/deepscan_docs_contract_refresh2_20260308.log`（PASS）
+   - `/tmp/deepscan_ssot_refresh2_20260308.log`（OK）
+   - `/tmp/deepscan_surface_drift_refresh2_20260308.json`（`PASS_REQUIRED`）
+2. base-repo-architect independent full-chain replay:
+   - `/tmp/round27_identity_creator_validate_bra_20260308.log`（`rc=1`）
+   - `/tmp/round27_three_plane_bra_20260308.json`（`overall_release_decision=Conditional Go`）
+   - `/tmp/round27_full_scan_bra_20260308.json`（`summary.p0=1, ok=0`）
+   - `/tmp/round27_release_readiness_bra_20260308.log`（`rc=1`）
+   - `/tmp/round27_e2e_bra_20260308.log`（`rc=2`）
+3. persistent blocker evidence:
+   - `post_execution_mandatory_status=FAIL_REQUIRED` / `error_code=IP-WRB-003` remains active in validate/readiness/scan lanes.
+
+#### Governance decision
+
+1. `8.49` 提升列表保持不变，本轮无新增 `PASS_WITH_BLOCKERS` 条目。
+2. Review ledger 必须补齐 `HOTFIX16-P0-008` 的 decision-log 行；审计结论维持 `PENDING_INTAKE`。
+3. `FIX16-037` 与 `HOTFIX16-P1-004` 本轮复放后仍不满足 promotion guard，保持 `PENDING_INTAKE`。
+4. 生命周期边界不变：`SPEC_READY / PENDING_INTAKE`，`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
 
 ## 9) References
 
@@ -3487,16 +3782,16 @@ State boundary:
 4. `docs/review/protocol-remediation-audit-ledger-v1.6.md`
 5. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-brief-2026-03-04-initial-prompt-base-contract-capability-and-business-impact.md`
 6. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/identity-prompt-initial-base-contract-capability-roundtable-2026-03-04.md`
-7. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
-8. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
-9. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
-10. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-01_official-vibe-coding-playbook.md`
-11. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+7. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_001.md`
+8. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_002.md`
+9. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_003.md`
+10. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-01_official-vibe-coding-playbook.md`
+11. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
 12. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
 13. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
 14. `https://developers.openai.com/cookbook/examples/o-series/o3o4-mini_prompting_guide/#frequented-asked-questions-faq`
 15. `context7:/websites/developers_openai_api (strict schema/tool docs extraction)`
-16. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
+16. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_2026-03-04_004.md`
 17. `/Users/yangxi/claude/codex_project/cqsw/governance/protocol-issue-reports/to-identity-base-architect-unified-feedback-index-2026-03-04.md`
 18. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/REQUIREMENTS_FQG_MULTIAGENT_MULTIIDENTITY_SWITCH_GUARD_V2_20260306T211854.md`
 19. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T134224Z_fqg_multiagent_multiidentity_gated_switch_v2.md`
@@ -3525,9 +3820,9 @@ State boundary:
 42. `https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/system-prompts`
 43. `https://modelcontextprotocol.io/specification/latest`
 44. `https://agentskills.io/specification`
-45. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
-46. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
-47. `/Users/yangxi/.codex/identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
+45. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/roundtables/ROUNDTABLE_2026-03-05_semantic-convergence-and-dual-lane-governance.md`
+46. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_SCAN_2026-03-02_official-cross-verification-work-layer.md`
+47. `/Users/yangxi/.codex/.identity/instances/system-requirements-analyst/runtime/reports/identity-upgrade-exec-system-requirements-analyst-1772691244.json`
 48. `/tmp/three_plane_system_requirements_analyst_20260305_replay2.json`
 49. `/tmp/full_scan_system_requirements_analyst_20260305_replay2.json`
 50. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
