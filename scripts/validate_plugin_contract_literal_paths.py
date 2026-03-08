@@ -139,8 +139,8 @@ def main() -> int:
             for token in TOKENS:
                 if token not in line:
                     continue
-                # allow dynamic references to canonical root variable patterns
-                if "CANONICAL_PLUGIN_ROOT" in line or _contains_canonical_root_literal(line=line, token=token):
+                # allow only structurally canonical literals; variable-name presence alone is insufficient.
+                if _contains_canonical_root_literal(line=line, token=token):
                     continue
                 if _is_allowed_context(rel=rel, line=raw_line, token=token):
                     continue
