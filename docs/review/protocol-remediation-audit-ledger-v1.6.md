@@ -3400,6 +3400,43 @@ Decision:
 
 ---
 
+### Round-29.1 addendum: health report emits final-egress upgrade commands (2026-03-08)
+
+Scope:
+
+1. 仅补强“实例自检可执行性”：让 health report 在 strict operation 下对 final egress requiredization 缺口给出可执行升级链。
+2. 不改变 Round-29 的 L3 控制面结论，不替代实例债务修复。
+
+Cross-verified changes:
+
+1. `scripts/collect_identity_health_report.py` 新增 `outlet_matrix` 检查位。
+2. strict operation 下，`outlet_matrix_status=SKIPPED_NOT_REQUIRED` 从“静默 PASS”升级为 `WARN`。
+3. `self_upgrade_plan` 增补强制命令：
+   - `python3 scripts/validate_outlet_matrix.py ... --operation validate --force-required --json-only`
+4. 健康报告新增 final egress 观测字段：
+   - `final_emit_only_mode_required`
+   - `final_emit_only_mode_status`
+   - `final_emit_only_mode_enforced`
+   - `final_emit_contract_status`
+
+Replay evidence:
+
+1. `/private/tmp/health-final-emit-round291/identity-health-base-repo-architect-1772976720.json`
+   - `final_emit_only_mode_required=true`
+   - `final_emit_only_mode_status=SKIPPED_NOT_REQUIRED`
+   - `checks[outlet_matrix].status=WARN`
+2. `/tmp/health_final_emit_round291_validate_console.log`
+   - `warn:outlet_matrix` 已出现；
+   - `trigger:outlet_matrix` 已纳入 `upgrade_plan_status=ACTION_REQUIRED`；
+   - 升级命令链包含 `validate_outlet_matrix --force-required`。
+
+Decision:
+
+1. 接受本次补强：实例在 strict health operation 下不再对 final egress requiredization 缺口“静默通过”。
+2. 该补强为“升级指引增强”，不等同于实例债务已清零。
+
+---
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

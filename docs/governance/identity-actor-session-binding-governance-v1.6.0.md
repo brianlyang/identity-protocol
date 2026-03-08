@@ -4146,6 +4146,48 @@ Machine report artifacts:
 2. 实例历史债务（如 writeback continuity / prompt lifecycle 等）仍按实例层职责推进，不并入本节“控制面闭环”结论。
 3. 生命周期边界保持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
 
+### 8.56 Round-29.1 Health-check upgrade emission for final egress only-mode (2026-03-08)
+
+#### Why this addendum is required
+
+1. Round-29 已把 L3 `final_emit_governed` 控制面做成 fail-close，但实例侧仍会出现“未进入 required_contract 分支 -> 视觉上像是已收口，实则仍可跳过强校验”的落差。
+2. 为避免再次出现“修了 20 轮但健康检查没有把升级路径直接抛给实例”的循环，本节把 final egress 升级动作写入 health check 的机器化输出链路。
+
+#### Landed protocol changes
+
+1. `scripts/collect_identity_health_report.py` 新增 `outlet_matrix` 检查（调用 `validate_outlet_matrix.py`）。
+2. 在 strict operation（`validate/readiness/e2e/ci/three-plane`）下：
+   - 若 `outlet_matrix_status=SKIPPED_NOT_REQUIRED`，健康检查不再视作静默通过，而是上报 `WARN` 并给出升级命令。
+3. `self_upgrade_plan.commands` 新增强制项：
+   - `python3 scripts/validate_outlet_matrix.py ... --operation validate --force-required --json-only`
+4. 健康报告新增可观测字段：
+   - `final_emit_only_mode_required`
+   - `final_emit_only_mode_status`
+   - `final_emit_only_mode_enforced`
+   - `final_emit_contract_status`
+
+#### Replay evidence (this round)
+
+1. `/private/tmp/health-final-emit-round291/identity-health-base-repo-architect-1772976720.json`
+   - `final_emit_only_mode_required=true`
+   - `final_emit_only_mode_status=SKIPPED_NOT_REQUIRED`
+   - `checks[outlet_matrix].status=WARN`
+2. `/tmp/health_final_emit_round291_validate_console.log`
+   - 明确输出 `warn:outlet_matrix`；
+   - `trigger:outlet_matrix` 已进入 `self_upgrade_plan`；
+   - command chain 已包含 `validate_outlet_matrix --force-required`。
+
+#### Acceptance
+
+1. 实例执行 health check（strict operation）时，若 final emit 未 requiredized，不得再“看起来全绿”。
+2. 必须输出可执行升级命令链，且包含 final egress 合同校验命令。
+3. 当实例完成升级并提供新 execution report 后，`outlet_matrix_status` 应达到 `PASS_REQUIRED`（或在非 strict operation 下明确标注为非 required 场景）。
+
+#### Boundary
+
+1. 本节仍只处理协议控制面的“识别/校验/拒绝与升级指引输出”。
+2. 实例是否完成迁移与债务清理，继续由实例层负责并回填报告。
+
 
 ## 9) References
 
