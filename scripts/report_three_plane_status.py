@@ -6,15 +6,18 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from actor_session_common import resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
+LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
+LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
     run_cwd = cwd.resolve() if isinstance(cwd, Path) else PROTOCOL_ROOT
@@ -81,6 +84,63 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     except Exception:
         return None
     return data if isinstance(data, dict) else None
+
+
+def _safe_json_file(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _latest_lane_receipt(*, outbox_dir: Path, prefix: str, identity_id: str) -> Path | None:
+    if not outbox_dir.exists():
+        return None
+    rows = sorted(outbox_dir.glob(f"{prefix}*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in rows:
+        doc = _safe_json_file(p)
+        rid = str(doc.get("identity_id", "")).strip()
+        if rid and rid != identity_id:
+            continue
+        return p.resolve()
+    return None
+
+
+def _detect_session_lane_lock(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    resolved_pack_path: Path | None,
+) -> str:
+    try:
+        binding = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=session_id,
+        )
+    except Exception:
+        binding = {}
+    for key in ("session_lane_lock", "lane_lock", "work_layer_lock"):
+        token = str(binding.get(key, "")).strip().lower()
+        if token in {"protocol", "instance"}:
+            return token
+
+    if resolved_pack_path is None:
+        return ""
+    outbox_dir = (resolved_pack_path / "runtime" / "protocol-feedback" / "outbox-to-protocol").resolve()
+    lock_protocol = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_PROTOCOL_PREFIX, identity_id=identity_id)
+    lock_exit = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_EXIT_PREFIX, identity_id=identity_id)
+    if lock_protocol is None:
+        return ""
+    protocol_mtime = lock_protocol.stat().st_mtime
+    exit_mtime = lock_exit.stat().st_mtime if lock_exit is not None else -1.0
+    if exit_mtime > protocol_mtime:
+        return ""
+    return "protocol"
 
 
 def _latest_report(identity_id: str, identity_home: str = "", preferred_pack: str = "") -> Path | None:
@@ -172,7 +232,11 @@ def _repo_plane_status(args: argparse.Namespace, resolved: dict[str, Any]) -> tu
     return status, checks
 
 
-def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -> tuple[str, dict[str, Any]]:
+def _instance_plane_status(
+    args: argparse.Namespace,
+    report_path: Path | None,
+    resolved: dict[str, Any] | None = None,
+) -> tuple[str, dict[str, Any]]:
     if report_path is None:
         return "NOT_STARTED", {"reason": "execution_report_not_found"}
 
@@ -198,6 +262,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     all_ok = _bool(data.get("all_ok", False))
     err_code = str((ew.get("error_code", "") or data.get("permission_error_code", ""))).strip()
     next_action = str(data.get("next_action", "")).strip()
+    report_run_id = str(data.get("run_id", "")).strip()
+    current_round_anchor_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     cap_status = str(data.get("capability_activation_status", "")).strip().upper()
     cap_error = str(data.get("capability_activation_error_code", "")).strip()
     hard_boundary = err_code.startswith("IP-PATH-") or err_code.startswith("IP-PERM-")
@@ -207,10 +273,46 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     expected_work_layer = str(getattr(args, "expected_work_layer", "") or "").strip().lower()
     expected_source_layer = str(getattr(args, "expected_source_layer", "") or "").strip().lower()
     actor_id = resolve_actor_id(str(getattr(args, "actor_id", "") or "").strip())
+    resolved_ctx = resolved or {}
+    resolved_source_hint = str(resolved_ctx.get("source_layer", "") or "").strip().lower()
+    effective_source_layer = expected_source_layer or (
+        resolved_source_hint if resolved_source_hint in {"project", "global"} else "project"
+    )
+    resolved_pack_token = str(resolved_ctx.get("resolved_pack_path") or resolved_ctx.get("pack_path") or "").strip()
+    resolved_pack_path: Path | None = None
+    if resolved_pack_token:
+        try:
+            resolved_pack_path = Path(resolved_pack_token).expanduser().resolve()
+        except Exception:
+            resolved_pack_path = None
+    lane_lock_hint = _detect_session_lane_lock(
+        catalog_path=Path(args.catalog).expanduser().resolve(),
+        identity_id=args.identity_id,
+        actor_id=actor_id,
+        session_id=str(getattr(args, "session_id", "") or "").strip(),
+        resolved_pack_path=resolved_pack_path,
+    )
+    effective_work_layer = expected_work_layer
+    if not effective_work_layer:
+        inferred = resolve_layer_intent(
+            explicit_work_layer="",
+            explicit_source_layer=effective_source_layer,
+            intent_text=layer_intent_text,
+            default_work_layer=DEFAULT_WORK_LAYER,
+            default_source_layer=effective_source_layer,
+        )
+        effective_work_layer = (
+            str(inferred.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+        )
+    if not expected_work_layer and lane_lock_hint in {"protocol", "instance"}:
+        effective_work_layer = lane_lock_hint
+    if effective_work_layer not in {"protocol", "instance", "dual"}:
+        effective_work_layer = DEFAULT_WORK_LAYER
+
     lane_applied_gate_set = _resolve_applied_gate_set(
         layer_intent_text=layer_intent_text,
-        expected_work_layer=expected_work_layer,
-        expected_source_layer=expected_source_layer,
+        expected_work_layer=effective_work_layer,
+        expected_source_layer=effective_source_layer,
     )
     # Always validate tuple and writeback linkage to keep evidence machine-checkable.
     rc_tuple, out_tuple, err_tuple = _run(
@@ -319,6 +421,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--actor-id",
             actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--operation",
             "three-plane",
             "--json-only",
@@ -345,6 +449,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--actor-id",
             actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--operation",
             "three-plane",
             "--json-only",
@@ -526,6 +632,8 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         args.repo_catalog,
         "--identity-id",
         args.identity_id,
+        "--actor-id",
+        actor_id,
         "--view",
         "external",
         "--disclosure-level",
@@ -536,10 +644,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         render_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        render_cmd.extend(["--work-layer", expected_work_layer])
-    if expected_source_layer:
-        render_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        render_cmd.extend(["--work-layer", effective_work_layer])
+    if effective_source_layer:
+        render_cmd.extend(["--source-layer", effective_source_layer])
     rc_stamp_render, out_stamp_render, err_stamp_render = _run(render_cmd)
     stamp_render_payload = _parse_json_payload(out_stamp_render) or {}
     validators["response_stamp_render"] = {
@@ -619,16 +727,18 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--enforce-first-line-gate",
         "--operation",
         "three-plane",
+        "--actor-id",
+        actor_id,
         "--blocker-receipt-out",
         reply_first_line_blocker_receipt,
         "--json-only",
     ]
     if layer_intent_text:
         reply_first_line_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        reply_first_line_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        reply_first_line_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        reply_first_line_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        reply_first_line_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_reply_first_line, out_reply_first_line, err_reply_first_line = _run(reply_first_line_cmd)
     reply_first_line_payload = _parse_json_payload(out_reply_first_line) or {}
     validators["reply_identity_context_first_line"] = {
@@ -660,10 +770,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         layer_intent_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        layer_intent_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        layer_intent_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        layer_intent_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        layer_intent_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_layer_intent, out_layer_intent, err_layer_intent = _run(layer_intent_cmd)
     layer_intent_payload = _parse_json_payload(out_layer_intent) or {}
     validators["layer_intent_resolution"] = {
@@ -678,7 +788,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
 
     compose_send_time_cmd = [
         "python3",
-        "scripts/compose_and_validate_governed_reply.py",
+        "scripts/final_emit_governed.py",
         "--catalog",
         args.catalog,
         "--repo-catalog",
@@ -692,17 +802,17 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--blocker-receipt-out",
         send_time_reply_gate_blocker_receipt,
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--actor-id",
         actor_id,
         "--json-only",
     ]
     if layer_intent_text:
         compose_send_time_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        compose_send_time_cmd.extend(["--work-layer", expected_work_layer])
-    if expected_source_layer:
-        compose_send_time_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        compose_send_time_cmd.extend(["--work-layer", effective_work_layer])
+    if effective_source_layer:
+        compose_send_time_cmd.extend(["--source-layer", effective_source_layer])
     rc_compose_send_time, out_compose_send_time, err_compose_send_time = _run(compose_send_time_cmd)
     compose_send_time_payload = _parse_json_payload(out_compose_send_time) or {}
     validators["compose_governed_reply_preflight"] = {
@@ -730,7 +840,7 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--enforce-send-time-gate",
         "--reply-outlet-guard-applied",
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--reply-transport-ref",
         send_time_reply_file,
         "--operation",
@@ -743,10 +853,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         send_time_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        send_time_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        send_time_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        send_time_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        send_time_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_send_time_gate, out_send_time_gate, err_send_time_gate = _run(send_time_cmd)
     send_time_gate_payload = _parse_json_payload(out_send_time_gate) or {}
     validators["send_time_reply_gate"] = {
@@ -801,16 +911,18 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "--enforce-coherence-gate",
         "--operation",
         "three-plane",
+        "--actor-id",
+        actor_id,
         "--blocker-receipt-out",
         execution_reply_coherence_blocker_receipt,
         "--json-only",
     ]
     if layer_intent_text:
         reply_coherence_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        reply_coherence_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        reply_coherence_cmd.extend(["--expected-source-layer", expected_source_layer])
+    if effective_work_layer:
+        reply_coherence_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        reply_coherence_cmd.extend(["--expected-source-layer", effective_source_layer])
     rc_reply_coherence, out_reply_coherence, err_reply_coherence = _run(reply_coherence_cmd)
     reply_coherence_payload = _parse_json_payload(out_reply_coherence) or {}
     validators["execution_reply_identity_coherence"] = {
@@ -1470,6 +1582,31 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_prompt_coupling != 0 or prompt_coupling_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    bundle_send_time_gate_status = compose_send_time_status or "UNKNOWN"
+    bundle_outlet_bypass_detected = "true" if bool(compose_send_time_payload.get("outlet_bypass_detected", False)) else "false"
+    bundle_final_emit_contract_status = str(compose_send_time_payload.get("final_emit_contract_status", "")).strip().upper()
+    bundle_final_emit_policy_mode = str(compose_send_time_payload.get("final_emit_policy_mode", "")).strip()
+    bundle_final_emit_schema_status = str(compose_send_time_payload.get("final_emit_schema_status", "")).strip().upper()
+    bundle_resolved_work_layer = str(
+        effective_work_layer
+        or layer_intent_payload.get("resolved_work_layer")
+        or compose_send_time_payload.get("work_layer")
+        or stamp_payload.get("work_layer")
+        or ""
+    ).strip().lower()
+    bundle_resolved_source_layer = str(
+        effective_source_layer
+        or layer_intent_payload.get("resolved_source_layer")
+        or compose_send_time_payload.get("source_layer")
+        or stamp_payload.get("source_layer")
+        or ""
+    ).strip().lower()
+    bundle_lock_state = str(
+        reply_first_line_payload.get("context_lock_state")
+        or compose_send_time_payload.get("context_lock_state")
+        or stamp_payload.get("lock_state")
+        or "LOCK_MATCH"
+    ).strip()
     rc_required_bundle, out_required_bundle, err_required_bundle = _run(
         [
             "python3",
@@ -1480,6 +1617,24 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--run-id",
             bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--surface-label",
             "three_plane",
             "--operation",
@@ -1510,6 +1665,24 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.identity_id,
             "--run-id",
             bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--surface-label",
             "three_plane_scan_probe",
             "--operation",
@@ -1588,6 +1761,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "cross_verification_tracks",
             "--surface-label",
@@ -1616,6 +1809,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "intake_evidence_quorum",
             "--surface-label",
@@ -1644,6 +1857,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "route_version_pinning",
             "--surface-label",
@@ -1672,6 +1905,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "fallback_taxonomy_normalization",
             "--surface-label",
@@ -1700,6 +1953,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "dedup_monotonicity",
             "--surface-label",
@@ -1728,6 +2001,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "cross_workflow_schema",
             "--surface-label",
@@ -1756,6 +2049,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "skill_path_integrity",
             "--surface-label",
@@ -1784,6 +2097,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
             "--target-name",
             "execution_target_tuple_isolation",
             "--surface-label",
@@ -1920,10 +2253,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         lane_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        lane_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        lane_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        lane_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        lane_cmd.extend(["--source-layer", effective_source_layer])
     rc_lane, out_lane, err_lane = _run(lane_cmd)
     lane_payload = _parse_json_payload(out_lane) or {}
     validators["work_layer_gate_set_routing"] = {
@@ -1978,10 +2311,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         bootstrap_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        bootstrap_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        bootstrap_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        bootstrap_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        bootstrap_cmd.extend(["--source-layer", effective_source_layer])
     rc_bootstrap, out_bootstrap, err_bootstrap = _run(bootstrap_cmd)
     bootstrap_payload = _parse_json_payload(out_bootstrap) or {}
     validators["protocol_feedback_bootstrap_ready"] = {
@@ -2010,10 +2343,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         candidate_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        candidate_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        candidate_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        candidate_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        candidate_cmd.extend(["--source-layer", effective_source_layer])
     rc_candidate, out_candidate, err_candidate = _run(candidate_cmd)
     candidate_payload = _parse_json_payload(out_candidate) or {}
     validators["protocol_entry_candidate_bridge"] = {
@@ -2042,10 +2375,10 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     ]
     if layer_intent_text:
         inquiry_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if expected_work_layer:
-        inquiry_cmd.extend(["--expected-work-layer", expected_work_layer])
-    if expected_source_layer:
-        inquiry_cmd.extend(["--source-layer", expected_source_layer])
+    if effective_work_layer:
+        inquiry_cmd.extend(["--expected-work-layer", effective_work_layer])
+    if effective_source_layer:
+        inquiry_cmd.extend(["--source-layer", effective_source_layer])
     rc_inquiry, out_inquiry, err_inquiry = _run(inquiry_cmd)
     inquiry_payload = _parse_json_payload(out_inquiry) or {}
     validators["protocol_inquiry_followup_chain"] = {
@@ -2422,23 +2755,26 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
     if rc_post_exec != 0 or post_exec_status == "FAIL_REQUIRED":
         hard_boundary = True
 
-    rc_sidecar, out_sidecar, err_sidecar = _run(
-        [
-            "python3",
-            "scripts/validate_protocol_feedback_sidecar_contract.py",
-            "--identity-id",
-            args.identity_id,
-            "--catalog",
-            args.catalog,
-            "--repo-catalog",
-            args.repo_catalog,
-            "--report",
-            str(report_path),
-            "--operation",
-            "three-plane",
-            "--json-only",
-        ]
-    )
+    sidecar_cmd = [
+        "python3",
+        "scripts/validate_protocol_feedback_sidecar_contract.py",
+        "--identity-id",
+        args.identity_id,
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--report",
+        str(report_path),
+        "--current-round-anchor-utc",
+        current_round_anchor_utc,
+        "--operation",
+        "three-plane",
+        "--json-only",
+    ]
+    if report_run_id:
+        sidecar_cmd.extend(["--run-id", report_run_id])
+    rc_sidecar, out_sidecar, err_sidecar = _run(sidecar_cmd)
     sidecar_payload = _parse_json_payload(out_sidecar) or {}
     validators["protocol_feedback_sidecar"] = {
         "rc": rc_sidecar,
@@ -2589,6 +2925,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
         "all_ok": all_ok,
         "writeback_status": wb,
         "permission_state": ps,
+        "effective_expected_work_layer": effective_work_layer,
+        "effective_expected_source_layer": effective_source_layer,
+        "detected_session_lane_lock": lane_lock_hint,
         "capability_activation_status": cap_status,
         "capability_activation_error_code": cap_error,
         "next_action": next_action,
@@ -2889,6 +3228,11 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "bundle_contract_id": required_bundle_payload.get("bundle_contract_id", ""),
             "bundle_key": required_bundle_payload.get("bundle_key", ""),
             "surface_label": required_bundle_payload.get("surface_label", ""),
+            "identity_id": required_bundle_payload.get("identity_id", ""),
+            "actor_id": required_bundle_payload.get("actor_id", ""),
+            "resolved_work_layer": required_bundle_payload.get("resolved_work_layer", ""),
+            "resolved_source_layer": required_bundle_payload.get("resolved_source_layer", ""),
+            "lock_state": required_bundle_payload.get("lock_state", ""),
             "required_contract": required_bundle_payload.get("required_contract"),
             "failed_required_contract_count": required_bundle_payload.get("failed_required_contract_count"),
             "row_contract_error_count": required_bundle_payload.get("row_contract_error_count"),
@@ -2896,6 +3240,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "report_selected_path": required_bundle_payload.get("report_selected_path", ""),
             "send_time_gate_status": required_bundle_payload.get("send_time_gate_status", ""),
             "outlet_bypass_detected": required_bundle_payload.get("outlet_bypass_detected"),
+            "final_emit_contract_status": required_bundle_payload.get("final_emit_contract_status", ""),
+            "final_emit_policy_mode": required_bundle_payload.get("final_emit_policy_mode", ""),
+            "final_emit_schema_status": required_bundle_payload.get("final_emit_schema_status", ""),
             "mapping_errors": required_bundle_payload.get("mapping_errors", []),
             "missing_targets": required_bundle_payload.get("missing_targets", []),
             "contract_mapping": required_bundle_payload.get("contract_mapping", ""),
@@ -2905,6 +3252,11 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "required_gate_bundle_runner_shadow_status": required_bundle_shadow_payload.get("bundle_status"),
             "error_code": required_bundle_shadow_payload.get("error_code", ""),
             "surface_label": required_bundle_shadow_payload.get("surface_label", ""),
+            "identity_id": required_bundle_shadow_payload.get("identity_id", ""),
+            "actor_id": required_bundle_shadow_payload.get("actor_id", ""),
+            "resolved_work_layer": required_bundle_shadow_payload.get("resolved_work_layer", ""),
+            "resolved_source_layer": required_bundle_shadow_payload.get("resolved_source_layer", ""),
+            "lock_state": required_bundle_shadow_payload.get("lock_state", ""),
             "required_contract": required_bundle_shadow_payload.get("required_contract"),
             "failed_required_contract_count": required_bundle_shadow_payload.get("failed_required_contract_count"),
             "row_contract_error_count": required_bundle_shadow_payload.get("row_contract_error_count"),
@@ -2912,6 +3264,9 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "report_selected_path": required_bundle_shadow_payload.get("report_selected_path", ""),
             "send_time_gate_status": required_bundle_shadow_payload.get("send_time_gate_status", ""),
             "outlet_bypass_detected": required_bundle_shadow_payload.get("outlet_bypass_detected"),
+            "final_emit_contract_status": required_bundle_shadow_payload.get("final_emit_contract_status", ""),
+            "final_emit_policy_mode": required_bundle_shadow_payload.get("final_emit_policy_mode", ""),
+            "final_emit_schema_status": required_bundle_shadow_payload.get("final_emit_schema_status", ""),
             "mapping_errors": required_bundle_shadow_payload.get("mapping_errors", []),
             "missing_targets": required_bundle_shadow_payload.get("missing_targets", []),
             "contract_mapping": required_bundle_shadow_payload.get("contract_mapping", ""),
@@ -2937,10 +3292,16 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "required_gate_tuple_parity_status": tuple_parity_payload.get("required_gate_tuple_parity_status"),
             "error_code": tuple_parity_payload.get("error_code", ""),
             "tuple_fields": tuple_parity_payload.get("tuple_fields", []),
+            "core_tuple_fields": tuple_parity_payload.get("core_tuple_fields", []),
+            "conditional_tuple_fields": tuple_parity_payload.get("conditional_tuple_fields", []),
             "receipts_checked": tuple_parity_payload.get("receipts_checked", []),
             "surface_labels_checked": tuple_parity_payload.get("surface_labels_checked", []),
             "min_receipts": tuple_parity_payload.get("min_receipts"),
             "require_distinct_surface_labels": tuple_parity_payload.get("require_distinct_surface_labels"),
+            "require_distinct_operations": tuple_parity_payload.get("require_distinct_operations"),
+            "operations_checked": tuple_parity_payload.get("operations_checked", []),
+            "missing_operations": tuple_parity_payload.get("missing_operations", []),
+            "duplicate_operations": tuple_parity_payload.get("duplicate_operations", {}),
             "parity_contract_reasons": tuple_parity_payload.get("parity_contract_reasons", []),
             "missing_surface_labels": tuple_parity_payload.get("missing_surface_labels", []),
             "duplicate_surface_labels": tuple_parity_payload.get("duplicate_surface_labels", {}),
@@ -3428,9 +3789,24 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "sidecar_error_code": sidecar_payload.get("sidecar_error_code", ""),
             "required_contract": sidecar_payload.get("required_contract"),
             "auto_required_signal": sidecar_payload.get("auto_required_signal"),
+            "requiredization_scope_decision": sidecar_payload.get("requiredization_scope_decision", ""),
+            "requiredization_scope_reason": sidecar_payload.get("requiredization_scope_reason", ""),
+            "requiredization_current_round_linked": sidecar_payload.get("requiredization_current_round_linked"),
+            "current_round_anchor_utc": sidecar_payload.get("current_round_anchor_utc", ""),
+            "activity_correlation_status": sidecar_payload.get("activity_correlation_status", ""),
+            "activity_correlation_key": sidecar_payload.get("activity_correlation_key", ""),
+            "activity_unscoped_count": sidecar_payload.get("activity_unscoped_count"),
+            "activity_ignored_missing_correlation_key_refs": sidecar_payload.get(
+                "activity_ignored_missing_correlation_key_refs", []
+            ),
+            "activity_ignored_missing_anchor_refs": sidecar_payload.get("activity_ignored_missing_anchor_refs", []),
+            "activity_ignored_pre_round_refs": sidecar_payload.get("activity_ignored_pre_round_refs", []),
             "enforce_blocking": sidecar_payload.get("enforce_blocking"),
             "escalation_required": sidecar_payload.get("escalation_required"),
             "escalation_decision": sidecar_payload.get("escalation_decision"),
+            "observability_escalation_required": sidecar_payload.get("observability_escalation_required"),
+            "observability_alert_level": sidecar_payload.get("observability_alert_level", ""),
+            "observability_escalation_reason": sidecar_payload.get("observability_escalation_reason", ""),
             "blocking_error_codes": sidecar_payload.get("blocking_error_codes", []),
             "p0_violations": sidecar_payload.get("p0_violations", []),
             "track_a": sidecar_payload.get("track_a", {}),
@@ -3567,6 +3943,11 @@ def _instance_plane_status(args: argparse.Namespace, report_path: Path | None) -
             "send_time_gate_error_code": send_time_gate_payload.get("error_code", ""),
             "governed_outlet_enforced": send_time_gate_payload.get("governed_outlet_enforced", False),
             "outlet_channel_id": send_time_gate_payload.get("outlet_channel_id", ""),
+            "final_emit_channel_id": send_time_gate_payload.get("final_emit_channel_id", ""),
+            "final_emit_policy_mode": send_time_gate_payload.get("final_emit_policy_mode", ""),
+            "final_emit_schema_id": send_time_gate_payload.get("final_emit_schema_id", ""),
+            "final_emit_schema_status": send_time_gate_payload.get("final_emit_schema_status", ""),
+            "final_emit_contract_status": send_time_gate_payload.get("final_emit_contract_status", ""),
             "outlet_preflight_receipt": send_time_gate_payload.get("outlet_preflight_receipt", ""),
             "outlet_bypass_detected": send_time_gate_payload.get("outlet_bypass_detected", False),
             "send_time_reply_evidence_mode": send_time_gate_payload.get("reply_evidence_mode", ""),
@@ -3668,11 +4049,16 @@ def main() -> int:
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "required for strict three-plane execution (no implicit fallback)."
         ),
+    )
+    ap.add_argument(
+        "--session-id",
+        default="",
+        help="explicit actor session id for strict three-plane execution (e.g., run:<run_id>)",
     )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
@@ -3696,6 +4082,22 @@ def main() -> int:
         )
         return 2
     args.repo_catalog = str(repo_catalog_path)
+    actor_id_input = str(args.actor_id or "").strip()
+    if not actor_id_input:
+        print(
+            "[FAIL] IP-ACTOR-ENTRY-001 explicit --actor-id is required for strict three-plane execution "
+            f"(identity_id={args.identity_id})"
+        )
+        return 1
+    args.actor_id = actor_id_input
+    session_id_input = str(args.session_id or "").strip()
+    if not session_id_input:
+        print(
+            "[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id is required for strict three-plane execution "
+            f"(identity_id={args.identity_id}, actor_id={actor_id_input})"
+        )
+        return 1
+    args.session_id = session_id_input
 
     mode_guard_cmd = [
         "python3",
@@ -3744,7 +4146,7 @@ def main() -> int:
         os.environ.get("IDENTITY_HOME", ""),
         preferred_pack,
     )
-    instance_status, instance_detail = _instance_plane_status(args, report_path)
+    instance_status, instance_detail = _instance_plane_status(args, report_path, resolved)
     repo_status, repo_detail = _repo_plane_status(args, resolved)
     release_status, release_detail = _release_plane_status(args)
 

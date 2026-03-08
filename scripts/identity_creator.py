@@ -737,6 +737,7 @@ def _heal_identity(
     repo_catalog: Path,
     local_catalog: Path,
     identity_id: str,
+    actor_id: str,
     scope: str,
     source_pack: str,
     canonical_root: str,
@@ -751,6 +752,7 @@ def _heal_identity(
         "report_id": report_id,
         "generated_at": report_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "identity_id": identity_id,
+        "actor_id": actor_id,
         "scope": scope,
         "catalog": str(local_catalog),
         "repo_catalog": str(repo_catalog),
@@ -940,6 +942,8 @@ def _heal_identity(
     ]
     if scope:
         validate_cmd += ["--scope", scope]
+    if actor_id:
+        validate_cmd += ["--actor-id", actor_id]
     rc = _step("validate", validate_cmd)
     if rc != 0:
         last = report["steps"][-1]
@@ -1050,6 +1054,8 @@ def _heal_identity(
     ]
     if scope:
         post_health_cmd.extend(["--scope", scope])
+    if actor_id:
+        post_health_cmd.extend(["--actor-id", actor_id])
     rc_post_health = _step("health_post_validate_recheck", post_health_cmd)
     if rc_post_health == 0:
         post_step = report["steps"][-1]
@@ -1418,6 +1424,7 @@ def main() -> int:
     p_heal.add_argument("--identity-id", required=True)
     p_heal.add_argument("--repo-catalog", default=repo_catalog_default)
     p_heal.add_argument("--catalog", default=local_catalog_default)
+    p_heal.add_argument("--actor-id", default="", help="explicit actor id for strict validate/health steps in heal flow")
     p_heal.add_argument("--scope", default="USER")
     p_heal.add_argument("--source-pack", default="")
     p_heal.add_argument("--canonical-root", default="")
@@ -1828,7 +1835,7 @@ def main() -> int:
             ],
             [
                 "python3",
-                "scripts/compose_and_validate_governed_reply.py",
+                "scripts/final_emit_governed.py",
                 "--catalog",
                 args.catalog,
                 "--repo-catalog",
@@ -2650,7 +2657,7 @@ def main() -> int:
                     continue
                 if cmd[1] in {
                     "scripts/render_identity_response_stamp.py",
-                    "scripts/compose_and_validate_governed_reply.py",
+                    "scripts/final_emit_governed.py",
                     "scripts/validate_layer_intent_resolution.py",
                     "scripts/validate_reply_identity_context_first_line.py",
                     "scripts/validate_send_time_reply_gate.py",
@@ -2678,7 +2685,7 @@ def main() -> int:
                     "scripts/validate_protocol_inquiry_followup_chain.py",
                 }:
                     cmd.extend(["--expected-work-layer", expected_work_layer])
-                if cmd[1] == "scripts/compose_and_validate_governed_reply.py":
+                if cmd[1] == "scripts/final_emit_governed.py":
                     cmd.extend(["--work-layer", expected_work_layer])
         if expected_source_layer:
             for cmd in checks:
@@ -2686,7 +2693,7 @@ def main() -> int:
                     continue
                 if cmd[1] == "scripts/render_identity_response_stamp.py":
                     cmd.extend(["--source-layer", expected_source_layer])
-                if cmd[1] == "scripts/compose_and_validate_governed_reply.py":
+                if cmd[1] == "scripts/final_emit_governed.py":
                     cmd.extend(["--source-layer", expected_source_layer])
                 if cmd[1] in {
                     "scripts/validate_layer_intent_resolution.py",
@@ -2958,7 +2965,7 @@ def main() -> int:
         )
         pre_mutation_compose_cmd = [
             "python3",
-            "scripts/compose_and_validate_governed_reply.py",
+            "scripts/final_emit_governed.py",
             "--catalog",
             args.catalog,
             "--repo-catalog",
@@ -3790,10 +3797,12 @@ def main() -> int:
         return _run(cmd)
 
     if args.command == "heal":
+        heal_actor_id = resolve_actor_id(str(args.actor_id or "").strip())
         return _heal_identity(
             Path(args.repo_catalog),
             Path(args.catalog),
             args.identity_id,
+            heal_actor_id,
             args.scope,
             args.source_pack,
             args.canonical_root,

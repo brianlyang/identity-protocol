@@ -69,9 +69,10 @@ Headstamp/HUD issue means any failure in:
 
 ### 2.1 Single Egress SSOT
 
-1. User-visible outbound text must pass through `scripts/compose_and_validate_governed_reply.py`.
-2. The compose output must be validated by `scripts/validate_send_time_reply_gate.py` before release to user channel.
-3. Any path that emits text without this chain is protocol violation (fail-close).
+1. User-visible outbound text must pass through `scripts/final_emit_governed.py`.
+2. `final_emit_governed.py` is the only L3 egress entry and internally routes to `scripts/compose_and_validate_governed_reply.py`.
+3. The compose output must be validated by `scripts/validate_send_time_reply_gate.py` before release to user channel.
+4. Any path that emits text without this chain is protocol violation (fail-close).
 
 ### 2.2 Canonical first-line tuple
 
@@ -101,6 +102,15 @@ Strict tuple invariants:
 2. Legacy tokens (`local/repo/env/auto`) are migration metadata only.
 3. Any strict receipt using legacy source token is invalid.
 
+### 2.5 Instance self-wiring rule (no manual parameter burden)
+
+1. `scripts/final_emit_governed.py` must support auto context resolution when explicit flags are absent:
+   - catalog: `project/.identity/catalog.local.yaml` first, then `~/.codex/.identity/catalog.local.yaml`
+   - identity: actor binding -> session active pointer -> catalog active/default fallback
+   - actor: `--actor-id` -> `CODEX_ACTOR_ID` -> `assistant:codex`
+2. Any unresolved/ambiguous auto context is `FAIL_REQUIRED` and must not emit reply body.
+3. Strict surfaces can pass explicit flags for determinism, but runtime default path must be auto-wirable for instance autonomy.
+
 ## 3) Error Family Convergence
 
 ### 3.1 Canonical family (v1.6.1 required)
@@ -119,7 +129,8 @@ Strict tuple invariants:
 
 | Control | Script | Mandatory surfaces |
 | --- | --- | --- |
-| governed compose entry | `scripts/compose_and_validate_governed_reply.py` | creator/readiness/e2e/full-scan/three-plane/ci |
+| final egress single entry | `scripts/final_emit_governed.py` | creator/readiness/e2e/full-scan/three-plane/ci |
+| governed compose internal stage | `scripts/compose_and_validate_governed_reply.py` | internal only (must not be used as surface entry) |
 | send-time hard gate | `scripts/validate_send_time_reply_gate.py` | creator/readiness/e2e/full-scan/three-plane/ci |
 | first-line validator | `scripts/validate_reply_identity_context_first_line.py` | creator/readiness/e2e/full-scan/three-plane/ci |
 | recurrence closure | `scripts/validate_headstamp_recurrence_closure.py` | scan/three-plane/ci |

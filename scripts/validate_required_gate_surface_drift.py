@@ -20,10 +20,21 @@ STRICT_SURFACES: tuple[str, ...] = (
     "scripts/e2e_smoke_test.sh",
     ".github/workflows/_identity-required-gates.yml",
 )
+FINAL_EGRESS_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/identity_creator.py",
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/full_identity_protocol_scan.py",
+    "scripts/e2e_smoke_test.sh",
+)
 
 BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
 RECURRENCE_ESCALATOR_SCRIPT = "scripts/validate_required_gate_recurrence_escalator.py"
 TUPLE_PARITY_SCRIPT = "scripts/validate_required_gate_tuple_parity.py"
+FINAL_EGRESS_WRAPPER_SCRIPT = "scripts/final_emit_governed.py"
+FORBIDDEN_DIRECT_EGRESS_SCRIPTS: tuple[str, ...] = (
+    "scripts/compose_and_validate_governed_reply.py",
+)
 MANDATORY_LINEAGE_SCRIPTS: tuple[str, ...] = (
     BUNDLE_RUNNER_SCRIPT,
     RECURRENCE_ESCALATOR_SCRIPT,
@@ -39,6 +50,34 @@ BUNDLE_REQUIREMENT_KEYS: tuple[str, ...] = (
     "asb16-rq-019",
     "asb16-rq-020",
     "asb16-rq-033",
+)
+
+ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/render_identity_response_stamp.py",
+    FINAL_EGRESS_WRAPPER_SCRIPT,
+    "scripts/validate_reply_identity_context_first_line.py",
+    "scripts/validate_send_time_reply_gate.py",
+    "scripts/validate_execution_reply_identity_coherence.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/full_identity_protocol_scan.py",
+)
+SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_actor_session_binding.py",
+    "scripts/validate_actor_session_multibinding_concurrency.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/full_identity_protocol_scan.py",
+)
+BUNDLE_REQUIRED_ARGS: tuple[str, ...] = (
+    "--run-id",
+    "--send-time-gate-status",
+    "--outlet-bypass-detected",
+    "--final-emit-contract-status",
+    "--final-emit-policy-mode",
+    "--final-emit-schema-status",
+    "--actor-id",
+    "--resolved-work-layer",
+    "--resolved-source-layer",
+    "--lock-state",
 )
 
 VERSIONED_SCRIPT_ALIAS_RE = re.compile(r"^(?P<prefix>validate|normalize|emit)_v\d+_(?P<tail>.+)\.py$")
@@ -131,6 +170,91 @@ def _load_forbidden_direct_validators(*, repo_root: Path, mapping_path: Path) ->
     return forbidden, errors
 
 
+def _python_command_blocks_for_script(text: str, script_path: str) -> list[str]:
+    pattern = re.compile(
+        r'\[\s*"python3"\s*,\s*"'
+        + re.escape(script_path)
+        + r'"(?P<body>.*?)\]',
+        re.DOTALL,
+    )
+    return [m.group(0) for m in pattern.finditer(text)]
+
+
+def _line_command_blocks_for_script(text: str, script_path: str) -> list[str]:
+    rows: list[str] = []
+    lines = text.splitlines()
+    idx = 0
+    while idx < len(lines):
+        line = lines[idx]
+        if script_path not in line or "python3" not in line:
+            idx += 1
+            continue
+        start = idx + 1
+        block_lines = [line.strip()]
+        while line.rstrip().endswith("\\") and idx + 1 < len(lines):
+            idx += 1
+            line = lines[idx]
+            block_lines.append(line.strip())
+        rows.append(f"line:{start}:" + "\n".join(block_lines))
+        idx += 1
+    return rows
+
+
+def _missing_actor_id_for_surface(*, surface_path: Path, text: str) -> dict[str, list[str]]:
+    missing: dict[str, list[str]] = {}
+    suffix = surface_path.suffix.lower()
+    for script_path in ACTOR_ID_REQUIRED_SCRIPTS:
+        if suffix == ".py":
+            blocks = _python_command_blocks_for_script(text, script_path)
+        else:
+            blocks = _line_command_blocks_for_script(text, script_path)
+        if not blocks:
+            continue
+        bad_blocks = [b for b in blocks if "--actor-id" not in b]
+        if bad_blocks:
+            missing[script_path] = bad_blocks
+    return missing
+
+
+def _missing_session_id_for_surface(*, surface_path: Path, text: str) -> dict[str, list[str]]:
+    missing: dict[str, list[str]] = {}
+    suffix = surface_path.suffix.lower()
+    for script_path in SESSION_ID_REQUIRED_SCRIPTS:
+        if suffix == ".py":
+            blocks = _python_command_blocks_for_script(text, script_path)
+        else:
+            blocks = _line_command_blocks_for_script(text, script_path)
+        if not blocks:
+            continue
+        bad_blocks = [b for b in blocks if "--session-id" not in b]
+        if bad_blocks:
+            missing[script_path] = bad_blocks
+    return missing
+
+
+def _missing_bundle_args_for_surface(*, surface_path: Path, text: str) -> list[dict[str, Any]]:
+    suffix = surface_path.suffix.lower()
+    if suffix == ".py":
+        blocks = _python_command_blocks_for_script(text, BUNDLE_RUNNER_SCRIPT)
+    else:
+        blocks = _line_command_blocks_for_script(text, BUNDLE_RUNNER_SCRIPT)
+    if not blocks:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for idx, block in enumerate(blocks, start=1):
+        missing = [flag for flag in BUNDLE_REQUIRED_ARGS if flag not in block]
+        if missing:
+            rows.append(
+                {
+                    "command_index": idx,
+                    "missing_args": missing,
+                    "command_excerpt": block,
+                }
+            )
+    return rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detect strict-surface direct validator drift against bundle-runner lineage.")
     parser.add_argument("--repo-root", default=".")
@@ -152,6 +276,11 @@ def main() -> int:
     missing_surface_files: list[str] = []
     missing_lineage_refs: dict[str, list[str]] = {}
     forbidden_hits: dict[str, list[str]] = {}
+    missing_final_egress_wrapper: list[str] = []
+    forbidden_direct_egress_hits: dict[str, list[str]] = {}
+    actor_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
+    session_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
+    bundle_arg_contract_missing: dict[str, list[dict[str, Any]]] = {}
 
     for rel in STRICT_SURFACES:
         path = repo_root / rel
@@ -165,6 +294,20 @@ def main() -> int:
         hits = [needle for needle in forbidden_direct_validators if needle in text]
         if hits:
             forbidden_hits[rel] = hits
+        if rel in FINAL_EGRESS_REQUIRED_SURFACES and FINAL_EGRESS_WRAPPER_SCRIPT not in text:
+            missing_final_egress_wrapper.append(rel)
+        direct_egress_hits = [needle for needle in FORBIDDEN_DIRECT_EGRESS_SCRIPTS if needle in text]
+        if direct_egress_hits:
+            forbidden_direct_egress_hits[rel] = direct_egress_hits
+        missing_actor = _missing_actor_id_for_surface(surface_path=path, text=text)
+        if missing_actor:
+            actor_id_passthrough_missing[rel] = missing_actor
+        missing_session = _missing_session_id_for_surface(surface_path=path, text=text)
+        if missing_session:
+            session_id_passthrough_missing[rel] = missing_session
+        missing_bundle_args = _missing_bundle_args_for_surface(surface_path=path, text=text)
+        if missing_bundle_args:
+            bundle_arg_contract_missing[rel] = missing_bundle_args
 
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
@@ -172,6 +315,18 @@ def main() -> int:
     elif missing_lineage_refs or forbidden_hits:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-002"
+    elif missing_final_egress_wrapper or forbidden_direct_egress_hits:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-006"
+    elif actor_id_passthrough_missing:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-003"
+    elif session_id_passthrough_missing:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-005"
+    elif bundle_arg_contract_missing:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-004"
     else:
         status = STATUS_PASS_REQUIRED
         error_code = ""
@@ -190,6 +345,17 @@ def main() -> int:
         "missing_surface_files": missing_surface_files,
         "missing_lineage_refs": missing_lineage_refs,
         "forbidden_hits": forbidden_hits,
+        "final_egress_wrapper_script": FINAL_EGRESS_WRAPPER_SCRIPT,
+        "final_egress_required_surfaces": list(FINAL_EGRESS_REQUIRED_SURFACES),
+        "missing_final_egress_wrapper": missing_final_egress_wrapper,
+        "forbidden_direct_egress_scripts": list(FORBIDDEN_DIRECT_EGRESS_SCRIPTS),
+        "forbidden_direct_egress_hits": forbidden_direct_egress_hits,
+        "actor_id_required_scripts": list(ACTOR_ID_REQUIRED_SCRIPTS),
+        "actor_id_passthrough_missing": actor_id_passthrough_missing,
+        "session_id_required_scripts": list(SESSION_ID_REQUIRED_SCRIPTS),
+        "session_id_passthrough_missing": session_id_passthrough_missing,
+        "bundle_runner_required_args": list(BUNDLE_REQUIRED_ARGS),
+        "bundle_arg_contract_missing": bundle_arg_contract_missing,
     }
 
     if args.json_only:

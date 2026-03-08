@@ -755,7 +755,7 @@ def main() -> int:
         ],
         [
             "python3",
-            "scripts/compose_and_validate_governed_reply.py",
+            "scripts/final_emit_governed.py",
             "--catalog",
             catalog,
             "--repo-catalog",
@@ -2026,7 +2026,7 @@ def main() -> int:
             script = cmd[1]
             if script in {
                 "scripts/render_identity_response_stamp.py",
-                "scripts/compose_and_validate_governed_reply.py",
+                "scripts/final_emit_governed.py",
                 "scripts/validate_layer_intent_resolution.py",
                 "scripts/validate_reply_identity_context_first_line.py",
                 "scripts/validate_send_time_reply_gate.py",
@@ -2053,7 +2053,7 @@ def main() -> int:
             } and "--expected-work-layer" not in cmd:
                 cmd.extend(["--expected-work-layer", expected_work_layer])
             if (
-                cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                cmd[1] == "scripts/final_emit_governed.py"
                 and "--work-layer" not in cmd
             ):
                 cmd.extend(["--work-layer", expected_work_layer])
@@ -2067,7 +2067,7 @@ def main() -> int:
             if len(cmd) < 2:
                 continue
             if (
-                cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                cmd[1] == "scripts/final_emit_governed.py"
                 and "--source-layer" not in cmd
             ):
                 cmd.extend(["--source-layer", expected_source_layer])

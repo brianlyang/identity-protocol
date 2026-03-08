@@ -130,6 +130,37 @@ if [ -z "$IDS" ]; then
 fi
 
 SESSION_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+SESSION_ACTOR_SESSION_ID="${HEADSTAMP_SESSION_ID:-}"
+
+resolve_identity_session_id() {
+  local target_identity_id="$1"
+  python3 - "$CATALOG_PATH" "$SESSION_ACTOR_ID" "$target_identity_id" "$SESSION_ACTOR_SESSION_ID" <<'PY'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str((Path.cwd() / "scripts").resolve()))
+from actor_session_common import load_actor_binding
+
+catalog = Path(sys.argv[1]).expanduser().resolve()
+actor_id = str(sys.argv[2] or "").strip()
+identity_id = str(sys.argv[3] or "").strip()
+explicit_session_id = str(sys.argv[4] or "").strip()
+
+if explicit_session_id:
+    print(explicit_session_id)
+    raise SystemExit(0)
+
+session_id = ""
+try:
+    binding = load_actor_binding(catalog, actor_id, identity_id=identity_id)
+    if isinstance(binding, dict):
+        session_id = str(binding.get("session_id", "")).strip()
+except Exception:
+    session_id = ""
+
+print(session_id)
+PY
+}
 
 echo "[10.15/30] validate runtime mode/catalog binding guard (for each target identity)"
 for ID in $IDS; do
@@ -148,10 +179,11 @@ done
 
 echo "[10.18/30] validate actor-scoped session isolation gates (for each target identity)"
 for ID in $IDS; do
-  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --operation e2e
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
+  python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
   python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
-  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --operation e2e --json-only
+  python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --operation e2e --json-only
 done
 
 echo "[10.19/30] validate anytime session refresh status contract (for each target identity)"
@@ -230,7 +262,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_resolution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
   python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
   python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 done
@@ -248,6 +280,9 @@ echo "[9/30] test discovery contract"
 python3 scripts/test_identity_discovery_contract.py >"$DISCOVERY_CONTRACT_REPORT"
 
 for ID in $IDS; do
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
+  echo "[INFO][$ID] actor session selector: ${TARGET_SESSION_ID:-<auto>}"
+
   echo "[10.5/32][$ID] validate identity instance isolation boundary"
   python3 scripts/validate_identity_instance_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
@@ -258,7 +293,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[10.8/32][$ID] collect + validate health report"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
   python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
   python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 
@@ -284,7 +319,7 @@ for ID in $IDS; do
   HEADSTAMP_ACTOR_ID="${SESSION_ACTOR_ID}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
-  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
+  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --actor-id "$HEADSTAMP_ACTOR_ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     render_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -303,7 +338,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.45/30][$ID] validate reply first-line Identity-Context hard gate (HOTFIX-P0-004)"
-  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
+  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     first_line_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -332,7 +367,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
   echo "[12.465/30][$ID] compose governed send-time reply sample + preflight"
-  compose_cmd=(python3 scripts/compose_and_validate_governed_reply.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id governed_adapter_v1 --actor-id "$HEADSTAMP_ACTOR_ID" --json-only)
+  compose_cmd=(python3 scripts/final_emit_governed.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id final_emit_governed --actor-id "$HEADSTAMP_ACTOR_ID" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     compose_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -345,7 +380,7 @@ for ID in $IDS; do
   "${compose_cmd[@]}"
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
-  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id governed_adapter_v1 --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID")
+  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id final_emit_governed --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     send_time_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -364,7 +399,7 @@ for ID in $IDS; do
   python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --json-only
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
-  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
+  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     coherence_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -658,6 +693,15 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --run-id "$BUNDLE_RUN_TOKEN" \
+    --send-time-gate-status "UNKNOWN" \
+    --outlet-bypass-detected "false" \
+    --final-emit-contract-status "UNKNOWN" \
+    --final-emit-policy-mode "tool_choice_required" \
+    --final-emit-schema-status "UNKNOWN" \
+    --actor-id "$SESSION_ACTOR_ID" \
+    --resolved-work-layer "${E2E_WORK_LAYER:-instance}" \
+    --resolved-source-layer "${EXPECTED_SOURCE_LAYER:-project}" \
+    --lock-state "LOCK_MATCH" \
     --surface-label "e2e" \
     --operation e2e \
     --out "$REQUIRED_GATE_BUNDLE_RECEIPT" \
@@ -667,6 +711,15 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --run-id "$BUNDLE_RUN_TOKEN" \
+    --send-time-gate-status "UNKNOWN" \
+    --outlet-bypass-detected "false" \
+    --final-emit-contract-status "UNKNOWN" \
+    --final-emit-policy-mode "tool_choice_required" \
+    --final-emit-schema-status "UNKNOWN" \
+    --actor-id "$SESSION_ACTOR_ID" \
+    --resolved-work-layer "${E2E_WORK_LAYER:-instance}" \
+    --resolved-source-layer "${EXPECTED_SOURCE_LAYER:-project}" \
+    --lock-state "LOCK_MATCH" \
     --surface-label "e2e_scan_probe" \
     --operation scan \
     --out "$REQUIRED_GATE_BUNDLE_RECEIPT_SHADOW" \
@@ -705,7 +758,7 @@ for ID in $IDS; do
 
   echo "[26/30][$ID] execute identity upgrade cycle via identity-creator (review-required)"
   set +e
-  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID"
+  CI=true python3 scripts/identity_creator.py update --catalog "$CATALOG_PATH" --identity-id "$ID" --mode review-required --actor-id "$SESSION_ACTOR_ID" --run-id "${REQUIRED_GATES_RUN_ID:-$E2E_RUN_TOKEN}" --session-id "$TARGET_SESSION_ID"
   UPDATE_RC=$?
   set -e
   UPGRADE_REPORT=$(python3 - "$ID" "$CATALOG_PATH" "${IDENTITY_HOME:-}" "$UPGRADE_REPORT_ROOT_A" "$UPGRADE_REPORT_ROOT_B" <<'PY'
@@ -796,6 +849,7 @@ PY
     --repo-catalog identity/catalog/identities.yaml \
     --operation e2e \
     --execution-report "$UPGRADE_REPORT" \
+    --actor-id "$SESSION_ACTOR_ID" \
     --out-dir "$HEALTH_REPORT_DIR" \
     --enforce-pass
 
@@ -956,6 +1010,9 @@ PY
     CAP_ARGS+=(--require-activated)
   fi
   python3 scripts/validate_identity_capability_activation.py "${CAP_ARGS[@]}"
+
+  echo "[27.95/30][$ID] refresh route quality metrics before arbitration linkage"
+  python3 scripts/export_route_quality_metrics.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[28/30][$ID] validate capability arbitration contract (self-test + upgrade linkage)"
   python3 scripts/validate_identity_capability_arbitration.py --catalog "$CATALOG_PATH" --identity-id "$ID" --self-test --upgrade-report "$UPGRADE_REPORT"

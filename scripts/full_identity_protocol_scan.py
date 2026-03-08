@@ -6,13 +6,17 @@ import json
 import os
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
-from actor_session_common import resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
+
+LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
+LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 
 
 @dataclass
@@ -38,6 +42,63 @@ def _resolve_applied_gate_set(*, layer_intent_text: str, expected_work_layer: st
     if work_layer == "instance":
         return "instance_required_checks"
     return "dual_unroutable"
+
+
+def _safe_json_file(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _latest_lane_receipt(*, outbox_dir: Path, prefix: str, identity_id: str) -> Path | None:
+    if not outbox_dir.exists():
+        return None
+    rows = sorted(outbox_dir.glob(f"{prefix}*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in rows:
+        doc = _safe_json_file(p)
+        rid = str(doc.get("identity_id", "")).strip()
+        if rid and rid != identity_id:
+            continue
+        return p.resolve()
+    return None
+
+
+def _detect_session_lane_lock(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    resolved_pack_path: Path | None,
+) -> str:
+    try:
+        binding = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=session_id,
+        )
+    except Exception:
+        binding = {}
+    for key in ("session_lane_lock", "lane_lock", "work_layer_lock"):
+        token = str(binding.get(key, "")).strip().lower()
+        if token in {"protocol", "instance"}:
+            return token
+
+    if resolved_pack_path is None:
+        return ""
+    outbox_dir = (resolved_pack_path / "runtime" / "protocol-feedback" / "outbox-to-protocol").resolve()
+    lock_protocol = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_PROTOCOL_PREFIX, identity_id=identity_id)
+    lock_exit = _latest_lane_receipt(outbox_dir=outbox_dir, prefix=LOCK_EXIT_PREFIX, identity_id=identity_id)
+    if lock_protocol is None:
+        return ""
+    protocol_mtime = lock_protocol.stat().st_mtime
+    exit_mtime = lock_exit.stat().st_mtime if lock_exit is not None else -1.0
+    if exit_mtime > protocol_mtime:
+        return ""
+    return "protocol"
 
 
 def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckResult:
@@ -125,6 +186,29 @@ def _latest_runtime_report(identity_id: str, report_dir: Path) -> Path | None:
         return None
     rows.sort(key=lambda p: p.stat().st_mtime)
     return rows[-1]
+
+
+def _within(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except Exception:
+        return False
+
+
+def _infer_target_source_layer_from_env(*, project_catalog: Path, global_catalog: Path) -> str:
+    token = os.environ.get("IDENTITY_CATALOG", "").strip()
+    if not token:
+        return ""
+    try:
+        env_catalog = Path(token).expanduser().resolve()
+    except Exception:
+        return ""
+    if env_catalog == project_catalog.resolve() or _within(env_catalog, project_catalog.parent):
+        return "project"
+    if env_catalog == global_catalog.resolve() or _within(env_catalog, global_catalog.parent):
+        return "global"
+    return ""
 
 
 def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
@@ -305,16 +389,30 @@ def main() -> int:
         default=os.environ.get("IDENTITY_IDS", ""),
         help="target identities for --scan-mode target (space/comma separated)",
     )
+    ap.add_argument(
+        "--target-source-layer",
+        choices=["auto", "project", "global", "both"],
+        default="auto",
+        help=(
+            "target-mode catalog scope: auto=prefer expected-source-layer/env-bound runtime layer; "
+            "project/global=single layer only; both=scan both project+global."
+        ),
+    )
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passed to stamp render/reply gates")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     ap.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "required for strict full-scan execution (no implicit fallback)."
         ),
+    )
+    ap.add_argument(
+        "--session-id",
+        default="",
+        help="explicit actor session id for strict full-scan execution (e.g., run:<run_id>)",
     )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
@@ -340,30 +438,70 @@ def main() -> int:
         else (codex_home / ".identity" / "catalog.local.yaml").resolve()
     )
 
-    catalog_list: list[tuple[str, Path]] = []
-    if args.include_repo_catalog:
-        catalog_list.append(("repo_metadata", repo_catalog))
-    catalog_list.extend([("project", project_catalog), ("global", global_catalog)])
-
     target_ids = [x.strip() for x in args.identity_ids.replace(",", " ").split() if x.strip()]
     target_set = set(target_ids)
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
-    actor_id = resolve_actor_id(str(args.actor_id or "").strip())
+    target_source_layer_mode = str(args.target_source_layer or "auto").strip().lower() or "auto"
+    actor_id_input = str(args.actor_id or "").strip()
+    if not actor_id_input:
+        print("[FAIL] IP-ACTOR-ENTRY-001 explicit --actor-id is required for strict full-scan execution")
+        return 1
+    session_id_input = str(args.session_id or "").strip()
+    if not session_id_input:
+        print("[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id is required for strict full-scan execution")
+        return 1
+    actor_id = resolve_actor_id(actor_id_input)
     if args.scan_mode == "target" and not target_set:
         print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
         return 2
     matched_targets: set[str] = set()
+
+    runtime_catalogs: list[tuple[str, Path]] = [("project", project_catalog), ("global", global_catalog)]
+    effective_target_source_layer = ""
+    if args.scan_mode == "target":
+        if target_source_layer_mode in {"project", "global"}:
+            effective_target_source_layer = target_source_layer_mode
+        elif target_source_layer_mode == "both":
+            effective_target_source_layer = "both"
+        else:
+            if expected_source_layer in {"project", "global"}:
+                effective_target_source_layer = expected_source_layer
+            else:
+                inferred = _infer_target_source_layer_from_env(
+                    project_catalog=project_catalog,
+                    global_catalog=global_catalog,
+                )
+                effective_target_source_layer = inferred or "project"
+        if effective_target_source_layer in {"project", "global"}:
+            runtime_catalogs = [(layer, path) for layer, path in runtime_catalogs if layer == effective_target_source_layer]
+
+    catalog_list: list[tuple[str, Path]] = []
+    if args.include_repo_catalog:
+        catalog_list.append(("repo_metadata", repo_catalog))
+    catalog_list.extend(runtime_catalogs)
 
     payload: dict[str, Any] = {
         "repo_root": str(repo_root),
         "repo_catalog": str(repo_catalog),
         "scan_mode": args.scan_mode,
         "target_identities": sorted(target_set),
+        "target_source_layer_mode": target_source_layer_mode,
+        "target_source_layer_effective": effective_target_source_layer,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
     }
+    target_severity_map: dict[str, str] = {}
+
+    def _update_target_severity(identity_id: str, severity: str) -> None:
+        if args.scan_mode != "target":
+            return
+        normalized = str(severity or "OK").strip().upper() or "OK"
+        rank = {"P0": 2, "P1": 1, "OK": 0}
+        current = target_severity_map.get(identity_id, "OK")
+        if rank.get(normalized, 0) >= rank.get(current, 0):
+            target_severity_map[identity_id] = normalized
 
     for layer, catalog in catalog_list:
         rows = _catalog_rows(catalog) if catalog.exists() else []
@@ -385,11 +523,6 @@ def main() -> int:
                 "scan_scope_hint": scan_scope_hint,
                 "checks": {},
             }
-            lane_applied_gate_set = _resolve_applied_gate_set(
-                layer_intent_text=layer_intent_text,
-                expected_work_layer=expected_work_layer,
-                expected_source_layer=expected_source_layer,
-            )
             resolve = _run(
                 [
                     "python3",
@@ -408,12 +541,62 @@ def main() -> int:
             )
             item["checks"]["resolve"] = {"rc": resolve.rc, "ok": resolve.ok, "tail": resolve.tail}
             resolved_scope = scan_scope_hint
+            resolved_pack_path: Path | None = None
             if resolve.ok:
                 data = _parse_json_safely(resolve.stdout) or {}
                 item["resolved_scope"] = data.get("resolved_scope")
                 item["source_layer"] = data.get("source_layer")
                 item["conflict_detected"] = data.get("conflict_detected")
+                resolved_pack_token = str(data.get("resolved_pack_path") or data.get("pack_path") or "").strip()
+                if resolved_pack_token:
+                    try:
+                        resolved_pack_path = Path(resolved_pack_token).expanduser().resolve()
+                        item["resolved_pack_path"] = str(resolved_pack_path)
+                    except Exception:
+                        resolved_pack_path = None
                 resolved_scope = str(data.get("resolved_scope", "")).upper() or scan_scope_hint
+            if resolved_pack_path is None:
+                fallback_pack = str(row.get("pack_path", "")).strip()
+                if fallback_pack:
+                    try:
+                        resolved_pack_path = Path(fallback_pack).expanduser().resolve()
+                    except Exception:
+                        resolved_pack_path = None
+
+            effective_source_layer = expected_source_layer or ("global" if layer == "global" else "project")
+            lane_lock_hint = _detect_session_lane_lock(
+                catalog_path=catalog,
+                identity_id=iid,
+                actor_id=actor_id,
+                session_id=session_id_input,
+                resolved_pack_path=resolved_pack_path,
+            )
+            effective_work_layer = expected_work_layer
+            if not effective_work_layer:
+                inferred = resolve_layer_intent(
+                    explicit_work_layer="",
+                    explicit_source_layer=effective_source_layer,
+                    intent_text=layer_intent_text,
+                    default_work_layer=DEFAULT_WORK_LAYER,
+                    default_source_layer=effective_source_layer,
+                )
+                effective_work_layer = (
+                    str(inferred.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
+                )
+            if not expected_work_layer and lane_lock_hint in {"protocol", "instance"}:
+                effective_work_layer = lane_lock_hint
+            if effective_work_layer not in {"protocol", "instance", "dual"}:
+                effective_work_layer = DEFAULT_WORK_LAYER
+
+            lane_applied_gate_set = _resolve_applied_gate_set(
+                layer_intent_text=layer_intent_text,
+                expected_work_layer=effective_work_layer,
+                expected_source_layer=effective_source_layer,
+            )
+            item["effective_expected_work_layer"] = effective_work_layer
+            item["effective_expected_source_layer"] = effective_source_layer
+            if lane_lock_hint:
+                item["detected_session_lane_lock"] = lane_lock_hint
 
             mode_guard_cmd = [
                 "python3",
@@ -440,6 +623,7 @@ def main() -> int:
             if not mode_guard.ok:
                 item["runtime_mode_guard_blocked"] = True
                 item["severity"] = _severity_for_row(item)
+                _update_target_severity(iid, str(item["severity"]))
                 payload["summary"]["total_identities"] += 1
                 if item["severity"] == "P0":
                     payload["summary"]["p0"] += 1
@@ -529,6 +713,7 @@ def main() -> int:
             )
             vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
             capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
+            current_round_anchor_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             checks = {
                 "scope_resolution": [
                     "python3",
@@ -609,6 +794,8 @@ def main() -> int:
                     iid,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    session_id_input,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -622,6 +809,8 @@ def main() -> int:
                     iid,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    session_id_input,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -674,6 +863,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
                     "--view",
                     "external",
                     "--disclosure-level",
@@ -730,6 +921,8 @@ def main() -> int:
                     "--enforce-first-line-gate",
                     "--operation",
                     "scan",
+                    "--actor-id",
+                    actor_id,
                     "--blocker-receipt-out",
                     reply_first_line_blocker_receipt,
                     "--json-only",
@@ -753,7 +946,7 @@ def main() -> int:
                 ],
                 "send_time_reply_gate": [
                     "python3",
-                    "scripts/compose_and_validate_governed_reply.py",
+                    "scripts/final_emit_governed.py",
                     "--catalog",
                     str(catalog),
                     "--repo-catalog",
@@ -767,7 +960,7 @@ def main() -> int:
                     "--blocker-receipt-out",
                     send_time_reply_gate_blocker_receipt,
                     "--outlet-channel-id",
-                    "governed_adapter_v1",
+                    "final_emit_governed",
                     "--actor-id",
                     actor_id,
                     "--json-only",
@@ -787,7 +980,7 @@ def main() -> int:
                     "--enforce-send-time-gate",
                     "--reply-outlet-guard-applied",
                     "--outlet-channel-id",
-                    "governed_adapter_v1",
+                    "final_emit_governed",
                     "--reply-transport-ref",
                     send_time_reply_file,
                     "--operation",
@@ -828,6 +1021,8 @@ def main() -> int:
                     "--enforce-coherence-gate",
                     "--operation",
                     "scan",
+                    "--actor-id",
+                    actor_id,
                     "--blocker-receipt-out",
                     execution_reply_coherence_blocker_receipt,
                     "--json-only",
@@ -1118,6 +1313,8 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--current-round-anchor-utc",
+                    current_round_anchor_utc,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1411,6 +1608,24 @@ def main() -> int:
                     iid,
                     "--run-id",
                     required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--surface-label",
                     f"full_scan_{layer}",
                     "--operation",
@@ -1428,6 +1643,24 @@ def main() -> int:
                     iid,
                     "--run-id",
                     required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--surface-label",
                     f"full_scan_{layer}_validate_probe",
                     "--operation",
@@ -1467,6 +1700,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "cross_verification_tracks",
                     "--surface-label",
@@ -1482,6 +1735,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "intake_evidence_quorum",
                     "--surface-label",
@@ -1497,6 +1770,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "route_version_pinning",
                     "--surface-label",
@@ -1512,6 +1805,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "fallback_taxonomy_normalization",
                     "--surface-label",
@@ -1527,6 +1840,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "dedup_monotonicity",
                     "--surface-label",
@@ -1542,6 +1875,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "cross_workflow_schema",
                     "--surface-label",
@@ -1557,6 +1910,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "skill_path_integrity",
                     "--surface-label",
@@ -1572,6 +1945,26 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "UNKNOWN",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "UNKNOWN",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "UNKNOWN",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
                     "--target-name",
                     "execution_target_tuple_isolation",
                     "--surface-label",
@@ -1669,8 +2062,8 @@ def main() -> int:
                     "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--layer-intent-text", layer_intent_text])
-            if expected_work_layer:
-                checks["response_stamp_render"].extend(["--work-layer", expected_work_layer])
+            if effective_work_layer:
+                checks["response_stamp_render"].extend(["--work-layer", effective_work_layer])
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
@@ -1681,25 +2074,34 @@ def main() -> int:
                     "protocol_inquiry_followup_chain",
                     "work_layer_gate_set_routing",
                 ):
-                    checks[key].extend(["--expected-work-layer", expected_work_layer])
-                checks["send_time_reply_gate"].extend(["--work-layer", expected_work_layer])
-            if expected_source_layer:
-                checks["response_stamp_render"].extend(["--source-layer", expected_source_layer])
+                    checks[key].extend(["--expected-work-layer", effective_work_layer])
+                checks["send_time_reply_gate"].extend(["--work-layer", effective_work_layer])
+            if effective_source_layer:
+                checks["response_stamp_render"].extend(["--source-layer", effective_source_layer])
                 for key in (
                     "layer_intent_resolution",
                     "reply_identity_context_first_line",
                     "send_time_reply_gate_validate",
                     "execution_reply_identity_coherence",
                 ):
-                    checks[key].extend(["--expected-source-layer", expected_source_layer])
-                checks["send_time_reply_gate"].extend(["--source-layer", expected_source_layer])
+                    checks[key].extend(["--expected-source-layer", effective_source_layer])
+                checks["send_time_reply_gate"].extend(["--source-layer", effective_source_layer])
                 for key in (
                     "protocol_feedback_bootstrap_ready",
                     "protocol_entry_candidate_bridge",
                     "protocol_inquiry_followup_chain",
                     "work_layer_gate_set_routing",
                 ):
-                    checks[key].extend(["--source-layer", expected_source_layer])
+                    checks[key].extend(["--source-layer", effective_source_layer])
+            for key in (
+                "response_stamp_render",
+                "reply_identity_context_first_line",
+                "send_time_reply_gate_validate",
+                "execution_reply_identity_coherence",
+            ):
+                cmd = checks.get(key)
+                if isinstance(cmd, list) and "--actor-id" not in cmd:
+                    cmd.extend(["--actor-id", actor_id])
             if not is_fixture:
                 checks["prompt_quality"] = [
                     "python3",
@@ -1820,6 +2222,13 @@ def main() -> int:
                     if report_all_ok and report_writeback_status == "WRITTEN" and report_permission_state == "WRITEBACK_WRITTEN":
                         cap_report_cmd.append("--require-activated")
                     checks["capability_activation_report"] = cap_report_cmd
+                    sidecar_cmd = checks.get("protocol_feedback_sidecar")
+                    if isinstance(sidecar_cmd, list):
+                        if "--report" not in sidecar_cmd:
+                            sidecar_cmd.extend(["--report", str(latest_report)])
+                        report_run_id = str(report_meta.get("run_id", "")).strip()
+                        if report_run_id and "--run-id" not in sidecar_cmd:
+                            sidecar_cmd.extend(["--run-id", report_run_id])
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
@@ -2249,6 +2658,10 @@ def main() -> int:
                         "mapping_errors",
                         "missing_targets",
                         "surface_label",
+                        "actor_id",
+                        "resolved_work_layer",
+                        "resolved_source_layer",
+                        "lock_state",
                         "run_id_binding",
                         "report_selected_path",
                         "required_contract",
@@ -2256,6 +2669,9 @@ def main() -> int:
                         "row_contract_error_count",
                         "send_time_gate_status",
                         "outlet_bypass_detected",
+                        "final_emit_contract_status",
+                        "final_emit_policy_mode",
+                        "final_emit_schema_status",
                         "results",
                     ):
                         if k in bundle_doc:
@@ -2276,6 +2692,10 @@ def main() -> int:
                         "mapping_errors",
                         "missing_targets",
                         "surface_label",
+                        "actor_id",
+                        "resolved_work_layer",
+                        "resolved_source_layer",
+                        "lock_state",
                         "run_id_binding",
                         "report_selected_path",
                         "required_contract",
@@ -2283,6 +2703,9 @@ def main() -> int:
                         "row_contract_error_count",
                         "send_time_gate_status",
                         "outlet_bypass_detected",
+                        "final_emit_contract_status",
+                        "final_emit_policy_mode",
+                        "final_emit_schema_status",
                         "results",
                     ):
                         if k in bundle_shadow_doc:
@@ -2316,10 +2739,16 @@ def main() -> int:
                         "required_gate_tuple_parity_status",
                         "error_code",
                         "tuple_fields",
+                        "core_tuple_fields",
+                        "conditional_tuple_fields",
                         "receipts_checked",
                         "surface_labels_checked",
                         "min_receipts",
                         "require_distinct_surface_labels",
+                        "require_distinct_operations",
+                        "operations_checked",
+                        "missing_operations",
+                        "duplicate_operations",
                         "parity_contract_reasons",
                         "missing_surface_labels",
                         "duplicate_surface_labels",
@@ -2813,9 +3242,22 @@ def main() -> int:
                         "sidecar_error_code",
                         "required_contract",
                         "auto_required_signal",
+                        "requiredization_scope_decision",
+                        "requiredization_scope_reason",
+                        "requiredization_current_round_linked",
+                        "current_round_anchor_utc",
+                        "activity_correlation_status",
+                        "activity_correlation_key",
+                        "activity_unscoped_count",
+                        "activity_ignored_missing_correlation_key_refs",
+                        "activity_ignored_missing_anchor_refs",
+                        "activity_ignored_pre_round_refs",
                         "enforce_blocking",
                         "escalation_required",
                         "escalation_decision",
+                        "observability_escalation_required",
+                        "observability_alert_level",
+                        "observability_escalation_reason",
                         "blocking_error_codes",
                         "p0_violations",
                         "track_a",
@@ -3096,6 +3538,11 @@ def main() -> int:
                         "error_code",
                         "governed_outlet_enforced",
                         "outlet_channel_id",
+                        "final_emit_channel_id",
+                        "final_emit_policy_mode",
+                        "final_emit_schema_id",
+                        "final_emit_schema_status",
+                        "final_emit_contract_status",
                         "outlet_preflight_receipt",
                         "outlet_bypass_detected",
                         "reply_evidence_mode",
@@ -3222,11 +3669,15 @@ def main() -> int:
                     "scripts/report_three_plane_status.py",
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    session_id_input,
                     "--scope",
                     scan_scope_hint,
                     *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
-                    *(["--expected-work-layer", expected_work_layer] if expected_work_layer else []),
-                    *(["--expected-source-layer", expected_source_layer] if expected_source_layer else []),
+                    *(["--expected-work-layer", effective_work_layer] if effective_work_layer else []),
+                    *(["--expected-source-layer", effective_source_layer] if effective_source_layer else []),
                     *(["--with-docs-contract"] if args.with_docs_contract else []),
                 ],
                 cwd=repo_root,
@@ -3242,6 +3693,7 @@ def main() -> int:
                     "overall": tp.get("overall_release_decision"),
                 }
             item["severity"] = _severity_for_row(item)
+            _update_target_severity(iid, str(item["severity"]))
             payload["summary"]["total_identities"] += 1
             if item["severity"] == "P0":
                 payload["summary"]["p0"] += 1
@@ -3255,6 +3707,12 @@ def main() -> int:
 
     if args.scan_mode == "target":
         missing = sorted(target_set - matched_targets)
+        payload["summary_unique_targets"] = {
+            "total_identities": len(target_severity_map),
+            "p0": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "P0"),
+            "p1": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "P1"),
+            "ok": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "OK"),
+        }
         payload["missing_target_identities"] = missing
         if missing:
             if args.out:

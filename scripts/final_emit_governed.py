@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from actor_session_common import load_actor_binding, resolve_actor_id
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -18,6 +22,10 @@ ERR_COMPOSE_RUNTIME = "IP-FE-002"
 ERR_COMPOSE_JSON_MISSING = "IP-FE-003"
 ERR_EGRESS_CONTRACT_FAILED = "IP-FE-004"
 ERR_REPLY_FILE_MISSING = "IP-FE-005"
+ERR_CONTEXT_RESOLVE = "IP-FE-006"
+ERR_IDENTITY_RESOLVE = "IP-FE-007"
+
+DEFAULT_ACTOR_ID = "assistant:codex"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -39,6 +47,134 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
         return doc if isinstance(doc, dict) else None
     except Exception:
         return None
+
+
+def _resolve_relative_path(raw: str) -> Path:
+    p = Path(str(raw).strip()).expanduser()
+    if not p.is_absolute():
+        p = (REPO_ROOT / p).resolve()
+    return p.resolve()
+
+
+def _default_repo_catalog_path() -> Path:
+    return (REPO_ROOT / "identity" / "catalog" / "identities.yaml").resolve()
+
+
+def _default_global_catalog_path() -> Path:
+    codex_home = str(os.environ.get("CODEX_HOME", "")).strip()
+    if codex_home:
+        return (Path(codex_home).expanduser() / ".identity" / "catalog.local.yaml").resolve()
+    return (Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve()
+
+
+def _default_project_catalog_candidates() -> list[Path]:
+    if REPO_ROOT.name == "identity-protocol-local":
+        project_root = REPO_ROOT.parent
+    else:
+        project_root = REPO_ROOT
+    candidates = [
+        (project_root / ".identity" / "catalog.local.yaml").resolve(),
+        (REPO_ROOT / ".identity" / "catalog.local.yaml").resolve(),
+    ]
+    # Preserve order while deduplicating.
+    out: list[Path] = []
+    for path in candidates:
+        if path not in out:
+            out.append(path)
+    return out
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"yaml root must be object: {path}")
+    return data
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"json root must be object: {path}")
+    return data
+
+
+def _resolve_catalog(args: argparse.Namespace) -> tuple[Path, str]:
+    raw = str(args.catalog or "").strip()
+    if raw:
+        return _resolve_relative_path(raw), "explicit"
+
+    for candidate in _default_project_catalog_candidates():
+        if candidate.exists():
+            return candidate, "project_auto"
+    global_catalog = _default_global_catalog_path()
+    if global_catalog.exists():
+        return global_catalog, "global_auto"
+    return _default_project_catalog_candidates()[0], "project_default_missing"
+
+
+def _resolve_repo_catalog(args: argparse.Namespace) -> tuple[Path, str]:
+    raw = str(args.repo_catalog or "").strip()
+    if raw:
+        return _resolve_relative_path(raw), "explicit"
+    return _default_repo_catalog_path(), "repo_default"
+
+
+def _resolve_actor_id(args: argparse.Namespace) -> tuple[str, str]:
+    actor_raw = str(args.actor_id or "").strip()
+    if actor_raw:
+        return resolve_actor_id(actor_raw), "explicit"
+    actor_env = str(os.environ.get("CODEX_ACTOR_ID", "")).strip()
+    if actor_env:
+        return resolve_actor_id(actor_env), "env"
+    return resolve_actor_id(DEFAULT_ACTOR_ID), "default"
+
+
+def _resolve_identity_id(
+    *,
+    args: argparse.Namespace,
+    catalog_path: Path,
+    actor_id: str,
+) -> tuple[str, str]:
+    explicit = str(args.identity_id or "").strip()
+    if explicit:
+        return explicit, "explicit"
+    if not catalog_path.exists():
+        raise FileNotFoundError(f"catalog not found for auto identity resolution: {catalog_path}")
+
+    binding = load_actor_binding(catalog_path, actor_id)
+    bound_identity_id = str(binding.get("identity_id", "")).strip()
+    if bound_identity_id:
+        return bound_identity_id, "actor_binding"
+
+    session_active = (catalog_path.parent / "session" / "active_identity.json").resolve()
+    if session_active.exists():
+        try:
+            active_payload = _load_json(session_active)
+            active_identity_id = str(active_payload.get("identity_id", "")).strip()
+            if active_identity_id:
+                return active_identity_id, "session_active"
+        except Exception:
+            pass
+
+    doc = _load_yaml(catalog_path)
+    rows = [x for x in (doc.get("identities") or []) if isinstance(x, dict)]
+    active_rows = [x for x in rows if str(x.get("status", "")).strip().lower() == "active"]
+    active_ids = [str(x.get("id", "")).strip() for x in active_rows if str(x.get("id", "")).strip()]
+    if len(active_ids) == 1:
+        return active_ids[0], "catalog_single_active"
+
+    default_identity = str(doc.get("default_identity", "")).strip()
+    if default_identity:
+        return default_identity, "catalog_default_identity"
+
+    all_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("id", "")).strip()]
+    if len(all_ids) == 1:
+        return all_ids[0], "catalog_single_row"
+
+    raise RuntimeError(
+        "identity-id is ambiguous under auto mode; pass --identity-id explicitly "
+        f"(active_ids={active_ids}, all_ids={all_ids})"
+    )
 
 
 def _resolve_body(args: argparse.Namespace) -> tuple[str, str]:
@@ -63,21 +199,90 @@ def main() -> int:
             "Always routes through compose_and_validate_governed_reply and emits reply only when contracts pass."
         )
     )
-    ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", required=True)
-    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
-    ap.add_argument("--actor-id", required=True)
+    ap.add_argument("--identity-id", default="")
+    ap.add_argument("--catalog", default="")
+    ap.add_argument("--repo-catalog", default="")
+    ap.add_argument("--actor-id", default="")
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
     ap.add_argument("--stdin-body", action="store_true")
     ap.add_argument("--work-layer", default="")
     ap.add_argument("--source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
+    ap.add_argument("--outlet-channel-id", default=FINAL_EMIT_CHANNEL_ID)
     ap.add_argument("--out-reply-file", default="")
     ap.add_argument("--out-json", default="")
     ap.add_argument("--blocker-receipt-out", default="")
     ap.add_argument("--json-only", action="store_true")
+    ap.add_argument(
+        "--strict-explicit-context",
+        action="store_true",
+        help="require explicit --identity-id/--catalog/--actor-id, disable auto context resolution",
+    )
     args = ap.parse_args()
+
+    try:
+        if args.strict_explicit_context:
+            missing: list[str] = []
+            if not str(args.identity_id or "").strip():
+                missing.append("identity-id")
+            if not str(args.catalog or "").strip():
+                missing.append("catalog")
+            if not str(args.actor_id or "").strip():
+                missing.append("actor-id")
+            if missing:
+                raise ValueError(f"missing required explicit context args: {','.join(missing)}")
+
+        catalog_path, catalog_resolution_mode = _resolve_catalog(args)
+        repo_catalog_path, repo_catalog_resolution_mode = _resolve_repo_catalog(args)
+        actor_id, actor_resolution_mode = _resolve_actor_id(args)
+        identity_id, identity_resolution_mode = _resolve_identity_id(
+            args=args,
+            catalog_path=catalog_path,
+            actor_id=actor_id,
+        )
+    except Exception as exc:
+        payload = {
+            "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_CONTEXT_RESOLVE,
+            "stale_reasons": [f"context_resolution_failed:{exc}"],
+            "identity_id": str(args.identity_id or "").strip(),
+            "catalog": str(args.catalog or "").strip(),
+            "actor_id": str(args.actor_id or "").strip(),
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if not repo_catalog_path.exists():
+        payload = {
+            "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_CONTEXT_RESOLVE,
+            "stale_reasons": [f"repo_catalog_missing:{repo_catalog_path}"],
+            "repo_catalog_path": str(repo_catalog_path),
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+    if not catalog_path.exists():
+        payload = {
+            "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_IDENTITY_RESOLVE,
+            "stale_reasons": [f"catalog_missing:{catalog_path}"],
+            "catalog_path": str(catalog_path),
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
+    if outlet_channel_id != FINAL_EMIT_CHANNEL_ID:
+        payload = {
+            "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_EGRESS_CONTRACT_FAILED,
+            "stale_reasons": [f"non_canonical_outlet_channel:{outlet_channel_id}"],
+            "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     try:
         body, body_mode = _resolve_body(args)
@@ -94,17 +299,17 @@ def main() -> int:
         sys.executable,
         str((SCRIPT_DIR / "compose_and_validate_governed_reply.py").resolve()),
         "--identity-id",
-        args.identity_id,
+        identity_id,
         "--catalog",
-        str(Path(args.catalog).expanduser().resolve()),
+        str(catalog_path),
         "--repo-catalog",
-        str(Path(args.repo_catalog).expanduser().resolve()),
+        str(repo_catalog_path),
         "--actor-id",
-        str(args.actor_id).strip(),
+        actor_id,
         "--body-text",
         body,
         "--outlet-channel-id",
-        FINAL_EMIT_CHANNEL_ID,
+        outlet_channel_id,
         "--json-only",
     ]
     if str(args.work_layer or "").strip():
@@ -155,12 +360,19 @@ def main() -> int:
         "final_emit_guard_status": STATUS_PASS_REQUIRED if pass_contract else STATUS_FAIL_REQUIRED,
         "error_code": "" if pass_contract else ERR_EGRESS_CONTRACT_FAILED,
         "compose_rc": proc.returncode,
+        "identity_id": identity_id,
+        "catalog_path": str(catalog_path),
+        "repo_catalog_path": str(repo_catalog_path),
+        "resolved_actor_id": actor_id,
+        "catalog_resolution_mode": catalog_resolution_mode,
+        "repo_catalog_resolution_mode": repo_catalog_resolution_mode,
+        "identity_resolution_mode": identity_resolution_mode,
+        "actor_resolution_mode": actor_resolution_mode,
         "body_mode": body_mode,
         "send_time_gate_status": send_time_status,
         "final_emit_contract_status": final_emit_status,
         "reply_emit_allowed": emit_allowed,
         "out_reply_file": out_reply_file,
-        "identity_id": str(compose_payload.get("identity_id", "")),
         "outlet_channel_id": str(compose_payload.get("outlet_channel_id", "")),
     }
     if not pass_contract:
