@@ -4231,6 +4231,48 @@ Machine report artifacts:
 1. 本节仅修正“验证器合同漂移”；
 2. 不改变实例层历史债务归属原则（实例负责迁移与清债，协议负责识别/校验/拒绝）。
 
+### 8.58 Round-29.3 Default report binding and sidecar anchor stabilization (2026-03-08)
+
+#### Why this addendum is required
+
+1. Round-29.2 后，strict health 在“显式 `--execution-report` 绑定”已可闭环；
+2. 但默认 latest_report 路径仍有漂移风险（mtime 依赖、扫描面过宽、protocol-feedback 备份文件污染活动统计）。
+
+#### Landed protocol changes
+
+1. `scripts/execute_identity_upgrade.py`
+   - 每次写 execution report 后同步写入 canonical pointer：
+   - `runtime/state/active_execution_report.json`（`run_id/report_path/updated_at`）。
+2. `scripts/tool_vendor_governance_common.py`
+   - `latest_identity_upgrade_report()` 优先读取 pointer；
+   - 报告候选根收敛为 `runtime/reports` + `resource/reports`（去除对整个 `runtime` 根的泛扫描）；
+   - 默认排除 `runtime/protocol-feedback/**` 与 archive 目录。
+3. `scripts/validate_protocol_feedback_sidecar_contract.py`
+   - 新增 `anchor_source` / `anchor_report_path`，并在无显式 report 时回退到 default report anchor；
+   - 补齐 activity 计数字段（`activity_ref_count` 等）；
+   - `track_a` 增补关键观测字段（含 report_selected_path 与 final_emit* 投影）。
+4. `scripts/protocol_feedback_lane_common.py`
+   - protocol-feedback 活动扫描新增 ignore 策略：`*.bak*`, `*.tmp`, `*~`, `*.swp`, `.DS_Store`。
+
+#### Replay evidence
+
+1. base-repo-architect（strict health, no explicit report）
+   - `/tmp/audit_postcommit_base_health_noreport.log`
+   - `/private/tmp/audit-postcommit/identity-health-base-repo-architect-1772979281.json`
+   - 结果：`overall_status=PASS`。
+2. pointer 生效快照：
+   - `/tmp/audit_pointer_base_snapshot.txt`
+   - 结果：`active_execution_report.json` 已写入，`latest_identity_upgrade_report` 命中 pointer 指向报告。
+3. sidecar anchor 稳定性与污染收敛（custom-creative-ecom-analyst）：
+   - `/tmp/sidecar_compare_no_report_afterpatch_6537307.json`
+   - `/tmp/sidecar_compare_with_report_afterpatch_6537307.json`
+   - 结果：`anchor_source` 明确、`activity_ref_count` 可观测、活动 refs 不再包含 `.bak` 文件。
+
+#### Boundary
+
+1. 本节解决“默认绑定/锚点/扫描污染”协议控制面问题；
+2. 不等于实例历史债务清零（例如 custom-creative-ecom-analyst 当前仍有 `IP-SID-002` 链路阻断，需实例升级与债务回填）。
+
 
 ## 9) References
 

@@ -3470,6 +3470,44 @@ Decision:
 
 ---
 
+### Round-29.3 addendum: default report binding + sidecar anchor stabilization (2026-03-08)
+
+Scope:
+
+1. 收敛 default latest_report 绑定漂移；
+2. 收敛 protocol-feedback sidecar 的 anchor 语义抖动与备份文件扫描污染。
+
+Cross-verified changes:
+
+1. `scripts/execute_identity_upgrade.py`
+   - 写 report 时同步写 `runtime/state/active_execution_report.json`。
+2. `scripts/tool_vendor_governance_common.py`
+   - latest report 解析优先 pointer；
+   - 候选池收敛到 `runtime/reports` + `resource/reports`，排除 protocol-feedback/archive 噪声路径。
+3. `scripts/protocol_feedback_lane_common.py`
+   - activity 扫描忽略备份与临时文件：`*.bak*`, `*.tmp`, `*~`, `*.swp`, `.DS_Store`。
+4. `scripts/validate_protocol_feedback_sidecar_contract.py`
+   - 新增 `anchor_source`、`anchor_report_path` 与 activity count 字段；
+   - `track_a` 增补 report/final_emit 观测字段。
+
+Replay evidence:
+
+1. `/tmp/audit_postcommit_base_health_noreport.log`
+2. `/private/tmp/audit-postcommit/identity-health-base-repo-architect-1772979281.json`  
+   (`overall_status=PASS`, strict health no explicit report)
+3. `/tmp/audit_pointer_base_snapshot.txt`  
+   (pointer 已写入：`active_execution_report.json`)
+4. `/tmp/sidecar_compare_no_report_afterpatch_6537307.json`
+5. `/tmp/sidecar_compare_with_report_afterpatch_6537307.json`  
+   (`anchor_source` 明确，activity refs 无 `.bak` 污染)
+
+Decision:
+
+1. 接受本轮补强：default binding 与 sidecar anchor 的协议控制面稳定性显著提升。
+2. remaining blocker 继续留在实例债务域（尤其 `custom-creative-ecom-analyst` 的 `IP-SID-002` 链路）。
+
+---
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).
