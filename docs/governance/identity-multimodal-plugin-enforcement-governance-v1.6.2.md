@@ -87,7 +87,7 @@ Required files under base-repo plugin system:
 2. `adapter_id`:
    - `^[a-z][a-z0-9_]{2,63}$`
 3. Validator script naming:
-   - `scripts/validate_plugin_<plugin_slug>.py`
+   - `validate_plugin_<plugin_slug>.py` (under `scripts/`)
    - where `plugin_slug` maps from `plugin_id` via `- -> _`
 4. Invalid naming is hard fail-close:
    - `IP-MM-NAME-001` (plugin_id invalid)
@@ -321,3 +321,55 @@ Closure replay set to retain:
 7. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
 8. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
 9. `https://agentskills.io/specification`
+
+## 11) Round-29.3 implementation closure addendum (2026-03-09)
+
+### 11.1 Protocol-layer code closure landed this round
+
+1. Plugin literal-path lint false positives are closed without weakening canonical policy:
+   - `scripts/validate_plugin_contract_literal_paths.py`
+   - contextual allow only for canonical dynamic resolution in `validate_multimodal_plugin_enforcement.py`
+2. Target-probe bundle receipts now carry HUD parity tuple fields (no projection loss in target mode):
+   - `scripts/required_gate_bundle_runner.py`
+   - added passthrough defaults for `actor_id`, `resolved_work_layer`, `resolved_source_layer`, `lock_state`
+3. Provider binding enforcement is hardened in multimodal validator:
+   - `scripts/validate_multimodal_plugin_enforcement.py`
+   - required plugin binding missing => `FAIL_REQUIRED` (`IP-MM-CONF-001`)
+4. Instance-side minimal binding template is standardized:
+   - `identity/protocol/plugins/templates/provider-bindings.local.template.yaml`
+   - only non-secret pointers (`provider_profile_id`, `credential_ref`, `enabled`)
+5. Doc command checker now includes v1.6.2 governance/review streams in mandatory checks:
+   - `scripts/docs_command_contract_check.py`
+
+### 11.2 Instance-side self-repair replay (non-protocol mutation)
+
+1. Backfill replay for real instance (`base-repo-audit-expert-v3`) confirms RQ-034 contract auto-wire:
+   - dry-run: `/tmp/rq034_backfill_dryrun_braev3_20260309.json`
+   - apply: `/tmp/rq034_backfill_apply_braev3_20260309.json`
+2. Capability arbitration contract replay passes after backfill:
+   - `/tmp/rq034_capability_arbitration_validate_braev3_20260309.log`
+3. Provider binding replay passes with minimal non-secret binding file:
+   - `/tmp/rq034_validator_braev3_after_binding_20260309.json`
+
+### 11.3 Cross-check evidence set (current round)
+
+1. Plugin literal lint: `/tmp/rq034_plugin_literal_lint_20260309.json`
+2. Multimodal validator positive/negative:
+   - `/tmp/rq034_validator_positive_20260309.json`
+   - `/tmp/rq034_validator_negative_20260309.json`
+3. Bundle + tuple parity (target probe):
+   - `/tmp/rq034_bundle_target_20260309.json`
+   - `/tmp/rq034_bundle_target_scanprobe_20260309.json`
+   - `/tmp/rq034_tuple_parity_20260309.json`
+4. Strict surface drift: `/tmp/rq034_surface_drift_20260309.json`
+5. Three-plane/full-scan (real instance):
+   - `/tmp/rq034_three_plane_v4_20260309.json`
+   - `/tmp/rq034_full_scan_v4_20260309.json`
+
+### 11.4 Current closure judgment
+
+1. RQ-034 protocol wiring and strict entry controls are closed for this stream.
+2. Remaining non-green signal is instance report freshness churn (`IP-REL-001`) and workspace dirty baseline, not multimodal plugin wiring regression.
+3. Governance boundary remains unchanged:
+   - protocol layer: identify/validate/reject
+   - instance layer: migration/backfill/debt cleanup

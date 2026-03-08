@@ -31,6 +31,17 @@ REQUIRED_CURRENT_DOC_PATTERNS = [
     r"^docs/governance/identity-token-governance-audit-checklist-v\d+\.\d+\.\d+\.md$",
 ]
 
+# Round-26 scope closure: always include current governance/review + release notes
+# even when index coverage evolves.
+MANDATORY_DOC_PATHS = (
+    "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+    "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+    "CHANGELOG.md",
+    "VERSIONING.md",
+)
+
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -178,6 +189,13 @@ def main() -> int:
         for req in required_docs:
             if req not in docs:
                 docs.append(req)
+        for req in MANDATORY_DOC_PATHS:
+            if req in docs:
+                continue
+            if (repo_root / req).exists():
+                docs.append(req)
+            else:
+                bootstrap_failures.append(f"[MISSING_MANDATORY_DOC] required doc not found: {req}")
         if len(docs) < 4:
             bootstrap_failures.append(
                 f"[INSUFFICIENT_COVERAGE] dynamic docs coverage too small: {len(docs)} (<4). check {INDEX_PATH}"

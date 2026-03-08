@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity/protocol/plugins/schemas/plugin-registry.schema.json",
+  "title": "Plugin Registry (v1.6.2)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "contract_id",
+    "plugins"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1.6.2"
+    },
+    "contract_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "plugin_id",
+          "contract_file",
+          "validator_script",
+          "provider_profiles",
+          "status"
+        ],
+        "properties": {
+          "plugin_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,63}$"
+          },
+          "contract_file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "validator_script": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider_profiles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{2,63}$"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "deprecated"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

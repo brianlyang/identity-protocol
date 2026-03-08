@@ -1,0 +1,25 @@
+contract_id: rq_034_multimodal_plugin_enforcement_contract_v1
+plugin_id: multimodal-vision-enforcement
+version: v1.6.2
+owner: protocol_base_repo
+validator_script: scripts/validate_multimodal_plugin_enforcement.py
+required_capabilities:
+  vision: true
+  tool_calling: true
+  structured_json: true
+required_thresholds:
+  min_confidence: 0.0
+  max_confidence: 1.0
+  min_char_count: 1
+  max_char_count: 20000
+provider_binding:
+  required: true
+  allowed_profiles:
+    - glm46v_vision_prod
+    - openai_vision_prod
+error_family:
+  - IP-MM-NAME-*
+  - IP-MM-THR-*
+  - IP-MM-PATH-*
+  - IP-MM-COPY-*
+  - IP-MM-CONF-*

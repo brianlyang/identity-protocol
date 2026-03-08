@@ -1,0 +1,48 @@
+version: v1.6.2
+contract_id: provider_profiles_contract_v1
+description: >
+  Central provider capability profiles for protocol-layer multimodal plugin enforcement.
+  This file stores non-secret metadata only. Secrets must be referenced via env/vault keys.
+
+profiles:
+  - profile_id: glm46v_vision_prod
+    provider_id: zhipu
+    model_id: glm-4.6v
+    api_base_env: GLM_API_BASE
+    api_key_env: GLM_API_KEY
+    capabilities:
+      vision: true
+      tool_calling: true
+      structured_json: true
+    limits:
+      max_images: 8
+      max_image_mb: 10
+      max_output_tokens: 4096
+      timeout_ms: 60000
+      max_retries: 2
+    governance:
+      require_https: true
+      endpoint_allowlist:
+        - open.bigmodel.cn
+      pii_policy: redact_before_send
+
+  - profile_id: openai_vision_prod
+    provider_id: openai
+    model_id: gpt-4.1
+    api_base_env: OPENAI_BASE_URL
+    api_key_env: OPENAI_API_KEY
+    capabilities:
+      vision: true
+      tool_calling: true
+      structured_json: true
+    limits:
+      max_images: 16
+      max_image_mb: 20
+      max_output_tokens: 8192
+      timeout_ms: 60000
+      max_retries: 2
+    governance:
+      require_https: true
+      endpoint_allowlist:
+        - api.openai.com
+      pii_policy: redact_before_send

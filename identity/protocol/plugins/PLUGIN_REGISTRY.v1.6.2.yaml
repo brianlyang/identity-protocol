@@ -1,0 +1,12 @@
+version: v1.6.2
+contract_id: plugin_registry_contract_v1
+description: Central registry for protocol-governed plugins.
+
+plugins:
+  - plugin_id: multimodal-vision-enforcement
+    contract_file: identity/protocol/plugins/multimodal-vision-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_multimodal_plugin_enforcement.py
+    provider_profiles:
+      - glm46v_vision_prod
+      - openai_vision_prod
+    status: draft

@@ -29,6 +29,7 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-019",
     "asb16-rq-020",
     "asb16-rq-033",
+    "asb16-rq-034",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -40,6 +41,7 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-019": "cross_workflow_schema",
     "asb16-rq-020": "skill_path_integrity",
     "asb16-rq-033": "execution_target_tuple_isolation",
+    "asb16-rq-034": "multimodal_plugin_enforcement",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -52,6 +54,7 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "cross_workflow_schema": "cross_workflow_schema_status",
     "skill_path_integrity": "path_integrity_status",
     "execution_target_tuple_isolation": "execution_target_tuple_isolation_status",
+    "multimodal_plugin_enforcement": "multimodal_plugin_enforcement_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
@@ -61,6 +64,9 @@ ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
     "path_integrity_error_code",
     "route_conflict_error_code",
 )
+
+TRUTHY_VALUES: tuple[str, ...] = ("1", "true", "yes", "y", "on")
+FALSY_VALUES: tuple[str, ...] = ("0", "false", "no", "n", "off", "")
 
 
 @dataclass(frozen=True)
@@ -220,6 +226,44 @@ def _write_payload_out(out_path: str, payload: dict[str, Any]) -> None:
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _parse_bool_token(raw: Any) -> bool:
+    if isinstance(raw, bool):
+        return raw
+    text = str(raw or "").strip().lower()
+    if text in TRUTHY_VALUES:
+        return True
+    if text in FALSY_VALUES:
+        return False
+    return False
+
+
+def _derive_parity_operation_scope(*, operation: str, surface_label: str) -> str:
+    op = str(operation or "").strip().lower()
+    label = str(surface_label or "").strip().lower()
+    if op in {"scan", "inspection"} and label.endswith("_scan_probe"):
+        return "scan_probe"
+    if op:
+        return f"operation:{op}"
+    if label:
+        return f"surface:{label}"
+    return "default"
+
+
+def _derive_required_contract_reason(
+    *,
+    required_contract: bool,
+    operation: str,
+    surface_label: str,
+) -> str:
+    if bool(required_contract):
+        return "required_contract_detected"
+    op = str(operation or "").strip().lower()
+    label = str(surface_label or "").strip().lower()
+    if op in {"scan", "inspection"} and label.endswith("_scan_probe"):
+        return "scan_probe_optional_not_required"
+    return "no_required_contract_detected"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run required gate bundle from mapping single-source registry.")
     parser.add_argument("--catalog", required=True)
@@ -230,11 +274,24 @@ def main() -> int:
     parser.add_argument("--run-id", default="")
     parser.add_argument("--report-selected-path", default="")
     parser.add_argument("--send-time-gate-status", default="")
-    parser.add_argument("--outlet-bypass-detected", action="store_true")
+    parser.add_argument(
+        "--outlet-bypass-detected",
+        nargs="?",
+        const="true",
+        default="",
+        help="explicit outlet bypass flag (true/false). bare flag implies true.",
+    )
     parser.add_argument("--surface-label", default="")
     parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
     parser.add_argument("--out", default="", help="optional path to persist JSON receipt")
     parser.add_argument("--json-only", action="store_true")
+    parser.add_argument("--actor-id", default="")
+    parser.add_argument("--resolved-work-layer", default="")
+    parser.add_argument("--resolved-source-layer", default="")
+    parser.add_argument("--lock-state", default="")
+    parser.add_argument("--final-emit-contract-status", default="")
+    parser.add_argument("--final-emit-policy-mode", default="")
+    parser.add_argument("--final-emit-schema-status", default="")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -259,7 +316,7 @@ def main() -> int:
 
     if mapping_errors:
         failure_count += len(mapping_errors)
-    if not target_name and not str(args.run_id or "").strip():
+    if not str(args.run_id or "").strip():
         mapping_errors.append("run_id_binding_missing")
         failure_count += 1
 
@@ -343,6 +400,16 @@ def main() -> int:
         bundle_status = STATUS_PASS_REQUIRED
         error_code = ""
 
+    parity_operation_scope = _derive_parity_operation_scope(
+        operation=str(args.operation or "").strip(),
+        surface_label=surface_label,
+    )
+    required_contract_reason = _derive_required_contract_reason(
+        required_contract=required_contract_any,
+        operation=str(args.operation or "").strip(),
+        surface_label=surface_label,
+    )
+
     payload: dict[str, Any] = {
         "bundle_contract_id": BUNDLE_CONTRACT_ID,
         "bundle_key": BUNDLE_KEY,
@@ -358,10 +425,19 @@ def main() -> int:
         "surface_label": surface_label,
         "run_id_binding": run_id_binding,
         "report_selected_path": report_selected_path,
+        "actor_id": str(args.actor_id or "").strip(),
+        "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
+        "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
+        "lock_state": str(args.lock_state or "").strip(),
         "required_contract": required_contract_any,
+        "required_contract_reason": required_contract_reason,
         "failed_required_contract_count": failed_required_contract_count,
+        "parity_operation_scope": parity_operation_scope,
         "send_time_gate_status": str(args.send_time_gate_status or "").strip().upper(),
-        "outlet_bypass_detected": bool(args.outlet_bypass_detected),
+        "outlet_bypass_detected": _parse_bool_token(args.outlet_bypass_detected),
+        "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
+        "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
+        "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
         "row_contract_error_count": row_contract_error_count,
     }
 
@@ -376,6 +452,10 @@ def main() -> int:
                 "bundle_contract_id": BUNDLE_CONTRACT_ID,
                 "bundle_key": BUNDLE_KEY,
                 "bundle_target_name": target_name,
+                "actor_id": str(args.actor_id or "").strip(),
+                "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
+                "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
+                "lock_state": str(args.lock_state or "").strip(),
             }
             if args.json_only:
                 print(json.dumps(target_payload, ensure_ascii=False))
@@ -398,13 +478,41 @@ def main() -> int:
         target_payload.setdefault("bundle_key", BUNDLE_KEY)
         target_payload.setdefault("bundle_target_name", target_name)
         target_payload.setdefault("surface_label", surface_label)
+        target_payload.setdefault("run_id_binding", run_id_binding)
+        target_payload.setdefault("report_selected_path", report_selected_path)
+        target_payload.setdefault("actor_id", str(args.actor_id or "").strip())
+        target_payload.setdefault("resolved_work_layer", str(args.resolved_work_layer or "").strip())
+        target_payload.setdefault("resolved_source_layer", str(args.resolved_source_layer or "").strip())
+        target_payload.setdefault("lock_state", str(args.lock_state or "").strip())
+        target_payload.setdefault("parity_operation_scope", parity_operation_scope)
+        target_payload.setdefault(
+            "required_contract_reason",
+            _derive_required_contract_reason(
+                required_contract=bool(target_payload.get("required_contract", False)),
+                operation=str(args.operation or "").strip(),
+                surface_label=surface_label,
+            ),
+        )
+        target_payload.setdefault("send_time_gate_status", str(args.send_time_gate_status or "").strip().upper())
+        target_payload.setdefault("outlet_bypass_detected", _parse_bool_token(args.outlet_bypass_detected))
+        target_payload.setdefault("final_emit_contract_status", str(args.final_emit_contract_status or "").strip().upper())
+        target_payload.setdefault("final_emit_policy_mode", str(args.final_emit_policy_mode or "").strip())
+        target_payload.setdefault("final_emit_schema_status", str(args.final_emit_schema_status or "").strip().upper())
+        if bundle_status == STATUS_FAIL_REQUIRED:
+            target_payload[target_status_field] = STATUS_FAIL_REQUIRED
+            if not str(target_payload.get("error_code", "")).strip():
+                target_payload["error_code"] = error_code or "IP-GATE-ENTRY-001"
+            stale = list(target_payload.get("stale_reasons") or [])
+            if "bundle_entry_contract_failed" not in stale:
+                stale.append("bundle_entry_contract_failed")
+            target_payload["stale_reasons"] = stale
         if str(args.out or "").strip():
             _write_payload_out(str(args.out), target_payload)
         if args.json_only:
             print(json.dumps(target_payload, ensure_ascii=False))
         else:
             print(json.dumps(target_payload, ensure_ascii=False, indent=2))
-        return 1 if str(target_row.get("status", "")).upper() == STATUS_FAIL_REQUIRED else 0
+        return 1 if str(target_payload.get(target_status_field, "")).upper() == STATUS_FAIL_REQUIRED else 0
 
     if str(args.out or "").strip():
         _write_payload_out(str(args.out), payload)

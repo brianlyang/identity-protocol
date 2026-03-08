@@ -55,7 +55,7 @@ Owner: identity protocol base-repo architect
 1. `plugin_id` regex:
    - `^[a-z][a-z0-9-]{2,63}$`
 2. Validator naming:
-   - `scripts/validate_plugin_<plugin_slug>.py`
+   - `validate_plugin_<plugin_slug>.py` (under `scripts/`)
 3. Error family:
    - naming: `IP-MM-NAME-*`
    - path: `IP-MM-PATH-*`
@@ -187,3 +187,49 @@ Pending:
 ## 8) Additional input packet
 
 1. `/Users/yangxi/claude/codex_project/ddm/identity_protocol_feedback/multimodal-plugin-enforcement-mechanism-deepdive-20260308.md`
+
+## 9) Round-29.3 replay addendum (2026-03-09)
+
+### 9.1 What was fixed this round (code-level)
+
+1. Plugin literal-path lint now passes without opening non-canonical path bypass:
+   - `scripts/validate_plugin_contract_literal_paths.py`
+2. Bundle target-mode tuple projection loss is fixed:
+   - `scripts/required_gate_bundle_runner.py`
+   - target receipts now carry `actor_id/resolved_work_layer/resolved_source_layer/lock_state`
+3. Provider binding requirement is explicit and fail-close:
+   - `scripts/validate_multimodal_plugin_enforcement.py`
+   - required plugin binding absence now yields `IP-MM-CONF-001`
+4. Instance minimal binding template is added:
+   - `identity/protocol/plugins/templates/provider-bindings.local.template.yaml`
+5. v1.6.2 docs are part of mandatory docs command contract check:
+   - `scripts/docs_command_contract_check.py`
+
+### 9.2 Replay evidence (this round)
+
+1. Lint + drift:
+   - `/tmp/rq034_plugin_literal_lint_20260309.json`
+   - `/tmp/rq034_surface_drift_20260309.json`
+2. Validator matrix:
+   - `/tmp/rq034_validator_positive_20260309.json` (`PASS_REQUIRED`)
+   - `/tmp/rq034_validator_negative_20260309.json` (`FAIL_REQUIRED`, `IP-MM-CONF-001`)
+3. Bundle/parity:
+   - `/tmp/rq034_bundle_target_20260309.json`
+   - `/tmp/rq034_bundle_target_scanprobe_20260309.json`
+   - `/tmp/rq034_tuple_parity_20260309.json`
+4. Real-instance self-repair replays:
+   - `/tmp/rq034_backfill_dryrun_braev3_20260309.json`
+   - `/tmp/rq034_backfill_apply_braev3_20260309.json`
+   - `/tmp/rq034_capability_arbitration_validate_braev3_20260309.log`
+   - `/tmp/rq034_validator_braev3_after_binding_20260309.json`
+5. Full-plane replay:
+   - `/tmp/rq034_three_plane_v4_20260309.json`
+   - `/tmp/rq034_full_scan_v4_20260309.json`
+
+### 9.3 Updated judgment
+
+1. Multimodal protocol-control-plane wiring is closed for v1.6.2.
+2. Remaining non-green signals are outside RQ-034 wiring itself (instance freshness churn / dirty baseline).
+3. Posture remains non-promotional:
+   - `SPEC_READY / PENDING_INTAKE`
+   - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`
