@@ -12,7 +12,11 @@ from typing import Any
 import yaml
 
 from actor_session_common import load_actor_binding, resolve_actor_id
-from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
+from final_emit_contract_common import (
+    FINAL_EMIT_CHANNEL_ID,
+    FINAL_EMIT_POLICY_MODE,
+    FINAL_EMIT_SCHEMA_ID,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -374,6 +378,13 @@ def main() -> int:
         "reply_emit_allowed": emit_allowed,
         "out_reply_file": out_reply_file,
         "outlet_channel_id": str(compose_payload.get("outlet_channel_id", "")),
+        "governed_outlet_enforced": bool(compose_payload.get("governed_outlet_enforced", False)),
+        "outlet_preflight_receipt": str(compose_payload.get("outlet_preflight_receipt", "")),
+        "outlet_bypass_detected": bool(compose_payload.get("outlet_bypass_detected", False)),
+        "final_emit_channel_id": str(compose_payload.get("final_emit_channel_id", FINAL_EMIT_CHANNEL_ID)),
+        "final_emit_policy_mode": str(compose_payload.get("final_emit_policy_mode", FINAL_EMIT_POLICY_MODE)),
+        "final_emit_schema_id": str(compose_payload.get("final_emit_schema_id", FINAL_EMIT_SCHEMA_ID)),
+        "final_emit_schema_status": str(compose_payload.get("final_emit_schema_status", "")).strip().upper(),
     }
     if not pass_contract:
         payload["stale_reasons"] = ["egress_contract_not_pass"]
