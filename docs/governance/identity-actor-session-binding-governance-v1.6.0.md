@@ -4194,6 +4194,43 @@ Machine report artifacts:
 1. 本节仍只处理协议控制面的“识别/校验/拒绝与升级指引输出”。
 2. 实例是否完成迁移与债务清理，继续由实例层负责并回填报告。
 
+### 8.57 Round-29.2 Validator contract alignment hotfix (2026-03-08)
+
+#### Why this hotfix was required
+
+1. strict health self-test 中仍出现两条误阻断：
+   - `headstamp_recurrence_closure`：`IP-ASB-STAMP-SCAN-005`
+   - `post_execution_mandatory`：`IP-WRB-003`
+2. 复盘确认属于“验证器口径漂移”，不是 L3 final emit 合同本身失效。
+
+#### Root-cause alignment fixes
+
+1. `scripts/validate_headstamp_recurrence_closure.py`
+   - non-governed outlet 负向探针原先仅接受 legacy 错误码 `IP-ASB-STAMP-SESSION-004`；
+   - 在 Round-29 的 strict final emit 合同下，channel mismatch 已升级为 `IP-ASB-STAMP-SESSION-006`；
+   - 本轮补齐兼容判定：`004 | 006` 都视为“负向探针正确 fail-close”。
+2. `scripts/validate_post_execution_mandatory.py`
+   - 与 `execute_identity_upgrade` 的 strict non-upgrade closure 语义对齐：
+   - 当 `upgrade_required=false && all_ok=true && writeback_mode=STRICT_WRITEBACK && writeback_status in {NOT_REQUIRED, WRITTEN}`，判定为闭环通过，不再错误要求降级写回与 `next_recovery_action`。
+
+#### Replay evidence (self-run, architect instance)
+
+1. `/tmp/fix_verify_headstamp.json`
+   - `headstamp_recurrence_closure_status=PASS_REQUIRED`
+2. `/tmp/fix_verify_postexec.json`
+   - `post_execution_mandatory_status=PASS_REQUIRED`
+3. `/tmp/fix_verify_health_enforce.log`
+   - `overall_status=PASS`
+   - `warning_count=0`
+   - `failed_count=0`
+4. `/private/tmp/health-selftest-round292/identity-health-base-repo-architect-1772977729.json`
+   - strict health `--enforce-pass` 回放通过。
+
+#### Boundary
+
+1. 本节仅修正“验证器合同漂移”；
+2. 不改变实例层历史债务归属原则（实例负责迁移与清债，协议负责识别/校验/拒绝）。
+
 
 ## 9) References
 

@@ -3440,6 +3440,36 @@ Decision:
 
 ---
 
+### Round-29.2 addendum: validator contract drift alignment (2026-03-08)
+
+Scope:
+
+1. 修复 strict health 自测中的两条“验证器误阻断”，确保控制面收口结论与执行语义一致。
+
+Cross-verified fixes:
+
+1. `scripts/validate_headstamp_recurrence_closure.py`
+   - non-governed outlet 负向探针从“仅接受 `IP-ASB-STAMP-SESSION-004`”扩展为“接受 `004/006`”；
+   - 与 send-time gate 的 final emit channel strict 错误码升级保持一致。
+2. `scripts/validate_post_execution_mandatory.py`
+   - 对齐 `execute_identity_upgrade` 的 strict non-upgrade closure 合同：
+   - `upgrade_required=false && all_ok=true && writeback_mode=STRICT_WRITEBACK && writeback_status in {NOT_REQUIRED, WRITTEN}` 直接判定闭环。
+
+Replay evidence:
+
+1. `/tmp/fix_verify_headstamp.json` -> `headstamp_recurrence_closure_status=PASS_REQUIRED`
+2. `/tmp/fix_verify_postexec.json` -> `post_execution_mandatory_status=PASS_REQUIRED`
+3. `/tmp/fix_verify_health_enforce.log` -> `overall_status=PASS, warning_count=0, failed_count=0`
+4. `/private/tmp/health-selftest-round292/identity-health-base-repo-architect-1772977729.json`  
+   strict health `--enforce-pass` 通过。
+
+Decision:
+
+1. 判定本轮为“验证器合同对齐修复”，不是新增模型变更。
+2. 允许继续按 Round-29/29.1 口径推进实例升级通知。
+
+---
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
 from tool_vendor_governance_common import latest_identity_upgrade_report, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -38,6 +39,11 @@ MANDATORY_REPORT_FIELDS = (
     "outlet_channel_id",
     "outlet_preflight_receipt",
     "outlet_bypass_detected",
+    "final_emit_channel_id",
+    "final_emit_policy_mode",
+    "final_emit_schema_id",
+    "final_emit_schema_status",
+    "final_emit_contract_status",
 )
 
 
@@ -163,6 +169,11 @@ def main() -> int:
         "outlet_channel_id": "",
         "outlet_preflight_receipt": "",
         "outlet_bypass_detected": False,
+        "final_emit_channel_id": "",
+        "final_emit_policy_mode": "",
+        "final_emit_schema_id": "",
+        "final_emit_schema_status": "",
+        "final_emit_contract_status": "",
         "stale_reasons": [],
     }
 
@@ -225,6 +236,11 @@ def main() -> int:
             "outlet_channel_id": str(report.get("outlet_channel_id", "")).strip(),
             "outlet_preflight_receipt": str(report.get("outlet_preflight_receipt", "")).strip(),
             "outlet_bypass_detected": bool(report.get("outlet_bypass_detected", False)),
+            "final_emit_channel_id": str(report.get("final_emit_channel_id", "")).strip(),
+            "final_emit_policy_mode": str(report.get("final_emit_policy_mode", "")).strip(),
+            "final_emit_schema_id": str(report.get("final_emit_schema_id", "")).strip(),
+            "final_emit_schema_status": str(report.get("final_emit_schema_status", "")).strip().upper(),
+            "final_emit_contract_status": str(report.get("final_emit_contract_status", "")).strip().upper(),
         }
     )
 
@@ -251,8 +267,24 @@ def main() -> int:
             stale_reasons.append("outlet_preflight_receipt_missing")
         if bool(payload.get("outlet_bypass_detected", False)):
             stale_reasons.append("outlet_bypass_detected_in_strict_operation")
+        if str(payload.get("final_emit_channel_id", "")).strip() != FINAL_EMIT_CHANNEL_ID:
+            stale_reasons.append("final_emit_channel_id_not_canonical")
+        if str(payload.get("final_emit_policy_mode", "")).strip() != FINAL_EMIT_POLICY_MODE:
+            stale_reasons.append("final_emit_policy_mode_not_required")
+        if str(payload.get("final_emit_schema_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+            stale_reasons.append("final_emit_schema_status_not_pass")
+        if str(payload.get("final_emit_contract_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+            stale_reasons.append("final_emit_contract_status_not_pass")
 
-    if upgrade_required and all_ok and writeback_status == "WRITTEN":
+    strict_non_upgrade_closed = (
+        (not upgrade_required)
+        and all_ok
+        and writeback_mode == "STRICT_WRITEBACK"
+        and writeback_status in {"WRITTEN", "NOT_REQUIRED"}
+    )
+    strict_upgrade_closed = upgrade_required and all_ok and writeback_status == "WRITTEN"
+
+    if strict_upgrade_closed:
         rc_ew, out_ew, err_ew = _run_experience_writeback_validator(
             identity_id=args.identity_id,
             catalog_path=catalog_path,
@@ -266,6 +298,10 @@ def main() -> int:
             elif err_ew:
                 tail = err_ew.splitlines()[-1]
             stale_reasons.append(f"experience_writeback_linkage_failed:{tail or 'validator_failed'}")
+    elif strict_non_upgrade_closed:
+        # Non-upgrade closure path: strict execution can legitimately finish without writeback mutation.
+        # In this branch, next_recovery_action may be empty by design.
+        pass
     else:
         if writeback_mode != "DEGRADED_WRITEBACK":
             stale_reasons.append("degraded_mode_required_for_non_closed_execution")

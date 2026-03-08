@@ -32,6 +32,7 @@ ERR_MIXED_EVIDENCE_UNPARTITIONED = "IP-ASB-ACTOR-002"
 ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
 ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
 ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
+ERR_FINAL_EMIT_CHANNEL_REQUIRED = "IP-ASB-STAMP-SESSION-006"
 ERR_ACTOR_BOUND_MISMATCH = "IP-ASB-STAMP-SESSION-005"
 
 STRICT_ACTOR_REQUIRED_OPS = {
@@ -279,7 +280,7 @@ def _actor_mismatch_probe(
         "--blocker-receipt-out",
         str(blocker_receipt),
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--actor-id",
         actor_id,
         "--json-only",
@@ -490,7 +491,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        outlet_channel_id="governed_adapter_v1",
+        outlet_channel_id="final_emit_governed",
         blocker_receipt=missing_receipt,
         reply_file=missing_file,
     )
@@ -517,7 +518,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        outlet_channel_id="governed_adapter_v1",
+        outlet_channel_id="final_emit_governed",
         blocker_receipt=inline_receipt,
         reply_text="manual inline reply without governed file evidence",
     )
@@ -555,9 +556,10 @@ def main() -> int:
         "governed_outlet_enforced": bool(payload_nongov.get("governed_outlet_enforced", False)),
         "outlet_channel_id": str(payload_nongov.get("outlet_channel_id", "")),
     }
+    nongov_error_code = str(payload_nongov.get("error_code", "")).strip()
     nongov_ok = (
         rc_nongov != 0
-        and str(payload_nongov.get("error_code", "")) == ERR_NON_GOVERNED_OUTLET
+        and nongov_error_code in {ERR_NON_GOVERNED_OUTLET, ERR_FINAL_EMIT_CHANNEL_REQUIRED}
         and str(payload_nongov.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
     )
     if not nongov_ok and not error_code:
@@ -581,7 +583,7 @@ def main() -> int:
         "--blocker-receipt-out",
         str(compose_receipt),
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        "final_emit_governed",
         "--actor-id",
         actor_id,
         "--json-only",
@@ -622,7 +624,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=actor_id,
-            outlet_channel_id="governed_adapter_v1",
+            outlet_channel_id="final_emit_governed",
             blocker_receipt=coverage_receipt,
             reply_file=pass_file,
         )
