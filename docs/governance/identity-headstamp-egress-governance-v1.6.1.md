@@ -25,6 +25,13 @@ Hard rule:
 1. Any new headstamp/HUD normative update must be written in v1.6.1.
 2. v1.6.0 headstamp sections are frozen as historical evidence and cannot be used as active execution source.
 
+### 0.2A Cross-stream boundary (v1.6.2 multimodal)
+
+1. Multimodal-plugin governance is executed in:
+   - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
+2. v1.6.1 must not absorb multimodal-plugin normative clauses.
+3. If a headstamp issue references multimodal state, link to v1.6.2 evidence instead of duplicating contracts here.
+
 ### 0.3 Extracted legacy anchors (frozen references)
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md:502` (`4.21` headstamp pre-send hard gate)

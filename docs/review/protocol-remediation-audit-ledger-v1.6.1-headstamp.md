@@ -14,6 +14,8 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
    - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
 4. Any new headstamp/HUD review entry must be added here, not backfilled into v1.6 ledger.
 5. If this review ledger conflicts with v1.6.1 governance, governance wins.
+6. Multimodal-plugin review entries are out of scope for this ledger and must be tracked in:
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
 
 ## 1) Extracted baseline (from v1.6)
 

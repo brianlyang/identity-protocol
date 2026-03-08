@@ -1,0 +1,189 @@
+# Protocol Remediation Audit Ledger (v1.6.2 multimodal stream)
+
+Status: Active  
+Layer: protocol control-plane  
+Scope: multimodal-plugin enforcement closure only  
+Owner: identity protocol base-repo architect
+
+## 1) Intake decision
+
+1. Create dedicated v1.6.2 stream for multimodal-plugin enforcement.
+2. Keep v1.6.0/v1.6.1 as historical baseline; do not continue scatter updates for this topic.
+3. Keep protocol/instance boundary strict:
+   - protocol: identify + validate + reject
+   - instance: migrate + backfill + content debt cleanup
+
+## 2) Architecture decision record (ADR-v1.6.2-PLUGIN-001)
+
+### 2.1 Decision
+
+1. Plugin system is maintained centrally in identity protocol base repo.
+2. Identity instances do not copy plugin contracts or plugin adapters.
+3. Instances only keep runtime receipts/projections/activation artifacts.
+
+### 2.2 Alternatives evaluated
+
+1. Alternative A (rejected): per-instance plugin code copy.
+   - Rejected due to high drift, version fragmentation, and difficult audit replay.
+2. Alternative B (accepted): centralized plugin SSOT with instance invocation.
+   - Accepted due to single governance surface and deterministic fail-close enforcement.
+
+### 2.3 Consequences
+
+1. Protocol changes become auditable in one place (`identity/protocol/plugins/**`).
+2. Instance migration debt becomes explicit and isolated from protocol control plane.
+3. Non-canonical instance plugin copies become policy violations (`IP-MM-COPY-001`).
+
+## 3) Canonical filesystem + naming freeze (audit baseline)
+
+### 3.1 Canonical filesystem
+
+1. Registry root:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml`
+2. Registry schema:
+   - `identity/protocol/plugins/schemas/plugin-registry.schema.json`
+3. Per-plugin required files:
+   - `identity/protocol/plugins/<plugin_id>/plugin.contract.yaml`
+   - `identity/protocol/plugins/<plugin_id>/plugin.input.schema.json`
+   - `identity/protocol/plugins/<plugin_id>/plugin.output.schema.json`
+   - `identity/protocol/plugins/<plugin_id>/plugin.error-codes.yaml`
+   - `identity/protocol/plugins/<plugin_id>/README.md`
+   - `identity/protocol/plugins/<plugin_id>/fixtures/*.json`
+
+### 3.2 Naming contract
+
+1. `plugin_id` regex:
+   - `^[a-z][a-z0-9-]{2,63}$`
+2. Validator naming:
+   - `scripts/validate_plugin_<plugin_slug>.py`
+3. Error family:
+   - naming: `IP-MM-NAME-*`
+   - path: `IP-MM-PATH-*`
+   - copy policy: `IP-MM-COPY-*`
+   - provider config: `IP-MM-CONF-*`
+
+### 3.4 Four-core contract binding confirmation
+
+1. `IDENTITY_PROTOCOL.md` declares:
+   - Accurate judgement requires multimodal evidence consistency.
+2. v1.6.2 binds this declaration to executable protocol checks via:
+   - `asb16-rq-034`
+   - `rq_034_multimodal_plugin_enforcement_contract_v1`
+   - `scripts/validate_multimodal_plugin_enforcement.py`
+3. Done-transition semantics are locked:
+   - inconsistent multimodal evidence => `block_done` (fail-close).
+4. Non-goal clarified:
+   - protocol layer does not host business-specific orchestration logic;
+   - instance layer hosts business execution and migration debt cleanup.
+
+### 3.3 Provider/API configuration governance baseline
+
+1. Provider profiles are centrally governed in base repo:
+   - `identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml`
+   - `identity/protocol/plugins/schemas/provider-profiles.schema.json`
+2. Instance packs keep binding pointers only:
+   - `<pack>/runtime/plugins/provider-bindings.local.yaml`
+3. Secrets are externalized (env/vault references only), never persisted as plaintext in repo/runtime receipts.
+4. GLM4.6V-like visual providers are onboarded by profile registration + capability gate, not by per-instance script forks.
+
+## 4) Cross-verified findings (Roundtable/Vendor/Reference/Replay)
+
+### T1 Governance (roundtable)
+
+1. Multimodal requirement wiring is now landed in bundle/drift contracts.
+2. Path/config framework and fail-close coverage are landed for strict surfaces.
+3. Centralized plugin ownership remains lower-governance-entropy than per-instance copies.
+
+Evidence anchors:
+
+1. `scripts/required_gate_bundle_runner.py:23`
+2. `scripts/required_gate_bundle_runner.py:32`
+3. `scripts/validate_required_gate_surface_drift.py:44`
+4. `scripts/validate_required_gate_surface_drift.py:53`
+5. `scripts/configure_identity_runtime_paths.py:32`
+
+### T2 Vendor
+
+1. MCP lifecycle supports explicit capability negotiation; aligns with strict multimodal threshold/path gate.
+2. Codex approvals/security supports centralized output control and deterministic block behavior.
+3. Vendor pattern favors central registry + strict runtime admission checks.
+
+Reference anchors:
+
+1. `https://modelcontextprotocol.io/specification/latest`
+2. `https://developers.openai.com/codex/agent-approvals-security/`
+
+### T3 Reference
+
+1. Structured outputs strict mode supports machine-checkable deterministic contracts.
+2. Agent Skills metadata contract aligns with explicit naming/path/trigger governance.
+3. Therefore naming and copy policy can be enforced by protocol-level schema/receipt checks.
+4. Provider profile gating (capability + credential indirection) is consistent with strict structured contract style.
+
+Reference anchors:
+
+1. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+2. `https://developers.openai.com/api/docs/guides/structured-outputs/#additionalproperties-false-must-always-be-set-in-objects`
+3. `https://agentskills.io/specification`
+
+### T4 Replay
+
+Current replay judgment:
+
+1. Multimodal key requiredization is closed in bundle/drift.
+2. Strict validator replay is positive and requiredized (`PASS_REQUIRED`).
+3. Remaining closure item is release-readiness projection parity for provider fields.
+
+Replay evidence:
+
+1. `/tmp/mm_enforcement_validate_20260309.json`
+2. `/tmp/mm_bundle_validate_20260309.json`
+3. `/tmp/docs_contract_v162_audit_20260309.log`
+4. `/tmp/ssot_v162_audit_20260309.log`
+
+Residual replay set for full closure:
+
+1. Positive: canonical plugin topology + valid schemas + valid thresholds => `PASS_REQUIRED`.
+2. Negative A: invalid naming => `FAIL_REQUIRED` + `IP-MM-NAME-*`.
+3. Negative B: path escape => `FAIL_REQUIRED` + `IP-MM-PATH-*`.
+4. Negative C: instance plugin code copy => `FAIL_REQUIRED` + `IP-MM-COPY-*`.
+5. Negative D: provider profile missing => `FAIL_REQUIRED` + `IP-MM-CONF-001`.
+6. Negative E: vision-required plugin bound to non-vision provider => `FAIL_REQUIRED` + `IP-MM-CONF-005`.
+
+## 5) Protocol execution set (v1.6.2 state update)
+
+Completed:
+
+1. `asb16-rq-034` added to bundle + drift required key lists.
+2. Mapping row `asb16-rq-034` added in `identity/protocol/mappings/contract-binding.v1.6.yaml`.
+3. `scripts/validate_multimodal_plugin_enforcement.py` landed and replayed as single-source validator.
+4. Projection parity landed in three-plane/full-scan (`provider_config_status`, `provider_profile_id`).
+5. Provider config validator branch landed:
+   - registry existence
+   - capability compatibility
+   - credential reference resolvability (without secret exposure)
+
+Pending:
+
+1. Release-readiness output projection parity for `provider_config_status` + `provider_profile_id`.
+2. Negative replay archive completion for naming/path/copy/provider mismatch matrix.
+3. CI literal-path lint for plugin topology whitelist.
+
+## 6) Current posture
+
+1. v1.6.2 stream has landed runtime closure for `asb16-rq-034` in strict bundle/drift/validator surfaces.
+2. Current blocker is release-readiness projection parity and residual replay archive completion.
+3. Posture remains non-promotional:
+   - `SPEC_READY / PENDING_INTAKE`
+   - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`
+
+## 7) Command contract note (prevent false negative replay)
+
+1. `scripts/validate_multimodal_plugin_enforcement.py` does not accept `--repo-catalog`.
+2. Canonical invocation template:
+   - `python3 scripts/validate_multimodal_plugin_enforcement.py --catalog <catalog.local.yaml> --identity-id <identity_id> --operation validate --json-only`
+3. Passing unsupported args must be treated as command-contract error, not protocol regression.
+
+## 8) Additional input packet
+
+1. `/Users/yangxi/claude/codex_project/ddm/identity_protocol_feedback/multimodal-plugin-enforcement-mechanism-deepdive-20260308.md`
