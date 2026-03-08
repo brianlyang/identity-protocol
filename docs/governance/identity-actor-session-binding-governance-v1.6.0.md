@@ -4083,6 +4083,69 @@ Machine report artifacts:
 1. 本节将“prompt 合同接线”责任固定在协议层；实例层仅负责业务内容与历史债务，不负责协议合同结构补丁。
 2. 生命周期边界不变：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
 
+### 8.55 Round-29 L3 Final Egress Hard-Gate Closure (official alignment, 2026-03-08)
+
+#### Why this section exists
+
+1. Round-28.2 已冻结 `RC-HUD-001`（最终输出口未硬封闭）为主根因。
+2. 本轮执行要求是：把“最终 user-visible 输出”从“建议约束”升级为“协议硬闸门”，并且对齐官方可验证能力（tool required + strict schema + deterministic final output contract）。
+
+#### Official alignment (control philosophy)
+
+1. Codex CLI 文档已给出“可脚本化确定输出”能力：`codex exec --json --output-last-message --output-schema`（用于最终输出形状约束与事件化审计）。
+2. Chat Completions / OpenAPI 明确 `tool_choice=required` 语义：模型必须调用一个或多个工具，不允许自由文本直出作为主路径。
+3. Function calling strict mode 明确：`strict=true` 时需满足 schema 约束（含 `additionalProperties=false` 与 required 字段完整），从“best effort”升级为“合同输出”。
+4. Codex approvals/security 明确控制面分层：sandbox + approvals；协议层应采用同构策略（统一出口 + fail-close），而不是分散 fallback。
+
+#### Canonical final egress contract (frozen)
+
+1. `final_emit_channel_id = final_emit_governed`
+2. `final_emit_policy_mode = tool_choice_required`
+3. `final_emit_schema_id = hud_headstamp_final_emit_schema_v1`
+4. `final_emit_schema_status = PASS_REQUIRED`
+5. `final_emit_contract_status = PASS_REQUIRED`
+6. `send_time_gate_status = PASS_REQUIRED`
+
+任一字段缺失、漂移、或 bypass（含 outlet bypass）均必须 fail-close。
+
+#### Code-level hardening landed (this round)
+
+1. `scripts/validate_send_time_reply_gate.py`
+   - strict 场景下新增 final emit 合同硬校验（channel/policy/schema）。
+   - 错误码：`IP-ASB-STAMP-SESSION-006`（channel/policy）、`IP-ASB-STAMP-SESSION-007`（schema）。
+2. `scripts/execute_identity_upgrade.py`
+   - 新增 final emit passthrough 合同校验；当 `--header-first-gate-status PASS_REQUIRED` 但 final emit 关键字段缺失/不一致时，直接 fail-close。
+   - 错误码对齐：`IP-OUTLET-004`。
+   - 禁止“external_override”语义兜底被当作可接受真值。
+3. `scripts/identity_creator.py`
+   - update surface 的 `required_gate_bundle_runner` 改为透传 pre-mutation 真实 final emit/send-time tuple，不再写死 `UNKNOWN`。
+4. `scripts/release_readiness_check.py`
+   - bundle passthrough 改为从 selected execution report 回填 final emit/send-time 字段，避免固定 `UNKNOWN` 扩散到 strict 审计面。
+
+#### Replay acceptance (executed)
+
+1. Positive compose（canonical egress）：
+   - `/tmp/final_emit_compose_positive_20260308.json`
+   - 期望并已验证：`send_time_gate_status=PASS_REQUIRED`，`final_emit_contract_status=PASS_REQUIRED`。
+2. Negative probes（必须 fail-close）：
+   - channel mismatch：`/tmp/final_emit_sendtime_negative_channel_20260308.json` -> `IP-ASB-STAMP-SESSION-006`
+   - policy mismatch：`/tmp/final_emit_sendtime_negative_policy_20260308.json` -> `IP-ASB-STAMP-SESSION-006`
+   - schema mismatch：`/tmp/final_emit_sendtime_negative_schema_20260308.json` -> `IP-ASB-STAMP-SESSION-007`
+3. Execute passthrough guard（L3 hard gate）：
+   - 缺 final emit passthrough：`/tmp/final_emit_execute_missing_probe_20260308.log` + `/private/tmp/final_emit_missing_probe_reports/FINAL-EMIT-MISSING-PT-20260308.json`
+   - 期望并已验证：`header_first_gate_status=FAIL_REQUIRED`，`pre_mutation_gate_error_code=IP-OUTLET-004`。
+4. Post-exec invariants：
+   - `/tmp/final_emit_outlet_matrix_replay_20260308.json` -> `outlet_matrix_status=PASS_REQUIRED`
+   - `/tmp/final_emit_postexec_mandatory_replay_20260308.json` -> `post_execution_mandatory_status=PASS_REQUIRED`
+5. Drift/surface wiring：
+   - `/tmp/final_emit_surface_drift_after_patch_20260308.json` -> `required_gate_surface_drift_status=PASS_REQUIRED`
+
+#### Boundary and truth-in-reporting
+
+1. 本节声明“L3 final egress 控制面硬闸门已落地”，不是宣称全局发布闭环完成。
+2. 实例历史债务（如 writeback continuity / prompt lifecycle 等）仍按实例层职责推进，不并入本节“控制面闭环”结论。
+3. 生命周期边界保持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
 
 ## 9) References
 
@@ -4151,3 +4214,8 @@ Machine report artifacts:
 63. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_20260306T140030Z_tmp_hardcoded_path_governance_gap.md`
 64. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/outbox-to-protocol/PROTOCOL_FEEDBACK_RECEIPT_20260306T140030Z_tmp_hardcoded_path_governance_gap.json`
 65. `/Users/yangxi/claude/codex_project/fqsh/.agents/identity/feiqiao-guard-delivery-lead/runtime/protocol-feedback/evidence-index/INDEX.md`
+66. `https://developers.openai.com/codex/cli/reference/#codex-exec`
+67. `https://developers.openai.com/codex/agent-approvals-security/#sandbox-and-approvals`
+68. `https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create/`
+69. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
+70. `https://github.com/openai/codex`

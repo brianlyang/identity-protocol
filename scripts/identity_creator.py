@@ -27,6 +27,9 @@ ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
+SWITCH_GUARD_SCOPE_ACTOR_SESSION = "actor_session"
+SWITCH_GUARD_SCOPE_ACTOR_GLOBAL = "actor_global"
+SWITCH_GUARD_SCOPE_CHOICES = {SWITCH_GUARD_SCOPE_ACTOR_SESSION, SWITCH_GUARD_SCOPE_ACTOR_GLOBAL}
 SCAFFOLD_CONSENT_TOKEN = "I_ACK_IDENTITY_SCAFFOLD_SCOPE_STACK_RUNTIME"
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROTOCOL_ROOT = SCRIPT_DIR.parent
@@ -78,11 +81,45 @@ def _infer_source_domain_from_catalog(catalog: str) -> str:
     except Exception:
         return "project"
     txt = str(p)
-    if "/.identity/" in txt:
-        return "project"
     if "/.codex/.identity/" in txt:
         return "global"
+    if "/.identity/" in txt:
+        return "project"
     return "project"
+
+
+def _derive_actor_session_id(explicit_session_id: str, run_id: str) -> tuple[str, str]:
+    session_id = str(explicit_session_id or "").strip()
+    if session_id:
+        return session_id, "explicit_session_id"
+    rid = str(run_id or "").strip()
+    if rid:
+        return f"run:{rid}", "run_id"
+    return "", "missing"
+
+
+def _resolve_bound_session_id_for_identity(
+    *,
+    catalog: str,
+    identity_id: str,
+    actor_id: str,
+    explicit_session_id: str = "",
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if explicit:
+        return explicit, "explicit_session_id"
+    try:
+        binding = load_actor_binding(
+            Path(catalog).expanduser().resolve(),
+            actor_id,
+            identity_id=identity_id,
+        )
+    except Exception:
+        binding = {}
+    bound_session_id = str((binding or {}).get("session_id", "")).strip()
+    if bound_session_id:
+        return bound_session_id, "actor_binding_identity"
+    return "", "binding_missing"
 
 
 def _emit_two_phase_trace(
@@ -158,6 +195,7 @@ def _actor_binding_entry_guard(
     identity_id: str,
     catalog: str,
     actor_id: str,
+    session_id: str,
     operation: str,
 ) -> int:
     cmd = [
@@ -169,6 +207,8 @@ def _actor_binding_entry_guard(
         identity_id,
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(session_id or "").strip(),
         "--operation",
         operation,
     ]
@@ -239,6 +279,8 @@ def _resolve_evidence_output_path(pattern: str, identity_id: str, ts: datetime, 
         return (pack_path / "runtime" / candidate[len(local_prefix) :]).resolve()
     if candidate.startswith("identity/runtime/"):
         return (pack_path / "runtime" / candidate[len("identity/runtime/") :]).resolve()
+    if candidate.startswith("runtime/"):
+        return (pack_path / candidate).resolve()
     return Path(candidate).expanduser().resolve()
 
 
@@ -422,7 +464,9 @@ def _activate_identity(
     protocol_mode: str = "mode_a_shared",
     actor_id: str = "",
     run_id: str = "",
+    session_id: str = "",
     switch_reason: str = "",
+    switch_guard_scope: str = SWITCH_GUARD_SCOPE_ACTOR_SESSION,
     allow_identity_switch: bool = False,
     switch_intent_receipt: str = "",
     allow_cross_actor_switch: bool = False,
@@ -436,8 +480,19 @@ def _activate_identity(
         return 1
     actor_id_resolved = resolve_actor_id(actor_id)
     run_id_resolved = str(run_id or "").strip() or f"activate-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    session_id_resolved, session_id_source = _derive_actor_session_id(session_id, run_id_resolved)
+    switch_scope = str(switch_guard_scope or SWITCH_GUARD_SCOPE_ACTOR_SESSION).strip().lower()
+    if switch_scope not in SWITCH_GUARD_SCOPE_CHOICES:
+        switch_scope = SWITCH_GUARD_SCOPE_ACTOR_SESSION
     switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
-    actor_binding = load_actor_binding(local_catalog, actor_id_resolved)
+    if switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL:
+        actor_binding = load_actor_binding(local_catalog, actor_id_resolved)
+    else:
+        actor_binding = load_actor_binding(
+            local_catalog,
+            actor_id_resolved,
+            session_id=session_id_resolved,
+        )
     current_actor_identity = str(actor_binding.get("identity_id", "")).strip()
     switch_intent_payload: dict = {}
     switch_intent_receipt_path = ""
@@ -446,9 +501,9 @@ def _activate_identity(
     if identity_switch_detected:
         if not allow_identity_switch:
             print(
-                "[FAIL] activation would switch actor-bound identity without explicit switch intent "
+                "[FAIL] activation would switch actor-bound identity within guarded scope without explicit switch intent "
                 f"(error_code=IP-ACT-SWITCH-001, actor_id={actor_id_resolved}, current_identity={current_actor_identity}, "
-                f"target_identity={identity_id})."
+                f"target_identity={identity_id}, switch_guard_scope={switch_scope}, session_id={session_id_resolved})."
             )
             print("[HINT] re-run with --allow-identity-switch --switch-intent-receipt <path.json>")
             return 1
@@ -544,8 +599,12 @@ def _activate_identity(
             "activation_model": "actor_scoped_catalog_with_multi_active",
             "actor_id": actor_id_resolved,
             "run_id": run_id_resolved,
+            "session_id": session_id_resolved,
+            "session_id_source": session_id_source,
             "entrypoint_pid": str(os.getpid()),
             "switch_reason": switch_reason_resolved,
+            "switch_guard_scope": switch_scope,
+            "switch_guard_binding_ref": str(actor_binding.get("binding_ref", "")).strip(),
             "identity_switch_detected": identity_switch_detected,
             "identity_switch_from": current_actor_identity,
             "identity_switch_to": identity_id,
@@ -582,7 +641,6 @@ def _activate_identity(
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         actor_store = load_actor_binding_store(local_catalog, actor_id_resolved)
         compare_token = str(actor_store.get("compare_token", "")).strip() or str(actor_store.get("binding_version", 0))
-        session_id = f"run:{run_id_resolved}"
         sync = subprocess.run(
             [
                 "python3",
@@ -600,7 +658,7 @@ def _activate_identity(
                 "--run-id",
                 run_id_resolved,
                 "--session-id",
-                session_id,
+                session_id_resolved,
                 "--compare-token",
                 compare_token,
                 "--mutation-lane",
@@ -651,6 +709,8 @@ def _activate_identity(
                 identity_id,
                 "--actor-id",
                 actor_id_resolved,
+                "--session-id",
+                session_id_resolved,
                 "--operation",
                 "activate",
                 "--json-only",
@@ -1221,12 +1281,22 @@ def main() -> int:
         help="explicit actor id for actor-scoped session binding (required for strict activate entry)",
     )
     p_activate.add_argument("--run-id", default="", help="activation run id for audit traceability")
+    p_activate.add_argument("--session-id", default="", help="optional actor session id; defaults to run:<run-id>")
     p_activate.add_argument("--switch-reason", default="explicit_activate", help="reason for activation switch")
+    p_activate.add_argument(
+        "--switch-guard-scope",
+        choices=sorted(SWITCH_GUARD_SCOPE_CHOICES),
+        default=SWITCH_GUARD_SCOPE_ACTOR_SESSION,
+        help=(
+            "switch guard scope: actor_session enforces receipt when same actor+session switches identity; "
+            "actor_global preserves legacy actor-wide guard."
+        ),
+    )
     p_activate.add_argument(
         "--allow-identity-switch",
         action="store_true",
         help=(
-            "explicitly allow switching actor-bound identity; required when current actor binding points to a different identity"
+            "explicitly allow switching actor-bound identity; required when guarded actor binding points to a different identity"
         ),
     )
     p_activate.add_argument(
@@ -1303,6 +1373,11 @@ def main() -> int:
     )
     p_update.add_argument("--auto-converge-active", action="store_true")
     p_update.add_argument("--run-id", default="", help="optional update run id for run-id anchored validators")
+    p_update.add_argument(
+        "--session-id",
+        default="",
+        help="optional actor session id for actor-session entry guard; defaults to actor binding for target identity",
+    )
     p_update.add_argument("--target-branch", default="")
     p_update.add_argument("--release-head-sha", default="")
     p_update.add_argument("--required-gates-run-id", default="")
@@ -1541,15 +1616,17 @@ def main() -> int:
         except Exception as e:
             print(f"[FAIL] {e}")
             return 1
+        validate_run_token = str(args.run_id or "").strip() or f"validate-{args.identity_id}"
+        validate_session_id = f"run:{validate_run_token}"
         rc_actor_binding_entry = _actor_binding_entry_guard(
             identity_id=args.identity_id,
             catalog=args.catalog,
             actor_id=actor_id_validate,
+            session_id=validate_session_id,
             operation="validate",
         )
         if rc_actor_binding_entry != 0:
             return rc_actor_binding_entry
-        validate_run_token = str(args.run_id or "").strip() or f"validate-{args.identity_id}"
         required_gate_bundle_receipt_validate = str(
             runtime_temp_file(
                 channel="required-gate-bundle",
@@ -1640,6 +1717,8 @@ def main() -> int:
                 args.identity_id,
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -1669,6 +1748,8 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
                 "--view",
                 "external",
                 "--disclosure-level",
@@ -1723,6 +1804,8 @@ def main() -> int:
                 "--enforce-first-line-gate",
                 "--operation",
                 "validate",
+                "--actor-id",
+                actor_id_validate,
                 "--blocker-receipt-out",
                 reply_first_line_blocker_receipt,
             ],
@@ -1759,7 +1842,7 @@ def main() -> int:
                 "--blocker-receipt-out",
                 send_time_reply_gate_blocker_receipt,
                 "--outlet-channel-id",
-                "governed_adapter_v1",
+                "final_emit_governed",
                 "--actor-id",
                 actor_id_validate,
                 "--json-only",
@@ -1779,7 +1862,7 @@ def main() -> int:
                 "--enforce-send-time-gate",
                 "--reply-outlet-guard-applied",
                 "--outlet-channel-id",
-                "governed_adapter_v1",
+                "final_emit_governed",
                 "--reply-transport-ref",
                 send_time_reply_file,
                 "--operation",
@@ -1845,6 +1928,8 @@ def main() -> int:
                 "--enforce-coherence-gate",
                 "--operation",
                 "validate",
+                "--actor-id",
+                actor_id_validate,
                 "--blocker-receipt-out",
                 execution_reply_coherence_blocker_receipt,
             ],
@@ -2134,6 +2219,24 @@ def main() -> int:
                 args.identity_id,
                 "--run-id",
                 validate_run_token,
+                "--send-time-gate-status",
+                "UNKNOWN",
+                "--outlet-bypass-detected",
+                "false",
+                "--final-emit-contract-status",
+                "UNKNOWN",
+                "--final-emit-policy-mode",
+                "tool_choice_required",
+                "--final-emit-schema-status",
+                "UNKNOWN",
+                "--actor-id",
+                actor_id_validate,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
                 "--surface-label",
                 "creator_validate",
                 "--operation",
@@ -2151,6 +2254,24 @@ def main() -> int:
                 args.identity_id,
                 "--run-id",
                 validate_run_token,
+                "--send-time-gate-status",
+                "UNKNOWN",
+                "--outlet-bypass-detected",
+                "false",
+                "--final-emit-contract-status",
+                "UNKNOWN",
+                "--final-emit-policy-mode",
+                "tool_choice_required",
+                "--final-emit-schema-status",
+                "UNKNOWN",
+                "--actor-id",
+                actor_id_validate,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
                 "--surface-label",
                 "creator_validate_scan_probe",
                 "--operation",
@@ -2544,6 +2665,8 @@ def main() -> int:
             for cmd in checks:
                 if len(cmd) < 2:
                     continue
+                if cmd[1] == "scripts/render_identity_response_stamp.py":
+                    cmd.extend(["--work-layer", expected_work_layer])
                 if cmd[1] in {
                     "scripts/validate_layer_intent_resolution.py",
                     "scripts/validate_reply_identity_context_first_line.py",
@@ -2561,6 +2684,8 @@ def main() -> int:
             for cmd in checks:
                 if len(cmd) < 2:
                     continue
+                if cmd[1] == "scripts/render_identity_response_stamp.py":
+                    cmd.extend(["--source-layer", expected_source_layer])
                 if cmd[1] == "scripts/compose_and_validate_governed_reply.py":
                     cmd.extend(["--source-layer", expected_source_layer])
                 if cmd[1] in {
@@ -2580,6 +2705,17 @@ def main() -> int:
                     "scripts/validate_work_layer_gate_set_routing.py",
                 }:
                     cmd.extend(["--source-layer", expected_source_layer])
+        actor_id_required_scripts = {
+            "scripts/render_identity_response_stamp.py",
+            "scripts/validate_reply_identity_context_first_line.py",
+            "scripts/validate_send_time_reply_gate.py",
+            "scripts/validate_execution_reply_identity_coherence.py",
+        }
+        for cmd in checks:
+            if len(cmd) < 2:
+                continue
+            if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
+                cmd.extend(["--actor-id", actor_id_validate])
         for cmd in checks:
             rc = _run(cmd)
             if rc != 0:
@@ -2658,7 +2794,9 @@ def main() -> int:
             args.protocol_mode,
             actor_id_activate,
             args.run_id,
+            args.session_id,
             args.switch_reason,
+            args.switch_guard_scope,
             bool(args.allow_identity_switch),
             args.switch_intent_receipt,
             bool(args.allow_cross_actor_switch),
@@ -2733,6 +2871,12 @@ def main() -> int:
             identity_id=args.identity_id,
             catalog=args.catalog,
             actor_id=actor_id_update,
+            session_id=_resolve_bound_session_id_for_identity(
+                catalog=args.catalog,
+                identity_id=args.identity_id,
+                actor_id=actor_id_update,
+                explicit_session_id=str(args.session_id or "").strip(),
+            )[0],
             operation="update",
         )
         if rc_actor_binding_entry != 0:
@@ -2830,7 +2974,7 @@ def main() -> int:
             "--blocker-receipt-out",
             pre_mutation_send_time_blocker,
             "--outlet-channel-id",
-            "governed_adapter_v1",
+            "final_emit_governed",
             "--json-only",
         ]
         if args.layer_intent_text.strip():
@@ -2895,9 +3039,15 @@ def main() -> int:
                     pre_mutation_header_payload.get("blocker_receipt_path", "") or pre_mutation_send_time_blocker
                 ),
                 "governed_outlet_enforced": bool(pre_mutation_header_payload.get("governed_outlet_enforced", False)),
+                "send_time_gate_status": str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper(),
                 "outlet_channel_id": str(pre_mutation_header_payload.get("outlet_channel_id", "")),
                 "outlet_preflight_receipt": str(pre_mutation_header_payload.get("outlet_preflight_receipt", "")),
                 "outlet_bypass_detected": bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)),
+                "final_emit_channel_id": str(pre_mutation_header_payload.get("final_emit_channel_id", "")),
+                "final_emit_policy_mode": str(pre_mutation_header_payload.get("final_emit_policy_mode", "")),
+                "final_emit_schema_id": str(pre_mutation_header_payload.get("final_emit_schema_id", "")),
+                "final_emit_schema_status": str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper(),
+                "final_emit_contract_status": str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper(),
                 "status": "PASS_REQUIRED" if not pre_mutation_gate_error_code else "FAIL_REQUIRED",
             },
         )
@@ -3452,6 +3602,24 @@ def main() -> int:
                 args.identity_id,
                 "--run-id",
                 update_bundle_run_token,
+                "--send-time-gate-status",
+                str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--outlet-bypass-detected",
+                "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
+                "--final-emit-contract-status",
+                str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--final-emit-policy-mode",
+                str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip() or "tool_choice_required",
+                "--final-emit-schema-status",
+                str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--actor-id",
+                actor_id_update,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
                 "--surface-label",
                 "creator_update",
                 "--operation",
@@ -3469,6 +3637,24 @@ def main() -> int:
                 args.identity_id,
                 "--run-id",
                 update_bundle_run_token,
+                "--send-time-gate-status",
+                str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--outlet-bypass-detected",
+                "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
+                "--final-emit-contract-status",
+                str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--final-emit-policy-mode",
+                str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip() or "tool_choice_required",
+                "--final-emit-schema-status",
+                str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--actor-id",
+                actor_id_update,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
                 "--surface-label",
                 "creator_update_scan_probe",
                 "--operation",
@@ -3555,6 +3741,24 @@ def main() -> int:
             pre_mutation_gate_ts,
             "--pre-mutation-gate-receipt",
             str(pre_mutation_gate_receipt),
+            "--send-time-gate-status",
+            str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper(),
+            "--outlet-channel-id",
+            str(pre_mutation_header_payload.get("outlet_channel_id", "")),
+            "--outlet-preflight-receipt",
+            str(pre_mutation_header_payload.get("outlet_preflight_receipt", "")),
+            "--outlet-bypass-detected",
+            "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
+            "--final-emit-channel-id",
+            str(pre_mutation_header_payload.get("final_emit_channel_id", "")),
+            "--final-emit-policy-mode",
+            str(pre_mutation_header_payload.get("final_emit_policy_mode", "")),
+            "--final-emit-schema-id",
+            str(pre_mutation_header_payload.get("final_emit_schema_id", "")),
+            "--final-emit-schema-status",
+            str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper(),
+            "--final-emit-contract-status",
+            str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper(),
             "--why-now",
             why_now,
         ]

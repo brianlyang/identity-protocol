@@ -3353,6 +3353,53 @@ Decision:
 
 ---
 
+### Round-29 addendum: L3 final egress hard-gate closure replay (official-aligned, 2026-03-08)
+
+Scope:
+
+1. 仅覆盖协议控制面“最终输出口”闭环（L3 final emission），不覆盖实例业务债务清理。
+2. 目标是把 `final_emit_governed` 从“建议”升级为“强制合同 + fail-close”。
+
+Cross-verified changes:
+
+1. `scripts/validate_send_time_reply_gate.py`
+   - 严格校验 `final_emit_channel/policy/schema`；
+   - mismatch fail-close：`IP-ASB-STAMP-SESSION-006/007`。
+2. `scripts/execute_identity_upgrade.py`
+   - 对 `--header-first-gate-status PASS_REQUIRED` 场景新增 final emit passthrough 合同硬校验；
+   - 缺失或不一致直接阻断：`IP-OUTLET-004`（不再容忍 external_override 语义兜底）。
+3. `scripts/identity_creator.py`
+   - update 面 required gate bundle 透传 pre-mutation 真实值（send-time/final_emit），去除 `UNKNOWN` 常量透传。
+4. `scripts/release_readiness_check.py`
+   - bundle passthrough 从 selected execution report 回填，避免 strict readiness 面继续注入 `UNKNOWN`。
+
+Replay evidence:
+
+1. Positive:
+   - `/tmp/final_emit_compose_positive_20260308.json`  
+     (`send_time_gate_status=PASS_REQUIRED`, `final_emit_contract_status=PASS_REQUIRED`)
+2. Negative strict probes:
+   - `/tmp/final_emit_sendtime_negative_channel_20260308.json` -> `IP-ASB-STAMP-SESSION-006`
+   - `/tmp/final_emit_sendtime_negative_policy_20260308.json` -> `IP-ASB-STAMP-SESSION-006`
+   - `/tmp/final_emit_sendtime_negative_schema_20260308.json` -> `IP-ASB-STAMP-SESSION-007`
+3. L3 passthrough hard-fail:
+   - `/tmp/final_emit_execute_missing_probe_20260308.log`
+   - `/private/tmp/final_emit_missing_probe_reports/FINAL-EMIT-MISSING-PT-20260308.json`  
+     (`header_first_gate_status=FAIL_REQUIRED`, `pre_mutation_gate_error_code=IP-OUTLET-004`)
+4. Post-exec invariants:
+   - `/tmp/final_emit_outlet_matrix_replay_20260308.json` -> `outlet_matrix_status=PASS_REQUIRED`
+   - `/tmp/final_emit_postexec_mandatory_replay_20260308.json` -> `post_execution_mandatory_status=PASS_REQUIRED`
+5. Surface drift:
+   - `/tmp/final_emit_surface_drift_after_patch_20260308.json` -> `required_gate_surface_drift_status=PASS_REQUIRED`
+
+Decision:
+
+1. 判定“唯一最终输出口（L3）控制面硬闸门”已落地，且具备负向 fail-close 证据。
+2. 仍未闭环项继续留在实例债务域（writeback continuity / prompt lifecycle / baseline clean SHA），不与 L3 控制面结论混淆。
+3. 状态边界保持不变：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+---
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

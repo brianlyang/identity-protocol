@@ -14,6 +14,11 @@ from typing import Any
 
 import yaml
 
+from final_emit_contract_common import (
+    FINAL_EMIT_CHANNEL_ID,
+    FINAL_EMIT_POLICY_MODE,
+    FINAL_EMIT_SCHEMA_ID,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
 from runtime_temp_path_common import runtime_temp_file, runtime_temp_root
@@ -29,6 +34,7 @@ ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
+ERR_FINAL_EMIT_CONTRACT_REQUIRED = "IP-OUTLET-004"
 
 
 def _as_bool(raw: str, default: bool = False) -> bool:
@@ -60,6 +66,43 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     except Exception:
         return None
     return parsed if isinstance(parsed, dict) else None
+
+
+def _validate_final_emit_contract_snapshot(
+    *,
+    send_time_gate_status: str,
+    governed_outlet_enforced: bool,
+    outlet_channel_id: str,
+    outlet_preflight_receipt: str,
+    outlet_bypass_detected: bool,
+    final_emit_channel_id: str,
+    final_emit_policy_mode: str,
+    final_emit_schema_id: str,
+    final_emit_schema_status: str,
+    final_emit_contract_status: str,
+) -> tuple[bool, list[str]]:
+    stale_reasons: list[str] = []
+    if str(send_time_gate_status or "").strip().upper() != "PASS_REQUIRED":
+        stale_reasons.append("send_time_gate_not_pass_required")
+    if not bool(governed_outlet_enforced):
+        stale_reasons.append("governed_outlet_not_enforced")
+    if str(outlet_channel_id or "").strip() != FINAL_EMIT_CHANNEL_ID:
+        stale_reasons.append("outlet_channel_not_final_emit_governed")
+    if not str(outlet_preflight_receipt or "").strip():
+        stale_reasons.append("outlet_preflight_receipt_missing")
+    if bool(outlet_bypass_detected):
+        stale_reasons.append("outlet_bypass_detected")
+    if str(final_emit_channel_id or "").strip() != FINAL_EMIT_CHANNEL_ID:
+        stale_reasons.append("final_emit_channel_not_canonical")
+    if str(final_emit_policy_mode or "").strip() != FINAL_EMIT_POLICY_MODE:
+        stale_reasons.append("final_emit_policy_mode_not_tool_choice_required")
+    if str(final_emit_schema_id or "").strip() != FINAL_EMIT_SCHEMA_ID:
+        stale_reasons.append("final_emit_schema_id_not_canonical")
+    if str(final_emit_schema_status or "").strip().upper() != "PASS_REQUIRED":
+        stale_reasons.append("final_emit_schema_status_not_pass_required")
+    if str(final_emit_contract_status or "").strip().upper() != "PASS_REQUIRED":
+        stale_reasons.append("final_emit_contract_status_not_pass_required")
+    return len(stale_reasons) == 0, stale_reasons
 
 
 def _lane_context(layer_intent_text: str, expected_work_layer: str, expected_source_layer: str) -> dict[str, Any]:
@@ -142,8 +185,9 @@ def _resolve_prompt_contract(
     repo_catalog_path: Path,
     resolved_scope: str,
     resolved_pack_path: str,
+    resolved_source_layer: str = "",
 ) -> dict[str, Any]:
-    source_layer = "project"
+    source_layer = str(resolved_source_layer or "").strip() or "project"
     scope = str(resolved_scope or "").strip()
     pack = Path(str(resolved_pack_path or "")).expanduser().resolve() if str(resolved_pack_path or "").strip() else None
     if pack is None:
@@ -570,9 +614,15 @@ def _base_report(
     pre_mutation_gate_error_code: str = "",
     pre_mutation_gate_receipt: str = "",
     governed_outlet_enforced: bool = False,
+    send_time_gate_status: str = "",
     outlet_channel_id: str = "",
     outlet_preflight_receipt: str = "",
     outlet_bypass_detected: bool = False,
+    final_emit_channel_id: str = "",
+    final_emit_policy_mode: str = "",
+    final_emit_schema_id: str = "",
+    final_emit_schema_status: str = "",
+    final_emit_contract_status: str = "",
     why_now: str = "",
 ) -> dict[str, Any]:
     """
@@ -618,6 +668,7 @@ def _base_report(
         "phase_transition_reason": str(phase_transition_reason or ""),
         "phase_transition_error_code": str(phase_transition_error_code or ""),
         "header_first_gate_status": str(header_first_gate_status or ""),
+        "send_time_gate_status": str(send_time_gate_status or ""),
         "scaffold_consent_gate_status": str(scaffold_consent_gate_status or "PASS_NOT_APPLICABLE"),
         "mutation_plan_disclosed": bool(mutation_plan_disclosed),
         "planned_files": list(planned_files),
@@ -628,6 +679,11 @@ def _base_report(
         "outlet_channel_id": str(outlet_channel_id or ""),
         "outlet_preflight_receipt": str(outlet_preflight_receipt or ""),
         "outlet_bypass_detected": bool(outlet_bypass_detected),
+        "final_emit_channel_id": str(final_emit_channel_id or ""),
+        "final_emit_policy_mode": str(final_emit_policy_mode or ""),
+        "final_emit_schema_id": str(final_emit_schema_id or ""),
+        "final_emit_schema_status": str(final_emit_schema_status or ""),
+        "final_emit_contract_status": str(final_emit_contract_status or ""),
         "why_now": str(why_now or ""),
         "actions_taken": [],
         "checks": [],
@@ -891,7 +947,7 @@ def _run_header_first_gate(
         "--blocker-receipt-out",
         str(receipt_file),
         "--outlet-channel-id",
-        "governed_adapter_v1",
+        FINAL_EMIT_CHANNEL_ID,
         "--json-only",
     ]
     if str(layer_intent_text or "").strip():
@@ -903,19 +959,50 @@ def _run_header_first_gate(
     proc = subprocess.run(cmd, capture_output=True, text=True)
     payload = _parse_json_payload(proc.stdout) or {}
     send_time_status = str(payload.get("send_time_gate_status", "")).strip().upper()
-    ok = proc.returncode == 0 and send_time_status == "PASS_REQUIRED"
+    governed_outlet_enforced = bool(payload.get("governed_outlet_enforced", False))
+    outlet_channel_id = str(payload.get("outlet_channel_id", "")).strip()
+    outlet_preflight_receipt = str(payload.get("outlet_preflight_receipt", "")).strip()
+    outlet_bypass_detected = bool(payload.get("outlet_bypass_detected", False))
+    final_emit_channel_id = str(payload.get("final_emit_channel_id", "")).strip()
+    final_emit_policy_mode = str(payload.get("final_emit_policy_mode", "")).strip()
+    final_emit_schema_id = str(payload.get("final_emit_schema_id", "")).strip()
+    final_emit_schema_status = str(payload.get("final_emit_schema_status", "")).strip().upper()
+    final_emit_contract_status = str(payload.get("final_emit_contract_status", "")).strip().upper()
+    final_emit_ok, final_emit_stale_reasons = _validate_final_emit_contract_snapshot(
+        send_time_gate_status=send_time_status,
+        governed_outlet_enforced=governed_outlet_enforced,
+        outlet_channel_id=outlet_channel_id,
+        outlet_preflight_receipt=outlet_preflight_receipt,
+        outlet_bypass_detected=outlet_bypass_detected,
+        final_emit_channel_id=final_emit_channel_id,
+        final_emit_policy_mode=final_emit_policy_mode,
+        final_emit_schema_id=final_emit_schema_id,
+        final_emit_schema_status=final_emit_schema_status,
+        final_emit_contract_status=final_emit_contract_status,
+    )
+    ok = proc.returncode == 0 and final_emit_ok
+    error_code = str(payload.get("send_time_error_code") or payload.get("error_code") or "").strip()
+    if not final_emit_ok and not error_code:
+        error_code = ERR_FINAL_EMIT_CONTRACT_REQUIRED
     return {
         "ok": ok,
         "rc": proc.returncode,
         "send_time_gate_status": send_time_status,
-        "error_code": str(payload.get("send_time_error_code") or payload.get("error_code") or "").strip(),
+        "error_code": error_code,
         "reply_file": str(reply_file),
         "blocker_receipt_path": str(payload.get("blocker_receipt_path", "")).strip() or str(receipt_file),
         "reply_transport_ref": str(payload.get("reply_transport_ref", "")).strip() or str(reply_file),
-        "governed_outlet_enforced": bool(payload.get("governed_outlet_enforced", False)),
-        "outlet_channel_id": str(payload.get("outlet_channel_id", "")).strip(),
-        "outlet_preflight_receipt": str(payload.get("outlet_preflight_receipt", "")).strip(),
-        "outlet_bypass_detected": bool(payload.get("outlet_bypass_detected", False)),
+        "governed_outlet_enforced": governed_outlet_enforced,
+        "outlet_channel_id": outlet_channel_id,
+        "outlet_preflight_receipt": outlet_preflight_receipt,
+        "outlet_bypass_detected": outlet_bypass_detected,
+        "final_emit_channel_id": final_emit_channel_id,
+        "final_emit_policy_mode": final_emit_policy_mode,
+        "final_emit_schema_id": final_emit_schema_id,
+        "final_emit_schema_status": final_emit_schema_status,
+        "final_emit_contract_status": final_emit_contract_status,
+        "final_emit_contract_ok": final_emit_ok,
+        "final_emit_stale_reasons": final_emit_stale_reasons,
         "stdout_tail": (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else "",
         "stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
     }
@@ -994,6 +1081,19 @@ def main() -> int:
     ap.add_argument("--why-now", default="", help="pre-mutation disclosure rationale bound to run id")
     ap.add_argument("--pre-mutation-gate-ts", default="", help="pre-mutation gate timestamp (UTC)")
     ap.add_argument("--pre-mutation-gate-receipt", default="", help="pre-mutation gate receipt/evidence path")
+    ap.add_argument("--send-time-gate-status", default="", help="optional explicit send-time gate status passthrough")
+    ap.add_argument("--outlet-channel-id", default="", help="optional explicit outlet channel id passthrough")
+    ap.add_argument("--outlet-preflight-receipt", default="", help="optional explicit outlet preflight receipt passthrough")
+    ap.add_argument(
+        "--outlet-bypass-detected",
+        default="",
+        help="optional explicit outlet bypass marker (true/false) for preflight passthrough",
+    )
+    ap.add_argument("--final-emit-channel-id", default="", help="optional final emit channel id passthrough")
+    ap.add_argument("--final-emit-policy-mode", default="", help="optional final emit policy mode passthrough")
+    ap.add_argument("--final-emit-schema-id", default="", help="optional final emit schema id passthrough")
+    ap.add_argument("--final-emit-schema-status", default="", help="optional final emit schema status passthrough")
+    ap.add_argument("--final-emit-contract-status", default="", help="optional final emit contract status passthrough")
     ap.add_argument("--phase-a-refresh-applied", action="store_true")
     ap.add_argument("--phase-b-strict-revalidate-status", default="NOT_APPLICABLE")
     ap.add_argument("--phase-transition-reason", default="")
@@ -1016,12 +1116,31 @@ def main() -> int:
     )
     report_pack_path = str(effective_pack.resolve())
     runtime_output_root = _resolve_runtime_output_root(effective_pack, args.identity_id, protocol_root)
+    resolved_ctx = resolve_identity(
+        args.identity_id,
+        Path(args.repo_catalog).expanduser().resolve(),
+        Path(args.catalog).expanduser().resolve(),
+        preferred_scope=str(args.resolved_scope or ""),
+        allow_conflict=True,
+    )
+    effective_resolved_scope = (
+        str(args.resolved_scope or "").strip()
+        or str(resolved_ctx.get("resolved_scope", "")).strip()
+        or "USER"
+    )
+    effective_resolved_pack_path = (
+        str(args.resolved_pack_path or "").strip()
+        or str(resolved_ctx.get("resolved_pack_path") or resolved_ctx.get("pack_path") or "").strip()
+        or report_pack_path
+    )
+    effective_source_layer = str(resolved_ctx.get("source_layer", "")).strip() or "project"
     prompt_contract = _resolve_prompt_contract(
         identity_id=args.identity_id,
         catalog_path=Path(args.catalog),
         repo_catalog_path=Path(args.repo_catalog),
-        resolved_scope=str(args.resolved_scope or ""),
-        resolved_pack_path=report_pack_path,
+        resolved_scope=effective_resolved_scope,
+        resolved_pack_path=effective_resolved_pack_path,
+        resolved_source_layer=effective_source_layer,
     )
     prompt_path = Path(str(prompt_contract.get("identity_prompt_path", ""))).expanduser().resolve()
     runtime_state_target = (prompt_path.parent / "runtime" / "state" / "prompt_contract.json").resolve()
@@ -1099,9 +1218,15 @@ def main() -> int:
     actor_id = str(args.actor_id or "").strip()
     pre_mutation_gate_receipt = str(args.pre_mutation_gate_receipt or "").strip()
     governed_outlet_enforced = False
+    send_time_gate_status = ""
     outlet_channel_id = ""
     outlet_preflight_receipt = ""
     outlet_bypass_detected = False
+    final_emit_channel_id = ""
+    final_emit_policy_mode = ""
+    final_emit_schema_id = ""
+    final_emit_schema_status = ""
+    final_emit_contract_status = ""
     pre_mutation_gate_error_code = ""
     if not header_first_gate_status:
         if not actor_id:
@@ -1129,19 +1254,56 @@ def main() -> int:
                 )
                 pre_mutation_gate_receipt = pre_mutation_gate_receipt or str(header_probe.get("blocker_receipt_path", ""))
             governed_outlet_enforced = bool(header_probe.get("governed_outlet_enforced", False))
+            send_time_gate_status = str(header_probe.get("send_time_gate_status", "")).strip().upper()
             outlet_channel_id = str(header_probe.get("outlet_channel_id", "")).strip()
             outlet_preflight_receipt = (
                 str(header_probe.get("outlet_preflight_receipt", "")).strip() or pre_mutation_gate_receipt
             )
             outlet_bypass_detected = bool(header_probe.get("outlet_bypass_detected", False))
+            final_emit_channel_id = str(header_probe.get("final_emit_channel_id", "")).strip()
+            final_emit_policy_mode = str(header_probe.get("final_emit_policy_mode", "")).strip()
+            final_emit_schema_id = str(header_probe.get("final_emit_schema_id", "")).strip()
+            final_emit_schema_status = str(header_probe.get("final_emit_schema_status", "")).strip().upper()
+            final_emit_contract_status = str(header_probe.get("final_emit_contract_status", "")).strip().upper()
     elif header_first_gate_status not in {"PASS_REQUIRED", "FAIL_REQUIRED"}:
         header_first_gate_status = "FAIL_REQUIRED"
         pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST
     else:
         governed_outlet_enforced = header_first_gate_status == "PASS_REQUIRED"
-        outlet_channel_id = "external_override"
-        outlet_preflight_receipt = pre_mutation_gate_receipt
-        outlet_bypass_detected = header_first_gate_status != "PASS_REQUIRED"
+        send_time_gate_status = (
+            str(args.send_time_gate_status or "").strip().upper()
+            or ("PASS_REQUIRED" if header_first_gate_status == "PASS_REQUIRED" else "FAIL_REQUIRED")
+        )
+        outlet_channel_id = str(args.outlet_channel_id or "").strip()
+        outlet_preflight_receipt = str(args.outlet_preflight_receipt or "").strip() or pre_mutation_gate_receipt
+        outlet_bypass_detected = _as_bool(str(args.outlet_bypass_detected or ""), default=(header_first_gate_status != "PASS_REQUIRED"))
+        final_emit_channel_id = str(args.final_emit_channel_id or "").strip()
+        final_emit_policy_mode = str(args.final_emit_policy_mode or "").strip()
+        final_emit_schema_id = str(args.final_emit_schema_id or "").strip()
+        final_emit_schema_status = (
+            str(args.final_emit_schema_status or "").strip().upper()
+            or ("FAIL_REQUIRED" if header_first_gate_status != "PASS_REQUIRED" else "PASS_REQUIRED")
+        )
+        final_emit_contract_status = (
+            str(args.final_emit_contract_status or "").strip().upper()
+            or ("FAIL_REQUIRED" if header_first_gate_status != "PASS_REQUIRED" else "PASS_REQUIRED")
+        )
+        if header_first_gate_status == "PASS_REQUIRED":
+            final_emit_ok, _final_emit_stale_reasons = _validate_final_emit_contract_snapshot(
+                send_time_gate_status=send_time_gate_status,
+                governed_outlet_enforced=governed_outlet_enforced,
+                outlet_channel_id=outlet_channel_id,
+                outlet_preflight_receipt=outlet_preflight_receipt,
+                outlet_bypass_detected=outlet_bypass_detected,
+                final_emit_channel_id=final_emit_channel_id,
+                final_emit_policy_mode=final_emit_policy_mode,
+                final_emit_schema_id=final_emit_schema_id,
+                final_emit_schema_status=final_emit_schema_status,
+                final_emit_contract_status=final_emit_contract_status,
+            )
+            if not final_emit_ok:
+                header_first_gate_status = "FAIL_REQUIRED"
+                pre_mutation_gate_error_code = pre_mutation_gate_error_code or ERR_FINAL_EMIT_CONTRACT_REQUIRED
 
     pre_mutation_error = ""
     if header_first_gate_status != "PASS_REQUIRED":
@@ -1168,7 +1330,7 @@ def main() -> int:
             mode=args.mode,
             protocol=protocol,
             catalog_path=args.catalog,
-            resolved_scope=str(args.resolved_scope or ""),
+            resolved_scope=str(effective_resolved_scope or ""),
             resolved_pack_path=report_pack_path,
             runtime_output_root=str(runtime_output_root),
             metrics_path=str((runtime_output_root / "metrics" / f"{args.identity_id}-route-quality.json").resolve()),
@@ -1187,6 +1349,7 @@ def main() -> int:
             applied_gate_set=applied_gate_set,
             lane_transition_reason=lane_transition_reason,
             header_first_gate_status=header_first_gate_status,
+            send_time_gate_status=send_time_gate_status,
             scaffold_consent_gate_status=scaffold_consent_gate_status,
             mutation_plan_disclosed=mutation_plan_disclosed,
             planned_files=planned_files,
@@ -1197,6 +1360,11 @@ def main() -> int:
             outlet_channel_id=outlet_channel_id,
             outlet_preflight_receipt=outlet_preflight_receipt,
             outlet_bypass_detected=outlet_bypass_detected,
+            final_emit_channel_id=final_emit_channel_id,
+            final_emit_policy_mode=final_emit_policy_mode,
+            final_emit_schema_id=final_emit_schema_id,
+            final_emit_schema_status=final_emit_schema_status,
+            final_emit_contract_status=final_emit_contract_status,
             why_now=why_now,
         )
         report.update(
@@ -1222,6 +1390,35 @@ def main() -> int:
                 "notes": "pre-mutation gate blocked execution before any mutation",
             }
         )
+        plan_path = out_dir / f"{run_id}-patch-plan.json"
+        _write_json(
+            plan_path,
+            {
+                "run_id": run_id,
+                "identity_id": args.identity_id,
+                "generated_at": now,
+                "mode": args.mode,
+                "upgrade_required": False,
+                "trigger_reasons": [f"pre_mutation_gate_failed:{pre_mutation_error}"],
+                "patch_surface": [],
+                "planned_actions": ["satisfy_pre_mutation_gate_and_rerun_update"],
+                "planned_files": planned_files,
+                "why_now": why_now,
+                "required_checks": required_checks,
+                "protocol_mode": protocol["protocol_mode"],
+                "protocol_root": protocol["protocol_root"],
+                "protocol_commit_sha": protocol["protocol_commit_sha"],
+                "protocol_ref": protocol["protocol_ref"],
+                "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+                "resolved_scope": str(effective_resolved_scope or ""),
+                "resolved_pack_path": report_pack_path,
+                "pre_mutation_gate_error_code": pre_mutation_error,
+            },
+        )
+        report["actions_taken"] = list(
+            dict.fromkeys([*list(report.get("actions_taken") or []), f"patch_plan_written:{plan_path}"])
+        )
+        report["artifacts"] = list(dict.fromkeys([*list(report.get("artifacts") or []), str(plan_path)]))
         _write_json(report_path, report)
         print(f"report={report_path}")
         print("upgrade_required=False")
@@ -1287,7 +1484,7 @@ def main() -> int:
             mode=args.mode,
             protocol=protocol,
             catalog_path=args.catalog,
-            resolved_scope=str(args.resolved_scope or ""),
+            resolved_scope=str(effective_resolved_scope or ""),
             resolved_pack_path=report_pack_path,
             runtime_output_root=str(runtime_output_root),
             metrics_path=fallback_metrics_path,
@@ -1314,6 +1511,7 @@ def main() -> int:
             phase_transition_reason=str(args.phase_transition_reason or ""),
             phase_transition_error_code=str(args.phase_transition_error_code or ""),
             header_first_gate_status=header_first_gate_status,
+            send_time_gate_status=send_time_gate_status,
             scaffold_consent_gate_status=scaffold_consent_gate_status,
             mutation_plan_disclosed=mutation_plan_disclosed,
             planned_files=planned_files,
@@ -1324,6 +1522,11 @@ def main() -> int:
             outlet_channel_id=outlet_channel_id,
             outlet_preflight_receipt=outlet_preflight_receipt,
             outlet_bypass_detected=outlet_bypass_detected,
+            final_emit_channel_id=final_emit_channel_id,
+            final_emit_policy_mode=final_emit_policy_mode,
+            final_emit_schema_id=final_emit_schema_id,
+            final_emit_schema_status=final_emit_schema_status,
+            final_emit_contract_status=final_emit_contract_status,
             why_now=why_now,
         )
         report.update(
@@ -1342,6 +1545,36 @@ def main() -> int:
                 "artifacts": artifacts,
             }
         )
+        plan_path = out_dir / f"{run_id}-patch-plan.json"
+        _write_json(
+            plan_path,
+            {
+                "run_id": run_id,
+                "identity_id": args.identity_id,
+                "generated_at": now,
+                "mode": args.mode,
+                "upgrade_required": False,
+                "trigger_reasons": [reason],
+                "patch_surface": [],
+                "planned_actions": ["rerun_with_deterministic_lane_instance_or_protocol"],
+                "planned_files": planned_files,
+                "why_now": why_now,
+                "required_checks": required_checks,
+                "protocol_mode": protocol["protocol_mode"],
+                "protocol_root": protocol["protocol_root"],
+                "protocol_commit_sha": protocol["protocol_commit_sha"],
+                "protocol_ref": protocol["protocol_ref"],
+                "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+                "resolved_scope": str(effective_resolved_scope or ""),
+                "resolved_pack_path": report_pack_path,
+                "lane_routing_status": str(lane_routing_payload.get("work_layer_gate_set_routing_status", "FAIL_REQUIRED")),
+                "lane_routing_error_code": str(lane_routing_payload.get("error_code", "IP-LAYER-GATE-001")),
+            },
+        )
+        report["actions_taken"] = list(
+            dict.fromkeys([*list(report.get("actions_taken") or []), f"patch_plan_written:{plan_path}"])
+        )
+        report["artifacts"] = list(dict.fromkeys([*list(report.get("artifacts") or []), str(plan_path)]))
         report_path = out_dir / f"{run_id}.json"
         _write_json(report_path, report)
         print(f"report={report_path}")
@@ -1396,7 +1629,7 @@ def main() -> int:
                 "protocol_commit_sha": protocol["protocol_commit_sha"],
                 "protocol_ref": protocol["protocol_ref"],
                 "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-                "resolved_scope": str(args.resolved_scope or ""),
+                "resolved_scope": str(effective_resolved_scope or ""),
                 "resolved_pack_path": report_pack_path,
                 "capability_activation_status": capability_status,
                 "capability_activation_error_code": capability_error_code,
@@ -1415,7 +1648,7 @@ def main() -> int:
             mode=args.mode,
             protocol=protocol,
             catalog_path=args.catalog,
-            resolved_scope=str(args.resolved_scope or ""),
+            resolved_scope=str(effective_resolved_scope or ""),
             resolved_pack_path=report_pack_path,
             runtime_output_root=str(runtime_output_root),
             metrics_path=str(metrics_path),
@@ -1433,6 +1666,7 @@ def main() -> int:
             lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
             lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
             header_first_gate_status=header_first_gate_status,
+            send_time_gate_status=send_time_gate_status,
             scaffold_consent_gate_status=scaffold_consent_gate_status,
             mutation_plan_disclosed=mutation_plan_disclosed,
             planned_files=planned_files,
@@ -1443,6 +1677,11 @@ def main() -> int:
             outlet_channel_id=outlet_channel_id,
             outlet_preflight_receipt=outlet_preflight_receipt,
             outlet_bypass_detected=outlet_bypass_detected,
+            final_emit_channel_id=final_emit_channel_id,
+            final_emit_policy_mode=final_emit_policy_mode,
+            final_emit_schema_id=final_emit_schema_id,
+            final_emit_schema_status=final_emit_schema_status,
+            final_emit_contract_status=final_emit_contract_status,
             why_now=why_now,
         )
         report.update(
@@ -1515,7 +1754,7 @@ def main() -> int:
                 "protocol_commit_sha": protocol["protocol_commit_sha"],
                 "protocol_ref": protocol["protocol_ref"],
                 "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-                "resolved_scope": str(args.resolved_scope or ""),
+                "resolved_scope": str(effective_resolved_scope or ""),
                 "resolved_pack_path": report_pack_path,
                 "capability_activation_status": capability_status,
                 "capability_activation_error_code": capability_error_code,
@@ -1534,7 +1773,7 @@ def main() -> int:
             mode=args.mode,
             protocol=protocol,
             catalog_path=args.catalog,
-            resolved_scope=str(args.resolved_scope or ""),
+            resolved_scope=str(effective_resolved_scope or ""),
             resolved_pack_path=report_pack_path,
             runtime_output_root=str(runtime_output_root),
             metrics_path=str(metrics_path),
@@ -1552,6 +1791,7 @@ def main() -> int:
             lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
             lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
             header_first_gate_status=header_first_gate_status,
+            send_time_gate_status=send_time_gate_status,
             scaffold_consent_gate_status=scaffold_consent_gate_status,
             mutation_plan_disclosed=mutation_plan_disclosed,
             planned_files=planned_files,
@@ -1562,6 +1802,11 @@ def main() -> int:
             outlet_channel_id=outlet_channel_id,
             outlet_preflight_receipt=outlet_preflight_receipt,
             outlet_bypass_detected=outlet_bypass_detected,
+            final_emit_channel_id=final_emit_channel_id,
+            final_emit_policy_mode=final_emit_policy_mode,
+            final_emit_schema_id=final_emit_schema_id,
+            final_emit_schema_status=final_emit_schema_status,
+            final_emit_contract_status=final_emit_contract_status,
             why_now=why_now,
         )
         report.update(
@@ -1665,7 +1910,7 @@ def main() -> int:
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-            "resolved_scope": str(args.resolved_scope or ""),
+            "resolved_scope": str(effective_resolved_scope or ""),
             "resolved_pack_path": report_pack_path,
             "capability_activation_status": capability_status,
             "capability_activation_error_code": capability_error_code,
@@ -1762,7 +2007,7 @@ def main() -> int:
                         mode=args.mode,
                         protocol=protocol,
                         catalog_path=args.catalog,
-                        resolved_scope=str(args.resolved_scope or ""),
+                        resolved_scope=str(effective_resolved_scope or ""),
                         resolved_pack_path=report_pack_path,
                         runtime_output_root=str(runtime_output_root),
                         metrics_path=str(metrics_path),
@@ -1780,6 +2025,7 @@ def main() -> int:
                         lane_routing_status=str(lane_routing_payload.get("work_layer_gate_set_routing_status", "")),
                         lane_routing_error_code=str(lane_routing_payload.get("error_code", "")),
                         header_first_gate_status=header_first_gate_status,
+                        send_time_gate_status=send_time_gate_status,
                         scaffold_consent_gate_status=scaffold_consent_gate_status,
                         mutation_plan_disclosed=mutation_plan_disclosed,
                         planned_files=planned_files,
@@ -1790,6 +2036,11 @@ def main() -> int:
                         outlet_channel_id=outlet_channel_id,
                         outlet_preflight_receipt=outlet_preflight_receipt,
                         outlet_bypass_detected=outlet_bypass_detected,
+                        final_emit_channel_id=final_emit_channel_id,
+                        final_emit_policy_mode=final_emit_policy_mode,
+                        final_emit_schema_id=final_emit_schema_id,
+                        final_emit_schema_status=final_emit_schema_status,
+                        final_emit_contract_status=final_emit_contract_status,
                         why_now=why_now,
                     ),
                     "upgrade_required": upgrade_required,
@@ -2086,8 +2337,9 @@ def main() -> int:
         identity_id=args.identity_id,
         catalog_path=Path(args.catalog),
         repo_catalog_path=Path(args.repo_catalog),
-        resolved_scope=str(args.resolved_scope or ""),
-        resolved_pack_path=str(args.resolved_pack_path or str(effective_pack)),
+        resolved_scope=effective_resolved_scope,
+        resolved_pack_path=str(effective_resolved_pack_path or str(effective_pack)),
+        resolved_source_layer=effective_source_layer,
     )
     report = {
         "run_id": run_id,
@@ -2154,6 +2406,7 @@ def main() -> int:
         "phase_transition_reason": str(args.phase_transition_reason or ""),
         "phase_transition_error_code": str(args.phase_transition_error_code or ""),
         "header_first_gate_status": header_first_gate_status,
+        "send_time_gate_status": str(send_time_gate_status or ""),
         "scaffold_consent_gate_status": scaffold_consent_gate_status,
         "mutation_plan_disclosed": bool(mutation_plan_disclosed),
         "planned_files": list(planned_files),
@@ -2164,6 +2417,11 @@ def main() -> int:
         "outlet_channel_id": str(outlet_channel_id or ""),
         "outlet_preflight_receipt": str(outlet_preflight_receipt or ""),
         "outlet_bypass_detected": bool(outlet_bypass_detected),
+        "final_emit_channel_id": str(final_emit_channel_id or ""),
+        "final_emit_policy_mode": str(final_emit_policy_mode or ""),
+        "final_emit_schema_id": str(final_emit_schema_id or ""),
+        "final_emit_schema_status": str(final_emit_schema_status or ""),
+        "final_emit_contract_status": str(final_emit_contract_status or ""),
         "why_now": why_now,
     }
     report.update(
@@ -2195,7 +2453,7 @@ def main() -> int:
             "protocol_ref": protocol["protocol_ref"],
             "identity_home": str(default_identity_home()),
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
-            "resolved_scope": str(args.resolved_scope or ""),
+            "resolved_scope": str(effective_resolved_scope or ""),
             "resolved_pack_path": report_pack_path,
             "prompt_change_required": prompt_change_required,
             "prompt_change_applied": prompt_change_applied,
