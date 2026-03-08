@@ -82,6 +82,21 @@ def _default_repo_identity_home(start: Path | None = None) -> Path:
     return (repo_root / ".identity").resolve()
 
 
+def _project_identity_home_from_repo_catalog(repo_root: Path, repo_catalog_path: Path | None = None) -> Path:
+    if repo_catalog_path is not None:
+        try:
+            repo_catalog = repo_catalog_path.expanduser().resolve()
+            # canonical repo catalog: <protocol_root>/identity/catalog/identities.yaml
+            if repo_catalog.parent.name == "catalog" and repo_catalog.parent.parent.name == "identity":
+                protocol_root = repo_catalog.parent.parent.parent.resolve()
+                if protocol_root.name == "identity-protocol-local":
+                    return (protocol_root.parent / ".identity").resolve()
+                return (protocol_root / ".identity").resolve()
+        except Exception:
+            pass
+    return _default_repo_identity_home(repo_root)
+
+
 def _within(path: Path, root: Path) -> bool:
     try:
         path.resolve().relative_to(root.resolve())
@@ -98,7 +113,7 @@ def _classify_catalog_source_layer(
     repo_catalog_path: Path,
 ) -> str:
     c = catalog_path.expanduser().resolve()
-    project_root = _default_repo_identity_home(repo_root)
+    project_root = _project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)
     if _within(c, project_root):
         return "project"
     if _within(c, user_root):
@@ -112,23 +127,22 @@ def _classify_scope_from_pack_path(
     pack_path: Path,
     *,
     repo_root: Path,
+    project_root: Path,
     user_root: Path,
     admin_root: Path,
 ) -> ScopeName:
     p = pack_path.expanduser().resolve()
-    repo_scope_root = _default_repo_identity_home(repo_root)
-    try:
-        p.relative_to(repo_scope_root)
+    if _within(p, project_root):
         return "USER"
-    except Exception:
-        pass
-    try:
-        p.relative_to(user_root)
+    if _within(p, user_root):
         return "USER"
-    except Exception:
-        pass
-    if str(p).startswith(str((repo_root / "identity").resolve())):
+    if _within(p, admin_root):
+        return "ADMIN"
+    if _within(p, (repo_root / "identity").resolve()):
         return "SYSTEM"
+    # Legacy project-local runtime paths (e.g. .agents/identity) should not degrade to UNKNOWN.
+    if _within(p, repo_root):
+        return "USER"
     return "UNKNOWN"
 
 
@@ -287,6 +301,7 @@ def resolve_identity(
     repo_root = _detect_repo_root(repo_catalog_path.parent)
     user_root = _default_user_identity_home()
     admin_root = Path("/etc/codex/identity").resolve()
+    project_root = _project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)
     local_source_layer = _classify_catalog_source_layer(
         local_catalog_path,
         repo_root=repo_root,
@@ -315,7 +330,13 @@ def resolve_identity(
         if profile == "fixture" or runtime_mode == "demo_only":
             scope: ScopeName = "SYSTEM"
         else:
-            scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)
+            scope = _classify_scope_from_pack_path(
+                pack,
+                repo_root=repo_root,
+                project_root=project_root,
+                user_root=user_root,
+                admin_root=admin_root,
+            )
             # P0: avoid UNKNOWN scope entering runtime upgrade chain.
             # For runtime catalogs, UNKNOWN is coerced to USER semantics.
             if source_layer in {"project", "global"} and scope == "UNKNOWN":
@@ -342,7 +363,13 @@ def resolve_identity(
             if profile == "fixture" or runtime_mode == "demo_only":
                 scope = "SYSTEM"
             else:
-                scope = _classify_scope_from_pack_path(pack, repo_root=repo_root, user_root=user_root, admin_root=admin_root)
+                scope = _classify_scope_from_pack_path(
+                    pack,
+                    repo_root=repo_root,
+                    project_root=project_root,
+                    user_root=user_root,
+                    admin_root=admin_root,
+                )
                 if scope == "UNKNOWN":
                     scope = "SYSTEM"
             candidates.append(
@@ -388,6 +415,10 @@ def resolve_identity(
 
     assert chosen is not None
     source_layer = str(chosen.get("source_layer", "")).strip() or "unknown"
+    resolved_scope = str(chosen.get("scope", "")).strip().upper()
+    if not resolved_scope or resolved_scope == "UNKNOWN":
+        # Fail-close normalization: runtime candidates never leak UNKNOWN scope.
+        resolved_scope = "USER" if source_layer in {"project", "global", "unknown"} else "SYSTEM"
     return {
         "identity_id": identity_id,
         "source_layer": source_layer,
@@ -397,7 +428,7 @@ def resolve_identity(
         "profile": str(chosen.get("profile", "")).strip() or ("fixture" if source_layer == "repo_metadata" else "runtime"),
         "runtime_mode": str(chosen.get("runtime_mode", "")).strip()
         or ("demo_only" if source_layer == "repo_metadata" else "local_only"),
-        "resolved_scope": str(chosen.get("scope", "UNKNOWN")),
+        "resolved_scope": resolved_scope,
         "resolved_pack_path": str(chosen.get("pack_path", "")),
         "conflict_detected": conflict_detected,
         "candidate_matches": candidates,
