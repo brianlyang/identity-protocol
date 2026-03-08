@@ -3251,6 +3251,59 @@ Decision:
 
 ---
 
+### Round-28.2 addendum: why 17 rounds still recur (deduplicated root-cause matrix, 2026-03-08)
+
+Scope:
+
+1. 回答“为什么头显问题提了 17 次仍复发”，并将重复叙事压缩为固定 root IDs。
+2. 本加段只做协议审计去重，不新增实例层责任转移。
+
+Cross-verified findings:
+
+1. 文档命中统计（v1.6 governance + review）：
+   - headstamp/HUD/egress 相关命中 `332` 条；
+   - 相关章节标题 `17` 条；
+   - 高频码族集中于同一簇（非 17 个独立故障）。
+2. 现象判定：
+   - 17 次修改属于“局部收口叠加”，主根因未在最终输出口闭环。
+3. 主根因与放大器（冻结命名）：
+   - `RC-HUD-001`：final user-visible emission 未被平台级 hard-gate 到 canonical egress（主根因）。
+   - `RC-HUD-002`：requiredization applicability drift（strict 场景出现 `SKIPPED_NOT_REQUIRED(contract_not_required)`）。
+   - `RC-HUD-003`：actor passthrough/fallback 漂移。
+   - `RC-HUD-004`：tuple/parser/source 分叉导致同轮口径不一致。
+4. 去重结论：
+   - 后续 round 必须映射到 `RC-HUD-001..004`，禁止以同义“新根因”重复入账。
+
+Architect execution directive (single remaining closure):
+
+1. 平台最终输出必须统一到单一 API（建议：`final_emit_governed`）。
+2. 该 API 内部必须强制执行 canonical egress：
+   - `compose_and_validate_governed_reply.py`
+   - `validate_send_time_reply_gate.py`
+   - canonical receipt 校验
+3. 无 receipt 或 bypass 情况一律 `FAIL_REQUIRED`，禁止 direct text fallback。
+4. 将 `final emission hard-gate` 提升为 P0 required mapping，并纳入 drift guard。
+
+Acceptance replay (must pass):
+
+1. 负向 A：direct output bypass -> fail-close，且无 user-visible 正文下发。
+2. 负向 B：actor tuple drift -> fail-close，且 blocker 码族稳定。
+3. 正向：governed compose output -> `Identity-Context|Layer-Context` 首行稳定，`send_time_gate_status=PASS_REQUIRED`。
+
+Evidence:
+
+1. `/tmp/v16_headstamp_hits_20260308.txt`
+2. `/tmp/v16_headstamp_sections_20260308.txt`
+3. `/tmp/v16_headstamp_code_freq_20260308.txt`
+4. `/tmp/hud_probe_reply_20260308.txt`
+
+Decision:
+
+1. Round-28.2 定性为“去重治理完成，主根因未闭环”。
+2. 继续维持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
+---
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

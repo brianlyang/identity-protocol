@@ -3965,6 +3965,67 @@ Machine report artifacts:
 1. 本节仅定义协议控制面优化，不改变实例层“路径迁移/历史清债”的职责切分。
 2. 生命周期边界保持：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
 
+### 8.53 Round-28.2 Headstamp recurrence de-dup closure statement (2026-03-08)
+
+#### Decision (direct answer to recurring concern)
+
+1. “头显丢失”在 v1.6 文档中已被反复记录，不是 17 个独立根因；当前应按去重口径治理，不再按轮次重复叙事。
+2. 本轮 machine scan 统计显示：
+   - v1.6 governance + review 中 headstamp/HUD/egress 相关命中共 `332` 条；
+   - 相关章节标题共 `17` 条；
+   - 高频错误码族集中在同一簇（`IP-ASB-STAMP-SESSION-005`, `IP-HDSTAMP-001/002/003`, `IP-ASB-STAMP-SCAN-004`）。
+3. 结论：17 次修改形成的是“局部收口叠加”，但并未形成“最终输出口硬封闭”，因此会表现为复发。
+
+#### Deduplicated root-cause set (frozen IDs)
+
+1. `RC-HUD-001`（主根因，未闭环）：
+   - 最终 user-visible emission 未被平台级强制绑定到 canonical egress（`compose -> send_time -> final emission`）。
+2. `RC-HUD-002`（放大器）：
+   - requiredization applicability drift，strict 场景出现 `SKIPPED_NOT_REQUIRED(contract_not_required)`。
+3. `RC-HUD-003`（放大器）：
+   - strict 链路 actor 参数透传不完整，触发 fallback actor 漂移。
+4. `RC-HUD-004`（放大器）：
+   - tuple/parser/source 分叉（render/first-line/coherence 输入不完全同构）。
+
+#### Why 17 rounds still recur
+
+1. 已落地修复主要覆盖“脚本执行面 + CI surface”，并未硬接线到“平台最终输出面”。
+2. 因此会出现：
+   - protocol validators replay 通过；
+   - 但真实对话最终输出仍可能绕过 canonical egress，导致头显偶发丢失。
+3. 后续 round 必须按 `RC-HUD-001..004` 归类，不允许新增同义“新根因”条目。
+
+#### Protocol hard-close directive (single remaining closure)
+
+1. 引入唯一最终出口 API（建议名：`final_emit_governed`）：
+   - 所有 user-visible 输出仅允许通过该 API 发送。
+2. `final_emit_governed` 必须强制执行：
+   - `compose_and_validate_governed_reply.py`；
+   - `validate_send_time_reply_gate.py`；
+   - canonical receipt 检查。
+3. 缺失 canonical receipt 时：
+   - 直接 `FAIL_REQUIRED`；
+   - 禁止 direct text fallback。
+4. 将“final emission hard-gate”纳入 required gate mapping 与 drift guard（P0）。
+
+#### Acceptance criteria (must all pass)
+
+1. 负向 A：绕过 compose 直接发 user-visible 文本 -> 必须 fail-close（无正文下发）。
+2. 负向 B：构造 actor tuple 漂移 -> 必须 fail-close 且输出 canonical blocker 码族。
+3. 正向：通过 governed compose 发文 -> 首行稳定包含 `Identity-Context | Layer-Context`，且 `send_time_gate_status=PASS_REQUIRED`。
+
+#### Evidence refs (this round)
+
+1. `/tmp/v16_headstamp_hits_20260308.txt`
+2. `/tmp/v16_headstamp_sections_20260308.txt`
+3. `/tmp/v16_headstamp_code_freq_20260308.txt`
+4. `/tmp/hud_probe_reply_20260308.txt`
+
+#### Boundary
+
+1. 本节为“去重治理 + 单剩余闭环项”声明，不宣称 `RC-HUD-001` 已代码关闭。
+2. 生命周期边界不变：`SPEC_READY / PENDING_INTAKE`；`ACCEPT_WITH_FIX != READY_FOR_PROMOTION`。
+
 
 ## 9) References
 
