@@ -263,10 +263,10 @@ Cross-verified replay (2026-03-09):
 
 1. Positive replay passed:
    - `validate_multimodal_plugin_enforcement` -> `PASS_REQUIRED`
-   - evidence: `/tmp/mm_enforcement_validate_20260309.json`
+   - evidence: `activity/evidence/rq034/2026-03-09/mm_enforcement_validate_20260309.json`
 2. Bundle replay passed with requiredized multimodal key:
    - `required_gate_bundle_runner --operation validate` -> `PASS_REQUIRED`
-   - evidence: `/tmp/mm_bundle_validate_20260309.json`
+   - evidence: `activity/evidence/rq034/2026-03-09/mm_bundle_validate_20260309.json`
 3. Remaining replay debt is not key wiring; it is release-readiness projection parity for provider fields.
 
 Closure replay set to retain:
@@ -344,27 +344,27 @@ Closure replay set to retain:
 ### 11.2 Instance-side self-repair replay (non-protocol mutation)
 
 1. Backfill replay for real instance (`base-repo-audit-expert-v3`) confirms RQ-034 contract auto-wire:
-   - dry-run: `/tmp/rq034_backfill_dryrun_braev3_20260309.json`
-   - apply: `/tmp/rq034_backfill_apply_braev3_20260309.json`
+   - dry-run: `activity/evidence/rq034/2026-03-09/rq034_backfill_dryrun_braev3_20260309.json`
+   - apply: `activity/evidence/rq034/2026-03-09/rq034_backfill_apply_braev3_20260309.json`
 2. Capability arbitration contract replay passes after backfill:
-   - `/tmp/rq034_capability_arbitration_validate_braev3_20260309.log`
+   - `activity/evidence/rq034/2026-03-09/rq034_capability_arbitration_validate_braev3_20260309.log`
 3. Provider binding replay passes with minimal non-secret binding file:
-   - `/tmp/rq034_validator_braev3_after_binding_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_braev3_after_binding_20260309.json`
 
 ### 11.3 Cross-check evidence set (current round)
 
-1. Plugin literal lint: `/tmp/rq034_plugin_literal_lint_20260309.json`
+1. Plugin literal lint: `activity/evidence/rq034/2026-03-09/rq034_plugin_literal_lint_20260309.json`
 2. Multimodal validator positive/negative:
-   - `/tmp/rq034_validator_positive_20260309.json`
-   - `/tmp/rq034_validator_negative_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_positive_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_negative_20260309.json`
 3. Bundle + tuple parity (target probe):
-   - `/tmp/rq034_bundle_target_20260309.json`
-   - `/tmp/rq034_bundle_target_scanprobe_20260309.json`
-   - `/tmp/rq034_tuple_parity_20260309.json`
-4. Strict surface drift: `/tmp/rq034_surface_drift_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_scanprobe_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_tuple_parity_20260309.json`
+4. Strict surface drift: `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309.json`
 5. Three-plane/full-scan (real instance):
-   - `/tmp/rq034_three_plane_v4_20260309.json`
-   - `/tmp/rq034_full_scan_v4_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_three_plane_v4_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_v4_20260309.json`
 
 ### 11.4 Current closure judgment
 
@@ -374,3 +374,249 @@ Closure replay set to retain:
 4. Governance boundary remains unchanged:
    - protocol layer: identify/validate/reject
    - instance layer: migration/backfill/debt cleanup
+
+## 12) Round-29.4 plugin interface exposure normalization addendum (2026-03-09)
+
+### 12.1 Scope freeze (prevent topic drift)
+
+1. v1.6.2 keeps one focused mission: **plugin-system interface normalization under protocol control-plane**.
+2. This addendum does **not** redefine generic full-protocol interfaces from v1.6.0/v1.6.1 streams.
+3. Any cross-topic requirement must still be anchored in:
+   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+   - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`
+
+### 12.2 Interface exposure contract matrix (protocol-owned vs instance-writable)
+
+| Interface surface | Canonical location / shape | Owner | Instance writable | Secret policy | Stability |
+| --- | --- | --- | --- | --- | --- |
+| Plugin registry + plugin contracts + schemas | `identity/protocol/plugins/**` | protocol base repo | No | No secrets allowed | Stable |
+| Provider profile registry | `identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml` | protocol base repo | No | No secrets allowed | Stable |
+| Instance provider binding pointer | `<pack>/runtime/plugins/provider-bindings.local.yaml` | instance runtime | Yes (pointer-only) | Only `credential_ref` pointer (`env:`/`vault:`), never plaintext key | Stable |
+| Active execution report pointer | `<pack>/runtime/state/active_execution_report.json` | protocol execution chain | Runtime-generated | No secrets required | Extendable |
+| Strict bundle tuple passthrough | `scripts/required_gate_bundle_runner.py` args/receipt fields | protocol orchestration | Input only via orchestrator | No secrets required | Stable |
+| Multimodal enforcement receipt | `scripts/validate_multimodal_plugin_enforcement.py` JSON payload | protocol validator | No (consume-only) | No secrets in receipt | Stable |
+
+### 12.3 Protocol-exposed extension hooks (what instances may do)
+
+Instances can extend capability under protocol governance only through these hooks:
+
+1. Provide local binding pointers (`provider_profile_id`, `credential_ref`, `enabled`) in:
+   - `runtime/plugins/provider-bindings.local.yaml`
+2. Select provider profile by registry ID (no profile copy/fork in instance pack).
+3. Supply runtime execution context (`run_id`, actor/layer tuple) through strict orchestrator entry.
+4. Emit protocol-feedback evidence into canonical runtime feedback directories for correlation.
+
+Instances must **not**:
+
+1. Copy plugin contracts/schemas/adapters into identity pack runtime tree.
+2. Replace canonical plugin registry/provider-profile source paths.
+3. Bypass strict validator/error-code contract by ad-hoc local scripts.
+
+### 12.4 Fail-close invariants (frozen)
+
+1. Non-canonical plugin literal path => `FAIL_REQUIRED` (`IP-MM-LINT-001`).
+2. Missing provider binding for required plugin => `FAIL_REQUIRED` (`IP-MM-CONF-001`).
+3. Provider capability mismatch to required plugin contract => `FAIL_REQUIRED` (`IP-MM-CONF-005`).
+4. Instance-side plugin source copy detected => `FAIL_REQUIRED` (`IP-MM-COPY-001`).
+5. Any unresolved/invalid credential reference pointer => `FAIL_REQUIRED` (`IP-MM-CONF-003`).
+
+### 12.5 Four-track cross verification (Roundtable / Vendor / Reference / Replay)
+
+#### T1 Governance roundtable
+
+1. Option A (rejected): per-instance plugin code/contracts copy.
+2. Option B (accepted): centralized plugin SSOT in protocol repo + instance pointer binding only.
+3. Decision freeze: retain Option B to minimize drift entropy and keep single audit choke-point.
+
+#### T2 Vendor track
+
+1. MCP lifecycle emphasizes explicit capability surfaces and deterministic negotiation boundaries.
+2. Codex approvals/security emphasizes centralized policy + controlled execution gateway.
+3. The protocol-owned plugin registry + instance pointer binding model matches both patterns.
+
+#### T3 Reference track
+
+1. Structured-output strictness aligns with schema-first plugin IO contracts.
+2. Agent-skills metadata style aligns with explicit naming, discoverability, and trigger boundaries.
+3. Therefore plugin interface normalization remains reference-consistent without business hardcoding.
+
+#### T4 Replay track
+
+Current replay set (this round):
+
+1. Lint probes:
+   - `activity/evidence/rq034/2026-03-09/rq034_lint_prefix_probe_aa1ec44_20260309.json` => `FAIL_REQUIRED`
+   - `activity/evidence/rq034/2026-03-09/rq034_lint_traversal_probe_aa1ec44_20260309.json` => `FAIL_REQUIRED`
+   - `activity/evidence/rq034/2026-03-09/rq034_lint_canonical_probe_aa1ec44_20260309.json` => `PASS_REQUIRED`
+   - `activity/evidence/rq034/2026-03-09/rq034_lint_canonicalvar_probe_aa1ec44_20260309.json` => `FAIL_REQUIRED`
+   - `activity/evidence/rq034/2026-03-09/rq034_lint_repo_probe_aa1ec44_20260309.json` => `PASS_REQUIRED`
+2. Provider-binding negative probes:
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_no_binding_aa1ec44_20260309.json` => `FAIL_REQUIRED` + `IP-MM-CONF-001`
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_missing_required_binding_entry_aa1ec44_20260309.json` => `FAIL_REQUIRED` + `IP-MM-CONF-001`
+3. Governance gates:
+   - `activity/evidence/rq034/2026-03-09/rq034_docs_contract_after_aa1ec44_20260309.log` => `PASS`
+   - `activity/evidence/rq034/2026-03-09/rq034_ssot_after_aa1ec44_20260309.log` => `OK`
+
+### 12.6 Updated judgment for v1.6.2 interface layer
+
+1. Plugin-scope interface exposure contract is now normalized and replay-verifiable on strict lint/validator surfaces.
+2. Protocol/instance boundary is explicit:
+   - protocol controls schema + validation + rejection policy;
+   - instances provide pointer-level bindings and evidence only.
+3. Promotion status remains unchanged from §11.4 due to remaining non-v1.6.2 items (release-readiness projection parity and external baseline debt).
+
+## 13) Round-29.5 evidence persistence hard-gate addendum (2026-03-09)
+
+### 13.1 Why this addendum
+
+1. `/tmp` evidence is ephemeral and hard to replay after handoff.
+2. Prior rounds repeatedly reported “evidence path exists in text but not in durable storage”.
+3. For v1.6.2 plugin stream, evidence references are now normalized to persistent mirrors and machine-checkable tuple metadata.
+
+### 13.2 Hard rules (gate-level, frozen)
+
+1. Governance doc stream must not use `/tmp/...` as evidence path.
+2. Review stream may mention `/tmp/...` only when mirror + tuple metadata are present (see §13.3).
+3. Persistent mirror path is restricted to:
+   - `activity/evidence/<stream>/<date>/...`
+   - `.identity/<id>/runtime/reports/...`
+4. Every mirrored evidence item must expose tuple fields:
+   - `sha256`
+   - `command`
+   - `rc`
+   - `timestamp`
+
+### 13.3 Canonical mirror index for this stream
+
+1. Evidence mirror root:
+   - `activity/evidence/rq034/2026-03-09/`
+2. Evidence tuple manifest:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+3. This manifest is now the canonical replay index for all v1.6.2 evidence references in this document/review ledger pair.
+
+### 13.4 Gate wiring
+
+1. `scripts/validate_doc_evidence_persistence.py` enforces this addendum.
+2. `scripts/docs_command_contract_check.py` now invokes this validator fail-close.
+3. CI required-gates workflow now executes both checks explicitly.
+4. Delta hardening is enabled in CI:
+   - `--enforce-delta --base <base_sha> --head <head_sha>`
+   - semantics: governance/review docs cannot introduce new `/tmp` evidence debt in changed lines.
+
+### 13.5 Cross-check alignment (roundtable/vendor/reference/replay)
+
+1. Roundtable:
+   - We preserve protocol/instance boundary by storing protocol evidence in repo-controlled `activity/evidence/**`.
+2. Vendor:
+   - Codex security guidance emphasizes auditable control layers and controlled execution boundaries.
+3. Reference:
+   - MCP lifecycle emphasizes explicit lifecycle boundaries and deterministic state transitions.
+4. Replay:
+   - All prior v1.6.2 `/tmp` references in this stream are replaced by persistent mirrors under `activity/evidence/rq034/2026-03-09/`, with tuple metadata in manifest.
+
+Reference anchors:
+
+1. `https://developers.openai.com/codex/agent-approvals-security/`
+2. `https://modelcontextprotocol.io/specification/latest/basic/lifecycle`
+3. `https://docs.github.com/actions/using-workflows/storing-workflow-data-as-artifacts`
+4. `https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-artifact-attestations`
+
+## 14) Round-30.0 addendum: multi-agent × multi-identity (M:N) closure statement (2026-03-09)
+
+### 14.1 Scope and objective (frozen)
+
+1. This addendum freezes only **protocol control-plane M:N closure**:
+   - actor × identity × session strict binding
+   - strict surface/session passthrough consistency
+   - final egress ambiguity fail-close behavior
+2. This addendum does **not** reclassify instance capability debt as M:N debt.
+3. Promotion posture remains governed by all planes; M:N closure alone does not imply `READY_FOR_PROMOTION`.
+
+### 14.2 Protocol hardening landed (code-level)
+
+1. Strict-surface session passthrough hardening:
+   - `scripts/validate_required_gate_surface_drift.py`
+   - `.github/workflows/_identity-required-gates.yml`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/identity_creator.py`
+2. Scan/projection hardening for multimodal preflight and target probe report linkage:
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+3. Intake quorum target probe now receives explicit report path:
+   - `scripts/report_three_plane_status.py`
+4. Commits:
+   - `1b4d6fb`
+   - `d476fc6`
+   - `423c0e0`
+
+### 14.3 Four-track cross verification (deep replay)
+
+#### T1 Governance roundtable
+
+1. M:N classification now has deterministic split:
+   - `m2m_projection.m2m_binding_closure_status`
+   - `m2m_projection.non_m2m_failure_scope`
+2. Decision freeze:
+   - M:N failures only include actor/session/final-egress ambiguity families.
+   - generic bundle/instance capability failures are not auto-labeled M:N.
+
+#### T2 Vendor track
+
+1. MCP lifecycle aligns with explicit negotiated context and deterministic transitions.
+2. Codex approvals/security aligns with centralized control-plane enforcement and fail-close outlets.
+3. The current architecture (single protocol control-plane + strict entry tuple + fail-close final egress) remains vendor-consistent.
+
+#### T3 Reference track
+
+1. Strict structured contract posture remains aligned with schema-first deterministic checks.
+2. Evidence persistence remains aligned with controlled artifact retention and auditable command execution.
+
+#### T4 Replay track (persistent evidence only)
+
+Canonical evidence root:
+
+1. `activity/evidence/m2m-full-scan/2026-03-09-afterfix-v6/`
+
+Key closure artifacts:
+
+1. `m2m_closure_status.afterfix_v6.json`
+2. `m2m_deep_scan_summary.afterfix_v6.json`
+3. `release_readiness_blockers.afterfix_v6.json`
+4. `EVIDENCE_MANIFEST.m2m-deep-scan-afterfix-v6.json`
+5. `m2m_post_commit_quickcheck.423c0e0.json`
+
+Acceptance snapshot (this round):
+
+1. `m2m_core_closure_status = PASS`
+2. `strict_surface_drift_status = PASS_REQUIRED`
+3. `final_emit_positive_all_pass = true`
+4. `final_emit_ambiguous_failclose = true`
+5. `full_scan_target3_m2m = { total_identities: 3, pass: 3, fail: 0 }`
+
+### 14.4 Misjudgment prevention contract (new freeze)
+
+When evaluating closure, enforce this order:
+
+1. Check `m2m_projection.m2m_binding_closure_status` first.
+2. If M:N is `PASS` but overall plane is non-green, classify as non-M:N and read:
+   - `m2m_projection.non_m2m_failure_scope`
+   - `release_readiness_blockers.afterfix_v6.json`
+3. Do not reopen M:N root-cause tickets for non-M:N blockers (`instance_plane/release_plane/repo_plane` scope) unless M:N projection turns FAIL.
+
+### 14.5 Residual blockers (explicitly non-M:N)
+
+Current non-M:N blockers remain:
+
+1. `IP-MM-RUN-002` (runtime multimodal evidence completeness)
+2. `IP-CAP-003` (capability env/auth boundary)
+3. Residual bundle/readiness chain impacts under instance/release/repo scopes
+
+These are instance/release control-plane debts and are excluded from M:N closure reopening.
+
+### 14.6 Final governance judgment for this stream
+
+1. **M:N protocol control-plane is closed in this round.**
+2. Stream posture remains non-promotional due non-M:N blockers.
+3. Future audits must distinguish:
+   - `M:N closure status`
+   - `global release readiness status`

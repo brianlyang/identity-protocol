@@ -136,10 +136,10 @@ Current replay judgment:
 
 Replay evidence:
 
-1. `/tmp/mm_enforcement_validate_20260309.json`
-2. `/tmp/mm_bundle_validate_20260309.json`
-3. `/tmp/docs_contract_v162_audit_20260309.log`
-4. `/tmp/ssot_v162_audit_20260309.log`
+1. `activity/evidence/rq034/2026-03-09/mm_enforcement_validate_20260309.json`
+2. `activity/evidence/rq034/2026-03-09/mm_bundle_validate_20260309.json`
+3. `activity/evidence/rq034/2026-03-09/docs_contract_v162_audit_20260309.log`
+4. `activity/evidence/rq034/2026-03-09/ssot_v162_audit_20260309.log`
 
 Residual replay set for full closure:
 
@@ -208,23 +208,23 @@ Pending:
 ### 9.2 Replay evidence (this round)
 
 1. Lint + drift:
-   - `/tmp/rq034_plugin_literal_lint_20260309.json`
-   - `/tmp/rq034_surface_drift_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_plugin_literal_lint_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309.json`
 2. Validator matrix:
-   - `/tmp/rq034_validator_positive_20260309.json` (`PASS_REQUIRED`)
-   - `/tmp/rq034_validator_negative_20260309.json` (`FAIL_REQUIRED`, `IP-MM-CONF-001`)
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_positive_20260309.json` (`PASS_REQUIRED`)
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_negative_20260309.json` (`FAIL_REQUIRED`, `IP-MM-CONF-001`)
 3. Bundle/parity:
-   - `/tmp/rq034_bundle_target_20260309.json`
-   - `/tmp/rq034_bundle_target_scanprobe_20260309.json`
-   - `/tmp/rq034_tuple_parity_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_scanprobe_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_tuple_parity_20260309.json`
 4. Real-instance self-repair replays:
-   - `/tmp/rq034_backfill_dryrun_braev3_20260309.json`
-   - `/tmp/rq034_backfill_apply_braev3_20260309.json`
-   - `/tmp/rq034_capability_arbitration_validate_braev3_20260309.log`
-   - `/tmp/rq034_validator_braev3_after_binding_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_backfill_dryrun_braev3_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_backfill_apply_braev3_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_capability_arbitration_validate_braev3_20260309.log`
+   - `activity/evidence/rq034/2026-03-09/rq034_validator_braev3_after_binding_20260309.json`
 5. Full-plane replay:
-   - `/tmp/rq034_three_plane_v4_20260309.json`
-   - `/tmp/rq034_full_scan_v4_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_three_plane_v4_20260309.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_v4_20260309.json`
 
 ### 9.3 Updated judgment
 
@@ -234,3 +234,191 @@ Pending:
 4. Posture remains non-promotional:
    - `SPEC_READY / PENDING_INTAKE`
    - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`
+
+## 10) Round-29.4 addendum: plugin interface exposure normalization (2026-03-09)
+
+### 10.1 Why this addendum was required
+
+1. Prior rounds validated plugin wiring, but “which interfaces are protocol-owned vs instance-writable” was still implicit.
+2. Without an explicit interface boundary contract, multi-agent/multi-identity operation risks:
+   - local copy drift,
+   - inconsistent extension patterns,
+   - replay ambiguity on ownership.
+3. This addendum freezes interface boundary semantics under v1.6.2 scope (plugin system only).
+
+### 10.2 Cross-verification synthesis (four tracks)
+
+#### T1 Governance roundtable
+
+1. Decision confirmed: centralized plugin SSOT (`identity/protocol/plugins/**`) + instance pointer binding.
+2. Rejected path: per-instance plugin contract/code replication.
+3. Boundary rule retained:
+   - protocol layer: define/validate/reject;
+   - instance layer: bind pointers/emit evidence/migrate debt.
+
+#### T2 Vendor track
+
+1. MCP lifecycle contract favors explicit capability advertisement and deterministic interface boundaries.
+2. Codex controlled execution/approval model favors centralized policy enforcement surfaces.
+3. Hence, protocol-owned canonical plugin registry + instance pointer-based runtime binding remains vendor-aligned.
+
+#### T3 Reference track
+
+1. Structured output strictness aligns with schema-first interface contracts.
+2. Skills metadata discipline aligns with explicit naming and stable contract paths.
+3. Therefore plugin interface normalization is reference-consistent and auditable.
+
+#### T4 Replay track
+
+1. Canonical-path bypass class replay (all on `aa1ec44`):
+   - prefix probe => `FAIL_REQUIRED`
+   - traversal probe => `FAIL_REQUIRED`
+   - canonical probe => `PASS_REQUIRED`
+   - canonicalvar probe => `FAIL_REQUIRED`
+   - repo probe => `PASS_REQUIRED`
+2. Provider-binding negative replay:
+   - no binding => `FAIL_REQUIRED` + `IP-MM-CONF-001`
+   - missing required plugin entry => `FAIL_REQUIRED` + `IP-MM-CONF-001`
+3. Governance gate replay:
+   - docs command contract => `PASS`
+   - protocol SSOT source => `OK`
+
+### 10.3 Frozen interface contract (execution summary)
+
+1. Protocol-owned immutable surfaces:
+   - `identity/protocol/plugins/**`
+   - plugin registry + provider profile registry + schemas + validator contracts
+2. Instance-writable controlled surfaces:
+   - `<pack>/runtime/plugins/provider-bindings.local.yaml` (pointer only)
+   - `<pack>/runtime/state/active_execution_report.json` (runtime pointer)
+3. Security/secret invariants:
+   - no plaintext credentials in runtime/repo bindings,
+   - only `credential_ref` pointer forms (`env:`/`vault:`),
+   - copied plugin source in instance runtime remains fail-close.
+
+### 10.4 Acceptance statement (this addendum scope)
+
+1. v1.6.2 plugin interface exposure contract is now explicitly documented and replay-backed.
+2. This addendum does not alter previously declared non-promotional posture.
+3. Remaining blockers still outside this addendum scope:
+   - release-readiness provider projection parity closure,
+   - instance-specific debt and baseline cleanliness.
+
+## 11) Round-29.5 addendum: evidence persistence hard-gate execution (2026-03-09)
+
+### 11.1 Enforcement summary
+
+1. This review stream adopts persistent evidence mirrors as canonical replay references.
+2. Current round keeps zero `/tmp` evidence references in-body; all paths point to `activity/evidence/...`.
+3. Tuple metadata for every mirrored evidence file is centralized in:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+
+### 11.2 Contract rules implemented
+
+1. Governance docs fail-close when `/tmp` evidence paths appear.
+2. Review docs may carry `/tmp` only if corresponding mirror + tuple metadata exist.
+3. Allowed persistent mirror roots:
+   - `activity/evidence/<stream>/<date>/...`
+   - `.identity/<id>/runtime/reports/...`
+4. Required tuple fields:
+   - `sha256`, `command`, `rc`, `timestamp`
+
+### 11.3 Gate wiring and acceptance
+
+1. Validator:
+   - `python3 scripts/validate_doc_evidence_persistence.py --json-only`
+2. Docs contract gate (includes evidence persistence sub-check):
+   - `python3 scripts/docs_command_contract_check.py`
+3. CI required-gates workflow now runs both commands as fail-close steps.
+4. CI delta mode:
+   - `python3 scripts/validate_doc_evidence_persistence.py --enforce-delta --base <base_sha> --head <head_sha> --json-only`
+   - blocks newly introduced `/tmp` evidence debt in governance/review streams.
+
+### 11.4 Replay note
+
+1. Evidence mirror set for v1.6.2 stream:
+   - `activity/evidence/rq034/2026-03-09/`
+2. This change is protocol-control-plane hardening only; it does not mutate instance business logic.
+3. External reference set used in this addendum:
+   - `https://developers.openai.com/codex/agent-approvals-security/`
+   - `https://modelcontextprotocol.io/specification/latest/basic/lifecycle`
+   - `https://docs.github.com/actions/using-workflows/storing-workflow-data-as-artifacts`
+   - `https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-artifact-attestations`
+
+## 12) Round-30.0 addendum: M:N full-repo deep-scan closure ledger (2026-03-09)
+
+### 12.1 Audit objective
+
+1. Close recurring ambiguity of “1→N fallback vs M:N strict binding”.
+2. Ensure actor×identity×session closure is independently verifiable from global release status.
+3. Freeze replay evidence on persistent paths (no `/tmp`-only dependency).
+
+### 12.2 Code delta audited in this round
+
+1. `1b4d6fb` — strict-surface session passthrough hardening
+2. `d476fc6` — scan projection parity hardening
+3. `423c0e0` — three-plane intake probe report linkage hardening
+
+### 12.3 Replay bundle (persistent)
+
+Canonical root:
+
+1. `activity/evidence/m2m-full-scan/2026-03-09-afterfix-v6/`
+
+Primary artifacts:
+
+1. `m2m_closure_status.afterfix_v6.json`
+2. `m2m_deep_scan_summary.afterfix_v6.json`
+3. `release_readiness_blockers.afterfix_v6.json`
+4. `EVIDENCE_MANIFEST.m2m-deep-scan-afterfix-v6.json`
+5. `m2m_post_commit_quickcheck.423c0e0.json`
+
+### 12.4 Cross-verified findings (four tracks)
+
+#### T1 Governance
+
+1. Strict-surface session passthrough coverage is now `PASS_REQUIRED`.
+2. CI/e2e/creator wiring no longer leaves the previously observed session blind spots.
+3. M:N projection now separates M:N closure from non-M:N blocker scopes.
+
+#### T2 Vendor
+
+1. Deterministic lifecycle/negotiation expectations (MCP) remain aligned.
+2. Centralized safety/approval enforcement posture (Codex) remains aligned.
+
+#### T3 Reference
+
+1. Structured strict-contract reasoning remains consistent with deterministic fail-close checks.
+2. Evidence persistence and command-tuple replay are retained as mandatory audit primitives.
+
+#### T4 Replay (actual run)
+
+1. Final emit positive matrix:
+   - multi-identity pass for `assistant:codex`
+   - multi-identity pass for `user:yangxi` (bound identities)
+2. Final emit negative probes:
+   - ambiguous actor-only call => `IP-FE-006`
+   - cross-actor/unbound identity => `IP-FE-004`
+3. three-plane M:N projection:
+   - assistant/user sampled identities all `m2m_binding_closure_status = PASS`
+4. full-scan target3:
+   - `summary_unique_targets_m2m = { pass: 3, fail: 0 }`
+
+### 12.5 Decision split (must not be conflated)
+
+1. M:N closure decision: **PASS**
+2. Global release readiness decision: **not closed**
+3. Current non-M:N blocker chain (from replay parser):
+   - `IP-MM-RUN-002` (primary)
+   - `IP-CAP-003` (companion)
+
+Evidence:
+
+1. `release_readiness_blockers.afterfix_v6.json`
+2. `m2m_closure_status.afterfix_v6.json`
+
+### 12.6 Audit-grade statement (frozen wording)
+
+1. “M:N protocol closure completed; remaining blockers are non-M:N.”
+2. “Do not reopen M:N root-cause cluster unless `m2m_binding_closure_status` regresses to FAIL.”
+3. “Promotion remains blocked until non-M:N blockers are closed by corresponding owner lanes.”
