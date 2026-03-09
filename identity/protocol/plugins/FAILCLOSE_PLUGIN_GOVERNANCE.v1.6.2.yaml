@@ -102,6 +102,7 @@ plugin_failclose_profiles:
       - escalation_requirement_mode
       - escalation_signal_accept_nonempty_ref
       - escalation_signal_nonempty_fields
+      - strict_run_id_binding
       - reasoning_four_track_status
       - external_source_freshness_status
       - plugin_registry_status

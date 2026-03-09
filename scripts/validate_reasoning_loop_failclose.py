@@ -423,6 +423,7 @@ def main() -> int:
         "escalation_signal_accept_nonempty_ref": True,
         "escalation_signal_nonempty_fields": [],
         "escalation_requirement_mode": "",
+        "strict_run_id_binding": True,
         "reasoning_runtime_evidence_refs": [],
         "error_code": "",
         "stale_reasons": [],
@@ -541,6 +542,16 @@ def main() -> int:
         _emit_with_status(payload, json_only=args.json_only)
         return 1
     payload["escalation_requirement_mode"] = escalation_requirement_mode
+    strict_run_id_binding_raw = contract.get("strict_run_id_binding", "__DEFAULT__")
+    if strict_run_id_binding_raw == "__DEFAULT__":
+        strict_run_id_binding = args.operation in STRICT_OPERATIONS
+    elif strict_run_id_binding_raw is None:
+        strict_run_id_binding = args.operation in STRICT_OPERATIONS
+    elif isinstance(strict_run_id_binding_raw, str) and not strict_run_id_binding_raw.strip():
+        strict_run_id_binding = args.operation in STRICT_OPERATIONS
+    else:
+        strict_run_id_binding = _boolish(strict_run_id_binding_raw)
+    payload["strict_run_id_binding"] = strict_run_id_binding
 
     level_attempt_fields_cfg = contract.get("level_required_attempt_fields")
     level_run_fields_cfg = contract.get("level_required_run_fields")
@@ -613,18 +624,30 @@ def main() -> int:
     payload["evidence_ref"] = str(report_path)
 
     run_id_binding = str(args.run_id or "").strip()
-    if run_id_binding and payload["runtime_report_run_id"] and payload["runtime_report_run_id"] != run_id_binding:
-        if report_source == "runtime_report":
+    runtime_report_run_id = str(payload.get("runtime_report_run_id", "")).strip()
+    if run_id_binding and strict_run_id_binding and not runtime_report_run_id:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_RUN_ID_MISMATCH
+        payload["stale_reasons"] = ["runtime_report_run_id_missing_for_strict_binding"]
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    if run_id_binding and runtime_report_run_id and runtime_report_run_id != run_id_binding:
+        run_id_mismatch_is_blocking = report_source == "runtime_report" or strict_run_id_binding
+        if run_id_mismatch_is_blocking:
             payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
             payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
             payload["error_code"] = ERR_RUN_ID_MISMATCH
             payload["stale_reasons"] = [
-                f"runtime_report_run_id_mismatch:{payload['runtime_report_run_id']}!={run_id_binding}"
+                (
+                    "run_id_mismatch_blocked:"
+                    + f"source={report_source},report={runtime_report_run_id},expected={run_id_binding}"
+                )
             ]
             _emit_with_status(payload, json_only=args.json_only)
             return 1
         payload["stale_reasons"].append(
-            f"run_id_mismatch_accepted_by_learning_fallback:{payload['runtime_report_run_id']}!={run_id_binding}"
+            f"run_id_mismatch_accepted_by_learning_fallback:{runtime_report_run_id}!={run_id_binding}"
         )
 
     attempts = _extract_attempts(report_doc)

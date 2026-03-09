@@ -956,6 +956,9 @@ Key replay outcomes:
    - generic retry `next_action` is **not** escalation by default.
    - escalation still accepts boolean/token signals and non-empty escalation refs when configured.
 3. Legacy learning-loop validator is aligned with the same threshold semantics to avoid dual-gate drift.
+4. Strict run binding is now explicit and config-driven:
+   - `strict_run_id_binding=true` requires run-id parity even when runtime proof falls back from explicit runtime reports to learning-sample sources.
+   - run-id mismatch under strict operations fail-closes with `IP-RL-RUN-006`.
 
 ### 19.3 Projection and SSOT strengthening
 
@@ -963,5 +966,6 @@ Key replay outcomes:
    - terminal attempt tuple (`index/target_reached/no_target_reached`)
    - completion mode / done guard flags
    - escalation requirement mode / escalation non-empty policy flags
+   - strict run-id binding policy flag (`strict_run_id_binding`)
 2. Governance `required_report_fields` and mapping `report_field_refs` were expanded accordingly to fail-close if projection drops these fields.
 3. `validate_failclose_plugin_projection.py` now recognizes both multimodal and reasoning fail-close status fields when evaluating target probe receipts.

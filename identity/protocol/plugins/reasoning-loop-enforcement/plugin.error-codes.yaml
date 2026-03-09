@@ -15,7 +15,7 @@ codes:
   - code: IP-RL-RUN-005
     description: failed attempts reach/exceed escalation threshold without valid escalation signal
   - code: IP-RL-RUN-006
-    description: selected runtime report run_id mismatches current run binding
+    description: strict run-id binding failed because selected runtime proof source (including fallback source) mismatches current run binding
   - code: IP-RL-RUN-007
     description: L2/L3 four-track evidence references are missing from run evidence
   - code: IP-RL-RUN-008

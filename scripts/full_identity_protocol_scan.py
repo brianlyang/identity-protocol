@@ -803,7 +803,12 @@ def main() -> int:
             ]
             if str(scan_scope_hint or "").strip():
                 mode_guard_cmd.extend(["--scope", str(scan_scope_hint).strip()])
-            mode_guard = _run(mode_guard_cmd, cwd=repo_root)
+            # Scan passes explicit --catalog for each row; bind IDENTITY_CATALOG to the
+            # same path so env drift cannot create false P0 runtime-mode failures.
+            mode_guard_env = dict(os.environ)
+            mode_guard_env["IDENTITY_CATALOG"] = str(catalog)
+            item["runtime_mode_guard_env_catalog_injected"] = True
+            mode_guard = _run(mode_guard_cmd, cwd=repo_root, env=mode_guard_env)
             item["checks"]["runtime_mode_guard"] = {
                 "rc": mode_guard.rc,
                 "ok": mode_guard.ok,
@@ -3288,6 +3293,7 @@ def main() -> int:
                         "escalation_requirement_mode",
                         "escalation_signal_accept_nonempty_ref",
                         "escalation_signal_nonempty_fields",
+                        "strict_run_id_binding",
                         "reasoning_four_track_status",
                         "external_source_freshness_status",
                         "reasoning_enforcement_level",

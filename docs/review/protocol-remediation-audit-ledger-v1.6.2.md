@@ -701,7 +701,8 @@ Validated matrix outcomes:
 
 1. `scripts/validate_reasoning_loop_failclose.py`
    - added `escalation_requirement_mode` (`at_or_exceed` default),
-   - tightened default escalation non-empty fields (retry text is not escalation by default).
+   - tightened default escalation non-empty fields (retry text is not escalation by default),
+   - enabled strict run-id binding (`strict_run_id_binding=true`) so strict operations fail-close on run-id mismatch even when runtime proof source falls back.
 2. `scripts/validate_identity_learning_loop.py`
    - aligned threshold semantics and escalation signal rules with RQ-035 validator.
 3. `scripts/create_identity_pack.py` + plugin contract
@@ -720,3 +721,5 @@ Validated matrix outcomes:
    - at/over-threshold failures without valid escalation now fail-close with `IP-RL-RUN-005`.
 3. Escalation ref path remains valid:
    - non-empty escalation refs are still accepted under strict semantics.
+4. Strict run binding is deterministic:
+   - strict operation + provided `run_id` + mismatched selected/fallback runtime proof now fails-close with `IP-RL-RUN-006`.

@@ -182,6 +182,7 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
             "escalation_requirement_mode": "at_or_exceed",
             "mandatory_fields_per_attempt": ["attempt", "hypothesis", "patch", "expected_effect", "result"],
             "failure_requires_next_action": True,
+            "strict_run_id_binding": True,
             "escalation_signal_fields": [
                 "route_switch_triggered",
                 "human_collaboration_triggered",
@@ -562,6 +563,7 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
         "max_attempts_before_escalation": 3,
         "escalation_requirement_mode": "at_or_exceed",
         "failure_requires_next_action": True,
+        "strict_run_id_binding": True,
         "escalation_signal_fields": [
             "route_switch_triggered",
             "human_collaboration_triggered",
@@ -590,6 +592,7 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
             "escalation_requirement_mode",
             "escalation_signal_accept_nonempty_ref",
             "escalation_signal_nonempty_fields",
+            "strict_run_id_binding",
             "reasoning_four_track_status",
             "external_source_freshness_status",
             "runtime_report_path",

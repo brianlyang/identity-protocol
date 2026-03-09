@@ -212,6 +212,7 @@ To avoid “trace-present but semantic-invalid” drift, the reasoning loop cont
    - escalation threshold is controlled by `escalation_requirement_mode` (default `at_or_exceed`).
    - once escalation threshold is hit, missing escalation signal is fail-close.
    - escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled; generic retry text is not escalation by default.
+   - strict operations use `strict_run_id_binding=true`: when `run_id` is provided, any selected runtime proof source (including fallback sources) must bind to the same run id or fail-close with `IP-RL-RUN-006`.
 6. Enforcement-level policy is configuration-driven (no validator hardcoding):
    - `L1`: attempt trace integrity
    - `L2`: `L1` + four-track evidence refs
