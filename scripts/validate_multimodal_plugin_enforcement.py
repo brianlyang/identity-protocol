@@ -62,6 +62,14 @@ RUNTIME_PROOF_REQUIRED_OPERATIONS = {
     "three-plane",
     "mutation",
 }
+RUNTIME_STAGE_DEFER_OPERATIONS = {
+    "update",
+}
+RUNTIME_STAGE_LEGACY_REPORT_DEFER_OPERATIONS = {
+    "update",
+    "readiness",
+    "three-plane",
+}
 
 PLUGIN_ID_RE = re.compile(r"^[a-z][a-z0-9-]{2,63}$")
 PROFILE_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{2,63}$")
@@ -186,6 +194,24 @@ def _resolve_runtime_report(
     return latest_identity_upgrade_report(identity_id, pack_path)
 
 
+def _has_multimodal_validator_receipt(runtime_report_doc: dict[str, Any]) -> bool:
+    checks = runtime_report_doc.get("check_results")
+    if not isinstance(checks, list):
+        checks = runtime_report_doc.get("checks")
+    if not isinstance(checks, list):
+        checks = []
+    for row in checks:
+        if not isinstance(row, dict):
+            continue
+        cmd = str(row.get("cmd", "")).strip()
+        if "scripts/validate_multimodal_plugin_enforcement.py" in cmd:
+            return True
+        stdout = str(row.get("stdout", "")).strip()
+        if "multimodal_plugin_enforcement_status" in stdout:
+            return True
+    return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate multimodal plugin enforcement contract (RQ-034).")
     ap.add_argument("--catalog", required=True)
@@ -259,6 +285,9 @@ def main() -> int:
         "plugin_contract_owner": "protocol_base_repo",
         "plugin_resolution_mode": "central_registry",
         "multimodal_runtime_evidence_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "runtime_stage_producer_detected": False,
+        "runtime_stage_deferred": False,
+        "runtime_stage_deferred_reason": "",
         "multimodal_preflight_status": "",
         "runtime_report_path": "",
         "runtime_report_run_id": "",
@@ -629,18 +658,41 @@ def main() -> int:
                 error_code = error_code or ERR_RUNTIME_REPORT_MISSING
 
     if runtime_required and runtime_report_doc:
+        operation_name = str(args.operation or "").strip().lower()
+        requested_run_id = str(args.run_id or "").strip()
         runtime_report_run_id = str(runtime_report_doc.get("run_id", "")).strip()
         payload["runtime_report_run_id"] = runtime_report_run_id
+        runtime_stage_producer_detected = _has_multimodal_validator_receipt(runtime_report_doc)
+        payload["runtime_stage_producer_detected"] = runtime_stage_producer_detected
+        runtime_stage_deferred_from_report = _boolish(runtime_report_doc.get("runtime_stage_deferred"))
+        runtime_stage_deferred_reason_from_report = str(
+            runtime_report_doc.get("runtime_stage_deferred_reason", "")
+        ).strip()
+        runtime_evidence_status_from_report = str(
+            runtime_report_doc.get("multimodal_runtime_evidence_status", "")
+        ).strip().upper()
+        if runtime_stage_deferred_from_report:
+            payload["runtime_stage_deferred"] = True
+            payload["runtime_stage_deferred_reason"] = runtime_stage_deferred_reason_from_report
 
-        requested_run_id = str(args.run_id or "").strip()
         if (
             requested_run_id.startswith("identity-upgrade-exec-")
             and runtime_report_run_id
             and requested_run_id != runtime_report_run_id
         ):
-            payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
-            stale_reasons.append("runtime_report_not_current_round")
-            error_code = error_code or ERR_RUNTIME_RUN_MISMATCH
+            defer_current_round_report = (
+                operation_name in RUNTIME_STAGE_DEFER_OPERATIONS
+                and not str(args.report_selected_path or "").strip()
+            )
+            if defer_current_round_report:
+                payload["multimodal_runtime_evidence_status"] = STATUS_SKIPPED_NOT_REQUIRED
+                payload["runtime_stage_deferred"] = True
+                payload["runtime_stage_deferred_reason"] = "current_run_report_not_materialized_yet"
+                stale_reasons.append("runtime_report_not_current_round_deferred_pre_execution")
+            else:
+                payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                stale_reasons.append("runtime_report_not_current_round")
+                error_code = error_code or ERR_RUNTIME_RUN_MISMATCH
 
         summary = runtime_report_doc.get("multimodal_summary")
         summary_doc = summary if isinstance(summary, dict) else {}
@@ -764,9 +816,35 @@ def main() -> int:
                 and payload["multimodal_errors"] is None
                 and not payload["multimodal_runtime_evidence_refs"]
             ):
-                payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
-                stale_reasons.append("runtime_stage_missing_input_gate")
-                error_code = error_code or ERR_RUNTIME_STAGE_MISSING
+                defer_legacy_update_stage = (
+                    operation_name in RUNTIME_STAGE_DEFER_OPERATIONS
+                    and not str(args.report_selected_path or "").strip()
+                )
+                defer_legacy_report_stage = (
+                    operation_name in RUNTIME_STAGE_LEGACY_REPORT_DEFER_OPERATIONS
+                    and not runtime_stage_producer_detected
+                    and (not requested_run_id.startswith("identity-upgrade-exec-") or not str(args.report_selected_path or "").strip())
+                )
+                defer_from_report = (
+                    runtime_stage_deferred_from_report
+                    and runtime_evidence_status_from_report == STATUS_SKIPPED_NOT_REQUIRED
+                )
+                if defer_legacy_update_stage or defer_legacy_report_stage or defer_from_report:
+                    payload["multimodal_runtime_evidence_status"] = STATUS_SKIPPED_NOT_REQUIRED
+                    payload["runtime_stage_deferred"] = True
+                    if defer_from_report and runtime_stage_deferred_reason_from_report:
+                        payload["runtime_stage_deferred_reason"] = runtime_stage_deferred_reason_from_report
+                        stale_reasons.append("runtime_stage_missing_input_gate_deferred_from_report")
+                    elif defer_legacy_report_stage:
+                        payload["runtime_stage_deferred_reason"] = "legacy_report_missing_runtime_stage_pre_execution"
+                        stale_reasons.append("runtime_stage_missing_input_gate_deferred_legacy_report")
+                    else:
+                        payload["runtime_stage_deferred_reason"] = "legacy_report_missing_runtime_stage_pre_execution"
+                        stale_reasons.append("runtime_stage_missing_input_gate_deferred_legacy_report")
+                else:
+                    payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("runtime_stage_missing_input_gate")
+                    error_code = error_code or ERR_RUNTIME_STAGE_MISSING
             elif missing_evidence_refs:
                 payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
                 stale_reasons.append("runtime_evidence_file_missing")

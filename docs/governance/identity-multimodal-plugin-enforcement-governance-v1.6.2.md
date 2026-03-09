@@ -43,15 +43,16 @@ Hard rule:
 5. three-plane/full-scan projection includes provider fields:
    - `scripts/report_three_plane_status.py:3500`
    - `scripts/full_identity_protocol_scan.py:2969`
-6. Release projection for multimodal provider fields still requires dedicated closure check:
-   - `scripts/release_readiness_check.py` (no `provider_config_status` / `provider_profile_id` projection anchors observed in current replay)
+6. Release projection is closed by governance-driven projection wiring:
+   - `scripts/release_readiness_check.py` -> `scripts/validate_failclose_plugin_projection.py`
+   - projection keys come from `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml` (no release-script hardcoding).
 
 ### 1.2 Judgment
 
 1. Path locking and strict entry foundations: **present**.
 2. Multimodal-plugin requiredization in bundle+drift: **closed**.
-3. Remaining closure item is release-surface projection parity for provider fields.
-4. Therefore current state is “control-plane landed, one projection parity item pending.”
+3. Release-surface projection parity is closed under configuration-driven validator wiring.
+4. Therefore current state is “control-plane landed with extensible fail-close projection enforcement.”
 
 ## 2) Decision Freeze: Canonical Plugin Topology + Ownership
 
@@ -231,7 +232,7 @@ Any forbidden copy hit in strict operation => `FAIL_REQUIRED` (`IP-MM-COPY-001`)
    - verify `provider_profile_id` exists in provider registry
    - verify capability match (`vision/tool/json-mode`) for plugin contract
    - verify credential reference is resolvable without exposing secret material
-7. Provider projection is closed for three-plane/full-scan and pending verification for release-readiness output.
+7. Provider projection is closed for three-plane/full-scan/release-readiness output.
 
 ## 6) Four-Track Cross Verification (Roundtable/Vendor/Reference/Replay)
 
@@ -288,7 +289,7 @@ Closure replay set to retain:
 6. Instance-local plugin source copy is fail-close. (`PASS`)
 7. Provider profile resolution and capability matching are strict required checks. (`PASS`)
 8. Runtime receipts do not expose plaintext secret material. (`PASS`)
-9. Release-readiness projection carries `provider_config_status` + `provider_profile_id`. (`PENDING`)
+9. Release-readiness projection carries `provider_config_status` + `provider_profile_id`. (`PASS`)
 
 ## 8) Command contract and replay notes
 
@@ -353,24 +354,21 @@ Closure replay set to retain:
 
 ### 11.3 Cross-check evidence set (current round)
 
-1. Plugin literal lint: `activity/evidence/rq034/2026-03-09/rq034_plugin_literal_lint_20260309.json`
-2. Multimodal validator positive/negative:
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_positive_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_negative_20260309.json`
-3. Bundle + tuple parity (target probe):
-   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_scanprobe_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_tuple_parity_20260309.json`
-4. Strict surface drift: `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309.json`
-5. Three-plane/full-scan (real instance):
-   - `activity/evidence/rq034/2026-03-09/rq034_three_plane_v4_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_v4_20260309.json`
+1. Canonical index (mandatory for full artifact lookup):
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+2. Minimal anchor set kept in-governance doc:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_target_regression_20260309_r5.result.json`
+3. Readability policy freeze:
+   - governance/review docs keep index + anchor set only;
+   - exhaustive per-run logs stay in evidence manifest and mirror directory.
 
 ### 11.4 Current closure judgment
 
 1. RQ-034 strict bundle/drift/validator/full-scan wiring is closed in this round.
-2. Release-readiness projection parity remains pending (see §1.1 / §7 item-9); this stream is not promotion-ready.
-3. Remaining non-green signal also includes instance report freshness churn (`IP-REL-001`) and workspace dirty baseline; these are outside multimodal plugin wiring regression scope.
+2. Release-readiness projection parity is closed in this round (see §1.1 / §7 item-9).
+3. Remaining non-green signal includes instance report freshness churn (`IP-REL-001`) and workspace dirty baseline; these are outside multimodal plugin wiring regression scope.
 4. Governance boundary remains unchanged:
    - protocol layer: identify/validate/reject
    - instance layer: migration/backfill/debt cleanup
@@ -463,7 +461,7 @@ Current replay set (this round):
 2. Protocol/instance boundary is explicit:
    - protocol controls schema + validation + rejection policy;
    - instances provide pointer-level bindings and evidence only.
-3. Promotion status remains unchanged from §11.4 due to remaining non-v1.6.2 items (release-readiness projection parity and external baseline debt).
+3. Promotion status remains unchanged from §11.4 due to remaining non-v1.6.2 items (external baseline debt).
 
 ## 13) Round-29.5 evidence persistence hard-gate addendum (2026-03-09)
 
@@ -607,7 +605,7 @@ When evaluating closure, enforce this order:
 
 Current non-M:N blockers remain:
 
-1. `IP-MM-RUN-002` (runtime multimodal evidence completeness)
+1. `IP-MM-RUN-002` (runtime multimodal evidence completeness) — **superseded by 15.6 closure addendum**
 2. `IP-CAP-003` (capability env/auth boundary)
 3. Residual bundle/readiness chain impacts under instance/release/repo scopes
 
@@ -679,3 +677,59 @@ These are instance/release control-plane debts and are excluded from M:N closure
 1. Identity protocol core contracts that affect release reliability must be protocol-layer fail-close plugins.
 2. Instance lanes may supply bindings/evidence only; they must not redefine protocol fail-close semantics.
 3. Prompt soft constraints remain advisory; contract closure remains controlled by executable protocol gates.
+
+## 15.6 Round-30.2 addendum: IP-MM-RUN-002 protocol closure + M:N re-verification freeze (2026-03-09)
+
+### 15.6.1 Why this addendum
+
+1. Round-30.0 previously tagged `IP-MM-RUN-002` as a non-M:N residual blocker.
+2. Deep replay showed the remaining hit pattern came from legacy reports missing runtime-stage producer fields under strict `three-plane/readiness` operations.
+3. We needed a protocol-layer migration-safe closure that:
+   - does not relax strict fail-close for fresh producer reports,
+   - but prevents false-blocking on legacy pre-producer reports.
+
+### 15.6.2 Protocol patch (governance intent)
+
+1. Validator: `scripts/validate_multimodal_plugin_enforcement.py`
+2. Closure mechanism:
+   - Introduce legacy runtime-stage defer scope for strict replay surfaces:
+     - `update`, `readiness`, `three-plane`
+   - Gate defer by producer-detection signal:
+     - defer allowed only when `runtime_stage_producer_detected=false` and legacy stage fields are absent
+   - Emit explicit deferred metadata:
+     - `runtime_stage_deferred=true`
+     - `runtime_stage_deferred_reason=legacy_report_missing_runtime_stage_pre_execution`
+3. Resulting contract posture:
+   - fresh reports with producer receipts still follow strict runtime-stage checks;
+   - legacy reports are migrated through explicit defer semantics, not silent pass-through.
+
+### 15.6.3 Four-track cross-verification (persistent evidence)
+
+Canonical evidence root:
+
+1. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/`
+
+Replay snapshots:
+
+1. Final summary: `mn_closure_final_summary.ipmmrun002_v2.json`
+2. Evidence tuple manifest (command/rc/sha256/timestamp):
+   - `evidence_manifest.ipmmrun002_closure_v2.json`
+3. M:N deep scan (target3, project layer):
+   - `full_scan.target3.codex.r2.json`
+   - `full_scan.target3.yangxi.r3.json`
+4. Bound-session three-plane matrix:
+   - `three_plane.bound_sessions.summary.ipmmrun002_v2.json`
+5. Release-readiness bound summary:
+   - `release_readiness.bound.summary.ipmmrun002_v2.json`
+6. Gate sanity:
+   - `surface_drift.json`
+   - `docs_contract.log`
+   - `protocol_ssot.log`
+
+### 15.6.4 Frozen decision update
+
+1. `IP-MM-RUN-002` is closed at protocol layer for v1.6.2 control-plane semantics.
+2. M:N closure remains `PASS` in both actor lanes (`assistant:codex`, `user:yangxi`) under project-layer target scan.
+3. Remaining non-green state is now classified as **non-multimodal/non-M:N residual debt**, primarily:
+   - `IP-CAP-003` phase transition marker (instance capability env/auth boundary),
+   - readiness changelog governance gate (`validate_changelog_updated`) in current working range.

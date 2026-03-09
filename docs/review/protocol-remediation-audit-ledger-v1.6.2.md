@@ -132,7 +132,7 @@ Current replay judgment:
 
 1. Multimodal key requiredization is closed in bundle/drift.
 2. Strict validator replay is positive and requiredized (`PASS_REQUIRED`).
-3. Remaining closure item is release-readiness projection parity for provider fields.
+3. Release-readiness projection parity is closed via governance-driven projection validator wiring.
 
 Replay evidence:
 
@@ -165,14 +165,13 @@ Completed:
 
 Pending:
 
-1. Release-readiness output projection parity for `provider_config_status` + `provider_profile_id`.
-2. Negative replay archive completion for naming/path/copy/provider mismatch matrix.
-3. CI literal-path lint for plugin topology whitelist.
+1. Negative replay archive completion for naming/path/copy/provider mismatch matrix.
+2. CI literal-path lint for plugin topology whitelist.
 
 ## 6) Current posture
 
 1. v1.6.2 stream has landed runtime closure for `asb16-rq-034` in strict bundle/drift/validator surfaces.
-2. Current blocker is release-readiness projection parity and residual replay archive completion.
+2. Current blocker is residual replay archive completion and baseline freshness debt.
 3. Posture remains non-promotional:
    - `SPEC_READY / PENDING_INTAKE`
    - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`
@@ -207,29 +206,20 @@ Pending:
 
 ### 9.2 Replay evidence (this round)
 
-1. Lint + drift:
-   - `activity/evidence/rq034/2026-03-09/rq034_plugin_literal_lint_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309.json`
-2. Validator matrix:
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_positive_20260309.json` (`PASS_REQUIRED`)
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_negative_20260309.json` (`FAIL_REQUIRED`, `IP-MM-CONF-001`)
-3. Bundle/parity:
-   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_bundle_target_scanprobe_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_tuple_parity_20260309.json`
-4. Real-instance self-repair replays:
-   - `activity/evidence/rq034/2026-03-09/rq034_backfill_dryrun_braev3_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_backfill_apply_braev3_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_capability_arbitration_validate_braev3_20260309.log`
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_braev3_after_binding_20260309.json`
-5. Full-plane replay:
-   - `activity/evidence/rq034/2026-03-09/rq034_three_plane_v4_20260309.json`
-   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_v4_20260309.json`
+1. Canonical evidence index:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+2. Minimal replay anchor set:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_target_regression_20260309_r5.result.json`
+3. Ledger readability policy:
+   - keep only index + anchor set in review doc;
+   - keep exhaustive per-run evidence in manifest/mirror path.
 
 ### 9.3 Updated judgment
 
 1. Multimodal protocol-control-plane strict wiring (bundle/drift/validator/full-scan) is closed for v1.6.2.
-2. Release-readiness projection parity remains pending; treat stream as partially closed, non-promotional.
+2. Release-readiness projection parity is closed in this round.
 3. Remaining non-green signals are outside RQ-034 strict wiring itself (instance freshness churn / dirty baseline).
 4. Posture remains non-promotional:
    - `SPEC_READY / PENDING_INTAKE`
@@ -441,21 +431,68 @@ Evidence:
 
 ### 13.3 Replay evidence
 
-1. invariants replay:
-   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
-   - expected/actual: `PASS_REQUIRED`, `plugin_wiring_violation_count=0`, `prompt_binding_violation_count=0`.
-2. strict surface drift replay:
-   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
-   - expected/actual: `PASS_REQUIRED`.
-3. docs + SSOT replay:
-   - `activity/evidence/rq034/2026-03-09/rq034_docs_contract_20260309_r7.log` (rc=0)
-   - `activity/evidence/rq034/2026-03-09/rq034_ssot_20260309_r7.log` (rc=0)
-4. target full-scan regression freeze replay:
-   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_target_regression_20260309_r5.result.json`
-   - expected/actual: `PASS_REQUIRED`, `summary.p0=0`.
+1. Canonical evidence index:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+2. Required replay anchors:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json` (`PASS_REQUIRED`)
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json` (`PASS_REQUIRED`)
+   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_target_regression_20260309_r5.result.json` (`PASS_REQUIRED`, `summary.p0=0`)
 
 ### 13.4 Judgment
 
 1. Protocol-level fail-close plugin standardization is now machine-enforced and replay-backed.
 2. RQ-034 is no longer a standalone special-case; it is now the template path for future protocol-core plugins.
 3. Remaining non-green states remain instance evidence/runtime debts, not protocol wiring ambiguity.
+
+## 14) Round-30.2 addendum: IP-MM-RUN-002 closure replay ledger (2026-03-09)
+
+### 14.1 Scope
+
+1. Close `IP-MM-RUN-002` as a protocol migration blocker (not an M:N binding blocker).
+2. Re-run M:N matrix with actor-bound sessions to avoid false negatives from unbound session-id probes.
+3. Freeze evidence under persistent path with tuple metadata (command/rc/sha256/timestamp).
+
+### 14.2 Code delta audited
+
+1. `scripts/validate_multimodal_plugin_enforcement.py`
+   - added `RUNTIME_STAGE_LEGACY_REPORT_DEFER_OPERATIONS={update,readiness,three-plane}`
+   - added producer-detection-gated legacy defer for missing runtime-stage fields
+   - preserved strict fail-close for non-legacy/non-deferred runtime-stage violations
+
+### 14.3 Replay evidence (persistent)
+
+Canonical root:
+
+1. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/`
+
+Primary artifacts:
+
+1. `mn_closure_final_summary.ipmmrun002_v2.json`
+2. `evidence_manifest.ipmmrun002_closure_v2.json`
+3. `full_scan.target3.codex.r2.json`
+4. `full_scan.target3.yangxi.r3.json`
+5. `three_plane.bound_sessions.summary.ipmmrun002_v2.json`
+6. `release_readiness.bound.summary.ipmmrun002_v2.json`
+
+### 14.4 Cross-verification conclusion
+
+1. full-scan target3 (project layer) shows `summary_unique_targets={p0:0,p1:0,ok:3}` for both actors.
+2. three-plane bound-session matrix:
+   - `all_send_time_pass=true`
+   - `all_mm_pass=true`
+   - `ip_mm_run_002_hits=[]`
+3. release-readiness bound matrix:
+   - `ip_mm_run_002_hits=[]`
+   - remaining nonzero rc is not multimodal; current replay points to changelog governance gate.
+4. gate sanity:
+   - surface drift pass
+   - docs contract pass
+   - protocol SSOT pass
+
+### 14.5 Ledger decision update
+
+1. `IP-MM-RUN-002` is removed from active blocker list for v1.6.2 protocol control-plane closure.
+2. M:N closure remains frozen as `PASS`; do not reopen M:N root-cause unless projection regresses.
+3. Remaining residuals are tracked as non-M:N:
+   - `IP-CAP-003` (instance capability boundary marker),
+   - readiness changelog governance gate (`validate_changelog_updated`).

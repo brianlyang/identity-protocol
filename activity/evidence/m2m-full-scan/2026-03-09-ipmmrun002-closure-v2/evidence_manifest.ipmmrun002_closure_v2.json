@@ -1,0 +1,70 @@
+{
+  "stream": "ipmmrun002_closure_v2",
+  "generated_at_utc": "2026-03-09T13:55:51Z",
+  "records": [
+    {
+      "name": "surface_drift_after_fix",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/surface_drift.after_fix.json",
+      "rc": 0,
+      "sha256": "3c46b738205292f27ef5464a33632b789baa66b8be1b5529a7b82b4404a0361c",
+      "timestamp_utc": "2026-03-09T13:54:34Z"
+    },
+    {
+      "name": "docs_contract_after_docs",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/docs_contract.after_docs.log",
+      "rc": 0,
+      "sha256": "19c1234c2b810716364cc9c1ffa94a8ca4bc49363aee30560c21af8cce95e137",
+      "timestamp_utc": "2026-03-09T13:54:14Z"
+    },
+    {
+      "name": "protocol_ssot_after_docs",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/protocol_ssot.after_docs.log",
+      "rc": 0,
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "timestamp_utc": "2026-03-09T13:54:05Z"
+    },
+    {
+      "name": "full_scan_codex_r2",
+      "command": "python3 scripts/full_identity_protocol_scan.py ... --actor-id assistant:codex",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.codex.r2.json",
+      "rc": 0,
+      "sha256": "b4a4242112f3e138b1891642b92132c3b8f872b6f44afff8afb9e53a9dd5ed03",
+      "timestamp_utc": "2026-03-09T13:44:33Z"
+    },
+    {
+      "name": "full_scan_yangxi_r3",
+      "command": "python3 scripts/full_identity_protocol_scan.py ... --actor-id user:yangxi",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.yangxi.r3.json",
+      "rc": 0,
+      "sha256": "3664b87ae38a8fe994c8d3b7c3372e9f90aaa8a8df82bc10163a886e71eca7c2",
+      "timestamp_utc": "2026-03-09T13:47:32Z"
+    },
+    {
+      "name": "three_plane_bound_summary",
+      "command": "python3 scripts/report_three_plane_status.py (bound-session matrix)",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/three_plane.bound_sessions.summary.ipmmrun002_v2.json",
+      "rc": null,
+      "sha256": "a39b76578d1e6888ed052f0f75fd3c3adb42c1ba48a505ff31d7a96e3a9333f0",
+      "timestamp_utc": "2026-03-09T13:36:02Z"
+    },
+    {
+      "name": "release_readiness_bound_summary",
+      "command": "python3 scripts/release_readiness_check.py (bound-session matrix)",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json",
+      "rc": null,
+      "sha256": "2ea5ece6bb74b31065dd8e800b2cfe8e0dfee715869e1b6ba931fee5809624ac",
+      "timestamp_utc": "2026-03-09T13:37:47Z"
+    },
+    {
+      "name": "mn_final_summary",
+      "command": "python3 <summary_generator>",
+      "artifact_path": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/mn_closure_final_summary.ipmmrun002_v2.json",
+      "rc": null,
+      "sha256": "0a1bbd6165e7a290c1c007ea617e6c2ab550266660f8106b6a3513355a081ccf",
+      "timestamp_utc": "2026-03-09T13:55:06Z"
+    }
+  ]
+}
