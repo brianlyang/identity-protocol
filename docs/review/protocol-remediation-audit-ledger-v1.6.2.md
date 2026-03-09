@@ -620,3 +620,61 @@ Cross-surface replay:
    - required-gates workflow target-regression step now iterates all resolved `IDS`;
    - fixture/demo ids use baseline mode;
    - non-fixture ids use strict `--enforce-m2m-pass`.
+
+## 17) Round-30.6 addendum: M:N hard-close closure proof (2026-03-10)
+
+### 17.1 Audit objective
+
+1. Convert the last M:N residual gap from advisory posture into deterministic fail-close:
+   - explicit session selector enforcement,
+   - canonical pointer switch receipt enforcement,
+   - strict compose/session mismatch fail-close continuity.
+2. Verify closure with multi-agent × multi-identity replay matrix (not single-lane anecdotal probes).
+
+### 17.2 Code changes audited (commits + files)
+
+1. `bb3692a` (`fix(m2m): hard-close activate session/receipt gap for canonical pointer switch`)
+   - `scripts/identity_creator.py`
+   - `scripts/sync_session_identity.py`
+2. `140d01f` (`fix(m2m): require explicit session selector at governed compose entry`)
+   - `scripts/compose_and_validate_governed_reply.py`
+   - `scripts/execute_identity_upgrade.py`
+
+### 17.3 Protocol semantics now enforced
+
+1. activate lane:
+   - explicit `--session-id` required; run-id-derived activate session is blocked (`IP-ACT-SESSION-001`).
+2. canonical pointer switch:
+   - tuple-bound switch intent receipt required for identity change (`IP-ASB-MB-008` / `IP-ASB-MB-009`).
+3. governed compose lane:
+   - explicit `--session-id` required (`IP-ASB-SESSION-ENTRY-001`).
+   - session/identity mismatch remains strict fail-close (`IP-HDSTAMP-002`).
+
+### 17.4 Replay evidence (persistent)
+
+Canonical root:
+
+1. `activity/evidence/v162-cross-verify/2026-03-10/round308-m2m-hardclose-matrix/`
+
+Manifest:
+
+1. `EVIDENCE_MANIFEST.round308-m2m-hardclose-matrix.json`
+
+Validated matrix outcomes:
+
+1. matched actor/session/identity rows pass (`PASS_REQUIRED`).
+2. cross-session or cross-identity mismatch rows fail-close (`IP-HDSTAMP-002`).
+3. strict final egress without session fails-close; with bound session passes.
+4. strict scan surface continuity:
+   - `surface_drift.after_round308` -> `PASS_REQUIRED`
+   - `control_plane_invariants.after_round308` -> `PASS_REQUIRED`
+   - `full_scan.target.base_repo_architect.strict_bound` -> `summary.ok=1`, `summary.p0=0`, `summary_m2m.pass=1`
+   - `three_plane.base_repo_architect.strict_bound` -> `m2m_projection.m2m_binding_closure_status=PASS`
+
+### 17.5 Ledger decision update
+
+1. M:N protocol control-plane residual implicit-switch gap is closed under strict governance lanes.
+2. Remaining non-green outcomes are non-M:N owner-lane debt and must not be mislabeled as reopened M:N protocol regression.
+3. Promotion posture remains scope-accurate:
+   - M:N control-plane: hard-closed in strict lanes.
+   - global release readiness: still decided by non-M:N gates.

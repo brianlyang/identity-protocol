@@ -852,3 +852,82 @@ Key replay outcomes:
    - `.github/workflows/_identity-required-gates.yml` now runs target regression for **all resolved `IDS`** (not only `PRIMARY_ID`).
    - fixture/demo identities stay on baseline `p0` regression mode;
    - non-fixture identities automatically run with `--enforce-m2m-pass`.
+
+## 18) Round-30.6 M:N hard-close addendum (2026-03-10)
+
+### 18.1 Why this addendum exists
+
+1. Prior rounds closed major M:N wiring gaps, but one residual class remained: implicit or weakly-audited identity/session switching that can still create “identity drift perception”.
+2. This round converts the remaining edges from “policy recommendation” into **fail-close protocol behavior**.
+3. Scope is protocol control-plane only (no instance business logic hardcoding).
+
+### 18.2 Hard-close changes landed (commits frozen)
+
+1. `bb3692a` — `fix(m2m): hard-close activate session/receipt gap for canonical pointer switch`
+   - `identity_creator.py activate` now requires **explicit** `--session-id`; run-id-derived session fallback is blocked (`IP-ACT-SESSION-001`).
+   - canonical pointer identity switch now requires tuple-bound `--switch-intent-receipt` (`actor_id/from_identity_id/to_identity_id`), fail-close with:
+     - `IP-ASB-MB-008` (receipt missing),
+     - `IP-ASB-MB-009` (receipt invalid).
+   - `sync_session_identity.py` mutation order is hardened (actor-binding mutation + canonical pointer write with rollback guard) to prevent partial state drift.
+2. `140d01f` — `fix(m2m): require explicit session selector at governed compose entry`
+   - `compose_and_validate_governed_reply.py` now requires explicit `--session-id`, fail-close with `IP-ASB-SESSION-ENTRY-001`.
+   - strict mismatch remains fail-close with `IP-HDSTAMP-002`.
+   - `execute_identity_upgrade.py` pre-mutation governed compose path now forwards explicit `--session-id`.
+
+### 18.3 Four-track deep cross-verification (roundtable / vendor / reference / replay)
+
+#### T1 Governance roundtable
+
+1. M:N tuple is now operationally enforced at both mutation and emission boundaries:
+   - mutation boundary (`activate/sync_session_identity`) requires explicit session and audited switch intent,
+   - emission boundary (`compose/final_emit`) requires explicit session selector and binding match.
+2. Decision freeze:
+   - no implicit session derivation in strict activate lane,
+   - no canonical pointer switch without audited intent receipt.
+
+#### T2 Vendor track
+
+1. This aligns with deterministic control-plane principles used by multi-agent systems:
+   - explicit context in,
+   - explicit audited transition receipt for identity switch,
+   - fail-close on ambiguity.
+2. Net effect: removes ambiguity-driven output drift under multi-agent / multi-identity concurrency.
+
+#### T3 Reference track
+
+1. The protocol now binds state transition validity to tuple-complete constraints instead of fallback inference.
+2. Error family is explicit and auditable across boundaries:
+   - `IP-ACT-SESSION-001`
+   - `IP-ASB-MB-008`
+   - `IP-ASB-MB-009`
+   - `IP-ASB-SESSION-ENTRY-001`
+   - `IP-HDSTAMP-002`
+
+#### T4 Replay track (persistent evidence only)
+
+Evidence roots:
+
+1. `activity/evidence/v162-cross-verify/2026-03-10/round306-m2m-hardclose/`
+2. `activity/evidence/v162-cross-verify/2026-03-10/round307-compose-session-hardclose/`
+3. `activity/evidence/v162-cross-verify/2026-03-10/round308-m2m-hardclose-matrix/`
+
+Key replay outcomes:
+
+1. activate without explicit session-id -> fail-close (`IP-ACT-SESSION-001`).
+2. canonical pointer switch without switch-intent receipt -> fail-close (`IP-ASB-MB-008`) and rollback preserved.
+3. compose without session-id -> fail-close (`IP-ASB-SESSION-ENTRY-001`).
+4. session/identity mismatch in strict compose -> fail-close (`IP-HDSTAMP-002`).
+5. M:N matrix confirms expected pass/fail split across multi-agent rows:
+   - same actor + matched session + matched identity => pass,
+   - cross-session/cross-identity or cross-actor mismatch => fail-close.
+6. strict scan planes remain green on M:N projection:
+   - `full_scan.target.*.summary_m2m.pass=1`,
+   - `three_plane.m2m_projection.m2m_binding_closure_status=PASS`.
+7. gate sanity remains pass:
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`,
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`.
+
+### 18.4 Freeze statement (scope-accurate)
+
+1. **M:N protocol control-plane closure is now hard-closed** for the residual implicit-switch class.
+2. Remaining non-green statuses (if any) are classified as non-M:N residual lanes (for example release/instance debt), not a reopened M:N binding defect.
