@@ -136,10 +136,10 @@ Current replay judgment:
 
 Replay evidence:
 
-1. `activity/evidence/rq034/2026-03-09/mm_enforcement_validate_20260309.json`
-2. `activity/evidence/rq034/2026-03-09/mm_bundle_validate_20260309.json`
-3. `activity/evidence/rq034/2026-03-09/docs_contract_v162_audit_20260309.log`
-4. `activity/evidence/rq034/2026-03-09/ssot_v162_audit_20260309.log`
+1. Canonical index: `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+2. Minimal anchors:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
 
 Residual replay set for full closure:
 

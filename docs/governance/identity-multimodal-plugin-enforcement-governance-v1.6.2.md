@@ -264,11 +264,11 @@ Cross-verified replay (2026-03-09):
 
 1. Positive replay passed:
    - `validate_multimodal_plugin_enforcement` -> `PASS_REQUIRED`
-   - evidence: `activity/evidence/rq034/2026-03-09/mm_enforcement_validate_20260309.json`
 2. Bundle replay passed with requiredized multimodal key:
    - `required_gate_bundle_runner --operation validate` -> `PASS_REQUIRED`
-   - evidence: `activity/evidence/rq034/2026-03-09/mm_bundle_validate_20260309.json`
-3. Remaining replay debt is not key wiring; it is release-readiness projection parity for provider fields.
+3. Evidence retrieval is index-first:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+4. Remaining replay debt is baseline freshness / workspace cleanliness, not plugin wiring.
 
 Closure replay set to retain:
 
@@ -345,12 +345,11 @@ Closure replay set to retain:
 ### 11.2 Instance-side self-repair replay (non-protocol mutation)
 
 1. Backfill replay for real instance (`base-repo-audit-expert-v3`) confirms RQ-034 contract auto-wire:
-   - dry-run: `activity/evidence/rq034/2026-03-09/rq034_backfill_dryrun_braev3_20260309.json`
-   - apply: `activity/evidence/rq034/2026-03-09/rq034_backfill_apply_braev3_20260309.json`
+   - detailed artifacts are indexed in `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
 2. Capability arbitration contract replay passes after backfill:
-   - `activity/evidence/rq034/2026-03-09/rq034_capability_arbitration_validate_braev3_20260309.log`
+   - anchor in manifest stream (`rq034_capability_arbitration_validate_braev3_20260309.log`)
 3. Provider binding replay passes with minimal non-secret binding file:
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_braev3_after_binding_20260309.json`
+   - anchor in manifest stream (`rq034_validator_braev3_after_binding_20260309.json`)
 
 ### 11.3 Cross-check evidence set (current round)
 
@@ -442,18 +441,12 @@ Instances must **not**:
 
 Current replay set (this round):
 
-1. Lint probes:
-   - `activity/evidence/rq034/2026-03-09/rq034_lint_prefix_probe_aa1ec44_20260309.json` => `FAIL_REQUIRED`
-   - `activity/evidence/rq034/2026-03-09/rq034_lint_traversal_probe_aa1ec44_20260309.json` => `FAIL_REQUIRED`
-   - `activity/evidence/rq034/2026-03-09/rq034_lint_canonical_probe_aa1ec44_20260309.json` => `PASS_REQUIRED`
-   - `activity/evidence/rq034/2026-03-09/rq034_lint_canonicalvar_probe_aa1ec44_20260309.json` => `FAIL_REQUIRED`
-   - `activity/evidence/rq034/2026-03-09/rq034_lint_repo_probe_aa1ec44_20260309.json` => `PASS_REQUIRED`
-2. Provider-binding negative probes:
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_no_binding_aa1ec44_20260309.json` => `FAIL_REQUIRED` + `IP-MM-CONF-001`
-   - `activity/evidence/rq034/2026-03-09/rq034_validator_missing_required_binding_entry_aa1ec44_20260309.json` => `FAIL_REQUIRED` + `IP-MM-CONF-001`
-3. Governance gates:
-   - `activity/evidence/rq034/2026-03-09/rq034_docs_contract_after_aa1ec44_20260309.log` => `PASS`
-   - `activity/evidence/rq034/2026-03-09/rq034_ssot_after_aa1ec44_20260309.log` => `OK`
+1. Canonical evidence index:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+2. Minimal anchors for this replay:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
+3. Detailed lint/negative matrices are tracked in manifest only to keep governance doc readable.
 
 ### 12.6 Updated judgment for v1.6.2 interface layer
 
@@ -659,18 +652,11 @@ These are instance/release control-plane debts and are excluded from M:N closure
 
 ### 15.4 Cross-verification replay (this addendum)
 
-1. `python3 scripts/validate_control_plane_invariants.py --json-only`
-   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
-   - result: `PASS_REQUIRED`, plugin wiring violations = 0.
-2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
-   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
-   - result: `PASS_REQUIRED`.
-3. `python3 scripts/docs_command_contract_check.py`
-   - `activity/evidence/rq034/2026-03-09/rq034_docs_contract_20260309_r7.log`
-   - result: rc=0.
-4. `python3 scripts/validate_protocol_ssot_source.py`
-   - `activity/evidence/rq034/2026-03-09/rq034_ssot_20260309_r7.log`
-   - result: rc=0.
+1. Canonical replay index:
+   - `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
+2. Required anchors:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json` (`PASS_REQUIRED`)
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json` (`PASS_REQUIRED`)
 
 ### 15.5 Normative decision
 
