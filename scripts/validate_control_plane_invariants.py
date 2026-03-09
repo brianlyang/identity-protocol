@@ -178,6 +178,10 @@ def main() -> int:
     unique_egress_violation_count = 0
     bundle_entry_violation_count = 0
     prompt_binding_violation_count = 0
+    registry_fail_close_plugin_ids: set[str] = set()
+    governance_plugin_ids: set[str] = set()
+    duplicate_governance_plugin_ids: set[str] = set()
+    registry_source_files: set[str] = set()
     plugin_doc_parse_ok = False
 
     if plugin_governance_path.exists():
@@ -271,8 +275,44 @@ def main() -> int:
                 )
 
             # Plugin fail-close profile invariants.
+            profiles = _as_list(plugin_doc.get("plugin_failclose_profiles"))
             registry_cache: dict[str, dict[str, Any]] = {}
-            for profile in _as_list(plugin_doc.get("plugin_failclose_profiles")):
+            registry_source_files.update(_as_str_list(plugin_doc.get("plugin_registry_files")))
+            if not registry_source_files:
+                registry_source_files.add("identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml")
+
+            for profile in profiles:
+                if not isinstance(profile, dict):
+                    continue
+                registry_file = str(profile.get("registry_file", "")).strip()
+                if registry_file:
+                    registry_source_files.add(registry_file)
+
+            for registry_file in sorted(registry_source_files):
+                registry_path = (repo_root / registry_file).resolve()
+                if not registry_path.exists() or not registry_path.is_file():
+                    plugin_wiring_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_registry",
+                        reason="registry_file_missing",
+                        registry_file=registry_file,
+                    )
+                    continue
+                cache_key = str(registry_path)
+                if cache_key not in registry_cache:
+                    registry_cache[cache_key] = _load_yaml(registry_path)
+                registry_doc = registry_cache.get(cache_key) or {}
+                plugins = _as_list(registry_doc.get("plugins"))
+                for row in plugins:
+                    if not isinstance(row, dict):
+                        continue
+                    reg_plugin_id = str(row.get("plugin_id", "")).strip()
+                    reg_gate_mode = str(row.get("gate_mode", "")).strip().lower()
+                    if reg_plugin_id and reg_gate_mode == "fail_close_strict":
+                        registry_fail_close_plugin_ids.add(reg_plugin_id)
+
+            for profile in profiles:
                 if not isinstance(profile, dict):
                     plugin_wiring_violation_count += 1
                     _append_violation(
@@ -291,23 +331,40 @@ def main() -> int:
                 strict_surfaces = _as_str_list(profile.get("strict_surfaces"))
                 required_gate_surfaces = set(_as_str_list(profile.get("required_gate_surfaces")))
                 required_report_fields = set(_as_str_list(profile.get("required_report_fields")))
+                if not plugin_id:
+                    plugin_wiring_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_failclose_profiles",
+                        reason="plugin_id_missing",
+                    )
+                elif plugin_id in governance_plugin_ids:
+                    duplicate_governance_plugin_ids.add(plugin_id)
+                governance_plugin_ids.add(plugin_id)
 
                 # Registry profile checks.
-                registry_path = (repo_root / registry_file).resolve()
-                if not registry_path.exists():
+                if not registry_file:
                     plugin_wiring_violation_count += 1
                     _append_violation(
                         violations,
                         field="plugin_registry",
-                        reason="registry_file_missing",
+                        reason="registry_file_missing_on_profile",
                         plugin_id=plugin_id,
-                        registry_file=registry_file,
                     )
                 else:
+                    registry_path = (repo_root / registry_file).resolve()
                     cache_key = str(registry_path)
-                    if cache_key not in registry_cache:
-                        registry_cache[cache_key] = _load_yaml(registry_path)
-                    registry_doc = registry_cache.get(cache_key) or {}
+                    registry_doc = registry_cache.get(cache_key)
+                    if registry_doc is None:
+                        plugin_wiring_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="plugin_registry",
+                            reason="registry_file_missing",
+                            plugin_id=plugin_id,
+                            registry_file=registry_file,
+                        )
+                        registry_doc = {}
                     plugins = _as_list(registry_doc.get("plugins"))
                     plugin_rows = [
                         row
@@ -502,6 +559,37 @@ def main() -> int:
                             required_script=bundle_script,
                         )
 
+            if duplicate_governance_plugin_ids:
+                plugin_wiring_violation_count += len(duplicate_governance_plugin_ids)
+                _append_violation(
+                    violations,
+                    field="plugin_failclose_profiles",
+                    reason="duplicate_plugin_profile_detected",
+                    duplicate_plugin_ids=sorted(duplicate_governance_plugin_ids),
+                )
+
+            missing_governance_profiles = sorted(registry_fail_close_plugin_ids - governance_plugin_ids)
+            if missing_governance_profiles:
+                plugin_wiring_violation_count += len(missing_governance_profiles)
+                _append_violation(
+                    violations,
+                    field="plugin_failclose_profiles",
+                    reason="registry_fail_close_plugin_missing_governance_profile",
+                    missing_plugin_ids=missing_governance_profiles,
+                    missing_count=len(missing_governance_profiles),
+                )
+
+            orphan_governance_profiles = sorted(governance_plugin_ids - registry_fail_close_plugin_ids)
+            if orphan_governance_profiles:
+                plugin_wiring_violation_count += len(orphan_governance_profiles)
+                _append_violation(
+                    violations,
+                    field="plugin_failclose_profiles",
+                    reason="governance_profile_missing_registry_fail_close_plugin",
+                    orphan_plugin_ids=orphan_governance_profiles,
+                    orphan_count=len(orphan_governance_profiles),
+                )
+
             # Prompt fail-close binding invariants.
             prompt_binding = plugin_doc.get("prompt_failclose_binding")
             if isinstance(prompt_binding, dict):
@@ -587,6 +675,12 @@ def main() -> int:
         "bundle_rows_not_in_mapping": extra_rows,
         "plugin_profile_count": plugin_profile_count,
         "plugin_wiring_violation_count": plugin_wiring_violation_count,
+        "registry_fail_close_plugin_count": len(registry_fail_close_plugin_ids),
+        "registry_fail_close_plugin_ids": sorted(registry_fail_close_plugin_ids),
+        "governance_profile_plugin_count": len(governance_plugin_ids),
+        "governance_profile_plugin_ids": sorted(governance_plugin_ids),
+        "duplicate_governance_profile_count": len(duplicate_governance_plugin_ids),
+        "duplicate_governance_plugin_ids": sorted(duplicate_governance_plugin_ids),
         "unique_egress_violation_count": unique_egress_violation_count,
         "bundle_entry_violation_count": bundle_entry_violation_count,
         "prompt_binding_violation_count": prompt_binding_violation_count,
