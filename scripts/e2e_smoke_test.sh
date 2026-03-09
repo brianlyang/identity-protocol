@@ -91,8 +91,7 @@ python3 scripts/validate_identity_creation_boundary.py
 echo "[2.5/30] validate identity state consistency (catalog vs META)"
 python3 scripts/validate_identity_state_consistency.py --catalog "$CATALOG_PATH"
 
-echo "[2.55/30] validate session pointer consistency (catalog-scoped canonical + legacy mirror)"
-python3 scripts/validate_identity_session_pointer_consistency.py --catalog "$CATALOG_PATH"
+echo "[2.55/30] defer session pointer consistency to per-identity actor/session phase"
 
 echo "[3/30] validate governance snapshot index"
 python3 scripts/validate_audit_snapshot_index.py
@@ -175,6 +174,12 @@ done
 echo "[10.17/30] validate fixture/runtime boundary gate (for each target identity)"
 for ID in $IDS; do
   python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e
+done
+
+echo "[10.175/30] validate session pointer consistency (per identity, actor/session scoped)"
+for ID in $IDS; do
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
+  python3 scripts/validate_identity_session_pointer_consistency.py --catalog "$CATALOG_PATH" --identity-id "$ID" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID"
 done
 
 echo "[10.18/30] validate actor-scoped session isolation gates (for each target identity)"
@@ -381,7 +386,7 @@ for ID in $IDS; do
   "${compose_cmd[@]}"
 
   echo "[12.466/30][$ID] validate send-time unified reply gate (real dialogue outlet)"
-  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id final_emit_governed --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID")
+  send_time_cmd=(python3 scripts/validate_send_time_reply_gate.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --reply-file "$SEND_TIME_REPLY_FILE" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id final_emit_governed --reply-transport-ref "$SEND_TIME_REPLY_FILE" --operation e2e --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     send_time_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -400,7 +405,7 @@ for ID in $IDS; do
   python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --json-only
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
-  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
+  coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     coherence_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi

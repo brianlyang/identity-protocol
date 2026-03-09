@@ -185,6 +185,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict M:N binding checks")
     ap.add_argument("--reply-log", default="")
     ap.add_argument("--reply-file", default="")
     ap.add_argument("--reply-text", default="")
@@ -245,6 +246,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=args.session_id,
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:

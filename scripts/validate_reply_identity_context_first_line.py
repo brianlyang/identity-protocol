@@ -167,17 +167,18 @@ def _resolve_actor_binding_with_target(
     catalog_path: Path,
     actor_id: str,
     target_identity_id: str,
+    session_id: str = "",
 ) -> tuple[dict[str, Any], dict[str, Any], str]:
     store = load_actor_binding_store(catalog_path, actor_id)
-    selected = load_actor_binding(catalog_path, actor_id, identity_id=target_identity_id)
+    selected = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=target_identity_id,
+        session_id=session_id,
+    )
     selection_mode = "identity_scoped"
     if not selected:
-        fallback = load_actor_binding(catalog_path, actor_id)
-        if fallback:
-            selected = fallback
-            selection_mode = "actor_latest_fallback"
-        else:
-            selection_mode = "identity_scoped_missing"
+        selection_mode = "identity_scoped_missing"
     return selected, store, selection_mode
 
 
@@ -207,6 +208,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--reply-log", default="", help="assistant reply evidence (.json/.jsonl/.txt)")
     ap.add_argument("--reply-file", default="", help="single reply text file")
     ap.add_argument("--reply-text", default="", help="inline single reply text")
@@ -432,8 +434,13 @@ def main() -> int:
         catalog_path=catalog_path,
         actor_id=actor_id_effective,
         target_identity_id=ctx.identity_id,
+        session_id=str(args.session_id or "").strip(),
     )
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+    session_id_effective = str(args.session_id or "").strip()
+    if strict_format_enforced and session_id_effective and not actor_bound_identity and not error_code:
+        stale_reasons.append("session_scoped_actor_binding_missing")
+        error_code = ERR_RUNTIME_BINDING_MISMATCH
     if strict_format_enforced and actor_bound_identity and actor_bound_identity != ctx.identity_id and not error_code:
         stale_reasons.append("actor_bound_identity_mismatch")
         error_code = ERR_RUNTIME_BINDING_MISMATCH

@@ -62,17 +62,18 @@ def _resolve_actor_binding_with_target(
     catalog_path: Path,
     actor_id: str,
     target_identity_id: str,
+    session_id: str = "",
 ) -> tuple[dict[str, Any], dict[str, Any], str]:
     store = load_actor_binding_store(catalog_path, actor_id)
-    selected = load_actor_binding(catalog_path, actor_id, identity_id=target_identity_id)
+    selected = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=target_identity_id,
+        session_id=session_id,
+    )
     selection_mode = "identity_scoped"
     if not selected:
-        fallback = load_actor_binding(catalog_path, actor_id)
-        if fallback:
-            selected = fallback
-            selection_mode = "actor_latest_fallback"
-        else:
-            selection_mode = "identity_scoped_missing"
+        selection_mode = "identity_scoped_missing"
     return selected, store, selection_mode
 
 
@@ -97,6 +98,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
     ap.add_argument("--work-layer", default="")
@@ -176,8 +178,47 @@ def main() -> int:
         catalog_path=catalog_path,
         actor_id=actor_id_effective,
         target_identity_id=str(args.identity_id or "").strip(),
+        session_id=str(args.session_id or "").strip(),
     )
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
+    session_id_effective = str(args.session_id or "").strip()
+
+    if session_id_effective and not actor_bound_identity:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "send_time_gate_status": "FAIL_REQUIRED",
+            "send_time_error_code": ERR_RUNTIME_BINDING_MISMATCH,
+            "error_code": ERR_RUNTIME_BINDING_MISMATCH,
+            "reply_first_line_status": "FAIL_REQUIRED",
+            "reply_evidence_mode": "none",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_outlet_guard_applied": True,
+            "governed_outlet_enforced": False,
+            "outlet_bypass_detected": True,
+            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": FINAL_EMIT_POLICY_MODE,
+            "final_emit_schema_id": FINAL_EMIT_SCHEMA_ID,
+            "final_emit_schema_status": "FAIL_REQUIRED",
+            "final_emit_contract_status": "FAIL_REQUIRED",
+            "resolved_actor_id": actor_id_effective,
+            "actor_bound_identity_id": actor_bound_identity,
+            "actor_binding_selection_mode": actor_binding_selection_mode,
+            "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+            "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+            "actor_binding_session_id": str(actor_binding.get("session_id", "")),
+            "stale_reasons": ["session_scoped_actor_binding_missing"],
+        }
+        out_json = str(args.out_json or "").strip()
+        if out_json:
+            out_json_path = Path(out_json).expanduser().resolve()
+            out_json_path.parent.mkdir(parents=True, exist_ok=True)
+            out_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
 
     if actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
         payload = {
@@ -301,6 +342,8 @@ def main() -> int:
         "--json-only",
     ]
     validate_cmd += ["--actor-id", str(actor_id_effective).strip()]
+    if str(args.session_id or "").strip():
+        validate_cmd += ["--session-id", str(args.session_id).strip()]
     if str(args.blocker_receipt_out or "").strip():
         validate_cmd += ["--blocker-receipt-out", str(args.blocker_receipt_out).strip()]
     if str(args.layer_intent_text or "").strip():

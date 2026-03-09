@@ -9,12 +9,21 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from final_emit_contract_common import (
+    FINAL_EMIT_CHANNEL_ID,
+    FINAL_EMIT_POLICY_MODE,
+    FINAL_EMIT_SCHEMA_ID,
+    normalize_status,
+    normalize_text,
+)
 
 ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
 ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
 ERR_OUTLET_GUARD_MISSING = "IP-ASB-STAMP-SESSION-003"
 ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
 ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
+ERR_FINAL_EMIT_CHANNEL_REQUIRED = "IP-ASB-STAMP-SESSION-006"
+ERR_FINAL_EMIT_SCHEMA_REQUIRED = "IP-ASB-STAMP-SESSION-007"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -122,7 +131,21 @@ def _is_governed_outlet(channel_id: str) -> bool:
     cid = str(channel_id or "").strip().lower()
     if not cid:
         return False
+    if cid == FINAL_EMIT_CHANNEL_ID:
+        return True
     return cid.startswith("governed_") or cid.startswith("governed-") or cid in {"governed", "governedoutlet"}
+
+
+def _is_final_emit_channel(channel_id: str) -> bool:
+    return normalize_text(channel_id).lower() == FINAL_EMIT_CHANNEL_ID
+
+
+def _is_final_emit_policy_mode(policy_mode: str) -> bool:
+    return normalize_text(policy_mode).lower() == FINAL_EMIT_POLICY_MODE
+
+
+def _is_final_emit_schema_pass(schema_status: str) -> bool:
+    return normalize_status(schema_status) == STATUS_PASS_REQUIRED
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -143,6 +166,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict M:N binding checks")
     ap.add_argument("--reply-text", default="")
     ap.add_argument("--reply-file", default="")
     ap.add_argument("--reply-log", default="")
@@ -150,8 +174,23 @@ def main() -> int:
     ap.add_argument("--reply-transport-ref", default="")
     ap.add_argument(
         "--outlet-channel-id",
-        default="governed_adapter_v1",
-        help="logical reply outlet channel id; strict operations require governed_* channel",
+        default=FINAL_EMIT_CHANNEL_ID,
+        help="logical reply outlet channel id; strict operations require canonical final_emit_governed channel",
+    )
+    ap.add_argument(
+        "--final-emit-policy-mode",
+        default=FINAL_EMIT_POLICY_MODE,
+        help="final emission policy mode; strict operations require tool_choice_required",
+    )
+    ap.add_argument(
+        "--final-emit-schema-status",
+        default=STATUS_PASS_REQUIRED,
+        help="final emission schema validation status",
+    )
+    ap.add_argument(
+        "--final-emit-schema-id",
+        default=FINAL_EMIT_SCHEMA_ID,
+        help="final emission schema identifier",
     )
     ap.add_argument("--reply-outlet-guard-applied", action="store_true")
     ap.add_argument("--business-line", default="SEND_TIME_GATE_PROBE_BODY")
@@ -198,7 +237,12 @@ def main() -> int:
             "reply_transport_ref": "",
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
             "governed_outlet_enforced": False,
-            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or "governed_adapter_v1",
+            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip() or FINAL_EMIT_POLICY_MODE,
+            "final_emit_schema_id": str(args.final_emit_schema_id or "").strip() or FINAL_EMIT_SCHEMA_ID,
+            "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper() or STATUS_PASS_REQUIRED,
+            "final_emit_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
             "outlet_preflight_receipt": "",
             "outlet_bypass_detected": False,
             "reply_evidence_ref": "",
@@ -252,10 +296,180 @@ def main() -> int:
 
     strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
     reply_transport_ref = _reply_transport_ref(args, evidence_mode)
-    outlet_channel_id = str(args.outlet_channel_id or "").strip() or "governed_adapter_v1"
+    outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
     governed_outlet = _is_governed_outlet(outlet_channel_id)
+    final_emit_channel_ok = _is_final_emit_channel(outlet_channel_id)
+    final_emit_policy_mode = str(args.final_emit_policy_mode or "").strip() or FINAL_EMIT_POLICY_MODE
+    final_emit_policy_ok = _is_final_emit_policy_mode(final_emit_policy_mode)
+    final_emit_schema_id = str(args.final_emit_schema_id or "").strip() or FINAL_EMIT_SCHEMA_ID
+    final_emit_schema_status = str(args.final_emit_schema_status or "").strip().upper() or STATUS_PASS_REQUIRED
+    final_emit_schema_ok = _is_final_emit_schema_pass(final_emit_schema_status)
+    final_emit_contract_ok = final_emit_channel_ok and final_emit_policy_ok and final_emit_schema_ok
+    final_emit_contract_status = STATUS_PASS_REQUIRED if final_emit_contract_ok else STATUS_FAIL_REQUIRED
     strict_outlet_enforced = strict_context and governed_outlet and bool(args.reply_outlet_guard_applied)
     preflight_receipt_ref = str(Path(args.blocker_receipt_out).expanduser().resolve()) if str(args.blocker_receipt_out or "").strip() else ""
+
+    if strict_context and not final_emit_channel_ok:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_FINAL_EMIT_CHANNEL_REQUIRED,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": False,
+            "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": STATUS_FAIL_REQUIRED,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["final_emit_channel_not_canonical"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "strict_send_time_guard",
+            "fallback_reason": "final_emit_channel_not_canonical",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["strict_send_time_final_emit_channel_required"],
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if strict_context and not final_emit_policy_ok:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_FINAL_EMIT_CHANNEL_REQUIRED,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": False,
+            "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": STATUS_FAIL_REQUIRED,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["final_emit_policy_mode_not_required"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "strict_send_time_guard",
+            "fallback_reason": "final_emit_policy_mode_not_required",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["strict_send_time_final_emit_policy_mode_required"],
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if strict_context and not final_emit_schema_ok:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_FINAL_EMIT_SCHEMA_REQUIRED,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": False,
+            "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": STATUS_FAIL_REQUIRED,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["final_emit_schema_not_pass"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "strict_send_time_guard",
+            "fallback_reason": "final_emit_schema_not_pass",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "stale_reasons": ["strict_send_time_final_emit_schema_required"],
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     if strict_context and not governed_outlet:
         payload = {
@@ -276,6 +490,11 @@ def main() -> int:
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
             "governed_outlet_enforced": strict_outlet_enforced,
             "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": final_emit_contract_status,
             "outlet_preflight_receipt": preflight_receipt_ref,
             "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
@@ -330,6 +549,11 @@ def main() -> int:
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
             "governed_outlet_enforced": strict_outlet_enforced,
             "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": final_emit_contract_status,
             "outlet_preflight_receipt": preflight_receipt_ref,
             "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
@@ -378,6 +602,11 @@ def main() -> int:
             "reply_outlet_guard_applied": False,
             "governed_outlet_enforced": False,
             "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": final_emit_contract_status,
             "outlet_preflight_receipt": preflight_receipt_ref,
             "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
@@ -443,6 +672,8 @@ def main() -> int:
     ]
     if str(args.actor_id or "").strip():
         cmd.extend(["--actor-id", str(args.actor_id).strip()])
+    if str(args.session_id or "").strip():
+        cmd.extend(["--session-id", str(args.session_id).strip()])
     if args.force_check:
         cmd.append("--force-check")
     if args.enforce_send_time_gate:
@@ -489,10 +720,16 @@ def main() -> int:
         "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
         "governed_outlet_enforced": strict_outlet_enforced,
         "outlet_channel_id": outlet_channel_id,
+        "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+        "final_emit_policy_mode": final_emit_policy_mode,
+        "final_emit_schema_id": final_emit_schema_id,
+        "final_emit_schema_status": final_emit_schema_status,
+        "final_emit_contract_status": final_emit_contract_status,
         "outlet_preflight_receipt": preflight_receipt_ref,
         "outlet_bypass_detected": bool(
             (strict_context and not governed_outlet)
             or (strict_context and not bool(args.reply_outlet_guard_applied))
+            or (strict_context and not final_emit_contract_ok)
             or str(error_code).strip() == ERR_NON_GOVERNED_OUTLET
         ),
         "expected_work_layer": expected_work_layer,

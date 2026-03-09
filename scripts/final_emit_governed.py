@@ -11,7 +11,7 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import load_actor_binding, load_actor_binding_store, resolve_actor_id
 from final_emit_contract_common import (
     FINAL_EMIT_CHANNEL_ID,
     FINAL_EMIT_POLICY_MODE,
@@ -136,6 +136,7 @@ def _resolve_identity_id(
     args: argparse.Namespace,
     catalog_path: Path,
     actor_id: str,
+    session_id: str = "",
 ) -> tuple[str, str]:
     explicit = str(args.identity_id or "").strip()
     if explicit:
@@ -143,10 +144,25 @@ def _resolve_identity_id(
     if not catalog_path.exists():
         raise FileNotFoundError(f"catalog not found for auto identity resolution: {catalog_path}")
 
-    binding = load_actor_binding(catalog_path, actor_id)
+    session_id = str(session_id or "").strip()
+    binding = load_actor_binding(catalog_path, actor_id, session_id=session_id)
     bound_identity_id = str(binding.get("identity_id", "")).strip()
     if bound_identity_id:
-        return bound_identity_id, "actor_binding"
+        return bound_identity_id, "actor_binding_session_scoped" if session_id else "actor_binding"
+    if session_id:
+        raise RuntimeError(f"session_id has no actor binding: actor={actor_id} session_id={session_id}")
+
+    store = load_actor_binding_store(catalog_path, actor_id)
+    bound_identity_ids = {
+        str(x.get("identity_id", "")).strip()
+        for x in (store.get("bindings") or [])
+        if isinstance(x, dict) and str(x.get("identity_id", "")).strip()
+    }
+    if len(bound_identity_ids) > 1:
+        raise RuntimeError(
+            "identity-id is ambiguous under actor multibinding; pass --identity-id or --session-id explicitly "
+            f"(actor={actor_id}, bound_identities={sorted(bound_identity_ids)})"
+        )
 
     session_active = (catalog_path.parent / "session" / "active_identity.json").resolve()
     if session_active.exists():
@@ -209,6 +225,7 @@ def main() -> int:
         default="",
         help="required actor context; no implicit default fallback is allowed",
     )
+    ap.add_argument("--session-id", default="", help="optional actor session selector for multibinding disambiguation")
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
     ap.add_argument("--stdin-body", action="store_true")
@@ -246,6 +263,7 @@ def main() -> int:
             args=args,
             catalog_path=catalog_path,
             actor_id=actor_id,
+            session_id=str(args.session_id or "").strip(),
         )
     except Exception as exc:
         payload = {
@@ -312,6 +330,8 @@ def main() -> int:
         str(repo_catalog_path),
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(args.session_id or "").strip(),
         "--body-text",
         body,
         "--outlet-channel-id",

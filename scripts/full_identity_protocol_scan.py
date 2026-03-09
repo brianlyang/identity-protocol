@@ -1053,6 +1053,8 @@ def main() -> int:
                     send_time_reply_gate_blocker_receipt,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--json-only",
                 ],
                 "headstamp_recurrence_closure": [
@@ -1089,6 +1091,8 @@ def main() -> int:
                     "scan",
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--blocker-receipt-out",
                     execution_reply_coherence_blocker_receipt,
                     "--json-only",
@@ -2281,6 +2285,10 @@ def main() -> int:
                     str(catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                 ]
                 checks["prompt_activation"] = [
                     "python3",

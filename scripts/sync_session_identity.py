@@ -12,6 +12,7 @@ import yaml
 
 from actor_session_common import (
     DEFAULT_BINDING_KEY_MODE,
+    SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
     load_actor_binding_store,
     resolve_actor_id,
@@ -96,23 +97,33 @@ def _build_actor_payload(
 ) -> tuple[dict[str, Any], str]:
     now = _utc_now()
     existing_bindings = [x for x in (store.get("bindings") or []) if isinstance(x, dict)]
+    key_mode = str(store.get("binding_key_mode", "")).strip() or DEFAULT_BINDING_KEY_MODE
+
+    def binding_key(row: dict[str, Any]) -> str:
+        sid = str(row.get("session_id", "")).strip()
+        iid = str(row.get("identity_id", "")).strip()
+        if key_mode == SESSION_ONLY_BINDING_KEY_MODE:
+            return sid
+        return f"{iid}::{sid}"
+
+    target_key = f"{target_identity_id}::{session_id}" if key_mode != SESSION_ONLY_BINDING_KEY_MODE else session_id
 
     pre_binding_ref = next(
         (
             str(x.get("binding_ref", "")).strip()
             for x in existing_bindings
-            if str(x.get("session_id", "")).strip() == session_id and str(x.get("binding_ref", "")).strip()
+            if binding_key(x) == target_key and str(x.get("binding_ref", "")).strip()
         ),
         "NONE",
     )
-    existing_for_session = [x for x in existing_bindings if str(x.get("session_id", "")).strip() == session_id]
+    existing_for_session = [x for x in existing_bindings if binding_key(x) == target_key]
     bound_at = now
     if existing_for_session:
         latest = sorted(existing_for_session, key=_entry_sort_key)[-1]
         bound_at = str(latest.get("bound_at", "")).strip() or bound_at
 
     next_version = int(store.get("binding_version", 0)) + 1
-    next_binding_ref = f"{actor_id}:{session_id}:v{next_version}"
+    next_binding_ref = f"{actor_id}:{target_identity_id}:{session_id}:v{next_version}"
     updated_entry = {
         "actor_id": actor_id,
         "session_id": session_id,
@@ -140,8 +151,7 @@ def _build_actor_payload(
     merged: list[dict[str, Any]] = []
     replaced = False
     for row in existing_bindings:
-        sid = str(row.get("session_id", "")).strip()
-        if sid == session_id:
+        if binding_key(row) == target_key:
             if not replaced:
                 merged.append(updated_entry)
                 replaced = True
@@ -150,9 +160,9 @@ def _build_actor_payload(
     if not replaced:
         merged.append(updated_entry)
 
-    pre_sessions = {str(x.get("session_id", "")).strip() for x in existing_bindings if str(x.get("session_id", "")).strip()}
-    post_sessions = {str(x.get("session_id", "")).strip() for x in merged if str(x.get("session_id", "")).strip()}
-    dropped_peers = sorted(x for x in pre_sessions if x != session_id and x not in post_sessions)
+    pre_keys = {binding_key(x) for x in existing_bindings if binding_key(x)}
+    post_keys = {binding_key(x) for x in merged if binding_key(x)}
+    dropped_peers = sorted(x for x in pre_keys if x != target_key and x not in post_keys)
     if dropped_peers:
         raise ValueError(f"{ERR_MB_006}:peer_session_dropped:{','.join(dropped_peers)}")
 

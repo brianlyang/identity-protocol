@@ -350,6 +350,10 @@ def _instance_plane_status(
             args.catalog,
             "--identity-id",
             args.identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
         ]
     )
     validators["session_pointer"] = {
@@ -859,6 +863,8 @@ def _instance_plane_status(
         send_time_reply_gate_blocker_receipt,
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--json-only",
     ]
     if layer_intent_text:
@@ -925,6 +931,8 @@ def _instance_plane_status(
         "three-plane",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--blocker-receipt-out",
         execution_reply_coherence_blocker_receipt,
         "--json-only",

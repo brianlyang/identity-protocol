@@ -581,7 +581,18 @@ def main() -> int:
             identity_id,
         ],
         ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
-        ["python3", "scripts/validate_identity_session_pointer_consistency.py", "--catalog", catalog],
+        [
+            "python3",
+            "scripts/validate_identity_session_pointer_consistency.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+        ],
         [
             "python3",
             "scripts/validate_actor_session_binding.py",
@@ -2100,6 +2111,7 @@ def main() -> int:
                 cmd.extend(["--source-layer", expected_source_layer])
     actor_id_required_scripts = {
         "scripts/render_identity_response_stamp.py",
+        "scripts/validate_identity_response_stamp.py",
         "scripts/final_emit_governed.py",
         "scripts/validate_reply_identity_context_first_line.py",
         "scripts/validate_headstamp_recurrence_closure.py",
@@ -2114,9 +2126,13 @@ def main() -> int:
         if (
             session_id
             and cmd[1] in {
+                "scripts/render_identity_response_stamp.py",
+                "scripts/validate_identity_response_stamp.py",
                 "scripts/final_emit_governed.py",
                 "scripts/validate_reply_identity_context_first_line.py",
                 "scripts/validate_headstamp_recurrence_closure.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
             }
             and "--session-id" not in cmd
         ):

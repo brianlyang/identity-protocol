@@ -2734,6 +2734,7 @@ def main() -> int:
                     cmd.extend(["--source-layer", expected_source_layer])
         actor_id_required_scripts = {
             "scripts/render_identity_response_stamp.py",
+            "scripts/validate_identity_response_stamp.py",
             "scripts/final_emit_governed.py",
             "scripts/validate_headstamp_recurrence_closure.py",
             "scripts/validate_reply_identity_context_first_line.py",
@@ -2741,9 +2742,13 @@ def main() -> int:
             "scripts/validate_execution_reply_identity_coherence.py",
         }
         session_id_required_scripts = {
+            "scripts/render_identity_response_stamp.py",
+            "scripts/validate_identity_response_stamp.py",
             "scripts/final_emit_governed.py",
             "scripts/validate_headstamp_recurrence_closure.py",
             "scripts/validate_reply_identity_context_first_line.py",
+            "scripts/validate_send_time_reply_gate.py",
+            "scripts/validate_execution_reply_identity_coherence.py",
         }
         for cmd in checks:
             if len(cmd) < 2:

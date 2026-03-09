@@ -88,6 +88,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", default="", help="optional: require this identity to be current active")
     ap.add_argument("--actor-id", default="", help="optional actor id for actor-scoped expected identity resolution")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict M:N binding checks")
     ap.add_argument(
         "--canonical-out",
         default="",
@@ -126,14 +127,20 @@ def main() -> int:
     active_rows = [x for x in rows if str(x.get("status", "")).strip().lower() == "active"]
     active_ids = [str(x.get("id", "")).strip() for x in active_rows if str(x.get("id", "")).strip()]
     actor_id = resolve_actor_id(args.actor_id)
+    session_id = str(args.session_id or "").strip()
     expected_identity_id = str(args.identity_id or "").strip()
-    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=expected_identity_id)
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=expected_identity_id,
+        session_id=session_id,
+    )
     bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
     if not expected_identity_id:
         if bound_identity_id:
             expected_identity_id = bound_identity_id
         else:
-            fallback_binding = load_actor_binding(catalog_path, actor_id)
+            fallback_binding = load_actor_binding(catalog_path, actor_id, session_id=session_id)
             bound_identity_id = str(fallback_binding.get("identity_id", "")).strip()
             if bound_identity_id:
                 expected_identity_id = bound_identity_id
@@ -233,6 +240,7 @@ def main() -> int:
     print(
         "[OK] session pointer consistency validated: "
         f"expected_identity={expected_identity_id} actor={actor_id} "
+        f"session_id={session_id or '<auto>'} "
         f"active_count={len(active_rows)} catalog={catalog_path} canonical={canonical_out}"
     )
     return 0

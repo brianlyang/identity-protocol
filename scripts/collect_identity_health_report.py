@@ -539,6 +539,8 @@ def main() -> int:
             cmd += ["--session-id", session_id]
         if name == "pointer_drift_guard" and actor_id:
             cmd += ["--actor-id", actor_id]
+        if name == "pointer_drift_guard" and session_id:
+            cmd += ["--session-id", session_id]
 
         rc, out, err = _run(cmd)
         status = "PASS" if rc == 0 else "FAIL"

@@ -152,6 +152,7 @@ def _send_time_cmd(
     catalog_path: Path,
     repo_catalog_path: Path,
     actor_id: str,
+    session_id: str,
     outlet_channel_id: str,
     blocker_receipt: Path,
     reply_file: Path | None = None,
@@ -179,6 +180,8 @@ def _send_time_cmd(
         actor_id,
         "--json-only",
     ]
+    if str(session_id or "").strip():
+        cmd += ["--session-id", str(session_id).strip()]
     if reply_file is not None:
         cmd += ["--reply-file", str(reply_file)]
     if reply_text:
@@ -186,7 +189,7 @@ def _send_time_cmd(
     return cmd
 
 
-def _catalog_identity_ids(catalog_path: Path) -> list[str]:
+def _catalog_identity_ids(catalog_path: Path, *, include_fixture: bool = True) -> list[str]:
     try:
         data = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
     except Exception:
@@ -195,8 +198,15 @@ def _catalog_identity_ids(catalog_path: Path) -> list[str]:
     out: list[str] = []
     for row in rows:
         iid = str(row.get("id", "")).strip()
-        if iid:
-            out.append(iid)
+        if not iid:
+            continue
+        if not include_fixture:
+            profile = str(row.get("profile", "")).strip().lower()
+            runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+            status = str(row.get("status", "")).strip().lower()
+            if profile == "fixture" or runtime_mode == "demo_only" or status == "inactive":
+                continue
+        out.append(iid)
     return out
 
 
@@ -204,6 +214,7 @@ def _actor_mismatch_probe(
     *,
     identity_id: str,
     actor_id: str,
+    session_id: str,
     catalog_path: Path,
     repo_catalog_path: Path,
     reply_file: Path,
@@ -211,17 +222,36 @@ def _actor_mismatch_probe(
 ) -> tuple[bool, dict[str, Any], list[str]]:
     stale_reasons: list[str] = []
     actor_binding_store = load_actor_binding_store(catalog_path, actor_id)
-    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id=session_id,
+    )
     binding_selection_mode = "identity_scoped"
     if not actor_binding:
-        fallback = load_actor_binding(catalog_path, actor_id)
-        if fallback:
-            actor_binding = fallback
-            binding_selection_mode = "actor_latest_fallback"
-        else:
-            binding_selection_mode = "identity_scoped_missing"
+        binding_selection_mode = "identity_scoped_missing"
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
     if not actor_bound_identity:
+        if str(session_id or "").strip():
+            stale_reasons.append("actor_mismatch_probe_failed_session_scoped_binding_missing")
+            return (
+                False,
+                {
+                    "rc": 1,
+                    "status": "FAIL_SESSION_SCOPED_BINDING_MISSING",
+                    "probe_actor_id": actor_id,
+                    "probe_session_id": session_id,
+                    "actor_bound_identity_id": "",
+                    "mismatch_identity_id": "",
+                    "binding_selection_mode": binding_selection_mode,
+                    "binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
+                    "binding_compare_token": str(actor_binding_store.get("compare_token", "")),
+                    "binding_session_id": "",
+                    "binding_entry_count": int(actor_binding_store.get("session_entry_count", 0) or 0),
+                },
+                stale_reasons,
+            )
         stale_reasons.append("actor_mismatch_probe_skipped_no_binding")
         return (
             True,
@@ -240,8 +270,11 @@ def _actor_mismatch_probe(
             stale_reasons,
         )
 
+    candidate_ids = _catalog_identity_ids(catalog_path, include_fixture=False)
+    if not candidate_ids:
+        candidate_ids = _catalog_identity_ids(catalog_path, include_fixture=True)
     mismatch_identity = ""
-    for iid in _catalog_identity_ids(catalog_path):
+    for iid in candidate_ids:
         if iid != actor_bound_identity:
             mismatch_identity = iid
             break
@@ -283,6 +316,8 @@ def _actor_mismatch_probe(
         "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--session-id",
+        session_id,
         "--json-only",
     ]
     rc, payload, _, _ = _run_json(cmd)
@@ -331,6 +366,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "mutation", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -491,6 +527,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
+        session_id=str(args.session_id or "").strip(),
         outlet_channel_id="final_emit_governed",
         blocker_receipt=missing_receipt,
         reply_file=missing_file,
@@ -518,6 +555,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
+        session_id=str(args.session_id or "").strip(),
         outlet_channel_id="final_emit_governed",
         blocker_receipt=inline_receipt,
         reply_text="manual inline reply without governed file evidence",
@@ -544,6 +582,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
+        session_id=str(args.session_id or "").strip(),
         outlet_channel_id="direct_text_channel",
         blocker_receipt=nongov_receipt,
         reply_file=missing_file,
@@ -586,6 +625,8 @@ def main() -> int:
         "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(args.session_id or "").strip(),
         "--json-only",
     ]
     rc_compose, payload_compose, _, _ = _run_json(compose_cmd)
@@ -624,6 +665,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=actor_id,
+            session_id=str(args.session_id or "").strip(),
             outlet_channel_id="final_emit_governed",
             blocker_receipt=coverage_receipt,
             reply_file=pass_file,
@@ -653,6 +695,7 @@ def main() -> int:
     mismatch_ok, mismatch_case, mismatch_stale = _actor_mismatch_probe(
         identity_id=args.identity_id,
         actor_id=actor_id,
+        session_id=str(args.session_id or "").strip(),
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         reply_file=mismatch_reply,
