@@ -3193,6 +3193,7 @@ def main() -> int:
                     for k in (
                         "multimodal_plugin_enforcement_status",
                         "multimodal_runtime_evidence_status",
+                        "multimodal_preflight_status",
                         "error_code",
                         "required_contract",
                         "auto_required_signal",

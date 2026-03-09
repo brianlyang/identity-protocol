@@ -1966,6 +1966,8 @@ def _instance_plane_status(
             "three_plane_target_probe",
             "--operation",
             "three-plane",
+            "--report-selected-path",
+            str(report_path),
             "--json-only",
         ]
     )
@@ -3668,6 +3670,7 @@ def _instance_plane_status(
         "multimodal_plugin_enforcement": {
             "multimodal_plugin_enforcement_status": multimodal_plugin_payload.get("multimodal_plugin_enforcement_status"),
             "multimodal_runtime_evidence_status": multimodal_plugin_payload.get("multimodal_runtime_evidence_status"),
+            "multimodal_preflight_status": multimodal_plugin_payload.get("multimodal_preflight_status", ""),
             "error_code": multimodal_plugin_payload.get("error_code", ""),
             "required_contract": multimodal_plugin_payload.get("required_contract"),
             "auto_required_signal": multimodal_plugin_payload.get("auto_required_signal"),
