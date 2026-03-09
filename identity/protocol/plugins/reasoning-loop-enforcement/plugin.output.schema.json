@@ -8,6 +8,7 @@
     "reasoning_runtime_evidence_status",
     "reasoning_enforcement_level",
     "strict_run_id_binding",
+    "runtime_report_selection_mode",
     "runtime_report_path",
     "runtime_report_run_id",
     "error_code"
@@ -40,6 +41,13 @@
     },
     "strict_run_id_binding": {
       "type": "boolean"
+    },
+    "runtime_report_selection_mode": {
+      "type": "string",
+      "enum": [
+        "prefer_run_id",
+        "latest_first"
+      ]
     },
     "runtime_report_path": {
       "type": "string"

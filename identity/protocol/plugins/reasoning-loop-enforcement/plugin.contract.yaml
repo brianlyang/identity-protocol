@@ -62,6 +62,7 @@ semantics:
   done_requires_terminal_target_reached: true
   failure_requires_next_action: true
   strict_run_id_binding: true
+  runtime_report_selection_mode: prefer_run_id
   max_attempts_before_escalation: 3
   escalation_requirement_mode: at_or_exceed
   escalation_signal_fields:

@@ -959,6 +959,9 @@ Key replay outcomes:
 4. Strict run binding is now explicit and config-driven:
    - `strict_run_id_binding=true` requires run-id parity even when runtime proof falls back from explicit runtime reports to learning-sample sources.
    - run-id mismatch under strict operations fail-closes with `IP-RL-RUN-006`.
+5. Runtime report source selection is now explicit and config-driven:
+   - `runtime_report_selection_mode=prefer_run_id` is the default strict-lane strategy.
+   - this reduces default-path volatility by preferring run-id bound runtime reports before generic latest/fallback paths.
 
 ### 19.3 Projection and SSOT strengthening
 
@@ -967,5 +970,6 @@ Key replay outcomes:
    - completion mode / done guard flags
    - escalation requirement mode / escalation non-empty policy flags
    - strict run-id binding policy flag (`strict_run_id_binding`)
+   - runtime report source selection policy flag (`runtime_report_selection_mode`)
 2. Governance `required_report_fields` and mapping `report_field_refs` were expanded accordingly to fail-close if projection drops these fields.
 3. `validate_failclose_plugin_projection.py` now recognizes both multimodal and reasoning fail-close status fields when evaluating target probe receipts.

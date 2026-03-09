@@ -140,6 +140,9 @@ NO_TARGET_COMPLETION_MODE_TERMINAL = {
     "final_attempt",
 }
 DEFAULT_ESCALATION_NONEMPTY_FIELDS: set[str] = set()
+DEFAULT_RUNTIME_REPORT_SELECTION_MODE = "prefer_run_id"
+RUNTIME_REPORT_SELECTION_MODE_PREFER_RUN_ID = "prefer_run_id"
+RUNTIME_REPORT_SELECTION_MODE_LATEST_FIRST = "latest_first"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -188,10 +191,87 @@ def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _candidate_upgrade_report_roots(pack_path: Path) -> list[Path]:
+    roots: list[Path] = []
+    seen: set[str] = set()
+
+    def _push(path: Path) -> None:
+        key = path.as_posix()
+        if key in seen:
+            return
+        seen.add(key)
+        roots.append(path)
+
+    pack_resolved = pack_path.resolve()
+    _push((pack_resolved / "runtime" / "reports").resolve())
+    for parent in [pack_resolved, *pack_resolved.parents]:
+        candidate = (parent / "resource" / "reports").resolve()
+        _push(candidate)
+        if candidate.exists():
+            break
+    return roots
+
+
+def _resolve_runtime_report_for_run_id(
+    *,
+    identity_id: str,
+    pack_path: Path,
+    run_id: str,
+) -> Path | None:
+    normalized_run_id = str(run_id or "").strip()
+    if not normalized_run_id:
+        return None
+
+    normalized_identity = str(identity_id or "").strip()
+    if normalized_identity in {"", "*"}:
+        pattern = "**/identity-upgrade-exec-*.json"
+    else:
+        pattern = f"**/identity-upgrade-exec-{normalized_identity}-*.json"
+
+    rows: list[Path] = []
+    for root in _candidate_upgrade_report_roots(pack_path):
+        if not root.exists():
+            continue
+        for path in root.glob(pattern):
+            if not path.is_file() or path.name.endswith("-patch-plan.json"):
+                continue
+            path_text = path.as_posix()
+            if (
+                "/runtime/protocol-feedback/" in path_text
+                or "/archive/" in path_text
+                or "/archives/" in path_text
+            ):
+                continue
+            rows.append(path.resolve())
+
+    if not rows:
+        return None
+
+    name_hits = [path for path in rows if normalized_run_id in path.name]
+    if name_hits:
+        name_hits.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        return name_hits[0]
+
+    run_id_hits: list[Path] = []
+    for path in rows:
+        try:
+            doc = load_json(path)
+        except Exception:
+            continue
+        if str(doc.get("run_id", "")).strip() == normalized_run_id:
+            run_id_hits.append(path)
+    if not run_id_hits:
+        return None
+    run_id_hits.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    return run_id_hits[0]
+
+
 def _resolve_report_candidates(
     *,
     identity_id: str,
     pack_path: Path,
+    run_id: str,
+    runtime_report_selection_mode: str,
     report_selected_path: str,
     learning_pattern: str,
 ) -> tuple[list[Path], list[Path]]:
@@ -202,9 +282,22 @@ def _resolve_report_candidates(
         if p.exists() and p.is_file():
             runtime_candidates.append(p)
 
+    run_id_candidate = _resolve_runtime_report_for_run_id(
+        identity_id=identity_id,
+        pack_path=pack_path,
+        run_id=run_id,
+    )
     latest = latest_identity_upgrade_report(identity_id, pack_path)
-    if latest is not None:
-        runtime_candidates.append(latest.resolve())
+    if runtime_report_selection_mode == RUNTIME_REPORT_SELECTION_MODE_LATEST_FIRST:
+        if latest is not None:
+            runtime_candidates.append(latest.resolve())
+        if run_id_candidate is not None:
+            runtime_candidates.append(run_id_candidate.resolve())
+    else:
+        if run_id_candidate is not None:
+            runtime_candidates.append(run_id_candidate.resolve())
+        if latest is not None:
+            runtime_candidates.append(latest.resolve())
 
     learning_candidates: list[Path] = []
     raw_pattern = str(learning_pattern or "").strip()
@@ -340,6 +433,18 @@ def _normalize_escalation_requirement_mode(raw: str) -> str:
     return ""
 
 
+def _normalize_runtime_report_selection_mode(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if not value:
+        return DEFAULT_RUNTIME_REPORT_SELECTION_MODE
+    if value in {
+        RUNTIME_REPORT_SELECTION_MODE_PREFER_RUN_ID,
+        RUNTIME_REPORT_SELECTION_MODE_LATEST_FIRST,
+    }:
+        return value
+    return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate reasoning-loop fail-close contract (RQ-035).")
     ap.add_argument("--catalog", required=True)
@@ -424,6 +529,7 @@ def main() -> int:
         "escalation_signal_nonempty_fields": [],
         "escalation_requirement_mode": "",
         "strict_run_id_binding": True,
+        "runtime_report_selection_mode": DEFAULT_RUNTIME_REPORT_SELECTION_MODE,
         "reasoning_runtime_evidence_refs": [],
         "error_code": "",
         "stale_reasons": [],
@@ -552,6 +658,18 @@ def main() -> int:
     else:
         strict_run_id_binding = _boolish(strict_run_id_binding_raw)
     payload["strict_run_id_binding"] = strict_run_id_binding
+    runtime_report_selection_mode = _normalize_runtime_report_selection_mode(
+        str(contract.get("runtime_report_selection_mode", DEFAULT_RUNTIME_REPORT_SELECTION_MODE))
+    )
+    if not runtime_report_selection_mode:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = ["invalid_runtime_report_selection_mode"]
+        payload["evidence_ref"] = str(task_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    payload["runtime_report_selection_mode"] = runtime_report_selection_mode
 
     level_attempt_fields_cfg = contract.get("level_required_attempt_fields")
     level_run_fields_cfg = contract.get("level_required_run_fields")
@@ -575,6 +693,8 @@ def main() -> int:
     runtime_candidates, learning_candidates = _resolve_report_candidates(
         identity_id=args.identity_id,
         pack_path=pack_path,
+        run_id=str(args.run_id or "").strip(),
+        runtime_report_selection_mode=runtime_report_selection_mode,
         report_selected_path=str(args.report_selected_path or "").strip(),
         learning_pattern=str(contract.get("learning_report_path_pattern", "runtime/examples/*-learning-sample.json")),
     )

@@ -3294,6 +3294,7 @@ def main() -> int:
                         "escalation_signal_accept_nonempty_ref",
                         "escalation_signal_nonempty_fields",
                         "strict_run_id_binding",
+                        "runtime_report_selection_mode",
                         "reasoning_four_track_status",
                         "external_source_freshness_status",
                         "reasoning_enforcement_level",

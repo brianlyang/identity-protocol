@@ -3776,6 +3776,7 @@ def _instance_plane_status(
             "escalation_signal_accept_nonempty_ref": reasoning_plugin_payload.get("escalation_signal_accept_nonempty_ref"),
             "escalation_signal_nonempty_fields": reasoning_plugin_payload.get("escalation_signal_nonempty_fields", []),
             "strict_run_id_binding": reasoning_plugin_payload.get("strict_run_id_binding"),
+            "runtime_report_selection_mode": reasoning_plugin_payload.get("runtime_report_selection_mode", ""),
             "reasoning_four_track_status": reasoning_plugin_payload.get("reasoning_four_track_status"),
             "external_source_freshness_status": reasoning_plugin_payload.get("external_source_freshness_status"),
             "reasoning_enforcement_level": reasoning_plugin_payload.get("reasoning_enforcement_level", ""),
