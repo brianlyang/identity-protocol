@@ -23,6 +23,10 @@ from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
 from runtime_temp_path_common import runtime_temp_file, runtime_temp_root
 
+SCRIPT_FILE = Path(__file__).resolve()
+PROTOCOL_REPO_ROOT = SCRIPT_FILE.parents[1]
+PROTOCOL_SCRIPTS_ROOT = PROTOCOL_REPO_ROOT / "scripts"
+
 PROTOCOL_PUBLISH_CHECKS = {
     "scripts/validate_changelog_updated.py",
     "scripts/validate_protocol_handoff_coupling.py",
@@ -89,6 +93,13 @@ PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
         "fail_action": "block_when_prompt_import_not_executable_coupled",
     },
 }
+
+
+def _resolve_script_path(cmd_or_script: str) -> str:
+    text = str(cmd_or_script or "").strip()
+    if text.startswith("scripts/"):
+        return str((PROTOCOL_REPO_ROOT / text).resolve())
+    return text
 
 
 def _deep_merge_defaults(defaults: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
@@ -829,9 +840,16 @@ def _build_skipped_check_results(
     return rows
 
 
-def _resolve_git_range() -> tuple[str, str]:
+def _resolve_git_range(repo_root: Path | None = None) -> tuple[str, str]:
+    resolved_repo_root = (repo_root or PROTOCOL_REPO_ROOT).expanduser().resolve()
+
     def _git(cmd: list[str]) -> str:
-        p = subprocess.run(["git", *cmd], capture_output=True, text=True)
+        p = subprocess.run(
+            ["git", *cmd],
+            capture_output=True,
+            text=True,
+            cwd=str(resolved_repo_root),
+        )
         return (p.stdout or "").strip() if p.returncode == 0 else ""
 
     base = os.environ.get("PR_BASE_SHA") or os.environ.get("GITHUB_BASE_SHA") or os.environ.get("PUSH_BEFORE_SHA") or os.environ.get("GITHUB_EVENT_BEFORE") or ""
@@ -1272,6 +1290,7 @@ def _resolve_capability_contract(
     runtime_output_root: Path,
     run_id: str,
     activation_policy: str = "strict-union",
+    protocol_root: Path = PROTOCOL_REPO_ROOT,
 ) -> dict[str, Any]:
     payload = _default_capability_contract_payload(identity_id=identity_id, catalog_path=catalog_path)
     out_path: Path | None = None
@@ -1296,7 +1315,7 @@ def _resolve_capability_contract(
             continue
     cmd = [
         "python3",
-        "scripts/validate_identity_capability_activation.py",
+        _resolve_script_path("scripts/validate_identity_capability_activation.py"),
         "--catalog",
         str(catalog_path.expanduser().resolve()),
         "--repo-catalog",
@@ -1308,7 +1327,12 @@ def _resolve_capability_contract(
     ]
     if out_path is not None:
         cmd.extend(["--out", str(out_path)])
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=str(protocol_root.expanduser().resolve()),
+    )
     if out_path is not None and out_path.exists():
         try:
             raw = _load_json(out_path)
@@ -1350,6 +1374,7 @@ def _run_header_first_gate(
     layer_intent_text: str,
     expected_work_layer: str,
     expected_source_layer: str,
+    protocol_root: Path = PROTOCOL_REPO_ROOT,
 ) -> dict[str, Any]:
     reply_file = runtime_temp_file(
         channel="identity-upgrade",
@@ -1369,7 +1394,7 @@ def _run_header_first_gate(
     )
     cmd = [
         "python3",
-        "scripts/compose_and_validate_governed_reply.py",
+        _resolve_script_path("scripts/compose_and_validate_governed_reply.py"),
         "--catalog",
         str(catalog_path.expanduser().resolve()),
         "--repo-catalog",
@@ -1396,7 +1421,12 @@ def _run_header_first_gate(
         cmd.extend(["--work-layer", str(expected_work_layer).strip()])
     if str(expected_source_layer or "").strip():
         cmd.extend(["--source-layer", str(expected_source_layer).strip()])
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=str(protocol_root.expanduser().resolve()),
+    )
     payload = _parse_json_payload(proc.stdout) or {}
     send_time_status = str(payload.get("send_time_gate_status", "")).strip().upper()
     governed_outlet_enforced = bool(payload.get("governed_outlet_enforced", False))
@@ -1539,6 +1569,8 @@ def main() -> int:
     ap.add_argument("--phase-transition-reason", default="")
     ap.add_argument("--phase-transition-error-code", default="")
     args = ap.parse_args()
+    args.catalog = str(Path(args.catalog).expanduser().resolve())
+    args.repo_catalog = str(Path(args.repo_catalog).expanduser().resolve())
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     run_id = str(args.run_id or "").strip() or f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
@@ -1698,6 +1730,7 @@ def main() -> int:
                 layer_intent_text=str(args.layer_intent_text or ""),
                 expected_work_layer=str(args.expected_work_layer or ""),
                 expected_source_layer=str(args.expected_source_layer or ""),
+                protocol_root=protocol_root,
             )
             if bool(header_probe.get("ok", False)):
                 header_first_gate_status = "PASS_REQUIRED"
@@ -1886,7 +1919,7 @@ def main() -> int:
     base_sha, head_sha = _resolve_git_range()
     lane_routing_cmd = [
         "python3",
-        "scripts/validate_work_layer_gate_set_routing.py",
+        _resolve_script_path("scripts/validate_work_layer_gate_set_routing.py"),
         "--catalog",
         args.catalog,
         "--repo-catalog",
@@ -1910,7 +1943,12 @@ def main() -> int:
         lane_routing_cmd.extend(["--expected-work-layer", args.expected_work_layer.strip()])
     if args.expected_source_layer.strip():
         lane_routing_cmd.extend(["--source-layer", args.expected_source_layer.strip()])
-    lane_routing_proc = subprocess.run(lane_routing_cmd, capture_output=True, text=True)
+    lane_routing_proc = subprocess.run(
+        lane_routing_cmd,
+        capture_output=True,
+        text=True,
+        cwd=str(protocol_root),
+    )
     lane_routing_payload = _parse_json_payload(lane_routing_proc.stdout) or {}
     if lane_routing_proc.returncode != 0:
         reason = "lane_gate_set_routing_failed"
@@ -2047,6 +2085,7 @@ def main() -> int:
         runtime_output_root=runtime_output_root,
         run_id=run_id,
         activation_policy=args.capability_activation_policy,
+        protocol_root=protocol_root,
     )
     capability_status = str(capability_contract.get("capability_activation_status", "ERROR")).strip().upper()
     capability_error_code = str(capability_contract.get("capability_activation_error_code", "")).strip()
