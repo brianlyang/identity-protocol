@@ -528,6 +528,14 @@ def _activate_identity(
     actor_id_resolved = resolve_actor_id(actor_id)
     run_id_resolved = str(run_id or "").strip() or f"activate-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
     session_id_resolved, session_id_source = _derive_actor_session_id(session_id, run_id_resolved)
+    if session_id_source != "explicit_session_id":
+        print(
+            "[FAIL] activation requires explicit session-id under strict M:N actor binding "
+            "(error_code=IP-ACT-SESSION-001, session_id_source="
+            f"{session_id_source or 'missing'}, derived_session_id={session_id_resolved or 'EMPTY'})."
+        )
+        print("[HINT] re-run activate with --session-id run:<stable-session-id> (run-id derivation is disabled).")
+        return 1
     switch_scope = str(switch_guard_scope or SWITCH_GUARD_SCOPE_ACTOR_SESSION).strip().lower()
     if switch_scope not in SWITCH_GUARD_SCOPE_CHOICES:
         switch_scope = SWITCH_GUARD_SCOPE_ACTOR_SESSION
@@ -688,35 +696,41 @@ def _activate_identity(
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         actor_store = load_actor_binding_store(local_catalog, actor_id_resolved)
         compare_token = str(actor_store.get("compare_token", "")).strip() or str(actor_store.get("binding_version", 0))
+        switch_intent_receipt_sync = switch_intent_receipt_path or str(switch_intent_receipt or "").strip()
+        sync_cmd = [
+            "python3",
+            "scripts/sync_session_identity.py",
+            "--catalog",
+            str(local_catalog),
+            "--identity-id",
+            identity_id,
+            "--out",
+            str(canonical_session_pointer),
+            "--mirror-out",
+            str(scoped_session_mirror),
+            "--actor-id",
+            actor_id_resolved,
+            "--run-id",
+            run_id_resolved,
+            "--session-id",
+            session_id_resolved,
+            "--session-id-source",
+            session_id_source,
+            "--compare-token",
+            compare_token,
+            "--mutation-lane",
+            "activate",
+            "--switch-reason",
+            switch_reason_resolved,
+            "--entrypoint-pid",
+            str(os.getpid()),
+            "--cross-actor-override-receipt",
+            cross_actor_receipt_path,
+        ]
+        if switch_intent_receipt_sync:
+            sync_cmd.extend(["--switch-intent-receipt", switch_intent_receipt_sync])
         sync = subprocess.run(
-            [
-                "python3",
-                "scripts/sync_session_identity.py",
-                "--catalog",
-                str(local_catalog),
-                "--identity-id",
-                identity_id,
-                "--out",
-                str(canonical_session_pointer),
-                "--mirror-out",
-                str(scoped_session_mirror),
-                "--actor-id",
-                actor_id_resolved,
-                "--run-id",
-                run_id_resolved,
-                "--session-id",
-                session_id_resolved,
-                "--compare-token",
-                compare_token,
-                "--mutation-lane",
-                "activate",
-                "--switch-reason",
-                switch_reason_resolved,
-                "--entrypoint-pid",
-                str(os.getpid()),
-                "--cross-actor-override-receipt",
-                cross_actor_receipt_path,
-            ],
+            sync_cmd,
             capture_output=True,
             text=True,
         )

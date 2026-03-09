@@ -25,6 +25,9 @@ ERR_MB_003 = "IP-ASB-MB-003"
 ERR_MB_004 = "IP-ASB-MB-004"
 ERR_MB_005 = "IP-ASB-MB-005"
 ERR_MB_006 = "IP-ASB-MB-006"
+ERR_MB_007 = "IP-ASB-MB-007"
+ERR_MB_008 = "IP-ASB-MB-008"
+ERR_MB_009 = "IP-ASB-MB-009"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -56,6 +59,14 @@ def _fail(err_code: str, reason: str) -> int:
     return 1
 
 
+def _load_json(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def _entry_sort_key(row: dict[str, Any]) -> tuple[int, str]:
     try:
         version = int(row.get("binding_version", 0))
@@ -73,6 +84,39 @@ def _derive_session_id(explicit_session_id: str, run_id: str) -> tuple[str, str]
     if rid:
         return f"run:{rid}", "run_id"
     return "", ""
+
+
+def _load_canonical_identity_id(canonical_out: Path) -> str:
+    if not canonical_out.exists():
+        return ""
+    doc = _load_json(canonical_out)
+    return str(doc.get("identity_id", "")).strip()
+
+
+def _validate_switch_intent_receipt(
+    *,
+    receipt_path: str,
+    actor_id: str,
+    from_identity_id: str,
+    to_identity_id: str,
+) -> list[str]:
+    p = Path(receipt_path).expanduser().resolve()
+    if not p.exists() or not p.is_file():
+        return ["switch_intent_receipt_missing"]
+    data = _load_json(p)
+    if not data:
+        return ["switch_intent_receipt_not_object_or_parse_failed"]
+    errors: list[str] = []
+    actor_receipt = str(data.get("actor_id", "")).strip()
+    from_receipt = str(data.get("from_identity_id", "")).strip()
+    to_receipt = str(data.get("to_identity_id", "")).strip()
+    if actor_receipt != actor_id:
+        errors.append("switch_intent_receipt_actor_mismatch")
+    if from_receipt != from_identity_id:
+        errors.append("switch_intent_receipt_from_identity_mismatch")
+    if to_receipt != to_identity_id:
+        errors.append("switch_intent_receipt_to_identity_mismatch")
+    return errors
 
 
 def _build_actor_payload(
@@ -289,6 +333,16 @@ def main() -> int:
         help="explicit governance override receipt required for non-activate canonical mutations",
     )
     ap.add_argument("--approved-by", default="", help="manual override approver for rebind receipt")
+    ap.add_argument(
+        "--switch-intent-receipt",
+        default="",
+        help="receipt required when canonical pointer switches identity (actor_id/from_identity_id/to_identity_id tuple-bound)",
+    )
+    ap.add_argument(
+        "--session-id-source",
+        default="",
+        help="session id source tag (explicit_session_id/run_id); activate lane requires explicit_session_id",
+    )
     args = ap.parse_args()
 
     catalog = Path(args.catalog).expanduser().resolve()
@@ -315,12 +369,6 @@ def main() -> int:
         "synced_at": _utc_now(),
         "session_pointer_type": "canonical",
     }
-    try:
-        _write_payload(canonical_out, payload)
-    except Exception as exc:
-        print(f"[FAIL] canonical session sync failed: {canonical_out} ({exc})")
-        return 1
-    print(f"[OK] session identity synced (canonical): {canonical_out}")
 
     mirror_targets: list[Path] = []
     mirror_raw = args.mirror_out.strip()
@@ -341,23 +389,6 @@ def main() -> int:
         seen.add(k)
         dedup_targets.append(t)
 
-    for mirror_out in dedup_targets:
-        if mirror_out == canonical_out:
-            print("[INFO] mirror path equals canonical path; mirror write skipped")
-            continue
-        mirror_payload = dict(payload)
-        mirror_payload["session_pointer_type"] = "mirror"
-        mirror_payload["canonical_session_pointer"] = str(canonical_out)
-        try:
-            _write_payload(mirror_out, mirror_payload)
-            print(f"[OK] session identity mirrored: {mirror_out}")
-        except Exception as exc:
-            msg = f"mirror session sync failed: {mirror_out} ({exc})"
-            if args.require_mirror:
-                print(f"[FAIL] {msg}")
-                return 1
-            print(f"[WARN] {msg}")
-
     actor_id = resolve_actor_id(args.actor_id)
     actor_out = actor_session_path(catalog, actor_id)
     mutation_lane = str(args.mutation_lane or "").strip().lower() or "activate"
@@ -366,8 +397,13 @@ def main() -> int:
         return _fail(ERR_MB_004, "non_activation_mutation_without_override_receipt")
 
     session_id, session_id_source = _derive_session_id(args.session_id, args.run_id)
+    session_id_source_input = str(args.session_id_source or "").strip()
+    if session_id_source_input:
+        session_id_source = session_id_source_input
     if not session_id:
         return _fail(ERR_MB_005, "session_id_missing_and_run_id_missing")
+    if mutation_lane == "activate" and session_id_source != "explicit_session_id":
+        return _fail(ERR_MB_007, "activate_requires_explicit_session_id")
 
     store = load_actor_binding_store(catalog, actor_id)
 
@@ -383,6 +419,25 @@ def main() -> int:
     entrypoint_pid = str(args.entrypoint_pid or "").strip() or str(os.getpid())
     approved_by = str(args.approved_by or "").strip() or "system:auto"
     cross_actor_override_receipt = str(args.cross_actor_override_receipt or "").strip()
+    canonical_before_identity = _load_canonical_identity_id(canonical_out)
+    if canonical_before_identity and canonical_before_identity != args.identity_id:
+        switch_receipt = str(args.switch_intent_receipt or "").strip()
+        if not switch_receipt:
+            return _fail(
+                ERR_MB_008,
+                (
+                    "canonical_pointer_identity_switch_requires_switch_intent_receipt "
+                    f"from={canonical_before_identity} to={args.identity_id}"
+                ),
+            )
+        receipt_errors = _validate_switch_intent_receipt(
+            receipt_path=switch_receipt,
+            actor_id=actor_id,
+            from_identity_id=canonical_before_identity,
+            to_identity_id=args.identity_id,
+        )
+        if receipt_errors:
+            return _fail(ERR_MB_009, "switch_intent_receipt_invalid:" + ",".join(receipt_errors))
     try:
         actor_payload, compare_token_after = _build_actor_payload(
             store=store,
@@ -420,6 +475,34 @@ def main() -> int:
         "[OK] session identity actor-bound: "
         f"{actor_out} session_id={session_id} compare_token={compare_token_after} lane={mutation_lane}"
     )
+    try:
+        _write_payload(canonical_out, payload)
+    except Exception as exc:
+        # Rollback actor binding store to pre-mutation snapshot when canonical write fails.
+        try:
+            write_actor_binding_store(actor_out, store)
+        except Exception as rb_exc:
+            print(f"[FAIL] canonical session sync failed and actor rollback failed: {canonical_out} ({exc}); rollback_error={rb_exc}")
+            return 1
+        print(f"[FAIL] canonical session sync failed: {canonical_out} ({exc}); actor binding rolled back")
+        return 1
+    print(f"[OK] session identity synced (canonical): {canonical_out}")
+    for mirror_out in dedup_targets:
+        if mirror_out == canonical_out:
+            print("[INFO] mirror path equals canonical path; mirror write skipped")
+            continue
+        mirror_payload = dict(payload)
+        mirror_payload["session_pointer_type"] = "mirror"
+        mirror_payload["canonical_session_pointer"] = str(canonical_out)
+        try:
+            _write_payload(mirror_out, mirror_payload)
+            print(f"[OK] session identity mirrored: {mirror_out}")
+        except Exception as exc:
+            msg = f"mirror session sync failed: {mirror_out} ({exc})"
+            if args.require_mirror:
+                print(f"[FAIL] {msg}")
+                return 1
+            print(f"[WARN] {msg}")
     return 0
 
 
