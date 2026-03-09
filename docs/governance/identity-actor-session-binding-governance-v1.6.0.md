@@ -4547,6 +4547,56 @@ Machine report artifacts:
 6. `python3 scripts/docs_command_contract_check.py`
 7. `python3 scripts/validate_protocol_ssot_source.py`
 
+### 8.65 Round-30.0 prompt-capability nested-validator convergence + full-scan zero-P0 closure (2026-03-09)
+
+#### Why this section exists
+
+1. full-scan `scan-mode=full` still produced a residual `P0` on `base-repo-architect` even after control-plane gates were green.
+2. root cause was validator input projection drift: prompt-capability validators only read top-level `required_validators`, while the instance had validator contracts under nested nodes.
+
+#### Protocol patch scope
+
+1. `scripts/validate_prompt_bootstrap_capability.py`
+   - aggregate configured validators from:
+     - top-level `required_validators`
+     - `ci_enforcement_contract.required_validators`
+     - `identity_update_lifecycle_contract.validation_contract.required_checks`
+2. `scripts/validate_prompt_capability_matrix.py`
+   - apply the same multi-source validator aggregation model.
+3. behavior remains fail-close:
+   - missing drivers still returns `FAIL_REQUIRED` (`IP-PBOOT-001` / `IP-PCAPM-001`).
+
+#### Instance closure action (non-protocol tracked runtime)
+
+1. add explicit `required_validators` capability drivers in:
+   `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect/CURRENT_TASK.json`
+2. this action closes runtime debt without weakening protocol fail-close semantics.
+
+#### Replay evidence
+
+1. pre-fix failing probe:
+   - `/tmp/audit_round302_prompt_bootstrap_architect_20260309.json` (`FAIL_REQUIRED`, `IP-PBOOT-001`)
+   - `/tmp/audit_round302_prompt_matrix_architect_20260309.json` (`FAIL_REQUIRED`, `IP-PCAPM-001`)
+2. post-fix validator replay:
+   - `/tmp/audit_round302_prompt_bootstrap_architect_afterfix_20260309.json` (`PASS_REQUIRED`)
+   - `/tmp/audit_round302_prompt_matrix_architect_afterfix_20260309.json` (`PASS_REQUIRED`)
+3. full-scan closure replay:
+   - `/tmp/audit_round302_full_scan_full_afterfix_20260309.json`
+   - summary: `total=4, p0=0, p1=0, ok=4`
+4. control-plane cross-check after patch:
+   - `/tmp/audit_round302_budget_afterfix_20260309.json`
+   - `/tmp/audit_round302_invariants_afterfix_20260309.json`
+   - `/tmp/audit_round302_status_sync_afterfix_20260309.json`
+   - `/tmp/audit_round302_surface_drift_afterfix2_20260309.json`
+   - `/tmp/audit_round302_docs_contract_afterfix_20260309.log`
+   - `/tmp/audit_round302_ssot_afterfix_20260309.log`
+
+#### Decision boundary
+
+1. this closure removes the remaining round302 `P0` in full-scan while preserving strict fail-close behavior.
+2. protocol scope closes validator projection drift; instance scope closes missing runtime capability-driver declaration.
+3. promotion statements remain machine-derived only.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

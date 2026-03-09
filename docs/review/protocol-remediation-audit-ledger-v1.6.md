@@ -3732,6 +3732,54 @@ Decision boundary:
 1. this addendum closes control-plane budget/status drift and achieves machine-green within control-plane governance scope.
 2. this addendum does not claim required-plane migration debt closure (`mapping_rows_missing_in_bundle=25` remains frozen and visible).
 
+---
+
+### Round-30.0 addendum: prompt-capability validator projection closure + full-scan zero-P0 replay (2026-03-09)
+
+Cross-verified findings:
+
+1. full-scan `scan-mode=full` residual `P0` narrowed to `base-repo-architect`.
+2. failure was not outlet/tuple drift; it was prompt-capability driver detection using only top-level `required_validators`.
+3. protocol patch now aggregates validator declarations from three canonical sources:
+   - top-level `required_validators`
+   - `ci_enforcement_contract.required_validators`
+   - `identity_update_lifecycle_contract.validation_contract.required_checks`
+4. strict fail-close logic is unchanged: missing capability drivers still hard-fail with existing error codes.
+
+Protocol code changes:
+
+1. `scripts/validate_prompt_bootstrap_capability.py`
+2. `scripts/validate_prompt_capability_matrix.py`
+
+Runtime debt closure performed:
+
+1. `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect/CURRENT_TASK.json`
+2. added explicit capability-driver validators to top-level `required_validators` for consistency with prompt contracts.
+
+Replay evidence:
+
+1. pre-fix:
+   - `/tmp/audit_round302_prompt_bootstrap_architect_20260309.json` => `FAIL_REQUIRED` (`IP-PBOOT-001`)
+   - `/tmp/audit_round302_prompt_matrix_architect_20260309.json` => `FAIL_REQUIRED` (`IP-PCAPM-001`)
+2. post-fix:
+   - `/tmp/audit_round302_prompt_bootstrap_architect_afterfix_20260309.json` => `PASS_REQUIRED`
+   - `/tmp/audit_round302_prompt_matrix_architect_afterfix_20260309.json` => `PASS_REQUIRED`
+3. full-scan convergence:
+   - `/tmp/audit_round302_full_scan_full_afterfix_20260309.json`
+   - summary: `total=4, p0=0, p1=0, ok=4`
+4. control-plane cross-gate replay:
+   - `/tmp/audit_round302_budget_afterfix_20260309.json`
+   - `/tmp/audit_round302_invariants_afterfix_20260309.json`
+   - `/tmp/audit_round302_status_sync_afterfix_20260309.json`
+   - `/tmp/audit_round302_surface_drift_afterfix2_20260309.json`
+   - `/tmp/audit_round302_docs_contract_afterfix_20260309.log`
+   - `/tmp/audit_round302_ssot_afterfix_20260309.log`
+
+Decision boundary:
+
+1. this addendum closes the round302 full-scan residual `P0` and reaches machine-green for currently discovered identities.
+2. protocol and runtime actions are both required for this closure; neither side alone was sufficient.
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).
