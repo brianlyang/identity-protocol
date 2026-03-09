@@ -45,6 +45,31 @@ jobs:
       - name: Validate protocol SSOT source boundary
         run: python3 scripts/validate_protocol_ssot_source.py
 
+      - name: Validate governance docs command contract
+        run: python3 scripts/docs_command_contract_check.py
+
+      - name: Validate doc evidence persistence policy (v1.6.2)
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [ -n "${PR_BASE_SHA}" ] && [ -n "${PR_HEAD_SHA}" ]; then
+            BASE_SHA="${PR_BASE_SHA}"
+            HEAD_SHA="${PR_HEAD_SHA}"
+          elif [ -n "${PUSH_BEFORE_SHA}" ] && [ "${PUSH_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="${PUSH_BEFORE_SHA}"
+            HEAD_SHA="${CURRENT_SHA}"
+          else
+            BASE_SHA="$(git rev-parse HEAD~1)"
+            HEAD_SHA="$(git rev-parse HEAD)"
+          fi
+          python3 scripts/validate_doc_evidence_persistence.py --enforce-delta --base "${BASE_SHA}" --head "${HEAD_SHA}" --json-only
+
+      - name: Validate plugin literal path canonicalization
+        run: python3 scripts/validate_plugin_contract_literal_paths.py --json-only
+
       - name: Validate changelog update for significant changes
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -203,28 +228,29 @@ jobs:
             CAPABILITY_FIT_ROOT="${TMP_ROOT}/capability-fit-matrices"
             UPGRADE_REPORT_ROOT="${TMP_ROOT}/identity-upgrade-reports"
             HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
+            HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID}}"
             IS_FIXTURE_ID="$(ID="$ID" python3 -c 'import os,yaml,pathlib; identity_id=os.environ.get("ID","").strip(); doc=yaml.safe_load(pathlib.Path("identity/catalog/identities.yaml").read_text(encoding="utf-8")) or {}; rows=[x for x in (doc.get("identities") or []) if isinstance(x,dict)]; row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), {}); profile=str(row.get("profile","")).strip().lower(); runtime_mode=str(row.get("runtime_mode","")).strip().lower(); print("1" if (profile=="fixture" or runtime_mode=="demo_only") else "0")')"
             python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
             python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --scope AUTO
             python3 scripts/validate_identity_role_binding.py --identity-id "$ID"
             python3 scripts/validate_identity_home_catalog_alignment.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --identity-home "$CATALOG_PARENT"
             python3 scripts/validate_fixture_runtime_boundary.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci
-            python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --operation ci
-            python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --operation ci --json-only
+            python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --operation ci
+            python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --operation ci --json-only
             python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci
             python3 scripts/validate_identity_session_refresh_status.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --operation ci --baseline-policy warn
             python3 scripts/validate_e2e_hermetic_runtime_import.py --operation ci --pythonpath-bootstrap-mode internal_bootstrap --json-only
-            python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --view external --disclosure-level standard --out "${STAMP_JSON}" --json-only
+            python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --actor-id "$HEADSTAMP_ACTOR_ID" --view external --disclosure-level standard --out "${STAMP_JSON}" --json-only
             python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-user-visible-gate --operation ci --blocker-receipt-out "${STAMP_BLOCKER_RECEIPT}"
             python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${STAMP_BLOCKER_RECEIPT}"
-            python3 scripts/validate_reply_identity_context_first_line.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-first-line-gate --operation ci --blocker-receipt-out "${FIRST_LINE_BLOCKER_RECEIPT}"
+            python3 scripts/validate_reply_identity_context_first_line.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-first-line-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "${FIRST_LINE_BLOCKER_RECEIPT}"
             python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${FIRST_LINE_BLOCKER_RECEIPT}"
             python3 scripts/validate_layer_intent_resolution.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-layer-intent-gate --operation ci --json-only
             python3 scripts/validate_send_time_reply_gate.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-send-time-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "${SEND_TIME_BLOCKER_RECEIPT}"
             python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${SEND_TIME_BLOCKER_RECEIPT}"
             python3 scripts/validate_headstamp_recurrence_closure.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --json-only
-            python3 scripts/validate_execution_reply_identity_coherence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-coherence-gate --operation ci --blocker-receipt-out "${COHERENCE_BLOCKER_RECEIPT}"
+            python3 scripts/validate_execution_reply_identity_coherence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --stamp-json "${STAMP_JSON}" --force-check --enforce-coherence-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "${COHERENCE_BLOCKER_RECEIPT}"
             python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --force-check --receipt "${COHERENCE_BLOCKER_RECEIPT}"
             python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
             python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
@@ -286,8 +312,8 @@ jobs:
             python3 scripts/validate_prompt_derivation_conformance.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_semantic_convergence.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only
             python3 scripts/validate_prompt_kernel_executable_coupling.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --repo-catalog identity/catalog/identities.yaml --actor-id "${SESSION_ACTOR_ID:-assistant:codex}" --operation ci --json-only
-            python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "$BUNDLE_RUN_TOKEN" --surface-label ci_validate --operation validate --out "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --json-only
-            python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "$BUNDLE_RUN_TOKEN" --surface-label ci_three_plane --operation three-plane --out "$REQUIRED_GATE_BUNDLE_RECEIPT_THREE_PLANE" --json-only
+            python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "$BUNDLE_RUN_TOKEN" --send-time-gate-status NOT_APPLICABLE --outlet-bypass-detected false --final-emit-contract-status NOT_APPLICABLE --final-emit-policy-mode tool_choice_required --final-emit-schema-status NOT_APPLICABLE --actor-id "$HEADSTAMP_ACTOR_ID" --resolved-work-layer protocol --resolved-source-layer project --lock-state LOCK_MATCH --surface-label ci_validate --operation validate --out "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --json-only
+            python3 scripts/required_gate_bundle_runner.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --run-id "$BUNDLE_RUN_TOKEN" --send-time-gate-status NOT_APPLICABLE --outlet-bypass-detected false --final-emit-contract-status NOT_APPLICABLE --final-emit-policy-mode tool_choice_required --final-emit-schema-status NOT_APPLICABLE --actor-id "$HEADSTAMP_ACTOR_ID" --resolved-work-layer protocol --resolved-source-layer project --lock-state LOCK_MATCH --surface-label ci_three_plane --operation three-plane --out "$REQUIRED_GATE_BUNDLE_RECEIPT_THREE_PLANE" --json-only
             python3 scripts/validate_required_gate_recurrence_escalator.py --identity-id "$ID" --surface ci --operation ci --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --enforce-blocking --json-only
             python3 scripts/validate_required_gate_tuple_parity.py --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_THREE_PLANE" --require-distinct-operations --json-only
             python3 scripts/validate_replay_archive_contract.py --identity-id "$ID" --catalog identity/catalog/identities.yaml --operation ci --json-only

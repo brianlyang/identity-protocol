@@ -3558,6 +3558,79 @@ Decision:
 
 ---
 
+### Round-29.5 addendum: heal-lane prompt contract wiring parity (2026-03-08)
+
+Scope:
+
+1. 补齐 `heal --apply` 链路与 Round-29.4 update lane 的 prompt 合同强约束一致性。
+2. 防止 heal lane 退化为“可修但不强校验”的旁路。
+
+Cross-verified changes:
+
+1. `scripts/repair_contract_backfill.py`
+   - 增加 prompt 合同强约束集（四项 canonical keys）；
+   - 增加 `_normalize_prompt_contracts()`，执行自动补齐 + `required=true` 强制 + validator 回填；
+   - 在 backfill 报告内输出 prompt auto-wire 观测字段与错误码。
+2. 新增/复用错误码：
+   - `IP-PROMPT-WIRE-002`（missing after auto-wire）
+   - `IP-PROMPT-WIRE-003`（invalid after auto-wire）
+3. `scripts/identity_creator.py`
+   - `heal` 子命令新增 `--actor-id`；
+   - heal 执行链把 actor 透传到 strict `validate` 与 `collect_identity_health_report --operation validate`，消除缺 actor 的入口误阻断。
+
+Replay evidence:
+
+1. `/tmp/round295_repair_contract_backfill_base.json`
+   - `contract_backfill_status=PASS_REQUIRED`
+   - `prompt_contract_auto_wire_status=PASS_REQUIRED`
+2. `/tmp/round295_heal_base.log`
+   - heal 链内 backfill 步骤输出了 prompt wiring 字段；
+   - 该轮失败根因位于 actor/session 健康项，非 prompt 合同接线。
+3. `/tmp/round295_heal_base_actorwired.log`
+   - heal strict 链不再触发 `IP-ACTOR-ENTRY-001`；
+   - 剩余失败收敛为 `IP-ASB-201`（实例会话绑定债务）。
+
+Decision:
+
+1. 接受本轮补强：prompt 接线强约束已覆盖 update + heal 双入口。
+2. remaining blocker 按职责继续归实例层（能力/会话健康/历史债务），不回退到协议兼容兜底。
+
+---
+
+### Round-29.6 addendum: strict egress actor + bundle UNKNOWN literal closure (2026-03-09)
+
+Cross-verified findings:
+
+1. `scripts/final_emit_governed.py` actor fallback closure landed:
+   - before replay（no `--actor-id`）: `PASS_REQUIRED` + `actor_resolution_mode=default`;
+   - after replay（no `--actor-id`）: `FAIL_REQUIRED` + `IP-FE-006`;
+   - positive replay（with `--actor-id`）: `PASS_REQUIRED`.
+2. strict surface bundle arg value closure landed:
+   - target strict surfaces no longer emit literal `UNKNOWN` for
+     `send-time/final-emit-contract/final-emit-schema` trio;
+   - `validate_required_gate_surface_drift --json-only` returns
+     `PASS_REQUIRED`, `bundle_arg_value_invalid={}`.
+3. drift validator strengthened:
+   - `scripts/validate_required_gate_surface_drift.py` adds forbidden-value gate;
+   - new fail-close code for this class: `IP-GATE-ENTRY-007`.
+
+Evidence anchors (replay):
+
+1. `/tmp/audit_final_emit_no_actor_20260309.json` (before)
+2. `/tmp/audit_after_final_emit_no_actor_20260309.json` (after negative)
+3. `/tmp/audit_after_final_emit_with_actor_20260309.json` (after positive)
+4. `/tmp/audit_before_unknown_only_20260309.log` (before bundle literal scan)
+5. `/tmp/audit_after_unknown_bundle_literals_20260309.log` (after bundle literal scan)
+6. `/tmp/audit_after_surface_drift_20260309.json`
+7. `/tmp/audit_after_docs_contract_20260309.log`
+8. `/tmp/audit_after_ssot_20260309.log`
+
+Decision boundary:
+
+1. This addendum closes protocol control-plane drift in two recurrent classes:
+   actor fallback and UNKNOWN-literal bundle tuple placeholders.
+2. This addendum does not claim global promotion readiness; instance debts remain out of scope.
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

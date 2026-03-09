@@ -4331,6 +4331,91 @@ Machine report artifacts:
 1. 本节只关闭“update lane prompt 合同自动接线”协议缺口。
 2. 不宣称实例能力驱动内容已达标；能力缺失仍应由实例升级与回填解决。
 
+### 8.60 Round-29.5 Heal-lane prompt contract wiring parity (2026-03-08)
+
+#### Why this addendum is required
+
+1. Round-29.4 关闭了 update lane 的自动接线，但 `heal --apply` 仍通过 `repair_contract_backfill.py` 进入修复链，必须保证同级 fail-close 合同。
+2. 协议层目标是不让 heal lane 成为 prompt 合同“弱约束旁路”。
+
+#### Landed protocol changes
+
+1. `scripts/repair_contract_backfill.py`
+   - 新增 prompt contract 必需键集合（四项与 Round-29.4 一致）；
+   - 新增 `_normalize_prompt_contracts()`：
+     - 自动补齐缺失 prompt 合同键；
+     - 强制 `required=true`；
+     - `validator` 空值回填 canonical default。
+2. 新增 prompt wiring fail-close 错误码语义（与 update lane 对齐）：
+   - `IP-PROMPT-WIRE-002`：auto-wire 后仍缺 required prompt 合同键；
+   - `IP-PROMPT-WIRE-003`：auto-wire 后合同结构仍非法（如 validator 为空）。
+3. 回填报告新增机器字段：
+   - `prompt_contract_auto_wire_status`
+   - `prompt_contract_auto_wire_error_code`
+   - `missing_prompt_contract_keys_before/after`
+   - `forced_prompt_required_keys`
+   - `restored_prompt_validator_keys`
+4. `scripts/identity_creator.py` heal strict 面接线补齐：
+   - `heal` 子命令新增 `--actor-id`；
+   - heal 内部 `validate` 与 `health_post_validate_recheck` 统一透传 actor，避免 strict validate 因缺 actor 直接触发 `IP-ACTOR-ENTRY-001` 伪阻断。
+
+#### Replay evidence
+
+1. `python3 scripts/repair_contract_backfill.py --catalog <project>/.identity/catalog.local.yaml --identity-id base-repo-architect --apply --json-only`
+   - 证据：`/tmp/round295_repair_contract_backfill_base.json`
+   - 结果：`contract_backfill_status=PASS_REQUIRED`，`prompt_contract_auto_wire_status=PASS_REQUIRED`。
+2. `python3 scripts/identity_creator.py heal --identity-id base-repo-architect --catalog <project>/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --apply`
+   - 证据：`/tmp/round295_heal_base.log`
+   - 结果：heal 链路中的 backfill 步骤已输出 prompt wiring 字段并通过；后续失败点落在 actor/session 健康项（实例/会话态债务），非 prompt 接线缺口。
+3. `python3 scripts/identity_creator.py heal --identity-id base-repo-architect --actor-id assistant:codex --catalog <project>/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --scope USER --apply`
+   - 证据：`/tmp/round295_heal_base_actorwired.log`
+   - 结果：不再出现 `IP-ACTOR-ENTRY-001`；当前失败收敛到 `IP-ASB-201`（实例会话绑定债务）。
+
+#### Boundary
+
+1. 协议层职责：自动接线 + 校验 + 拒绝（已补齐 update/heal 双入口）。
+2. 实例层职责：能力驱动内容、actor/session 健康、历史债务回填（如 `IP-CAP-003`、`IP-ASB-RFS-*`）。
+
+
+### 8.61 Round-29.6 strict egress actor + bundle UNKNOWN literal closure (2026-03-09)
+
+#### Closure scope (protocol control-plane)
+
+1. `scripts/final_emit_governed.py` 移除隐式 actor 默认回退：
+   - 不再允许 `DEFAULT_ACTOR_ID` 自动兜底；
+   - 缺 `--actor-id` 且无 `CODEX_ACTOR_ID` 时 fail-close（`IP-FE-006`）。
+2. strict surface 的 `required_gate_bundle_runner` 参数值语义收敛：
+   - `--send-time-gate-status`
+   - `--final-emit-contract-status`
+   - `--final-emit-schema-status`
+   - 以上三项禁止 literal `UNKNOWN`，统一收敛为显式语义值（本轮收口到 `NOT_APPLICABLE`）。
+3. `scripts/validate_required_gate_surface_drift.py` 增加值域门禁：
+   - 新增 `bundle_arg_value_invalid` 检测；
+   - 任一 strict surface 在上述三项出现 `UNKNOWN` 时 fail-close：`IP-GATE-ENTRY-007`。
+
+#### Landed files
+
+1. `scripts/final_emit_governed.py`
+2. `scripts/validate_required_gate_surface_drift.py`
+3. `scripts/identity_creator.py`
+4. `scripts/release_readiness_check.py`
+5. `scripts/full_identity_protocol_scan.py`
+6. `scripts/e2e_smoke_test.sh`
+7. `.github/workflows/_identity-required-gates.yml`
+
+#### Cross-verification (before/after)
+
+1. final egress actor fallback probe：
+   - before: no `--actor-id` => `PASS_REQUIRED`（`actor_resolution_mode=default`）
+   - after: no `--actor-id` => `FAIL_REQUIRED`（`IP-FE-006`）
+   - with actor: `PASS_REQUIRED`
+2. strict bundle UNKNOWN literal probe：
+   - before: strict surfaces 存在 `UNKNOWN` literal 占位；
+   - after: target surfaces `UNKNOWN` literal count = `0`。
+3. gate replay：
+   - `validate_required_gate_surface_drift --json-only` => `PASS_REQUIRED`（`bundle_arg_value_invalid={}`）
+   - `docs_command_contract_check` => `PASS`
+   - `validate_protocol_ssot_source` => `OK`
 
 ## 9) References
 

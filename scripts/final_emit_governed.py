@@ -29,8 +29,6 @@ ERR_REPLY_FILE_MISSING = "IP-FE-005"
 ERR_CONTEXT_RESOLVE = "IP-FE-006"
 ERR_IDENTITY_RESOLVE = "IP-FE-007"
 
-DEFAULT_ACTOR_ID = "assistant:codex"
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 
@@ -130,7 +128,7 @@ def _resolve_actor_id(args: argparse.Namespace) -> tuple[str, str]:
     actor_env = str(os.environ.get("CODEX_ACTOR_ID", "")).strip()
     if actor_env:
         return resolve_actor_id(actor_env), "env"
-    return resolve_actor_id(DEFAULT_ACTOR_ID), "default"
+    raise ValueError("actor-id required: pass --actor-id or set CODEX_ACTOR_ID")
 
 
 def _resolve_identity_id(
@@ -206,7 +204,11 @@ def main() -> int:
     ap.add_argument("--identity-id", default="")
     ap.add_argument("--catalog", default="")
     ap.add_argument("--repo-catalog", default="")
-    ap.add_argument("--actor-id", default="")
+    ap.add_argument(
+        "--actor-id",
+        default="",
+        help="required actor context; no implicit default fallback is allowed",
+    )
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
     ap.add_argument("--stdin-body", action="store_true")

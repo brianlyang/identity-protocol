@@ -50,6 +50,7 @@ BUNDLE_REQUIREMENT_KEYS: tuple[str, ...] = (
     "asb16-rq-019",
     "asb16-rq-020",
     "asb16-rq-033",
+    "asb16-rq-034",
 )
 
 ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
@@ -78,6 +79,11 @@ BUNDLE_REQUIRED_ARGS: tuple[str, ...] = (
     "--resolved-work-layer",
     "--resolved-source-layer",
     "--lock-state",
+)
+BUNDLE_ARGS_FORBID_UNKNOWN: tuple[str, ...] = (
+    "--send-time-gate-status",
+    "--final-emit-contract-status",
+    "--final-emit-schema-status",
 )
 
 VERSIONED_SCRIPT_ALIAS_RE = re.compile(r"^(?P<prefix>validate|normalize|emit)_v\d+_(?P<tail>.+)\.py$")
@@ -255,6 +261,41 @@ def _missing_bundle_args_for_surface(*, surface_path: Path, text: str) -> list[d
     return rows
 
 
+def _block_contains_unknown_value(*, block: str, flag: str) -> bool:
+    pattern_inline = re.compile(
+        re.escape(flag) + r'\s+(?:"UNKNOWN"|UNKNOWN)(?:\s|$)',
+        re.IGNORECASE,
+    )
+    pattern_python_list = re.compile(
+        re.escape(flag) + r'"\s*,\s*"UNKNOWN"',
+        re.IGNORECASE,
+    )
+    return bool(pattern_inline.search(block)) or bool(pattern_python_list.search(block))
+
+
+def _invalid_bundle_arg_values_for_surface(*, surface_path: Path, text: str) -> list[dict[str, Any]]:
+    suffix = surface_path.suffix.lower()
+    if suffix == ".py":
+        blocks = _python_command_blocks_for_script(text, BUNDLE_RUNNER_SCRIPT)
+    else:
+        blocks = _line_command_blocks_for_script(text, BUNDLE_RUNNER_SCRIPT)
+    if not blocks:
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for idx, block in enumerate(blocks, start=1):
+        bad_flags = [flag for flag in BUNDLE_ARGS_FORBID_UNKNOWN if _block_contains_unknown_value(block=block, flag=flag)]
+        if bad_flags:
+            rows.append(
+                {
+                    "command_index": idx,
+                    "forbidden_unknown_args": bad_flags,
+                    "command_excerpt": block,
+                }
+            )
+    return rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detect strict-surface direct validator drift against bundle-runner lineage.")
     parser.add_argument("--repo-root", default=".")
@@ -281,6 +322,7 @@ def main() -> int:
     actor_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     session_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     bundle_arg_contract_missing: dict[str, list[dict[str, Any]]] = {}
+    bundle_arg_value_invalid: dict[str, list[dict[str, Any]]] = {}
 
     for rel in STRICT_SURFACES:
         path = repo_root / rel
@@ -308,6 +350,9 @@ def main() -> int:
         missing_bundle_args = _missing_bundle_args_for_surface(surface_path=path, text=text)
         if missing_bundle_args:
             bundle_arg_contract_missing[rel] = missing_bundle_args
+        invalid_bundle_values = _invalid_bundle_arg_values_for_surface(surface_path=path, text=text)
+        if invalid_bundle_values:
+            bundle_arg_value_invalid[rel] = invalid_bundle_values
 
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
@@ -327,6 +372,9 @@ def main() -> int:
     elif bundle_arg_contract_missing:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-004"
+    elif bundle_arg_value_invalid:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-007"
     else:
         status = STATUS_PASS_REQUIRED
         error_code = ""
@@ -356,6 +404,8 @@ def main() -> int:
         "session_id_passthrough_missing": session_id_passthrough_missing,
         "bundle_runner_required_args": list(BUNDLE_REQUIRED_ARGS),
         "bundle_arg_contract_missing": bundle_arg_contract_missing,
+        "bundle_args_forbid_unknown": list(BUNDLE_ARGS_FORBID_UNKNOWN),
+        "bundle_arg_value_invalid": bundle_arg_value_invalid,
     }
 
     if args.json_only:

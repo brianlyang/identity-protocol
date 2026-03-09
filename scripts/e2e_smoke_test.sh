@@ -693,11 +693,11 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --run-id "$BUNDLE_RUN_TOKEN" \
-    --send-time-gate-status "UNKNOWN" \
+    --send-time-gate-status "NOT_APPLICABLE" \
     --outlet-bypass-detected "false" \
-    --final-emit-contract-status "UNKNOWN" \
+    --final-emit-contract-status "NOT_APPLICABLE" \
     --final-emit-policy-mode "tool_choice_required" \
-    --final-emit-schema-status "UNKNOWN" \
+    --final-emit-schema-status "NOT_APPLICABLE" \
     --actor-id "$SESSION_ACTOR_ID" \
     --resolved-work-layer "${E2E_WORK_LAYER:-instance}" \
     --resolved-source-layer "${EXPECTED_SOURCE_LAYER:-project}" \
@@ -711,11 +711,11 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --identity-id "$ID" \
     --run-id "$BUNDLE_RUN_TOKEN" \
-    --send-time-gate-status "UNKNOWN" \
+    --send-time-gate-status "NOT_APPLICABLE" \
     --outlet-bypass-detected "false" \
-    --final-emit-contract-status "UNKNOWN" \
+    --final-emit-contract-status "NOT_APPLICABLE" \
     --final-emit-policy-mode "tool_choice_required" \
-    --final-emit-schema-status "UNKNOWN" \
+    --final-emit-schema-status "NOT_APPLICABLE" \
     --actor-id "$SESSION_ACTOR_ID" \
     --resolved-work-layer "${E2E_WORK_LAYER:-instance}" \
     --resolved-source-layer "${EXPECTED_SOURCE_LAYER:-project}" \
