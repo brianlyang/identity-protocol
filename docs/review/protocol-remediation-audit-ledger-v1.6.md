@@ -3665,6 +3665,40 @@ Decision boundary:
 1. this addendum hardens governance against uncontrolled expansion drift.
 2. this addendum does not claim required-plane single-entry full migration (`mapping_rows_missing_in_bundle` debt remains visible and budget-frozen).
 
+---
+
+### Round-29.8 addendum: machine status artifact + sync gate closure (2026-03-09)
+
+Cross-verified findings:
+
+1. machine status renderer landed:
+   - `scripts/render_control_plane_status.py`
+   - emits `identity/protocol/mappings/control-plane-status.v1.6.json`
+2. machine sync validator landed and fail-closes on drift:
+   - `scripts/validate_control_plane_status_sync.py`
+   - fail code: `IP-CP-STATUS-001`
+3. CI now enforces status sync:
+   - `.github/workflows/_identity-required-gates.yml`
+   - step: `python3 scripts/validate_control_plane_status_sync.py --json-only`
+4. replay confirmed status is machine-derived and non-promotional at current head:
+   - `control_plane_status=PASS_WITH_BLOCKERS`
+   - `promotion_ready=false`
+5. this addendum closes the gap “status text can be edited without gate parity”.
+
+Replay evidence:
+
+1. `/tmp/audit_round298_invariants_20260309.json`
+2. `/tmp/audit_round298_control_plane_status_runtime_20260309.json`
+3. `/tmp/audit_round298_status_sync_20260309.json`
+4. `/tmp/audit_round298_surface_drift_20260309.json`
+5. `/tmp/audit_round298_docs_contract_20260309.log`
+6. `/tmp/audit_round298_ssot_20260309.log`
+
+Decision boundary:
+
+1. this addendum closes machine-only promotion-state derivation for protocol control-plane.
+2. this addendum does not remove existing non-control-plane blockers; posture remains conservative.
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

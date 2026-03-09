@@ -4471,6 +4471,42 @@ Machine report artifacts:
 3. `python3 scripts/docs_command_contract_check.py`
 4. `python3 scripts/validate_protocol_ssot_source.py`
 
+### 8.63 Round-29.8 machine promotion-state artifact + sync gate (2026-03-09)
+
+#### Why this section exists
+
+1. review text can drift from executable gate reality when status is edited manually.
+2. governance requirement is machine-only status promotion derived from current gate receipts.
+
+#### Implementation scope
+
+1. add machine status renderer:
+   `scripts/render_control_plane_status.py`
+2. add status sync validator (fail-close on drift):
+   `scripts/validate_control_plane_status_sync.py`
+3. add machine status artifact ssot:
+   `identity/protocol/mappings/control-plane-status.v1.6.json`
+4. wire sync gate into CI:
+   `.github/workflows/_identity-required-gates.yml`
+5. fail-close code for artifact drift:
+   `IP-CP-STATUS-001`
+
+#### Promotion-state semantics
+
+1. `control_plane_status=PASS_REQUIRED` => `promotion_ready=true`.
+2. `control_plane_status=PASS_WITH_BLOCKERS` => `promotion_ready=false`.
+3. `control_plane_status=FAIL_REQUIRED` => `promotion_ready=false`.
+4. `PASS_WITH_BLOCKERS` is machine-derived from gate warnings (`WARN_NON_BLOCKING`), not manual state text.
+
+#### Acceptance commands (replay)
+
+1. `python3 scripts/render_control_plane_status.py --json-only`
+2. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+3. `python3 scripts/validate_control_plane_invariants.py --json-only`
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+5. `python3 scripts/docs_command_contract_check.py`
+6. `python3 scripts/validate_protocol_ssot_source.py`
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
