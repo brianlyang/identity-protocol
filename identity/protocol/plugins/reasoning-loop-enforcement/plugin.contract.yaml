@@ -58,6 +58,8 @@ reasoning_enforcement:
       - source_url_set
 semantics:
   no_target_completion_forbidden: true
+  no_target_completion_mode: terminal_attempt_only
+  done_requires_terminal_target_reached: true
   failure_requires_next_action: true
   max_attempts_before_escalation: 3
   escalation_signal_fields:
@@ -68,6 +70,12 @@ semantics:
     - human_collaboration_ref
     - escalation_ref
     - next_action
+  escalation_signal_accept_nonempty_ref: true
+  escalation_signal_nonempty_fields:
+    - next_action
+    - route_switch_ref
+    - human_collaboration_ref
+    - escalation_ref
 error_family:
   - IP-RL-REG-*
   - IP-RL-CONF-*

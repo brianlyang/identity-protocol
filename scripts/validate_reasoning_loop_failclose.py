@@ -117,6 +117,15 @@ DEFAULT_ESCALATION_SIGNAL_VALUES = {
     "route_switch",
     "human_collaboration",
 }
+DEFAULT_NO_TARGET_COMPLETION_MODE = "terminal_attempt_only"
+NO_TARGET_COMPLETION_MODE_ANY = {"any_attempt", "historical_any", "any"}
+NO_TARGET_COMPLETION_MODE_TERMINAL = {
+    "terminal_attempt_only",
+    "terminal_attempt",
+    "terminal",
+    "final_attempt",
+}
+DEFAULT_ESCALATION_NONEMPTY_FIELDS = {"next_action"}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -268,19 +277,44 @@ def _nonempty(value: Any) -> bool:
 def _has_escalation_signal(
     *,
     report_doc: dict[str, Any],
+    attempts: list[dict[str, Any]],
     fields: list[str],
     values: set[str],
+    accept_nonempty_ref: bool,
+    accept_nonempty_fields: set[str],
 ) -> bool:
-    for field in fields:
-        raw = report_doc.get(field)
-        if isinstance(raw, bool) and raw:
-            return True
-        text = str(raw or "").strip().lower()
-        if text in values:
-            return True
-        if field == "next_action" and text:
-            return True
+    sources: list[dict[str, Any]] = [report_doc] + [row for row in attempts if isinstance(row, dict)]
+    normalized_nonempty_fields = {str(x).strip().lower() for x in accept_nonempty_fields if str(x).strip()}
+    for source in sources:
+        for field in fields:
+            key = str(field or "").strip()
+            if not key:
+                continue
+            raw = source.get(key)
+            if isinstance(raw, bool) and raw:
+                return True
+            norm_key = key.lower()
+            if _nonempty(raw):
+                if norm_key in normalized_nonempty_fields:
+                    return True
+                if accept_nonempty_ref and (
+                    norm_key.endswith("_ref")
+                    or norm_key.endswith("_refs")
+                ):
+                    return True
+            text = str(raw or "").strip().lower()
+            if text in values:
+                return True
     return False
+
+
+def _normalize_no_target_completion_mode(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if value in NO_TARGET_COMPLETION_MODE_ANY:
+        return "any_attempt"
+    if value in NO_TARGET_COMPLETION_MODE_TERMINAL or not value:
+        return "terminal_attempt_only"
+    return ""
 
 
 def main() -> int:
@@ -358,6 +392,13 @@ def main() -> int:
         "reasoning_attempt_count": 0,
         "reasoning_failed_attempt_count": 0,
         "no_target_reached_detected": False,
+        "terminal_attempt_index": 0,
+        "terminal_attempt_target_reached": False,
+        "terminal_attempt_no_target_reached": False,
+        "no_target_completion_mode": "",
+        "done_requires_terminal_target_reached": True,
+        "escalation_signal_accept_nonempty_ref": True,
+        "escalation_signal_nonempty_fields": [],
         "reasoning_runtime_evidence_refs": [],
         "error_code": "",
         "stale_reasons": [],
@@ -426,6 +467,39 @@ def main() -> int:
         _emit_with_status(payload, json_only=args.json_only)
         return 1
     payload["reasoning_enforcement_level"] = level
+
+    no_target_completion_mode = _normalize_no_target_completion_mode(
+        str(
+            contract.get(
+                "no_target_completion_mode",
+                contract.get("no_target_completion_scope", DEFAULT_NO_TARGET_COMPLETION_MODE),
+            )
+        )
+    )
+    if not no_target_completion_mode:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = ["invalid_no_target_completion_mode"]
+        payload["evidence_ref"] = str(task_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    payload["no_target_completion_mode"] = no_target_completion_mode
+    done_requires_terminal_target_reached = _boolish(
+        contract.get("done_requires_terminal_target_reached", True)
+    )
+    payload["done_requires_terminal_target_reached"] = done_requires_terminal_target_reached
+
+    escalation_signal_accept_nonempty_ref = _boolish(
+        contract.get("escalation_signal_accept_nonempty_ref", True)
+    )
+    escalation_signal_nonempty_fields = {
+        token.strip().lower()
+        for token in _as_str_list(contract.get("escalation_signal_nonempty_fields"))
+        if token.strip()
+    } or set(DEFAULT_ESCALATION_NONEMPTY_FIELDS)
+    payload["escalation_signal_accept_nonempty_ref"] = escalation_signal_accept_nonempty_ref
+    payload["escalation_signal_nonempty_fields"] = sorted(escalation_signal_nonempty_fields)
 
     level_attempt_fields_cfg = contract.get("level_required_attempt_fields")
     level_run_fields_cfg = contract.get("level_required_run_fields")
@@ -527,6 +601,9 @@ def main() -> int:
     failed_attempt_count = 0
     failed_without_next_action_count = 0
     no_target_detected = False
+    terminal_attempt_target_reached = False
+    terminal_attempt_no_target_reached = False
+    terminal_attempt_index = len(attempts)
     no_target_tokens = {
         token.strip().lower()
         for token in _as_str_list(contract.get("no_target_result_tokens"))
@@ -555,9 +632,15 @@ def main() -> int:
             if _boolish(contract.get("failure_requires_next_action", True)):
                 if not _nonempty(attempt.get("next_action")):
                     failed_without_next_action_count += 1
+        terminal_attempt_index = idx
+        terminal_attempt_target_reached = target_reached
+        terminal_attempt_no_target_reached = no_target
 
     payload["reasoning_failed_attempt_count"] = failed_attempt_count
     payload["no_target_reached_detected"] = no_target_detected
+    payload["terminal_attempt_index"] = terminal_attempt_index
+    payload["terminal_attempt_target_reached"] = terminal_attempt_target_reached
+    payload["terminal_attempt_no_target_reached"] = terminal_attempt_no_target_reached
 
     completion_states = {
         token.strip().lower()
@@ -581,8 +664,11 @@ def main() -> int:
     escalation_required = failed_attempt_count > max_attempts_before_escalation
     escalation_detected = _has_escalation_signal(
         report_doc=report_doc,
+        attempts=attempts,
         fields=escalation_signal_fields,
         values=escalation_signal_values,
+        accept_nonempty_ref=escalation_signal_accept_nonempty_ref,
+        accept_nonempty_fields=escalation_signal_nonempty_fields,
     )
 
     run_field_missing = sorted(field for field in run_fields if not _nonempty(report_doc.get(field)))
@@ -593,10 +679,19 @@ def main() -> int:
         freshness = str(report_doc.get("external_source_freshness_status", "")).strip().upper()
         external_freshness_ok = freshness in {"PASS_REQUIRED", "PASS"}
 
+    no_target_done_violation = False
+    if completion_is_done:
+        if no_target_completion_mode == "any_attempt":
+            no_target_done_violation = no_target_detected
+        else:
+            no_target_done_violation = terminal_attempt_no_target_reached
+        if done_requires_terminal_target_reached and not terminal_attempt_target_reached:
+            no_target_done_violation = True
+
     fail_code = ""
     if missing_attempt_fields:
         fail_code = ERR_ATTEMPT_FIELDS
-    elif no_target_detected and completion_is_done:
+    elif no_target_done_violation:
         fail_code = ERR_NO_TARGET_DONE
     elif failed_without_next_action_count > 0:
         fail_code = ERR_NEXT_ACTION
@@ -611,7 +706,7 @@ def main() -> int:
         STATUS_PASS_REQUIRED if not missing_attempt_fields else STATUS_FAIL_REQUIRED
     )
     payload["no_target_done_block_status"] = (
-        STATUS_FAIL_REQUIRED if (no_target_detected and completion_is_done) else STATUS_PASS_REQUIRED
+        STATUS_FAIL_REQUIRED if no_target_done_violation else STATUS_PASS_REQUIRED
     )
     payload["reasoning_next_action_status"] = (
         STATUS_FAIL_REQUIRED if failed_without_next_action_count > 0 else STATUS_PASS_REQUIRED
@@ -638,6 +733,12 @@ def main() -> int:
         payload["error_code"] = fail_code
         if missing_attempt_fields:
             payload["stale_reasons"].append(f"missing_attempt_fields:{len(missing_attempt_fields)}")
+        if fail_code == ERR_NO_TARGET_DONE:
+            payload["stale_reasons"].append(
+                "done_transition_violation:"
+                + f"mode={no_target_completion_mode},terminal_target_reached={terminal_attempt_target_reached},"
+                + f"terminal_no_target={terminal_attempt_no_target_reached}"
+            )
         if run_field_missing:
             payload["stale_reasons"].append(f"missing_level_run_fields:{','.join(run_field_missing)}")
         if external_field_missing:

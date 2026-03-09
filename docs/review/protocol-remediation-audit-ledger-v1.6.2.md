@@ -530,10 +530,14 @@ Primary artifacts:
 
 ### 15.3 Semantics now enforced
 
-1. `no_target_reached=true` cannot transition to done/pass.
-2. Failed attempt without `next_action` is fail-close.
-3. Exceed threshold without escalation signal is fail-close.
-4. Enforcement is level-configured (`L0/L1/L2/L3`), not hardcoded:
+1. done-transition block is enforced by configurable completion mode:
+   - default `terminal_attempt_only`: terminal unresolved attempt blocks done/pass.
+   - optional `any_attempt`: historical `no_target_reached=true` also blocks done/pass.
+2. `done_requires_terminal_target_reached=true` preserves strict closure for unresolved terminal completion.
+3. Failed attempt without `next_action` is fail-close.
+4. Exceed threshold without escalation signal is fail-close.
+5. Escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled.
+6. Enforcement is level-configured (`L0/L1/L2/L3`), not hardcoded:
    - `L1`: attempt trace
    - `L2`: four-track refs
    - `L3`: external freshness/reconciliation

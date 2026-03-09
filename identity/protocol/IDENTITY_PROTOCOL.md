@@ -204,9 +204,13 @@ To avoid “trace-present but semantic-invalid” drift, the reasoning loop cont
 4. Canonical plugin root:
    - `identity/protocol/plugins/reasoning-loop-enforcement/`
 5. Mandatory semantic gate:
-   - `no_target_reached=true` cannot transition to done/pass completion.
+   - done/pass completion block is controlled by `no_target_completion_mode`:
+     - default `terminal_attempt_only`: terminal unresolved attempt cannot transition to done/pass.
+     - optional `any_attempt`: any historical `no_target_reached=true` blocks done/pass.
+   - `done_requires_terminal_target_reached=true` preserves strict closure for unresolved terminal completion.
    - failed attempt without `next_action` is fail-close.
    - exceed `max_attempts_before_escalation` without escalation signal is fail-close.
+   - escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled.
 6. Enforcement-level policy is configuration-driven (no validator hardcoding):
    - `L1`: attempt trace integrity
    - `L2`: `L1` + four-track evidence refs

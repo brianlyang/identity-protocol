@@ -17,6 +17,10 @@ This plugin hardens the `Reasoning loop contract` into a protocol-level fail-clo
 
 ## Hard semantics
 
-- `no_target_reached=true` cannot transition to completion/done.
+- done-transition blocking is controlled by `no_target_completion_mode`:
+  - default `terminal_attempt_only`: terminal unresolved attempt cannot transition to completion/done.
+  - optional `any_attempt`: any historical `no_target_reached=true` blocks completion/done.
+- `done_requires_terminal_target_reached=true` keeps strict closure for unresolved terminal completion.
 - Failed attempts must carry `next_action`.
 - Beyond `max_attempts_before_escalation`, escalation signal is mandatory.
+- Escalation accepts boolean/token signals and configurable non-empty reference fields when enabled.

@@ -537,6 +537,8 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
             ],
         },
         "completion_states_done": ["done", "pass", "passed", "success", "completed", "closed"],
+        "no_target_completion_mode": "terminal_attempt_only",
+        "done_requires_terminal_target_reached": True,
         "no_target_result_tokens": ["no_target_reached", "not_reached", "target_not_reached"],
         "failed_result_tokens": ["fail", "failed", "error", "blocked", "no_target_reached", "not_reached", "target_not_reached"],
         "pass_result_tokens": ["pass", "passed", "success", "done", "resolved", "target_reached"],
@@ -551,6 +553,8 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
             "escalation_ref",
             "next_action",
         ],
+        "escalation_signal_accept_nonempty_ref": True,
+        "escalation_signal_nonempty_fields": ["next_action", "route_switch_ref", "human_collaboration_ref", "escalation_ref"],
         "escalation_signal_values": ["true", "triggered", "escalate", "route_switch", "human_collaboration", "handoff"],
         "learning_report_path_pattern": "runtime/examples/*learning-sample*.json",
         "required_fields": [

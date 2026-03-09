@@ -757,9 +757,13 @@ Replay snapshots:
 
 1. `reasoning_enforcement_level` is config-driven (`L0/L1/L2/L3`), not script hardcoding.
 2. Hard semantic closure (all strict lanes):
-   - `no_target_reached=true` + completion state => `FAIL_REQUIRED`
+   - done-transition block is evaluated by `no_target_completion_mode`:
+     - default `terminal_attempt_only`: only terminal attempt unresolved semantics block completion.
+     - optional `any_attempt`: any historical `no_target_reached=true` blocks completion.
+   - `done_requires_terminal_target_reached=true` keeps strict closure for unresolved terminal completion.
    - failed attempt without `next_action` => `FAIL_REQUIRED`
    - failed attempts beyond threshold without escalation signal => `FAIL_REQUIRED`
+   - escalation signal accepts boolean/token triggers and configurable non-empty ref fields (`*_ref` / `*_refs`) when enabled.
 3. Level gates:
    - `L1`: attempt trace integrity
    - `L2`: `L1` + four-track evidence refs (`roundtable/vendor/network/reference`)
