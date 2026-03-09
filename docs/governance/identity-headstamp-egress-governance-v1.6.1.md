@@ -232,3 +232,17 @@ Reference links:
 3. `send_time_gate.negative.inline.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`.
 4. `compose_actor_mismatch.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-002`.
 5. `headstamp_recurrence.base-repo-architect` -> `PASS_REQUIRED` (rc=0).
+
+### 9.5 Cross-surface replay (three-plane/full-scan, strict actor/session bound)
+
+1. `report_three_plane_status` replay under explicit actor/session binding:
+   - actor: `assistant:codex`
+   - session: `run:asb-m2m-hotfix-20260309`
+   - result: rc=0, `m2m_binding_closure_status=PASS`, release remains `Conditional Go` due release-plane preconditions (non-headstamp scope).
+2. `full_identity_protocol_scan --scan-mode target --target-source-layer project` replay under same actor/session binding:
+   - result: rc=0, `summary.ok=1`, `summary_m2m.pass=1`.
+3. `IP-ASB-STAMP-SESSION-*` / `IP-FE-*` no longer appear in these replay outputs as surfaced defect codes; headstamp negatives are canonicalized to `IP-HDSTAMP-*`.
+4. Evidence paths:
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/three_plane.base-repo-architect.json`
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/full_scan_target.base-repo-architect.json`
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/legacy_code_presence_scan.txt`

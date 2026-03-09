@@ -34,6 +34,7 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 | HS16-101 | 2026-03-08 | protocol | open v1.6.1 dedicated headstamp/HUD governance stream + freeze v1.6 scattered updates | 06e551c | SPEC_READY | PENDING_INTAKE |
 | HS16-102 | 2026-03-08 | protocol | enforce final egress wrapper adoption on strict surfaces + auto-context self-wiring | 5f15aef | SPEC_READY | PENDING_INTAKE |
 | HS16-103 | 2026-03-09 | protocol | canonicalize headstamp error family to `IP-HDSTAMP-*` across strict wrappers/validators and projection classifiers | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
+| HS16-104 | 2026-03-09 | protocol | cross-surface replay confirms canonical family in three-plane/full-scan strict actor-session bound mode | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 
 ## 3) Current blocker map (headstamp only)
 
@@ -79,3 +80,10 @@ Observed outcomes:
 3. Strict inline evidence negative -> `FAIL_REQUIRED + IP-HDSTAMP-003`.
 4. Session binding mismatch negative -> `FAIL_REQUIRED + IP-HDSTAMP-002`.
 5. Recurrence closure replay -> `PASS_REQUIRED`.
+
+Cross-surface extension (HS16-104):
+
+1. `report_three_plane_status` (strict actor/session bound) -> rc=0, `m2m_binding_closure_status=PASS`.
+2. `full_identity_protocol_scan --scan-mode target --target-source-layer project` (same actor/session) -> rc=0, `summary.ok=1`, `summary_m2m.pass=1`.
+3. In these replay artifacts, `IP-ASB-STAMP-SESSION-*` / `IP-FE-*` are absent as surfaced defect codes; headstamp negatives remain canonical `IP-HDSTAMP-*`.
+4. Presence scan evidence: `activity/evidence/v161-headstamp-convergence/2026-03-09/legacy_code_presence_scan.txt` (`result=NO_MATCH`).

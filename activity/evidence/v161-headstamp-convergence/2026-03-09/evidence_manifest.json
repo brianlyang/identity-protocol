@@ -1,7 +1,7 @@
 {
   "stream": "v161-headstamp-convergence",
   "date_utc": "2026-03-09",
-  "generated_at_utc": "2026-03-09T15:25:57Z",
+  "generated_at_utc": "2026-03-09T15:55:39Z",
   "entries": [
     {
       "id": "resolve_identity_context.base-repo-architect",
@@ -52,6 +52,30 @@
       "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/headstamp_recurrence.base-repo-architect.json"
     },
     {
+      "id": "three_plane.base-repo-architect",
+      "command": "python3 scripts/report_three_plane_status.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --session-id run:asb-m2m-hotfix-20260309 --with-docs-contract --out activity/evidence/v161-headstamp-convergence/2026-03-09/three_plane.base-repo-architect.json",
+      "rc": 0,
+      "sha256": "cb3bf4c34ed390e74b961c0c5cbf199040094fc858a1e8014f113e786f56c121",
+      "timestamp_utc": "2026-03-09T15:44:12Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/three_plane.base-repo-architect.json"
+    },
+    {
+      "id": "full_scan_target.base-repo-architect",
+      "command": "python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-architect --target-source-layer project --project-catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex --session-id run:asb-m2m-hotfix-20260309 --out activity/evidence/v161-headstamp-convergence/2026-03-09/full_scan_target.base-repo-architect.json",
+      "rc": 0,
+      "sha256": "acf1deb24763401ceb6893894b263d0a5a93e17e4491c1d4bc63c8d75b04a1bc",
+      "timestamp_utc": "2026-03-09T15:45:03Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/full_scan_target.base-repo-architect.json"
+    },
+    {
+      "id": "legacy_code_presence_scan",
+      "command": "rg -n \"IP-ASB-STAMP-SESSION|IP-FE-\" activity/evidence/v161-headstamp-convergence/2026-03-09/three_plane.base-repo-architect.json activity/evidence/v161-headstamp-convergence/2026-03-09/full_scan_target.base-repo-architect.json",
+      "rc": 0,
+      "sha256": "79e3661dbec614a2d41e5e7904d6c0351889ebc5b9166c4e8163dcc43c7906ca",
+      "timestamp_utc": "2026-03-09T15:51:46Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/legacy_code_presence_scan.txt"
+    },
+    {
       "id": "surface_drift",
       "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
       "rc": 0,
@@ -64,7 +88,7 @@
       "command": "python3 scripts/docs_command_contract_check.py",
       "rc": 0,
       "sha256": "27cf10daf7e0c8aea28373400c97628f5727503f36e3f47969e1f334a59d5432",
-      "timestamp_utc": "2026-03-09T15:14:06Z",
+      "timestamp_utc": "2026-03-09T15:55:00Z",
       "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/docs_contract.log"
     },
     {
@@ -72,7 +96,7 @@
       "command": "python3 scripts/validate_protocol_ssot_source.py",
       "rc": 0,
       "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
-      "timestamp_utc": "2026-03-09T15:04:39Z",
+      "timestamp_utc": "2026-03-09T15:55:00Z",
       "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/protocol_ssot.log"
     },
     {
