@@ -187,7 +187,7 @@ def _normalize_reasoning_contracts(task: dict[str, Any]) -> tuple[list[str], lis
             "validator": "scripts/validate_reasoning_loop_failclose.py",
             "no_target_reached_cannot_complete": True,
             "failed_attempt_requires_next_action": True,
-            "exceed_threshold_requires_escalation": True,
+            "threshold_requires_escalation": True,
             "reasoning_enforcement_level_field": "reasoning_enforcement_level",
         }
         current = arbitration.get("reasoning_loop_enforcement")

@@ -686,3 +686,37 @@ Validated matrix outcomes:
 3. Promotion posture remains scope-accurate:
    - M:N control-plane: hard-closed in strict lanes.
    - global release readiness: still decided by non-M:N gates.
+
+## 18) Round-30.7 addendum: RQ-035 anti-loop retighten + projection parity hardening (2026-03-10)
+
+### 18.1 Audit finding
+
+1. Primary RQ-035 deadlock fix was correct (`retry-then-success` no longer blocked by historical `no_target`), but escalation strength drift appeared:
+   - generic retry `next_action` could be interpreted as escalation too broadly.
+2. Target effect required:
+   - keep deadlock fix,
+   - restore anti-loop fail-close (`IP-RL-RUN-005`) for missing real escalation signals.
+
+### 18.2 Fix set audited
+
+1. `scripts/validate_reasoning_loop_failclose.py`
+   - added `escalation_requirement_mode` (`at_or_exceed` default),
+   - tightened default escalation non-empty fields (retry text is not escalation by default).
+2. `scripts/validate_identity_learning_loop.py`
+   - aligned threshold semantics and escalation signal rules with RQ-035 validator.
+3. `scripts/create_identity_pack.py` + plugin contract
+   - contract skeleton/defaults now carry `escalation_requirement_mode` and tightened escalation non-empty policy.
+4. Projection hardening:
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml`
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+
+### 18.3 Replay judgment
+
+1. Deadlock path stays fixed:
+   - retry-then-success completion remains `PASS_REQUIRED`.
+2. Anti-loop block strength restored:
+   - at/over-threshold failures without valid escalation now fail-close with `IP-RL-RUN-005`.
+3. Escalation ref path remains valid:
+   - non-empty escalation refs are still accepted under strict semantics.

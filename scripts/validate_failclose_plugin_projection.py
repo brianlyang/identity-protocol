@@ -179,6 +179,7 @@ def main() -> int:
         missing_fields = [field for field in required_fields if field not in payload]
         status_candidates = [
             str(payload.get("multimodal_plugin_enforcement_status", "")).strip().upper(),
+            str(payload.get("reasoning_loop_failclose_status", "")).strip().upper(),
             str(payload.get("status", "")).strip().upper(),
         ]
         row_status = next((x for x in status_candidates if x), "")

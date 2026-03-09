@@ -13,7 +13,7 @@ codes:
   - code: IP-RL-RUN-004
     description: failed reasoning attempt lacks required next_action instruction
   - code: IP-RL-RUN-005
-    description: failed attempts exceed escalation threshold without route switch or collaboration signal
+    description: failed attempts reach/exceed escalation threshold without valid escalation signal
   - code: IP-RL-RUN-006
     description: selected runtime report run_id mismatches current run binding
   - code: IP-RL-RUN-007

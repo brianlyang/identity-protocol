@@ -229,8 +229,15 @@ def main() -> int:
             if reasoning_enforcement.get("failed_attempt_requires_next_action") is not True:
                 print("[FAIL] reasoning_loop_enforcement.failed_attempt_requires_next_action must be true")
                 rc = 1
-            if reasoning_enforcement.get("exceed_threshold_requires_escalation") is not True:
-                print("[FAIL] reasoning_loop_enforcement.exceed_threshold_requires_escalation must be true")
+            threshold_requires_escalation = reasoning_enforcement.get(
+                "threshold_requires_escalation",
+                reasoning_enforcement.get("exceed_threshold_requires_escalation"),
+            )
+            if threshold_requires_escalation is not True:
+                print(
+                    "[FAIL] reasoning_loop_enforcement.threshold_requires_escalation "
+                    "(or legacy exceed_threshold_requires_escalation) must be true"
+                )
                 rc = 1
             if str(reasoning_enforcement.get("reasoning_enforcement_level_field", "")).strip() != "reasoning_enforcement_level":
                 print("[FAIL] reasoning_loop_enforcement.reasoning_enforcement_level_field must be reasoning_enforcement_level")
