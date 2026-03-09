@@ -2016,6 +2016,8 @@ def _instance_plane_status(
             "three_plane_target_probe",
             "--operation",
             "three-plane",
+            "--report-selected-path",
+            str(report_path),
             "--json-only",
         ]
     )
@@ -2354,6 +2356,8 @@ def _instance_plane_status(
             "three_plane_target_probe",
             "--operation",
             "three-plane",
+            "--report-selected-path",
+            str(report_path),
             "--json-only",
         ]
     )
