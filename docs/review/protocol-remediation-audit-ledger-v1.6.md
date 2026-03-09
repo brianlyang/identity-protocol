@@ -3631,6 +3631,40 @@ Decision boundary:
    actor fallback and UNKNOWN-literal bundle tuple placeholders.
 2. This addendum does not claim global promotion readiness; instance debts remain out of scope.
 
+---
+
+### Round-29.7 addendum: control-plane invariants + growth budget CI hardening (2026-03-09)
+
+Cross-verified findings:
+
+1. dual-threshold control-plane budget gate landed and is CI-wired:
+   - script: `scripts/validate_control_plane_budget.py`
+   - budget ssot: `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+   - CI hook: `.github/workflows/_identity-required-gates.yml`
+2. budget gate reports machine-readable status classes:
+   - `PASS_REQUIRED`
+   - `WARN_NON_BLOCKING`
+   - `FAIL_REQUIRED`
+3. current baseline replay at landing head is `PASS_REQUIRED` under configured warn/fail envelopes.
+
+Control-plane audit scope reinforced:
+
+1. red-line invariants are frozen in governance `8.62` (single egress, bundle single entry, drift arg contract, forbidden UNKNOWN literals, machine-only promotion posture).
+2. budget gate is intentionally minimal and anti-overfit:
+   - it constrains growth vectors, not model reasoning capability.
+
+Replay evidence:
+
+1. `/tmp/audit_control_plane_budget_20260309.json`
+2. `/tmp/audit_after_surface_drift_20260309.json`
+3. `/tmp/audit_after_docs_contract_20260309.log`
+4. `/tmp/audit_after_ssot_20260309.log`
+
+Decision boundary:
+
+1. this addendum hardens governance against uncontrolled expansion drift.
+2. this addendum does not claim required-plane single-entry full migration (`mapping_rows_missing_in_bundle` debt remains visible and budget-frozen).
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).

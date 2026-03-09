@@ -4417,6 +4417,60 @@ Machine report artifacts:
    - `docs_command_contract_check` => `PASS`
    - `validate_protocol_ssot_source` => `OK`
 
+### 8.62 Round-29.7 control-plane invariants + growth budget hardening (2026-03-09)
+
+#### Why this section exists
+
+1. repository growth is no longer small-scale; contract drift now comes from structural expansion pressure, not single bug class.
+2. governance objective is to keep protocol control-plane stable while preserving model capability expansion in execution layer.
+
+#### Normative control-plane invariants (10 red lines)
+
+1. user-visible outbound text must pass through `scripts/final_emit_governed.py`.
+2. strict required-gate aggregation must pass through `scripts/required_gate_bundle_runner.py`.
+3. strict surfaces must include recurrence escalator and tuple parity lineage artifacts.
+4. strict surfaces must not directly invoke forbidden required validators from mapping rows in bundle scope.
+5. strict surfaces must not directly invoke `scripts/compose_and_validate_governed_reply.py`.
+6. strict surfaces must pass actor context for all mandatory headstamp/egress validators.
+7. strict surfaces must pass session context for actor-session binding validators.
+8. strict bundle calls must include full required argument contract (`run-id`, send-time/final-emit tuple, actor/work/source/lock).
+9. strict bundle calls must not use literal `UNKNOWN` for:
+   - `--send-time-gate-status`
+   - `--final-emit-contract-status`
+   - `--final-emit-schema-status`
+10. status promotion text must be machine-derived from gate receipts; manual green-label edits are non-normative.
+
+#### Machine enforcement wiring
+
+1. drift gate remains authoritative for invariants 1..9:
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+2. growth budget gate is now mandatory in CI:
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+3. budget source of truth:
+   - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+4. budget semantics:
+   - dual threshold (`warn` / `fail`) is used to avoid no-headroom lockups while still fail-closing structural overgrowth.
+
+#### Growth-budget contract (minimal, non-overfitted)
+
+1. validator scripts budget: controls uncontrolled script-surface explosion.
+2. error-code budget: controls taxonomy inflation and semantic fragmentation.
+3. mapping-vs-bundle gap budget: prevents required-plane divergence from silently growing.
+4. strict direct-validate call budget: freezes direct-call expansion until migration to bundle single-entry is complete.
+
+#### Promotion boundary
+
+1. `FAIL_REQUIRED` from budget gate blocks promotion.
+2. `WARN_NON_BLOCKING` does not block promotion, but must be logged as review debt.
+3. `PASS_REQUIRED` is required to claim control-plane budget stability at current head.
+
+#### Acceptance commands (replay)
+
+1. `python3 scripts/validate_control_plane_budget.py --json-only`
+2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+3. `python3 scripts/docs_command_contract_check.py`
+4. `python3 scripts/validate_protocol_ssot_source.py`
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
