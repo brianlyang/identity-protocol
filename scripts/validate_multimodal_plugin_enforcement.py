@@ -418,6 +418,10 @@ def main() -> int:
 
         contract_rel = str(plugin_row.get("contract_file", "")).strip()
         validator_script = str(plugin_row.get("validator_script", "")).strip()
+        is_multimodal_plugin_row = (
+            validator_script == "scripts/validate_multimodal_plugin_enforcement.py"
+            or plugin_id == "multimodal-vision-enforcement"
+        )
         if not contract_rel or not validator_script:
             payload["plugin_registry_status"] = STATUS_FAIL_REQUIRED
             stale_reasons.append("plugin_registry_required_fields_missing")
@@ -463,58 +467,59 @@ def main() -> int:
         if isinstance(provider_binding, dict) and _boolish(provider_binding.get("required", False)):
             required_binding_plugin_ids.add(plugin_id)
 
-        thresholds = contract_doc.get("required_thresholds")
-        if not isinstance(thresholds, dict):
-            payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
-            stale_reasons.append("required_thresholds_missing")
-            error_code = error_code or ERR_THRESHOLD
-        else:
-            min_conf = thresholds.get("min_confidence")
-            max_conf = thresholds.get("max_confidence")
-            min_chars = thresholds.get("min_char_count")
-            max_chars = thresholds.get("max_char_count")
-            if not isinstance(min_conf, (int, float)) or not isinstance(max_conf, (int, float)):
+        if is_multimodal_plugin_row:
+            thresholds = contract_doc.get("required_thresholds")
+            if not isinstance(thresholds, dict):
                 payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
-                stale_reasons.append("confidence_threshold_type_invalid")
+                stale_reasons.append("required_thresholds_missing")
                 error_code = error_code or ERR_THRESHOLD
-            elif not (0 <= float(min_conf) <= float(max_conf) <= 1):
-                payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
-                stale_reasons.append("confidence_threshold_out_of_range")
-                error_code = error_code or ERR_THRESHOLD
-            if not isinstance(min_chars, int) or not isinstance(max_chars, int):
-                payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
-                stale_reasons.append("char_threshold_type_invalid")
-                error_code = error_code or ERR_THRESHOLD
-            elif min_chars < 0 or max_chars < min_chars:
-                payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
-                stale_reasons.append("char_threshold_out_of_range")
-                error_code = error_code or ERR_THRESHOLD
+            else:
+                min_conf = thresholds.get("min_confidence")
+                max_conf = thresholds.get("max_confidence")
+                min_chars = thresholds.get("min_char_count")
+                max_chars = thresholds.get("max_char_count")
+                if not isinstance(min_conf, (int, float)) or not isinstance(max_conf, (int, float)):
+                    payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("confidence_threshold_type_invalid")
+                    error_code = error_code or ERR_THRESHOLD
+                elif not (0 <= float(min_conf) <= float(max_conf) <= 1):
+                    payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("confidence_threshold_out_of_range")
+                    error_code = error_code or ERR_THRESHOLD
+                if not isinstance(min_chars, int) or not isinstance(max_chars, int):
+                    payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("char_threshold_type_invalid")
+                    error_code = error_code or ERR_THRESHOLD
+                elif min_chars < 0 or max_chars < min_chars:
+                    payload["plugin_threshold_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("char_threshold_out_of_range")
+                    error_code = error_code or ERR_THRESHOLD
 
-        required_caps = contract_doc.get("required_capabilities")
-        allowed_profiles = (contract_doc.get("provider_binding") or {}).get("allowed_profiles")
-        if isinstance(required_caps, dict) and isinstance(allowed_profiles, list):
-            for profile_id in allowed_profiles:
-                profile_key = str(profile_id or "").strip()
-                if not profile_key:
-                    continue
-                referenced_profile_ids.add(profile_key)
-                profile = profiles_by_id.get(profile_key)
-                if not isinstance(profile, dict):
-                    payload["provider_config_status"] = STATUS_FAIL_REQUIRED
-                    stale_reasons.append("provider_profile_missing_for_plugin")
-                    error_code = error_code or ERR_CONF_PROFILE
-                    continue
-                caps = profile.get("capabilities")
-                if not isinstance(caps, dict):
-                    payload["provider_config_status"] = STATUS_FAIL_REQUIRED
-                    stale_reasons.append("provider_capabilities_missing")
-                    error_code = error_code or ERR_CONF_FIELDS
-                    continue
-                for cap_name, cap_required in required_caps.items():
-                    if _boolish(cap_required) and not _boolish(caps.get(cap_name)):
+            required_caps = contract_doc.get("required_capabilities")
+            allowed_profiles = (contract_doc.get("provider_binding") or {}).get("allowed_profiles")
+            if isinstance(required_caps, dict) and isinstance(allowed_profiles, list):
+                for profile_id in allowed_profiles:
+                    profile_key = str(profile_id or "").strip()
+                    if not profile_key:
+                        continue
+                    referenced_profile_ids.add(profile_key)
+                    profile = profiles_by_id.get(profile_key)
+                    if not isinstance(profile, dict):
                         payload["provider_config_status"] = STATUS_FAIL_REQUIRED
-                        stale_reasons.append(f"provider_capability_mismatch:{cap_name}")
-                        error_code = error_code or ERR_CONF_CAPABILITY
+                        stale_reasons.append("provider_profile_missing_for_plugin")
+                        error_code = error_code or ERR_CONF_PROFILE
+                        continue
+                    caps = profile.get("capabilities")
+                    if not isinstance(caps, dict):
+                        payload["provider_config_status"] = STATUS_FAIL_REQUIRED
+                        stale_reasons.append("provider_capabilities_missing")
+                        error_code = error_code or ERR_CONF_FIELDS
+                        continue
+                    for cap_name, cap_required in required_caps.items():
+                        if _boolish(cap_required) and not _boolish(caps.get(cap_name)):
+                            payload["provider_config_status"] = STATUS_FAIL_REQUIRED
+                            stale_reasons.append(f"provider_capability_mismatch:{cap_name}")
+                            error_code = error_code or ERR_CONF_CAPABILITY
 
     # Registry provider profile references
     for plugin_row in plugins:
