@@ -1,0 +1,7 @@
+schema_version: 1
+invariants_version: "v1.6"
+last_updated_utc: "2026-03-09T00:00:00Z"
+invariants:
+  bundle_mapping_parity:
+    mode: freeze
+    baseline_missing_rows: 25
