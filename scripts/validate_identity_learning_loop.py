@@ -8,6 +8,35 @@ from typing import Any
 
 import yaml
 
+DEFAULT_NO_TARGET_COMPLETION_MODE = "terminal_attempt_only"
+NO_TARGET_COMPLETION_MODE_ANY = {"any_attempt", "historical_any", "any"}
+NO_TARGET_COMPLETION_MODE_TERMINAL = {
+    "terminal_attempt_only",
+    "terminal_attempt",
+    "terminal",
+    "final_attempt",
+}
+DEFAULT_ESCALATION_SIGNAL_FIELDS = [
+    "route_switch_triggered",
+    "human_collaboration_triggered",
+    "escalation_triggered",
+    "route_switch_ref",
+    "human_collaboration_ref",
+    "escalation_ref",
+    "next_action",
+]
+DEFAULT_ESCALATION_SIGNAL_VALUES = {
+    "true",
+    "1",
+    "yes",
+    "triggered",
+    "escalate",
+    "handoff",
+    "route_switch",
+    "human_collaboration",
+}
+DEFAULT_ESCALATION_NONEMPTY_FIELDS = {"next_action"}
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -101,6 +130,66 @@ def _completion_token(run: dict[str, Any]) -> str:
     return ""
 
 
+def _nonempty(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (int, float, bool)):
+        return True
+    if isinstance(value, list):
+        return len(value) > 0
+    if isinstance(value, dict):
+        return len(value) > 0
+    return True
+
+
+def _normalize_no_target_completion_mode(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if value in NO_TARGET_COMPLETION_MODE_ANY:
+        return "any_attempt"
+    if value in NO_TARGET_COMPLETION_MODE_TERMINAL or not value:
+        return "terminal_attempt_only"
+    return ""
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(x).strip() for x in value if str(x).strip()]
+
+
+def _has_escalation_signal(
+    *,
+    run: dict[str, Any],
+    attempts: list[dict[str, Any]],
+    fields: list[str],
+    values: set[str],
+    accept_nonempty_ref: bool,
+    accept_nonempty_fields: set[str],
+) -> bool:
+    sources: list[dict[str, Any]] = [run] + [row for row in attempts if isinstance(row, dict)]
+    normalized_nonempty_fields = {str(x).strip().lower() for x in accept_nonempty_fields if str(x).strip()}
+    for source in sources:
+        for field in fields:
+            key = str(field or "").strip()
+            if not key:
+                continue
+            raw = source.get(key)
+            if isinstance(raw, bool) and raw:
+                return True
+            norm_key = key.lower()
+            if _nonempty(raw):
+                if norm_key in normalized_nonempty_fields:
+                    return True
+                if accept_nonempty_ref and (norm_key.endswith("_ref") or norm_key.endswith("_refs")):
+                    return True
+            text = str(raw or "").strip().lower()
+            if text in values:
+                return True
+    return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity learning loop evidence (reasoning + rulebook linkage)")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -169,9 +258,33 @@ def main() -> int:
     }
     failure_requires_next_action = _boolish(rlc.get("failure_requires_next_action", True))
     max_attempts_before_escalation = int(rlc.get("max_attempts_before_escalation", 3))
+    no_target_completion_mode = _normalize_no_target_completion_mode(
+        str(
+            rlc.get(
+                "no_target_completion_mode",
+                rlc.get("no_target_completion_scope", DEFAULT_NO_TARGET_COMPLETION_MODE),
+            )
+        )
+    )
+    if not no_target_completion_mode:
+        print("[FAIL] invalid no_target_completion_mode in reasoning_loop_contract")
+        return 1
+    done_requires_terminal_target_reached = _boolish(rlc.get("done_requires_terminal_target_reached", True))
+    escalation_signal_fields = _as_str_list(rlc.get("escalation_signal_fields")) or list(DEFAULT_ESCALATION_SIGNAL_FIELDS)
+    escalation_signal_values = {
+        token.strip().lower() for token in _as_str_list(rlc.get("escalation_signal_values"))
+    } or DEFAULT_ESCALATION_SIGNAL_VALUES
+    escalation_signal_accept_nonempty_ref = _boolish(rlc.get("escalation_signal_accept_nonempty_ref", True))
+    escalation_signal_nonempty_fields = {
+        token.strip().lower()
+        for token in _as_str_list(rlc.get("escalation_signal_nonempty_fields"))
+        if token.strip()
+    } or set(DEFAULT_ESCALATION_NONEMPTY_FIELDS)
     no_target_reached_detected = False
     failed_attempt_count = 0
     failed_without_next_action_count = 0
+    terminal_attempt_target_reached = False
+    terminal_attempt_no_target_reached = False
 
     for i, att in enumerate(attempts, start=1):
         if not isinstance(att, dict):
@@ -196,23 +309,38 @@ def main() -> int:
                 print(f"[FAIL] attempt[{i}] failed but next_action is missing")
                 failed_without_next_action_count += 1
                 rc = 1
+        terminal_attempt_target_reached = target_reached
+        terminal_attempt_no_target_reached = no_target
 
     completion_token = _completion_token(run)
-    if no_target_reached_detected and completion_token in completion_tokens:
-        print("[FAIL] no_target_reached=true cannot be treated as completion")
+    completion_is_done = completion_token in completion_tokens
+    no_target_done_violation = False
+    if completion_is_done:
+        if no_target_completion_mode == "any_attempt":
+            no_target_done_violation = no_target_reached_detected
+        else:
+            no_target_done_violation = terminal_attempt_no_target_reached
+        if done_requires_terminal_target_reached and not terminal_attempt_target_reached:
+            no_target_done_violation = True
+
+    if no_target_done_violation:
+        print(
+            "[FAIL] done-transition violation "
+            f"(mode={no_target_completion_mode}, terminal_target_reached={terminal_attempt_target_reached}, "
+            f"terminal_no_target={terminal_attempt_no_target_reached})"
+        )
         rc = 1
     else:
         print("[OK]   no-target completion semantic respected")
 
     if failed_attempt_count > max_attempts_before_escalation:
-        has_escalation = any(
-            str(run.get(field, "")).strip()
-            for field in (
-                "route_switch_ref",
-                "human_collaboration_ref",
-                "escalation_ref",
-                "next_action",
-            )
+        has_escalation = _has_escalation_signal(
+            run=run,
+            attempts=[x for x in attempts if isinstance(x, dict)],
+            fields=escalation_signal_fields,
+            values=escalation_signal_values,
+            accept_nonempty_ref=escalation_signal_accept_nonempty_ref,
+            accept_nonempty_fields=escalation_signal_nonempty_fields,
         )
         if not has_escalation:
             print(
