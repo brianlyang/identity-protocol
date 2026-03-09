@@ -852,6 +852,9 @@ Key replay outcomes:
    - `.github/workflows/_identity-required-gates.yml` now runs target regression for **all resolved `IDS`** (not only `PRIMARY_ID`).
    - fixture/demo identities stay on baseline `p0` regression mode;
    - non-fixture identities automatically run with `--enforce-m2m-pass`.
+6. Release-readiness hardening:
+   - `scripts/release_readiness_check.py` now includes `scripts/validate_full_scan_target_regression.py` in readiness sequence.
+   - fixture/demo identities run baseline mode; non-fixture identities run strict mode with `--enforce-m2m-pass`.
 
 ## 18) Round-30.6 M:N hard-close addendum (2026-03-10)
 

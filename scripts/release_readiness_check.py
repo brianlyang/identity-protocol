@@ -25,6 +25,7 @@ PROTOCOL_PUBLISH_SCRIPTS = {
 }
 BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
 FAILCLOSE_PLUGIN_PROJECTION_SCRIPT = "scripts/validate_failclose_plugin_projection.py"
+FULL_SCAN_TARGET_REGRESSION_SCRIPT = "scripts/validate_full_scan_target_regression.py"
 
 
 def _run(cmd: list[str]) -> int:
@@ -453,6 +454,16 @@ def main() -> int:
             ext="json",
         )
     )
+    full_scan_target_regression_receipt = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="readiness",
+            identity_id=identity_id,
+            run_token=f"{bundle_run_token}-full-scan-target-regression",
+            stem=f"full-scan-target-regression-readiness-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
     vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
     capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
     health_report_dir = str(named_temp_root("identity-health-reports"))
@@ -564,6 +575,46 @@ def main() -> int:
     )
     if rc_fixture_boundary != 0:
         return rc_fixture_boundary
+    fixture_profile = str(fixture_boundary_payload.get("profile", "")).strip().lower()
+    fixture_runtime_mode = str(fixture_boundary_payload.get("runtime_mode", "")).strip().lower()
+    is_fixture_identity = fixture_profile == "fixture" or fixture_runtime_mode == "demo_only"
+    target_source_layer_mode = (
+        expected_source_layer if expected_source_layer in {"auto", "project", "global", "both"} else "project"
+    )
+    effective_expected_work_layer = str(expected_work_layer or routed_work_layer or "protocol").strip().lower() or "protocol"
+    effective_expected_source_layer = (
+        str(expected_source_layer or routed_source_layer or "project").strip().lower() or "project"
+    )
+    full_scan_target_regression_cmd = [
+        "python3",
+        FULL_SCAN_TARGET_REGRESSION_SCRIPT,
+        "--identity-id",
+        identity_id,
+        "--project-catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--target-source-layer",
+        target_source_layer_mode,
+        "--actor-id",
+        actor_id,
+        "--expected-work-layer",
+        effective_expected_work_layer,
+        "--expected-source-layer",
+        effective_expected_source_layer,
+        "--out",
+        full_scan_target_regression_receipt,
+        "--json-only",
+    ]
+    if session_id:
+        full_scan_target_regression_cmd.extend(["--session-id", session_id])
+    if not is_fixture_identity:
+        full_scan_target_regression_cmd.append("--enforce-m2m-pass")
+    print(
+        "[INFO] full-scan target regression preflight: "
+        f"fixture_identity={is_fixture_identity} enforce_m2m_pass={not is_fixture_identity} "
+        f"source_layer={target_source_layer_mode}"
+    )
 
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
@@ -1512,6 +1563,7 @@ def main() -> int:
             failclose_plugin_projection_receipt,
             "--json-only",
         ],
+        full_scan_target_regression_cmd,
         [
             "python3",
             "scripts/validate_replay_archive_contract.py",

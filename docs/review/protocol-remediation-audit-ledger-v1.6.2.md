@@ -620,6 +620,9 @@ Cross-surface replay:
    - required-gates workflow target-regression step now iterates all resolved `IDS`;
    - fixture/demo ids use baseline mode;
    - non-fixture ids use strict `--enforce-m2m-pass`.
+5. Release rollout in this round:
+   - `release_readiness_check.py` readiness sequence now includes `validate_full_scan_target_regression.py`;
+   - fixture/demo ids remain baseline, non-fixture ids enable `--enforce-m2m-pass`.
 
 ## 17) Round-30.6 addendum: M:N hard-close closure proof (2026-03-10)
 
