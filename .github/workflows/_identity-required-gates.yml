@@ -45,6 +45,9 @@ jobs:
       - name: Validate protocol SSOT source boundary
         run: python3 scripts/validate_protocol_ssot_source.py
 
+      - name: Validate control-plane growth budget (v1.6)
+        run: python3 scripts/validate_control_plane_budget.py --json-only
+
       - name: Validate governance docs command contract
         run: python3 scripts/docs_command_contract_check.py
 

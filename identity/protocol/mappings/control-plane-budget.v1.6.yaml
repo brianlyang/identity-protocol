@@ -1,0 +1,33 @@
+schema_version: 1
+budget_version: "v1.6"
+last_updated_utc: "2026-03-09T00:00:00Z"
+policy_mode: dual_threshold
+budgets:
+  validator_scripts:
+    warn: 140
+    fail: 150
+  error_codes:
+    warn: 373
+    fail: 410
+  mapping_rows_missing_in_bundle:
+    warn: 25
+    fail: 25
+  direct_validate_calls:
+    scripts/identity_creator.py:
+      warn: 89
+      fail: 94
+    scripts/release_readiness_check.py:
+      warn: 107
+      fail: 112
+    scripts/report_three_plane_status.py:
+      warn: 75
+      fail: 80
+    scripts/full_identity_protocol_scan.py:
+      warn: 82
+      fail: 87
+    scripts/e2e_smoke_test.sh:
+      warn: 116
+      fail: 121
+    .github/workflows/_identity-required-gates.yml:
+      warn: 101
+      fail: 105
