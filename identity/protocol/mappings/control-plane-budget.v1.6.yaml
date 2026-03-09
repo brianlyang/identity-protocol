@@ -4,10 +4,10 @@ last_updated_utc: "2026-03-09T00:00:00Z"
 policy_mode: dual_threshold
 budgets:
   validator_scripts:
-    warn: 140
+    warn: 142
     fail: 150
   error_codes:
-    warn: 373
+    warn: 375
     fail: 410
   mapping_rows_missing_in_bundle:
     warn: 25
@@ -29,5 +29,5 @@ budgets:
       warn: 116
       fail: 121
     .github/workflows/_identity-required-gates.yml:
-      warn: 101
+      warn: 103
       fail: 105

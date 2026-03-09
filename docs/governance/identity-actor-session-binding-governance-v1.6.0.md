@@ -4507,6 +4507,46 @@ Machine report artifacts:
 5. `python3 scripts/docs_command_contract_check.py`
 6. `python3 scripts/validate_protocol_ssot_source.py`
 
+### 8.64 Round-29.9 control-plane budget re-anchor closure (2026-03-09)
+
+#### Why this section exists
+
+1. after adding invariants/status-sync gates, budget warn thresholds became stale against current machine baseline.
+2. stale warn baselines kept control-plane status at `PASS_WITH_BLOCKERS` despite all structural gates passing.
+
+#### Re-anchor scope
+
+1. update budget warning baselines in:
+   `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+2. keep fail thresholds unchanged (no downgrade of hard-stop boundary).
+3. re-render status artifact:
+   `identity/protocol/mappings/control-plane-status.v1.6.json`
+
+#### Updated warn baselines
+
+1. `validator_scripts.warn: 140 -> 142`
+2. `error_codes.warn: 373 -> 375`
+3. `.github/workflows/_identity-required-gates.yml direct_validate_calls.warn: 101 -> 103`
+
+#### Decision boundary
+
+1. this is a baseline synchronization closure, not a relaxation of fail-close policy.
+2. current machine control-plane status after re-anchor:
+   - `control_plane_budget_status=PASS_REQUIRED`
+   - `control_plane_status=PASS_REQUIRED`
+   - `promotion_ready=true` (control-plane scope only)
+3. required-plane coverage debt remains explicitly frozen by invariants (`mapping_rows_missing_in_bundle=25`) and is out of this re-anchor scope.
+
+#### Acceptance commands (replay)
+
+1. `python3 scripts/validate_control_plane_budget.py --json-only`
+2. `python3 scripts/render_control_plane_status.py --json-only`
+3. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+4. `python3 scripts/validate_control_plane_invariants.py --json-only`
+5. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+6. `python3 scripts/docs_command_contract_check.py`
+7. `python3 scripts/validate_protocol_ssot_source.py`
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

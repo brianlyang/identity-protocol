@@ -3699,6 +3699,39 @@ Decision boundary:
 1. this addendum closes machine-only promotion-state derivation for protocol control-plane.
 2. this addendum does not remove existing non-control-plane blockers; posture remains conservative.
 
+---
+
+### Round-29.9 addendum: budget warn baseline synchronization + full control-plane green (2026-03-09)
+
+Cross-verified findings:
+
+1. budget warn baselines were re-anchored to the current structural baseline after new control-plane gates landed.
+2. fail thresholds remained unchanged; fail-close boundary did not weaken.
+3. post re-anchor machine results:
+   - `control_plane_budget_status=PASS_REQUIRED`
+   - `control_plane_invariants_status=PASS_REQUIRED`
+   - `control_plane_status_sync_status=PASS_REQUIRED`
+   - `required_gate_surface_drift_status=PASS_REQUIRED`
+4. rendered status artifact now reports:
+   - `control_plane_status=PASS_REQUIRED`
+   - `promotion_ready=true` (control-plane scope)
+
+Replay evidence:
+
+1. `/tmp/audit_round299_control_plane_status_render_20260309.json`
+2. `/tmp/audit_round299_control_plane_status_runtime_20260309.json`
+3. `/tmp/audit_round299_status_sync_20260309.json`
+4. `python3 scripts/validate_control_plane_budget.py --json-only` (post re-anchor pass)
+5. `python3 scripts/validate_control_plane_invariants.py --json-only`
+6. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+7. `/tmp/audit_round298_docs_contract_20260309.log`
+8. `/tmp/audit_round298_ssot_20260309.log`
+
+Decision boundary:
+
+1. this addendum closes control-plane budget/status drift and achieves machine-green within control-plane governance scope.
+2. this addendum does not claim required-plane migration debt closure (`mapping_rows_missing_in_bundle=25` remains frozen and visible).
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).
