@@ -620,3 +620,62 @@ These are instance/release control-plane debts and are excluded from M:N closure
 3. Future audits must distinguish:
    - `M:N closure status`
    - `global release readiness status`
+
+## 15) Round-30.1 addendum: standardized fail-close plugin wiring baseline (2026-03-09)
+
+### 15.1 Why this addendum
+
+1. RQ-034 has proven that strict fail-close plugin governance is workable in production.
+2. Repeated instance-side regressions show soft prompt constraints are insufficient for protocol-core contracts.
+3. We need a reusable protocol-level standard that binds: file path + config + gate + SSOT + wiring.
+
+### 15.2 Standardized governance assets (new baseline)
+
+1. Single-source plugin fail-close governance file:
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml`
+2. Registry row now carries explicit wiring metadata:
+   - `requirement_key`
+   - `bundle_target_name`
+   - `gate_mode=fail_close_strict`
+   - `ssot_mapping_ref`
+3. Mapping SSOT (`contract-binding.v1.6`) for `asb16-rq-034` is expanded with runtime-proof report fields:
+   - `multimodal_runtime_evidence_status`
+   - `multimodal_preflight_status`
+   - `runtime_report_path`
+   - `runtime_report_run_id`
+   - `multimodal_calls/resolved/unresolved/errors/retry_calls`
+   - `runtime_gate_mode`
+   - `runtime_gate_required_confidence`
+   - `multimodal_runtime_evidence_refs`
+
+### 15.3 Gate wiring (fail-close, machine-enforced)
+
+1. `scripts/validate_control_plane_invariants.py` now validates:
+   - bundle/mapping parity mode invariants,
+   - unique egress invariants (`scripts/final_emit_governed.py` + `final_emit_governed`),
+   - single bundle-entry invariants (`scripts/required_gate_bundle_runner.py`),
+   - plugin registry ↔ mapping ↔ bundle target consistency,
+   - strict-surface anti-bypass (no direct validator wiring on strict surfaces),
+   - prompt fail-close binding tokens in `scripts/execute_identity_upgrade.py`.
+2. This validator is already wired into required CI gates (`_identity-required-gates.yml`).
+
+### 15.4 Cross-verification replay (this addendum)
+
+1. `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+   - result: `PASS_REQUIRED`, plugin wiring violations = 0.
+2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
+   - result: `PASS_REQUIRED`.
+3. `python3 scripts/docs_command_contract_check.py`
+   - `activity/evidence/rq034/2026-03-09/rq034_docs_contract_20260309_r7.log`
+   - result: rc=0.
+4. `python3 scripts/validate_protocol_ssot_source.py`
+   - `activity/evidence/rq034/2026-03-09/rq034_ssot_20260309_r7.log`
+   - result: rc=0.
+
+### 15.5 Normative decision
+
+1. Identity protocol core contracts that affect release reliability must be protocol-layer fail-close plugins.
+2. Instance lanes may supply bindings/evidence only; they must not redefine protocol fail-close semantics.
+3. Prompt soft constraints remain advisory; contract closure remains controlled by executable protocol gates.

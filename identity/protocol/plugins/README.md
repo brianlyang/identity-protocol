@@ -12,8 +12,9 @@ This directory is the canonical plugin governance root for protocol-level plugin
 
 1. `PLUGIN_REGISTRY.v1.6.2.yaml` (registry, when landed)
 2. `PROVIDER_PROFILES.v1.6.2.yaml` (provider capabilities and endpoint policy)
-3. `schemas/*.schema.json` (strict schema validation)
-4. `templates/provider-bindings.local.template.yaml` (instance-side minimal binding template: profile pointer + credential_ref only)
+3. `FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml` (single-source fail-close plugin wiring policy: paths + mapping + surfaces + prompt binding)
+4. `schemas/*.schema.json` (strict schema validation)
+5. `templates/provider-bindings.local.template.yaml` (instance-side minimal binding template: profile pointer + credential_ref only)
 
 ## Security
 

@@ -1,0 +1,86 @@
+schema_version: 1
+governance_version: v1.6.2
+last_updated_utc: "2026-03-09T00:00:00Z"
+
+unique_egress:
+  script: scripts/final_emit_governed.py
+  channel_id: final_emit_governed
+  strict_surfaces:
+    - scripts/identity_creator.py
+    - scripts/release_readiness_check.py
+    - scripts/report_three_plane_status.py
+    - scripts/full_identity_protocol_scan.py
+    - scripts/e2e_smoke_test.sh
+
+bundle_entry:
+  script: scripts/required_gate_bundle_runner.py
+  strict_surfaces:
+    - scripts/identity_creator.py
+    - scripts/release_readiness_check.py
+    - scripts/report_three_plane_status.py
+    - scripts/full_identity_protocol_scan.py
+    - scripts/e2e_smoke_test.sh
+    - .github/workflows/_identity-required-gates.yml
+
+plugin_failclose_profiles:
+  - plugin_id: multimodal-vision-enforcement
+    requirement_key: asb16-rq-034
+    target_name: multimodal_plugin_enforcement
+    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml
+    contract_file: identity/protocol/plugins/multimodal-vision-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_multimodal_plugin_enforcement.py
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - multimodal_plugin_enforcement_status
+      - multimodal_runtime_evidence_status
+      - multimodal_preflight_status
+      - plugin_registry_status
+      - plugin_naming_status
+      - plugin_schema_status
+      - plugin_threshold_status
+      - plugin_path_status
+      - plugin_copy_policy_status
+      - provider_config_status
+      - runtime_report_path
+      - runtime_report_run_id
+      - multimodal_calls
+      - multimodal_resolved
+      - multimodal_unresolved
+      - multimodal_errors
+      - multimodal_retry_calls
+      - runtime_gate_mode
+      - runtime_gate_required_confidence
+      - multimodal_runtime_evidence_refs
+      - error_code
+      - evidence_ref
+
+prompt_failclose_binding:
+  enforcement_script: scripts/execute_identity_upgrade.py
+  strict_failure_guard:
+    status_field: prompt_contract_auto_wire_status
+    required_status: PASS_REQUIRED
+    error_fallback: IP-PROMPT-WIRE-003
+  required_contract_keys:
+    - prompt_bootstrap_capability_contract_v1
+    - prompt_capability_matrix_fail_closed_contract_v1
+    - derived_prompt_conformance_contract_v1
+    - prompt_import_executable_coupling_contract_v1
+  required_result_fields:
+    - prompt_contract_auto_wire_status
+    - prompt_contract_auto_wire_error_code
+    - prompt_contract_auto_wire_missing_before
+    - prompt_contract_auto_wire_missing_after
+    - prompt_contract_auto_wire_forced_required_keys

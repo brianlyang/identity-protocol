@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-07T23:15:00Z"
-  row_count: 33
+  last_updated_utc: "2026-03-09T03:40:00Z"
+  row_count: 34
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -15,6 +15,7 @@ _meta:
     - "Phase-6 extension completes full requirement projection for P0 rows (RQ-023/024/028/032)."
     - "Hotfix extension adds RQ-033 execution-target tuple isolation mapping row with lane wiring closure."
     - "Post-audit alignment: RQ-018 canonical validator path now points to scripts/validate_dedup_monotonicity.py with wrapper compatibility retained."
+    - "v1.6.2 multimodal stream adds RQ-034 multimodal plugin enforcement mapping row with central provider profile governance hooks."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -891,6 +892,54 @@ asb16-rq-033:
     - IP-XTARGET-003
     - IP-XTARGET-004
   mapping_state: phase6_hotfix_landed
+
+asb16-rq-034:
+  requirement_id: ASB16-RQ-034
+  kernel_contract_id: rq_034_multimodal_plugin_enforcement_contract_v1
+  kernel_source_path: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#4-runtime-contract-requiredization
+  validator_ids:
+    - scripts/validate_multimodal_plugin_enforcement.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#2-decision-freeze-canonical-plugin-topology--ownership
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.2.md#5-required-protocol-execution-set-v162
+  report_field_refs:
+    - multimodal_plugin_enforcement_status
+    - multimodal_runtime_evidence_status
+    - multimodal_preflight_status
+    - plugin_registry_status
+    - plugin_naming_status
+    - plugin_schema_status
+    - plugin_threshold_status
+    - plugin_path_status
+    - plugin_copy_policy_status
+    - provider_config_status
+    - runtime_report_path
+    - runtime_report_run_id
+    - multimodal_calls
+    - multimodal_resolved
+    - multimodal_unresolved
+    - multimodal_errors
+    - multimodal_retry_calls
+    - runtime_gate_mode
+    - runtime_gate_required_confidence
+    - multimodal_runtime_evidence_refs
+    - error_code
+    - evidence_ref
+  error_code_refs:
+    - IP-MM-REG-001
+    - IP-MM-NAME-001
+    - IP-MM-THR-001
+    - IP-MM-PATH-001
+    - IP-MM-COPY-001
+    - IP-MM-CONF-001
+    - IP-MM-CONF-005
+  mapping_state: phase6_v162_multimodal_seed
 
 asb16-rq-030:
   requirement_id: ASB16-RQ-030

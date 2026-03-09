@@ -422,3 +422,40 @@ Evidence:
 1. “M:N protocol closure completed; remaining blockers are non-M:N.”
 2. “Do not reopen M:N root-cause cluster unless `m2m_binding_closure_status` regresses to FAIL.”
 3. “Promotion remains blocked until non-M:N blockers are closed by corresponding owner lanes.”
+
+## 13) Round-30.1 addendum: protocol fail-close plugin standardization closure (2026-03-09)
+
+### 13.1 Scope
+
+1. Convert RQ-034 single-case hardening into reusable protocol fail-close plugin standard.
+2. Ensure "file path + config + gate + SSOT + wiring" is machine-verifiable in one validator path.
+3. Prevent recurrence of instance-side soft-constraint regressions for protocol-core contracts.
+
+### 13.2 Code/config delta audited
+
+1. `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml` (new)
+2. `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml` (explicit requirement/target/gate metadata)
+3. `identity/protocol/mappings/contract-binding.v1.6.yaml` (`asb16-rq-034` report field refs expanded)
+4. `scripts/validate_control_plane_invariants.py` (plugin/prompt/entrypoint invariants extended)
+5. `identity/protocol/plugins/README.md` (canonical governance asset list updated)
+
+### 13.3 Replay evidence
+
+1. invariants replay:
+   - `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+   - expected/actual: `PASS_REQUIRED`, `plugin_wiring_violation_count=0`, `prompt_binding_violation_count=0`.
+2. strict surface drift replay:
+   - `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
+   - expected/actual: `PASS_REQUIRED`.
+3. docs + SSOT replay:
+   - `activity/evidence/rq034/2026-03-09/rq034_docs_contract_20260309_r7.log` (rc=0)
+   - `activity/evidence/rq034/2026-03-09/rq034_ssot_20260309_r7.log` (rc=0)
+4. target full-scan regression freeze replay:
+   - `activity/evidence/rq034/2026-03-09/rq034_full_scan_target_regression_20260309_r5.result.json`
+   - expected/actual: `PASS_REQUIRED`, `summary.p0=0`.
+
+### 13.4 Judgment
+
+1. Protocol-level fail-close plugin standardization is now machine-enforced and replay-backed.
+2. RQ-034 is no longer a standalone special-case; it is now the template path for future protocol-core plugins.
+3. Remaining non-green states remain instance evidence/runtime debts, not protocol wiring ambiguity.
