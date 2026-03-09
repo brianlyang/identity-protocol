@@ -13,6 +13,7 @@ from create_identity_pack import (
     _prompt_bootstrap_capability_contract_skeleton,
     _prompt_capability_matrix_contract_skeleton,
     _prompt_kernel_executable_coupling_contract_skeleton,
+    _reasoning_loop_failclose_contract_skeleton,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
@@ -41,6 +42,9 @@ REQUIRED_PROMPT_KEYS = (
 REQUIRED_MULTIMODAL_KEYS = (
     "multimodal_plugin_enforcement_contract_v1",
 )
+REQUIRED_REASONING_KEYS = (
+    "reasoning_loop_failclose_contract_v1",
+)
 
 PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
@@ -52,11 +56,16 @@ PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 MULTIMODAL_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
 }
+REASONING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
+}
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
 ERR_MM_WIRE_MISSING = "IP-MM-WIRE-001"
 ERR_MM_WIRE_INVALID = "IP-MM-WIRE-002"
+ERR_RL_WIRE_MISSING = "IP-RL-WIRE-001"
+ERR_RL_WIRE_INVALID = "IP-RL-WIRE-002"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -147,6 +156,54 @@ def _normalize_multimodal_contracts(task: dict[str, Any]) -> tuple[list[str], li
     return forced_required_keys, restored_validator_keys, arbitration_link_restored
 
 
+def _normalize_reasoning_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], bool]:
+    forced_required_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    arbitration_link_restored = False
+    for key in REQUIRED_REASONING_KEYS:
+        default = REASONING_CONTRACT_DEFAULTS.get(key, {})
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            forced_required_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        if node.get("required") is not True:
+            node["required"] = True
+            forced_required_keys.append(key)
+        validator = str(node.get("validator", "")).strip()
+        if not validator:
+            node["validator"] = str(default.get("validator", "")).strip()
+            restored_validator_keys.append(key)
+        if not str(node.get("contract_id", "")).strip():
+            node["contract_id"] = str(default.get("contract_id", "")).strip()
+        if not str(node.get("reasoning_enforcement_level", "")).strip():
+            node["reasoning_enforcement_level"] = str(default.get("reasoning_enforcement_level", "L1"))
+
+    arbitration = task.get("capability_arbitration_contract")
+    if isinstance(arbitration, dict):
+        desired = {
+            "contract_ref": "rq_035_reasoning_loop_failclose_contract_v1",
+            "validator": "scripts/validate_reasoning_loop_failclose.py",
+            "no_target_reached_cannot_complete": True,
+            "failed_attempt_requires_next_action": True,
+            "exceed_threshold_requires_escalation": True,
+            "reasoning_enforcement_level_field": "reasoning_enforcement_level",
+        }
+        current = arbitration.get("reasoning_loop_enforcement")
+        if not isinstance(current, dict):
+            arbitration["reasoning_loop_enforcement"] = dict(desired)
+            arbitration_link_restored = True
+        else:
+            for k, v in desired.items():
+                if current.get(k) != v:
+                    current[k] = v
+                    arbitration_link_restored = True
+            arbitration["reasoning_loop_enforcement"] = current
+
+    return forced_required_keys, restored_validator_keys, arbitration_link_restored
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Backfill intake contract set into CURRENT_TASK.json.")
     ap.add_argument("--catalog", required=True)
@@ -171,14 +228,17 @@ def main() -> int:
     missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
+    reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
     forced_required_keys, restored_validator_keys = _normalize_prompt_contracts(updated)
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
+    forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     prompt_missing_after = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(updated.get(k), dict)]
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
+    reasoning_missing_after = [k for k in REQUIRED_REASONING_KEYS if not isinstance(updated.get(k), dict)]
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -191,6 +251,16 @@ def main() -> int:
     multimodal_invalid_after = [
         k
         for k in REQUIRED_MULTIMODAL_KEYS
+        if isinstance(updated.get(k), dict)
+        and (
+            updated.get(k, {}).get("required") is not True
+            or not str((updated.get(k) or {}).get("validator", "")).strip()
+            or not str((updated.get(k) or {}).get("contract_id", "")).strip()
+        )
+    ]
+    reasoning_invalid_after = [
+        k
+        for k in REQUIRED_REASONING_KEYS
         if isinstance(updated.get(k), dict)
         and (
             updated.get(k, {}).get("required") is not True
@@ -226,6 +296,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_MM_WIRE_INVALID
         stale_reasons = ["required_multimodal_contract_invalid_after_backfill"]
+    elif reasoning_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_RL_WIRE_MISSING
+        stale_reasons = ["required_reasoning_contract_keys_missing_after_backfill"]
+    elif reasoning_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_RL_WIRE_INVALID
+        stale_reasons = ["required_reasoning_contract_invalid_after_backfill"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -263,6 +341,13 @@ def main() -> int:
         "forced_multimodal_required_keys": forced_mm_required_keys,
         "restored_multimodal_validator_keys": restored_mm_validator_keys,
         "multimodal_arbitration_link_restored": arbitration_link_restored,
+        "required_reasoning_contract_keys": list(REQUIRED_REASONING_KEYS),
+        "missing_reasoning_contract_keys_before": reasoning_missing_before,
+        "missing_reasoning_contract_keys_after": reasoning_missing_after,
+        "invalid_reasoning_contract_keys_after": reasoning_invalid_after,
+        "forced_reasoning_required_keys": forced_rl_required_keys,
+        "restored_reasoning_validator_keys": restored_rl_validator_keys,
+        "reasoning_arbitration_link_restored": reasoning_arbitration_link_restored,
         "prompt_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not prompt_missing_after and not prompt_invalid_after else STATUS_FAIL_REQUIRED
         ),
@@ -279,9 +364,17 @@ def main() -> int:
             if not multimodal_missing_after and not multimodal_invalid_after
             else (ERR_MM_WIRE_MISSING if multimodal_missing_after else ERR_MM_WIRE_INVALID)
         ),
+        "reasoning_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not reasoning_missing_after and not reasoning_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "reasoning_contract_auto_wire_error_code": (
+            ""
+            if not reasoning_missing_after and not reasoning_invalid_after
+            else (ERR_RL_WIRE_MISSING if reasoning_missing_after else ERR_RL_WIRE_INVALID)
+        ),
         "legacy_path_drift_fields_before": legacy_drift_before,
         "legacy_path_drift_fields_after": legacy_drift_after,
-        "required_contract_keys": list(REQUIRED_INTAKE_KEYS) + list(REQUIRED_MULTIMODAL_KEYS),
+        "required_contract_keys": list(REQUIRED_INTAKE_KEYS) + list(REQUIRED_MULTIMODAL_KEYS) + list(REQUIRED_REASONING_KEYS),
         "stale_reasons": stale_reasons,
         "evidence_ref": str(task_path),
     }

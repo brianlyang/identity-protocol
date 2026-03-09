@@ -2379,6 +2379,58 @@ def _instance_plane_status(
     if rc_multimodal_plugin != 0 or multimodal_plugin_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_reasoning_plugin, out_reasoning_plugin, err_reasoning_plugin = _run(
+        [
+            "python3",
+            "scripts/required_gate_bundle_runner.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
+            "--target-name",
+            "reasoning_loop_failclose_enforcement",
+            "--surface-label",
+            "three_plane_target_probe",
+            "--operation",
+            "three-plane",
+            "--report-selected-path",
+            str(report_path),
+            "--json-only",
+        ]
+    )
+    reasoning_plugin_payload = _parse_json_payload(out_reasoning_plugin) or {}
+    validators["reasoning_loop_failclose_enforcement"] = {
+        "rc": rc_reasoning_plugin,
+        "ok": rc_reasoning_plugin == 0,
+        "out": out_reasoning_plugin,
+        "err": err_reasoning_plugin,
+    }
+    reasoning_plugin_status = str(
+        reasoning_plugin_payload.get("reasoning_loop_failclose_status", "")
+    ).strip().upper()
+    if rc_reasoning_plugin != 0 or reasoning_plugin_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_replay_archive, out_replay_archive, err_replay_archive = _run(
         [
             "python3",
@@ -3707,6 +3759,31 @@ def _instance_plane_status(
             "forbidden_copy_refs": multimodal_plugin_payload.get("forbidden_copy_refs", []),
             "stale_reasons": multimodal_plugin_payload.get("stale_reasons", []),
             "evidence_ref": multimodal_plugin_payload.get("evidence_ref", ""),
+        },
+        "reasoning_loop_failclose_enforcement": {
+            "reasoning_loop_failclose_status": reasoning_plugin_payload.get("reasoning_loop_failclose_status"),
+            "reasoning_runtime_evidence_status": reasoning_plugin_payload.get("reasoning_runtime_evidence_status"),
+            "reasoning_attempt_trace_status": reasoning_plugin_payload.get("reasoning_attempt_trace_status"),
+            "no_target_done_block_status": reasoning_plugin_payload.get("no_target_done_block_status"),
+            "reasoning_next_action_status": reasoning_plugin_payload.get("reasoning_next_action_status"),
+            "reasoning_escalation_status": reasoning_plugin_payload.get("reasoning_escalation_status"),
+            "reasoning_four_track_status": reasoning_plugin_payload.get("reasoning_four_track_status"),
+            "external_source_freshness_status": reasoning_plugin_payload.get("external_source_freshness_status"),
+            "reasoning_enforcement_level": reasoning_plugin_payload.get("reasoning_enforcement_level", ""),
+            "plugin_registry_status": reasoning_plugin_payload.get("plugin_registry_status", ""),
+            "runtime_report_path": reasoning_plugin_payload.get("runtime_report_path", ""),
+            "runtime_report_run_id": reasoning_plugin_payload.get("runtime_report_run_id", ""),
+            "runtime_report_source": reasoning_plugin_payload.get("runtime_report_source", ""),
+            "report_selected_path": reasoning_plugin_payload.get("report_selected_path", ""),
+            "reasoning_attempt_count": reasoning_plugin_payload.get("reasoning_attempt_count"),
+            "reasoning_failed_attempt_count": reasoning_plugin_payload.get("reasoning_failed_attempt_count"),
+            "no_target_reached_detected": reasoning_plugin_payload.get("no_target_reached_detected"),
+            "reasoning_runtime_evidence_refs": reasoning_plugin_payload.get("reasoning_runtime_evidence_refs", []),
+            "error_code": reasoning_plugin_payload.get("error_code", ""),
+            "required_contract": reasoning_plugin_payload.get("required_contract"),
+            "auto_required_signal": reasoning_plugin_payload.get("auto_required_signal"),
+            "stale_reasons": reasoning_plugin_payload.get("stale_reasons", []),
+            "evidence_ref": reasoning_plugin_payload.get("evidence_ref", ""),
         },
         "replay_archive_contract": {
             "replay_archive_contract_status": replay_archive_payload.get("replay_archive_contract_status"),

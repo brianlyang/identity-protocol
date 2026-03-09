@@ -478,6 +478,106 @@ def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
     }
 
 
+def _reasoning_loop_failclose_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "rq_035_reasoning_loop_failclose_contract_v1",
+        "plugin_id": "reasoning-loop-enforcement",
+        "validator": "scripts/validate_reasoning_loop_failclose.py",
+        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+        "contract_file": "identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml",
+        "reasoning_enforcement_level": "L1",
+        "level_required_attempt_fields": {
+            "L0": [],
+            "L1": ["attempt", "hypothesis", "patch", "expected_effect", "result"],
+            "L2": [
+                "attempt",
+                "hypothesis",
+                "patch",
+                "expected_effect",
+                "result",
+                "result_code",
+                "target_reached",
+                "no_target_reached",
+                "next_action",
+                "evidence_refs",
+            ],
+            "L3": [
+                "attempt",
+                "hypothesis",
+                "patch",
+                "expected_effect",
+                "result",
+                "result_code",
+                "target_reached",
+                "no_target_reached",
+                "next_action",
+                "evidence_refs",
+            ],
+        },
+        "level_required_run_fields": {
+            "L2": [
+                "roundtable_evidence_refs",
+                "vendor_evidence_refs",
+                "network_evidence_refs",
+                "reference_evidence_refs",
+            ],
+            "L3": [
+                "roundtable_evidence_refs",
+                "vendor_evidence_refs",
+                "network_evidence_refs",
+                "reference_evidence_refs",
+            ],
+        },
+        "level_required_external_fields": {
+            "L3": [
+                "external_source_freshness_status",
+                "conflict_reconciliation_note",
+                "source_url_set",
+            ],
+        },
+        "completion_states_done": ["done", "pass", "passed", "success", "completed", "closed"],
+        "no_target_result_tokens": ["no_target_reached", "not_reached", "target_not_reached"],
+        "failed_result_tokens": ["fail", "failed", "error", "blocked", "no_target_reached", "not_reached", "target_not_reached"],
+        "pass_result_tokens": ["pass", "passed", "success", "done", "resolved", "target_reached"],
+        "max_attempts_before_escalation": 3,
+        "failure_requires_next_action": True,
+        "escalation_signal_fields": [
+            "route_switch_triggered",
+            "human_collaboration_triggered",
+            "escalation_triggered",
+            "route_switch_ref",
+            "human_collaboration_ref",
+            "escalation_ref",
+            "next_action",
+        ],
+        "escalation_signal_values": ["true", "triggered", "escalate", "route_switch", "human_collaboration", "handoff"],
+        "learning_report_path_pattern": "runtime/examples/*learning-sample*.json",
+        "required_fields": [
+            "reasoning_loop_failclose_status",
+            "reasoning_runtime_evidence_status",
+            "reasoning_attempt_trace_status",
+            "no_target_done_block_status",
+            "reasoning_next_action_status",
+            "reasoning_escalation_status",
+            "reasoning_four_track_status",
+            "external_source_freshness_status",
+            "runtime_report_path",
+            "runtime_report_run_id",
+            "reasoning_attempt_count",
+            "reasoning_failed_attempt_count",
+            "no_target_reached_detected",
+            "reasoning_runtime_evidence_refs",
+        ],
+        "done_transition_guard": {
+            "no_target_reached_cannot_complete": True,
+            "failed_attempt_requires_next_action": True,
+            "exceed_threshold_requires_escalation": True,
+        },
+        "fail_action": "block_done_transition_on_reasoning_no_target_or_unclosed_attempts",
+    }
+
+
 def _release_unlock_formula_contract_skeleton() -> dict:
     return {
         "required": True,
@@ -997,6 +1097,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
         "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
+        "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)
@@ -1770,6 +1871,14 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "validator": "scripts/validate_multimodal_plugin_enforcement.py",
             "requires_multimodal_evidence_consistency": True,
             "inconsistent_evidence_transition": "block_done",
+        },
+        "reasoning_loop_enforcement": {
+            "contract_ref": "rq_035_reasoning_loop_failclose_contract_v1",
+            "validator": "scripts/validate_reasoning_loop_failclose.py",
+            "no_target_reached_cannot_complete": True,
+            "failed_attempt_requires_next_action": True,
+            "exceed_threshold_requires_escalation": True,
+            "reasoning_enforcement_level_field": "reasoning_enforcement_level",
         },
         "decision_record_required_fields": [
             "arbitration_id",

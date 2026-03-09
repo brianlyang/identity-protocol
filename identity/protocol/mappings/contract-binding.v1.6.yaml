@@ -941,6 +941,53 @@ asb16-rq-034:
     - IP-MM-CONF-005
   mapping_state: phase6_v162_multimodal_seed
 
+asb16-rq-035:
+  requirement_id: ASB16-RQ-035
+  kernel_contract_id: rq_035_reasoning_loop_failclose_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_PROTOCOL.md#reasoning-loop-canonical-binding-v162-fail-close-stream
+  validator_ids:
+    - scripts/validate_reasoning_loop_failclose.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#16-round-303-reasoning-loop-fail-close-standardization-addendum-2026-03-09
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.2.md#15-round-303-reasoning-loop-fail-close-protocolization-2026-03-09
+  report_field_refs:
+    - reasoning_loop_failclose_status
+    - reasoning_runtime_evidence_status
+    - reasoning_enforcement_level
+    - reasoning_attempt_trace_status
+    - no_target_done_block_status
+    - reasoning_next_action_status
+    - reasoning_escalation_status
+    - reasoning_four_track_status
+    - external_source_freshness_status
+    - plugin_registry_status
+    - runtime_report_path
+    - runtime_report_run_id
+    - reasoning_attempt_count
+    - reasoning_failed_attempt_count
+    - no_target_reached_detected
+    - reasoning_runtime_evidence_refs
+    - error_code
+    - evidence_ref
+  error_code_refs:
+    - IP-RL-REG-001
+    - IP-RL-CONF-001
+    - IP-RL-RUN-001
+    - IP-RL-RUN-002
+    - IP-RL-RUN-003
+    - IP-RL-RUN-004
+    - IP-RL-RUN-005
+    - IP-RL-RUN-006
+    - IP-RL-RUN-007
+    - IP-RL-RUN-008
+  mapping_state: phase6_v162_reasoning_loop_seed
+
 asb16-rq-030:
   requirement_id: ASB16-RQ-030
   kernel_contract_id: rq_030_intake_evidence_quorum_contract_v1

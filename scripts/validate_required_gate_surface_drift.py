@@ -51,6 +51,7 @@ BUNDLE_REQUIREMENT_KEYS: tuple[str, ...] = (
     "asb16-rq-020",
     "asb16-rq-033",
     "asb16-rq-034",
+    "asb16-rq-035",
 )
 
 ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (

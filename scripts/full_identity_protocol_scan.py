@@ -469,6 +469,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "skill_path_integrity",
             "execution_target_tuple_isolation",
             "multimodal_plugin_enforcement",
+            "reasoning_loop_failclose_enforcement",
             "e2e_hermetic_runtime_import",
         )
     )
@@ -2245,6 +2246,41 @@ def main() -> int:
                     "scan",
                     "--json-only",
                 ],
+                "reasoning_loop_failclose_enforcement": [
+                    "python3",
+                    "scripts/required_gate_bundle_runner.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--send-time-gate-status",
+                    "NOT_APPLICABLE",
+                    "--outlet-bypass-detected",
+                    "false",
+                    "--final-emit-contract-status",
+                    "NOT_APPLICABLE",
+                    "--final-emit-policy-mode",
+                    "tool_choice_required",
+                    "--final-emit-schema-status",
+                    "NOT_APPLICABLE",
+                    "--actor-id",
+                    actor_id,
+                    "--resolved-work-layer",
+                    effective_work_layer,
+                    "--resolved-source-layer",
+                    effective_source_layer,
+                    "--lock-state",
+                    "LOCK_MATCH",
+                    "--target-name",
+                    "reasoning_loop_failclose_enforcement",
+                    "--surface-label",
+                    f"full_scan_{layer}_target_probe",
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
                 "replay_archive_contract": [
                     "python3",
                     "scripts/validate_replay_archive_contract.py",
@@ -2508,6 +2544,9 @@ def main() -> int:
                     mm_cmd = checks.get("multimodal_plugin_enforcement")
                     if isinstance(mm_cmd, list) and "--report-selected-path" not in mm_cmd:
                         mm_cmd.extend(["--report-selected-path", str(latest_report)])
+                    rl_cmd = checks.get("reasoning_loop_failclose_enforcement")
+                    if isinstance(rl_cmd, list) and "--report-selected-path" not in rl_cmd:
+                        rl_cmd.extend(["--report-selected-path", str(latest_report)])
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
@@ -3232,6 +3271,35 @@ def main() -> int:
                     ):
                         if k in mm_doc:
                             check_payload[k] = mm_doc.get(k)
+                if name == "reasoning_loop_failclose_enforcement":
+                    rl_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "reasoning_loop_failclose_status",
+                        "reasoning_runtime_evidence_status",
+                        "reasoning_attempt_trace_status",
+                        "no_target_done_block_status",
+                        "reasoning_next_action_status",
+                        "reasoning_escalation_status",
+                        "reasoning_four_track_status",
+                        "external_source_freshness_status",
+                        "reasoning_enforcement_level",
+                        "plugin_registry_status",
+                        "runtime_report_path",
+                        "runtime_report_run_id",
+                        "runtime_report_source",
+                        "report_selected_path",
+                        "reasoning_attempt_count",
+                        "reasoning_failed_attempt_count",
+                        "no_target_reached_detected",
+                        "reasoning_runtime_evidence_refs",
+                        "required_contract",
+                        "auto_required_signal",
+                        "error_code",
+                        "stale_reasons",
+                        "evidence_ref",
+                    ):
+                        if k in rl_doc:
+                            check_payload[k] = rl_doc.get(k)
                 if name == "replay_archive_contract":
                     replay_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

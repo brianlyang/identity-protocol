@@ -500,3 +500,105 @@ Primary artifacts:
 3. Remaining residuals are tracked as non-M:N:
    - `IP-CAP-003` (instance capability boundary marker),
    - readiness changelog governance gate (`validate_changelog_updated`).
+
+## 15) Round-30.3 reasoning-loop fail-close protocolization (2026-03-09)
+
+### 15.1 Audit finding class
+
+1. Reasoning loop had structural checks but lacked full semantic fail-close closure.
+2. Verified risk pattern:
+   - `no_target_reached` can be represented without deterministic done-transition blocking unless explicitly gated.
+3. Decision:
+   - standardize as protocol fail-close plugin (`asb16-rq-035`) under existing v1.6.2 governance skeleton.
+
+### 15.2 Code and config changes audited
+
+1. Validator:
+   - `scripts/validate_reasoning_loop_failclose.py`
+2. Plugin assets:
+   - `identity/protocol/plugins/reasoning-loop-enforcement/*`
+3. Registry/governance/mapping:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml`
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml`
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+4. Required gate + drift:
+   - `scripts/required_gate_bundle_runner.py`
+   - `scripts/validate_required_gate_surface_drift.py`
+5. Cross-surface projection:
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+
+### 15.3 Semantics now enforced
+
+1. `no_target_reached=true` cannot transition to done/pass.
+2. Failed attempt without `next_action` is fail-close.
+3. Exceed threshold without escalation signal is fail-close.
+4. Enforcement is level-configured (`L0/L1/L2/L3`), not hardcoded:
+   - `L1`: attempt trace
+   - `L2`: four-track refs
+   - `L3`: external freshness/reconciliation
+
+### 15.4 Ledger judgment update
+
+1. Reasoning-loop semantic closure is now protocolized in the same control-plane grammar as multimodal fail-close plugins.
+2. This closes a protocol semantic gap and reduces “document says blocked, gate still passes” drift.
+3. Remaining non-green outcomes continue to be classified by owner lane (instance/release debt), not by reopening protocol semantic closure.
+
+## 16) Round-30.4 addendum: deep cross-verification + validator scope decoupling (2026-03-10)
+
+### 16.1 New protocol-side finding
+
+1. `validate_multimodal_plugin_enforcement.py` was over-scoped after multi-plugin registry expansion:
+   - it enforced `required_thresholds` for non-multimodal plugin rows.
+2. With `reasoning-loop-enforcement` in the same registry, this could produce false `IP-MM-THR-001` on multimodal path.
+
+### 16.2 Protocol fix audited
+
+1. File:
+   - `scripts/validate_multimodal_plugin_enforcement.py`
+2. Change:
+   - threshold/provider-capability checks are now scoped to multimodal plugin rows only
+     (`validator_script == scripts/validate_multimodal_plugin_enforcement.py` or `plugin_id == multimodal-vision-enforcement`).
+3. Effect:
+   - removes cross-plugin coupling between `asb16-rq-034` and `asb16-rq-035`.
+
+### 16.3 Replay evidence (persistent)
+
+Canonical root:
+
+1. `activity/evidence/v162-cross-verify/2026-03-10/`
+
+Core gate results:
+
+1. `control_plane_invariants` -> `PASS_REQUIRED`
+2. `plugin_literal_path_lint` -> `PASS_REQUIRED`
+3. `surface_drift` -> `PASS_REQUIRED`
+4. `docs_contract` -> `PASS`
+5. `protocol_ssot` -> `OK`
+
+Multimodal behavior split (expected by contract mode):
+
+1. Strict explicit current-report path:
+   - `validate_multimodal_plugin_enforcement --operation validate --run-id identity-upgrade-exec-* --report-selected-path ...`
+   - result: `FAIL_REQUIRED + IP-MM-RUN-002` (expected strict fail-close when runtime-stage producer fields missing).
+2. three-plane autorun legacy-defer path:
+   - `validate_multimodal_plugin_enforcement --operation three-plane --run-id three-plane-*` (no explicit report path)
+   - result: `PASS_REQUIRED` with:
+     - `multimodal_runtime_evidence_status=SKIPPED_NOT_REQUIRED`
+     - `runtime_stage_deferred=true`
+     - `runtime_stage_deferred_reason=legacy_report_missing_runtime_stage_pre_execution`
+3. Projection parity under same autorun semantics:
+   - `validate_failclose_plugin_projection --operation three-plane` -> `PASS_REQUIRED`.
+
+Cross-surface replay:
+
+1. `report_three_plane_status` (strict actor/session bound) -> rc=0, `m2m_binding_closure_status=PASS`.
+2. `full_identity_protocol_scan --scan-mode target --target-source-layer project` -> rc=0, `summary.ok=1`, `summary_m2m.pass=1`.
+
+### 16.4 Ledger decision update
+
+1. v1.6.2 control-plane plugin wiring remains stable after decoupling fix.
+2. `IP-MM-RUN-002` remains a valid strict explicit-report fail-close signal; not a reopened topology/lint regression.
+3. Stream posture unchanged:
+   - `SPEC_READY / PENDING_INTAKE`
+   - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`

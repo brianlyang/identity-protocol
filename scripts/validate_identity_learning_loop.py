@@ -77,6 +77,30 @@ def _resolve_rulebook_path(rulebook_raw: str, *, pack_dir: Path) -> Path:
     return pack_relative
 
 
+def _boolish(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _result_token(attempt: dict[str, Any]) -> str:
+    for key in ("result_code", "result", "status"):
+        token = str(attempt.get(key, "")).strip().lower()
+        if token:
+            return token
+    return ""
+
+
+def _completion_token(run: dict[str, Any]) -> str:
+    for key in ("overall_status", "final_status", "status", "result", "outcome"):
+        token = str(run.get(key, "")).strip().lower()
+        if token:
+            return token
+    return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity learning loop evidence (reasoning + rulebook linkage)")
     ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
@@ -133,6 +157,22 @@ def main() -> int:
             print(f"[OK]   reasoning_attempts count={len(attempts)}")
 
     required_attempt_fields = set(rlc.get("mandatory_fields_per_attempt") or [])
+    no_target_tokens = {
+        str(x).strip().lower()
+        for x in (rlc.get("no_target_result_tokens") or ["no_target_reached", "not_reached", "target_not_reached"])
+        if str(x).strip()
+    }
+    completion_tokens = {
+        str(x).strip().lower()
+        for x in (rlc.get("completion_states_done") or ["done", "pass", "passed", "success", "completed", "closed"])
+        if str(x).strip()
+    }
+    failure_requires_next_action = _boolish(rlc.get("failure_requires_next_action", True))
+    max_attempts_before_escalation = int(rlc.get("max_attempts_before_escalation", 3))
+    no_target_reached_detected = False
+    failed_attempt_count = 0
+    failed_without_next_action_count = 0
+
     for i, att in enumerate(attempts, start=1):
         if not isinstance(att, dict):
             print(f"[FAIL] attempt[{i}] must be object")
@@ -144,6 +184,44 @@ def main() -> int:
             rc = 1
         else:
             print(f"[OK]   attempt[{i}] fields complete")
+
+        result_token = _result_token(att)
+        no_target = _boolish(att.get("no_target_reached")) or (result_token in no_target_tokens)
+        no_target_reached_detected = no_target_reached_detected or no_target
+        target_reached = _boolish(att.get("target_reached")) or (result_token in {"pass", "passed", "success", "resolved", "target_reached"})
+        attempt_failed = no_target or (result_token in {"fail", "failed", "error", "blocked"}) or (not target_reached and bool(result_token))
+        if attempt_failed:
+            failed_attempt_count += 1
+            if failure_requires_next_action and not str(att.get("next_action", "")).strip():
+                print(f"[FAIL] attempt[{i}] failed but next_action is missing")
+                failed_without_next_action_count += 1
+                rc = 1
+
+    completion_token = _completion_token(run)
+    if no_target_reached_detected and completion_token in completion_tokens:
+        print("[FAIL] no_target_reached=true cannot be treated as completion")
+        rc = 1
+    else:
+        print("[OK]   no-target completion semantic respected")
+
+    if failed_attempt_count > max_attempts_before_escalation:
+        has_escalation = any(
+            str(run.get(field, "")).strip()
+            for field in (
+                "route_switch_ref",
+                "human_collaboration_ref",
+                "escalation_ref",
+                "next_action",
+            )
+        )
+        if not has_escalation:
+            print(
+                "[FAIL] failed attempts exceed max_attempts_before_escalation "
+                f"({failed_attempt_count}>{max_attempts_before_escalation}) without escalation signal"
+            )
+            rc = 1
+        else:
+            print("[OK]   escalation signal present for over-threshold failures")
 
     if args.rulebook:
         rulebook_path = Path(args.rulebook)

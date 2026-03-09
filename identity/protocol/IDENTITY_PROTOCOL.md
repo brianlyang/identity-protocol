@@ -194,6 +194,25 @@ To avoid “statement-only” drift, the accurate judgement contract is hard-bou
    - `inconsistent_evidence_transition=block_done`
 7. Any non-canonical plugin contract/profile source in strict lane must fail-close (`IP-MM-REG-001`).
 
+### Reasoning loop canonical binding (v1.6.2 fail-close stream)
+
+To avoid “trace-present but semantic-invalid” drift, the reasoning loop contract is hard-bound to protocol fail-close plugin governance:
+
+1. Contract ID: `rq_035_reasoning_loop_failclose_contract_v1`
+2. Requirement key: `asb16-rq-035`
+3. Canonical validator: `scripts/validate_reasoning_loop_failclose.py`
+4. Canonical plugin root:
+   - `identity/protocol/plugins/reasoning-loop-enforcement/`
+5. Mandatory semantic gate:
+   - `no_target_reached=true` cannot transition to done/pass completion.
+   - failed attempt without `next_action` is fail-close.
+   - exceed `max_attempts_before_escalation` without escalation signal is fail-close.
+6. Enforcement-level policy is configuration-driven (no validator hardcoding):
+   - `L1`: attempt trace integrity
+   - `L2`: `L1` + four-track evidence refs
+   - `L3`: `L2` + external freshness/reconciliation constraints
+7. Any registry/profile/contract mismatch for reasoning plugin in strict lane must fail-close (`IP-RL-REG-001` / `IP-RL-CONF-001`).
+
 ## Protocol baseline review contract (v1.2.3+)
 
 To avoid identity-level drift and unsupported architectural conclusions, identity upgrades MUST include baseline protocol review evidence.

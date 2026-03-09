@@ -66,6 +66,45 @@ plugin_failclose_profiles:
       - multimodal_runtime_evidence_refs
       - error_code
       - evidence_ref
+  - plugin_id: reasoning-loop-enforcement
+    requirement_key: asb16-rq-035
+    target_name: reasoning_loop_failclose_enforcement
+    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml
+    contract_file: identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_reasoning_loop_failclose.py
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - reasoning_loop_failclose_status
+      - reasoning_runtime_evidence_status
+      - reasoning_enforcement_level
+      - reasoning_attempt_trace_status
+      - no_target_done_block_status
+      - reasoning_next_action_status
+      - reasoning_escalation_status
+      - reasoning_four_track_status
+      - external_source_freshness_status
+      - plugin_registry_status
+      - runtime_report_path
+      - runtime_report_run_id
+      - reasoning_attempt_count
+      - reasoning_failed_attempt_count
+      - no_target_reached_detected
+      - reasoning_runtime_evidence_refs
+      - error_code
+      - evidence_ref
 
 prompt_failclose_binding:
   enforcement_script: scripts/execute_identity_upgrade.py

@@ -14,3 +14,12 @@ plugins:
       - glm46v_vision_prod
       - openai_vision_prod
     status: active
+  - plugin_id: reasoning-loop-enforcement
+    requirement_key: asb16-rq-035
+    bundle_target_name: reasoning_loop_failclose_enforcement
+    gate_mode: fail_close_strict
+    ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-035
+    contract_file: identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_reasoning_loop_failclose.py
+    provider_profiles: []
+    status: active

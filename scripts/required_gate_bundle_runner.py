@@ -30,6 +30,7 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-020",
     "asb16-rq-033",
     "asb16-rq-034",
+    "asb16-rq-035",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -42,6 +43,7 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-020": "skill_path_integrity",
     "asb16-rq-033": "execution_target_tuple_isolation",
     "asb16-rq-034": "multimodal_plugin_enforcement",
+    "asb16-rq-035": "reasoning_loop_failclose_enforcement",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -55,6 +57,7 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "skill_path_integrity": "path_integrity_status",
     "execution_target_tuple_isolation": "execution_target_tuple_isolation_status",
     "multimodal_plugin_enforcement": "multimodal_plugin_enforcement_status",
+    "reasoning_loop_failclose_enforcement": "reasoning_loop_failclose_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
@@ -89,6 +92,18 @@ MM_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
     "multimodal_retry_calls",
     "runtime_gate_mode",
     "runtime_gate_required_confidence",
+)
+RL_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
+    "reasoning_runtime_evidence_status",
+    "reasoning_enforcement_level",
+    "reasoning_attempt_trace_status",
+    "no_target_done_block_status",
+    "reasoning_next_action_status",
+    "reasoning_escalation_status",
+    "runtime_report_path",
+    "runtime_report_run_id",
+    "reasoning_attempt_count",
+    "reasoning_runtime_evidence_refs",
 )
 
 
@@ -256,6 +271,14 @@ def _validate_row_payload_contract(
         for field in MM_RUNTIME_REQUIRED_FIELDS:
             if field not in payload:
                 issues.append(f"mm_runtime_field_missing:{field}")
+    if (
+        target_name == "reasoning_loop_failclose_enforcement"
+        and required_contract
+        and op in RUNTIME_PROOF_REQUIRED_OPERATIONS
+    ):
+        for field in RL_RUNTIME_REQUIRED_FIELDS:
+            if field not in payload:
+                issues.append(f"rl_runtime_field_missing:{field}")
     return issues
 
 
@@ -374,7 +397,7 @@ def main() -> int:
             "--json-only",
         ]
         cmd.extend(spec.fixed_args)
-        if spec.target_name == "multimodal_plugin_enforcement":
+        if spec.target_name in {"multimodal_plugin_enforcement", "reasoning_loop_failclose_enforcement"}:
             cmd.extend(["--run-id", run_id_binding])
             if report_selected_path:
                 cmd.extend(["--report-selected-path", report_selected_path])
