@@ -1378,6 +1378,8 @@ def _run_header_first_gate(
         identity_id,
         "--actor-id",
         str(actor_id or "").strip(),
+        "--session-id",
+        f"run:{run_id}",
         "--body-text",
         "PRE_MUTATION_HEADER_FIRST_GATE",
         "--out-reply-file",

@@ -31,6 +31,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
+ERR_SESSION_ENTRY_REQUIRED = "IP-ASB-SESSION-ENTRY-001"
 
 
 def _load_body(args: argparse.Namespace) -> str:
@@ -163,6 +164,44 @@ def main() -> int:
             else json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2)
         )
         return 1
+    session_id_input = str(args.session_id or "").strip()
+    if not session_id_input:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "send_time_gate_status": "FAIL_REQUIRED",
+            "send_time_error_code": ERR_SESSION_ENTRY_REQUIRED,
+            "error_code": ERR_SESSION_ENTRY_REQUIRED,
+            "reply_first_line_status": "FAIL_REQUIRED",
+            "reply_evidence_mode": "none",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_outlet_guard_applied": False,
+            "governed_outlet_enforced": False,
+            "outlet_bypass_detected": True,
+            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": FINAL_EMIT_POLICY_MODE,
+            "final_emit_schema_id": FINAL_EMIT_SCHEMA_ID,
+            "final_emit_schema_status": "FAIL_REQUIRED",
+            "final_emit_contract_status": "FAIL_REQUIRED",
+            "stale_reasons": ["session_id_required"],
+        }
+        out_json = str(args.out_json or "").strip()
+        if out_json:
+            out_json_path = Path(out_json).expanduser().resolve()
+            out_json_path.parent.mkdir(parents=True, exist_ok=True)
+            out_json_path.write_text(
+                json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        print(
+            json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False)
+            if args.json_only
+            else json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2)
+        )
+        return 1
 
     try:
         body = _load_body(args)
@@ -190,7 +229,7 @@ def main() -> int:
         session_id=str(args.session_id or "").strip(),
     )
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
-    session_id_effective = str(args.session_id or "").strip()
+    session_id_effective = session_id_input
 
     if session_id_effective and not actor_bound_identity:
         payload = {
