@@ -320,7 +320,7 @@ for ID in $IDS; do
   HEADSTAMP_ACTOR_ID="${SESSION_ACTOR_ID}"
 
   echo "[12.2/30][$ID] render dynamic response identity stamp"
-  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --actor-id "$HEADSTAMP_ACTOR_ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
+  render_cmd=(python3 scripts/render_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --view external --disclosure-level standard --out "$STAMP_JSON" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     render_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -333,7 +333,7 @@ for ID in $IDS; do
   "${render_cmd[@]}"
 
   echo "[12.3/30][$ID] validate response identity stamp hard gate (user-visible channel)"
-  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
+  python3 scripts/validate_identity_response_stamp.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --stamp-json "$STAMP_JSON" --force-check --enforce-user-visible-gate --operation e2e --blocker-receipt-out "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.4/30][$ID] validate response stamp blocker receipt schema"
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"

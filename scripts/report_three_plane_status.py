@@ -634,6 +634,8 @@ def _instance_plane_status(
         args.identity_id,
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--view",
         "external",
         "--disclosure-level",
@@ -667,6 +669,10 @@ def _instance_plane_status(
             args.repo_catalog,
             "--identity-id",
             args.identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--stamp-json",
             stamp_artifact,
             "--force-check",
@@ -729,6 +735,8 @@ def _instance_plane_status(
         "three-plane",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--blocker-receipt-out",
         reply_first_line_blocker_receipt,
         "--json-only",
@@ -805,6 +813,8 @@ def _instance_plane_status(
         "final_emit_governed",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--json-only",
     ]
     if layer_intent_text:
@@ -882,6 +892,8 @@ def _instance_plane_status(
         "three-plane",
         "--actor-id",
         actor_id,
+        "--session-id",
+        str(getattr(args, "session_id", "") or "").strip(),
         "--json-only",
     ]
     rc_headstamp, out_headstamp, err_headstamp = _run(headstamp_recurrence_cmd)
@@ -2137,6 +2149,56 @@ def _instance_plane_status(
         exec_target_tuple_payload.get("execution_target_tuple_isolation_status", "")
     ).strip().upper()
     if rc_exec_target_tuple != 0 or exec_target_tuple_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_multimodal_plugin, out_multimodal_plugin, err_multimodal_plugin = _run(
+        [
+            "python3",
+            "scripts/required_gate_bundle_runner.py",
+            "--catalog",
+            args.catalog,
+            "--identity-id",
+            args.identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            bundle_send_time_gate_status,
+            "--outlet-bypass-detected",
+            bundle_outlet_bypass_detected,
+            "--final-emit-contract-status",
+            bundle_final_emit_contract_status,
+            "--final-emit-policy-mode",
+            bundle_final_emit_policy_mode,
+            "--final-emit-schema-status",
+            bundle_final_emit_schema_status,
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            bundle_resolved_work_layer,
+            "--resolved-source-layer",
+            bundle_resolved_source_layer,
+            "--lock-state",
+            bundle_lock_state,
+            "--target-name",
+            "multimodal_plugin_enforcement",
+            "--surface-label",
+            "three_plane_target_probe",
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    multimodal_plugin_payload = _parse_json_payload(out_multimodal_plugin) or {}
+    validators["multimodal_plugin_enforcement"] = {
+        "rc": rc_multimodal_plugin,
+        "ok": rc_multimodal_plugin == 0,
+        "out": out_multimodal_plugin,
+        "err": err_multimodal_plugin,
+    }
+    multimodal_plugin_status = str(
+        multimodal_plugin_payload.get("multimodal_plugin_enforcement_status", "")
+    ).strip().upper()
+    if rc_multimodal_plugin != 0 or multimodal_plugin_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     rc_replay_archive, out_replay_archive, err_replay_archive = _run(
@@ -3435,6 +3497,25 @@ def _instance_plane_status(
             "tuple_fields_missing": exec_target_tuple_payload.get("tuple_fields_missing", []),
             "stale_reasons": exec_target_tuple_payload.get("stale_reasons", []),
             "evidence_ref": exec_target_tuple_payload.get("evidence_ref", ""),
+        },
+        "multimodal_plugin_enforcement": {
+            "multimodal_plugin_enforcement_status": multimodal_plugin_payload.get("multimodal_plugin_enforcement_status"),
+            "error_code": multimodal_plugin_payload.get("error_code", ""),
+            "required_contract": multimodal_plugin_payload.get("required_contract"),
+            "auto_required_signal": multimodal_plugin_payload.get("auto_required_signal"),
+            "plugin_registry_status": multimodal_plugin_payload.get("plugin_registry_status", ""),
+            "plugin_naming_status": multimodal_plugin_payload.get("plugin_naming_status", ""),
+            "plugin_schema_status": multimodal_plugin_payload.get("plugin_schema_status", ""),
+            "plugin_threshold_status": multimodal_plugin_payload.get("plugin_threshold_status", ""),
+            "plugin_path_status": multimodal_plugin_payload.get("plugin_path_status", ""),
+            "plugin_copy_policy_status": multimodal_plugin_payload.get("plugin_copy_policy_status", ""),
+            "provider_config_status": multimodal_plugin_payload.get("provider_config_status", ""),
+            "provider_profile_id": multimodal_plugin_payload.get("provider_profile_id", ""),
+            "plugin_contract_owner": multimodal_plugin_payload.get("plugin_contract_owner", ""),
+            "plugin_resolution_mode": multimodal_plugin_payload.get("plugin_resolution_mode", ""),
+            "forbidden_copy_refs": multimodal_plugin_payload.get("forbidden_copy_refs", []),
+            "stale_reasons": multimodal_plugin_payload.get("stale_reasons", []),
+            "evidence_ref": multimodal_plugin_payload.get("evidence_ref", ""),
         },
         "replay_archive_contract": {
             "replay_archive_contract_status": replay_archive_payload.get("replay_archive_contract_status"),

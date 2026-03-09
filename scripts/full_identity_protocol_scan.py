@@ -211,6 +211,41 @@ def _infer_target_source_layer_from_env(*, project_catalog: Path, global_catalog
     return ""
 
 
+def _resolve_effective_scan_session_id(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    requested_session_id: str,
+) -> tuple[str, str, bool]:
+    requested = str(requested_session_id or "").strip()
+    if requested:
+        exact = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=requested,
+        )
+        if exact:
+            return requested, "requested_bound", True
+
+    identity_scoped = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id="",
+    )
+    fallback_session_id = str(identity_scoped.get("session_id", "")).strip()
+    if fallback_session_id:
+        if requested:
+            return fallback_session_id, "requested_unbound_fallback_identity_scoped", False
+        return fallback_session_id, "identity_scoped_latest", True
+
+    if requested:
+        return requested, "requested_unbound_no_fallback", False
+    return "", "missing", False
+
+
 def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
     profile = str(row.get("profile", "")).strip().lower()
     runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
@@ -461,22 +496,21 @@ def main() -> int:
 
     runtime_catalogs: list[tuple[str, Path]] = [("project", project_catalog), ("global", global_catalog)]
     effective_target_source_layer = ""
-    if args.scan_mode == "target":
-        if target_source_layer_mode in {"project", "global"}:
-            effective_target_source_layer = target_source_layer_mode
-        elif target_source_layer_mode == "both":
-            effective_target_source_layer = "both"
+    if target_source_layer_mode in {"project", "global"}:
+        effective_target_source_layer = target_source_layer_mode
+    elif target_source_layer_mode == "both":
+        effective_target_source_layer = "both"
+    else:
+        if expected_source_layer in {"project", "global"}:
+            effective_target_source_layer = expected_source_layer
         else:
-            if expected_source_layer in {"project", "global"}:
-                effective_target_source_layer = expected_source_layer
-            else:
-                inferred = _infer_target_source_layer_from_env(
-                    project_catalog=project_catalog,
-                    global_catalog=global_catalog,
-                )
-                effective_target_source_layer = inferred or "project"
-        if effective_target_source_layer in {"project", "global"}:
-            runtime_catalogs = [(layer, path) for layer, path in runtime_catalogs if layer == effective_target_source_layer]
+            inferred = _infer_target_source_layer_from_env(
+                project_catalog=project_catalog,
+                global_catalog=global_catalog,
+            )
+            effective_target_source_layer = inferred or "project"
+    if effective_target_source_layer in {"project", "global"}:
+        runtime_catalogs = [(layer, path) for layer, path in runtime_catalogs if layer == effective_target_source_layer]
 
     catalog_list: list[tuple[str, Path]] = []
     if args.include_repo_catalog:
@@ -623,7 +657,13 @@ def main() -> int:
             }
             if not mode_guard.ok:
                 item["runtime_mode_guard_blocked"] = True
-                item["severity"] = _severity_for_row(item)
+                mode_guard_raw = "\n".join(x for x in (mode_guard.stdout, mode_guard.stderr, mode_guard.tail) if x).upper()
+                env_catalog_mismatch = "IP-ENV-003" in mode_guard_raw
+                if env_catalog_mismatch and args.scan_mode == "full" and target_source_layer_mode == "auto":
+                    item["runtime_mode_guard_env_catalog_mismatch"] = True
+                    item["severity"] = "P1"
+                else:
+                    item["severity"] = _severity_for_row(item)
                 _update_target_severity(iid, str(item["severity"]))
                 payload["summary"]["total_identities"] += 1
                 if item["severity"] == "P0":
@@ -634,6 +674,19 @@ def main() -> int:
                     payload["summary"]["ok"] += 1
                 layer_out["identities"].append(item)
                 continue
+
+            scan_session_id, session_resolution_mode, requested_session_bound = _resolve_effective_scan_session_id(
+                catalog_path=catalog,
+                actor_id=actor_id,
+                identity_id=iid,
+                requested_session_id=session_id_input,
+            )
+            if not scan_session_id:
+                scan_session_id = session_id_input
+            item["session_id_requested"] = session_id_input
+            item["session_id_effective"] = scan_session_id
+            item["session_id_resolution_mode"] = session_resolution_mode
+            item["session_id_requested_bound"] = requested_session_bound
 
             is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
             is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
@@ -796,7 +849,7 @@ def main() -> int:
                     "--actor-id",
                     actor_id,
                     "--session-id",
-                    session_id_input,
+                    scan_session_id,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -811,7 +864,7 @@ def main() -> int:
                     "--actor-id",
                     actor_id,
                     "--session-id",
-                    session_id_input,
+                    scan_session_id,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -866,6 +919,8 @@ def main() -> int:
                     iid,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--view",
                     "external",
                     "--disclosure-level",
@@ -883,6 +938,10 @@ def main() -> int:
                     str(repo_catalog),
                     "--identity-id",
                     iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--stamp-json",
                     stamp_artifact,
                     "--force-check",
@@ -924,6 +983,8 @@ def main() -> int:
                     "scan",
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--blocker-receipt-out",
                     reply_first_line_blocker_receipt,
                     "--json-only",
@@ -964,6 +1025,8 @@ def main() -> int:
                     "final_emit_governed",
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--json-only",
                 ],
                 "send_time_reply_gate_validate": [
@@ -1005,6 +1068,8 @@ def main() -> int:
                     "scan",
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--json-only",
                 ],
                 "execution_reply_identity_coherence": [
@@ -3731,7 +3796,7 @@ def main() -> int:
                     "--actor-id",
                     actor_id,
                     "--session-id",
-                    session_id_input,
+                    scan_session_id,
                     "--scope",
                     scan_scope_hint,
                     *(["--layer-intent-text", layer_intent_text] if layer_intent_text else []),
