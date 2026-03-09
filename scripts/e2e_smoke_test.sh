@@ -693,6 +693,7 @@ for ID in $IDS; do
     --repo-catalog identity/catalog/identities.yaml \
     --identity-id "$ID" \
     --actor-id "$SESSION_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
     --operation e2e \
     --json-only
 

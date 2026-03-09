@@ -63,8 +63,17 @@ ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/full_identity_protocol_scan.py",
 )
 SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_required_contract_coverage.py",
+    "scripts/render_identity_response_stamp.py",
+    "scripts/validate_identity_response_stamp.py",
+    "scripts/final_emit_governed.py",
+    "scripts/validate_headstamp_recurrence_closure.py",
+    "scripts/validate_reply_identity_context_first_line.py",
+    "scripts/validate_send_time_reply_gate.py",
+    "scripts/validate_execution_reply_identity_coherence.py",
     "scripts/validate_actor_session_binding.py",
     "scripts/validate_actor_session_multibinding_concurrency.py",
+    "scripts/validate_prompt_kernel_executable_coupling.py",
     "scripts/report_three_plane_status.py",
     "scripts/full_identity_protocol_scan.py",
 )
@@ -88,6 +97,9 @@ BUNDLE_ARGS_FORBID_UNKNOWN: tuple[str, ...] = (
 
 VERSIONED_SCRIPT_ALIAS_RE = re.compile(r"^(?P<prefix>validate|normalize|emit)_v\d+_(?P<tail>.+)\.py$")
 WRAPPER_MAIN_IMPORT_RE = re.compile(r"^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+main\s*$", re.MULTILINE)
+SCRIPT_LITERAL_RE = re.compile(r'["\'](scripts/[A-Za-z0-9_.-]+\.py)["\']')
+SESSION_SET_RE = re.compile(r"session_id_required_scripts\s*=\s*\{(?P<body>.*?)\}", re.DOTALL)
+INLINE_SCRIPT_SET_RE = re.compile(r"cmd\[1\]\s+in\s+\{(?P<body>.*?)\}", re.DOTALL)
 
 
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
@@ -225,6 +237,7 @@ def _missing_actor_id_for_surface(*, surface_path: Path, text: str) -> dict[str,
 def _missing_session_id_for_surface(*, surface_path: Path, text: str) -> dict[str, list[str]]:
     missing: dict[str, list[str]] = {}
     suffix = surface_path.suffix.lower()
+    dynamic_session_scripts = _detect_dynamic_session_passthrough_scripts(text) if suffix == ".py" else set()
     for script_path in SESSION_ID_REQUIRED_SCRIPTS:
         if suffix == ".py":
             blocks = _python_command_blocks_for_script(text, script_path)
@@ -232,10 +245,57 @@ def _missing_session_id_for_surface(*, surface_path: Path, text: str) -> dict[st
             blocks = _line_command_blocks_for_script(text, script_path)
         if not blocks:
             continue
-        bad_blocks = [b for b in blocks if "--session-id" not in b]
+        bad_blocks = [b for b in blocks if "--session-id" not in b and script_path not in dynamic_session_scripts]
         if bad_blocks:
             missing[script_path] = bad_blocks
     return missing
+
+
+def _parse_script_literals(raw: str) -> set[str]:
+    return {m.group(1).strip() for m in SCRIPT_LITERAL_RE.finditer(str(raw or "")) if m.group(1).strip()}
+
+
+def _detect_dynamic_session_passthrough_scripts(text: str) -> set[str]:
+    """
+    Detect scripts that receive --session-id via dynamic injection loops
+    (instead of being explicitly present in command list literals).
+    This avoids false positives in surfaces that centralize session wiring.
+    """
+    dynamic: set[str] = set()
+    body_text = str(text or "")
+    if not body_text:
+        return dynamic
+
+    has_explicit_injection_loop = (
+        "--session-id" in body_text
+        and "cmd.extend([\"--session-id\"" in body_text
+        and "cmd[1]" in body_text
+    )
+    if not has_explicit_injection_loop:
+        return dynamic
+
+    for m in SESSION_SET_RE.finditer(body_text):
+        window_end = min(len(body_text), m.end() + 320)
+        window = body_text[m.start() : window_end]
+        if "cmd[1] in session_id_required_scripts" not in body_text:
+            continue
+        if "--session-id" not in window and "--session-id" not in body_text[m.end() : window_end]:
+            continue
+        dynamic.update(_parse_script_literals(m.group("body")))
+
+    for m in INLINE_SCRIPT_SET_RE.finditer(body_text):
+        window_start = max(0, m.start() - 240)
+        window_end = min(len(body_text), m.end() + 320)
+        window = body_text[window_start:window_end]
+        if "session_id" not in window:
+            continue
+        if "--session-id" not in window:
+            continue
+        if "cmd.extend([\"--session-id\"" not in window and "cmd.extend(['--session-id'" not in window:
+            continue
+        dynamic.update(_parse_script_literals(m.group("body")))
+
+    return dynamic
 
 
 def _missing_bundle_args_for_surface(*, surface_path: Path, text: str) -> list[dict[str, Any]]:

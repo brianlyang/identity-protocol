@@ -2235,6 +2235,8 @@ def main() -> int:
                 args.identity_id,
                 "--actor-id",
                 args.actor_id,
+                "--session-id",
+                validate_session_id,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -2912,16 +2914,17 @@ def main() -> int:
         if rc_fixture != 0:
             print("[FAIL] fixture/runtime boundary validation failed; update blocked")
             return rc_fixture
+        session_id_update, _session_id_update_source = _resolve_bound_session_id_for_identity(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            actor_id=actor_id_update,
+            explicit_session_id=str(args.session_id or "").strip(),
+        )
         rc_actor_binding_entry = _actor_binding_entry_guard(
             identity_id=args.identity_id,
             catalog=args.catalog,
             actor_id=actor_id_update,
-            session_id=_resolve_bound_session_id_for_identity(
-                catalog=args.catalog,
-                identity_id=args.identity_id,
-                actor_id=actor_id_update,
-                explicit_session_id=str(args.session_id or "").strip(),
-            )[0],
+            session_id=session_id_update,
             operation="update",
         )
         if rc_actor_binding_entry != 0:
@@ -3634,6 +3637,8 @@ def main() -> int:
                 args.identity_id,
                 "--actor-id",
                 args.actor_id,
+                "--session-id",
+                session_id_update,
                 "--operation",
                 "update",
                 "--json-only",
