@@ -4597,6 +4597,49 @@ Machine report artifacts:
 2. protocol scope closes validator projection drift; instance scope closes missing runtime capability-driver declaration.
 3. promotion statements remain machine-derived only.
 
+### 8.66 Round-30.1 prompt-lifecycle no-upgrade false-blocker closure + three-loop replay (2026-03-09)
+
+#### Why this section exists
+
+1. Round-303 full-scan (`scan-mode=full`, `target-source-layer=auto`) regressed to `p0=1`.
+2. root cause was in `validate_identity_prompt_lifecycle.py`: no-upgrade reports (`upgrade_required=false`) with `runtime_state_artifact_path` placeholder still failed when artifact file was absent, producing a false blocker.
+
+#### Protocol patch scope
+
+1. `scripts/validate_identity_prompt_lifecycle.py`
+2. add conditional allowance for missing runtime state artifact only when:
+   - `upgrade_required=false`
+   - `prompt_change_required=false`
+   - `prompt_change_applied=false`
+   - `prompt_runtime_state_binding_status in {"MISSING", "", "SKIPPED_NOT_REQUIRED"}`
+3. keep fail-close for upgrade paths unchanged.
+
+#### Cross-verification probes
+
+1. positive replay (no-upgrade):
+   - `/tmp/audit_round303_prompt_lifecycle_architect_afterfix.log`
+   - result: `[OK] prompt lifecycle validated`
+2. negative replay (upgrade-required + missing runtime artifact):
+   - `/tmp/audit_round303_prompt_lifecycle_negative2.log`
+   - result: `[FAIL] runtime state artifact missing ...`
+
+#### Three-loop convergence evidence
+
+1. Round-303B:
+   - `/tmp/audit_round303b_full_auto_20260309.json`
+   - summary: `total=4, p0=0, p1=0, ok=4`
+2. Round-304:
+   - `/tmp/audit_round304_full_auto_20260309.json`
+   - summary: `total=4, p0=0, p1=0, ok=4`
+3. Round-305C:
+   - `/private/tmp/audit_round305c_full_auto_20260309.json`
+   - summary: `total=4, p0=0, p1=0, ok=4`
+
+#### Boundary note (cross-layer scan)
+
+1. `target-source-layer=both` still shows global-lane `P0` entries when current env is project-bound.
+2. those are runtime mode guard (`IP-ENV-003`) boundary signals, not project control-plane regressions.
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

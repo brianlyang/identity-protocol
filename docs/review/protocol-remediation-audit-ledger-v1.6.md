@@ -3780,6 +3780,46 @@ Decision boundary:
 1. this addendum closes the round302 full-scan residual `P0` and reaches machine-green for currently discovered identities.
 2. protocol and runtime actions are both required for this closure; neither side alone was sufficient.
 
+---
+
+### Round-30.1 addendum: prompt-lifecycle no-upgrade false blocker fix + three-loop stability replay (2026-03-09)
+
+Cross-verified findings:
+
+1. Round-303 regressed with `base-repo-architect` `P0` on `prompt_lifecycle`.
+2. root cause was a false blocker in no-upgrade reports:
+   - `upgrade_required=false`
+   - runtime state artifact path present as metadata
+   - runtime artifact file absent
+   - validator still failed as required blocker.
+3. fix applied in protocol validator:
+   - `scripts/validate_identity_prompt_lifecycle.py`
+   - missing runtime state artifact is tolerated only for no-upgrade/no-change path with `binding_status=MISSING|SKIPPED_NOT_REQUIRED`.
+4. upgrade-required path remains fail-close (negative probe preserved).
+
+Replay evidence:
+
+1. positive probe:
+   - `/tmp/audit_round303_prompt_lifecycle_architect_afterfix.log` => `[OK] prompt lifecycle validated`
+2. negative probe:
+   - `/tmp/audit_round303_prompt_lifecycle_negative2.log` => `[FAIL] runtime state artifact missing ...`
+3. loop replay:
+   - `/tmp/audit_round303b_full_auto_20260309.json` => `summary(total=4,p0=0,p1=0,ok=4)`
+   - `/tmp/audit_round304_full_auto_20260309.json` => `summary(total=4,p0=0,p1=0,ok=4)`
+   - `/private/tmp/audit_round305c_full_auto_20260309.json` => `summary(total=4,p0=0,p1=0,ok=4)`
+4. control-plane gates in replay loops stayed green:
+   - `validate_control_plane_budget`
+   - `validate_control_plane_invariants`
+   - `validate_control_plane_status_sync`
+   - `validate_required_gate_surface_drift`
+   - `docs_command_contract_check`
+   - `validate_protocol_ssot_source`
+
+Decision boundary:
+
+1. project-lane strict replay is closed in three consecutive loops after patch.
+2. cross-layer `both` mode still surfaces global env-mismatch blockers (`IP-ENV-003`) under project-bound runtime; treated as boundary signal, not project regression.
+
 ## 5) Current release posture snapshot (v1.6 kickoff)
 
 1. `v1.6` release status: `NO_GO` (kickoff baseline).
