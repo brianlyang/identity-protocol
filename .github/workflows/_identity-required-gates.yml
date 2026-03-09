@@ -51,6 +51,9 @@ jobs:
       - name: Validate control-plane invariants (v1.6)
         run: python3 scripts/validate_control_plane_invariants.py --json-only
 
+      - name: Validate control-plane status sync (v1.6)
+        run: python3 scripts/validate_control_plane_status_sync.py --json-only
+
       - name: Validate governance docs command contract
         run: python3 scripts/docs_command_contract_check.py
 

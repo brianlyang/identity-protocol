@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "status_version": "v1.6",
+  "generated_at_utc": "2026-03-09T06:08:35Z",
+  "git_head_short": "c3f44c8",
+  "machine_promotion_policy": {
+    "promotion_ready_requires": [
+      "PASS_REQUIRED"
+    ],
+    "blocked_by": [
+      "FAIL_REQUIRED",
+      "PASS_WITH_BLOCKERS"
+    ],
+    "warnings_non_promotional": [
+      "WARN_NON_BLOCKING"
+    ]
+  },
+  "checks": [
+    {
+      "name": "control_plane_budget",
+      "command": [
+        "python3",
+        "scripts/validate_control_plane_budget.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "WARN_NON_BLOCKING",
+      "error_code": "",
+      "stdout_tail": [
+        "{\"control_plane_budget_status\": \"WARN_NON_BLOCKING\", \"error_code\": \"\", \"budget_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml\", \"strict_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\", \".github/workflows/_identity-required-gates.yml\"], \"observed\": {\"validator_scripts\": 142, \"error_codes\": 375, \"mapping_rows_missing_in_bundle\": 25, \"bundle_rows\": 9, \"missing_mapping_rows\": [\"asb16-rq-001\", \"asb16-rq-002\", \"asb16-rq-003\", \"asb16-rq-004\", \"asb16-rq-005\", \"asb16-rq-006\", \"asb16-rq-007\", \"asb16-rq-008\", \"asb16-rq-009\", \"asb16-rq-010\", \"asb16-rq-011\", \"asb16-rq-012\", \"asb16-rq-013\", \"asb16-rq-014\", \"asb16-rq-015\", \"asb16-rq-016\", \"asb16-rq-023\", \"asb16-rq-024\", \"asb16-rq-025\", \"asb16-rq-026\", \"asb16-rq-027\", \"asb16-rq-028\", \"asb16-rq-029\", \"asb16-rq-031\", \"asb16-rq-032\"], \"strict_direct_validate_calls\": {\"scripts/identity_creator.py\": 89, \"scripts/release_readiness_check.py\": 107, \"scripts/report_three_plane_status.py\": 75, \"scripts/full_identity_protocol_scan.py\": 82, \"scripts/e2e_smoke_test.sh\": 116, \".github/workflows/_identity-required-gates.yml\": 103}}, \"budgets\": {\"validator_scripts\": {\"warn\": 140, \"fail\": 150}, \"error_codes\": {\"warn\": 373, \"fail\": 410}, \"mapping_rows_missing_in_bundle\": {\"warn\": 25, \"fail\": 25}, \"direct_validate_calls\": {\"scripts/identity_creator.py\": {\"warn\": 89, \"fail\": 94}, \"scripts/release_readiness_check.py\": {\"warn\": 107, \"fail\": 112}, \"scripts/report_three_plane_status.py\": {\"warn\": 75, \"fail\": 80}, \"scripts/full_identity_protocol_scan.py\": {\"warn\": 82, \"fail\": 87}, \"scripts/e2e_smoke_test.sh\": {\"warn\": 116, \"fail\": 121}, \".github/workflows/_identity-required-gates.yml\": {\"warn\": 101, \"fail\": 105}}}, \"warn_violation_count\": 3, \"warn_violations\": [{\"field\": \"validator_scripts\", \"observed\": 142, \"budget_warn\": 140, \"reason\": \"validator_script_count_warn\"}, {\"field\": \"error_codes\", \"observed\": 375, \"budget_warn\": 373, \"reason\": \"error_code_count_warn\"}, {\"field\": \"strict_direct_validate_calls\", \"surface\": \".github/workflows/_identity-required-gates.yml\", \"observed\": 103, \"budget_warn\": 101, \"reason\": \"strict_surface_direct_calls_warn\"}], \"fail_violation_count\": 0, \"fail_violations\": [], \"stale_reasons\": [\"validator_script_count_warn\", \"error_code_count_warn\", \"strict_surface_direct_calls_warn\"]}"
+      ],
+      "stderr_tail": [],
+      "payload": {
+        "control_plane_budget_status": "WARN_NON_BLOCKING",
+        "error_code": "",
+        "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+        "strict_surfaces": [
+          "scripts/identity_creator.py",
+          "scripts/release_readiness_check.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/full_identity_protocol_scan.py",
+          "scripts/e2e_smoke_test.sh",
+          ".github/workflows/_identity-required-gates.yml"
+        ],
+        "observed": {
+          "validator_scripts": 142,
+          "error_codes": 375,
+          "mapping_rows_missing_in_bundle": 25,
+          "bundle_rows": 9,
+          "missing_mapping_rows": [
+            "asb16-rq-001",
+            "asb16-rq-002",
+            "asb16-rq-003",
+            "asb16-rq-004",
+            "asb16-rq-005",
+            "asb16-rq-006",
+            "asb16-rq-007",
+            "asb16-rq-008",
+            "asb16-rq-009",
+            "asb16-rq-010",
+            "asb16-rq-011",
+            "asb16-rq-012",
+            "asb16-rq-013",
+            "asb16-rq-014",
+            "asb16-rq-015",
+            "asb16-rq-016",
+            "asb16-rq-023",
+            "asb16-rq-024",
+            "asb16-rq-025",
+            "asb16-rq-026",
+            "asb16-rq-027",
+            "asb16-rq-028",
+            "asb16-rq-029",
+            "asb16-rq-031",
+            "asb16-rq-032"
+          ],
+          "strict_direct_validate_calls": {
+            "scripts/identity_creator.py": 89,
+            "scripts/release_readiness_check.py": 107,
+            "scripts/report_three_plane_status.py": 75,
+            "scripts/full_identity_protocol_scan.py": 82,
+            "scripts/e2e_smoke_test.sh": 116,
+            ".github/workflows/_identity-required-gates.yml": 103
+          }
+        },
+        "budgets": {
+          "validator_scripts": {
+            "warn": 140,
+            "fail": 150
+          },
+          "error_codes": {
+            "warn": 373,
+            "fail": 410
+          },
+          "mapping_rows_missing_in_bundle": {
+            "warn": 25,
+            "fail": 25
+          },
+          "direct_validate_calls": {
+            "scripts/identity_creator.py": {
+              "warn": 89,
+              "fail": 94
+            },
+            "scripts/release_readiness_check.py": {
+              "warn": 107,
+              "fail": 112
+            },
+            "scripts/report_three_plane_status.py": {
+              "warn": 75,
+              "fail": 80
+            },
+            "scripts/full_identity_protocol_scan.py": {
+              "warn": 82,
+              "fail": 87
+            },
+            "scripts/e2e_smoke_test.sh": {
+              "warn": 116,
+              "fail": 121
+            },
+            ".github/workflows/_identity-required-gates.yml": {
+              "warn": 101,
+              "fail": 105
+            }
+          }
+        },
+        "warn_violation_count": 3,
+        "warn_violations": [
+          {
+            "field": "validator_scripts",
+            "observed": 142,
+            "budget_warn": 140,
+            "reason": "validator_script_count_warn"
+          },
+          {
+            "field": "error_codes",
+            "observed": 375,
+            "budget_warn": 373,
+            "reason": "error_code_count_warn"
+          },
+          {
+            "field": "strict_direct_validate_calls",
+            "surface": ".github/workflows/_identity-required-gates.yml",
+            "observed": 103,
+            "budget_warn": 101,
+            "reason": "strict_surface_direct_calls_warn"
+          }
+        ],
+        "fail_violation_count": 0,
+        "fail_violations": [],
+        "stale_reasons": [
+          "validator_script_count_warn",
+          "error_code_count_warn",
+          "strict_surface_direct_calls_warn"
+        ]
+      }
+    },
+    {
+      "name": "control_plane_invariants",
+      "command": [
+        "python3",
+        "scripts/validate_control_plane_invariants.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [
+        "{\"control_plane_invariants_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"invariants_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml\", \"contract_mapping\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml\", \"bundle_mapping_parity_mode\": \"freeze\", \"bundle_mapping_parity_baseline_missing_rows\": 25, \"mapping_rows_missing_in_bundle_count\": 25, \"mapping_rows_missing_in_bundle\": [\"asb16-rq-001\", \"asb16-rq-002\", \"asb16-rq-003\", \"asb16-rq-004\", \"asb16-rq-005\", \"asb16-rq-006\", \"asb16-rq-007\", \"asb16-rq-008\", \"asb16-rq-009\", \"asb16-rq-010\", \"asb16-rq-011\", \"asb16-rq-012\", \"asb16-rq-013\", \"asb16-rq-014\", \"asb16-rq-015\", \"asb16-rq-016\", \"asb16-rq-023\", \"asb16-rq-024\", \"asb16-rq-025\", \"asb16-rq-026\", \"asb16-rq-027\", \"asb16-rq-028\", \"asb16-rq-029\", \"asb16-rq-031\", \"asb16-rq-032\"], \"bundle_rows_not_in_mapping_count\": 0, \"bundle_rows_not_in_mapping\": [], \"violation_count\": 0, \"violations\": [], \"stale_reasons\": []}"
+      ],
+      "stderr_tail": [],
+      "payload": {
+        "control_plane_invariants_status": "PASS_REQUIRED",
+        "error_code": "",
+        "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+        "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "bundle_mapping_parity_mode": "freeze",
+        "bundle_mapping_parity_baseline_missing_rows": 25,
+        "mapping_rows_missing_in_bundle_count": 25,
+        "mapping_rows_missing_in_bundle": [
+          "asb16-rq-001",
+          "asb16-rq-002",
+          "asb16-rq-003",
+          "asb16-rq-004",
+          "asb16-rq-005",
+          "asb16-rq-006",
+          "asb16-rq-007",
+          "asb16-rq-008",
+          "asb16-rq-009",
+          "asb16-rq-010",
+          "asb16-rq-011",
+          "asb16-rq-012",
+          "asb16-rq-013",
+          "asb16-rq-014",
+          "asb16-rq-015",
+          "asb16-rq-016",
+          "asb16-rq-023",
+          "asb16-rq-024",
+          "asb16-rq-025",
+          "asb16-rq-026",
+          "asb16-rq-027",
+          "asb16-rq-028",
+          "asb16-rq-029",
+          "asb16-rq-031",
+          "asb16-rq-032"
+        ],
+        "bundle_rows_not_in_mapping_count": 0,
+        "bundle_rows_not_in_mapping": [],
+        "violation_count": 0,
+        "violations": [],
+        "stale_reasons": []
+      }
+    },
+    {
+      "name": "required_gate_surface_drift",
+      "command": [
+        "python3",
+        "scripts/validate_required_gate_surface_drift.py",
+        "--json-only"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [
+        "{\"required_gate_surface_drift_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"bundle_runner_script\": \"scripts/required_gate_bundle_runner.py\", \"recurrence_escalator_script\": \"scripts/validate_required_gate_recurrence_escalator.py\", \"tuple_parity_script\": \"scripts/validate_required_gate_tuple_parity.py\", \"mandatory_lineage_scripts\": [\"scripts/required_gate_bundle_runner.py\", \"scripts/validate_required_gate_recurrence_escalator.py\", \"scripts/validate_required_gate_tuple_parity.py\"], \"contract_mapping\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml\", \"mapping_errors\": [], \"strict_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\", \".github/workflows/_identity-required-gates.yml\"], \"forbidden_direct_validators\": [\"scripts/emit_route_version_pin_receipt.py\", \"scripts/normalize_cross_workflow_evidence.py\", \"scripts/normalize_v16_cross_workflow_evidence.py\", \"scripts/validate_cross_verification_tracks.py\", \"scripts/validate_cross_workflow_schema.py\", \"scripts/validate_dedup_monotonicity.py\", \"scripts/validate_execution_target_tuple_isolation.py\", \"scripts/validate_fallback_taxonomy_normalization.py\", \"scripts/validate_intake_evidence_core.py\", \"scripts/validate_intake_evidence_quorum.py\", \"scripts/validate_multimodal_plugin_enforcement.py\", \"scripts/validate_route_version_pinning.py\", \"scripts/validate_skill_path_integrity.py\", \"scripts/validate_v16_cross_verification_tracks.py\", \"scripts/validate_v16_cross_workflow_schema.py\", \"scripts/validate_v16_dedup_monotonicity.py\", \"scripts/validate_v16_intake_evidence_core.py\", \"scripts/validate_v16_intake_evidence_quorum.py\", \"scripts/validate_v16_skill_path_integrity.py\"], \"missing_surface_files\": [], \"missing_lineage_refs\": {}, \"forbidden_hits\": {}, \"final_egress_wrapper_script\": \"scripts/final_emit_governed.py\", \"final_egress_required_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\"], \"missing_final_egress_wrapper\": [], \"forbidden_direct_egress_scripts\": [\"scripts/compose_and_validate_governed_reply.py\"], \"forbidden_direct_egress_hits\": {}, \"actor_id_required_scripts\": [\"scripts/render_identity_response_stamp.py\", \"scripts/final_emit_governed.py\", \"scripts/validate_reply_identity_context_first_line.py\", \"scripts/validate_send_time_reply_gate.py\", \"scripts/validate_execution_reply_identity_coherence.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\"], \"actor_id_passthrough_missing\": {}, \"session_id_required_scripts\": [\"scripts/validate_actor_session_binding.py\", \"scripts/validate_actor_session_multibinding_concurrency.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\"], \"session_id_passthrough_missing\": {}, \"bundle_runner_required_args\": [\"--run-id\", \"--send-time-gate-status\", \"--outlet-bypass-detected\", \"--final-emit-contract-status\", \"--final-emit-policy-mode\", \"--final-emit-schema-status\", \"--actor-id\", \"--resolved-work-layer\", \"--resolved-source-layer\", \"--lock-state\"], \"bundle_arg_contract_missing\": {}, \"bundle_args_forbid_unknown\": [\"--send-time-gate-status\", \"--final-emit-contract-status\", \"--final-emit-schema-status\"], \"bundle_arg_value_invalid\": {}}"
+      ],
+      "stderr_tail": [],
+      "payload": {
+        "required_gate_surface_drift_status": "PASS_REQUIRED",
+        "error_code": "",
+        "bundle_runner_script": "scripts/required_gate_bundle_runner.py",
+        "recurrence_escalator_script": "scripts/validate_required_gate_recurrence_escalator.py",
+        "tuple_parity_script": "scripts/validate_required_gate_tuple_parity.py",
+        "mandatory_lineage_scripts": [
+          "scripts/required_gate_bundle_runner.py",
+          "scripts/validate_required_gate_recurrence_escalator.py",
+          "scripts/validate_required_gate_tuple_parity.py"
+        ],
+        "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "mapping_errors": [],
+        "strict_surfaces": [
+          "scripts/identity_creator.py",
+          "scripts/release_readiness_check.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/full_identity_protocol_scan.py",
+          "scripts/e2e_smoke_test.sh",
+          ".github/workflows/_identity-required-gates.yml"
+        ],
+        "forbidden_direct_validators": [
+          "scripts/emit_route_version_pin_receipt.py",
+          "scripts/normalize_cross_workflow_evidence.py",
+          "scripts/normalize_v16_cross_workflow_evidence.py",
+          "scripts/validate_cross_verification_tracks.py",
+          "scripts/validate_cross_workflow_schema.py",
+          "scripts/validate_dedup_monotonicity.py",
+          "scripts/validate_execution_target_tuple_isolation.py",
+          "scripts/validate_fallback_taxonomy_normalization.py",
+          "scripts/validate_intake_evidence_core.py",
+          "scripts/validate_intake_evidence_quorum.py",
+          "scripts/validate_multimodal_plugin_enforcement.py",
+          "scripts/validate_route_version_pinning.py",
+          "scripts/validate_skill_path_integrity.py",
+          "scripts/validate_v16_cross_verification_tracks.py",
+          "scripts/validate_v16_cross_workflow_schema.py",
+          "scripts/validate_v16_dedup_monotonicity.py",
+          "scripts/validate_v16_intake_evidence_core.py",
+          "scripts/validate_v16_intake_evidence_quorum.py",
+          "scripts/validate_v16_skill_path_integrity.py"
+        ],
+        "missing_surface_files": [],
+        "missing_lineage_refs": {},
+        "forbidden_hits": {},
+        "final_egress_wrapper_script": "scripts/final_emit_governed.py",
+        "final_egress_required_surfaces": [
+          "scripts/identity_creator.py",
+          "scripts/release_readiness_check.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/full_identity_protocol_scan.py",
+          "scripts/e2e_smoke_test.sh"
+        ],
+        "missing_final_egress_wrapper": [],
+        "forbidden_direct_egress_scripts": [
+          "scripts/compose_and_validate_governed_reply.py"
+        ],
+        "forbidden_direct_egress_hits": {},
+        "actor_id_required_scripts": [
+          "scripts/render_identity_response_stamp.py",
+          "scripts/final_emit_governed.py",
+          "scripts/validate_reply_identity_context_first_line.py",
+          "scripts/validate_send_time_reply_gate.py",
+          "scripts/validate_execution_reply_identity_coherence.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/full_identity_protocol_scan.py"
+        ],
+        "actor_id_passthrough_missing": {},
+        "session_id_required_scripts": [
+          "scripts/validate_actor_session_binding.py",
+          "scripts/validate_actor_session_multibinding_concurrency.py",
+          "scripts/report_three_plane_status.py",
+          "scripts/full_identity_protocol_scan.py"
+        ],
+        "session_id_passthrough_missing": {},
+        "bundle_runner_required_args": [
+          "--run-id",
+          "--send-time-gate-status",
+          "--outlet-bypass-detected",
+          "--final-emit-contract-status",
+          "--final-emit-policy-mode",
+          "--final-emit-schema-status",
+          "--actor-id",
+          "--resolved-work-layer",
+          "--resolved-source-layer",
+          "--lock-state"
+        ],
+        "bundle_arg_contract_missing": {},
+        "bundle_args_forbid_unknown": [
+          "--send-time-gate-status",
+          "--final-emit-contract-status",
+          "--final-emit-schema-status"
+        ],
+        "bundle_arg_value_invalid": {}
+      }
+    },
+    {
+      "name": "docs_command_contract",
+      "command": [
+        "python3",
+        "scripts/docs_command_contract_check.py"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [
+        "[INFO] docs checked: 33",
+        "[INFO] command snippets checked: 519",
+        "[PASS] docs command contract check passed."
+      ],
+      "stderr_tail": [],
+      "payload": {}
+    },
+    {
+      "name": "protocol_ssot_source",
+      "command": [
+        "python3",
+        "scripts/validate_protocol_ssot_source.py"
+      ],
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "error_code": "",
+      "stdout_tail": [
+        "[OK] protocol SSOT source boundary validated",
+        "     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md",
+        "     core_change_map=docs/governance/templates/protocol-core-change-map.yaml",
+        "     artifacts_policy=evidence_only_non_normative"
+      ],
+      "stderr_tail": [],
+      "payload": {}
+    }
+  ],
+  "summary": {
+    "check_count": 5,
+    "fail_count": 0,
+    "warn_count": 1,
+    "pass_count": 4
+  },
+  "control_plane_status": "PASS_WITH_BLOCKERS",
+  "promotion_ready": false,
+  "promotion_block_reasons": [
+    "control_plane_budget:WARN_NON_BLOCKING"
+  ]
+}
