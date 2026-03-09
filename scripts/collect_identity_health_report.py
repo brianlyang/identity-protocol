@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from actor_session_common import load_actor_binding_store, resolve_actor_id
+
 
 DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("scope_resolution", ["python3", "scripts/validate_identity_scope_resolution.py"]),
@@ -186,6 +188,7 @@ OPERATION_AWARE_CHECKS: set[str] = {
     "outlet_matrix",
     "protocol_version_alignment",
 }
+STRICT_SESSION_BOUND_OPERATIONS = {"validate", "readiness", "e2e", "ci", "three-plane"}
 
 SUGGESTIONS = {
     "scope_resolution": "Run `identity_creator heal --identity-id <id> --apply` to arbitrate duplicate paths and lock canonical scope.",
@@ -206,7 +209,7 @@ SUGGESTIONS = {
     "cross_actor_isolation": "Run `validate_cross_actor_isolation --operation validate` and eliminate cross-actor identity contamination before closure.",
     "pointer_drift_guard": "Run `validate_identity_session_pointer_consistency --require-mirror` and fix canonical/mirror pointer drift.",
     "session_refresh_status": "Run refresh_identity_session_status and repair actor binding/session pointer drift before re-validating health.",
-    "headstamp_recurrence_closure": "Run `validate_headstamp_recurrence_closure --operation validate --actor-id <actor>` and enforce governed final emission (compose + send-time gate + canonical blocker receipt).",
+    "headstamp_recurrence_closure": "Run `validate_headstamp_recurrence_closure --operation validate --actor-id <actor> --session-id <run:...>` and enforce governed final emission (compose + send-time gate + canonical blocker receipt).",
     "semantic_routing_guard": "Add semantic_routing_guard_contract_v1 evidence and ensure intent_domain/intent_confidence/classifier_reason are present in feedback batches.",
     "vendor_namespace_separation": "Split protocol feedback artifacts into protocol-vendor-intel and business-partner-intel namespaces; eliminate legacy vendor-intel default writes.",
     "protocol_feedback_sidecar": "Align protocol_feedback_sidecar_contract_v1 (default non-blocking + auditable P0 escalation); resolve blocking IP-WRB/IP-SEM violations before strict gates.",
@@ -292,6 +295,7 @@ def _build_self_upgrade_plan(
         }
 
     actor_hint = actor_id.strip() or "${CODEX_ACTOR_ID:-assistant:codex}"
+    session_hint = "${CODEX_SESSION_ID:-}"
     upgrade_report_dir = str((Path(out_dir).expanduser().resolve() / "upgrade-reports" / identity_id).resolve())
     catalog_path = str(Path(catalog).expanduser().resolve())
     identity_home = str(Path(catalog_path).parent)
@@ -309,6 +313,7 @@ def _build_self_upgrade_plan(
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
             f"--actor-id {actor_hint} "
+            f"--session-id {session_hint} "
             "--mode review-required "
             "--baseline-policy strict "
             f"--out-dir {upgrade_report_dir}"
@@ -351,6 +356,7 @@ def _build_self_upgrade_plan(
             f"--catalog {catalog_path} "
             f"--repo-catalog {repo_catalog} "
             f"--actor-id {actor_hint} "
+            f"--session-id {session_hint} "
             "--operation validate "
             '--execution-report "$LATEST_REPORT" '
             f"--out-dir {out_dir} --enforce-pass"
@@ -395,6 +401,38 @@ def _override_operation(cmd: list[str], operation: str) -> list[str]:
     return out
 
 
+def _resolve_actor_session_id(
+    *,
+    catalog: str,
+    identity_id: str,
+    actor_id: str,
+    explicit_session_id: str,
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if explicit:
+        return explicit, "explicit_session_id"
+    actor = str(actor_id or "").strip()
+    if not actor:
+        return "", "actor_missing"
+    try:
+        store = load_actor_binding_store(Path(catalog).expanduser().resolve(), actor)
+    except Exception:
+        return "", "actor_binding_store_unavailable"
+    bindings = [x for x in (store.get("bindings") or []) if isinstance(x, dict)]
+    scoped = [
+        x
+        for x in bindings
+        if str(x.get("identity_id", "")).strip() == str(identity_id or "").strip()
+        and str(x.get("session_id", "")).strip()
+    ]
+    if not scoped:
+        return "", "actor_binding_identity_missing"
+    session_ids = sorted({str(x.get("session_id", "")).strip() for x in scoped if str(x.get("session_id", "")).strip()})
+    if len(session_ids) == 1:
+        return session_ids[0], "actor_binding_identity"
+    return "", "actor_binding_identity_ambiguous"
+
+
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     text = (raw or "").strip()
     if not text:
@@ -429,6 +467,7 @@ def main() -> int:
     )
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict actor-bound checks")
     ap.add_argument("--out-dir", default="/tmp/identity-health-reports")
     ap.add_argument("--enforce-pass", action="store_true", help="return non-zero if any check fails")
     args = ap.parse_args()
@@ -439,7 +478,22 @@ def main() -> int:
         or str((Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve())
     )
     execution_report = str(args.execution_report or "").strip()
-    actor_id = str(args.actor_id or "").strip()
+    actor_id_raw = str(args.actor_id or "").strip()
+    actor_id = resolve_actor_id(actor_id_raw) if actor_id_raw else ""
+    session_id, session_id_source = _resolve_actor_session_id(
+        catalog=catalog,
+        identity_id=args.identity_id,
+        actor_id=actor_id,
+        explicit_session_id=str(args.session_id or "").strip(),
+    )
+    strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
+    if strict_session_bound and actor_id and not session_id:
+        print(
+            "[FAIL] IP-ASB-SESSION-ENTRY-001 strict health requires actor-session binding context "
+            f"(actor_id={actor_id}, identity_id={args.identity_id}, session_source={session_id_source})"
+        )
+        print("[HINT] pass --session-id <run:...> or refresh actor binding for the target identity.")
+        return 1
 
     checks: list[dict[str, Any]] = []
     for name, base in DEFAULT_CHECKS:
@@ -481,6 +535,8 @@ def main() -> int:
                 cmd += ["--actor-id", actor_id]
         if name in {"actor_session_binding", "headstamp_recurrence_closure"} and actor_id:
             cmd += ["--actor-id", actor_id]
+        if name in {"actor_session_binding", "headstamp_recurrence_closure"} and session_id:
+            cmd += ["--session-id", session_id]
         if name == "pointer_drift_guard" and actor_id:
             cmd += ["--actor-id", actor_id]
 
@@ -742,6 +798,9 @@ def main() -> int:
         "operation": args.operation,
         "execution_report_ref": execution_report,
         "report_binding_mode": "explicit_report" if execution_report else "latest_report",
+        "actor_id": actor_id,
+        "session_id": session_id,
+        "session_id_source": session_id_source,
         "overall_status": overall,
         "warning_count": len(warns),
         "failed_count": len(failed),

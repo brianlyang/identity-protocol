@@ -1760,6 +1760,8 @@ def main() -> int:
             execution_report,
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--out-dir",
             health_report_dir,
             "--enforce-pass",
@@ -2092,7 +2094,9 @@ def main() -> int:
                 cmd.extend(["--source-layer", expected_source_layer])
     actor_id_required_scripts = {
         "scripts/render_identity_response_stamp.py",
+        "scripts/final_emit_governed.py",
         "scripts/validate_reply_identity_context_first_line.py",
+        "scripts/validate_headstamp_recurrence_closure.py",
         "scripts/validate_send_time_reply_gate.py",
         "scripts/validate_execution_reply_identity_coherence.py",
     }
@@ -2101,6 +2105,16 @@ def main() -> int:
             continue
         if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
             cmd.extend(["--actor-id", actor_id])
+        if (
+            session_id
+            and cmd[1] in {
+                "scripts/final_emit_governed.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_headstamp_recurrence_closure.py",
+            }
+            and "--session-id" not in cmd
+        ):
+            cmd.extend(["--session-id", session_id])
 
     for cmd in seq:
         is_capability_validator = len(cmd) >= 2 and cmd[1] == "scripts/validate_identity_capability_activation.py"

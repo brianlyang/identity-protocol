@@ -259,10 +259,11 @@ for ID in $IDS; do
 done
 echo "[2.4/30] validate identity scope resolution/isolation/persistence + health (for each target identity)"
 for ID in $IDS; do
+  TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
   python3 scripts/validate_identity_scope_resolution.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_isolation.py --catalog "$CATALOG_PATH" --identity-id "$ID"
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
   python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
   python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 done
@@ -293,7 +294,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_scope_persistence.py --catalog "$CATALOG_PATH" --identity-id "$ID"
 
   echo "[10.8/32][$ID] collect + validate health report"
-  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
+  python3 scripts/collect_identity_health_report.py --identity-id "$ID" --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --operation e2e --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --out-dir "$HEALTH_REPORT_DIR" --enforce-pass
   python3 scripts/validate_identity_health_contract.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --require-pass
   python3 scripts/validate_identity_actor_health_profile.py --identity-id "$ID" --report-dir "$HEALTH_REPORT_DIR" --operation e2e --json-only
 
@@ -338,7 +339,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$STAMP_BLOCKER_RECEIPT"
 
   echo "[12.45/30][$ID] validate reply first-line Identity-Context hard gate (HOTFIX-P0-004)"
-  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
+  first_line_cmd=(python3 scripts/validate_reply_identity_context_first_line.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-first-line-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --blocker-receipt-out "$REPLY_FIRST_LINE_BLOCKER_RECEIPT")
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     first_line_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -367,7 +368,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$REPLY_FIRST_LINE_BLOCKER_RECEIPT"
 
   echo "[12.465/30][$ID] compose governed send-time reply sample + preflight"
-  compose_cmd=(python3 scripts/final_emit_governed.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id final_emit_governed --actor-id "$HEADSTAMP_ACTOR_ID" --json-only)
+  compose_cmd=(python3 scripts/final_emit_governed.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --body-text "E2E_SEND_TIME_REPLY_BODY" --out-reply-file "$SEND_TIME_REPLY_FILE" --blocker-receipt-out "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT" --outlet-channel-id final_emit_governed --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --json-only)
   if [ -n "$LAYER_INTENT_TEXT" ]; then
     compose_cmd+=(--layer-intent-text "$LAYER_INTENT_TEXT")
   fi
@@ -396,7 +397,7 @@ for ID in $IDS; do
   python3 scripts/validate_identity_response_stamp_blocker_receipt.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --force-check --receipt "$SEND_TIME_REPLY_GATE_BLOCKER_RECEIPT"
 
   echo "[12.468/30][$ID] validate headstamp recurrence closure matrix (v1.5.x hotfix)"
-  python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --json-only
+  python3 scripts/validate_headstamp_recurrence_closure.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --json-only
 
   echo "[12.47/30][$ID] validate execution/reply tuple coherence hard gate (HOTFIX-P0-009)"
   coherence_cmd=(python3 scripts/validate_execution_reply_identity_coherence.py --catalog "$CATALOG_PATH" --repo-catalog identity/catalog/identities.yaml --identity-id "$ID" --stamp-json "$STAMP_JSON" --force-check --enforce-coherence-gate --operation e2e --actor-id "$HEADSTAMP_ACTOR_ID" --blocker-receipt-out "$EXECUTION_REPLY_COHERENCE_BLOCKER_RECEIPT")
@@ -850,6 +851,7 @@ PY
     --operation e2e \
     --execution-report "$UPGRADE_REPORT" \
     --actor-id "$SESSION_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
     --out-dir "$HEALTH_REPORT_DIR" \
     --enforce-pass
 

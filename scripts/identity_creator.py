@@ -795,6 +795,14 @@ def _heal_identity(
         base_opts += ["--scope", scope]
     if canonical_root:
         base_opts += ["--canonical-root", canonical_root]
+    health_session_id = ""
+    if actor_id:
+        health_session_id, _ = _resolve_bound_session_id_for_identity(
+            catalog=str(local_catalog),
+            identity_id=identity_id,
+            actor_id=actor_id,
+            explicit_session_id="",
+        )
 
     detect_cmd = [
         "python3",
@@ -812,6 +820,10 @@ def _heal_identity(
     ]
     if scope:
         detect_cmd.extend(["--scope", scope])
+    if actor_id:
+        detect_cmd.extend(["--actor-id", actor_id])
+    if health_session_id:
+        detect_cmd.extend(["--session-id", health_session_id])
     rc_detect = _step("health_detect", detect_cmd)
     if rc_detect == 0:
         detect_step = report["steps"][-1]
@@ -1056,6 +1068,8 @@ def _heal_identity(
         post_health_cmd.extend(["--scope", scope])
     if actor_id:
         post_health_cmd.extend(["--actor-id", actor_id])
+    if health_session_id:
+        post_health_cmd.extend(["--session-id", health_session_id])
     rc_post_health = _step("health_post_validate_recheck", post_health_cmd)
     if rc_post_health == 0:
         post_step = report["steps"][-1]
@@ -2714,15 +2728,24 @@ def main() -> int:
                     cmd.extend(["--source-layer", expected_source_layer])
         actor_id_required_scripts = {
             "scripts/render_identity_response_stamp.py",
+            "scripts/final_emit_governed.py",
+            "scripts/validate_headstamp_recurrence_closure.py",
             "scripts/validate_reply_identity_context_first_line.py",
             "scripts/validate_send_time_reply_gate.py",
             "scripts/validate_execution_reply_identity_coherence.py",
+        }
+        session_id_required_scripts = {
+            "scripts/final_emit_governed.py",
+            "scripts/validate_headstamp_recurrence_closure.py",
+            "scripts/validate_reply_identity_context_first_line.py",
         }
         for cmd in checks:
             if len(cmd) < 2:
                 continue
             if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
                 cmd.extend(["--actor-id", actor_id_validate])
+            if cmd[1] in session_id_required_scripts and "--session-id" not in cmd:
+                cmd.extend(["--session-id", validate_session_id])
         for cmd in checks:
             rc = _run(cmd)
             if rc != 0:
