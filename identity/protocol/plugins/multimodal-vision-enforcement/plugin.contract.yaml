@@ -23,3 +23,4 @@ error_family:
   - IP-MM-PATH-*
   - IP-MM-COPY-*
   - IP-MM-CONF-*
+  - IP-MM-RUN-*

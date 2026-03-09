@@ -67,6 +67,28 @@ ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
 
 TRUTHY_VALUES: tuple[str, ...] = ("1", "true", "yes", "y", "on")
 FALSY_VALUES: tuple[str, ...] = ("0", "false", "no", "n", "off", "")
+RUNTIME_PROOF_REQUIRED_OPERATIONS: tuple[str, ...] = (
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+    "mutation",
+)
+MM_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
+    "multimodal_runtime_evidence_status",
+    "runtime_report_path",
+    "runtime_report_run_id",
+    "multimodal_calls",
+    "multimodal_resolved",
+    "multimodal_unresolved",
+    "multimodal_errors",
+    "multimodal_retry_calls",
+    "runtime_gate_mode",
+    "runtime_gate_required_confidence",
+)
 
 
 @dataclass(frozen=True)
@@ -208,7 +230,14 @@ def _classify_status(*, target_name: str, rc: int, payload: dict[str, Any]) -> t
     return (STATUS_PASS_REQUIRED if required_contract else STATUS_SKIPPED_NOT_REQUIRED), status_field
 
 
-def _validate_row_payload_contract(*, payload: dict[str, Any], status_field: str) -> list[str]:
+def _validate_row_payload_contract(
+    *,
+    payload: dict[str, Any],
+    status_field: str,
+    target_name: str,
+    operation: str,
+    required_contract: bool,
+) -> list[str]:
     issues: list[str] = []
     if not isinstance(payload, dict) or not payload:
         issues.append("payload_missing_or_not_object")
@@ -217,6 +246,15 @@ def _validate_row_payload_contract(*, payload: dict[str, Any], status_field: str
         issues.append("status_field_missing")
     if "required_contract" not in payload:
         issues.append("required_contract_missing")
+    op = str(operation or "").strip().lower()
+    if (
+        target_name == "multimodal_plugin_enforcement"
+        and required_contract
+        and op in RUNTIME_PROOF_REQUIRED_OPERATIONS
+    ):
+        for field in MM_RUNTIME_REQUIRED_FIELDS:
+            if field not in payload:
+                issues.append(f"mm_runtime_field_missing:{field}")
     return issues
 
 
@@ -313,10 +351,12 @@ def main() -> int:
     failure_count = 0
     row_contract_error_count = 0
     surface_label = str(args.surface_label or "").strip() or str(args.operation or "").strip().replace("-", "_") or "unknown_surface"
+    run_id_binding = str(args.run_id or "").strip()
+    report_selected_path = str(args.report_selected_path or "").strip()
 
     if mapping_errors:
         failure_count += len(mapping_errors)
-    if not str(args.run_id or "").strip():
+    if not run_id_binding:
         mapping_errors.append("run_id_binding_missing")
         failure_count += 1
 
@@ -333,10 +373,21 @@ def main() -> int:
             "--json-only",
         ]
         cmd.extend(spec.fixed_args)
+        if spec.target_name == "multimodal_plugin_enforcement":
+            cmd.extend(["--run-id", run_id_binding])
+            if report_selected_path:
+                cmd.extend(["--report-selected-path", report_selected_path])
         rc, out, err = _run(cmd)
         payload = _parse_payload(out)
         status_value, status_field = _classify_status(target_name=spec.target_name, rc=rc, payload=payload)
-        payload_contract_issues = _validate_row_payload_contract(payload=payload, status_field=status_field)
+        required_contract = bool(payload.get("required_contract", False))
+        payload_contract_issues = _validate_row_payload_contract(
+            payload=payload,
+            status_field=status_field,
+            target_name=spec.target_name,
+            operation=str(args.operation),
+            required_contract=required_contract,
+        )
         if rc != 0:
             payload_contract_issues.append("validator_rc_nonzero")
         if payload_contract_issues:
@@ -346,7 +397,6 @@ def main() -> int:
         if payload_contract_issues and not error_code:
             error_code = "IP-GATE-ENTRY-002"
 
-        required_contract = bool(payload.get("required_contract", False))
         if status_value == STATUS_FAIL_REQUIRED:
             failure_count += 1
         elif status_value == STATUS_FAIL_OPTIONAL and required_contract:
@@ -381,8 +431,6 @@ def main() -> int:
     if missing_targets:
         failure_count += len(missing_targets)
 
-    run_id_binding = str(args.run_id or "").strip()
-    report_selected_path = str(args.report_selected_path or "").strip()
     required_contract_any = any(bool(row.get("required_contract", False)) for row in result_rows)
     failed_required_contract_count = sum(
         1

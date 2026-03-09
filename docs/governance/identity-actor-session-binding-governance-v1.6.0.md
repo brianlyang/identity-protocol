@@ -4640,6 +4640,45 @@ Machine report artifacts:
 1. `target-source-layer=both` still shows global-lane `P0` entries when current env is project-bound.
 2. those are runtime mode guard (`IP-ENV-003`) boundary signals, not project control-plane regressions.
 
+### 8.57 Round-30.2: RQ-034 Runtime-Proof Strict/Scan Convergence
+
+Decision:
+
+1. strict operations keep fail-close runtime-proof enforcement for multimodal plugin gating.
+2. scan operations remain observational and must not be upgraded to strict runtime-proof blockers.
+3. full-scan shadow probe keeps tuple parity validation but no longer forces strict semantics in scan path.
+
+Implementation anchors:
+
+1. `scripts/validate_multimodal_plugin_enforcement.py`
+   - strict-only runtime evidence enforcement with `IP-MM-RUN-*`.
+   - `scan` stays `multimodal_runtime_evidence_status=SKIPPED_NOT_REQUIRED`.
+2. `scripts/required_gate_bundle_runner.py`
+   - strict row contract requires multimodal runtime proof fields only on strict operations.
+3. `scripts/release_readiness_check.py`
+   - bundle passthrough includes selected execution report path for runtime-proof binding.
+4. `scripts/report_three_plane_status.py`
+   - multimodal runtime-proof projection fields are emitted in instance-plane detail.
+5. `scripts/full_identity_protocol_scan.py`
+   - `required_gate_bundle_runner_shadow` changed to `operation=scan`.
+   - tuple parity in full-scan probe uses `--require-distinct-surface-labels` (not strict-operation forcing).
+
+Replay evidence (2026-03-09):
+
+1. strict fail-close replay:
+   - `/tmp/rq034_runtime_validate_fail_20260309_r2.json` (`FAIL_REQUIRED`, `IP-MM-RUN-001`)
+2. strict positive replay:
+   - `/tmp/rq034_runtime_validate_pass_20260309_r2.json` (`PASS_REQUIRED`)
+3. scan non-blocking replay:
+   - `/tmp/rq034_runtime_scan_nonblocking_20260309_r2.json` (`PASS_REQUIRED`, runtime evidence `SKIPPED_NOT_REQUIRED`)
+4. full-scan target convergence:
+   - `/tmp/rq034_runtime_fullscan_target_braev3_20260309_r4.json`
+   - summary `p0=0, p1=0, ok=1`
+5. baseline gates after convergence:
+   - `/tmp/rq034_runtime_surface_drift_20260309_r4.json` (`PASS_REQUIRED`)
+   - `/tmp/rq034_runtime_docs_contract_20260309_r4.log` (rc=0)
+   - `/tmp/rq034_runtime_ssot_20260309_r4.log` (rc=0)
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

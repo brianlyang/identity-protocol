@@ -68,12 +68,17 @@ def _replace_flag_value(cmd: list[str], flag: str, value: str) -> None:
     cmd.extend([flag, str(value)])
 
 
-def _apply_bundle_passthrough_from_report(seq: list[list[str]], report_meta: dict[str, Any]) -> None:
+def _apply_bundle_passthrough_from_report(
+    seq: list[list[str]],
+    report_meta: dict[str, Any],
+    report_selected_path: str,
+) -> None:
     send_time_gate_status = str(report_meta.get("send_time_gate_status", "")).strip().upper() or "UNKNOWN"
     outlet_bypass_detected = "true" if _boolish(report_meta.get("outlet_bypass_detected")) else "false"
     final_emit_contract_status = str(report_meta.get("final_emit_contract_status", "")).strip().upper() or "UNKNOWN"
     final_emit_policy_mode = str(report_meta.get("final_emit_policy_mode", "")).strip() or "tool_choice_required"
     final_emit_schema_status = str(report_meta.get("final_emit_schema_status", "")).strip().upper() or "UNKNOWN"
+    selected_report = str(report_selected_path or "").strip()
     for cmd in seq:
         if len(cmd) < 2 or cmd[1] != "scripts/required_gate_bundle_runner.py":
             continue
@@ -82,6 +87,8 @@ def _apply_bundle_passthrough_from_report(seq: list[list[str]], report_meta: dic
         _replace_flag_value(cmd, "--final-emit-contract-status", final_emit_contract_status)
         _replace_flag_value(cmd, "--final-emit-policy-mode", final_emit_policy_mode)
         _replace_flag_value(cmd, "--final-emit-schema-status", final_emit_schema_status)
+        if selected_report:
+            _replace_flag_value(cmd, "--report-selected-path", selected_report)
 
 
 def _sha256(path: Path) -> str:
@@ -844,6 +851,8 @@ def main() -> int:
             "readiness",
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--json-only",
         ],
         [
@@ -1356,6 +1365,8 @@ def main() -> int:
             "readiness",
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--json-only",
         ],
         [
@@ -1972,7 +1983,7 @@ def main() -> int:
         report_meta = json.loads(Path(execution_report).read_text(encoding="utf-8"))
     except Exception:
         report_meta = {}
-    _apply_bundle_passthrough_from_report(seq, report_meta)
+    _apply_bundle_passthrough_from_report(seq, report_meta, execution_report)
     permission_cmd = [
         "python3",
         "scripts/validate_identity_permission_state.py",

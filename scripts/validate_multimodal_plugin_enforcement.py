@@ -10,7 +10,12 @@ from typing import Any
 
 import yaml
 
-from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    contract_required,
+    latest_identity_upgrade_report,
+    load_json,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -27,6 +32,13 @@ ERR_CONF_FIELDS = "IP-MM-CONF-002"
 ERR_CONF_CREDENTIAL = "IP-MM-CONF-003"
 ERR_CONF_ENDPOINT = "IP-MM-CONF-004"
 ERR_CONF_CAPABILITY = "IP-MM-CONF-005"
+ERR_RUNTIME_REPORT_MISSING = "IP-MM-RUN-001"
+ERR_RUNTIME_STAGE_MISSING = "IP-MM-RUN-002"
+ERR_RUNTIME_GATE_SKIPPED = "IP-MM-RUN-003"
+ERR_RUNTIME_REQUIRED_UNRESOLVED = "IP-MM-RUN-004"
+ERR_RUNTIME_PROVIDER_ERROR = "IP-MM-RUN-005"
+ERR_RUNTIME_EVIDENCE_MISSING = "IP-MM-RUN-006"
+ERR_RUNTIME_RUN_MISMATCH = "IP-MM-RUN-007"
 
 STRICT_OPERATIONS = {
     "activate",
@@ -38,6 +50,16 @@ STRICT_OPERATIONS = {
     "scan",
     "three-plane",
     "inspection",
+    "mutation",
+}
+RUNTIME_PROOF_REQUIRED_OPERATIONS = {
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
     "mutation",
 }
 
@@ -108,6 +130,62 @@ def _boolish(value: Any) -> bool:
     return False
 
 
+def _pick_first_nonempty(data: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    for key in keys:
+        value = data.get(key)
+        if value in (None, "", [], {}):
+            continue
+        return value
+    return None
+
+
+def _to_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return int(float(text))
+    except Exception:
+        return None
+
+
+def _to_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return float(int(value))
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except Exception:
+        return None
+
+
+def _resolve_runtime_report(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    report_selected_path: str,
+) -> Path | None:
+    raw = str(report_selected_path or "").strip()
+    if raw:
+        p = Path(raw).expanduser().resolve()
+        return p if p.exists() and p.is_file() else None
+    return latest_identity_upgrade_report(identity_id, pack_path)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate multimodal plugin enforcement contract (RQ-034).")
     ap.add_argument("--catalog", required=True)
@@ -128,6 +206,8 @@ def main() -> int:
         ],
         default="validate",
     )
+    ap.add_argument("--run-id", default="")
+    ap.add_argument("--report-selected-path", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -178,6 +258,17 @@ def main() -> int:
         "provider_profile_id": "",
         "plugin_contract_owner": "protocol_base_repo",
         "plugin_resolution_mode": "central_registry",
+        "multimodal_runtime_evidence_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "runtime_report_path": "",
+        "runtime_report_run_id": "",
+        "multimodal_calls": None,
+        "multimodal_resolved": None,
+        "multimodal_unresolved": None,
+        "multimodal_errors": None,
+        "multimodal_retry_calls": None,
+        "runtime_gate_mode": "",
+        "runtime_gate_required_confidence": None,
+        "multimodal_runtime_evidence_refs": [],
         "error_code": "",
         "stale_reasons": [],
         "evidence_ref": "",
@@ -513,11 +604,195 @@ def main() -> int:
         error_code = error_code or ERR_COPY
     payload["forbidden_copy_refs"] = sorted(dict.fromkeys(forbidden_hits))
 
+    runtime_required = str(args.operation or "").strip().lower() in RUNTIME_PROOF_REQUIRED_OPERATIONS
+    runtime_report_path = _resolve_runtime_report(
+        pack_path=pack_path,
+        identity_id=args.identity_id,
+        report_selected_path=str(args.report_selected_path or "").strip(),
+    )
+    runtime_report_doc: dict[str, Any] = {}
+    if runtime_required:
+        if runtime_report_path is None:
+            payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+            stale_reasons.append("runtime_report_missing")
+            error_code = error_code or ERR_RUNTIME_REPORT_MISSING
+        else:
+            payload["runtime_report_path"] = str(runtime_report_path)
+            try:
+                runtime_report_doc = load_json(runtime_report_path)
+            except Exception:
+                payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                stale_reasons.append("runtime_report_parse_failed")
+                error_code = error_code or ERR_RUNTIME_REPORT_MISSING
+
+    if runtime_required and runtime_report_doc:
+        runtime_report_run_id = str(runtime_report_doc.get("run_id", "")).strip()
+        payload["runtime_report_run_id"] = runtime_report_run_id
+
+        requested_run_id = str(args.run_id or "").strip()
+        if (
+            requested_run_id.startswith("identity-upgrade-exec-")
+            and runtime_report_run_id
+            and requested_run_id != runtime_report_run_id
+        ):
+            payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+            stale_reasons.append("runtime_report_not_current_round")
+            error_code = error_code or ERR_RUNTIME_RUN_MISMATCH
+
+        summary = runtime_report_doc.get("multimodal_summary")
+        summary_doc = summary if isinstance(summary, dict) else {}
+        payload["multimodal_calls"] = _to_int(
+            _pick_first_nonempty(
+                runtime_report_doc,
+                ("multimodal_calls", "multimodal_call_count", "multimodal_total_calls"),
+            )
+            if _pick_first_nonempty(runtime_report_doc, ("multimodal_calls", "multimodal_call_count", "multimodal_total_calls")) is not None
+            else _pick_first_nonempty(summary_doc, ("calls", "total_calls")),
+        )
+        payload["multimodal_resolved"] = _to_int(
+            _pick_first_nonempty(runtime_report_doc, ("multimodal_resolved",))
+            if _pick_first_nonempty(runtime_report_doc, ("multimodal_resolved",)) is not None
+            else _pick_first_nonempty(summary_doc, ("resolved",)),
+        )
+        payload["multimodal_unresolved"] = _to_int(
+            _pick_first_nonempty(runtime_report_doc, ("multimodal_unresolved",))
+            if _pick_first_nonempty(runtime_report_doc, ("multimodal_unresolved",)) is not None
+            else _pick_first_nonempty(summary_doc, ("unresolved",)),
+        )
+        payload["multimodal_errors"] = _to_int(
+            _pick_first_nonempty(runtime_report_doc, ("multimodal_errors",))
+            if _pick_first_nonempty(runtime_report_doc, ("multimodal_errors",)) is not None
+            else _pick_first_nonempty(summary_doc, ("errors",)),
+        )
+        payload["multimodal_retry_calls"] = _to_int(
+            _pick_first_nonempty(runtime_report_doc, ("multimodal_retry_calls",))
+            if _pick_first_nonempty(runtime_report_doc, ("multimodal_retry_calls",)) is not None
+            else _pick_first_nonempty(summary_doc, ("retry_calls",)),
+        )
+        payload["runtime_gate_mode"] = str(
+            _pick_first_nonempty(
+                runtime_report_doc,
+                ("runtime_gate_mode", "multimodal_gate_mode", "input_gate_mode"),
+            )
+            if _pick_first_nonempty(runtime_report_doc, ("runtime_gate_mode", "multimodal_gate_mode", "input_gate_mode")) is not None
+            else _pick_first_nonempty(summary_doc, ("mode", "gate_mode"))
+            or ""
+        ).strip().lower()
+        payload["runtime_gate_required_confidence"] = _to_float(
+            _pick_first_nonempty(
+                runtime_report_doc,
+                (
+                    "runtime_gate_required_confidence",
+                    "multimodal_required_confidence",
+                    "input_gate_required_confidence",
+                ),
+            )
+            if _pick_first_nonempty(
+                runtime_report_doc,
+                (
+                    "runtime_gate_required_confidence",
+                    "multimodal_required_confidence",
+                    "input_gate_required_confidence",
+                ),
+            )
+            is not None
+            else _pick_first_nonempty(summary_doc, ("required_confidence", "gate_required_confidence")),
+        )
+
+        raw_evidence_refs: list[str] = []
+        for key in (
+            "input_gate_report_path",
+            "multimodal_confirmation_results_path",
+            "multimodal_input_gate_report_path",
+            "multimodal_confirmation_csv_path",
+        ):
+            value = runtime_report_doc.get(key)
+            if isinstance(value, str) and value.strip():
+                raw_evidence_refs.append(value.strip())
+        for key in (
+            "input_gate_report_path",
+            "multimodal_confirmation_results_path",
+            "multimodal_input_gate_report_path",
+            "multimodal_confirmation_csv_path",
+        ):
+            value = summary_doc.get(key)
+            if isinstance(value, str) and value.strip():
+                raw_evidence_refs.append(value.strip())
+        refs_from_list = runtime_report_doc.get("multimodal_evidence_refs")
+        if isinstance(refs_from_list, list):
+            raw_evidence_refs.extend(str(x).strip() for x in refs_from_list if str(x).strip())
+
+        resolved_evidence_refs: list[str] = []
+        missing_evidence_refs: list[str] = []
+        for raw_ref in raw_evidence_refs:
+            p = Path(raw_ref).expanduser()
+            if not p.is_absolute():
+                p = (pack_path / p).resolve()
+            else:
+                p = p.resolve()
+            token = str(p)
+            resolved_evidence_refs.append(token)
+            if not p.exists():
+                missing_evidence_refs.append(token)
+        payload["multimodal_runtime_evidence_refs"] = sorted(dict.fromkeys(resolved_evidence_refs))
+
+        runtime_gate_status = str(
+            _pick_first_nonempty(
+                runtime_report_doc,
+                ("multimodal_preflight_status", "input_gate_status", "multimodal_gate_status"),
+            )
+            or ""
+        ).strip().upper()
+        runtime_gate_skipped = any(
+            _boolish(runtime_report_doc.get(key))
+            for key in ("multimodal_gate_skipped", "input_gate_skipped", "skip_input_gate")
+        ) or runtime_gate_status in {"SKIPPED", "BYPASSED", "SKIP_REQUIRED"}
+
+        if payload["multimodal_runtime_evidence_status"] != STATUS_FAIL_REQUIRED:
+            if runtime_gate_skipped:
+                payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                stale_reasons.append("runtime_gate_skipped_without_receipt")
+                error_code = error_code or ERR_RUNTIME_GATE_SKIPPED
+            elif (
+                payload["multimodal_calls"] is None
+                and payload["multimodal_resolved"] is None
+                and payload["multimodal_unresolved"] is None
+                and payload["multimodal_errors"] is None
+                and not payload["multimodal_runtime_evidence_refs"]
+            ):
+                payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                stale_reasons.append("runtime_stage_missing_input_gate")
+                error_code = error_code or ERR_RUNTIME_STAGE_MISSING
+            elif missing_evidence_refs:
+                payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                stale_reasons.append("runtime_evidence_file_missing")
+                error_code = error_code or ERR_RUNTIME_EVIDENCE_MISSING
+            elif payload["runtime_gate_mode"] == "required":
+                unresolved = payload["multimodal_unresolved"]
+                errors = payload["multimodal_errors"]
+                if unresolved is not None and unresolved > 0:
+                    payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("runtime_required_mode_unresolved")
+                    error_code = error_code or ERR_RUNTIME_REQUIRED_UNRESOLVED
+                elif errors is not None and errors > 0:
+                    payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append("runtime_provider_error_unrecovered")
+                    error_code = error_code or ERR_RUNTIME_PROVIDER_ERROR
+                else:
+                    payload["multimodal_runtime_evidence_status"] = STATUS_PASS_REQUIRED
+            else:
+                payload["multimodal_runtime_evidence_status"] = STATUS_PASS_REQUIRED
+    elif runtime_required and payload["multimodal_runtime_evidence_status"] != STATUS_FAIL_REQUIRED:
+        payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        stale_reasons.append("runtime_report_missing")
+        error_code = error_code or ERR_RUNTIME_REPORT_MISSING
+
     payload["evidence_ref"] = ";".join(
         [
             str(registry_path),
             str(provider_profiles_path),
             str(binding_path),
+            str(payload.get("runtime_report_path", "") or ""),
         ]
     )
 
@@ -529,6 +804,7 @@ def main() -> int:
         payload["plugin_path_status"],
         payload["plugin_copy_policy_status"],
         payload["provider_config_status"],
+        payload["multimodal_runtime_evidence_status"],
     ]
     if any(status == STATUS_FAIL_REQUIRED for status in failed_statuses):
         payload["multimodal_plugin_enforcement_status"] = STATUS_FAIL_REQUIRED

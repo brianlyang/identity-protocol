@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -17,6 +18,58 @@ from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
 LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
+IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+
+M2M_CHECK_NAMES: set[str] = {
+    "actor_session_binding",
+    "actor_session_multibinding_concurrency",
+    "no_implicit_switch",
+    "cross_actor_isolation",
+    "response_stamp_validation",
+    "reply_identity_context_first_line",
+    "send_time_reply_gate",
+    "headstamp_recurrence_closure",
+    "execution_reply_identity_coherence",
+    "required_gate_tuple_parity",
+    "execution_target_tuple_isolation",
+}
+BUNDLE_GATE_CHECK_NAMES: set[str] = {
+    "required_gate_bundle_runner",
+    "required_gate_bundle_runner_shadow",
+}
+CAPABILITY_CHECK_NAMES: set[str] = {
+    "capability_activation_preflight",
+    "capability_activation_report",
+    "prompt_bootstrap_capability",
+    "prompt_capability_matrix",
+    "prompt_kernel_executable_coupling",
+}
+RELEASE_ENV_CHECK_NAMES: set[str] = {
+    "release_plane_cloud_evidence",
+    "run_id_report_selection",
+    "outlet_regression_matrix",
+}
+BASELINE_CHECK_NAMES: set[str] = {
+    "session_refresh_status",
+    "execution_report_freshness",
+    "protocol_baseline_freshness",
+    "protocol_version_alignment",
+}
+PROTOCOL_FEEDBACK_OBS_CHECK_NAMES: set[str] = {
+    "protocol_feedback_sidecar",
+    "protocol_feedback_reply_channel",
+    "protocol_feedback_bootstrap_ready",
+}
+CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
+    "error_code",
+    "sidecar_error_code",
+    "capability_activation_error_code",
+    "pin_error_code",
+    "baseline_error_code",
+    "freshness_error_code",
+    "normalization_error_code",
+    "semantic_convergence_error_code",
+)
 
 
 @dataclass
@@ -161,6 +214,89 @@ def _extract_capability_signal(raw: str) -> tuple[str, str]:
     status = str(payload.get("capability_activation_status", "")).strip().upper()
     code = str(payload.get("capability_activation_error_code", "")).strip()
     return status, code
+
+
+def _extract_check_error_code(entry: dict[str, Any]) -> str:
+    for key in CHECK_ERROR_CODE_KEYS:
+        token = str(entry.get(key, "")).strip()
+        if token:
+            return token
+    for blob_key in ("tail", "stdout", "stderr"):
+        blob = str(entry.get(blob_key, "") or "")
+        m = IP_ERROR_CODE_RE.search(blob)
+        if m:
+            return str(m.group(1) or "").strip()
+    return ""
+
+
+def _is_m2m_error_code(error_code: str) -> bool:
+    token = str(error_code or "").strip().upper()
+    if not token:
+        return False
+    return token.startswith("IP-ASB-") or token.startswith("IP-ACTOR-") or token.startswith("IP-FE-")
+
+
+def _is_m2m_failed_check(*, check_name: str, error_code: str) -> bool:
+    if check_name in BUNDLE_GATE_CHECK_NAMES and not _is_m2m_error_code(error_code):
+        return False
+    return check_name in M2M_CHECK_NAMES or _is_m2m_error_code(error_code)
+
+
+def _classify_m2m_projection(*, checks: dict[str, Any]) -> dict[str, Any]:
+    failed: list[dict[str, str]] = []
+    for name, raw in (checks or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        if bool(entry.get("ok", False)):
+            continue
+        failed.append(
+            {
+                "check": str(name),
+                "error_code": _extract_check_error_code(entry),
+            }
+        )
+    m2m_failed = [
+        row
+        for row in failed
+        if _is_m2m_failed_check(
+            check_name=str(row.get("check", "")),
+            error_code=str(row.get("error_code", "")),
+        )
+    ]
+    non_m2m_failed = [row for row in failed if row not in m2m_failed]
+
+    non_m2m_scope: list[str] = []
+    if any(
+        row["check"] in CAPABILITY_CHECK_NAMES or str(row.get("error_code", "")).upper().startswith("IP-CAP-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("instance_capability")
+    if any(row["check"] in RELEASE_ENV_CHECK_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("release_env")
+    if any(
+        row["check"] in BASELINE_CHECK_NAMES or str(row.get("error_code", "")).upper().startswith("IP-PBL-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("baseline_refresh")
+    if any(row["check"] in PROTOCOL_FEEDBACK_OBS_CHECK_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("protocol_feedback_observability")
+    if non_m2m_failed and not non_m2m_scope:
+        non_m2m_scope.append("other")
+
+    return {
+        "m2m_binding_closure_status": "PASS" if not m2m_failed else "FAIL",
+        "m2m_failure_scope": "protocol_m2m" if m2m_failed else "",
+        "m2m_failed_check_count": len(m2m_failed),
+        "m2m_failed_checks": m2m_failed,
+        "m2m_failure_reasons": [f"{row['check']}:{row.get('error_code') or 'UNKNOWN'}" for row in m2m_failed],
+        "non_m2m_failed_check_count": len(non_m2m_failed),
+        "non_m2m_failed_checks": non_m2m_failed,
+        "non_m2m_failure_scope": sorted(set(non_m2m_scope)),
+        "non_m2m_failure_reasons": [
+            f"{row['check']}:{row.get('error_code') or 'UNKNOWN'}"
+            for row in non_m2m_failed
+        ],
+        "failed_check_count_total": len(failed),
+    }
 
 
 def _replace_activation_policy(cmd: list[str], policy: str) -> list[str]:
@@ -526,8 +662,10 @@ def main() -> int:
         "target_source_layer_effective": effective_target_source_layer,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
     }
     target_severity_map: dict[str, str] = {}
+    target_m2m_map: dict[str, str] = {}
 
     def _update_target_severity(identity_id: str, severity: str) -> None:
         if args.scan_mode != "target":
@@ -537,6 +675,16 @@ def main() -> int:
         current = target_severity_map.get(identity_id, "OK")
         if rank.get(normalized, 0) >= rank.get(current, 0):
             target_severity_map[identity_id] = normalized
+
+    def _update_target_m2m(identity_id: str, m2m_status: str) -> None:
+        if args.scan_mode != "target":
+            return
+        normalized = str(m2m_status or "PASS").strip().upper() or "PASS"
+        current = target_m2m_map.get(identity_id, "PASS")
+        if normalized == "FAIL" or current == "FAIL":
+            target_m2m_map[identity_id] = "FAIL"
+        else:
+            target_m2m_map[identity_id] = "PASS"
 
     for layer, catalog in catalog_list:
         rows = _catalog_rows(catalog) if catalog.exists() else []
@@ -664,6 +812,14 @@ def main() -> int:
                     item["severity"] = "P1"
                 else:
                     item["severity"] = _severity_for_row(item)
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
                 _update_target_severity(iid, str(item["severity"]))
                 payload["summary"]["total_identities"] += 1
                 if item["severity"] == "P0":
@@ -1669,6 +1825,8 @@ def main() -> int:
                     iid,
                     "--actor-id",
                     actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--operation",
                     "scan",
                     "--json-only",
@@ -1738,7 +1896,7 @@ def main() -> int:
                     "--surface-label",
                     f"full_scan_{layer}_validate_probe",
                     "--operation",
-                    "validate",
+                    "scan",
                     "--out",
                     required_gate_bundle_receipt_probe,
                     "--json-only",
@@ -1764,7 +1922,7 @@ def main() -> int:
                     required_gate_bundle_receipt,
                     "--receipt",
                     required_gate_bundle_receipt_probe,
-                    "--require-distinct-operations",
+                    "--require-distinct-surface-labels",
                     "--json-only",
                 ],
                 "cross_verification_tracks": [
@@ -3034,6 +3192,7 @@ def main() -> int:
                     mm_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
                         "multimodal_plugin_enforcement_status",
+                        "multimodal_runtime_evidence_status",
                         "error_code",
                         "required_contract",
                         "auto_required_signal",
@@ -3047,6 +3206,16 @@ def main() -> int:
                         "provider_profile_id",
                         "plugin_contract_owner",
                         "plugin_resolution_mode",
+                        "runtime_report_path",
+                        "runtime_report_run_id",
+                        "multimodal_calls",
+                        "multimodal_resolved",
+                        "multimodal_unresolved",
+                        "multimodal_errors",
+                        "multimodal_retry_calls",
+                        "runtime_gate_mode",
+                        "runtime_gate_required_confidence",
+                        "multimodal_runtime_evidence_refs",
                         "forbidden_copy_refs",
                         "stale_reasons",
                         "evidence_ref",
@@ -3828,6 +3997,17 @@ def main() -> int:
                     "release": tp.get("release_plane_status"),
                     "overall": tp.get("overall_release_decision"),
                 }
+                if isinstance(tp.get("m2m_projection"), dict):
+                    item["m2m_projection"] = tp.get("m2m_projection")
+            if "m2m_projection" not in item:
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+            payload["summary_m2m"]["total_identities"] += 1
+            current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+            if current_m2m == "PASS":
+                payload["summary_m2m"]["pass"] += 1
+            else:
+                payload["summary_m2m"]["fail"] += 1
+            _update_target_m2m(iid, current_m2m)
             item["severity"] = _severity_for_row(item)
             _update_target_severity(iid, str(item["severity"]))
             payload["summary"]["total_identities"] += 1
@@ -3848,6 +4028,11 @@ def main() -> int:
             "p0": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "P0"),
             "p1": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "P1"),
             "ok": sum(1 for severity in target_severity_map.values() if str(severity).upper() == "OK"),
+        }
+        payload["summary_unique_targets_m2m"] = {
+            "total_identities": len(target_m2m_map),
+            "pass": sum(1 for status in target_m2m_map.values() if str(status).upper() == "PASS"),
+            "fail": sum(1 for status in target_m2m_map.values() if str(status).upper() == "FAIL"),
         }
         payload["missing_target_identities"] = missing
         if missing:

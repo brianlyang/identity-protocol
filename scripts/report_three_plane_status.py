@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -18,11 +19,163 @@ from runtime_temp_path_common import named_temp_root, runtime_temp_file
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
 LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
+IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+
+M2M_VALIDATOR_NAMES: set[str] = {
+    "actor_session_binding",
+    "actor_session_multibinding_concurrency",
+    "no_implicit_switch",
+    "cross_actor_isolation",
+    "response_stamp_validation",
+    "reply_identity_context_first_line",
+    "send_time_reply_gate",
+    "headstamp_recurrence_closure",
+    "execution_reply_identity_coherence",
+    "required_gate_tuple_parity",
+    "execution_target_tuple_isolation",
+}
+BUNDLE_GATE_VALIDATOR_NAMES: set[str] = {
+    "required_gate_bundle_runner",
+    "required_gate_bundle_runner_shadow",
+}
+CAPABILITY_VALIDATOR_NAMES: set[str] = {
+    "capability_activation",
+    "prompt_bootstrap_capability",
+    "prompt_capability_matrix",
+    "prompt_kernel_executable_coupling",
+}
+RELEASE_ENV_VALIDATOR_NAMES: set[str] = {
+    "release_plane_cloud_evidence",
+    "run_id_report_selection",
+    "outlet_regression_matrix",
+}
+BASELINE_VALIDATOR_NAMES: set[str] = {
+    "session_refresh_status",
+    "execution_report_freshness",
+    "protocol_baseline_freshness",
+    "protocol_version_alignment",
+}
+PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES: set[str] = {
+    "protocol_feedback_sidecar",
+    "protocol_feedback_reply_channel",
+    "protocol_feedback_bootstrap_ready",
+}
+VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
+    "error_code",
+    "sidecar_error_code",
+    "capability_activation_error_code",
+    "pin_error_code",
+    "baseline_error_code",
+    "freshness_error_code",
+    "normalization_error_code",
+    "semantic_convergence_error_code",
+)
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
     run_cwd = cwd.resolve() if isinstance(cwd, Path) else PROTOCOL_ROOT
     p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(run_cwd))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
+
+
+def _extract_error_code_from_validator(entry: dict[str, Any]) -> str:
+    payload = _parse_json_payload(str(entry.get("out", ""))) or {}
+    for key in VALIDATOR_ERROR_CODE_KEYS:
+        token = str(payload.get(key, "")).strip()
+        if token:
+            return token
+    for blob_key in ("out", "err"):
+        blob = str(entry.get(blob_key, "") or "")
+        m = IP_ERROR_CODE_RE.search(blob)
+        if m:
+            return str(m.group(1) or "").strip()
+    return ""
+
+
+def _is_m2m_error_code(error_code: str) -> bool:
+    token = str(error_code or "").strip().upper()
+    if not token:
+        return False
+    return token.startswith("IP-ASB-") or token.startswith("IP-ACTOR-") or token.startswith("IP-FE-")
+
+
+def _is_m2m_failure_row(*, validator_name: str, error_code: str) -> bool:
+    if validator_name in BUNDLE_GATE_VALIDATOR_NAMES and not _is_m2m_error_code(error_code):
+        return False
+    return validator_name in M2M_VALIDATOR_NAMES or _is_m2m_error_code(error_code)
+
+
+def _classify_m2m_projection(
+    *,
+    validators: dict[str, Any],
+    instance_status: str,
+    repo_status: str,
+    release_status: str,
+) -> dict[str, Any]:
+    failed: list[dict[str, str]] = []
+    for name, raw in (validators or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        if bool(entry.get("ok", False)):
+            continue
+        error_code = _extract_error_code_from_validator(entry)
+        failed.append(
+            {
+                "validator": str(name),
+                "error_code": error_code,
+            }
+        )
+
+    m2m_failed = [
+        row
+        for row in failed
+        if _is_m2m_failure_row(
+            validator_name=str(row.get("validator", "")),
+            error_code=str(row.get("error_code", "")),
+        )
+    ]
+    non_m2m_failed = [row for row in failed if row not in m2m_failed]
+
+    non_m2m_scope: list[str] = []
+    if any(
+        row["validator"] in CAPABILITY_VALIDATOR_NAMES or str(row.get("error_code", "")).upper().startswith("IP-CAP-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("instance_capability")
+    if any(row["validator"] in RELEASE_ENV_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("release_env")
+    if any(
+        row["validator"] in BASELINE_VALIDATOR_NAMES or str(row.get("error_code", "")).upper().startswith("IP-PBL-")
+        for row in non_m2m_failed
+    ):
+        non_m2m_scope.append("baseline_refresh")
+    if any(row["validator"] in PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("protocol_feedback_observability")
+    if repo_status != "CLOSED":
+        non_m2m_scope.append("repo_plane")
+    if release_status != "CLOSED":
+        non_m2m_scope.append("release_plane")
+    if instance_status != "CLOSED" and non_m2m_failed and "instance_plane" not in non_m2m_scope:
+        non_m2m_scope.append("instance_plane")
+    if non_m2m_failed and not non_m2m_scope:
+        non_m2m_scope.append("other")
+
+    return {
+        "m2m_binding_closure_status": "PASS" if not m2m_failed else "FAIL",
+        "m2m_failure_scope": "protocol_m2m" if m2m_failed else "",
+        "m2m_failed_validator_count": len(m2m_failed),
+        "m2m_failed_validators": m2m_failed,
+        "m2m_failure_reasons": [
+            f"{row['validator']}:{row.get('error_code') or 'UNKNOWN'}"
+            for row in m2m_failed
+        ],
+        "non_m2m_failed_validator_count": len(non_m2m_failed),
+        "non_m2m_failed_validators": non_m2m_failed,
+        "non_m2m_failure_scope": sorted(set(non_m2m_scope)),
+        "non_m2m_failure_reasons": [
+            f"{row['validator']}:{row.get('error_code') or 'UNKNOWN'}"
+            for row in non_m2m_failed
+        ],
+        "failed_validator_count_total": len(failed),
+    }
 
 
 def _tracked_worktree_state() -> tuple[bool, list[str], str]:
@@ -1590,6 +1743,8 @@ def _instance_plane_status(
             args.identity_id,
             "--actor-id",
             args.actor_id,
+            "--session-id",
+            args.session_id,
             "--operation",
             "three-plane",
             "--json-only",
@@ -3512,6 +3667,7 @@ def _instance_plane_status(
         },
         "multimodal_plugin_enforcement": {
             "multimodal_plugin_enforcement_status": multimodal_plugin_payload.get("multimodal_plugin_enforcement_status"),
+            "multimodal_runtime_evidence_status": multimodal_plugin_payload.get("multimodal_runtime_evidence_status"),
             "error_code": multimodal_plugin_payload.get("error_code", ""),
             "required_contract": multimodal_plugin_payload.get("required_contract"),
             "auto_required_signal": multimodal_plugin_payload.get("auto_required_signal"),
@@ -3525,6 +3681,16 @@ def _instance_plane_status(
             "provider_profile_id": multimodal_plugin_payload.get("provider_profile_id", ""),
             "plugin_contract_owner": multimodal_plugin_payload.get("plugin_contract_owner", ""),
             "plugin_resolution_mode": multimodal_plugin_payload.get("plugin_resolution_mode", ""),
+            "runtime_report_path": multimodal_plugin_payload.get("runtime_report_path", ""),
+            "runtime_report_run_id": multimodal_plugin_payload.get("runtime_report_run_id", ""),
+            "multimodal_calls": multimodal_plugin_payload.get("multimodal_calls"),
+            "multimodal_resolved": multimodal_plugin_payload.get("multimodal_resolved"),
+            "multimodal_unresolved": multimodal_plugin_payload.get("multimodal_unresolved"),
+            "multimodal_errors": multimodal_plugin_payload.get("multimodal_errors"),
+            "multimodal_retry_calls": multimodal_plugin_payload.get("multimodal_retry_calls"),
+            "runtime_gate_mode": multimodal_plugin_payload.get("runtime_gate_mode", ""),
+            "runtime_gate_required_confidence": multimodal_plugin_payload.get("runtime_gate_required_confidence"),
+            "multimodal_runtime_evidence_refs": multimodal_plugin_payload.get("multimodal_runtime_evidence_refs", []),
             "forbidden_copy_refs": multimodal_plugin_payload.get("forbidden_copy_refs", []),
             "stale_reasons": multimodal_plugin_payload.get("stale_reasons", []),
             "evidence_ref": multimodal_plugin_payload.get("evidence_ref", ""),
@@ -4266,6 +4432,15 @@ def main() -> int:
         "repo_plane_detail": repo_detail,
         "release_plane_detail": release_detail,
     }
+    m2m_projection = _classify_m2m_projection(
+        validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
+        instance_status=instance_status,
+        repo_status=repo_status,
+        release_status=release_status,
+    )
+    payload["m2m_projection"] = m2m_projection
+    if isinstance(instance_detail, dict):
+        instance_detail["m2m_projection"] = m2m_projection
 
     overall = "Conditional Go"
     if instance_status == "CLOSED" and repo_status == "CLOSED" and release_status == "CLOSED":

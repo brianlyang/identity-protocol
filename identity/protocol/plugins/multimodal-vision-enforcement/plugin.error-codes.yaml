@@ -22,3 +22,17 @@ codes:
     description: provider endpoint policy violation (non-HTTPS or disallowed host)
   - code: IP-MM-CONF-005
     description: provider capability mismatch for plugin requirement
+  - code: IP-MM-RUN-001
+    description: runtime report missing for strict multimodal enforcement
+  - code: IP-MM-RUN-002
+    description: runtime report missing multimodal preflight stage evidence
+  - code: IP-MM-RUN-003
+    description: multimodal input gate skipped without approved bypass receipt
+  - code: IP-MM-RUN-004
+    description: required multimodal gate has unresolved items
+  - code: IP-MM-RUN-005
+    description: provider errors present and unrecovered in multimodal gate
+  - code: IP-MM-RUN-006
+    description: referenced multimodal runtime evidence artifact missing
+  - code: IP-MM-RUN-007
+    description: selected runtime report is not bound to current run id

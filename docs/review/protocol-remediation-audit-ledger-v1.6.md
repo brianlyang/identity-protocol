@@ -3832,6 +3832,56 @@ Decision boundary:
 
 ---
 
+## 5.18 Round-30.2 Addendum: RQ-034 Runtime-Proof Strict/Scan Convergence
+
+Scope:
+
+1. close scan-path false escalation introduced by strict multimodal runtime-proof gating.
+2. keep strict fail-close semantics unchanged for release-bearing surfaces.
+
+Code changes audited:
+
+1. `scripts/validate_multimodal_plugin_enforcement.py`
+2. `scripts/required_gate_bundle_runner.py`
+3. `scripts/release_readiness_check.py`
+4. `scripts/report_three_plane_status.py`
+5. `scripts/full_identity_protocol_scan.py`
+6. `identity/protocol/plugins/multimodal-vision-enforcement/plugin.contract.yaml`
+7. `identity/protocol/plugins/multimodal-vision-enforcement/plugin.error-codes.yaml`
+
+Cross-verification replay:
+
+1. strict fail-close:
+   - command result: `/tmp/rq034_runtime_validate_fail_20260309_r2.json`
+   - expected/actual: `FAIL_REQUIRED + IP-MM-RUN-001`
+2. strict positive:
+   - command result: `/tmp/rq034_runtime_validate_pass_20260309_r2.json`
+   - expected/actual: `PASS_REQUIRED`
+3. scan non-blocking:
+   - command result: `/tmp/rq034_runtime_scan_nonblocking_20260309_r2.json`
+   - expected/actual: validator `PASS_REQUIRED`, runtime evidence `SKIPPED_NOT_REQUIRED`
+4. bundle target fail/pass:
+   - fail: `/tmp/rq034_runtime_bundle_target_fail_20260309_r2.json`
+   - pass: `/tmp/rq034_runtime_bundle_target_pass_20260309_r2.json`
+5. three-plane projection visibility:
+   - `/tmp/rq034_runtime_three_plane_20260309_r2.json`
+   - runtime-proof fields present under `instance_plane_detail.multimodal_plugin_enforcement`
+6. full-scan target convergence after shadow scan alignment:
+   - `/tmp/rq034_runtime_fullscan_target_braev3_20260309_r4.json`
+   - summary: `p0=0, p1=0, ok=1`
+7. gate integrity replay:
+   - `/tmp/rq034_runtime_surface_drift_20260309_r4.json` (`PASS_REQUIRED`)
+   - `/tmp/rq034_runtime_docs_contract_20260309_r4.log` (rc=0)
+   - `/tmp/rq034_runtime_ssot_20260309_r4.log` (rc=0)
+
+Verdict:
+
+1. strict lanes are now runtime-proof hard-gated for multimodal enforcement.
+2. scan lanes are observational and no longer receive strict-shadow false escalation.
+3. RQ-034 control-plane strengthening is closed at protocol-layer wiring level.
+
+---
+
 ## 6) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
