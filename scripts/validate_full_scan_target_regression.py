@@ -15,6 +15,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_P0_REGRESSION = "IP-SCAN-REG-001"
 ERR_SCAN_CMD_FAILED = "IP-SCAN-REG-002"
 ERR_REPORT_INVALID = "IP-SCAN-REG-003"
+ERR_M2M_REGRESSION = "IP-SCAN-REG-004"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -54,6 +55,40 @@ def _extract_p0_rows(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _extract_m2m_fail_rows(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for catalog in report_doc.get("catalogs") or []:
+        if not isinstance(catalog, dict):
+            continue
+        layer = str(catalog.get("layer", "")).strip()
+        for item in catalog.get("identities") or []:
+            if not isinstance(item, dict):
+                continue
+            m2m_projection = item.get("m2m_projection") or {}
+            m2m_status = str(
+                m2m_projection.get("m2m_binding_closure_status", "")
+            ).strip().upper()
+            if m2m_status in {"PASS", "PASS_REQUIRED", ""}:
+                continue
+            rows.append(
+                {
+                    "layer": layer,
+                    "identity_id": str(item.get("identity_id", "")).strip(),
+                    "m2m_binding_closure_status": m2m_status,
+                    "m2m_failure_scope": str(
+                        m2m_projection.get("m2m_failure_scope", "")
+                    ).strip(),
+                    "m2m_failure_reasons": list(
+                        m2m_projection.get("m2m_failure_reasons") or []
+                    ),
+                    "m2m_failed_validator_count": int(
+                        m2m_projection.get("m2m_failed_validator_count", 0) or 0
+                    ),
+                }
+            )
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Regression gate: full_identity_protocol_scan --scan-mode target must keep summary.p0 == 0."
@@ -66,6 +101,11 @@ def main() -> int:
     ap.add_argument("--session-id", default="")
     ap.add_argument("--expected-work-layer", default="protocol")
     ap.add_argument("--expected-source-layer", default="project")
+    ap.add_argument(
+        "--enforce-m2m-pass",
+        action="store_true",
+        help="when set, fail-close if summary_m2m.fail != 0",
+    )
     ap.add_argument("--out", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
@@ -127,10 +167,15 @@ def main() -> int:
         "scan_stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
         "scan_report_path": str(out_path),
         "summary": {},
+        "summary_m2m": {},
         "p0_count": None,
         "p1_count": None,
         "ok_count": None,
         "p0_rows": [],
+        "m2m_pass_count": None,
+        "m2m_fail_count": None,
+        "m2m_fail_rows": [],
+        "enforce_m2m_pass": bool(args.enforce_m2m_pass),
     }
 
     if proc.returncode != 0:
@@ -171,9 +216,24 @@ def main() -> int:
     payload["p1_count"] = int(summary.get("p1", 0) or 0)
     payload["ok_count"] = int(summary.get("ok", 0) or 0)
     payload["p0_rows"] = _extract_p0_rows(report_doc)
+    summary_m2m = report_doc.get("summary_m2m")
+    if isinstance(summary_m2m, dict):
+        payload["summary_m2m"] = summary_m2m
+        payload["m2m_pass_count"] = int(summary_m2m.get("pass", 0) or 0)
+        payload["m2m_fail_count"] = int(summary_m2m.get("fail", 0) or 0)
+    else:
+        payload["summary_m2m"] = {}
+        payload["m2m_pass_count"] = 0
+        payload["m2m_fail_count"] = 0
+    payload["m2m_fail_rows"] = _extract_m2m_fail_rows(report_doc)
 
     if p0_count != 0:
         payload["error_code"] = ERR_P0_REGRESSION
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if bool(args.enforce_m2m_pass) and int(payload["m2m_fail_count"] or 0) != 0:
+        payload["error_code"] = ERR_M2M_REGRESSION
         _emit(payload, json_only=args.json_only)
         return 1
 

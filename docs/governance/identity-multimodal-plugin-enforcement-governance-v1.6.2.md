@@ -839,3 +839,12 @@ Key replay outcomes:
 1. v1.6.2 plugin wiring remains closed on protocol control-plane.
 2. `IP-MM-RUN-002` remains a valid strict fail-close on explicit current-report path when runtime-stage producer fields are missing.
 3. The deferred-pass behavior is limited to explicitly governed legacy replay scope (e.g., three-plane autorun path), not a global downgrade.
+
+### 17.4 Full-scan regression gate hardening (round-30.5)
+
+1. `scripts/validate_full_scan_target_regression.py` now emits `summary_m2m`, `m2m_pass_count`, `m2m_fail_count`, and `m2m_fail_rows` in receipt payload.
+2. Optional strict switch is introduced:
+   - `--enforce-m2m-pass`
+   - semantics: keep existing `summary.p0==0` check and additionally fail-close when `summary_m2m.fail != 0`.
+3. Default behavior remains backward compatible (switch off), so fixture-heavy lanes do not get broken by default.
+4. Protocol strict lanes can turn the switch on to block “`p0=0` but m2m closure failed” shadow regressions.

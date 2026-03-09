@@ -602,3 +602,17 @@ Cross-surface replay:
 3. Stream posture unchanged:
    - `SPEC_READY / PENDING_INTAKE`
    - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`
+
+### 16.5 Full-scan target regression addendum (round-30.5)
+
+1. `validate_full_scan_target_regression.py` now projects m2m summary fields in its receipt:
+   - `summary_m2m`
+   - `m2m_pass_count`
+   - `m2m_fail_count`
+   - `m2m_fail_rows`
+2. New optional strict flag:
+   - `--enforce-m2m-pass`
+   - effect: fail-close with `IP-SCAN-REG-004` when `summary_m2m.fail != 0`.
+3. Compatibility policy:
+   - default path keeps previous behavior (`summary.p0==0` hard gate only);
+   - strict protocol lanes can enable `--enforce-m2m-pass` to remove m2m shadow-green blind spots.
