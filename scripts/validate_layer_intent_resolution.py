@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inject_legacy_error_fields
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -20,11 +21,12 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
-ERR_LAYER_INTENT = "IP-ASB-STAMP-SESSION-001"
+ERR_LAYER_INTENT = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:

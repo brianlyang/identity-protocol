@@ -12,6 +12,12 @@ from typing import Any
 import yaml
 
 from actor_session_common import DEFAULT_BINDING_KEY_MODE, load_actor_binding, load_actor_binding_store
+from headstamp_error_family_common import (
+    ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
+    ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    ERR_HDSTAMP_RECEIPT_MISSING,
+    inject_legacy_error_fields,
+)
 from runtime_temp_path_common import runtime_temp_file
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -29,11 +35,11 @@ ERR_ACTOR_MISMATCH_NEGATIVE = "IP-ASB-STAMP-SCAN-007"
 ERR_ACTOR_REQUIRED = "IP-ASB-ACTOR-001"
 ERR_MIXED_EVIDENCE_UNPARTITIONED = "IP-ASB-ACTOR-002"
 
-ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
-ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
-ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
-ERR_FINAL_EMIT_CHANNEL_REQUIRED = "IP-ASB-STAMP-SESSION-006"
-ERR_ACTOR_BOUND_MISMATCH = "IP-ASB-STAMP-SESSION-005"
+ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
+ERR_SYNTHETIC_EVIDENCE = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_NON_GOVERNED_OUTLET = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_FINAL_EMIT_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_ACTOR_BOUND_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 
 STRICT_ACTOR_REQUIRED_OPS = {
     "activate",
@@ -65,6 +71,7 @@ def _utc_now() -> str:
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
         return

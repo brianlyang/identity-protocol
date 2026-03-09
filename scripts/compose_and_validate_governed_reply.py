@@ -16,6 +16,7 @@ from final_emit_contract_common import (
     FINAL_EMIT_SCHEMA_ID,
     FINAL_EMIT_SCHEMA_REQUIRED_FIELDS,
 )
+from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inject_legacy_error_fields
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -28,7 +29,7 @@ from runtime_temp_path_common import runtime_temp_file
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
-ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
+ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 
 
@@ -78,6 +79,7 @@ def _resolve_actor_binding_with_target(
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool, composed_reply: str, allow_reply_emit: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
         return
@@ -151,8 +153,15 @@ def main() -> int:
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
             out_json_path.parent.mkdir(parents=True, exist_ok=True)
-            out_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+            out_json_path.write_text(
+                json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        print(
+            json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False)
+            if args.json_only
+            else json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2)
+        )
         return 1
 
     try:
@@ -216,8 +225,15 @@ def main() -> int:
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
             out_json_path.parent.mkdir(parents=True, exist_ok=True)
-            out_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+            out_json_path.write_text(
+                json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        print(
+            json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False)
+            if args.json_only
+            else json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2)
+        )
         return 1
 
     if actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
@@ -266,8 +282,15 @@ def main() -> int:
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
             out_json_path.parent.mkdir(parents=True, exist_ok=True)
-            out_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+            out_json_path.write_text(
+                json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        print(
+            json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False)
+            if args.json_only
+            else json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2)
+        )
         return 1
 
     disclosure = resolve_disclosure_level(ctx, explicit_level=str(args.disclosure_level or "standard"))
@@ -479,7 +502,10 @@ def main() -> int:
     if out_json:
         out_json_path = Path(out_json).expanduser().resolve()
         out_json_path.parent.mkdir(parents=True, exist_ok=True)
-        out_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        out_json_path.write_text(
+            json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     allow_reply_emit = (
         proc.returncode == 0

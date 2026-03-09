@@ -233,7 +233,12 @@ def _is_m2m_error_code(error_code: str) -> bool:
     token = str(error_code or "").strip().upper()
     if not token:
         return False
-    return token.startswith("IP-ASB-") or token.startswith("IP-ACTOR-") or token.startswith("IP-FE-")
+    return (
+        token.startswith("IP-ASB-")
+        or token.startswith("IP-ACTOR-")
+        or token.startswith("IP-FE-")
+        or token.startswith("IP-HDSTAMP-")
+    )
 
 
 def _is_m2m_failed_check(*, check_name: str, error_code: str) -> bool:

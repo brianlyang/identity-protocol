@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import load_actor_binding, load_actor_binding_store
+from headstamp_error_family_common import (
+    ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
+    ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    inject_legacy_error_fields,
+)
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -22,9 +27,9 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
-ERR_REPLY_FIRST_LINE = "IP-ASB-STAMP-SESSION-001"
+ERR_REPLY_FIRST_LINE = ERR_HDSTAMP_MISSING_OR_MALFORMED
 ERR_INVALID_EXPECTED_SOURCE_LAYER = "IP-SOURCE-LAYER-001"
-ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
+ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 STRICT_LOCK_OPERATIONS = {
     "activate",
     "update",
@@ -191,6 +196,7 @@ def _first_nonempty_line(text: str) -> str:
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
     else:

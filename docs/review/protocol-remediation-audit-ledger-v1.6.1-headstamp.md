@@ -33,11 +33,12 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 | --- | --- | --- | --- | --- | --- | --- |
 | HS16-101 | 2026-03-08 | protocol | open v1.6.1 dedicated headstamp/HUD governance stream + freeze v1.6 scattered updates | 06e551c | SPEC_READY | PENDING_INTAKE |
 | HS16-102 | 2026-03-08 | protocol | enforce final egress wrapper adoption on strict surfaces + auto-context self-wiring | 5f15aef | SPEC_READY | PENDING_INTAKE |
+| HS16-103 | 2026-03-09 | protocol | canonicalize headstamp error family to `IP-HDSTAMP-*` across strict wrappers/validators and projection classifiers | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 
 ## 3) Current blocker map (headstamp only)
 
 1. Single-egress enforcement not yet guaranteed for all user-visible output channels.
-2. Canonical error-family convergence (`IP-HDSTAMP-*`) is incomplete while compatibility traces still appear.
+2. Canonical error-family convergence (`IP-HDSTAMP-*`) is closed on strict control plane (`error_code` canonicalized).
 3. Promotion-grade parity/recurrence closure still depends on deterministic cross-surface replay receipts.
 
 ## 4) Required acceptance commands (headstamp stream)
@@ -56,3 +57,25 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 3. Status boundary remains unchanged:
    - `SPEC_READY / PENDING_INTAKE`
    - `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`
+
+## 6) Round-30.3 evidence addendum (canonical error-family closure)
+
+Persistent evidence root:
+
+1. `activity/evidence/v161-headstamp-convergence/2026-03-09/`
+
+Command replay snapshot:
+
+1. `python3 scripts/final_emit_governed.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --body-text "<probe>" --json-only`
+2. `python3 scripts/final_emit_governed.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --body-text "<probe>" --outlet-channel-id direct_text_channel --json-only`
+3. `python3 scripts/validate_send_time_reply_gate.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --reply-text "<inline>" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id final_emit_governed --operation send-time --json-only`
+4. `python3 scripts/compose_and_validate_governed_reply.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --session-id run:nonexistent --body-text "<probe>" --json-only`
+5. `python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --operation validate --json-only`
+
+Observed outcomes:
+
+1. Positive governed egress -> `PASS_REQUIRED`.
+2. Non-governed outlet negative -> `FAIL_REQUIRED + IP-HDSTAMP-003`.
+3. Strict inline evidence negative -> `FAIL_REQUIRED + IP-HDSTAMP-003`.
+4. Session binding mismatch negative -> `FAIL_REQUIRED + IP-HDSTAMP-002`.
+5. Recurrence closure replay -> `PASS_REQUIRED`.

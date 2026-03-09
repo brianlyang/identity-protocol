@@ -1,0 +1,79 @@
+{
+  "stream": "v161-headstamp-convergence",
+  "date_utc": "2026-03-09",
+  "generated_at_utc": "2026-03-09T15:15:03Z",
+  "entries": [
+    {
+      "id": "resolve_identity_context.base-repo-architect",
+      "command": "python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect",
+      "rc": 0,
+      "sha256": "3a7929844220309ea59f96aaa8dfa351d89bb1679ae60fa9464c32bce49b0932",
+      "timestamp_utc": "2026-03-09T14:56:45Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/resolve_identity_context.base-repo-architect.json"
+    },
+    {
+      "id": "final_emit_governed.positive.base-repo-architect",
+      "command": "python3 scripts/final_emit_governed.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --body-text \"Round-30 headstamp canonical convergence positive probe\" --json-only",
+      "rc": 0,
+      "sha256": "e2abb2e5f486813580a1a866bad4afc3a804ab552f9f671c13c097cf897f75b4",
+      "timestamp_utc": "2026-03-09T14:59:21Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/final_emit_governed.positive.base-repo-architect.json"
+    },
+    {
+      "id": "final_emit_governed.negative.nongoverned.base-repo-architect",
+      "command": "python3 scripts/final_emit_governed.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --body-text \"Round-30 headstamp canonical convergence negative outlet probe\" --outlet-channel-id direct_text_channel --json-only",
+      "rc": 1,
+      "sha256": "ed948166b0c19b71124b1b9798b6d6ccc4926872344a1221dc1f0efcd5742752",
+      "timestamp_utc": "2026-03-09T14:59:21Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/final_emit_governed.negative.nongoverned.base-repo-architect.json"
+    },
+    {
+      "id": "send_time_gate.negative.inline.base-repo-architect",
+      "command": "python3 scripts/validate_send_time_reply_gate.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --reply-text \"manual inline reply without governed file evidence\" --force-check --enforce-send-time-gate --reply-outlet-guard-applied --outlet-channel-id final_emit_governed --operation send-time --json-only",
+      "rc": 1,
+      "sha256": "60280d96457671f5c3941258e56268b5b88480be0bca18780b828f4a8d5435d2",
+      "timestamp_utc": "2026-03-09T14:59:21Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/send_time_gate.negative.inline.base-repo-architect.json"
+    },
+    {
+      "id": "compose_actor_mismatch.base-repo-architect",
+      "command": "python3 scripts/compose_and_validate_governed_reply.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --session-id run:nonexistent --body-text \"actor-mismatch-probe\" --json-only",
+      "rc": 1,
+      "sha256": "05286bb870986f8f1fb24a7b68468cdad131d64513b5a8528e55256b5a583af7",
+      "timestamp_utc": "2026-03-09T15:00:06Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/compose_actor_mismatch.base-repo-architect.json"
+    },
+    {
+      "id": "headstamp_recurrence.base-repo-architect",
+      "command": "python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:mn-fix --operation validate --json-only",
+      "rc": 0,
+      "sha256": "cfbd43ebe2b05b1dcc2c4036236959b9a9792c7e7dfe8c6dae81c89aec5cfd79",
+      "timestamp_utc": "2026-03-09T14:59:22Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/headstamp_recurrence.base-repo-architect.json"
+    },
+    {
+      "id": "surface_drift",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "sha256": "3c46b738205292f27ef5464a33632b789baa66b8be1b5529a7b82b4404a0361c",
+      "timestamp_utc": "2026-03-09T14:58:12Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/surface_drift.json"
+    },
+    {
+      "id": "docs_contract",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "sha256": "27cf10daf7e0c8aea28373400c97628f5727503f36e3f47969e1f334a59d5432",
+      "timestamp_utc": "2026-03-09T15:14:06Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/docs_contract.log"
+    },
+    {
+      "id": "protocol_ssot",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "timestamp_utc": "2026-03-09T15:04:39Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/protocol_ssot.log"
+    }
+  ]
+}

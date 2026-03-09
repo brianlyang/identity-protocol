@@ -126,11 +126,12 @@ Strict tuple invariants:
 2. `IP-HDSTAMP-002` -> actor/layer binding mismatch
 3. `IP-HDSTAMP-003` -> pre-send receipt missing
 
-### 3.2 Compatibility alias mapping (non-final)
+### 3.2 Compatibility alias mapping (migration-only)
 
-1. `IP-ASB-STAMP-SESSION-001/002/003/004/005/006/007` may appear during migration diagnostics.
-2. Promotion-grade classification must map to canonical `IP-HDSTAMP-*` family.
-3. Mixed families in same surface for same defect are treated as non-converged.
+1. `IP-ASB-STAMP-SESSION-*` and `IP-FE-*` are legacy aliases only.
+2. Promotion-grade payload field `error_code` must emit canonical `IP-HDSTAMP-*` only.
+3. Legacy aliases may be retained in `legacy_error_code`/`compat_error_code` for replay migration, but cannot replace canonical `error_code`.
+4. Mixed families in same surface for same defect are treated as non-converged.
 
 ## 4) Mandatory Control-Plane Wiring Matrix
 
@@ -163,11 +164,11 @@ Strict tuple invariants:
 1. `validate` vs `three-plane` receipts must agree on core tuple fields.
 2. Any mismatch is release blocker.
 
-## 6) Current Open Blockers (as-of 2026-03-08)
+## 6) Current Open Blockers (as-of 2026-03-09)
 
 1. Single-egress enforcement is not yet guaranteed for every assistant-visible path outside governed compose invocation.
-2. Headstamp error-family convergence is incomplete; compatibility `IP-ASB-STAMP-SESSION-*` still appears in runtime evidence.
-3. Some status surfaces can still appear green while headstamp closure is not promotion-grade complete.
+2. Headstamp error-family convergence on strict control plane is **closed** (`error_code` canonicalized to `IP-HDSTAMP-*`).
+3. Some status surfaces can still appear green while headstamp closure is not promotion-grade complete (instance/business debt remains out of protocol scope).
 
 Status boundary:
 
@@ -193,3 +194,41 @@ Reference links:
 1. All headstamp/HUD protocol changes, replay notes, and closure decisions must be appended to v1.6.1 governance + v1.6.1 review ledger.
 2. v1.6.0 keeps historical text for traceability but cannot receive new headstamp normative clauses.
 3. New discussions about headstamp/HUD opened in other docs are invalid unless linked back to this v1.6.1 stream.
+
+## 9) Round-30.3 Addendum — canonical error-family convergence closure
+
+### 9.1 Scope
+
+1. Stream: v1.6.1 headstamp/HUD control-plane.
+2. Objective: remove mixed canonical/compatibility error families from strict emit path.
+3. Non-goal: instance business report debt (`IP-WRB-*`, prompt lifecycle) remediation.
+
+### 9.2 Protocol patch set (strict surfaces)
+
+1. Canonical mapping centralized in `scripts/headstamp_error_family_common.py`.
+2. Strict validators/wrappers now emit canonical `IP-HDSTAMP-*` as `error_code`:
+   - `scripts/validate_send_time_reply_gate.py`
+   - `scripts/validate_reply_identity_context_first_line.py`
+   - `scripts/compose_and_validate_governed_reply.py`
+   - `scripts/final_emit_governed.py`
+   - `scripts/validate_headstamp_recurrence_closure.py`
+   - `scripts/validate_layer_intent_resolution.py`
+3. Projection classifiers include canonical family:
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+
+### 9.3 Four-track cross verification (roundtable/vendor/reference/replay)
+
+1. `T1 governance`: canonical family is now explicit SSOT for `error_code`.
+2. `T2 vendor`: MCP lifecycle “initialize/validate before action” stays aligned with pre-send fail-close.
+3. `T3 reference`: Codex/Skills explicit I/O validation remains aligned with single governed egress gate.
+4. `T4 replay`: positive/negative recurrence probes replayed under persistent evidence root:
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/`
+
+### 9.4 Acceptance snapshot
+
+1. `final_emit_governed.positive.base-repo-architect` -> `PASS_REQUIRED` (rc=0).
+2. `final_emit_governed.negative.nongoverned.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`.
+3. `send_time_gate.negative.inline.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`.
+4. `compose_actor_mismatch.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-002`.
+5. `headstamp_recurrence.base-repo-architect` -> `PASS_REQUIRED` (rc=0).
