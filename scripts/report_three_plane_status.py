@@ -1057,6 +1057,10 @@ def _instance_plane_status(
             args.identity_id,
             "--operation",
             "three-plane",
+            "--actor-id",
+            args.actor_id,
+            "--session-id",
+            str(getattr(args, "session_id", "") or "").strip(),
             "--json-only",
         ]
     )

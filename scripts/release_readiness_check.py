@@ -1092,6 +1092,10 @@ def main() -> int:
             identity_id,
             "--operation",
             "readiness",
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
         ],
         [
             "python3",
@@ -2110,6 +2114,7 @@ def main() -> int:
             } and "--source-layer" not in cmd:
                 cmd.extend(["--source-layer", expected_source_layer])
     actor_id_required_scripts = {
+        "scripts/validate_required_contract_coverage.py",
         "scripts/render_identity_response_stamp.py",
         "scripts/validate_identity_response_stamp.py",
         "scripts/final_emit_governed.py",
@@ -2126,6 +2131,7 @@ def main() -> int:
         if (
             session_id
             and cmd[1] in {
+                "scripts/validate_required_contract_coverage.py",
                 "scripts/render_identity_response_stamp.py",
                 "scripts/validate_identity_response_stamp.py",
                 "scripts/final_emit_governed.py",

@@ -1426,6 +1426,10 @@ def main() -> int:
                     iid,
                     "--operation",
                     "scan",
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
                     "--json-only",
                 ],
                 "unlock_formula_automation": [

@@ -65,6 +65,7 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--source-layer", default="")
     ap.add_argument(
@@ -114,6 +115,7 @@ def main() -> int:
         "validator_ref": validator_ref,
         "evidence_ref": "",
         "actor_context_explicit": bool(actor_id),
+        "session_context_explicit": bool(str(args.session_id or "").strip()),
         "routing_validator_rc": 0,
         "routing_validator_tail": "",
         "stale_reasons": [],

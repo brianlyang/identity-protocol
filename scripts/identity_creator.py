@@ -2733,6 +2733,7 @@ def main() -> int:
                 }:
                     cmd.extend(["--source-layer", expected_source_layer])
         actor_id_required_scripts = {
+            "scripts/validate_required_contract_coverage.py",
             "scripts/render_identity_response_stamp.py",
             "scripts/validate_identity_response_stamp.py",
             "scripts/final_emit_governed.py",
@@ -2742,6 +2743,7 @@ def main() -> int:
             "scripts/validate_execution_reply_identity_coherence.py",
         }
         session_id_required_scripts = {
+            "scripts/validate_required_contract_coverage.py",
             "scripts/render_identity_response_stamp.py",
             "scripts/validate_identity_response_stamp.py",
             "scripts/final_emit_governed.py",

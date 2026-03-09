@@ -555,6 +555,8 @@ def _run_validator(
     identity_id: str,
     *,
     repo_catalog: str,
+    actor_id: str,
+    session_id: str,
     operation: str,
     expected_work_layer: str,
     expected_source_layer: str,
@@ -607,6 +609,10 @@ def _run_validator(
         cmd += ["--repo-catalog", repo_catalog]
     if script == "scripts/validate_prompt_kernel_executable_coupling.py":
         cmd += ["--repo-catalog", repo_catalog]
+        if actor_id:
+            cmd += ["--actor-id", actor_id]
+        if session_id:
+            cmd += ["--session-id", session_id]
     if script in {
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_instance_protocol_split_receipt.py",
@@ -680,6 +686,8 @@ def main() -> int:
         help="emit payload JSON only",
     )
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
@@ -745,6 +753,8 @@ def main() -> int:
             str(catalog_path),
             args.identity_id,
             repo_catalog=args.repo_catalog,
+            actor_id=str(args.actor_id or "").strip(),
+            session_id=str(args.session_id or "").strip(),
             operation=args.operation,
             expected_work_layer=str(args.expected_work_layer or "").strip(),
             expected_source_layer=str(args.expected_source_layer or "").strip(),

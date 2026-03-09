@@ -531,6 +531,8 @@ for ID in $IDS; do
     --catalog "$CATALOG_PATH" \
     --repo-catalog identity/catalog/identities.yaml \
     --identity-id "$ID" \
+    --actor-id "$HEADSTAMP_ACTOR_ID" \
+    --session-id "$TARGET_SESSION_ID" \
     --operation e2e
 
   echo "[23.4505/30][$ID] validate release unlock formula contract (RQ-001)"
