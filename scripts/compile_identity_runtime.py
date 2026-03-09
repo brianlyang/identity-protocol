@@ -60,7 +60,11 @@ def main() -> int:
             raise SystemExit(f"default_identity not found in identities: {default_id}")
     else:
         actor_id = resolve_actor_id(args.actor_id)
-        actor_binding = load_actor_binding(catalog_path.resolve(), actor_id)
+        actor_binding = load_actor_binding(
+            catalog_path.resolve(),
+            actor_id,
+            identity_id=explicit_id,
+        )
         bound_identity_id = str(actor_binding.get("identity_id", "")).strip()
         if bound_identity_id:
             active = next((x for x in identities if isinstance(x, dict) and x.get("id") == bound_identity_id), None)

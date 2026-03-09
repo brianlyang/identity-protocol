@@ -284,7 +284,11 @@ def main() -> int:
         else:
             actor_id_effective = _nonempty(args.actor_id, payload["headstamp_actor_id"])
             if actor_id_effective:
-                binding = load_actor_binding(catalog_path, actor_id_effective)
+                binding = load_actor_binding(
+                    catalog_path,
+                    actor_id_effective,
+                    identity_id=args.identity_id,
+                )
                 binding_identity = str(binding.get("identity_id", "")).strip()
                 payload["actor_binding_identity_id"] = binding_identity
                 if binding_identity and binding_identity != args.identity_id:

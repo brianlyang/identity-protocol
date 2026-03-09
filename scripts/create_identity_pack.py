@@ -447,6 +447,37 @@ def _execution_target_tuple_isolation_contract_skeleton() -> dict:
     }
 
 
+def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "rq_034_multimodal_plugin_enforcement_contract_v1",
+        "validator": "scripts/validate_multimodal_plugin_enforcement.py",
+        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+        "provider_profiles_path": "identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml",
+        "required_fields": [
+            "multimodal_plugin_enforcement_status",
+            "plugin_registry_status",
+            "plugin_naming_status",
+            "plugin_schema_status",
+            "plugin_threshold_status",
+            "plugin_path_status",
+            "plugin_copy_policy_status",
+            "provider_config_status",
+        ],
+        "provider_binding_path_pattern": "runtime/plugins/provider-bindings.local.yaml",
+        "capability_requirements": {
+            "vision": True,
+            "tool_calling": True,
+            "structured_json": True,
+        },
+        "done_transition_guard": {
+            "requires_multimodal_evidence_consistency": True,
+            "inconsistent_evidence_transition": "block_done",
+        },
+        "fail_action": "block_done_transition_on_inconsistent_multimodal_evidence",
+    }
+
+
 def _release_unlock_formula_contract_skeleton() -> dict:
     return {
         "required": True,
@@ -965,6 +996,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
+        "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)
@@ -1732,6 +1764,12 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "misroute_rate_percent": 10,
             "replay_failure_rate_percent": 20,
             "first_pass_success_drop_percent": 15,
+        },
+        "accurate_judgement_enforcement": {
+            "contract_ref": "rq_034_multimodal_plugin_enforcement_contract_v1",
+            "validator": "scripts/validate_multimodal_plugin_enforcement.py",
+            "requires_multimodal_evidence_consistency": True,
+            "inconsistent_evidence_transition": "block_done",
         },
         "decision_record_required_fields": [
             "arbitration_id",

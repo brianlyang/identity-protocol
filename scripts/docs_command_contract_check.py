@@ -239,6 +239,23 @@ def main() -> int:
                                 f"[FLAG_MISMATCH] {doc}: `{cmd_snippet}` -> `{flag}` not in {script_rel} --help"
                             )
 
+    # Round-29.5: enforce doc evidence persistence policy
+    evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
+    if evidence_policy_script.exists():
+        proc = subprocess.run(
+            [sys.executable, str(evidence_policy_script), "--json-only"],
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        )
+        if proc.returncode != 0:
+            failures.append(
+                "[EVIDENCE_POLICY_FAIL] "
+                + (proc.stdout.strip() or proc.stderr.strip() or "validate_doc_evidence_persistence failed")
+            )
+    else:
+        failures.append("[MISSING_SCRIPT] scripts/validate_doc_evidence_persistence.py not found")
+
     print(f"[INFO] docs checked: {len(docs)}")
     print(f"[INFO] command snippets checked: {checks}")
     if failures:

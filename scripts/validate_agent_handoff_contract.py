@@ -469,9 +469,23 @@ def main() -> int:
         sample_pattern = str(contract.get("sample_log_path_pattern") or "identity/runtime/examples/handoff")
         sample_root = Path(sample_pattern).expanduser()
         if not sample_root.is_absolute():
+            protocol_root = Path(__file__).resolve().parent.parent
+            sample_text = sample_pattern.replace("\\", "/").strip()
             candidate_pack = (task_path.parent.resolve() / sample_root).resolve()
-            candidate_protocol = (Path(__file__).resolve().parent.parent / sample_root).resolve()
-            sample_root = candidate_pack if candidate_pack.exists() else candidate_protocol
+            candidate_protocol = (protocol_root / sample_root).resolve()
+            candidate_protocol_identity = (
+                (protocol_root / "identity" / sample_text).resolve()
+                if sample_text.startswith("runtime/")
+                else (protocol_root / "identity" / sample_root).resolve()
+            )
+            sample_root = next(
+                (
+                    candidate
+                    for candidate in (candidate_pack, candidate_protocol, candidate_protocol_identity)
+                    if candidate.exists()
+                ),
+                candidate_pack,
+            )
         else:
             sample_root = sample_root.resolve()
         rc = max(

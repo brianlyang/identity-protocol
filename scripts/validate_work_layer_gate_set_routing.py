@@ -370,6 +370,18 @@ def main() -> int:
         protocol_context_reasons.append("protocol_classifier_high_confidence")
     protocol_context_detected = bool(protocol_context_reasons)
 
+    # Deterministic lane pass-through: when strict operations inherit an active
+    # protocol lane lock and caller did not explicitly pin work-layer, enforce
+    # protocol lane to prevent default-fallback drift.
+    if not explicit_work_layer and session_lane_lock == "protocol":
+        work_layer = "protocol"
+        applied_gate_set = "protocol_required_checks"
+        intent_source = "session_lane_lock"
+        lane_transition_reason = "session_lane_lock_protocol"
+        protocol_context_detected = True
+        if "session_lane_lock_protocol" not in protocol_context_reasons:
+            protocol_context_reasons.append("session_lane_lock_protocol")
+
     lane_resolution_decision = (
         "PROTOCOL_SELECTED"
         if work_layer == "protocol"
@@ -422,12 +434,22 @@ def main() -> int:
             error_code = ERR_PROTOCOL_CONTEXT_CONFIRMATION_MISSING
 
     if requested_applied_gate_set and requested_applied_gate_set != applied_gate_set and not error_code:
-        stale_reasons.append("applied_gate_set_mismatch")
-        error_code = (
-            ERR_INSTANCE_BLOCKED_BY_PROTOCOL_PUBLISH
-            if work_layer == "instance" and requested_applied_gate_set == "protocol_required_checks"
-            else ERR_LANE_GATESET_MISMATCH
+        default_instance_override = (
+            not explicit_work_layer
+            and session_lane_lock == "protocol"
+            and intent_source == "session_lane_lock"
+            and requested_applied_gate_set == "instance_required_checks"
+            and applied_gate_set == "protocol_required_checks"
         )
+        if default_instance_override:
+            stale_reasons.append("requested_applied_gate_set_default_instance_overridden_by_lane_lock")
+        else:
+            stale_reasons.append("applied_gate_set_mismatch")
+            error_code = (
+                ERR_INSTANCE_BLOCKED_BY_PROTOCOL_PUBLISH
+                if work_layer == "instance" and requested_applied_gate_set == "protocol_required_checks"
+                else ERR_LANE_GATESET_MISMATCH
+            )
 
     if git_error and strict and not error_code:
         stale_reasons.append("git_range_resolution_failed")

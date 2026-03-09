@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
 from tool_vendor_governance_common import contract_required, latest_identity_upgrade_report, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -15,6 +16,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_REPORT_MISSING = "IP-OUTLET-001"
 ERR_REQUIRED_FIELD_MISSING = "IP-OUTLET-002"
 ERR_OUTLET_BYPASS = "IP-OUTLET-003"
+ERR_FINAL_EMIT_CONTRACT = "IP-OUTLET-004"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
 
@@ -107,6 +109,11 @@ def main() -> int:
         "send_time_gate_status": "",
         "governed_outlet_enforced": False,
         "outlet_channel_id": "",
+        "final_emit_channel_id": "",
+        "final_emit_policy_mode": "",
+        "final_emit_schema_id": "",
+        "final_emit_schema_status": "",
+        "final_emit_contract_status": "",
         "outlet_bypass_detected": False,
         "blocker_receipt_path": "",
         "outlet_preflight_receipt": "",
@@ -135,12 +142,22 @@ def main() -> int:
     governed_outlet = bool(report_doc.get("governed_outlet_enforced", False))
     outlet_bypass = bool(report_doc.get("outlet_bypass_detected", False))
     outlet_channel_id = str(report_doc.get("outlet_channel_id", "")).strip()
+    final_emit_channel_id = str(report_doc.get("final_emit_channel_id", "")).strip()
+    final_emit_policy_mode = str(report_doc.get("final_emit_policy_mode", "")).strip()
+    final_emit_schema_id = str(report_doc.get("final_emit_schema_id", "")).strip()
+    final_emit_schema_status = str(report_doc.get("final_emit_schema_status", "")).strip().upper()
+    final_emit_contract_status = str(report_doc.get("final_emit_contract_status", "")).strip().upper()
     blocker_receipt_path = str(report_doc.get("blocker_receipt_path", "")).strip()
     outlet_preflight_receipt = str(report_doc.get("outlet_preflight_receipt", "")).strip()
 
     payload["send_time_gate_status"] = send_time_gate_status
     payload["governed_outlet_enforced"] = governed_outlet
     payload["outlet_channel_id"] = outlet_channel_id
+    payload["final_emit_channel_id"] = final_emit_channel_id
+    payload["final_emit_policy_mode"] = final_emit_policy_mode
+    payload["final_emit_schema_id"] = final_emit_schema_id
+    payload["final_emit_schema_status"] = final_emit_schema_status
+    payload["final_emit_contract_status"] = final_emit_contract_status
     payload["outlet_bypass_detected"] = outlet_bypass
     payload["blocker_receipt_path"] = blocker_receipt_path
     payload["outlet_preflight_receipt"] = outlet_preflight_receipt
@@ -150,6 +167,14 @@ def main() -> int:
         missing_fields.append("send_time_gate_status")
     if not outlet_channel_id:
         missing_fields.append("outlet_channel_id")
+    if not final_emit_channel_id:
+        missing_fields.append("final_emit_channel_id")
+    if not final_emit_policy_mode:
+        missing_fields.append("final_emit_policy_mode")
+    if not final_emit_schema_status:
+        missing_fields.append("final_emit_schema_status")
+    if not final_emit_contract_status:
+        missing_fields.append("final_emit_contract_status")
     if not outlet_preflight_receipt:
         missing_fields.append("outlet_preflight_receipt")
     if missing_fields:
@@ -173,6 +198,25 @@ def main() -> int:
         payload["outlet_matrix_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_OUTLET_BYPASS
         payload["stale_reasons"] = ["outlet_bypass_detected"]
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if (
+        outlet_channel_id != FINAL_EMIT_CHANNEL_ID
+        or final_emit_channel_id != FINAL_EMIT_CHANNEL_ID
+        or final_emit_policy_mode != FINAL_EMIT_POLICY_MODE
+        or final_emit_schema_status != STATUS_PASS_REQUIRED
+        or final_emit_contract_status != STATUS_PASS_REQUIRED
+    ):
+        payload["outlet_matrix_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_FINAL_EMIT_CONTRACT
+        payload["stale_reasons"] = [
+            "final_emit_contract_mismatch",
+            f"expected_outlet_channel_id:{FINAL_EMIT_CHANNEL_ID}",
+            f"expected_final_emit_policy_mode:{FINAL_EMIT_POLICY_MODE}",
+            f"expected_final_emit_schema_status:{STATUS_PASS_REQUIRED}",
+            f"expected_final_emit_contract_status:{STATUS_PASS_REQUIRED}",
+        ]
         _emit(payload, json_only=args.json_only)
         return 1
 

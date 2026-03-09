@@ -1,7 +1,7 @@
 {
   "stream": "v161-headstamp-convergence",
   "date_utc": "2026-03-09",
-  "generated_at_utc": "2026-03-09T15:15:03Z",
+  "generated_at_utc": "2026-03-09T15:25:57Z",
   "entries": [
     {
       "id": "resolve_identity_context.base-repo-architect",
@@ -74,6 +74,14 @@
       "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
       "timestamp_utc": "2026-03-09T15:04:39Z",
       "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/protocol_ssot.log"
+    },
+    {
+      "id": "static_legacy_family_scan",
+      "command": "rg -n \"IP-ASB-STAMP-SESSION|IP-FE-\" scripts",
+      "rc": 0,
+      "sha256": "b1f02e6dab93fc391c4778e113c3437788f986207bec994f0a65b2a2e0e3d38b",
+      "timestamp_utc": "2026-03-09T15:25:14Z",
+      "output_path": "activity/evidence/v161-headstamp-convergence/2026-03-09/static_legacy_family_scan.txt"
     }
   ]
 }

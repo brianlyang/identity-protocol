@@ -70,6 +70,53 @@ def _parse_json_payload(raw: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def _resolve_active_execution_report_from_pack(pack_path: Path, identity_id: str) -> str:
+    pointer_path = (pack_path / "runtime" / "state" / "active_execution_report.json").resolve()
+    if not pointer_path.exists():
+        return ""
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    if not isinstance(pointer, dict):
+        return ""
+    report_path_raw = str(pointer.get("report_path", "")).strip()
+    if not report_path_raw:
+        return ""
+    report_path = Path(report_path_raw).expanduser().resolve()
+    if not report_path.exists() or not report_path.is_file():
+        return ""
+    name = report_path.name
+    if not name.startswith("identity-upgrade-exec-") or not name.endswith(".json"):
+        return ""
+    if name.endswith("-patch-plan.json"):
+        return ""
+    token = str(identity_id or "").strip()
+    if token and f"identity-upgrade-exec-{token}-" not in name:
+        return ""
+    run_id = str(pointer.get("run_id", "")).strip()
+    if run_id and run_id not in name:
+        return ""
+    return str(report_path)
+
+
+def _inject_bundle_report_selected_path(commands: list[list[str]], report_selected_path: str) -> None:
+    path = str(report_selected_path or "").strip()
+    if not path:
+        return
+    for cmd in commands:
+        if len(cmd) < 2 or cmd[1] != "scripts/required_gate_bundle_runner.py":
+            continue
+        if "--report-selected-path" in cmd:
+            idx = cmd.index("--report-selected-path")
+            if idx + 1 < len(cmd):
+                cmd[idx + 1] = path
+            else:
+                cmd.append(path)
+            continue
+        cmd.extend(["--report-selected-path", path])
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

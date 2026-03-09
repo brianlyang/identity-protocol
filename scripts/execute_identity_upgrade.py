@@ -29,6 +29,7 @@ PROTOCOL_PUBLISH_CHECKS = {
     "scripts/validate_release_metadata_sync.py",
     "scripts/validate_release_freeze_boundary.py",
 }
+MULTIMODAL_ENFORCEMENT_VALIDATOR = "scripts/validate_multimodal_plugin_enforcement.py"
 
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
@@ -422,6 +423,15 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
         _pick_mm_value(report=report, payload=mm_payload, key="runtime_gate_mode", default="")
         or ""
     ).strip().lower()
+    runtime_evidence_status = str(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="multimodal_runtime_evidence_status",
+            default="",
+        )
+        or ""
+    ).strip().upper()
     runtime_gate_required_confidence = _to_float_or_none(
         _pick_mm_value(
             report=report,
@@ -430,6 +440,31 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
             default=None,
         )
     )
+    runtime_stage_producer_detected = bool(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="runtime_stage_producer_detected",
+            default=False,
+        )
+    )
+    runtime_stage_deferred = bool(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="runtime_stage_deferred",
+            default=False,
+        )
+    )
+    runtime_stage_deferred_reason = str(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="runtime_stage_deferred_reason",
+            default="",
+        )
+        or ""
+    ).strip()
 
     mm_calls = _to_int_or_none(_pick_mm_value(report=report, payload=mm_payload, key="multimodal_calls", default=None))
     mm_resolved = _to_int_or_none(
@@ -487,8 +522,13 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
     report["multimodal_input_gate_report_path"] = gate_report_path
     report["multimodal_confirmation_results_path"] = confirmation_results_path
     report["multimodal_confirmation_csv_path"] = confirmation_csv_path
+    report["multimodal_runtime_evidence_status"] = runtime_evidence_status
+    report["runtime_stage_producer_detected"] = runtime_stage_producer_detected
+    report["runtime_stage_deferred"] = runtime_stage_deferred
+    report["runtime_stage_deferred_reason"] = runtime_stage_deferred_reason
     report["multimodal_summary"] = {
         "status": preflight_status,
+        "runtime_evidence_status": runtime_evidence_status,
         "calls": mm_calls,
         "resolved": mm_resolved,
         "unresolved": mm_unresolved,
@@ -497,6 +537,8 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
         "mode": runtime_gate_mode,
         "required_confidence": runtime_gate_required_confidence,
         "evidence_refs": mm_refs,
+        "runtime_stage_deferred": runtime_stage_deferred,
+        "runtime_stage_deferred_reason": runtime_stage_deferred_reason,
     }
     report["multimodal_runtime_field_emission_status"] = "PASS_REQUIRED"
     return report
@@ -827,6 +869,54 @@ def _build_validator_cmd(check: str, identity_id: str, catalog_path: str) -> lis
     if check.endswith("validate_identity_experience_feedback.py"):
         cmd += ["--self-test"]
     return cmd
+
+
+def _upsert_flag(cmd: list[str], flag: str, value: str | None = None) -> None:
+    if flag in cmd:
+        idx = cmd.index(flag)
+        if value is None:
+            return
+        if idx + 1 < len(cmd) and not str(cmd[idx + 1]).startswith("--"):
+            cmd[idx + 1] = str(value)
+        else:
+            cmd.insert(idx + 1, str(value))
+        return
+    cmd.append(flag)
+    if value is not None:
+        cmd.append(str(value))
+
+
+def _ensure_multimodal_enforcement_check(
+    *,
+    check_cmds: list[list[str]],
+    catalog_path: str,
+    identity_id: str,
+    run_id: str,
+    operation: str,
+) -> None:
+    target = next(
+        (
+            cmd
+            for cmd in check_cmds
+            if len(cmd) >= 2 and str(cmd[1]).strip() == MULTIMODAL_ENFORCEMENT_VALIDATOR
+        ),
+        None,
+    )
+    if target is None:
+        target = [
+            "python3",
+            MULTIMODAL_ENFORCEMENT_VALIDATOR,
+            "--catalog",
+            str(catalog_path),
+            "--identity-id",
+            str(identity_id),
+        ]
+        check_cmds.append(target)
+    _upsert_flag(target, "--catalog", str(catalog_path))
+    _upsert_flag(target, "--identity-id", str(identity_id))
+    _upsert_flag(target, "--operation", str(operation))
+    _upsert_flag(target, "--run-id", str(run_id))
+    _upsert_flag(target, "--json-only")
 
 
 def _needs_upgrade(metrics: dict[str, Any], thresholds: dict[str, Any]) -> tuple[bool, list[str]]:
@@ -1534,6 +1624,13 @@ def main() -> int:
 
     required_checks, skipped_protocol_publish_checks = _filter_required_checks_for_lane(required_checks_raw, work_layer)
     check_cmds = [_build_validator_cmd(chk, args.identity_id, args.catalog) for chk in required_checks]
+    _ensure_multimodal_enforcement_check(
+        check_cmds=check_cmds,
+        catalog_path=args.catalog,
+        identity_id=args.identity_id,
+        run_id=run_id,
+        operation="update",
+    )
     log_dir = runtime_output_root / "logs" / "upgrade" / args.identity_id
     plan_path = out_dir / f"{run_id}-patch-plan.json"
     report_path = out_dir / f"{run_id}.json"

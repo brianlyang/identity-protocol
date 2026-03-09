@@ -178,6 +178,22 @@ Identity protocol must be verifiable against four capability contracts:
    - Requires append-only rulebook linkage to run evidence.
    - Requires both negative and positive rule accumulation over time.
 
+### Accurate judgement canonical binding (v1.6.2 multimodal stream)
+
+To avoid “statement-only” drift, the accurate judgement contract is hard-bound to protocol plugin governance:
+
+1. Contract ID: `rq_034_multimodal_plugin_enforcement_contract_v1`
+2. Requirement key: `asb16-rq-034`
+3. Canonical validator: `scripts/validate_multimodal_plugin_enforcement.py`
+4. Canonical plugin root: `identity/protocol/plugins/`
+5. Canonical registries:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml`
+   - `identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml`
+6. Mandatory done-transition gate:
+   - `requires_multimodal_evidence_consistency=true`
+   - `inconsistent_evidence_transition=block_done`
+7. Any non-canonical plugin contract/profile source in strict lane must fail-close (`IP-MM-REG-001`).
+
 ## Protocol baseline review contract (v1.2.3+)
 
 To avoid identity-level drift and unsupported architectural conclusions, identity upgrades MUST include baseline protocol review evidence.
