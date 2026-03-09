@@ -51,6 +51,24 @@ def _required_drivers(contract: dict[str, Any]) -> list[str]:
     return [str(x) for x in DEFAULT_DRIVERS]
 
 
+def _collect_configured_validators(task: dict[str, Any]) -> list[str]:
+    rows: list[str] = []
+    candidate_lists = [
+        task.get("required_validators"),
+        (task.get("ci_enforcement_contract") or {}).get("required_validators"),
+        ((task.get("identity_update_lifecycle_contract") or {}).get("validation_contract") or {}).get("required_checks"),
+    ]
+    for source in candidate_lists:
+        if not isinstance(source, list):
+            continue
+        for item in source:
+            token = str(item).strip()
+            if token:
+                rows.append(token)
+    # Preserve first-seen order while removing duplicates.
+    return list(dict.fromkeys(rows))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate prompt bootstrap capability contract (RQ-014).")
     ap.add_argument("--catalog", required=True)
@@ -84,7 +102,7 @@ def main() -> int:
     prompt_path = (pack_path / "IDENTITY_PROMPT.md").resolve()
     prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore") if prompt_path.exists() else ""
     required_drivers = _required_drivers(contract)
-    configured_validators = [str(x).strip() for x in (task.get("required_validators") or []) if str(x).strip()]
+    configured_validators = _collect_configured_validators(task)
 
     present: list[str] = []
     missing: list[str] = []
