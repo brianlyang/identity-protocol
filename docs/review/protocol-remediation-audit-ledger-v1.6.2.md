@@ -616,3 +616,7 @@ Cross-surface replay:
 3. Compatibility policy:
    - default path keeps previous behavior (`summary.p0==0` hard gate only);
    - strict protocol lanes can enable `--enforce-m2m-pass` to remove m2m shadow-green blind spots.
+4. CI rollout in this round:
+   - required-gates workflow target-regression step now iterates all resolved `IDS`;
+   - fixture/demo ids use baseline mode;
+   - non-fixture ids use strict `--enforce-m2m-pass`.

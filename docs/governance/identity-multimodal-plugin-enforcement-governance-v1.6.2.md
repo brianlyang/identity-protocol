@@ -848,3 +848,7 @@ Key replay outcomes:
    - semantics: keep existing `summary.p0==0` check and additionally fail-close when `summary_m2m.fail != 0`.
 3. Default behavior remains backward compatible (switch off), so fixture-heavy lanes do not get broken by default.
 4. Protocol strict lanes can turn the switch on to block “`p0=0` but m2m closure failed” shadow regressions.
+5. CI required-gates hardening:
+   - `.github/workflows/_identity-required-gates.yml` now runs target regression for **all resolved `IDS`** (not only `PRIMARY_ID`).
+   - fixture/demo identities stay on baseline `p0` regression mode;
+   - non-fixture identities automatically run with `--enforce-m2m-pass`.
