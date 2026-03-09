@@ -16,6 +16,20 @@ NO_TARGET_COMPLETION_MODE_TERMINAL = {
     "terminal",
     "final_attempt",
 }
+DEFAULT_ESCALATION_REQUIREMENT_MODE = "at_or_exceed"
+ESCALATION_REQUIREMENT_MODE_AT_OR_EXCEED = {
+    "at_or_exceed",
+    "gte",
+    "ge",
+    "inclusive",
+    "threshold_inclusive",
+}
+ESCALATION_REQUIREMENT_MODE_EXCEED = {
+    "exceed",
+    "gt",
+    "strictly_exceed",
+    "threshold_exclusive",
+}
 DEFAULT_ESCALATION_SIGNAL_FIELDS = [
     "route_switch_triggered",
     "human_collaboration_triggered",
@@ -35,7 +49,7 @@ DEFAULT_ESCALATION_SIGNAL_VALUES = {
     "route_switch",
     "human_collaboration",
 }
-DEFAULT_ESCALATION_NONEMPTY_FIELDS = {"next_action"}
+DEFAULT_ESCALATION_NONEMPTY_FIELDS: set[str] = set()
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -150,6 +164,15 @@ def _normalize_no_target_completion_mode(raw: str) -> str:
         return "any_attempt"
     if value in NO_TARGET_COMPLETION_MODE_TERMINAL or not value:
         return "terminal_attempt_only"
+    return ""
+
+
+def _normalize_escalation_requirement_mode(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if value in ESCALATION_REQUIREMENT_MODE_AT_OR_EXCEED or not value:
+        return "at_or_exceed"
+    if value in ESCALATION_REQUIREMENT_MODE_EXCEED:
+        return "exceed"
     return ""
 
 
@@ -280,6 +303,17 @@ def main() -> int:
         for token in _as_str_list(rlc.get("escalation_signal_nonempty_fields"))
         if token.strip()
     } or set(DEFAULT_ESCALATION_NONEMPTY_FIELDS)
+    escalation_requirement_mode = _normalize_escalation_requirement_mode(
+        str(
+            rlc.get(
+                "escalation_requirement_mode",
+                rlc.get("escalation_required_mode", DEFAULT_ESCALATION_REQUIREMENT_MODE),
+            )
+        )
+    )
+    if not escalation_requirement_mode:
+        print("[FAIL] invalid escalation_requirement_mode in reasoning_loop_contract")
+        return 1
     no_target_reached_detected = False
     failed_attempt_count = 0
     failed_without_next_action_count = 0
@@ -333,7 +367,13 @@ def main() -> int:
     else:
         print("[OK]   no-target completion semantic respected")
 
-    if failed_attempt_count > max_attempts_before_escalation:
+    escalation_required = (
+        failed_attempt_count >= max_attempts_before_escalation
+        if escalation_requirement_mode == "at_or_exceed"
+        else failed_attempt_count > max_attempts_before_escalation
+    )
+    if escalation_required:
+        comparator = ">=" if escalation_requirement_mode == "at_or_exceed" else ">"
         has_escalation = _has_escalation_signal(
             run=run,
             attempts=[x for x in attempts if isinstance(x, dict)],
@@ -344,12 +384,12 @@ def main() -> int:
         )
         if not has_escalation:
             print(
-                "[FAIL] failed attempts exceed max_attempts_before_escalation "
-                f"({failed_attempt_count}>{max_attempts_before_escalation}) without escalation signal"
+                "[FAIL] failed attempts breached escalation threshold "
+                f"({failed_attempt_count}{comparator}{max_attempts_before_escalation}) without escalation signal"
             )
             rc = 1
         else:
-            print("[OK]   escalation signal present for over-threshold failures")
+            print("[OK]   escalation signal present for threshold-breached failures")
 
     if args.rulebook:
         rulebook_path = Path(args.rulebook)

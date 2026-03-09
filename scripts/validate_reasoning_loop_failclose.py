@@ -117,6 +117,20 @@ DEFAULT_ESCALATION_SIGNAL_VALUES = {
     "route_switch",
     "human_collaboration",
 }
+DEFAULT_ESCALATION_REQUIREMENT_MODE = "at_or_exceed"
+ESCALATION_REQUIREMENT_MODE_AT_OR_EXCEED = {
+    "at_or_exceed",
+    "gte",
+    "ge",
+    "inclusive",
+    "threshold_inclusive",
+}
+ESCALATION_REQUIREMENT_MODE_EXCEED = {
+    "exceed",
+    "gt",
+    "strictly_exceed",
+    "threshold_exclusive",
+}
 DEFAULT_NO_TARGET_COMPLETION_MODE = "terminal_attempt_only"
 NO_TARGET_COMPLETION_MODE_ANY = {"any_attempt", "historical_any", "any"}
 NO_TARGET_COMPLETION_MODE_TERMINAL = {
@@ -125,7 +139,7 @@ NO_TARGET_COMPLETION_MODE_TERMINAL = {
     "terminal",
     "final_attempt",
 }
-DEFAULT_ESCALATION_NONEMPTY_FIELDS = {"next_action"}
+DEFAULT_ESCALATION_NONEMPTY_FIELDS: set[str] = set()
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -317,6 +331,15 @@ def _normalize_no_target_completion_mode(raw: str) -> str:
     return ""
 
 
+def _normalize_escalation_requirement_mode(raw: str) -> str:
+    value = str(raw or "").strip().lower()
+    if value in ESCALATION_REQUIREMENT_MODE_AT_OR_EXCEED or not value:
+        return "at_or_exceed"
+    if value in ESCALATION_REQUIREMENT_MODE_EXCEED:
+        return "exceed"
+    return ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate reasoning-loop fail-close contract (RQ-035).")
     ap.add_argument("--catalog", required=True)
@@ -399,6 +422,7 @@ def main() -> int:
         "done_requires_terminal_target_reached": True,
         "escalation_signal_accept_nonempty_ref": True,
         "escalation_signal_nonempty_fields": [],
+        "escalation_requirement_mode": "",
         "reasoning_runtime_evidence_refs": [],
         "error_code": "",
         "stale_reasons": [],
@@ -500,6 +524,23 @@ def main() -> int:
     } or set(DEFAULT_ESCALATION_NONEMPTY_FIELDS)
     payload["escalation_signal_accept_nonempty_ref"] = escalation_signal_accept_nonempty_ref
     payload["escalation_signal_nonempty_fields"] = sorted(escalation_signal_nonempty_fields)
+    escalation_requirement_mode = _normalize_escalation_requirement_mode(
+        str(
+            contract.get(
+                "escalation_requirement_mode",
+                contract.get("escalation_required_mode", DEFAULT_ESCALATION_REQUIREMENT_MODE),
+            )
+        )
+    )
+    if not escalation_requirement_mode:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = ["invalid_escalation_requirement_mode"]
+        payload["evidence_ref"] = str(task_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    payload["escalation_requirement_mode"] = escalation_requirement_mode
 
     level_attempt_fields_cfg = contract.get("level_required_attempt_fields")
     level_run_fields_cfg = contract.get("level_required_run_fields")
@@ -661,7 +702,10 @@ def main() -> int:
     escalation_signal_values = {
         token.strip().lower() for token in _as_str_list(contract.get("escalation_signal_values"))
     } or DEFAULT_ESCALATION_SIGNAL_VALUES
-    escalation_required = failed_attempt_count > max_attempts_before_escalation
+    if escalation_requirement_mode == "at_or_exceed":
+        escalation_required = failed_attempt_count >= max_attempts_before_escalation
+    else:
+        escalation_required = failed_attempt_count > max_attempts_before_escalation
     escalation_detected = _has_escalation_signal(
         report_doc=report_doc,
         attempts=attempts,

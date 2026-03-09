@@ -179,8 +179,25 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
         },
         "reasoning_loop_contract": {
             "max_attempts_before_escalation": 3,
+            "escalation_requirement_mode": "at_or_exceed",
             "mandatory_fields_per_attempt": ["attempt", "hypothesis", "patch", "expected_effect", "result"],
             "failure_requires_next_action": True,
+            "escalation_signal_fields": [
+                "route_switch_triggered",
+                "human_collaboration_triggered",
+                "escalation_triggered",
+                "route_switch_ref",
+                "human_collaboration_ref",
+                "escalation_ref",
+                "next_action",
+            ],
+            "escalation_signal_values": ["true", "triggered", "escalate", "route_switch", "human_collaboration", "handoff"],
+            "escalation_signal_accept_nonempty_ref": True,
+            "escalation_signal_nonempty_fields": [
+                "route_switch_ref",
+                "human_collaboration_ref",
+                "escalation_ref",
+            ],
         },
         "routing_contract": {
             "auto_route_enabled": True,
@@ -543,6 +560,7 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
         "failed_result_tokens": ["fail", "failed", "error", "blocked", "no_target_reached", "not_reached", "target_not_reached"],
         "pass_result_tokens": ["pass", "passed", "success", "done", "resolved", "target_reached"],
         "max_attempts_before_escalation": 3,
+        "escalation_requirement_mode": "at_or_exceed",
         "failure_requires_next_action": True,
         "escalation_signal_fields": [
             "route_switch_triggered",
@@ -554,7 +572,7 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
             "next_action",
         ],
         "escalation_signal_accept_nonempty_ref": True,
-        "escalation_signal_nonempty_fields": ["next_action", "route_switch_ref", "human_collaboration_ref", "escalation_ref"],
+        "escalation_signal_nonempty_fields": ["route_switch_ref", "human_collaboration_ref", "escalation_ref"],
         "escalation_signal_values": ["true", "triggered", "escalate", "route_switch", "human_collaboration", "handoff"],
         "learning_report_path_pattern": "runtime/examples/*learning-sample*.json",
         "required_fields": [

@@ -535,9 +535,10 @@ Primary artifacts:
    - optional `any_attempt`: historical `no_target_reached=true` also blocks done/pass.
 2. `done_requires_terminal_target_reached=true` preserves strict closure for unresolved terminal completion.
 3. Failed attempt without `next_action` is fail-close.
-4. Exceed threshold without escalation signal is fail-close.
-5. Escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled.
-6. Enforcement is level-configured (`L0/L1/L2/L3`), not hardcoded:
+4. Escalation threshold is controlled by `escalation_requirement_mode` (default `at_or_exceed`).
+5. At/over threshold without escalation signal is fail-close.
+6. Escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled; generic retry `next_action` text is not escalation by default.
+7. Enforcement is level-configured (`L0/L1/L2/L3`), not hardcoded:
    - `L1`: attempt trace
    - `L2`: four-track refs
    - `L3`: external freshness/reconciliation

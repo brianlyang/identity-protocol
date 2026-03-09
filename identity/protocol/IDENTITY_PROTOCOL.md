@@ -209,8 +209,9 @@ To avoid “trace-present but semantic-invalid” drift, the reasoning loop cont
      - optional `any_attempt`: any historical `no_target_reached=true` blocks done/pass.
    - `done_requires_terminal_target_reached=true` preserves strict closure for unresolved terminal completion.
    - failed attempt without `next_action` is fail-close.
-   - exceed `max_attempts_before_escalation` without escalation signal is fail-close.
-   - escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled.
+   - escalation threshold is controlled by `escalation_requirement_mode` (default `at_or_exceed`).
+   - once escalation threshold is hit, missing escalation signal is fail-close.
+   - escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled; generic retry text is not escalation by default.
 6. Enforcement-level policy is configuration-driven (no validator hardcoding):
    - `L1`: attempt trace integrity
    - `L2`: `L1` + four-track evidence refs

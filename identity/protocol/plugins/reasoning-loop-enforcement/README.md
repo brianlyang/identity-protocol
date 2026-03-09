@@ -22,5 +22,6 @@ This plugin hardens the `Reasoning loop contract` into a protocol-level fail-clo
   - optional `any_attempt`: any historical `no_target_reached=true` blocks completion/done.
 - `done_requires_terminal_target_reached=true` keeps strict closure for unresolved terminal completion.
 - Failed attempts must carry `next_action`.
-- Beyond `max_attempts_before_escalation`, escalation signal is mandatory.
+- Escalation threshold mode is config-driven via `escalation_requirement_mode` (default `at_or_exceed`).
+- Generic retry `next_action` text is not escalation by default; escalation requires boolean/token markers or non-empty escalation refs.
 - Escalation accepts boolean/token signals and configurable non-empty reference fields when enabled.

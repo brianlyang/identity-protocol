@@ -762,8 +762,9 @@ Replay snapshots:
      - optional `any_attempt`: any historical `no_target_reached=true` blocks completion.
    - `done_requires_terminal_target_reached=true` keeps strict closure for unresolved terminal completion.
    - failed attempt without `next_action` => `FAIL_REQUIRED`
-   - failed attempts beyond threshold without escalation signal => `FAIL_REQUIRED`
-   - escalation signal accepts boolean/token triggers and configurable non-empty ref fields (`*_ref` / `*_refs`) when enabled.
+   - escalation threshold is controlled by `escalation_requirement_mode` (default `at_or_exceed`).
+   - once threshold is reached, missing escalation signal => `FAIL_REQUIRED`
+   - escalation signal accepts boolean/token triggers and configurable non-empty ref fields (`*_ref` / `*_refs`) when enabled; generic retry `next_action` text is not escalation by default.
 3. Level gates:
    - `L1`: attempt trace integrity
    - `L2`: `L1` + four-track evidence refs (`roundtable/vendor/network/reference`)
