@@ -4679,6 +4679,54 @@ Replay evidence (2026-03-09):
    - `/tmp/rq034_runtime_docs_contract_20260309_r4.log` (rc=0)
    - `/tmp/rq034_runtime_ssot_20260309_r4.log` (rc=0)
 
+### 8.58 Round-30.3: Runtime-Proof Producer Emission + Target-Scan CI Regression Gate
+
+Decision:
+
+1. runtime-proof fields for RQ-034 must be producer-emitted by upgrade report generation, not inferred only at validator layer.
+2. three-plane multimodal target probe must bind the selected execution report explicitly (`--report-selected-path`) to remove latest-report fallback drift.
+3. CI adds a fixed regression gate: `full_identity_protocol_scan --scan-mode target` must keep `summary.p0 == 0` (fail-close on regression).
+
+Implementation anchors:
+
+1. `scripts/execute_identity_upgrade.py`
+   - report writer now guarantees multimodal runtime-proof fields are always emitted:
+   - `multimodal_preflight_status`
+   - `multimodal_calls/resolved/unresolved/errors/retry_calls`
+   - `multimodal_evidence_refs`
+   - `runtime_gate_mode`, `runtime_gate_required_confidence`
+   - `multimodal_runtime_field_emission_status=PASS_REQUIRED`
+2. `scripts/report_three_plane_status.py`
+   - multimodal bundle target call now forwards `--report-selected-path`.
+   - projection adds `report_selected_path` for direct observability in instance plane.
+3. `scripts/full_identity_protocol_scan.py`
+   - when latest runtime report is available, multimodal target probe receives `--report-selected-path`.
+   - multimodal projection includes `report_selected_path` field.
+4. `scripts/validate_full_scan_target_regression.py` (new)
+   - validates target full-scan summary and blocks on:
+   - `IP-SCAN-REG-001`: `p0 != 0`
+   - `IP-SCAN-REG-002`: scan command failed
+   - `IP-SCAN-REG-003`: invalid/missing scan report
+5. `.github/workflows/_identity-required-gates.yml`
+   - adds mandatory step `Validate full-scan target regression (p0=0)`.
+
+Replay evidence (2026-03-09):
+
+1. producer emission proof:
+   - `/tmp/rq034_upgrade_reports_r3/identity-upgrade-exec-rq034-production-fields-20260309.json`
+   - includes `multimodal_runtime_field_emission_status=PASS_REQUIRED` and full multimodal runtime-proof key set.
+2. three-plane explicit report binding:
+   - `/tmp/rq034_three_plane_runtime_fields_20260309_r6.json`
+   - `instance_plane_detail.multimodal_plugin_enforcement.report_selected_path` equals `runtime_report_path`.
+3. target scan fixed regression gate:
+   - `/tmp/rq034_full_scan_target_regression_20260309_r3.result.json`
+   - `/tmp/rq034_full_scan_target_regression_20260309_r3.json`
+   - result: `PASS_REQUIRED`, `p0=0`, `p1=0`, `ok=1`.
+4. baseline control gates:
+   - `/tmp/rq034_surface_drift_20260309_r3.json` (`PASS_REQUIRED`)
+   - `/tmp/rq034_docs_contract_20260309_r3.log` (rc=0)
+   - `/tmp/rq034_ssot_20260309_r3.log` (rc=0)
+
 ## 9) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`

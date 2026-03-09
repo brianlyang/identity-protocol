@@ -259,6 +259,7 @@ def main() -> int:
         "plugin_contract_owner": "protocol_base_repo",
         "plugin_resolution_mode": "central_registry",
         "multimodal_runtime_evidence_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "multimodal_preflight_status": "",
         "runtime_report_path": "",
         "runtime_report_run_id": "",
         "multimodal_calls": None,
@@ -614,6 +615,7 @@ def main() -> int:
     if runtime_required:
         if runtime_report_path is None:
             payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+            payload["multimodal_preflight_status"] = "MISSING"
             stale_reasons.append("runtime_report_missing")
             error_code = error_code or ERR_RUNTIME_REPORT_MISSING
         else:
@@ -622,6 +624,7 @@ def main() -> int:
                 runtime_report_doc = load_json(runtime_report_path)
             except Exception:
                 payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+                payload["multimodal_preflight_status"] = "MISSING"
                 stale_reasons.append("runtime_report_parse_failed")
                 error_code = error_code or ERR_RUNTIME_REPORT_MISSING
 
@@ -743,6 +746,7 @@ def main() -> int:
             )
             or ""
         ).strip().upper()
+        payload["multimodal_preflight_status"] = runtime_gate_status or "MISSING"
         runtime_gate_skipped = any(
             _boolish(runtime_report_doc.get(key))
             for key in ("multimodal_gate_skipped", "input_gate_skipped", "skip_input_gate")

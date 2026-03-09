@@ -3882,6 +3882,53 @@ Verdict:
 
 ---
 
+## 5.19 Round-30.3 Addendum: Producer Runtime-Proof Emission + Target Scan Regression Freeze
+
+Scope:
+
+1. promote multimodal runtime-proof field production from validator-side inference to producer-side mandatory emission.
+2. close three-plane multimodal report binding gap by enforcing explicit selected-report passthrough.
+3. freeze scan-path semantic regression with CI hard gate: target full-scan `p0` must remain zero.
+
+Code changes audited:
+
+1. `scripts/execute_identity_upgrade.py`
+2. `scripts/report_three_plane_status.py`
+3. `scripts/full_identity_protocol_scan.py`
+4. `scripts/validate_full_scan_target_regression.py` (new)
+5. `.github/workflows/_identity-required-gates.yml`
+
+Cross-verification replay:
+
+1. producer emission:
+   - `/tmp/rq034_upgrade_reports_r3/identity-upgrade-exec-rq034-production-fields-20260309.json`
+   - observed:
+   - `multimodal_runtime_field_emission_status=PASS_REQUIRED`
+   - mandatory runtime-proof keys are present even when status is `MISSING`.
+2. three-plane multimodal report binding:
+   - `/tmp/rq034_three_plane_runtime_fields_20260309_r6.json`
+   - observed:
+   - `instance_plane_detail.multimodal_plugin_enforcement.report_selected_path` equals `runtime_report_path`
+   - no fallback to unrelated latest report.
+3. fixed target full-scan regression gate:
+   - `/tmp/rq034_full_scan_target_regression_20260309_r3.result.json`
+   - `/tmp/rq034_full_scan_target_regression_20260309_r3.json`
+   - observed:
+   - `full_scan_target_regression_status=PASS_REQUIRED`
+   - `summary.p0=0`.
+4. baseline protocol gates:
+   - `/tmp/rq034_surface_drift_20260309_r3.json` (`PASS_REQUIRED`)
+   - `/tmp/rq034_docs_contract_20260309_r3.log` (rc=0)
+   - `/tmp/rq034_ssot_20260309_r3.log` (rc=0)
+
+Verdict:
+
+1. RQ-034 runtime-proof observability is now producer-backed + projection-consistent across three-plane/full-scan.
+2. scan-path regression now has explicit CI freeze (`p0=0`) instead of relying on manual deep-scan snapshots.
+3. residual blocker states in live runs remain instance evidence quality issues, not protocol control-plane wiring gaps.
+
+---
+
 ## 6) References
 
 1. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`

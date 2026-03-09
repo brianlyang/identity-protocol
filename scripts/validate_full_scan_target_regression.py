@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+
+ERR_P0_REGRESSION = "IP-SCAN-REG-001"
+ERR_SCAN_CMD_FAILED = "IP-SCAN-REG-002"
+ERR_REPORT_INVALID = "IP-SCAN-REG-003"
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _extract_p0_rows(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for catalog in report_doc.get("catalogs") or []:
+        if not isinstance(catalog, dict):
+            continue
+        layer = str(catalog.get("layer", "")).strip()
+        for item in catalog.get("identities") or []:
+            if not isinstance(item, dict):
+                continue
+            severity = str(item.get("severity", "")).strip().upper()
+            if severity != "P0":
+                continue
+            rows.append(
+                {
+                    "layer": layer,
+                    "identity_id": str(item.get("identity_id", "")).strip(),
+                    "severity": severity,
+                    "m2m_binding_closure_status": str(
+                        ((item.get("m2m_projection") or {}).get("m2m_binding_closure_status", ""))
+                    ).strip(),
+                    "summary_error_codes": [
+                        str(x.get("error_code", "")).strip()
+                        for x in (((item.get("summary") or {}).get("failed") or []))
+                        if isinstance(x, dict) and str(x.get("error_code", "")).strip()
+                    ],
+                }
+            )
+    return rows
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description="Regression gate: full_identity_protocol_scan --scan-mode target must keep summary.p0 == 0."
+    )
+    ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--project-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--target-source-layer", choices=["auto", "project", "global", "both"], default="project")
+    ap.add_argument("--actor-id", default="assistant:codex")
+    ap.add_argument("--session-id", default="")
+    ap.add_argument("--expected-work-layer", default="protocol")
+    ap.add_argument("--expected-source-layer", default="project")
+    ap.add_argument("--out", default="")
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    session_id = str(args.session_id or "").strip()
+    if not session_id:
+        session_id = f"run:full-scan-target-regression-{int(datetime.now(timezone.utc).timestamp())}"
+
+    if str(args.out or "").strip():
+        out_path = Path(str(args.out).strip()).expanduser().resolve()
+    else:
+        fd, tmp_path = tempfile.mkstemp(prefix="full-scan-target-regression-", suffix=".json")
+        Path(tmp_path).unlink(missing_ok=True)
+        out_path = Path(tmp_path).resolve()
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        "python3",
+        "scripts/full_identity_protocol_scan.py",
+        "--scan-mode",
+        "target",
+        "--identity-ids",
+        str(args.identity_id).strip(),
+        "--target-source-layer",
+        str(args.target_source_layer).strip(),
+        "--project-catalog",
+        str(Path(args.project_catalog).expanduser().resolve()),
+        "--repo-catalog",
+        str(Path(args.repo_catalog).expanduser().resolve()),
+        "--actor-id",
+        str(args.actor_id).strip(),
+        "--session-id",
+        session_id,
+        "--expected-work-layer",
+        str(args.expected_work_layer).strip(),
+        "--expected-source-layer",
+        str(args.expected_source_layer).strip(),
+        "--out",
+        str(out_path),
+    ]
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+
+    payload: dict[str, Any] = {
+        "full_scan_target_regression_status": STATUS_FAIL_REQUIRED,
+        "error_code": "",
+        "identity_id": str(args.identity_id).strip(),
+        "target_source_layer": str(args.target_source_layer).strip(),
+        "project_catalog": str(Path(args.project_catalog).expanduser().resolve()),
+        "repo_catalog": str(Path(args.repo_catalog).expanduser().resolve()),
+        "actor_id": str(args.actor_id).strip(),
+        "session_id": session_id,
+        "expected_work_layer": str(args.expected_work_layer).strip(),
+        "expected_source_layer": str(args.expected_source_layer).strip(),
+        "scan_command": cmd,
+        "scan_rc": proc.returncode,
+        "scan_stdout_tail": (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else "",
+        "scan_stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
+        "scan_report_path": str(out_path),
+        "summary": {},
+        "p0_count": None,
+        "p1_count": None,
+        "ok_count": None,
+        "p0_rows": [],
+    }
+
+    if proc.returncode != 0:
+        payload["error_code"] = ERR_SCAN_CMD_FAILED
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if not out_path.exists():
+        payload["error_code"] = ERR_REPORT_INVALID
+        payload["scan_stderr_tail"] = "full_scan_report_missing"
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    try:
+        report_doc = json.loads(out_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        payload["error_code"] = ERR_REPORT_INVALID
+        payload["scan_stderr_tail"] = f"full_scan_report_parse_failed:{exc}"
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if not isinstance(report_doc, dict):
+        payload["error_code"] = ERR_REPORT_INVALID
+        payload["scan_stderr_tail"] = "full_scan_report_invalid_root"
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    summary = report_doc.get("summary")
+    if not isinstance(summary, dict):
+        payload["error_code"] = ERR_REPORT_INVALID
+        payload["scan_stderr_tail"] = "full_scan_summary_missing"
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    p0_count = int(summary.get("p0", 0) or 0)
+    payload["summary"] = summary
+    payload["p0_count"] = p0_count
+    payload["p1_count"] = int(summary.get("p1", 0) or 0)
+    payload["ok_count"] = int(summary.get("ok", 0) or 0)
+    payload["p0_rows"] = _extract_p0_rows(report_doc)
+
+    if p0_count != 0:
+        payload["error_code"] = ERR_P0_REGRESSION
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    payload["full_scan_target_regression_status"] = STATUS_PASS_REQUIRED
+    payload["error_code"] = ""
+    _emit(payload, json_only=args.json_only)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

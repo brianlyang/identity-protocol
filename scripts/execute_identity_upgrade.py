@@ -35,6 +35,160 @@ ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 ERR_FINAL_EMIT_CONTRACT_REQUIRED = "IP-OUTLET-004"
+ERR_PROMPT_WIRE_IO = "IP-PROMPT-WIRE-001"
+ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
+ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
+
+REQUIRED_PROMPT_CONTRACT_KEYS: tuple[str, ...] = (
+    "prompt_bootstrap_capability_contract_v1",
+    "prompt_capability_matrix_fail_closed_contract_v1",
+    "derived_prompt_conformance_contract_v1",
+    "prompt_import_executable_coupling_contract_v1",
+)
+
+PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "prompt_bootstrap_capability_contract_v1": {
+        "required": True,
+        "validator": "scripts/validate_prompt_bootstrap_capability.py",
+        "required_capability_drivers": [
+            "scripts/validate_identity_tool_installation.py",
+            "scripts/validate_identity_vendor_api_discovery.py",
+            "scripts/validate_identity_vendor_api_solution.py",
+        ],
+        "fail_action": "block_when_prompt_bootstrap_missing_required_drivers",
+    },
+    "prompt_capability_matrix_fail_closed_contract_v1": {
+        "required": True,
+        "validator": "scripts/validate_prompt_capability_matrix.py",
+        "required_driver_ids": ["tool_installation", "vendor_api_discovery", "vendor_api_solution"],
+        "required_fields": [
+            "capability_driver_required_total",
+            "capability_driver_present_total",
+            "capability_driver_coverage_rate",
+            "missing_capability_drivers",
+        ],
+        "fail_action": "fail_closed_when_prompt_capability_matrix_incomplete",
+    },
+    "derived_prompt_conformance_contract_v1": {
+        "required": True,
+        "validator": "scripts/validate_prompt_derivation_conformance.py",
+        "kernel_contract_version": "v1.6",
+        "derived_from_contract_ids": [
+            "rq_014_prompt_bootstrap_capability_contract_v1",
+            "rq_015_prompt_capability_matrix_fail_closed_contract_v1",
+        ],
+        "fail_action": "block_when_prompt_derivation_metadata_incomplete",
+    },
+    "prompt_import_executable_coupling_contract_v1": {
+        "required": True,
+        "validator": "scripts/validate_prompt_kernel_executable_coupling.py",
+        "kernel_contract_ref": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1",
+        "validator_ref": "scripts/validate_work_layer_gate_set_routing.py",
+        "require_explicit_actor": True,
+        "fail_action": "block_when_prompt_import_not_executable_coupled",
+    },
+}
+
+
+def _deep_merge_defaults(defaults: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
+    merged: dict[str, Any] = json.loads(json.dumps(defaults))
+    for key, value in (current or {}).items():
+        base = merged.get(key)
+        if isinstance(base, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge_defaults(base, value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _ensure_prompt_contract_auto_wiring(task: dict[str, Any], task_path: Path) -> dict[str, Any]:
+    if not isinstance(task, dict):
+        return {
+            "prompt_contract_auto_wire_status": "FAIL_REQUIRED",
+            "prompt_contract_auto_wire_error_code": ERR_PROMPT_WIRE_INVALID,
+            "prompt_contract_auto_wire_applied": False,
+            "prompt_contract_auto_wire_changed": False,
+            "prompt_contract_auto_wire_missing_before": list(REQUIRED_PROMPT_CONTRACT_KEYS),
+            "prompt_contract_auto_wire_missing_after": list(REQUIRED_PROMPT_CONTRACT_KEYS),
+            "prompt_contract_auto_wire_forced_required_keys": [],
+            "prompt_contract_auto_wire_stale_reasons": ["task_not_object"],
+            "prompt_contract_auto_wire_task_path": str(task_path),
+        }
+
+    missing_before = [key for key in REQUIRED_PROMPT_CONTRACT_KEYS if not isinstance(task.get(key), dict)]
+    changed = False
+    forced_required_keys: list[str] = []
+
+    for key in REQUIRED_PROMPT_CONTRACT_KEYS:
+        default_node = PROMPT_CONTRACT_DEFAULTS.get(key, {})
+        current_node = task.get(key)
+        if not isinstance(current_node, dict):
+            task[key] = json.loads(json.dumps(default_node))
+            changed = True
+            continue
+        merged_node = _deep_merge_defaults(default_node, current_node)
+        if merged_node != current_node:
+            task[key] = merged_node
+            changed = True
+        node = task.get(key) if isinstance(task.get(key), dict) else None
+        if isinstance(node, dict) and node.get("required") is not True:
+            node["required"] = True
+            forced_required_keys.append(key)
+            changed = True
+
+    missing_after = [key for key in REQUIRED_PROMPT_CONTRACT_KEYS if not isinstance(task.get(key), dict)]
+    invalid_after = [
+        key
+        for key in REQUIRED_PROMPT_CONTRACT_KEYS
+        if isinstance(task.get(key), dict) and not str((task.get(key) or {}).get("validator", "")).strip()
+    ]
+
+    if changed:
+        try:
+            task_path.write_text(json.dumps(task, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except Exception:
+            return {
+                "prompt_contract_auto_wire_status": "FAIL_REQUIRED",
+                "prompt_contract_auto_wire_error_code": ERR_PROMPT_WIRE_IO,
+                "prompt_contract_auto_wire_applied": False,
+                "prompt_contract_auto_wire_changed": True,
+                "prompt_contract_auto_wire_missing_before": missing_before,
+                "prompt_contract_auto_wire_missing_after": missing_after,
+                "prompt_contract_auto_wire_forced_required_keys": forced_required_keys,
+                "prompt_contract_auto_wire_stale_reasons": ["task_write_failed"],
+                "prompt_contract_auto_wire_task_path": str(task_path),
+            }
+
+    if missing_after or invalid_after:
+        stale_reasons: list[str] = []
+        if missing_after:
+            stale_reasons.append("required_contract_missing_after_autowire")
+        if invalid_after:
+            stale_reasons.append("validator_missing_after_autowire")
+        return {
+            "prompt_contract_auto_wire_status": "FAIL_REQUIRED",
+            "prompt_contract_auto_wire_error_code": ERR_PROMPT_WIRE_MISSING,
+            "prompt_contract_auto_wire_applied": changed,
+            "prompt_contract_auto_wire_changed": changed,
+            "prompt_contract_auto_wire_missing_before": missing_before,
+            "prompt_contract_auto_wire_missing_after": missing_after,
+            "prompt_contract_auto_wire_invalid_after": invalid_after,
+            "prompt_contract_auto_wire_forced_required_keys": forced_required_keys,
+            "prompt_contract_auto_wire_stale_reasons": stale_reasons,
+            "prompt_contract_auto_wire_task_path": str(task_path),
+        }
+
+    return {
+        "prompt_contract_auto_wire_status": "PASS_REQUIRED",
+        "prompt_contract_auto_wire_error_code": "",
+        "prompt_contract_auto_wire_applied": changed,
+        "prompt_contract_auto_wire_changed": changed,
+        "prompt_contract_auto_wire_missing_before": missing_before,
+        "prompt_contract_auto_wire_missing_after": [],
+        "prompt_contract_auto_wire_forced_required_keys": forced_required_keys,
+        "prompt_contract_auto_wire_stale_reasons": [] if changed else ["already_wired"],
+        "prompt_contract_auto_wire_task_path": str(task_path),
+    }
 
 
 def _as_bool(raw: str, default: bool = False) -> bool:
@@ -175,8 +329,182 @@ def _write_active_execution_report_pointer(*, pack_path: Path, report_path: Path
     pointer_path.write_text(json.dumps(pointer, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _value_present(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (list, dict, str)):
+        return bool(value)
+    return True
+
+
+def _to_int_or_none(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return int(float(text))
+    except Exception:
+        return None
+
+
+def _to_float_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return float(int(value))
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except Exception:
+        return None
+
+
+def _pick_mm_value(*, report: dict[str, Any], payload: dict[str, Any], key: str, default: Any = None) -> Any:
+    report_value = report.get(key)
+    if _value_present(report_value):
+        return report_value
+    payload_value = payload.get(key)
+    if _value_present(payload_value):
+        return payload_value
+    return default
+
+
+def _extract_multimodal_payload_from_checks(checks: list[dict[str, Any]]) -> dict[str, Any]:
+    for row in reversed(checks):
+        cmd = str(row.get("cmd", "")).strip()
+        if "scripts/validate_multimodal_plugin_enforcement.py" not in cmd:
+            continue
+        parsed = _parse_json_payload(str(row.get("stdout", "")).strip()) or {}
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
+
+def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
+    """
+    Enforce producer-side runtime-proof field emission in every execution report.
+    This preserves fail-close semantics while preventing observability blind spots.
+    """
+    checks = report.get("check_results")
+    if not isinstance(checks, list):
+        checks = report.get("checks")
+    if not isinstance(checks, list):
+        checks = []
+    mm_payload = _extract_multimodal_payload_from_checks(checks)
+
+    preflight_status = str(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="multimodal_preflight_status",
+            default=(
+                str(mm_payload.get("multimodal_runtime_evidence_status", "")).strip()
+                or str(report.get("multimodal_runtime_evidence_status", "")).strip()
+                or "MISSING"
+            ),
+        )
+        or "MISSING"
+    ).strip()
+
+    runtime_gate_mode = str(
+        _pick_mm_value(report=report, payload=mm_payload, key="runtime_gate_mode", default="")
+        or ""
+    ).strip().lower()
+    runtime_gate_required_confidence = _to_float_or_none(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="runtime_gate_required_confidence",
+            default=None,
+        )
+    )
+
+    mm_calls = _to_int_or_none(_pick_mm_value(report=report, payload=mm_payload, key="multimodal_calls", default=None))
+    mm_resolved = _to_int_or_none(
+        _pick_mm_value(report=report, payload=mm_payload, key="multimodal_resolved", default=None)
+    )
+    mm_unresolved = _to_int_or_none(
+        _pick_mm_value(report=report, payload=mm_payload, key="multimodal_unresolved", default=None)
+    )
+    mm_errors = _to_int_or_none(_pick_mm_value(report=report, payload=mm_payload, key="multimodal_errors", default=None))
+    mm_retry_calls = _to_int_or_none(
+        _pick_mm_value(report=report, payload=mm_payload, key="multimodal_retry_calls", default=None)
+    )
+
+    existing_refs = report.get("multimodal_evidence_refs")
+    refs_value = existing_refs if isinstance(existing_refs, list) else mm_payload.get("multimodal_runtime_evidence_refs")
+    mm_refs = sorted(dict.fromkeys(str(x).strip() for x in (refs_value or []) if str(x).strip()))
+
+    gate_report_path = str(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="multimodal_input_gate_report_path",
+            default="",
+        )
+        or ""
+    ).strip()
+    confirmation_results_path = str(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="multimodal_confirmation_results_path",
+            default="",
+        )
+        or ""
+    ).strip()
+    confirmation_csv_path = str(
+        _pick_mm_value(
+            report=report,
+            payload=mm_payload,
+            key="multimodal_confirmation_csv_path",
+            default="",
+        )
+        or ""
+    ).strip()
+
+    report["multimodal_preflight_status"] = preflight_status
+    report["multimodal_calls"] = mm_calls
+    report["multimodal_resolved"] = mm_resolved
+    report["multimodal_unresolved"] = mm_unresolved
+    report["multimodal_errors"] = mm_errors
+    report["multimodal_retry_calls"] = mm_retry_calls
+    report["multimodal_evidence_refs"] = mm_refs
+    report["runtime_gate_mode"] = runtime_gate_mode
+    report["runtime_gate_required_confidence"] = runtime_gate_required_confidence
+    report["multimodal_input_gate_report_path"] = gate_report_path
+    report["multimodal_confirmation_results_path"] = confirmation_results_path
+    report["multimodal_confirmation_csv_path"] = confirmation_csv_path
+    report["multimodal_summary"] = {
+        "status": preflight_status,
+        "calls": mm_calls,
+        "resolved": mm_resolved,
+        "unresolved": mm_unresolved,
+        "errors": mm_errors,
+        "retry_calls": mm_retry_calls,
+        "mode": runtime_gate_mode,
+        "required_confidence": runtime_gate_required_confidence,
+        "evidence_refs": mm_refs,
+    }
+    report["multimodal_runtime_field_emission_status"] = "PASS_REQUIRED"
+    return report
+
+
 def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_path: Path, run_id: str) -> None:
-    _write_json(report_path, data)
+    enriched = _ensure_multimodal_runtime_fields(dict(data))
+    _write_json(report_path, enriched)
     try:
         _write_active_execution_report_pointer(pack_path=pack_path, report_path=report_path, run_id=run_id)
     except Exception:
@@ -1178,6 +1506,14 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     current_task_path = pack / "CURRENT_TASK.json"
     task = _load_json(current_task_path)
+    prompt_contract_wire_payload = _ensure_prompt_contract_auto_wiring(task, current_task_path)
+    prompt_contract.update(prompt_contract_wire_payload)
+    prompt_contract_auto_wire_status = str(
+        prompt_contract_wire_payload.get("prompt_contract_auto_wire_status", "FAIL_REQUIRED")
+    ).strip().upper()
+    prompt_contract_auto_wire_error_code = str(
+        prompt_contract_wire_payload.get("prompt_contract_auto_wire_error_code", "")
+    ).strip()
     required_checks_raw = (
         task.get("identity_update_lifecycle_contract", {})
         .get("validation_contract", {})
@@ -1326,7 +1662,9 @@ def main() -> int:
                 pre_mutation_gate_error_code = pre_mutation_gate_error_code or ERR_FINAL_EMIT_CONTRACT_REQUIRED
 
     pre_mutation_error = ""
-    if header_first_gate_status != "PASS_REQUIRED":
+    if prompt_contract_auto_wire_status != "PASS_REQUIRED":
+        pre_mutation_error = prompt_contract_auto_wire_error_code or ERR_PROMPT_WIRE_INVALID
+    elif header_first_gate_status != "PASS_REQUIRED":
         pre_mutation_error = ERR_EXEC_ORDER_HEADER_FIRST
     elif scaffold_consent_gate_status == "FAIL_REQUIRED":
         pre_mutation_error = ERR_EXEC_ORDER_SCAFFOLD_CONSENT

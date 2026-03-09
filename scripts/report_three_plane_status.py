@@ -3688,6 +3688,7 @@ def _instance_plane_status(
             "provider_profile_id": multimodal_plugin_payload.get("provider_profile_id", ""),
             "plugin_contract_owner": multimodal_plugin_payload.get("plugin_contract_owner", ""),
             "plugin_resolution_mode": multimodal_plugin_payload.get("plugin_resolution_mode", ""),
+            "report_selected_path": multimodal_plugin_payload.get("report_selected_path", ""),
             "runtime_report_path": multimodal_plugin_payload.get("runtime_report_path", ""),
             "runtime_report_run_id": multimodal_plugin_payload.get("runtime_report_run_id", ""),
             "multimodal_calls": multimodal_plugin_payload.get("multimodal_calls"),

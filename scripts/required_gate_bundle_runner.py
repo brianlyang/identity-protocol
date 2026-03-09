@@ -79,6 +79,7 @@ RUNTIME_PROOF_REQUIRED_OPERATIONS: tuple[str, ...] = (
 )
 MM_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
     "multimodal_runtime_evidence_status",
+    "multimodal_preflight_status",
     "runtime_report_path",
     "runtime_report_run_id",
     "multimodal_calls",

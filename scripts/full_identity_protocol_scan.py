@@ -2500,6 +2500,9 @@ def main() -> int:
                         report_run_id = str(report_meta.get("run_id", "")).strip()
                         if report_run_id and "--run-id" not in sidecar_cmd:
                             sidecar_cmd.extend(["--run-id", report_run_id])
+                    mm_cmd = checks.get("multimodal_plugin_enforcement")
+                    if isinstance(mm_cmd, list) and "--report-selected-path" not in mm_cmd:
+                        mm_cmd.extend(["--report-selected-path", str(latest_report)])
             for name, cmd in checks.items():
                 r = _run(cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
@@ -3207,6 +3210,7 @@ def main() -> int:
                         "provider_profile_id",
                         "plugin_contract_owner",
                         "plugin_resolution_mode",
+                        "report_selected_path",
                         "runtime_report_path",
                         "runtime_report_run_id",
                         "multimodal_calls",
