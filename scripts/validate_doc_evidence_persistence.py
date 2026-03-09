@@ -27,6 +27,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -48,6 +50,7 @@ PATH_TOKEN_RE = re.compile(
     r"(?P<path>(?:/tmp/|/private/tmp/|activity/evidence/|\.identity/)[^\s`\"'()<>\]]+)"
 )
 REQUIRED_TUPLE_FIELDS = ("sha256", "command", "rc", "timestamp")
+EVIDENCE_ALLOWLIST_FILE = "identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml"
 
 
 def _norm_path(value: str) -> str:
@@ -69,6 +72,14 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _collect_paths(text: str) -> tuple[list[str], list[str]]:
@@ -281,6 +292,74 @@ def _validate_activity_mirror_ref(
         )
 
 
+def _validate_strict_doc_evidence_allowlist(
+    *,
+    doc_rel: str,
+    persistent_refs: list[str],
+    allowlist_doc: dict[str, Any] | None,
+    violations: list[dict[str, Any]],
+) -> None:
+    if allowlist_doc is None:
+        violations.append(
+            {
+                "type": "strict_doc_allowlist_missing",
+                "doc": doc_rel,
+                "error_code": "IP-DOC-EVID-012",
+            }
+        )
+        return
+    patterns_raw = allowlist_doc.get("allowed_activity_patterns")
+    if not isinstance(patterns_raw, list) or not patterns_raw:
+        violations.append(
+            {
+                "type": "strict_doc_allowlist_pattern_missing",
+                "doc": doc_rel,
+                "error_code": "IP-DOC-EVID-012",
+            }
+        )
+        return
+    compiled_patterns: list[re.Pattern[str]] = []
+    for raw in patterns_raw:
+        token = str(raw or "").strip()
+        if not token:
+            continue
+        try:
+            compiled_patterns.append(re.compile(token))
+        except re.error:
+            violations.append(
+                {
+                    "type": "strict_doc_allowlist_pattern_invalid",
+                    "doc": doc_rel,
+                    "pattern": token,
+                    "error_code": "IP-DOC-EVID-012",
+                }
+            )
+    activity_refs = [ref for ref in persistent_refs if ref.startswith("activity/evidence/")]
+    max_refs = allowlist_doc.get("max_activity_refs", 0)
+    if isinstance(max_refs, int) and max_refs > 0 and len(activity_refs) > max_refs:
+        violations.append(
+            {
+                "type": "strict_doc_activity_ref_count_exceeded",
+                "doc": doc_rel,
+                "observed_count": len(activity_refs),
+                "max_allowed": max_refs,
+                "error_code": "IP-DOC-EVID-013",
+            }
+        )
+    for ref in activity_refs:
+        matched = any(pat.match(ref) for pat in compiled_patterns)
+        if matched:
+            continue
+        violations.append(
+            {
+                "type": "strict_doc_activity_ref_not_allowlisted",
+                "doc": doc_rel,
+                "path": ref,
+                "error_code": "IP-DOC-EVID-012",
+            }
+        )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate governance/review evidence persistence policy.")
     ap.add_argument("--repo-root", default=".")
@@ -298,6 +377,11 @@ def main() -> int:
     violations: list[dict[str, Any]] = []
 
     by_mirror, by_tmp, manifest_files = _load_manifest_records(repo_root)
+    evidence_allowlist_path = (repo_root / EVIDENCE_ALLOWLIST_FILE).resolve()
+    evidence_allowlist = _load_yaml(evidence_allowlist_path) if evidence_allowlist_path.exists() else {}
+    strict_doc_allowlist = evidence_allowlist.get("strict_docs") if isinstance(evidence_allowlist, dict) else {}
+    if not isinstance(strict_doc_allowlist, dict):
+        strict_doc_allowlist = {}
     all_persistent_refs: set[str] = set()
 
     # Strict stream full-scan (v1.6.2 docs)
@@ -318,6 +402,12 @@ def main() -> int:
         text = p.read_text(encoding="utf-8")
         tmp_refs, persistent_refs = _collect_paths(text)
         all_persistent_refs.update(persistent_refs)
+        _validate_strict_doc_evidence_allowlist(
+            doc_rel=rel,
+            persistent_refs=persistent_refs,
+            allowlist_doc=(strict_doc_allowlist.get(rel) if isinstance(strict_doc_allowlist, dict) else None),
+            violations=violations,
+        )
 
         if scope == "governance":
             for ref in tmp_refs:
@@ -415,6 +505,8 @@ def main() -> int:
     payload = {
         "doc_evidence_persistence_status": status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else ERR_POLICY,
+        "evidence_allowlist_file": EVIDENCE_ALLOWLIST_FILE,
+        "evidence_allowlist_path": str(evidence_allowlist_path),
         "strict_docs_checked": list(STRICT_DOC_SCOPES.keys()),
         "docs_checked_total": len(docs_checked),
         "docs_checked": sorted(docs_checked),

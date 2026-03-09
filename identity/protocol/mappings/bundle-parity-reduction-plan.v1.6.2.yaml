@@ -1,0 +1,20 @@
+schema_version: 1
+plan_version: v1.6.2
+description: >
+  Versioned burn-down plan for bundle_mapping_parity freeze debt.
+  This plan is machine-validated by validate_control_plane_invariants.py.
+
+baseline_missing_rows: 25
+owner: protocol-architecture
+enforcement: required
+
+milestones:
+  - release_version: v1.6.3
+    target_max_missing_rows: 20
+    gate_policy: freeze
+  - release_version: v1.6.4
+    target_max_missing_rows: 12
+    gate_policy: freeze
+  - release_version: v1.6.5
+    target_max_missing_rows: 0
+    gate_policy: strict

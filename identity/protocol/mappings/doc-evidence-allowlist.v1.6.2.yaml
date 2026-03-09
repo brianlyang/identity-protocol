@@ -1,0 +1,22 @@
+schema_version: 1
+version: v1.6.2
+description: >
+  Allowlist policy for evidence references in strict governance/review docs.
+  Docs should reference canonical manifest + minimal replay anchors only.
+
+strict_docs:
+  docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.2\.json$'
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_invariants_plugin_wiring_.*\.json$'
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_surface_drift_.*\.json$'
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_full_scan_target_regression_.*\.result\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.2.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.2\.json$'
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_invariants_plugin_wiring_.*\.json$'
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_surface_drift_.*\.json$'
+      - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_full_scan_target_regression_.*\.result\.json$'

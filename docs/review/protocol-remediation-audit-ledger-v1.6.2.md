@@ -291,7 +291,6 @@ Pending:
 1. v1.6.2 plugin interface exposure contract is now explicitly documented and replay-backed.
 2. This addendum does not alter previously declared non-promotional posture.
 3. Remaining blockers still outside this addendum scope:
-   - release-readiness provider projection parity closure,
    - instance-specific debt and baseline cleanliness.
 
 ## 11) Round-29.5 addendum: evidence persistence hard-gate execution (2026-03-09)
@@ -312,6 +311,9 @@ Pending:
    - `.identity/<id>/runtime/reports/...`
 4. Required tuple fields:
    - `sha256`, `command`, `rc`, `timestamp`
+5. Evidence admission allowlist (reverse standard):
+   - config: `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
+   - strict docs only allow canonical manifest + minimal replay anchors.
 
 ### 11.3 Gate wiring and acceptance
 
@@ -323,6 +325,8 @@ Pending:
 4. CI delta mode:
    - `python3 scripts/validate_doc_evidence_persistence.py --enforce-delta --base <base_sha> --head <head_sha> --json-only`
    - blocks newly introduced `/tmp` evidence debt in governance/review streams.
+5. Admission gate:
+   - non-allowlisted `activity/evidence/*` references in strict docs fail-close.
 
 ### 11.4 Replay note
 

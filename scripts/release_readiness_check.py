@@ -23,6 +23,8 @@ PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_release_metadata_sync.py",
     "scripts/validate_release_freeze_boundary.py",
 }
+BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
+FAILCLOSE_PLUGIN_PROJECTION_SCRIPT = "scripts/validate_failclose_plugin_projection.py"
 
 
 def _run(cmd: list[str]) -> int:
@@ -80,7 +82,7 @@ def _apply_bundle_passthrough_from_report(
     final_emit_schema_status = str(report_meta.get("final_emit_schema_status", "")).strip().upper() or "UNKNOWN"
     selected_report = str(report_selected_path or "").strip()
     for cmd in seq:
-        if len(cmd) < 2 or cmd[1] != "scripts/required_gate_bundle_runner.py":
+        if len(cmd) < 2 or cmd[1] not in {BUNDLE_RUNNER_SCRIPT, FAILCLOSE_PLUGIN_PROJECTION_SCRIPT}:
             continue
         _replace_flag_value(cmd, "--send-time-gate-status", send_time_gate_status)
         _replace_flag_value(cmd, "--outlet-bypass-detected", outlet_bypass_detected)
@@ -438,6 +440,16 @@ def main() -> int:
             identity_id=identity_id,
             run_token=f"{bundle_run_token}-scan-probe",
             stem=f"required-gate-bundle-readiness-scan-probe-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    failclose_plugin_projection_receipt = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="readiness",
+            identity_id=identity_id,
+            run_token=f"{bundle_run_token}-plugin-projection",
+            stem=f"failclose-plugin-projection-readiness-{identity_id}-{bundle_run_token}",
             ext="json",
         )
     )
@@ -1461,6 +1473,43 @@ def main() -> int:
             "--receipt",
             required_gate_bundle_receipt_probe,
             "--require-distinct-operations",
+            "--json-only",
+        ],
+        [
+            "python3",
+            FAILCLOSE_PLUGIN_PROJECTION_SCRIPT,
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--run-id",
+            bundle_run_token,
+            "--report-selected-path",
+            str(args.execution_report or "").strip(),
+            "--send-time-gate-status",
+            "NOT_APPLICABLE",
+            "--outlet-bypass-detected",
+            "false",
+            "--final-emit-contract-status",
+            "NOT_APPLICABLE",
+            "--final-emit-policy-mode",
+            "tool_choice_required",
+            "--final-emit-schema-status",
+            "NOT_APPLICABLE",
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--resolved-source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--lock-state",
+            "LOCK_MATCH",
+            "--surface-label",
+            "release_readiness_plugin_projection",
+            "--out",
+            failclose_plugin_projection_receipt,
             "--json-only",
         ],
         [

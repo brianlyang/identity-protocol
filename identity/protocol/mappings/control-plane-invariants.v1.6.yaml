@@ -5,3 +5,4 @@ invariants:
   bundle_mapping_parity:
     mode: freeze
     baseline_missing_rows: 25
+    reduction_plan_file: identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml

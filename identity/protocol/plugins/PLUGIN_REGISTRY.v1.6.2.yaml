@@ -13,4 +13,4 @@ plugins:
     provider_profiles:
       - glm46v_vision_prod
       - openai_vision_prod
-    status: draft
+    status: active

@@ -116,6 +116,10 @@ def main() -> int:
     bundle_target_map = _bundle_target_map()
     mode = ""
     baseline_missing_rows = -1
+    reduction_plan_file = ""
+    reduction_plan_status = "SKIPPED_NOT_REQUIRED"
+    reduction_plan_target_zero = False
+    reduction_plan_targets: list[int] = []
 
     if invariants_path.exists() and mapping_path.exists():
         inv_doc = _load_yaml(invariants_path)
@@ -123,6 +127,7 @@ def main() -> int:
         parity_cfg = (invariants.get("bundle_mapping_parity") or {}) if isinstance(invariants, dict) else {}
         mode = str(parity_cfg.get("mode", "")).strip().lower() or "freeze"
         baseline_missing_rows = int(parity_cfg.get("baseline_missing_rows", -1))
+        reduction_plan_file = str(parity_cfg.get("reduction_plan_file", "")).strip()
 
         mapping_doc = _load_yaml(mapping_path)
         mapping_rows = _mapping_rows(mapping_doc)
@@ -165,6 +170,77 @@ def main() -> int:
                     baseline_missing_rows=baseline_missing_rows,
                     missing_rows=missing_rows,
                 )
+            if baseline_missing_rows > 0:
+                if not reduction_plan_file:
+                    _append_violation(
+                        violations,
+                        field="bundle_mapping_parity_reduction_plan",
+                        reason="reduction_plan_file_missing_for_freeze_debt",
+                        baseline_missing_rows=baseline_missing_rows,
+                    )
+                else:
+                    plan_path = (repo_root / reduction_plan_file).resolve()
+                    if not plan_path.exists():
+                        _append_violation(
+                            violations,
+                            field="bundle_mapping_parity_reduction_plan",
+                            reason="reduction_plan_file_not_found",
+                            reduction_plan_file=reduction_plan_file,
+                        )
+                    else:
+                        plan_doc = _load_yaml(plan_path)
+                        plan_baseline = int(plan_doc.get("baseline_missing_rows", -1))
+                        milestones = _as_list(plan_doc.get("milestones"))
+                        reduction_plan_targets = []
+                        for row in milestones:
+                            if not isinstance(row, dict):
+                                continue
+                            try:
+                                target = int(row.get("target_max_missing_rows", -1))
+                            except Exception:
+                                continue
+                            if target >= 0:
+                                reduction_plan_targets.append(target)
+                        reduction_plan_target_zero = any(t == 0 for t in reduction_plan_targets)
+                        if plan_baseline != baseline_missing_rows:
+                            _append_violation(
+                                violations,
+                                field="bundle_mapping_parity_reduction_plan",
+                                reason="reduction_plan_baseline_mismatch",
+                                baseline_missing_rows=baseline_missing_rows,
+                                plan_baseline_missing_rows=plan_baseline,
+                                reduction_plan_file=reduction_plan_file,
+                            )
+                        if not reduction_plan_targets:
+                            _append_violation(
+                                violations,
+                                field="bundle_mapping_parity_reduction_plan",
+                                reason="reduction_plan_targets_missing",
+                                reduction_plan_file=reduction_plan_file,
+                            )
+                        if reduction_plan_targets and min(reduction_plan_targets) >= baseline_missing_rows:
+                            _append_violation(
+                                violations,
+                                field="bundle_mapping_parity_reduction_plan",
+                                reason="reduction_plan_no_strict_reduction_target",
+                                baseline_missing_rows=baseline_missing_rows,
+                                reduction_plan_targets=sorted(reduction_plan_targets),
+                                reduction_plan_file=reduction_plan_file,
+                            )
+                        if not reduction_plan_target_zero:
+                            _append_violation(
+                                violations,
+                                field="bundle_mapping_parity_reduction_plan",
+                                reason="reduction_plan_missing_zero_target",
+                                reduction_plan_targets=sorted(reduction_plan_targets),
+                                reduction_plan_file=reduction_plan_file,
+                            )
+                        if not any(v.get("field") == "bundle_mapping_parity_reduction_plan" for v in violations):
+                            reduction_plan_status = "PASS_REQUIRED"
+                        else:
+                            reduction_plan_status = STATUS_FAIL_REQUIRED
+            else:
+                reduction_plan_status = "SKIPPED_NOT_REQUIRED"
         else:
             _append_violation(
                 violations,
@@ -387,6 +463,7 @@ def main() -> int:
                         registry_requirement = str(reg_row.get("requirement_key", "")).strip()
                         registry_target = str(reg_row.get("bundle_target_name", "")).strip()
                         registry_mode = str(reg_row.get("gate_mode", "")).strip().lower()
+                        registry_status = str(reg_row.get("status", "")).strip().lower()
                         if contract_file and registry_contract != contract_file:
                             plugin_wiring_violation_count += 1
                             _append_violation(
@@ -436,6 +513,16 @@ def main() -> int:
                                 plugin_id=plugin_id,
                                 expected_gate_mode="fail_close_strict",
                                 observed_gate_mode=registry_mode,
+                            )
+                        if registry_mode == "fail_close_strict" and registry_status != "active":
+                            plugin_wiring_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_registry",
+                                reason="registry_fail_close_plugin_status_not_active",
+                                plugin_id=plugin_id,
+                                expected_status="active",
+                                observed_status=registry_status or "MISSING",
                             )
 
                 # Contract file canonical path check.
@@ -669,6 +756,10 @@ def main() -> int:
         "plugin_governance_file": str(plugin_governance_path),
         "bundle_mapping_parity_mode": mode,
         "bundle_mapping_parity_baseline_missing_rows": baseline_missing_rows,
+        "bundle_mapping_parity_reduction_plan_file": reduction_plan_file,
+        "bundle_mapping_parity_reduction_plan_status": reduction_plan_status,
+        "bundle_mapping_parity_reduction_plan_targets": sorted(reduction_plan_targets),
+        "bundle_mapping_parity_reduction_plan_zero_target": reduction_plan_target_zero,
         "mapping_rows_missing_in_bundle_count": len(missing_rows),
         "mapping_rows_missing_in_bundle": missing_rows,
         "bundle_rows_not_in_mapping_count": len(extra_rows),

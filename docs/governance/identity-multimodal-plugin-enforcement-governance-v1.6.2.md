@@ -476,6 +476,9 @@ Current replay set (this round):
    - `command`
    - `rc`
    - `timestamp`
+5. Strict doc evidence admission is allowlist-driven (reverse standard):
+   - config: `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
+   - only canonical manifest + minimal replay anchors are allowed in strict governance/review docs.
 
 ### 13.3 Canonical mirror index for this stream
 
@@ -493,6 +496,8 @@ Current replay set (this round):
 4. Delta hardening is enabled in CI:
    - `--enforce-delta --base <base_sha> --head <head_sha>`
    - semantics: governance/review docs cannot introduce new `/tmp` evidence debt in changed lines.
+5. Admission hardening:
+   - strict docs fail on non-allowlisted `activity/evidence/*` references or excessive evidence-link counts.
 
 ### 13.5 Cross-check alignment (roundtable/vendor/reference/replay)
 
