@@ -2855,10 +2855,10 @@ Four-track cross-verification anchors (`T1..T4`):
 
 1. `T1 governance contract`: UCG contract remains `single entry + single final verdict + single machine tuple`, with replay tuple parity as mandatory closure.
 2. `T2 code-path inspection` (current head):
-   - `scripts/required_gate_bundle_runner.py:185-199,202-224,321-340`
+   - `scripts/required_gate_bundle_runner.py` (line blocks: 185-199, 202-224, 321-340)
    - `scripts/validate_reply_identity_context_first_line.py:28,325,389-414`
    - `scripts/validate_send_time_reply_gate.py:21,228,242`
-   - `.github/workflows/_identity-required-gates.yml:288-290`
+   - `.github/workflows/_identity-required-gates.yml` (line block: 288-290)
 3. `T3 executable negative replay`:
    - `/tmp/ucg_bundle_badmap_now2.json` confirms bundle false-green window (`validator_rc=2`, row=`FAIL_OPTIONAL`, bundle=`PASS_REQUIRED`).
    - `/tmp/ucg_drift_gap_now.json` confirms drift detector bypass for non-listed direct validator alias.
