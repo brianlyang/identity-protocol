@@ -970,6 +970,28 @@ def _path_allowed(path: str, allowlist: list[str], denylist: list[str]) -> tuple
     return False, "not matched by allowlist"
 
 
+def _ensure_runtime_state_allowlist_entry(
+    *,
+    allowlist: list[str],
+    runtime_state_target: Path,
+    pack_root: Path,
+) -> tuple[list[str], bool]:
+    """
+    Safe-auto writes runtime/state/prompt_contract.json by design.
+    Auto-include this canonical path when omitted from instance allowlist.
+    """
+    normalized = [str(x).strip() for x in (allowlist or []) if str(x).strip()]
+    target = runtime_state_target.resolve()
+    if not _is_within(target, pack_root):
+        return normalized, False
+    target_text = str(target)
+    for pat in normalized:
+        if fnmatch.fnmatch(target_text, pat):
+            return normalized, False
+    normalized.append(target_text)
+    return normalized, True
+
+
 def _append_task_history(history_path: Path, line: str) -> None:
     history_path.parent.mkdir(parents=True, exist_ok=True)
     with history_path.open("a", encoding="utf-8") as f:
@@ -2477,11 +2499,19 @@ def main() -> int:
     prompt_runtime_state_externalization_error_code = str(
         prompt_contract.get("prompt_runtime_state_externalization_error_code", "")
     )
+    safe_auto_runtime_state_allowlist_autowired = False
 
     if upgrade_required and args.mode == "safe-auto" and precheck.get("all_writable", True):
         if safe_auto.get("enforce_path_policy") is True:
             allowlist = [str(x) for x in (safe_auto.get("allowlist") or [])]
             denylist = [str(x) for x in (safe_auto.get("denylist") or [])]
+            allowlist, safe_auto_runtime_state_allowlist_autowired = _ensure_runtime_state_allowlist_entry(
+                allowlist=allowlist,
+                runtime_state_target=runtime_state_target,
+                pack_root=pack,
+            )
+            if safe_auto_runtime_state_allowlist_autowired:
+                actions_taken.append("safe_auto_allowlist_runtime_state_autowired")
             violations: list[dict[str, str]] = []
             for pth in touched_paths:
                 ok, reason = _path_allowed(pth, allowlist, denylist)
@@ -2548,6 +2578,7 @@ def main() -> int:
                     "artifacts": artifacts,
                     "all_ok": False,
                     "path_policy_violations": violations,
+                    "safe_auto_runtime_state_allowlist_autowired": safe_auto_runtime_state_allowlist_autowired,
                     "permission_state": "BLOCKED",
                     "permission_error_code": "IP-UPG-001",
                     "writeback_precheck": precheck,
@@ -2903,6 +2934,7 @@ def main() -> int:
         "phase_transition_error_code": str(args.phase_transition_error_code or ""),
         "header_first_gate_status": header_first_gate_status,
         "send_time_gate_status": str(send_time_gate_status or ""),
+        "safe_auto_runtime_state_allowlist_autowired": safe_auto_runtime_state_allowlist_autowired,
         "scaffold_consent_gate_status": scaffold_consent_gate_status,
         "mutation_plan_disclosed": bool(mutation_plan_disclosed),
         "planned_files": list(planned_files),

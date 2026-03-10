@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ REQ_KEYS = [
     "required_checks",
     "freshness_gate",
 ]
+DELEGATED_SHELL_SCRIPT_RE = re.compile(r"""(?:^|[\s;|&])(?:bash|sh)\s+["']?([A-Za-z0-9_./-]+\.sh)["']?""")
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -29,6 +31,61 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _read_text_if_exists(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def _collect_delegated_script_paths(text: str) -> list[str]:
+    rows: list[str] = []
+    for m in DELEGATED_SHELL_SCRIPT_RE.finditer(str(text or "")):
+        token = str(m.group(1) or "").strip()
+        if not token:
+            continue
+        if not token.startswith("scripts/"):
+            continue
+        if token not in rows:
+            rows.append(token)
+    return rows
+
+
+def _collect_workflow_reference_texts(
+    *,
+    repo_root: Path,
+    workflow_text: str,
+    reusable_text: str,
+) -> tuple[list[str], list[str]]:
+    """
+    Collect searchable texts for validator reference checks:
+    workflow file -> reusable workflow -> delegated shell scripts.
+    """
+    texts: list[str] = [str(workflow_text or "")]
+    pending: list[str] = _collect_delegated_script_paths(workflow_text)
+    if reusable_text:
+        texts.append(reusable_text)
+        pending.extend(_collect_delegated_script_paths(reusable_text))
+
+    missing_scripts: list[str] = []
+    visited: set[str] = set()
+    while pending:
+        rel = str(pending.pop(0) or "").strip()
+        if not rel or rel in visited:
+            continue
+        visited.add(rel)
+        script_path = (repo_root / rel).resolve()
+        if not script_path.exists():
+            missing_scripts.append(rel)
+            continue
+        body = script_path.read_text(encoding="utf-8")
+        texts.append(body)
+        for nested in _collect_delegated_script_paths(body):
+            if nested not in visited:
+                pending.append(nested)
+
+    return texts, missing_scripts
 
 
 def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
@@ -79,6 +136,7 @@ def main() -> int:
         return 1
 
     rc = 0
+    repo_root = Path(".").resolve()
     wf_dir = Path('.github/workflows')
     required_job = str(c.get("required_job"))
     validators = c.get("required_validators") or []
@@ -90,8 +148,8 @@ def main() -> int:
         print("[FAIL] required_validator_set_label must be non-empty")
         rc = 1
 
-    reusable_path = wf_dir / "_identity-required-gates.yml"
-    reusable_text = reusable_path.read_text(encoding="utf-8") if reusable_path.exists() else ""
+    reusable_path = (wf_dir / "_identity-required-gates.yml").resolve()
+    reusable_text = _read_text_if_exists(reusable_path)
 
     for wf in c.get("required_workflows") or []:
         wf_path = wf_dir / f"{wf}.yml"
@@ -107,10 +165,16 @@ def main() -> int:
         if uses_reusable and not reusable_text:
             print(f"[FAIL] workflow {wf_path} references reusable required-gates workflow but {reusable_path} is missing")
             rc = 1
+        searchable_texts, missing_delegates = _collect_workflow_reference_texts(
+            repo_root=repo_root,
+            workflow_text=text,
+            reusable_text=reusable_text if uses_reusable else "",
+        )
+        for rel in missing_delegates:
+            print(f"[FAIL] workflow {wf_path} delegated script missing: {rel}")
+            rc = 1
         for v in validators:
-            if v in text:
-                continue
-            if uses_reusable and v in reusable_text:
+            if any(v in block for block in searchable_texts):
                 continue
             print(f"[FAIL] workflow {wf_path} missing validator call reference: {v}")
             rc = 1
