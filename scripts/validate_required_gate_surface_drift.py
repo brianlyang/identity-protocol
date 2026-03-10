@@ -23,9 +23,9 @@ STRICT_SURFACES: tuple[str, ...] = (
 WORKFLOW_REQUIRED_GATE_SURFACE = ".github/workflows/_identity-required-gates.yml"
 REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
 FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
-WORKFLOW_REQUIRED_EXECUTION_TOKENS: tuple[str, ...] = (
-    f"bash {REQUIRED_GATE_CI_DELEGATE_SCRIPT}",
-    f"bash {FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT}",
+WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
+    REQUIRED_GATE_CI_DELEGATE_SCRIPT,
+    FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
@@ -126,6 +126,48 @@ def _read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except Exception:
         return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def _extract_shell_invocations(text: str, executable: str) -> set[str]:
+    targets: set[str] = set()
+    pattern = re.compile(rf"(?:^|\s){re.escape(executable)}\s+([^\s\"']+)")
+    for raw_line in text.splitlines():
+        # Strip inline comments so comment-only token spoofing cannot satisfy checks.
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        for match in pattern.finditer(line):
+            target = match.group(1).strip()
+            if target:
+                targets.add(target)
+    return targets
+
+
+def _extract_workflow_run_invocations(path: Path, executable: str) -> set[str]:
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    if not isinstance(doc, dict):
+        return set()
+    jobs = doc.get("jobs")
+    if not isinstance(jobs, dict):
+        return set()
+
+    targets: set[str] = set()
+    for job in jobs.values():
+        if not isinstance(job, dict):
+            continue
+        steps = job.get("steps")
+        if not isinstance(steps, list):
+            continue
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            run_block = step.get("run")
+            if isinstance(run_block, str):
+                targets.update(_extract_shell_invocations(run_block, executable))
+    return targets
 
 
 def _parse_validator_entry(raw_entry: str) -> str:
@@ -402,11 +444,18 @@ def main() -> int:
             missing_surface_files.append(rel)
             continue
         text = _read_text(path)
-        missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
+        if rel == WORKFLOW_REQUIRED_GATE_SURFACE:
+            # Workflow surface uses delegated scripts; enforce command-level delegation,
+            # and check lineage scripts on delegated shells instead of workflow comments/text.
+            missing = []
+        else:
+            missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
         if missing:
             missing_lineage_refs[rel] = missing
         if rel == WORKFLOW_REQUIRED_GATE_SURFACE:
-            missing_exec = [token for token in WORKFLOW_REQUIRED_EXECUTION_TOKENS if token not in text]
+            invoked_scripts = _extract_workflow_run_invocations(path, executable="bash")
+            invoked_scripts.update(_extract_workflow_run_invocations(path, executable="sh"))
+            missing_exec = [script for script in WORKFLOW_REQUIRED_EXECUTION_SCRIPTS if script not in invoked_scripts]
             if missing_exec:
                 missing_execution_tokens[rel] = missing_exec
         hits = [needle for needle in forbidden_direct_validators if needle in text]
@@ -436,7 +485,8 @@ def main() -> int:
             missing_surface_files.append(rel)
             continue
         text = _read_text(path)
-        missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in invoked_python_scripts]
         if missing:
             missing_lineage_refs[rel] = missing
 
