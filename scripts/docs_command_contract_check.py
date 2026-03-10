@@ -69,7 +69,7 @@ def _docs_from_index(repo_root: Path) -> List[str]:
     if not p.exists():
         return []
     text = p.read_text(encoding="utf-8")
-    docs = re.findall(r"`(docs/governance/[^`]+?\.md)`", text)
+    docs = re.findall(r"`(docs/(?:governance|review)/[^`]+?\.md)`", text)
     # keep order + dedup
     seen = set()
     out: List[str] = []
@@ -259,10 +259,16 @@ def main() -> int:
         stream_docs, mandatory_static_docs, registry_errors = _load_stream_doc_registry(repo_root)
         bootstrap_failures.extend(registry_errors)
         governance_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/governance/")]
+        review_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/review/")]
         for doc in governance_stream_docs:
             if doc not in docs:
                 bootstrap_failures.append(
                     f"[MISSING_STREAM_GOV_DOC_IN_INDEX] missing index entry for stream governance doc: {doc}"
+                )
+        for doc in review_stream_docs:
+            if doc not in docs:
+                bootstrap_failures.append(
+                    f"[MISSING_STREAM_REVIEW_DOC_IN_INDEX] missing index entry for stream review doc: {doc}"
                 )
 
         # enforce current-version docs by pattern (version-agnostic).
