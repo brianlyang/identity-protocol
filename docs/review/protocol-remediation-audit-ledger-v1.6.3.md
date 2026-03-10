@@ -552,3 +552,32 @@ Observed:
 3. Replay outcome:
    - coverage replay no longer reports `FAIL_OPTIONAL` caused by unsupported argument passthrough.
    - residual failures remain semantic (`IP-PBOOT-001`, `IP-PCAPM-001`) and are unrelated to CLI wiring.
+
+### 11.14 Round-35 file-level semantic unification (2026-03-11)
+
+1. Problem statement:
+   - runtime/mapping layers were already pointer-driven, but legacy docs (`v1.6.0` + old review ledger + branch-protection checklist) still lacked machine-enforced current-state redirects.
+   - this left room for operator-side dual interpretation ("historical snapshot" vs "current SSOT").
+2. Fix package:
+   - added current-state redirect contract to:
+     - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+     - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+   - strengthened migration routing note in:
+     - `docs/governance/branch-protection-required-checks-v1.2.8.md`
+   - expanded registry contract:
+     - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+     - adds `static_doc_required_alias_refs`
+   - hardened docs contract gate:
+     - `scripts/docs_command_contract_check.py`
+     - now fail-closes when mandatory static docs miss required current-pointer references.
+3. Replay checks:
+   - `python3 scripts/docs_command_contract_check.py` -> PASS
+   - `python3 scripts/validate_protocol_ssot_source.py` -> OK
+   - `python3 scripts/validate_doc_evidence_persistence.py --json-only` -> PASS_REQUIRED
+   - `python3 scripts/validate_control_plane_invariants.py --json-only` -> PASS_REQUIRED
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> PASS_REQUIRED
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only` -> PASS_REQUIRED
+4. Persistent evidence root:
+   - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/`
+5. Manifest (tuple-complete):
+   - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json`
