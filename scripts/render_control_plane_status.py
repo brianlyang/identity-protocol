@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -59,6 +61,27 @@ CHECKS: tuple[CheckSpec, ...] = (
         status_key=None,
     ),
 )
+
+
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    try:
+        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return configured_path, "", "current_file_parse_failed"
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
 
 
 def _utc_now() -> str:
@@ -176,15 +199,28 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".")
     parser.add_argument(
         "--status-file",
-        default="identity/protocol/mappings/control-plane-status.v1.6.json",
+        default="identity/protocol/mappings/control-plane-status.current.yaml",
     )
     parser.add_argument("--write", action="store_true")
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    status_file = (repo_root / str(args.status_file)).resolve()
+    status_entry_file = (repo_root / str(args.status_file)).resolve()
+    status_file, status_active_file, status_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.status_file)
+    )
+    if not status_entry_file.exists():
+        print(f"[FAIL] control-plane status entry missing: {status_entry_file}")
+        return 1
+    if status_alias_error:
+        print(f"[FAIL] control-plane status alias resolution failed: {status_alias_error} ({status_active_file})")
+        return 1
     payload = build_status(repo_root)
+    payload["status_file_entry"] = str(status_entry_file)
+    payload["status_file"] = str(status_file)
+    payload["status_file_active_file"] = status_active_file
+    payload["status_file_alias_error"] = status_alias_error
 
     if args.write:
         status_file.parent.mkdir(parents=True, exist_ok=True)

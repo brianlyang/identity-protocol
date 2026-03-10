@@ -363,7 +363,7 @@ Observed:
    - `identity/protocol/mappings/contract-binding.v1.6.yaml`
 4. Integrated into machine control-plane status rendering:
    - `scripts/render_control_plane_status.py`
-   - `identity/protocol/mappings/control-plane-status.v1.6.json`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
 5. Round replay outcome:
    - `validate_contract_binding_reference_integrity` = `PASS_REQUIRED`
    - control-plane status sync remains `PASS_REQUIRED`
@@ -380,7 +380,7 @@ Observed:
    - `scripts/validate_failclose_plugin_projection.py`
    - `scripts/create_identity_pack.py`
 3. Extended invariants with plugin control-plane alias enforcement and versioned-reference block on strict execution surfaces:
-   - `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
    - `scripts/validate_control_plane_invariants.py`
 4. Updated plugin SSOT readability and onboarding references to stable alias entries:
    - `identity/protocol/plugins/README.md`
@@ -426,7 +426,7 @@ Observed:
      - `scripts/full_identity_protocol_scan.py`
      - `scripts/validate_layer_targeted_gate_profile.py`
    - extended invariants with alias + anti-drift enforcement:
-     - `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+     - `identity/protocol/mappings/control-plane-invariants.current.yaml`
      - `scripts/validate_control_plane_invariants.py`
 3. Contract hardening:
    - invariants now fail-close when current alias is missing/invalid, active profile file is missing, or required profile keys are dropped.
@@ -455,3 +455,30 @@ Observed:
    - invariants fail-close when alias entry is invalid, active file missing, required fields dropped, or strict execution surfaces reference versioned literals directly.
 4. SSOT alignment:
    - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml` mandatory static docs now include both new alias files.
+
+### 11.11 Round-33.7 control-plane core alias unification closure (2026-03-10)
+
+1. Gap:
+   - `control-plane-budget` / `control-plane-invariants` / `control-plane-status` still defaulted to versioned literals on execution surfaces.
+   - this forced script-level edits on version bumps and weakened upgrade tolerance for long-running protocol branches.
+2. Fix:
+   - added alias entry files:
+     - `identity/protocol/mappings/control-plane-budget.current.yaml`
+     - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+     - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - switched validator/render defaults to alias entry:
+     - `scripts/validate_control_plane_budget.py`
+     - `scripts/validate_control_plane_invariants.py`
+     - `scripts/render_control_plane_status.py`
+     - `scripts/validate_control_plane_status_sync.py`
+   - extended invariants alias checks:
+     - `control_plane_budget_alias`
+     - `control_plane_status_alias`
+3. Contract hardening:
+   - fail-close when any core current pointer is missing/invalid, active file missing, required core fields dropped, or strict execution surfaces reintroduce direct versioned literals.
+   - status renderer/sync now resolve `control-plane-status.current.yaml` deterministically before write/compare.
+4. Replay outcome:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`
+   - `python3 scripts/validate_control_plane_budget.py --json-only` => `WARN_NON_BLOCKING` (budget only, no fail-close regression)
+   - `python3 scripts/render_control_plane_status.py --write` => `PASS_WITH_BLOCKERS`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`

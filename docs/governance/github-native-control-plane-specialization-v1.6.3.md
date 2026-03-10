@@ -240,7 +240,7 @@ Vendor-reference snapshot for this addendum:
 | Domain | Existing SSOT | v1.6.3 action | Conflict rule |
 | --- | --- | --- | --- |
 | Plugin semantic contracts | `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml` | unchanged | Never offload semantic checks to GitHub primitives |
-| Control-plane invariants | `identity/protocol/mappings/control-plane-invariants.v1.6.yaml` | add/keep offload alias checks | Fail-close if current alias chain breaks |
+| Control-plane invariants | `identity/protocol/mappings/control-plane-invariants.current.yaml` | add/keep offload alias checks | Fail-close if current alias chain breaks |
 | Offload plan | `identity/protocol/mappings/github-control-plane-offload.current.yaml` | phase-gated implementation source | Scripts/workflows must read `.current.yaml`, not versioned file |
 | Docs contracts | `scripts/docs_command_contract_check.py` | continue mandatory coverage for v1.6.3 docs | No drift between docs and executable flags |
 | Evidence persistence | `scripts/validate_doc_evidence_persistence.py` | enforce persistent paths + tuple manifest | No `/tmp`-only normative evidence in governance/review deltas |

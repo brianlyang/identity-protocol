@@ -166,9 +166,14 @@ Strict tuple invariants:
 
 ## 6) Current Open Blockers (as-of 2026-03-09)
 
-1. Single-egress enforcement is not yet guaranteed for every assistant-visible path outside governed compose invocation.
+1. Historical note: this round opened with single-egress enforcement not yet guaranteed for every assistant-visible path outside governed compose invocation.
 2. Headstamp error-family convergence on strict control plane is **closed** (`error_code` canonicalized to `IP-HDSTAMP-*`).
 3. Some status surfaces can still appear green while headstamp closure is not promotion-grade complete (instance/business debt remains out of protocol scope).
+
+### 6.1 Closure Update (as-of 2026-03-10)
+
+1. Protocol strict surfaces now pass single-egress hard gate (`validate_required_gate_surface_drift` = `PASS_REQUIRED`), so v1.6.1 protocol-layer egress closure is no longer blocked by missing wrapper enforcement.
+2. Remaining residuals are instance/business replay debts, not protocol control-plane wiring gaps.
 
 Status boundary:
 

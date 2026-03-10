@@ -38,7 +38,7 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 
 ## 3) Current blocker map (headstamp only)
 
-1. Single-egress enforcement not yet guaranteed for all user-visible output channels.
+1. Protocol strict-surface single-egress enforcement is closed (`validate_required_gate_surface_drift` = `PASS_REQUIRED`); residual exposure is limited to non-protocol instance/business paths.
 2. Canonical error-family convergence (`IP-HDSTAMP-*`) is closed on strict control plane (`error_code` canonicalized).
 3. Promotion-grade parity/recurrence closure still depends on deterministic cross-surface replay receipts.
 

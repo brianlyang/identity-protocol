@@ -19,6 +19,9 @@ LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/la
 STREAM_DOC_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 DOC_EVIDENCE_ALLOWLIST_CURRENT_DEFAULT_REL = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
 CONTRACT_BINDING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/contract-binding.current.yaml"
+CONTROL_PLANE_INVARIANTS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-invariants.current.yaml"
+CONTROL_PLANE_BUDGET_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-budget.current.yaml"
+CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-status.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -353,7 +356,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".")
     parser.add_argument(
         "--invariants-file",
-        default="identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+        default=CONTROL_PLANE_INVARIANTS_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
         "--contract-mapping",
@@ -383,11 +386,24 @@ def main() -> int:
         "--doc-evidence-allowlist-current-file",
         default=DOC_EVIDENCE_ALLOWLIST_CURRENT_DEFAULT_REL,
     )
+    parser.add_argument(
+        "--control-plane-budget-current-file",
+        default=CONTROL_PLANE_BUDGET_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
+        "--control-plane-status-current-file",
+        default=CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL,
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    invariants_path = (repo_root / str(args.invariants_file)).resolve()
+    invariants_configured_file = str(args.invariants_file)
+    invariants_entry_path = (repo_root / invariants_configured_file).resolve()
+    invariants_path, invariants_active_file, invariants_alias_error = _resolve_current_yaml_alias(
+        repo_root,
+        invariants_configured_file,
+    )
     contract_mapping_configured_file = str(args.contract_mapping)
     contract_mapping_entry_path = (repo_root / contract_mapping_configured_file).resolve()
     mapping_path, contract_mapping_active_file, contract_mapping_alias_error = _resolve_current_yaml_alias(
@@ -434,6 +450,20 @@ def main() -> int:
     doc_evidence_allowlist_alias_enabled = False
     doc_evidence_allowlist_parse_ok = False
     doc_evidence_allowlist_violation_count = 0
+    control_plane_budget_current_configured_file = str(args.control_plane_budget_current_file)
+    control_plane_budget_current_path = (repo_root / control_plane_budget_current_configured_file).resolve()
+    control_plane_budget_current_resolved_path = control_plane_budget_current_path
+    control_plane_budget_active_file = ""
+    control_plane_budget_alias_enabled = False
+    control_plane_budget_parse_ok = False
+    control_plane_budget_violation_count = 0
+    control_plane_status_current_configured_file = str(args.control_plane_status_current_file)
+    control_plane_status_current_path = (repo_root / control_plane_status_current_configured_file).resolve()
+    control_plane_status_current_resolved_path = control_plane_status_current_path
+    control_plane_status_active_file = ""
+    control_plane_status_alias_enabled = False
+    control_plane_status_parse_ok = False
+    control_plane_status_violation_count = 0
     plugin_control_plane_alias_enabled = False
     plugin_control_plane_alias_parse_ok = False
     plugin_control_plane_alias_violation_count = 0
@@ -443,6 +473,10 @@ def main() -> int:
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
 
+    if not invariants_entry_path.exists():
+        stale_reasons.append(f"invariants_entry_file_missing:{invariants_entry_path}")
+    if invariants_alias_error:
+        stale_reasons.append(f"invariants_alias_error:{invariants_alias_error}")
     if not invariants_path.exists():
         stale_reasons.append(f"invariants_file_missing:{invariants_path}")
     if not contract_mapping_entry_path.exists():
@@ -895,6 +929,54 @@ def main() -> int:
         doc_evidence_allowlist_parse_ok = bool(doc_allow_state.get("parse_ok", False))
         doc_evidence_allowlist_violation_count = doc_allow_violation_count
         for row in doc_allow_violations:
+            violations.append(row)
+
+        control_plane_budget_alias_cfg = (
+            (invariants.get("control_plane_budget_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        budget_state, budget_violations, budget_violation_count = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="control_plane_budget_alias",
+            alias_cfg=control_plane_budget_alias_cfg if isinstance(control_plane_budget_alias_cfg, dict) else {},
+            configured_current_file=control_plane_budget_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/control-plane-budget.v",
+        )
+        control_plane_budget_alias_enabled = bool(budget_state.get("alias_enabled", False))
+        control_plane_budget_current_configured_file = str(budget_state.get("current_configured_file", ""))
+        control_plane_budget_current_path = Path(
+            budget_state.get("current_path", control_plane_budget_current_path)
+        )
+        control_plane_budget_current_resolved_path = Path(
+            budget_state.get("current_resolved_path", control_plane_budget_current_resolved_path)
+        )
+        control_plane_budget_active_file = str(budget_state.get("active_file", ""))
+        control_plane_budget_parse_ok = bool(budget_state.get("parse_ok", False))
+        control_plane_budget_violation_count = budget_violation_count
+        for row in budget_violations:
+            violations.append(row)
+
+        control_plane_status_alias_cfg = (
+            (invariants.get("control_plane_status_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        status_state, status_violations, status_violation_count = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="control_plane_status_alias",
+            alias_cfg=control_plane_status_alias_cfg if isinstance(control_plane_status_alias_cfg, dict) else {},
+            configured_current_file=control_plane_status_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/control-plane-status.v",
+        )
+        control_plane_status_alias_enabled = bool(status_state.get("alias_enabled", False))
+        control_plane_status_current_configured_file = str(status_state.get("current_configured_file", ""))
+        control_plane_status_current_path = Path(
+            status_state.get("current_path", control_plane_status_current_path)
+        )
+        control_plane_status_current_resolved_path = Path(
+            status_state.get("current_resolved_path", control_plane_status_current_resolved_path)
+        )
+        control_plane_status_active_file = str(status_state.get("active_file", ""))
+        control_plane_status_parse_ok = bool(status_state.get("parse_ok", False))
+        control_plane_status_violation_count = status_violation_count
+        for row in status_violations:
             violations.append(row)
 
         plugin_alias_cfg = (invariants.get("plugin_control_plane_alias") or {}) if isinstance(invariants, dict) else {}
@@ -1842,7 +1924,11 @@ def main() -> int:
     payload = {
         "control_plane_invariants_status": status,
         "error_code": error_code,
+        "invariants_entry_file": str(invariants_entry_path),
+        "invariants_configured_file": invariants_configured_file,
         "invariants_file": str(invariants_path),
+        "invariants_active_file": invariants_active_file,
+        "invariants_alias_error": invariants_alias_error,
         "contract_mapping_entry": str(contract_mapping_entry_path),
         "contract_mapping": str(mapping_path),
         "contract_mapping_active_file": contract_mapping_active_file,
@@ -1891,6 +1977,20 @@ def main() -> int:
         "doc_evidence_allowlist_active_file": doc_evidence_allowlist_active_file,
         "doc_evidence_allowlist_parse_ok": doc_evidence_allowlist_parse_ok,
         "doc_evidence_allowlist_violation_count": doc_evidence_allowlist_violation_count,
+        "control_plane_budget_alias_enabled": control_plane_budget_alias_enabled,
+        "control_plane_budget_current_file": str(control_plane_budget_current_path),
+        "control_plane_budget_current_configured_file": control_plane_budget_current_configured_file,
+        "control_plane_budget_current_resolved_file": str(control_plane_budget_current_resolved_path),
+        "control_plane_budget_active_file": control_plane_budget_active_file,
+        "control_plane_budget_parse_ok": control_plane_budget_parse_ok,
+        "control_plane_budget_violation_count": control_plane_budget_violation_count,
+        "control_plane_status_alias_enabled": control_plane_status_alias_enabled,
+        "control_plane_status_current_file": str(control_plane_status_current_path),
+        "control_plane_status_current_configured_file": control_plane_status_current_configured_file,
+        "control_plane_status_current_resolved_file": str(control_plane_status_current_resolved_path),
+        "control_plane_status_active_file": control_plane_status_active_file,
+        "control_plane_status_parse_ok": control_plane_status_parse_ok,
+        "control_plane_status_violation_count": control_plane_status_violation_count,
         "plugin_control_plane_alias_enabled": plugin_control_plane_alias_enabled,
         "plugin_control_plane_alias_parse_ok": plugin_control_plane_alias_parse_ok,
         "plugin_control_plane_alias_violation_count": plugin_control_plane_alias_violation_count,

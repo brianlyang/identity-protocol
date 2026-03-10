@@ -1,6 +1,6 @@
 schema_version: 1
 invariants_version: "v1.6"
-last_updated_utc: "2026-03-10T16:05:00Z"
+last_updated_utc: "2026-03-10T16:48:00Z"
 invariants:
   bundle_mapping_parity:
     mode: freeze
@@ -80,6 +80,28 @@ invariants:
       - strict_docs
     forbid_versioned_reference:
       regex: doc-evidence-allowlist\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  control_plane_budget_alias:
+    current_file: identity/protocol/mappings/control-plane-budget.current.yaml
+    required_fields:
+      - budgets
+    forbid_versioned_reference:
+      regex: control-plane-budget\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  control_plane_status_alias:
+    current_file: identity/protocol/mappings/control-plane-status.current.yaml
+    required_fields:
+      - schema_version
+      - status_version
+      - checks
+      - control_plane_status
+      - promotion_ready
+    forbid_versioned_reference:
+      regex: control-plane-status\\.v[0-9]+\\.[0-9]+\\.json
       surfaces:
         - scripts
         - .github/workflows

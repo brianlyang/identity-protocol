@@ -66,6 +66,27 @@ def _resolve_contract_mapping(repo_root: Path) -> Path:
     return mapping_dir / "contract-binding.yaml"
 
 
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    try:
+        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return configured_path, "", "current_file_parse_failed"
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
 def _mapping_bundle_gap(repo_root: Path) -> tuple[int, list[str], int]:
     mapping_path = _resolve_contract_mapping(repo_root)
     data = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
@@ -124,17 +145,48 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".")
     parser.add_argument(
         "--budget-file",
-        default="identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+        default="identity/protocol/mappings/control-plane-budget.current.yaml",
     )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    budget_path = (repo_root / str(args.budget_file)).resolve()
+    budget_entry_path = (repo_root / str(args.budget_file)).resolve()
+    budget_path, budget_active_file, budget_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.budget_file)
+    )
+    if not budget_entry_path.exists():
+        payload = {
+            "control_plane_budget_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_BUDGET,
+            "budget_file_entry": str(budget_entry_path),
+            "budget_file": str(budget_path),
+            "budget_file_active_file": budget_active_file,
+            "budget_file_alias_error": budget_alias_error,
+            "stale_reasons": [f"budget_file_entry_missing:{budget_entry_path}"],
+        }
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
+    if budget_alias_error:
+        payload = {
+            "control_plane_budget_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_BUDGET,
+            "budget_file_entry": str(budget_entry_path),
+            "budget_file": str(budget_path),
+            "budget_file_active_file": budget_active_file,
+            "budget_file_alias_error": budget_alias_error,
+            "stale_reasons": [f"budget_file_alias_error:{budget_alias_error}:{budget_active_file}"],
+        }
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
     if not budget_path.exists():
         payload = {
             "control_plane_budget_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_BUDGET,
+            "budget_file_entry": str(budget_entry_path),
+            "budget_file": str(budget_path),
+            "budget_file_active_file": budget_active_file,
+            "budget_file_alias_error": budget_alias_error,
             "stale_reasons": [f"budget_file_missing:{budget_path}"],
         }
         print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
@@ -255,7 +307,10 @@ def main() -> int:
     payload = {
         "control_plane_budget_status": status,
         "error_code": "" if status in {STATUS_PASS_REQUIRED, STATUS_WARN_NON_BLOCKING} else ERR_BUDGET,
+        "budget_file_entry": str(budget_entry_path),
         "budget_file": str(budget_path),
+        "budget_file_active_file": budget_active_file,
+        "budget_file_alias_error": budget_alias_error,
         "strict_surfaces": list(STRICT_SURFACES),
         "observed": {
             "validator_scripts": observed_validator_scripts,
