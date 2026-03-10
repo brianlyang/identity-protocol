@@ -24,6 +24,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical actor-scoped session binding governance (v1.6.0 planning track):
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+- Canonical GitHub-native control-plane specialization (v1.6.3 planning track):
+  - `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
 
 ## Snapshots
 

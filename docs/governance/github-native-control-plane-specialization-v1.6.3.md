@@ -6,6 +6,10 @@ Governance layer: protocol
 
 Scope: simplify protocol control-plane complexity by offloading platform-generic controls to GitHub native capabilities while retaining protocol semantic fail-close gates in-repo.
 
+Companion review ledger:
+
+- `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
+
 ## 0) Why v1.6.3 is a dedicated stream
 
 1. This is a control-plane migration, not a single validator patch.
