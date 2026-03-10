@@ -616,3 +616,44 @@ Evidence mirrors:
    - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json`
 3. Tuple contract:
    - every record contains `sha256`, `command`, `rc`, `timestamp_utc`.
+
+## 12) Round-36 seven-pass serial deep-scan addendum (2026-03-11)
+
+### 12.1 Execution requirement and scope
+
+1. A serial deep-scan replay was executed **7 consecutive iterations** under the same repository head to validate convergence depth and anti-flake stability.
+2. Scan scope:
+   - active v1.6 streams (`v1.6.1 / v1.6.2 / v1.6.3`)
+   - legacy v1.6-and-earlier docs coverage visibility against stream-registry authority boundary
+   - code-plane contract gates bound to docs semantics.
+
+### 12.2 Seven-pass replay status (all iterations)
+
+For each iteration (`1..7`):
+
+1. `validate_control_plane_invariants` -> `PASS_REQUIRED`
+2. `validate_required_gate_surface_drift` -> `PASS_REQUIRED`
+3. `docs_command_contract_check` -> `PASS`
+4. `validate_protocol_ssot_source` -> `OK`
+5. `validate_doc_evidence_persistence` -> `PASS_REQUIRED`
+6. `validate_control_plane_status_sync` -> `PASS_REQUIRED`
+
+### 12.3 File-level semantics result
+
+1. Legacy docs discovered by version pattern (`<= v1.6.*`): `54`.
+2. Current authoritative set coverage via stream registry (`stream_docs + mandatory_static_docs`): `8`.
+3. Interpretation contract:
+   - uncovered legacy docs are archival/context corpus by default,
+   - current-state decisions must resolve through the authoritative set from:
+     - `identity/protocol/mappings/stream-doc-registry.current.yaml`.
+4. To prevent boundary drift, static authority checks were expanded to include:
+   - `docs/governance/AUDIT_SNAPSHOT_INDEX.md` in mandatory static coverage + alias-reference checks.
+
+### 12.4 Evidence
+
+1. Root:
+   - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/`
+2. Manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json`
+3. Iteration summary:
+   - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/round36_iteration_summary.json`
