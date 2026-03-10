@@ -1,0 +1,129 @@
+schema_version: 1
+offload_plan_version: "v1.6.3"
+last_updated_utc: "2026-03-10T00:00:00Z"
+status: intake_ready
+owner: protocol_control_plane
+
+principles:
+  - id: cp-pr-001
+    text: "Platform-native controls must replace repo-local glue checks where semantics are equivalent."
+  - id: cp-pr-002
+    text: "Protocol semantic contracts (RQ-level meaning) stay in repo validators and are never offloaded."
+  - id: cp-pr-003
+    text: "Control-plane migration must be config-driven and reversible, no hardcoded one-off bypass."
+
+baseline_metrics:
+  scripts_total: 208
+  validate_scripts_total: 145
+  error_codes_total: 457
+  required_gate_workflow_python_invocations: 121
+  required_gate_workflow_unique_python_scripts: 115
+
+platform_offload_controls:
+  - control_id: cp-gh-001
+    scope: branch_protection
+    current_enforcement:
+      primary_files:
+        - docs/governance/branch-protection-required-checks-v1.2.8.md
+      mode: manual_ui_checklist
+    target_enforcement:
+      platform: github_rulesets
+      required_features:
+        - require_pull_request
+        - require_status_checks
+        - require_up_to_date_before_merge
+        - restrict_direct_push_to_main
+    migration_phase: phase_1
+    rollback_mode: keep_current_required_checks
+
+  - control_id: cp-gh-002
+    scope: required_check_name_stability
+    current_enforcement:
+      primary_files:
+        - .github/workflows/protocol-ci.yml
+        - .github/workflows/identity-protocol-ci.yml
+        - .github/workflows/_identity-required-gates.yml
+      mode: workflow_job_name_based
+    target_enforcement:
+      platform: github_rulesets
+      required_features:
+        - stable_required_check_names
+        - check_source_binding_to_actions
+    migration_phase: phase_1
+    rollback_mode: dual_check_names_temporarily_allowed
+
+  - control_id: cp-gh-003
+    scope: merge_queue_compatibility
+    current_enforcement:
+      primary_files:
+        - .github/workflows/protocol-ci.yml
+        - .github/workflows/identity-protocol-ci.yml
+      mode: pull_request_push_only
+    target_enforcement:
+      platform: github_merge_queue
+      required_features:
+        - merge_group_event_coverage
+        - same_required_checks_as_pr
+    migration_phase: phase_1
+    rollback_mode: disable_merge_queue_keep_pr_gates
+
+  - control_id: cp-gh-004
+    scope: ownership_approval
+    current_enforcement:
+      primary_files:
+        - docs/governance/branch-protection-required-checks-v1.2.8.md
+      mode: convention_only
+    target_enforcement:
+      platform: github_codeowners
+      required_features:
+        - required_code_owner_review
+        - protected_paths
+    migration_phase: phase_2
+    rollback_mode: maintain_security_team_required_review
+
+  - control_id: cp-gh-005
+    scope: workflow_reuse_and_policy
+    current_enforcement:
+      primary_files:
+        - .github/workflows/_identity-required-gates.yml
+      mode: reusable_workflow_partial
+    target_enforcement:
+      platform: github_actions_policy
+      required_features:
+        - reusable_workflow_boundary
+        - pin_actions_by_sha_or_verified_source
+        - allowed_actions_source_policy
+    migration_phase: phase_2
+    rollback_mode: lock_to_internal_reusable_workflow_only
+
+repo_retained_semantic_contracts:
+  - requirement_key: asb16-rq-034
+    contract_id: rq_034_multimodal_plugin_enforcement_contract_v1
+    validator: scripts/validate_multimodal_plugin_enforcement.py
+    reason: "multimodal evidence semantics cannot be represented by GitHub ruleset primitives"
+  - requirement_key: asb16-rq-035
+    contract_id: rq_035_reasoning_loop_failclose_contract_v1
+    validator: scripts/validate_reasoning_loop_failclose.py
+    reason: "attempt-level reasoning semantics and no-target final-state rules are protocol-domain logic"
+  - requirement_key: asb16-rq-019
+    contract_id: required_gate_bundle_runner_contract_v1
+    validator: scripts/required_gate_bundle_runner.py
+    reason: "cross-surface tuple parity and requirement-key dispatch are protocol-specific"
+
+acceptance_targets_v163:
+  phase_1:
+    required_gate_workflow_python_invocations_max: 95
+    merge_group_trigger_coverage: true
+    ruleset_required_checks_active: true
+  phase_2:
+    required_gate_workflow_python_invocations_max: 85
+    codeowners_required_review_active: true
+    actions_policy_active: true
+  phase_3:
+    required_gate_workflow_python_invocations_max: 75
+    manual_branch_protection_checklist_dependency: false
+
+non_goals:
+  - "Do not weaken any FAIL_REQUIRED semantics in multimodal/reasoning validators."
+  - "Do not move instance-runtime migration debt handling into protocol semantic validators."
+  - "Do not hardcode provider credentials or instance-specific paths in control-plane governance."

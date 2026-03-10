@@ -50,3 +50,4 @@ Quick entrypoint for audit history and remediation closure records.
 ## Protocol hardening plans
 
 - `docs/governance/p1-human-collab-trigger-upgrade-plan-2026-02-21.md` — protocol-level standardization plan for mandatory human-collaboration notification triggers (taxonomy + contract + validator + CI gate), **implemented in v1.3.0**
+- `docs/governance/github-native-control-plane-specialization-v1.6.3.md` — v1.6.3 dedicated migration stream for GitHub-native control-plane offload (rulesets/merge-queue/codeowners/actions-policy) with semantic fail-close retention in protocol validators.
