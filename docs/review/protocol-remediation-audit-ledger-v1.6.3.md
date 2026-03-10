@@ -340,3 +340,11 @@ Observed:
 
 1. Layer-targeted profile capability is now protocolized and machine-checkable.
 2. Default runtime path remains `strict_full`; no strict-chain relaxation introduced.
+
+### 11.5 Round-33.1 target-probe profile binding fix (2026-03-10)
+
+1. `scripts/required_gate_bundle_runner.py` now enforces profile binding even when `--target-name` is provided.
+2. If a target probe is outside the selected targeted profile:
+   - return `SKIPPED_NOT_REQUIRED` with reason `target_excluded_by_gate_profile`.
+3. If a targeted profile is used on strict operations (`ci/update/readiness/...`):
+   - return `FAIL_REQUIRED` with explicit `mapping_errors` in payload (fail-close contract preserved).

@@ -654,7 +654,14 @@ def main() -> int:
             mapping_errors.append(f"unknown_target_name:{target_name}")
             requirement_keys = ()
         else:
-            requirement_keys = (target_key,)
+            if (
+                isinstance(gate_profile_selection, GateProfileSelection)
+                and gate_profile_selection.profile_mode != "full"
+                and target_key not in set(gate_profile_selection.requirement_keys)
+            ):
+                requirement_keys = ()
+            else:
+                requirement_keys = (target_key,)
 
     specs, spec_errors = _load_validator_specs(mapping_path, requirement_keys)
     mapping_errors.extend(spec_errors)
@@ -872,16 +879,64 @@ def main() -> int:
     }
 
     if target_name:
+        if not result_rows and not mapping_errors:
+            target_status_field = STATUS_FIELD_BY_TARGET.get(target_name, "status")
+            target_payload = {
+                target_status_field: STATUS_SKIPPED_NOT_REQUIRED,
+                "required_contract": False,
+                "auto_required_signal": False,
+                "error_code": "",
+                "stale_reasons": ["target_excluded_by_gate_profile"],
+                "bundle_contract_id": BUNDLE_CONTRACT_ID,
+                "bundle_key": BUNDLE_KEY,
+                "bundle_target_name": target_name,
+                "surface_label": surface_label,
+                "run_id_binding": run_id_binding,
+                "report_selected_path": report_selected_path,
+                "gate_profile": gate_profile,
+                "gate_profile_mode": (
+                    gate_profile_selection.profile_mode
+                    if isinstance(gate_profile_selection, GateProfileSelection)
+                    else ""
+                ),
+                "gate_profile_file": gate_profile_file,
+                "gate_profile_resolved_file": str(gate_profile_resolved_file),
+                "gate_profile_requirement_count": len(requirement_keys),
+                "gate_profile_requirement_keys": list(requirement_keys),
+                "actor_id": str(args.actor_id or "").strip(),
+                "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
+                "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
+                "lock_state": str(args.lock_state or "").strip(),
+                "parity_operation_scope": parity_operation_scope,
+                "required_contract_reason": "scan_probe_profile_filtered_not_required",
+                "send_time_gate_status": str(args.send_time_gate_status or "").strip().upper(),
+                "outlet_bypass_detected": _parse_bool_token(args.outlet_bypass_detected),
+                "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
+                "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
+                "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
+            }
+            if str(args.out or "").strip():
+                _write_payload_out(str(args.out), target_payload)
+            if args.json_only:
+                print(json.dumps(target_payload, ensure_ascii=False))
+            else:
+                print(json.dumps(target_payload, ensure_ascii=False, indent=2))
+            return 0
+
         target_row = next((row for row in result_rows if row.get("target_name") == target_name), None)
         if not target_row:
+            stale_reasons = ["bundle_target_missing"]
+            if mapping_errors:
+                stale_reasons = ["bundle_entry_contract_failed"] + [f"mapping_error:{x}" for x in mapping_errors]
             target_status_field = STATUS_FIELD_BY_TARGET.get(target_name, "status")
             target_payload = {
                 target_status_field: STATUS_FAIL_REQUIRED,
                 "error_code": "IP-GATE-ENTRY-001",
-                "stale_reasons": ["bundle_target_missing"],
+                "stale_reasons": stale_reasons,
                 "bundle_contract_id": BUNDLE_CONTRACT_ID,
                 "bundle_key": BUNDLE_KEY,
                 "bundle_target_name": target_name,
+                "mapping_errors": mapping_errors,
                 "gate_profile": gate_profile,
                 "gate_profile_mode": (
                     gate_profile_selection.profile_mode
