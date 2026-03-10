@@ -218,6 +218,17 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
                     f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} governance_alias_refs must be non-empty"
                 )
             else:
+                for alias_ref in governance_alias_refs:
+                    if ".current." not in alias_ref:
+                        errors.append(
+                            f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} governance_alias_ref must be current-pointer: {alias_ref}"
+                        )
+                        continue
+                    alias_path = (repo_root / alias_ref).resolve()
+                    if not alias_path.exists():
+                        errors.append(
+                            f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} governance_alias_ref not found: {alias_ref}"
+                        )
                 stream_doc_alias_requirements[governance_doc] = governance_alias_refs
 
             if not review_doc:
@@ -233,6 +244,17 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
                     f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} review_alias_refs must be non-empty"
                 )
             else:
+                for alias_ref in review_alias_refs:
+                    if ".current." not in alias_ref:
+                        errors.append(
+                            f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} review_alias_ref must be current-pointer: {alias_ref}"
+                        )
+                        continue
+                    alias_path = (repo_root / alias_ref).resolve()
+                    if not alias_path.exists():
+                        errors.append(
+                            f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} review_alias_ref not found: {alias_ref}"
+                        )
                 stream_doc_alias_requirements[review_doc] = review_alias_refs
 
     return _dedup(stream_docs), _dedup(mandatory_static_docs), stream_doc_alias_requirements, errors
@@ -332,9 +354,9 @@ def main() -> int:
     docs = args.docs if args.docs else _docs_from_index(repo_root)
     bootstrap_failures: List[str] = []
     stream_doc_alias_requirements: dict[str, List[str]] = {}
+    stream_docs, mandatory_static_docs, stream_doc_alias_requirements, registry_errors = _load_stream_doc_registry(repo_root)
+    bootstrap_failures.extend(registry_errors)
     if args.docs is None:
-        stream_docs, mandatory_static_docs, stream_doc_alias_requirements, registry_errors = _load_stream_doc_registry(repo_root)
-        bootstrap_failures.extend(registry_errors)
         governance_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/governance/")]
         review_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/review/")]
         for doc in governance_stream_docs:
