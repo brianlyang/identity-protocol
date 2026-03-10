@@ -15,6 +15,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_FAIL_OPTIONAL = "FAIL_OPTIONAL"
+STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 
 BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
 BUNDLE_KEY = "required_gate_bundle_runner"
@@ -145,6 +146,16 @@ ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
 
 TRUTHY_VALUES: tuple[str, ...] = ("1", "true", "yes", "y", "on")
 FALSY_VALUES: tuple[str, ...] = ("0", "false", "no", "n", "off", "")
+HEADSTAMP_EVIDENCE_REQUIRED_OPERATIONS: tuple[str, ...] = (
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+)
 RUNTIME_PROOF_REQUIRED_OPERATIONS: tuple[str, ...] = (
     "activate",
     "update",
@@ -401,6 +412,63 @@ def _derive_required_contract_reason(
     return "no_required_contract_detected"
 
 
+def _normalize_headstamp_projection_status(raw: str) -> tuple[str, bool]:
+    token = str(raw or "").strip().upper()
+    if token in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED, STATUS_WARN_NON_BLOCKING}:
+        required_contract = token in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED, STATUS_WARN_NON_BLOCKING}
+        return token, required_contract
+    if token in {"NOT_APPLICABLE", "PASS_NOT_APPLICABLE"}:
+        return STATUS_SKIPPED_NOT_REQUIRED, False
+    if token:
+        return STATUS_FAIL_REQUIRED, True
+    return STATUS_SKIPPED_NOT_REQUIRED, False
+
+
+def _build_headstamp_projection_payload(
+    *,
+    send_time_gate_status: str,
+    operation: str,
+    evidence_ref: str,
+) -> dict[str, Any]:
+    status, required_contract = _normalize_headstamp_projection_status(send_time_gate_status)
+    normalized = str(send_time_gate_status or "").strip().upper()
+    payload: dict[str, Any] = {
+        "required_contract": required_contract,
+        "send_time_gate_status": status,
+        "reply_first_line_status": status,
+        "error_code": "",
+        "evidence_ref": str(evidence_ref or "").strip(),
+        "stale_reasons": ["headstamp_projection_from_bundle_signal"],
+        "auto_required_signal": False,
+    }
+    if normalized and normalized not in {
+        STATUS_PASS_REQUIRED,
+        STATUS_FAIL_REQUIRED,
+        STATUS_SKIPPED_NOT_REQUIRED,
+        STATUS_WARN_NON_BLOCKING,
+        "NOT_APPLICABLE",
+        "PASS_NOT_APPLICABLE",
+    }:
+        payload["send_time_gate_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_first_line_status"] = STATUS_FAIL_REQUIRED
+        payload["required_contract"] = True
+        payload["error_code"] = "IP-GATE-ENTRY-001"
+        payload["stale_reasons"] = [f"invalid_send_time_gate_status_token:{normalized}"]
+        return payload
+
+    if status == STATUS_FAIL_REQUIRED and not str(payload.get("error_code", "")).strip():
+        # Canonical headstamp family when upstream status is explicit fail but no detailed code is provided.
+        payload["error_code"] = "IP-HDSTAMP-003"
+    if status == STATUS_WARN_NON_BLOCKING:
+        payload["stale_reasons"].append("headstamp_warn_non_blocking_projection")
+    if status == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["stale_reasons"].append("headstamp_pre_send_gate_not_applicable_for_surface")
+    op = str(operation or "").strip().lower()
+    if status == STATUS_SKIPPED_NOT_REQUIRED and op in HEADSTAMP_EVIDENCE_REQUIRED_OPERATIONS:
+        payload["stale_reasons"].append("strict_operation_without_reply_evidence_projection")
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run required gate bundle from mapping single-source registry.")
     parser.add_argument("--catalog", required=True)
@@ -410,7 +478,13 @@ def main() -> int:
     parser.add_argument("--contract-mapping", default="")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--report-selected-path", default="")
+    parser.add_argument("--session-id", default="")
     parser.add_argument("--send-time-gate-status", default="")
+    parser.add_argument("--reply-text", default="")
+    parser.add_argument("--reply-file", default="")
+    parser.add_argument("--reply-log", default="")
+    parser.add_argument("--reply-transport-ref", default="")
+    parser.add_argument("--reply-outlet-guard-applied", action="store_true")
     parser.add_argument(
         "--outlet-bypass-detected",
         nargs="?",
@@ -452,6 +526,16 @@ def main() -> int:
     surface_label = str(args.surface_label or "").strip() or str(args.operation or "").strip().replace("-", "_") or "unknown_surface"
     run_id_binding = str(args.run_id or "").strip()
     report_selected_path = str(args.report_selected_path or "").strip()
+    actor_id = str(args.actor_id or "").strip()
+    session_id = str(args.session_id or "").strip()
+    send_time_gate_status = str(args.send_time_gate_status or "").strip()
+    reply_text = str(args.reply_text or "").strip()
+    reply_file = str(args.reply_file or "").strip()
+    reply_log = str(args.reply_log or "").strip()
+    reply_transport_ref = str(args.reply_transport_ref or "").strip()
+    explicit_reply_guard = bool(args.reply_outlet_guard_applied)
+    outlet_bypass_detected = _parse_bool_token(args.outlet_bypass_detected)
+    reply_outlet_guard_applied = explicit_reply_guard or (not outlet_bypass_detected)
 
     if mapping_errors:
         failure_count += len(mapping_errors)
@@ -475,9 +559,33 @@ def main() -> int:
             "--json-only",
         ]
         cmd.extend(spec.fixed_args)
+        if spec.target_name == "prompt_import_executable_coupling":
+            if actor_id:
+                cmd.extend(["--actor-id", actor_id])
+            if session_id:
+                cmd.extend(["--session-id", session_id])
+        if spec.target_name == "headstamp_pre_send_hard_gate":
+            if actor_id:
+                cmd.extend(["--actor-id", actor_id])
+            if session_id:
+                cmd.extend(["--session-id", session_id])
+            if reply_text:
+                cmd.extend(["--reply-text", reply_text])
+            if reply_file:
+                cmd.extend(["--reply-file", reply_file])
+            if reply_log:
+                cmd.extend(["--reply-log", reply_log])
+            if reply_transport_ref:
+                cmd.extend(["--reply-transport-ref", reply_transport_ref])
+            if reply_outlet_guard_applied:
+                cmd.append("--reply-outlet-guard-applied")
+            if str(args.final_emit_policy_mode or "").strip():
+                cmd.extend(["--final-emit-policy-mode", str(args.final_emit_policy_mode).strip()])
+            if str(args.final_emit_schema_status or "").strip():
+                cmd.extend(["--final-emit-schema-status", str(args.final_emit_schema_status).strip()])
+
         if spec.target_name in {
             "multimodal_plugin_enforcement",
-            "reasoning_loop_failclose_enforcement",
             "run_id_report_selection",
         }:
             cmd.extend(["--run-id", run_id_binding])
@@ -486,8 +594,25 @@ def main() -> int:
                     cmd.extend(["--report", report_selected_path])
                 else:
                     cmd.extend(["--report-selected-path", report_selected_path])
-        rc, out, err = _run(cmd, cwd=repo_root)
-        payload = _parse_payload(out)
+        if spec.target_name == "reasoning_loop_failclose_enforcement":
+            if run_id_binding and report_selected_path:
+                cmd.extend(["--run-id", run_id_binding])
+            if report_selected_path:
+                cmd.extend(["--report-selected-path", report_selected_path])
+
+        # RQ-032: if no concrete reply evidence is provided, project the upstream
+        # gate signal instead of forcing a synthetic re-validation pass.
+        if spec.target_name == "headstamp_pre_send_hard_gate" and not any([reply_text, reply_file, reply_log]):
+            payload = _build_headstamp_projection_payload(
+                send_time_gate_status=send_time_gate_status,
+                operation=str(args.operation),
+                evidence_ref=reply_transport_ref,
+            )
+            rc = 0 if str(payload.get("send_time_gate_status", "")).strip().upper() != STATUS_FAIL_REQUIRED else 1
+            err = ""
+        else:
+            rc, out, err = _run(cmd, cwd=repo_root)
+            payload = _parse_payload(out)
         status_value, status_field = _classify_status(target_name=spec.target_name, rc=rc, payload=payload)
         required_contract = bool(payload.get("required_contract", False))
         payload_contract_issues = _validate_row_payload_contract(
