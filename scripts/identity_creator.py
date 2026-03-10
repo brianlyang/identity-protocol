@@ -2784,12 +2784,14 @@ def main() -> int:
                 args.baseline_policy,
                 "--json-only",
             ],
-            ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_capability_arbitration.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_dialogue_content.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_dialogue_cross_validation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_dialogue_result_support.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            [
+                "python3",
+                "scripts/run_identity_dialogue_feedback_bundle.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+            ],
         ]
         layer_intent_text = str(args.layer_intent_text or "").strip()
         expected_work_layer = str(args.expected_work_layer or "").strip().lower()

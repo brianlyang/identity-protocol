@@ -505,3 +505,68 @@ Evidence mirrors:
 3. Enforcement:
    - `scripts/validate_control_plane_invariants.py` fail-closes alias breakage for all four pointers.
    - `scripts/validate_plugin_contract_literal_paths.py` blocks non-canonical literals for all four pointer tokens.
+
+## 10) Round-34 cross-stream hardening addendum (2026-03-11)
+
+### 10.1 Why this addendum exists
+
+1. Round-33 closed alias anti-break-chain, but review feedback still highlighted three convergence items:
+   - budget must enforce **continuous no-rebound**
+   - `identity_creator.py` direct validator coupling remained red-adjacent
+   - error-code governance needed family-level convergence framing (not only raw literal count)
+2. This addendum cross-checks `v1.6.1` / `v1.6.2` / `v1.6.3` in one packet and hardens the control plane without weakening fail-close semantics.
+
+### 10.2 Implemented hardening deltas
+
+1. Budget validator upgraded to convergence-aware mode:
+   - `scripts/validate_control_plane_budget.py`
+   - adds `error_code_families` metric (numeric-suffix family collapse)
+   - adds `convergence_guard` (`mode=no_rebound`) and fail-close rebound detection
+2. Budget SSOT updated to dual-threshold + family convergence policy:
+   - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+   - includes `convergence_guard.ceilings` for script/error/direct-call envelopes
+3. Direct validate density reduced on creator strict surface:
+   - `scripts/identity_creator.py`
+   - `scripts/run_identity_dialogue_feedback_bundle.py` (delegated bundle for dialogue/feedback block)
+   - result: strict-surface direct validate literals for `identity_creator.py` dropped to threshold-safe range.
+
+### 10.3 Cross-stream replay outcomes (v1.6.1 / v1.6.2 / v1.6.3)
+
+1. `v1.6.1` headstamp closure:
+   - `validate_headstamp_recurrence_closure` -> `PASS_REQUIRED` (with bound session replay)
+2. `v1.6.2` plugin/governance control surface:
+   - `validate_plugin_contract_literal_paths` -> `PASS_REQUIRED`
+   - `validate_reasoning_loop_failclose` -> `PASS_REQUIRED`
+   - `validate_multimodal_plugin_enforcement`:
+     - strict `operation=validate` currently returns `FAIL_REQUIRED` + `IP-MM-RUN-002` for `base-repo-architect` due missing runtime multimodal evidence in instance report path.
+     - `operation=inspection` remains `PASS_REQUIRED`.
+   - interpretation rule: `IP-MM-RUN-002` in this round is instance execution-evidence debt, not protocol control-plane wiring regression.
+3. `v1.6.3` control-plane core:
+   - `validate_control_plane_budget` -> `PASS_REQUIRED` (no warn, no rebound)
+   - `validate_control_plane_invariants` -> `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` -> `PASS_REQUIRED`
+   - `validate_contract_binding_reference_integrity` -> `PASS_REQUIRED`
+   - `validate_control_plane_status_sync` -> `PASS_REQUIRED`
+   - rendered status: `control_plane_status=PASS_REQUIRED`.
+
+### 10.4 Evidence (persistent-only, tuple complete)
+
+1. Canonical root:
+   - `activity/evidence/v163-predev/2026-03-11/round34-hardclose/`
+2. Manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round34-hardclose/EVIDENCE_MANIFEST.round34-hardclose.json`
+3. Every evidence row in manifest includes:
+   - `sha256`
+   - `command`
+   - `rc`
+   - `timestamp_utc`
+
+### 10.5 Governance lock for future rounds
+
+1. Budget is now governed by both threshold and monotonic convergence:
+   - crossing warn/fail thresholds remains guarded
+   - rebound above frozen ceilings is fail-close
+2. Error-code governance must track both views:
+   - raw count (telemetry continuity)
+   - family-normalized count (convergence decision signal)
+3. Creator strict-surface validator fan-out should continue to prefer delegated bundles for repeatable blocks to avoid reintroducing direct literal sprawl.

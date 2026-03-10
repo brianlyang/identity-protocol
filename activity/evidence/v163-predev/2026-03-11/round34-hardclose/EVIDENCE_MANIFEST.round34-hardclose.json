@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "stream": "v163-predev",
+  "round": "round34-hardclose",
+  "generated_at_utc": "2026-03-10T16:27:39Z",
+  "entries": [
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/resolve_identity_context_base_repo_architect.json",
+      "command": "python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-architect --repo-catalog ../.identity/catalog.local.yaml --local-catalog ../.identity/catalog.local.yaml",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:39Z",
+      "sha256": "b4cfa12d05a8ec2877a1b200247f2465428b147530d53e94ff4de7bc1290637f"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v161_headstamp_validate.json",
+      "command": "python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --repo-catalog ../.identity/catalog.local.yaml --actor-id assistant:codex --session-id run:SWITCH-BACK-BASE-REPO-ARCHITECT-20260310 --operation validate --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:41Z",
+      "sha256": "1cc259dbb3fa11d584ddfebd70a29719cf66b98d96490b35f73b94c84deca773"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v162_multimodal_validate_strict.json",
+      "command": "python3 scripts/validate_multimodal_plugin_enforcement.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --operation validate --json-only",
+      "rc": 1,
+      "timestamp_utc": "2026-03-10T16:27:41Z",
+      "sha256": "e262da83d149e521506cdbbb9dd0ebaba143ef0b608cc41a00311dbcfa27b016"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v162_multimodal_inspection.json",
+      "command": "python3 scripts/validate_multimodal_plugin_enforcement.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --operation inspection --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:41Z",
+      "sha256": "8ca57ab6ed93ea2dc70a924ccabb06c4615d51d096968e939f46ed64c8d850c0"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v162_reasoning_validate.json",
+      "command": "python3 scripts/validate_reasoning_loop_failclose.py --identity-id base-repo-architect --catalog ../.identity/catalog.local.yaml --operation validate --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:41Z",
+      "sha256": "ae68ab0c59359da31e76ed0db7808a3901ad28e07959570b2e9e70d8956626cd"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v162_plugin_literal_lint.json",
+      "command": "python3 scripts/validate_plugin_contract_literal_paths.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:42Z",
+      "sha256": "f2ffc95864b58a286245b7fce0f78e1a96bea01d53919c3b504dc433dc9bc6ef"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_control_plane_budget.json",
+      "command": "python3 scripts/validate_control_plane_budget.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:42Z",
+      "sha256": "96723ee95779ded70f59112286fd20df6b27b7ebad20e89daeeff5d9d5ff3bb6"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_control_plane_invariants.json",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:43Z",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_surface_drift.json",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:43Z",
+      "sha256": "dc9b205104726e9dedfda6e5c30af431098aac948c353d178137f0fb4e61c7c2"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_contract_binding_reference_integrity.json",
+      "command": "python3 scripts/validate_contract_binding_reference_integrity.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:27:43Z",
+      "sha256": "647aac26768cee2fc18ddedabb51ad29e562d0b835eb882f5b348cd81ab23024"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_render_control_plane_status.json",
+      "command": "python3 scripts/render_control_plane_status.py --write --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:28:02Z",
+      "sha256": "784416f28ceb06ad3b73e7a9930c6b539a7a75a0caa63b2f180bf9910dc596e7"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_control_plane_status_sync.json",
+      "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:28:23Z",
+      "sha256": "c54f892ac97f34b7ffb0d944887eb2a0f0c7f54568681e8a1c84474d418cd149"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/v163_doc_evidence_persistence.json",
+      "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:28:23Z",
+      "sha256": "a8568cb1b2fdbe88ca42bc4b76557b8c4596a9809da8e88f2c174b34b02c6296"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/docs_command_contract_check.log",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:28:41Z",
+      "sha256": "aaf72c17b233d1d9993c9552db0c2d69ef9918b2a5ea155c2ef178e3dbeb7d04"
+    },
+    {
+      "file": "activity/evidence/v163-predev/2026-03-11/round34-hardclose/protocol_ssot_source.log",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-10T16:28:41Z",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb"
+    }
+  ]
+}

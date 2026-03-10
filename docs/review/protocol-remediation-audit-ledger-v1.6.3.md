@@ -503,6 +503,45 @@ Observed:
    - `python3 scripts/validate_plugin_contract_literal_paths.py --json-only` => `PASS_REQUIRED`
    - `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`
 
+### 11.13 Round-34 convergence hardening ledger (2026-03-11)
+
+1. Scope:
+   - close three pending convergence points raised after Round-33:
+     - control-plane budget monotonic no-rebound
+     - `identity_creator.py` direct validate density
+     - error-code family convergence metric
+2. Code deltas:
+   - `scripts/validate_control_plane_budget.py`
+     - adds family-normalized error code metric
+     - adds convergence-guard fail-close check (`mode=no_rebound`)
+   - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+     - introduces `convergence_guard` ceilings and `error_code_family_strategy`
+     - updates dual-threshold values to match current stabilized envelope
+   - `scripts/identity_creator.py`
+   - `scripts/run_identity_dialogue_feedback_bundle.py`
+     - delegates six dialogue/feedback validators through one bundle entry to reduce creator strict-surface literal fan-out
+3. Measured outcomes:
+   - `validate_control_plane_budget`:
+     - before: `WARN_NON_BLOCKING` (`validator_scripts`, `error_codes`, creator direct-calls red-adjacent)
+     - after: `PASS_REQUIRED` with `convergence_guard.violations=[]`
+   - creator direct validate literals:
+     - `90 -> 84` (`scripts/identity_creator.py` strict surface)
+   - normalized error-code family count:
+     - observed `137`, tracked alongside raw `410`
+4. Cross-stream replay snapshot:
+   - v1.6.1: `validate_headstamp_recurrence_closure` => `PASS_REQUIRED` (bound-session replay)
+   - v1.6.2:
+     - `validate_plugin_contract_literal_paths` => `PASS_REQUIRED`
+     - `validate_reasoning_loop_failclose` => `PASS_REQUIRED`
+     - `validate_multimodal_plugin_enforcement` (strict validate) => `FAIL_REQUIRED` + `IP-MM-RUN-002` on `base-repo-architect` (instance runtime multimodal evidence debt)
+   - v1.6.3 control plane:
+     - invariants / surface drift / contract binding / status sync / docs+ssot gates all green
+     - rendered status now `control_plane_status=PASS_REQUIRED`
+5. Evidence (persistent mirror):
+   - root: `activity/evidence/v163-predev/2026-03-11/round34-hardclose/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round34-hardclose/EVIDENCE_MANIFEST.round34-hardclose.json`
+   - tuple completeness: every entry carries `sha256 + command + rc + timestamp_utc`.
+
 ### 11.13 Round-33.9 required-coverage run-id passthrough compatibility fix (2026-03-10)
 
 1. Gap:

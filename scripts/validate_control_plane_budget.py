@@ -35,14 +35,25 @@ def _count_validator_scripts(repo_root: Path) -> int:
     return len(list((repo_root / "scripts").glob("validate_*.py")))
 
 
-def _count_error_codes(repo_root: Path) -> int:
+def _normalize_error_code_family(code: str) -> str:
+    value = str(code or "").strip()
+    if not value:
+        return ""
+    return re.sub(r"-\d+$", "", value)
+
+
+def _collect_error_codes(repo_root: Path) -> tuple[set[str], set[str]]:
     codes: set[str] = set()
+    families: set[str] = set()
     for path in (repo_root / "scripts").glob("*.py"):
         text = _read_text(path)
         for code in re.findall(r"IP-[A-Z0-9\\-]+", text):
             if code:
                 codes.add(code)
-    return len(codes)
+                family = _normalize_error_code_family(code)
+                if family:
+                    families.add(family)
+    return codes, families
 
 
 def _resolve_contract_mapping(repo_root: Path) -> Path:
@@ -117,12 +128,9 @@ def _strict_direct_validate_calls(repo_root: Path) -> dict[str, int]:
     return out
 
 
-def _load_budget(path: Path) -> dict[str, Any]:
+def _load_budget_doc(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        return {}
-    budgets = data.get("budgets") or {}
-    return budgets if isinstance(budgets, dict) else {}
+    return data if isinstance(data, dict) else {}
 
 
 def _parse_threshold(value: Any) -> tuple[int | None, int | None]:
@@ -192,9 +200,17 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
         return 1
 
-    budgets = _load_budget(budget_path)
+    budget_doc = _load_budget_doc(budget_path)
+    budgets = budget_doc.get("budgets") or {}
+    if not isinstance(budgets, dict):
+        budgets = {}
+    convergence_guard = budget_doc.get("convergence_guard") or {}
+    if not isinstance(convergence_guard, dict):
+        convergence_guard = {}
     observed_validator_scripts = _count_validator_scripts(repo_root)
-    observed_error_codes = _count_error_codes(repo_root)
+    observed_error_codes_raw_set, observed_error_code_families_set = _collect_error_codes(repo_root)
+    observed_error_codes = len(observed_error_codes_raw_set)
+    observed_error_code_families = len(observed_error_code_families_set)
     missing_mapping_rows_count, missing_mapping_rows, observed_bundle_rows = _mapping_bundle_gap(repo_root)
     observed_direct_validate_calls = _strict_direct_validate_calls(repo_root)
 
@@ -238,6 +254,26 @@ def main() -> int:
                 "observed": observed_error_codes,
                 "budget_fail": e_fail,
                 "reason": "error_code_count_exceeded",
+            }
+        )
+
+    ef_warn, ef_fail = _parse_threshold(budgets.get("error_code_families"))
+    if ef_warn is not None and observed_error_code_families > ef_warn:
+        warn_violations.append(
+            {
+                "field": "error_code_families",
+                "observed": observed_error_code_families,
+                "budget_warn": ef_warn,
+                "reason": "error_code_family_count_warn",
+            }
+        )
+    if ef_fail is not None and observed_error_code_families > ef_fail:
+        fail_violations.append(
+            {
+                "field": "error_code_families",
+                "observed": observed_error_code_families,
+                "budget_fail": ef_fail,
+                "reason": "error_code_family_count_exceeded",
             }
         )
 
@@ -298,6 +334,86 @@ def main() -> int:
                     }
                 )
 
+    convergence_enabled = bool(convergence_guard.get("enabled", False))
+    convergence_mode = str(convergence_guard.get("mode", "")).strip() or "disabled"
+    convergence_enforce_mode = str(convergence_guard.get("enforce_mode", "")).strip() or "fail_required"
+    convergence_ceilings = convergence_guard.get("ceilings") or {}
+    if not isinstance(convergence_ceilings, dict):
+        convergence_ceilings = {}
+    convergence_violations: list[dict[str, Any]] = []
+    if convergence_enabled and convergence_mode == "no_rebound":
+        metric_map: dict[str, int] = {
+            "validator_scripts": observed_validator_scripts,
+            "error_codes": observed_error_codes,
+            "error_code_families": observed_error_code_families,
+            "mapping_rows_missing_in_bundle": missing_mapping_rows_count,
+        }
+        for key, observed in metric_map.items():
+            ceiling_value = convergence_ceilings.get(key)
+            if ceiling_value is None or str(ceiling_value).strip() == "":
+                continue
+            try:
+                ceiling_int = int(ceiling_value)
+            except Exception:
+                fail_violations.append(
+                    {
+                        "field": key,
+                        "reason": "convergence_ceiling_parse_failed",
+                        "ceiling": ceiling_value,
+                    }
+                )
+                continue
+            if observed > ceiling_int:
+                convergence_violations.append(
+                    {
+                        "field": key,
+                        "observed": observed,
+                        "ceiling": ceiling_int,
+                        "reason": "convergence_rebound_detected",
+                    }
+                )
+        direct_ceilings = convergence_ceilings.get("direct_validate_calls") or {}
+        if isinstance(direct_ceilings, dict):
+            for rel, ceiling_value in direct_ceilings.items():
+                observed = int(observed_direct_validate_calls.get(rel, -1))
+                if observed < 0:
+                    convergence_violations.append(
+                        {
+                            "field": "strict_direct_validate_calls",
+                            "surface": rel,
+                            "reason": "convergence_surface_missing",
+                        }
+                    )
+                    continue
+                try:
+                    ceiling_int = int(ceiling_value)
+                except Exception:
+                    convergence_violations.append(
+                        {
+                            "field": "strict_direct_validate_calls",
+                            "surface": rel,
+                            "reason": "convergence_ceiling_parse_failed",
+                            "ceiling": ceiling_value,
+                        }
+                    )
+                    continue
+                if observed > ceiling_int:
+                    convergence_violations.append(
+                        {
+                            "field": "strict_direct_validate_calls",
+                            "surface": rel,
+                            "observed": observed,
+                            "ceiling": ceiling_int,
+                            "reason": "convergence_rebound_detected",
+                        }
+                    )
+
+    if convergence_violations:
+        if convergence_enforce_mode == "warn_non_blocking":
+            warn_violations.extend(convergence_violations)
+        else:
+            fail_violations.extend(convergence_violations)
+
     if fail_violations:
         status = STATUS_FAIL_REQUIRED
     elif warn_violations:
@@ -315,12 +431,21 @@ def main() -> int:
         "observed": {
             "validator_scripts": observed_validator_scripts,
             "error_codes": observed_error_codes,
+            "error_code_families": observed_error_code_families,
             "mapping_rows_missing_in_bundle": missing_mapping_rows_count,
             "bundle_rows": observed_bundle_rows,
             "missing_mapping_rows": missing_mapping_rows,
             "strict_direct_validate_calls": observed_direct_validate_calls,
         },
         "budgets": budgets,
+        "error_code_family_strategy": budget_doc.get("error_code_family_strategy") or {},
+        "convergence_guard": {
+            "enabled": convergence_enabled,
+            "mode": convergence_mode,
+            "enforce_mode": convergence_enforce_mode,
+            "ceiling_count": len(convergence_ceilings),
+            "violations": convergence_violations,
+        },
         "warn_violation_count": len(warn_violations),
         "warn_violations": warn_violations,
         "fail_violation_count": len(fail_violations),

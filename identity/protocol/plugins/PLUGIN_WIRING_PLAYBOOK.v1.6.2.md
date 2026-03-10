@@ -43,7 +43,7 @@ Machine policy for this playbook and plugin READMEs:
    - `validator_script`
    - `required_gate_surfaces`
    - `required_report_fields`
-4. Add requirement row in `identity/protocol/mappings/contract-binding.v1.6.yaml`:
+4. Add requirement row in `identity/protocol/mappings/contract-binding.current.yaml` (resolved by alias):
    - `kernel_contract_id`
    - `validator_ids`
    - `gate_surfaces`

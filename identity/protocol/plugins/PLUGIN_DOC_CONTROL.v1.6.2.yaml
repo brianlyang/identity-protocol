@@ -6,6 +6,15 @@ docs:
   canonical_playbook: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
   root_readme: identity/protocol/plugins/README.md
   playbook_link_token: PLUGIN_WIRING_PLAYBOOK.current.md
+  playbook_required_tokens:
+    - PLUGIN_REGISTRY.current.yaml
+    - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+    - PROVIDER_PROFILES.current.yaml
+    - contract-binding.current.yaml
+    - scripts/required_gate_bundle_runner.py
+    - scripts/validate_required_gate_surface_drift.py
+    - scripts/report_three_plane_status.py
+    - scripts/full_identity_protocol_scan.py
   root_required_tokens:
     - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
     - PLUGIN_REGISTRY.current.yaml
