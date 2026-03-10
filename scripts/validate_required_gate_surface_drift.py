@@ -20,6 +20,16 @@ STRICT_SURFACES: tuple[str, ...] = (
     "scripts/e2e_smoke_test.sh",
     ".github/workflows/_identity-required-gates.yml",
 )
+WORKFLOW_REQUIRED_GATE_SURFACE = ".github/workflows/_identity-required-gates.yml"
+REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
+FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
+WORKFLOW_REQUIRED_EXECUTION_TOKENS: tuple[str, ...] = (
+    f"bash {REQUIRED_GATE_CI_DELEGATE_SCRIPT}",
+    f"bash {FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT}",
+)
+CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
+    REQUIRED_GATE_CI_DELEGATE_SCRIPT,
+)
 FINAL_EGRESS_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
     "scripts/release_readiness_check.py",
@@ -377,6 +387,7 @@ def main() -> int:
 
     missing_surface_files: list[str] = []
     missing_lineage_refs: dict[str, list[str]] = {}
+    missing_execution_tokens: dict[str, list[str]] = {}
     forbidden_hits: dict[str, list[str]] = {}
     missing_final_egress_wrapper: list[str] = []
     forbidden_direct_egress_hits: dict[str, list[str]] = {}
@@ -394,6 +405,10 @@ def main() -> int:
         missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
         if missing:
             missing_lineage_refs[rel] = missing
+        if rel == WORKFLOW_REQUIRED_GATE_SURFACE:
+            missing_exec = [token for token in WORKFLOW_REQUIRED_EXECUTION_TOKENS if token not in text]
+            if missing_exec:
+                missing_execution_tokens[rel] = missing_exec
         hits = [needle for needle in forbidden_direct_validators if needle in text]
         if hits:
             forbidden_hits[rel] = hits
@@ -415,10 +430,20 @@ def main() -> int:
         if invalid_bundle_values:
             bundle_arg_value_invalid[rel] = invalid_bundle_values
 
+    for rel in CI_DELEGATED_LINEAGE_SURFACES:
+        path = repo_root / rel
+        if not path.exists():
+            missing_surface_files.append(rel)
+            continue
+        text = _read_text(path)
+        missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
+        if missing:
+            missing_lineage_refs[rel] = missing
+
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
-    elif missing_lineage_refs or forbidden_hits:
+    elif missing_lineage_refs or missing_execution_tokens or forbidden_hits:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-002"
     elif missing_final_egress_wrapper or forbidden_direct_egress_hits:
@@ -453,6 +478,7 @@ def main() -> int:
         "forbidden_direct_validators": forbidden_direct_validators,
         "missing_surface_files": missing_surface_files,
         "missing_lineage_refs": missing_lineage_refs,
+        "missing_execution_tokens": missing_execution_tokens,
         "forbidden_hits": forbidden_hits,
         "final_egress_wrapper_script": FINAL_EGRESS_WRAPPER_SCRIPT,
         "final_egress_required_surfaces": list(FINAL_EGRESS_REQUIRED_SURFACES),
