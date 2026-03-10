@@ -12,6 +12,12 @@ Companion governance SSOT:
 2. `identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml`
 3. `identity/protocol/mappings/github-control-plane-offload.current.yaml` (stable alias entry)
 
+## State interpretation guard
+
+1. Intake and pre-dev sections are historical review records.
+2. Current-state verdict must prioritize the latest execution section (Round-32 or newer) and machine status files.
+3. Historical gap statements are archival unless reaffirmed by newer machine receipts.
+
 ## 0) Boundary rules
 
 1. This file is a review ledger, not a normative governance contract.

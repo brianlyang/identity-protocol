@@ -10,6 +10,13 @@ Companion review ledger:
 
 - `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
 
+## State interpretation guard (mandatory)
+
+1. Sections marked as Round-31 intake/pre-development are historical baseline snapshots.
+2. Current-state judgment must follow the latest implemented addendum in this stream (Round-32 or newer) plus mapping status:
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
+3. If historical intake text conflicts with latest addendum, historical text is archival evidence only and must not drive present-tense closure claims.
+
 ## 0) Why v1.6.3 is a dedicated stream
 
 1. This is a control-plane migration, not a single validator patch.
