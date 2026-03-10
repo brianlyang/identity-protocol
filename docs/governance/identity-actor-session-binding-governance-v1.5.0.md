@@ -7,6 +7,15 @@ Owner: identity protocol base-repo architect
 Execution mode: topic-level canonical SSOT for actor-session-binding governance  
 Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DONE` and audit sign-off is `PASS` (`P1` rows block only when explicitly promoted to `P0`)
 
+## 0A) Current-state redirect (mandatory)
+
+1. This file is retained as historical baseline for v1.5 actor-session-binding closure.
+2. Current v1.6.x stream governance/review routing must resolve via:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Current control-plane status/promotion checks must resolve via:
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+4. If this v1.5 baseline conflicts with active v1.6.x stream docs, follow stream-registry-resolved active stream docs.
+
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
 ### 0.1 Single execution entrypoint (topic SSOT)
