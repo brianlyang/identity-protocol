@@ -55,6 +55,7 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round34-hardclose/EVIDENCE_MANIFEST\.round34-hardclose\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round35-file-level-unification/EVIDENCE_MANIFEST\.round35-file-level-unification\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round36-seven-pass-deepscan/EVIDENCE_MANIFEST\.round36-seven-pass-deepscan\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round36-seven-pass-deepscan/round36_iteration_summary\.json$'
 
   docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
     max_activity_refs: 40
@@ -73,3 +74,4 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round34-hardclose/EVIDENCE_MANIFEST\.round34-hardclose\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round35-file-level-unification/EVIDENCE_MANIFEST\.round35-file-level-unification\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round36-seven-pass-deepscan/EVIDENCE_MANIFEST\.round36-seven-pass-deepscan\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round36-seven-pass-deepscan/round36_iteration_summary\.json$'
