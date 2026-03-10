@@ -18,6 +18,20 @@ baseline_metrics:
   error_codes_total: 457
   required_gate_workflow_python_invocations: 121
   required_gate_workflow_unique_python_scripts: 115
+  metric_scope: delegate_inclusive
+  notes:
+    - "baseline_metrics tracks end-to-end call volume including delegated scripts/ci runners."
+
+current_metrics:
+  required_gate_workflow_python_invocations: 15
+  required_gate_workflow_unique_python_scripts: 15
+  metric_scope: workflow_file_only
+  delegate_inclusive_reference:
+    required_gate_workflow_python_invocations: 121
+    required_gate_workflow_unique_python_scripts: 115
+  notes:
+    - "current_metrics tracks direct python invocations in .github/workflows/_identity-required-gates.yml."
+    - "delegate_inclusive_reference preserves end-to-end observability without coupling offload budget to delegated internals."
 
 platform_offload_controls:
   - control_id: cp-gh-001
