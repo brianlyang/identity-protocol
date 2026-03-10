@@ -14,7 +14,7 @@ Protocol-governed plugin contract for multimodal vision-capable provider enforce
 2. Bundle target name: `multimodal_plugin_enforcement`
 3. Contract id: `rq_034_multimodal_plugin_enforcement_contract_v1`
 4. Validator: `scripts/validate_multimodal_plugin_enforcement.py`
-5. Wiring playbook: `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`
+5. Wiring playbook: `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`
 
 ## Canonical contract files
 

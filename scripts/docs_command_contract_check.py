@@ -38,6 +38,7 @@ MANDATORY_DOC_PATHS = (
     "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
     "docs/review/protocol-remediation-audit-ledger-v1.6.md",
     "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+    "identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md",
     "identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md",
     "CHANGELOG.md",
     "VERSIONING.md",

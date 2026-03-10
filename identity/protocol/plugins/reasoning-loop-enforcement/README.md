@@ -8,7 +8,7 @@ This plugin hardens the `Reasoning loop contract` into a protocol-level fail-clo
 - Bundle target name: `reasoning_loop_failclose_enforcement`
 - Contract id: `rq_035_reasoning_loop_failclose_contract_v1`
 - Validator: `scripts/validate_reasoning_loop_failclose.py`
-- Wiring playbook: `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`
+- Wiring playbook: `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`
 
 ## Enforcement levels
 

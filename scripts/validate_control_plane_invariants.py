@@ -11,7 +11,7 @@ import yaml
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_INVARIANT = "IP-CP-INV-001"
-PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml"
+PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -104,6 +104,8 @@ def main() -> int:
     mapping_path = (repo_root / str(args.contract_mapping)).resolve()
     plugin_governance_path = (repo_root / str(args.plugin_governance_file)).resolve()
     plugin_doc_control_path = (repo_root / str(args.plugin_doc_control_file)).resolve()
+    plugin_doc_control_resolved_path = plugin_doc_control_path
+    plugin_doc_control_active_file = ""
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
@@ -297,11 +299,40 @@ def main() -> int:
                         plugin_doc_control_file=str(plugin_doc_control_path),
                     )
                 else:
+                    plugin_doc_control_active_file = str(doc_control_doc.get("active_file", "")).strip()
+                    if plugin_doc_control_active_file:
+                        active_path = (repo_root / plugin_doc_control_active_file).resolve()
+                        plugin_doc_control_resolved_path = active_path
+                        if not active_path.exists() or not active_path.is_file():
+                            plugin_readability_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_doc_control",
+                                reason="active_file_missing",
+                                plugin_doc_control_file=str(plugin_doc_control_path),
+                                active_file=plugin_doc_control_active_file,
+                            )
+                            doc_control_doc = {}
+                        else:
+                            resolved_doc = _load_yaml(active_path)
+                            if not resolved_doc:
+                                plugin_readability_violation_count += 1
+                                _append_violation(
+                                    violations,
+                                    field="plugin_doc_control",
+                                    reason="active_file_parse_failed",
+                                    plugin_doc_control_file=str(plugin_doc_control_path),
+                                    active_file=plugin_doc_control_active_file,
+                                )
+                                doc_control_doc = {}
+                            else:
+                                doc_control_doc = resolved_doc
+
                     docs_cfg_raw = doc_control_doc.get("docs")
                     docs_cfg = docs_cfg_raw if isinstance(docs_cfg_raw, dict) else {}
                     playbook_rel = str(docs_cfg.get("canonical_playbook", "")).strip()
                     playbook_link_token = str(
-                        docs_cfg.get("playbook_link_token", "PLUGIN_WIRING_PLAYBOOK.v1.6.2.md")
+                        docs_cfg.get("playbook_link_token", "PLUGIN_WIRING_PLAYBOOK.current.md")
                     ).strip()
                     if not playbook_rel:
                         plugin_readability_violation_count += 1
@@ -892,6 +923,8 @@ def main() -> int:
         "contract_mapping": str(mapping_path),
         "plugin_governance_file": str(plugin_governance_path),
         "plugin_doc_control_file": str(plugin_doc_control_path),
+        "plugin_doc_control_resolved_file": str(plugin_doc_control_resolved_path),
+        "plugin_doc_control_active_file": plugin_doc_control_active_file,
         "bundle_mapping_parity_mode": mode,
         "bundle_mapping_parity_baseline_missing_rows": baseline_missing_rows,
         "bundle_mapping_parity_reduction_plan_file": reduction_plan_file,

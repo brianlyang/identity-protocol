@@ -6,7 +6,7 @@ Use this file first. Other files are implementation targets.
 
 Machine policy for this playbook and plugin READMEs:
 
-- `identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml`
+- `identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml`
 
 ## Goal
 

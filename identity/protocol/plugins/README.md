@@ -13,8 +13,8 @@ This directory is the canonical plugin governance root for protocol-level plugin
 1. `PLUGIN_REGISTRY.v1.6.2.yaml` (registry, when landed)
 2. `PROVIDER_PROFILES.v1.6.2.yaml` (provider capabilities and endpoint policy)
 3. `FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml` (single-source fail-close plugin wiring policy: paths + mapping + surfaces + prompt binding)
-4. `PLUGIN_WIRING_PLAYBOOK.v1.6.2.md` (human-readable single-file plugin onboarding/wiring SSOT)
-5. `PLUGIN_DOC_CONTROL.v1.6.2.yaml` (machine-readable plugin documentation control policy)
+4. `PLUGIN_WIRING_PLAYBOOK.current.md` (stable playbook entry; points to current versioned playbook)
+5. `PLUGIN_DOC_CONTROL.current.yaml` (stable doc-control entry; points to current versioned policy)
 6. `schemas/*.schema.json` (strict schema validation)
 7. `templates/provider-bindings.local.template.yaml` (instance-side minimal binding template: profile pointer + credential_ref only)
 
@@ -27,6 +27,6 @@ This directory is the canonical plugin governance root for protocol-level plugin
 
 ## Readability Contract
 
-1. Plugin onboarding steps live in `PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`.
-2. Documentation control rules live in `PLUGIN_DOC_CONTROL.v1.6.2.yaml`.
+1. Plugin onboarding steps live in `PLUGIN_WIRING_PLAYBOOK.current.md`.
+2. Documentation control rules live in `PLUGIN_DOC_CONTROL.current.yaml`.
 3. `scripts/validate_control_plane_invariants.py` fail-closes when plugin README linkage or required tokens drift.
