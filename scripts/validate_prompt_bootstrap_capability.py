@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -69,6 +71,25 @@ def _collect_configured_validators(task: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(rows))
 
 
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        catalog_doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return False
+    rows = catalog_doc.get("identities")
+    if not isinstance(rows, list):
+        return False
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("id", "")).strip() != identity_id:
+            continue
+        profile = str(row.get("profile", "")).strip().lower()
+        runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+        return profile == "fixture" or runtime_mode == "demo_only"
+    return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate prompt bootstrap capability contract (RQ-014).")
     ap.add_argument("--catalog", required=True)
@@ -98,6 +119,9 @@ def main() -> int:
     required = contract_required(contract)
     if args.force_required:
         required = True
+    fixture_identity = _is_fixture_identity(catalog_path, args.identity_id)
+    if fixture_identity:
+        required = False
 
     prompt_path = (pack_path / "IDENTITY_PROMPT.md").resolve()
     prompt_text = prompt_path.read_text(encoding="utf-8", errors="ignore") if prompt_path.exists() else ""
@@ -123,6 +147,7 @@ def main() -> int:
         "task_path": str(task_path),
         "prompt_path": str(prompt_path),
         "operation": args.operation,
+        "fixture_identity": fixture_identity,
         "required_contract": required,
         "auto_required_signal": bool(required and args.operation in STRICT_OPERATIONS),
         "producer_readiness": prompt_path.exists(),
@@ -139,7 +164,7 @@ def main() -> int:
     }
 
     if not required:
-        payload["stale_reasons"] = ["required_contract_disabled_or_missing"]
+        payload["stale_reasons"] = ["fixture_profile_scope"] if fixture_identity else ["required_contract_disabled_or_missing"]
         _emit(payload, json_only=args.json_only)
         return 0
 
