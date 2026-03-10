@@ -10,6 +10,7 @@ Companion governance SSOT:
 
 1. `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
 2. `identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml`
+3. `identity/protocol/mappings/github-control-plane-offload.current.yaml` (stable alias entry)
 
 ## 0) Boundary rules
 
@@ -118,3 +119,11 @@ Source of truth for this matrix:
 1. Intake and review scaffolding are complete.
 2. Implementation is not started in this ledger yet.
 3. Posture: `CONDITIONAL_GO` (phase-1 executable, phase-gated).
+
+## 7) Anti-break-chain update (2026-03-10)
+
+1. Added current-alias pointer for offload mapping:
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
+2. Added invariant checks so alias chain is fail-closed:
+   - missing/unparseable `current` or `active_file` now fails control-plane invariants.
+3. This removes version-file direct-coupling in tooling and reduces pointer break risk during future upgrades.

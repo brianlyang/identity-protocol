@@ -6,3 +6,19 @@ invariants:
     mode: freeze
     baseline_missing_rows: 0
     reduction_plan_file: identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml
+  github_control_plane_offload_alias:
+    current_file: identity/protocol/mappings/github-control-plane-offload.current.yaml
+    required_fields:
+      - offload_plan_version
+      - platform_offload_controls
+      - repo_retained_semantic_contracts
+    required_control_ids:
+      - cp-gh-001
+      - cp-gh-002
+      - cp-gh-003
+      - cp-gh-004
+      - cp-gh-005
+    required_retained_requirement_keys:
+      - asb16-rq-019
+      - asb16-rq-034
+      - asb16-rq-035

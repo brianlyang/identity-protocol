@@ -96,6 +96,8 @@ References:
 Machine-readable migration source of truth:
 
 - `identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml`
+- Stable tooling entrypoint:
+  - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
 
 This file defines:
 
@@ -105,6 +107,16 @@ This file defines:
 4. phase targets and rollback modes
 
 Hard rule: implementation steps in v1.6.3 must reference this YAML; avoid one-off script hardcoding for migration decisions.
+
+### 3.1 Anti-break-chain contract (mandatory)
+
+1. Tooling/scripts must read `*.current.yaml`, not versioned files directly.
+2. `*.current.yaml` must expose `active_file` and point to a single versioned snapshot.
+3. `scripts/validate_control_plane_invariants.py` fail-closes when:
+   - current file is missing/unparseable
+   - `active_file` is missing/unparseable
+   - active file misses required fields/control IDs/retained semantic keys
+4. Version upgrades are done by pointer switch (`current -> new version`), not in-place overwrite of old snapshot.
 
 ## 4) Execution phases
 

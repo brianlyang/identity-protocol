@@ -12,6 +12,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_INVARIANT = "IP-CP-INV-001"
 PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
+GITHUB_OFFLOAD_CURRENT_DEFAULT_REL = "identity/protocol/mappings/github-control-plane-offload.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -96,6 +97,10 @@ def main() -> int:
         "--plugin-doc-control-file",
         default=PLUGIN_DOC_CONTROL_DEFAULT_REL,
     )
+    parser.add_argument(
+        "--github-offload-current-file",
+        default=GITHUB_OFFLOAD_CURRENT_DEFAULT_REL,
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -104,8 +109,15 @@ def main() -> int:
     mapping_path = (repo_root / str(args.contract_mapping)).resolve()
     plugin_governance_path = (repo_root / str(args.plugin_governance_file)).resolve()
     plugin_doc_control_path = (repo_root / str(args.plugin_doc_control_file)).resolve()
+    github_offload_current_path = (repo_root / str(args.github_offload_current_file)).resolve()
     plugin_doc_control_resolved_path = plugin_doc_control_path
     plugin_doc_control_active_file = ""
+    github_offload_current_configured_file = str(args.github_offload_current_file)
+    github_offload_current_resolved_path = github_offload_current_path
+    github_offload_active_file = ""
+    github_offload_alias_enabled = False
+    github_offload_parse_ok = False
+    github_offload_violation_count = 0
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
@@ -135,6 +147,144 @@ def main() -> int:
         inv_doc = _load_yaml(invariants_path)
         invariants = inv_doc.get("invariants") or {}
         parity_cfg = (invariants.get("bundle_mapping_parity") or {}) if isinstance(invariants, dict) else {}
+        github_offload_cfg = (
+            (invariants.get("github_control_plane_offload_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        if isinstance(github_offload_cfg, dict) and github_offload_cfg:
+            github_offload_alias_enabled = True
+            configured_current_file = str(github_offload_cfg.get("current_file", "")).strip()
+            if configured_current_file:
+                github_offload_current_configured_file = configured_current_file
+                github_offload_current_path = (repo_root / configured_current_file).resolve()
+                github_offload_current_resolved_path = github_offload_current_path
+            if not github_offload_current_configured_file.endswith(".current.yaml"):
+                github_offload_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="github_control_plane_offload_alias",
+                    reason="current_file_non_canonical",
+                    current_file=github_offload_current_configured_file,
+                )
+
+            if not github_offload_current_path.exists() or not github_offload_current_path.is_file():
+                github_offload_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="github_control_plane_offload_alias",
+                    reason="current_file_missing",
+                    current_file=github_offload_current_configured_file,
+                )
+            else:
+                current_doc = _load_yaml(github_offload_current_path)
+                if not current_doc:
+                    github_offload_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="github_control_plane_offload_alias",
+                        reason="current_file_parse_failed",
+                        current_file=github_offload_current_configured_file,
+                    )
+                else:
+                    github_offload_active_file = str(current_doc.get("active_file", "")).strip()
+                    if not github_offload_active_file:
+                        github_offload_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="github_control_plane_offload_alias",
+                            reason="active_file_missing",
+                            current_file=github_offload_current_configured_file,
+                        )
+                    else:
+                        if not github_offload_active_file.startswith(
+                            "identity/protocol/mappings/github-control-plane-offload.v"
+                        ):
+                            github_offload_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="github_control_plane_offload_alias",
+                                reason="active_file_non_canonical",
+                                active_file=github_offload_active_file,
+                            )
+                        active_path = (repo_root / github_offload_active_file).resolve()
+                        github_offload_current_resolved_path = active_path
+                        if not active_path.exists() or not active_path.is_file():
+                            github_offload_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="github_control_plane_offload_alias",
+                                reason="active_file_not_found",
+                                current_file=github_offload_current_configured_file,
+                                active_file=github_offload_active_file,
+                            )
+                        else:
+                            active_doc = _load_yaml(active_path)
+                            if not active_doc:
+                                github_offload_violation_count += 1
+                                _append_violation(
+                                    violations,
+                                    field="github_control_plane_offload_alias",
+                                    reason="active_file_parse_failed",
+                                    active_file=github_offload_active_file,
+                                )
+                            else:
+                                github_offload_parse_ok = True
+                                required_fields = _as_str_list(github_offload_cfg.get("required_fields"))
+                                for field_name in required_fields:
+                                    value = active_doc.get(field_name)
+                                    if value in (None, "", [], {}):
+                                        github_offload_violation_count += 1
+                                        _append_violation(
+                                            violations,
+                                            field="github_control_plane_offload_alias",
+                                            reason="required_field_missing_or_empty",
+                                            active_file=github_offload_active_file,
+                                            required_field=field_name,
+                                        )
+
+                                required_control_ids = set(
+                                    _as_str_list(github_offload_cfg.get("required_control_ids"))
+                                )
+                                observed_control_ids = {
+                                    str(row.get("control_id", "")).strip()
+                                    for row in _as_list(active_doc.get("platform_offload_controls"))
+                                    if isinstance(row, dict)
+                                }
+                                missing_control_ids = sorted(
+                                    x for x in required_control_ids if x and x not in observed_control_ids
+                                )
+                                if missing_control_ids:
+                                    github_offload_violation_count += len(missing_control_ids)
+                                    _append_violation(
+                                        violations,
+                                        field="github_control_plane_offload_alias",
+                                        reason="required_control_ids_missing",
+                                        active_file=github_offload_active_file,
+                                        missing_control_ids=missing_control_ids,
+                                    )
+
+                                required_requirement_keys = set(
+                                    _as_str_list(github_offload_cfg.get("required_retained_requirement_keys"))
+                                )
+                                observed_requirement_keys = {
+                                    str(row.get("requirement_key", "")).strip()
+                                    for row in _as_list(active_doc.get("repo_retained_semantic_contracts"))
+                                    if isinstance(row, dict)
+                                }
+                                missing_requirement_keys = sorted(
+                                    x
+                                    for x in required_requirement_keys
+                                    if x and x not in observed_requirement_keys
+                                )
+                                if missing_requirement_keys:
+                                    github_offload_violation_count += len(missing_requirement_keys)
+                                    _append_violation(
+                                        violations,
+                                        field="github_control_plane_offload_alias",
+                                        reason="required_retained_requirement_keys_missing",
+                                        active_file=github_offload_active_file,
+                                        missing_requirement_keys=missing_requirement_keys,
+                                    )
+
         mode = str(parity_cfg.get("mode", "")).strip().lower() or "freeze"
         baseline_missing_rows = int(parity_cfg.get("baseline_missing_rows", -1))
         reduction_plan_file = str(parity_cfg.get("reduction_plan_file", "")).strip()
@@ -925,6 +1075,13 @@ def main() -> int:
         "plugin_doc_control_file": str(plugin_doc_control_path),
         "plugin_doc_control_resolved_file": str(plugin_doc_control_resolved_path),
         "plugin_doc_control_active_file": plugin_doc_control_active_file,
+        "github_offload_alias_enabled": github_offload_alias_enabled,
+        "github_offload_current_file": str(github_offload_current_path),
+        "github_offload_current_configured_file": github_offload_current_configured_file,
+        "github_offload_current_resolved_file": str(github_offload_current_resolved_path),
+        "github_offload_active_file": github_offload_active_file,
+        "github_offload_parse_ok": github_offload_parse_ok,
+        "github_offload_violation_count": github_offload_violation_count,
         "bundle_mapping_parity_mode": mode,
         "bundle_mapping_parity_baseline_missing_rows": baseline_missing_rows,
         "bundle_mapping_parity_reduction_plan_file": reduction_plan_file,
