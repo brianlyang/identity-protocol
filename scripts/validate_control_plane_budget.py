@@ -129,14 +129,29 @@ def _strict_direct_validate_calls(repo_root: Path) -> dict[str, int]:
     return out
 
 
-def _required_gate_workflow_python_stats(repo_root: Path) -> tuple[int, int]:
+def _required_gate_workflow_python_stats(repo_root: Path) -> tuple[int, int, int, int]:
     workflow_path = repo_root / ".github/workflows/_identity-required-gates.yml"
     if not workflow_path.exists():
-        return -1, -1
+        return -1, -1, -1, -1
     text = _read_text(workflow_path)
-    matches = [m.group(0) for m in re.finditer(r"python3\\s+scripts/[A-Za-z0-9_.-]+\\.py", text)]
-    unique = set(matches)
-    return len(matches), len(unique)
+    py_call_pattern = re.compile(r"python3\s+scripts/[A-Za-z0-9_.-]+\.py")
+    delegate_pattern = re.compile(r"(scripts/ci/[A-Za-z0-9_.-]+\.sh)")
+    workflow_matches = [m.group(0) for m in py_call_pattern.finditer(text)]
+    delegate_matches: list[str] = []
+    delegates = sorted({m.group(1) for m in delegate_pattern.finditer(text)})
+    for rel in delegates:
+        delegate_path = (repo_root / rel).resolve()
+        if not delegate_path.exists() or not delegate_path.is_file():
+            continue
+        delegate_text = _read_text(delegate_path)
+        delegate_matches.extend(m.group(0) for m in py_call_pattern.finditer(delegate_text))
+    total_matches = workflow_matches + delegate_matches
+    return (
+        len(workflow_matches),
+        len(set(workflow_matches)),
+        len(total_matches),
+        len(set(total_matches)),
+    )
 
 
 def _offload_phase1_python_invocation_max(repo_root: Path) -> tuple[int | None, str, str]:
@@ -248,9 +263,12 @@ def main() -> int:
     observed_error_code_families = len(observed_error_code_families_set)
     missing_mapping_rows_count, missing_mapping_rows, observed_bundle_rows = _mapping_bundle_gap(repo_root)
     observed_direct_validate_calls = _strict_direct_validate_calls(repo_root)
-    observed_required_gate_workflow_python_invocations, observed_required_gate_workflow_unique_python_scripts = (
-        _required_gate_workflow_python_stats(repo_root)
-    )
+    (
+        observed_required_gate_workflow_python_invocations,
+        observed_required_gate_workflow_unique_python_scripts,
+        observed_required_gate_delegate_inclusive_python_invocations,
+        observed_required_gate_delegate_inclusive_unique_python_scripts,
+    ) = _required_gate_workflow_python_stats(repo_root)
     offload_phase1_max, offload_plan_path, offload_plan_error = _offload_phase1_python_invocation_max(repo_root)
 
     warn_violations: list[dict[str, Any]] = []
@@ -505,6 +523,8 @@ def main() -> int:
             "strict_direct_validate_calls": observed_direct_validate_calls,
             "required_gate_workflow_python_invocations": observed_required_gate_workflow_python_invocations,
             "required_gate_workflow_unique_python_scripts": observed_required_gate_workflow_unique_python_scripts,
+            "required_gate_delegate_inclusive_python_invocations": observed_required_gate_delegate_inclusive_python_invocations,
+            "required_gate_delegate_inclusive_unique_python_scripts": observed_required_gate_delegate_inclusive_unique_python_scripts,
         },
         "budgets": budgets,
         "offload_budget": {
