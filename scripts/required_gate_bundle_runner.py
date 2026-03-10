@@ -620,6 +620,18 @@ def _build_headstamp_projection_payload(
     return payload
 
 
+def _resolve_input_path(repo_root: Path, raw_path: str) -> Path:
+    value = str(raw_path or "").strip()
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (repo_root / path).resolve()
+
+
+def _is_strict_no_trim_operation(operation: str) -> bool:
+    return str(operation or "").strip().lower() in set(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run required gate bundle from mapping single-source registry.")
     parser.add_argument("--catalog", required=True)
@@ -674,11 +686,15 @@ def main() -> int:
     target_name = str(args.target_name or "").strip()
     gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
     gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
+    operation = str(args.operation or "").strip()
+    operation_normalized = operation.lower()
+    gate_profile_entry_file = _resolve_input_path(repo_root, gate_profile_file)
+    canonical_gate_profile_entry_file = (repo_root / DEFAULT_GATE_PROFILE_FILE).resolve()
     gate_profile_selection, gate_profile_resolved_file, gate_profile_errors = _load_gate_profile_selection(
         repo_root=repo_root,
         profile_file=gate_profile_file,
         profile_name=gate_profile,
-        operation=str(args.operation),
+        operation=operation,
         resolved_work_layer=str(args.resolved_work_layer or "").strip(),
     )
     requirement_keys = (
@@ -690,6 +706,11 @@ def main() -> int:
     if mapping_alias_error:
         mapping_errors.append(f"contract_mapping_alias_resolution_failed:{mapping_alias_error}")
     mapping_errors.extend(gate_profile_errors)
+    if _is_strict_no_trim_operation(operation_normalized) and gate_profile_entry_file != canonical_gate_profile_entry_file:
+        mapping_errors.append(
+            "gate_profile_file_non_canonical_for_strict_operation:"
+            f"{gate_profile_file}:expected={DEFAULT_GATE_PROFILE_FILE}"
+        )
     if target_name:
         target_key = REQUIREMENT_BY_TARGET.get(target_name, "")
         if not target_key:
@@ -895,7 +916,9 @@ def main() -> int:
             else ""
         ),
         "gate_profile_file": gate_profile_file,
+        "gate_profile_entry_file": str(gate_profile_entry_file),
         "gate_profile_resolved_file": str(gate_profile_resolved_file),
+        "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
         "gate_profile_requirement_count": len(requirement_keys),
         "gate_profile_requirement_keys": list(requirement_keys),
         "mapping_errors": mapping_errors,
@@ -942,7 +965,9 @@ def main() -> int:
                     else ""
                 ),
                 "gate_profile_file": gate_profile_file,
+                "gate_profile_entry_file": str(gate_profile_entry_file),
                 "gate_profile_resolved_file": str(gate_profile_resolved_file),
+                "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
                 "gate_profile_requirement_count": len(requirement_keys),
                 "gate_profile_requirement_keys": list(requirement_keys),
                 "actor_id": str(args.actor_id or "").strip(),
@@ -986,7 +1011,9 @@ def main() -> int:
                     else ""
                 ),
                 "gate_profile_file": gate_profile_file,
+                "gate_profile_entry_file": str(gate_profile_entry_file),
                 "gate_profile_resolved_file": str(gate_profile_resolved_file),
+                "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
                 "gate_profile_requirement_count": len(requirement_keys),
                 "gate_profile_requirement_keys": list(requirement_keys),
                 "actor_id": str(args.actor_id or "").strip(),
@@ -1022,7 +1049,9 @@ def main() -> int:
             else "",
         )
         target_payload.setdefault("gate_profile_file", gate_profile_file)
+        target_payload.setdefault("gate_profile_entry_file", str(gate_profile_entry_file))
         target_payload.setdefault("gate_profile_resolved_file", str(gate_profile_resolved_file))
+        target_payload.setdefault("canonical_gate_profile_entry_file", str(canonical_gate_profile_entry_file))
         target_payload.setdefault("gate_profile_requirement_count", len(requirement_keys))
         target_payload.setdefault("gate_profile_requirement_keys", list(requirement_keys))
         target_payload.setdefault("surface_label", surface_label)
