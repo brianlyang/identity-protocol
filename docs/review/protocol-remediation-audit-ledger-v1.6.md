@@ -4,6 +4,21 @@ Status: Active
 Layer: protocol-only tracking ledger (non-governance)
 Purpose: Central place for architect + audit-expert planning, implementation replay, and closure decisions before `v1.6` tag.
 
+## 0A) Current-state redirect (mandatory)
+
+1. This ledger remains historical/replay trace; it is **not** the standalone source for current-state protocol judgments.
+2. Current-state stream routing must follow:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Current-state control-plane metrics/status must follow current pointers:
+   - `identity/protocol/mappings/control-plane-budget.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
+4. Active stream review judgments must be read from:
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
+5. Historical evidence rows in this file may contain transient paths/threshold snapshots; they cannot override current-pointer SSOT.
+
 ## 0) Boundary and usage rules
 
 1. This file is a review ledger, not a governance SSOT.
