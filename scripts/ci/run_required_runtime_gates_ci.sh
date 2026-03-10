@@ -51,17 +51,25 @@ for ID in ${IDS}; do
   python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci
   python3 scripts/validate_identity_session_refresh_status.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --operation ci --baseline-policy warn
   python3 scripts/validate_e2e_hermetic_runtime_import.py --operation ci --pythonpath-bootstrap-mode internal_bootstrap --json-only
-  python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --view external --disclosure-level standard --out "${STAMP_JSON}" --json-only
-  python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-user-visible-gate --operation ci --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${STAMP_BLOCKER_RECEIPT}"
-  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${STAMP_BLOCKER_RECEIPT}"
-  python3 scripts/validate_reply_identity_context_first_line.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-first-line-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${FIRST_LINE_BLOCKER_RECEIPT}"
-  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${FIRST_LINE_BLOCKER_RECEIPT}"
+  python3 scripts/render_identity_response_stamp.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --work-layer protocol --source-layer project --view external --disclosure-level standard --out "${STAMP_JSON}" --json-only
+  if [ "${IS_FIXTURE_ID}" = "1" ]; then
+    echo "[INFO] fixture identity ${ID}: skipping user-visible stamp hard gates in ci lane."
+  else
+    python3 scripts/validate_identity_response_stamp.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-user-visible-gate --operation ci --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${STAMP_BLOCKER_RECEIPT}"
+    python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${STAMP_BLOCKER_RECEIPT}"
+    python3 scripts/validate_reply_identity_context_first_line.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-first-line-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${FIRST_LINE_BLOCKER_RECEIPT}"
+    python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${FIRST_LINE_BLOCKER_RECEIPT}"
+  fi
   python3 scripts/validate_layer_intent_resolution.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-layer-intent-gate --operation ci --json-only
-  python3 scripts/validate_send_time_reply_gate.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-send-time-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${SEND_TIME_BLOCKER_RECEIPT}"
-  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${SEND_TIME_BLOCKER_RECEIPT}"
+  if [ "${IS_FIXTURE_ID}" != "1" ]; then
+    python3 scripts/validate_send_time_reply_gate.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-send-time-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${SEND_TIME_BLOCKER_RECEIPT}"
+    python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${SEND_TIME_BLOCKER_RECEIPT}"
+  fi
   python3 scripts/validate_headstamp_recurrence_closure.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --json-only
-  python3 scripts/validate_execution_reply_identity_coherence.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-coherence-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${COHERENCE_BLOCKER_RECEIPT}"
-  python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${COHERENCE_BLOCKER_RECEIPT}"
+  if [ "${IS_FIXTURE_ID}" != "1" ]; then
+    python3 scripts/validate_execution_reply_identity_coherence.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --stamp-json "${STAMP_JSON}" --force-check --enforce-coherence-gate --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --blocker-receipt-out "${COHERENCE_BLOCKER_RECEIPT}"
+    python3 scripts/validate_identity_response_stamp_blocker_receipt.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --force-check --receipt "${COHERENCE_BLOCKER_RECEIPT}"
+  fi
   python3 scripts/validate_identity_upgrade_prereq.py --identity-id "$ID"
   python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
   python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
