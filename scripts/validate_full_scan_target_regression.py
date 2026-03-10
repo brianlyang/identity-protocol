@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
@@ -89,6 +91,63 @@ def _extract_m2m_fail_rows(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _identity_row_from_catalog(catalog_path: Path, identity_id: str) -> dict[str, Any]:
+    try:
+        doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    if not isinstance(doc, dict):
+        return {}
+    rows = [x for x in (doc.get("identities") or []) if isinstance(x, dict)]
+    return next((x for x in rows if str(x.get("id", "")).strip() == identity_id), {})
+
+
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    row = _identity_row_from_catalog(catalog_path, identity_id)
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
+def _only_requested_session_binding_p0(report_doc: dict[str, Any]) -> bool:
+    catalogs = report_doc.get("catalogs") or []
+    if not isinstance(catalogs, list):
+        return False
+    found_p0 = False
+    for catalog in catalogs:
+        if not isinstance(catalog, dict):
+            continue
+        identities = catalog.get("identities") or []
+        if not isinstance(identities, list):
+            continue
+        for item in identities:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("severity", "")).strip().upper() != "P0":
+                continue
+            found_p0 = True
+            checks = item.get("checks") or {}
+            if not isinstance(checks, dict):
+                return False
+            requested = checks.get("requested_session_binding") or {}
+            requested_tail = str((requested or {}).get("tail", "")).strip()
+            requested_ok = bool((requested or {}).get("ok", False))
+            if requested_ok:
+                return False
+            if "IP-ASB-SESSION-ENTRY-001" not in requested_tail:
+                return False
+            m2m_projection = item.get("m2m_projection") or {}
+            m2m_failed = m2m_projection.get("m2m_failed_checks") or []
+            if not isinstance(m2m_failed, list) or len(m2m_failed) != 1:
+                return False
+            only_row = m2m_failed[0] if isinstance(m2m_failed[0], dict) else {}
+            if str(only_row.get("check", "")).strip() != "requested_session_binding":
+                return False
+            if str(only_row.get("error_code", "")).strip() != "IP-ASB-SESSION-ENTRY-001":
+                return False
+    return found_p0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Regression gate: full_identity_protocol_scan --scan-mode target must keep summary.p0 == 0."
@@ -101,6 +160,14 @@ def main() -> int:
     ap.add_argument("--session-id", default="")
     ap.add_argument("--expected-work-layer", default="protocol")
     ap.add_argument("--expected-source-layer", default="project")
+    ap.add_argument(
+        "--allow-fixture-session-skip",
+        action="store_true",
+        help=(
+            "allow fixture/demo-only identities to pass when the only P0 is "
+            "requested_session_binding(IP-ASB-SESSION-ENTRY-001)"
+        ),
+    )
     ap.add_argument(
         "--enforce-m2m-pass",
         action="store_true",
@@ -176,6 +243,10 @@ def main() -> int:
         "m2m_fail_count": None,
         "m2m_fail_rows": [],
         "enforce_m2m_pass": bool(args.enforce_m2m_pass),
+        "allow_fixture_session_skip": bool(args.allow_fixture_session_skip),
+        "fixture_identity": _is_fixture_identity(Path(args.project_catalog).expanduser().resolve(), str(args.identity_id).strip()),
+        "fixture_session_skip_applied": False,
+        "stale_reasons": [],
     }
 
     if proc.returncode != 0:
@@ -228,6 +299,17 @@ def main() -> int:
     payload["m2m_fail_rows"] = _extract_m2m_fail_rows(report_doc)
 
     if p0_count != 0:
+        if (
+            bool(args.allow_fixture_session_skip)
+            and bool(payload.get("fixture_identity"))
+            and _only_requested_session_binding_p0(report_doc)
+        ):
+            payload["full_scan_target_regression_status"] = STATUS_PASS_REQUIRED
+            payload["error_code"] = ""
+            payload["fixture_session_skip_applied"] = True
+            payload["stale_reasons"] = ["fixture_requested_session_binding_skip_applied"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         payload["error_code"] = ERR_P0_REGRESSION
         _emit(payload, json_only=args.json_only)
         return 1

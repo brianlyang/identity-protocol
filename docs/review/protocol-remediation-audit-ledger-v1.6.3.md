@@ -395,3 +395,19 @@ Observed:
 6. Target full-scan note:
    - `full_identity_protocol_scan --scan-mode target` was replayed.
    - Local run with `--session-id run:v163-audit-20260310` reported `P0=1` caused by `IP-ASB-SESSION-ENTRY-001` (requested session not pre-bound in local project runtime), not by alias hardening regressions.
+
+### 11.8 Round-33.4 target full-scan fixture false-block closure (2026-03-10)
+
+1. Gap:
+   - `scripts/ci/run_full_scan_target_regression_ci.sh` runs target full-scan across resolved IDs.
+   - fixture/demo-only IDs can carry `P0` only because strict requested-session binding is absent (`IP-ASB-SESSION-ENTRY-001`), which is not a semantic regression for fixture inspection scope.
+2. Fix:
+   - Added fixture-scoped skip contract in `scripts/validate_full_scan_target_regression.py` via `--allow-fixture-session-skip`.
+   - Skip is applied only when **all** `P0` rows are exactly `requested_session_binding` with `IP-ASB-SESSION-ENTRY-001`.
+   - Any other `P0` (or mixed failure) remains `FAIL_REQUIRED`.
+3. CI wiring:
+   - `scripts/ci/run_full_scan_target_regression_ci.sh` now passes `--allow-fixture-session-skip` for fixture branch only.
+   - non-fixture branch remains strict and unchanged (`--enforce-m2m-pass` stays active).
+4. Safety boundary:
+   - this does not downgrade strict semantics for real runtime identities.
+   - this removes only fixture-mode false blocking caused by synthetic strict-session expectations.

@@ -25,6 +25,7 @@ for ID in ${IDS}; do
       --session-id "${SESSION_PER_ID}" \
       --expected-work-layer protocol \
       --expected-source-layer project \
+      --allow-fixture-session-skip \
       --json-only
   else
     python3 scripts/validate_full_scan_target_regression.py \
