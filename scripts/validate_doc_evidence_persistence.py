@@ -33,15 +33,7 @@ import yaml
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_POLICY = "IP-DOC-EVID-001"
-
-STRICT_DOC_SCOPES = {
-    "docs/governance/identity-headstamp-egress-governance-v1.6.1.md": "governance",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md": "review",
-    "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md": "governance",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.2.md": "review",
-    "docs/governance/github-native-control-plane-specialization-v1.6.3.md": "governance",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.3.md": "review",
-}
+STREAM_DOC_REGISTRY_FILE = "identity/protocol/mappings/stream-doc-registry.v1.6.yaml"
 
 TMP_PREFIXES = ("/tmp/", "/private/tmp/")
 ALLOWED_PERSISTENT_PREFIXES = (
@@ -68,6 +60,46 @@ def _doc_scope(rel: str) -> str:
     if rel.startswith("docs/review/"):
         return "review"
     return "unknown"
+
+
+def _load_strict_doc_scopes(repo_root: Path) -> tuple[dict[str, str], list[str]]:
+    """
+    Read active stream governance/review docs from registry as single source.
+    Returns (doc->scope map, validation_errors).
+    """
+    registry_path = (repo_root / STREAM_DOC_REGISTRY_FILE).resolve()
+    if not registry_path.exists():
+        return {}, [f"stream_doc_registry_missing:{STREAM_DOC_REGISTRY_FILE}"]
+    data = _load_yaml(registry_path)
+    rows = data.get("stream_docs")
+    if not isinstance(rows, list) or not rows:
+        return {}, [f"stream_doc_registry_invalid:stream_docs_non_empty_list_required:{STREAM_DOC_REGISTRY_FILE}"]
+
+    scopes: dict[str, str] = {}
+    errors: list[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"stream_doc_registry_invalid:row_{idx}_must_be_mapping")
+            continue
+        stream_version = str(row.get("stream_version", "")).strip() or f"row_{idx}"
+        governance_doc = _norm_path(row.get("governance_doc", ""))
+        review_doc = _norm_path(row.get("review_doc", ""))
+        if not governance_doc:
+            errors.append(f"stream_doc_registry_invalid:{stream_version}:missing_governance_doc")
+        elif governance_doc in scopes and scopes[governance_doc] != "governance":
+            errors.append(f"stream_doc_registry_invalid:{stream_version}:governance_doc_scope_conflict:{governance_doc}")
+        else:
+            scopes[governance_doc] = "governance"
+        if not review_doc:
+            errors.append(f"stream_doc_registry_invalid:{stream_version}:missing_review_doc")
+        elif review_doc in scopes and scopes[review_doc] != "review":
+            errors.append(f"stream_doc_registry_invalid:{stream_version}:review_doc_scope_conflict:{review_doc}")
+        else:
+            scopes[review_doc] = "review"
+
+    if not scopes:
+        errors.append("stream_doc_registry_invalid:no_strict_docs_resolved")
+    return scopes, errors
 
 
 def _sha256_file(path: Path) -> str:
@@ -381,6 +413,7 @@ def main() -> int:
     violations: list[dict[str, Any]] = []
 
     by_mirror, by_tmp, manifest_files = _load_manifest_records(repo_root)
+    strict_doc_scopes, stream_registry_errors = _load_strict_doc_scopes(repo_root)
     evidence_allowlist_path = (repo_root / EVIDENCE_ALLOWLIST_FILE).resolve()
     evidence_allowlist = _load_yaml(evidence_allowlist_path) if evidence_allowlist_path.exists() else {}
     strict_doc_allowlist = evidence_allowlist.get("strict_docs") if isinstance(evidence_allowlist, dict) else {}
@@ -388,9 +421,19 @@ def main() -> int:
         strict_doc_allowlist = {}
     all_persistent_refs: set[str] = set()
 
-    # Strict stream full-scan (v1.6.2 docs)
+    for reason in stream_registry_errors:
+        violations.append(
+            {
+                "type": "stream_doc_registry_invalid",
+                "error_code": ERR_POLICY,
+                "reason": reason,
+                "registry_file": STREAM_DOC_REGISTRY_FILE,
+            }
+        )
+
+    # Strict stream full-scan (v1.6.x docs from stream-doc-registry)
     docs_checked: set[str] = set()
-    for rel, scope in STRICT_DOC_SCOPES.items():
+    for rel, scope in strict_doc_scopes.items():
         docs_checked.add(rel)
         p = repo_root / rel
         if not p.exists():
@@ -509,9 +552,12 @@ def main() -> int:
     payload = {
         "doc_evidence_persistence_status": status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else ERR_POLICY,
+        "stream_doc_registry_file": STREAM_DOC_REGISTRY_FILE,
+        "stream_doc_registry_error_count": len(stream_registry_errors),
+        "stream_doc_registry_errors": stream_registry_errors,
         "evidence_allowlist_file": EVIDENCE_ALLOWLIST_FILE,
         "evidence_allowlist_path": str(evidence_allowlist_path),
-        "strict_docs_checked": list(STRICT_DOC_SCOPES.keys()),
+        "strict_docs_checked": list(strict_doc_scopes.keys()),
         "docs_checked_total": len(docs_checked),
         "docs_checked": sorted(docs_checked),
         "delta_enforced": bool(args.enforce_delta),

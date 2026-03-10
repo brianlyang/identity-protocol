@@ -24,30 +24,15 @@ import sys
 from pathlib import Path
 from typing import List, Set, Tuple
 
+import yaml
+
 
 INDEX_PATH = "docs/governance/AUDIT_SNAPSHOT_INDEX.md"
+STREAM_DOC_REGISTRY_PATH = "identity/protocol/mappings/stream-doc-registry.v1.6.yaml"
 REQUIRED_CURRENT_DOC_PATTERNS = [
     r"^docs/governance/identity-token-efficiency-and-skill-parity-governance-v\d+\.\d+\.\d+\.md$",
     r"^docs/governance/identity-token-governance-audit-checklist-v\d+\.\d+\.\d+\.md$",
 ]
-
-# Round-26 scope closure: always include current governance/review + release notes
-# even when index coverage evolves.
-MANDATORY_DOC_PATHS = (
-    "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
-    "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
-    "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
-    "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.md",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
-    "docs/review/protocol-remediation-audit-ledger-v1.6.3.md",
-    "identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md",
-    "identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md",
-    "CHANGELOG.md",
-    "VERSIONING.md",
-)
-
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -93,6 +78,84 @@ def _docs_from_index(repo_root: Path) -> List[str]:
             seen.add(d)
             out.append(d)
     return out
+
+
+def _norm_path(value: str) -> str:
+    return str(value or "").strip().replace("\\", "/")
+
+
+def _as_str_list(value: object) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    out: List[str] = []
+    for item in value:
+        token = _norm_path(str(item))
+        if token:
+            out.append(token)
+    return out
+
+
+def _load_yaml(path: Path) -> dict:
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _dedup(seq: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for item in seq:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], List[str]]:
+    """
+    Returns:
+      stream_docs (governance/review docs per active stream),
+      mandatory_static_docs (non-stream docs that must be present),
+      validation_errors (fail-close reasons)
+    """
+    registry_path = repo_root / STREAM_DOC_REGISTRY_PATH
+    if not registry_path.exists():
+        return [], [], [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {STREAM_DOC_REGISTRY_PATH}"]
+
+    data = _load_yaml(registry_path)
+    errors: List[str] = []
+    rows = data.get("stream_docs")
+    if not isinstance(rows, list) or not rows:
+        errors.append(
+            f"[INVALID_STREAM_DOC_REGISTRY] stream_docs must be a non-empty list: {STREAM_DOC_REGISTRY_PATH}"
+        )
+        return [], [], errors
+
+    stream_docs: List[str] = []
+    for idx, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            errors.append(f"[INVALID_STREAM_DOC_REGISTRY] row[{idx}] must be mapping")
+            continue
+        stream_version = str(row.get("stream_version", "")).strip() or f"row-{idx}"
+        governance_doc = _norm_path(row.get("governance_doc", ""))
+        review_doc = _norm_path(row.get("review_doc", ""))
+        if not governance_doc:
+            errors.append(f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} missing governance_doc")
+        else:
+            stream_docs.append(governance_doc)
+        if not review_doc:
+            errors.append(f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} missing review_doc")
+        else:
+            stream_docs.append(review_doc)
+
+    mandatory_static_docs = _as_str_list(data.get("mandatory_static_docs"))
+    if not mandatory_static_docs:
+        errors.append(f"[INVALID_STREAM_DOC_REGISTRY] mandatory_static_docs must be non-empty list")
+
+    return _dedup(stream_docs), _dedup(mandatory_static_docs), errors
 
 
 def _enforce_required_current_docs(index_docs: List[str]) -> tuple[List[str], List[str]]:
@@ -189,13 +252,16 @@ def main() -> int:
     docs = args.docs if args.docs else _docs_from_index(repo_root)
     bootstrap_failures: List[str] = []
     if args.docs is None:
+        stream_docs, mandatory_static_docs, registry_errors = _load_stream_doc_registry(repo_root)
+        bootstrap_failures.extend(registry_errors)
+
         # enforce current-version docs by pattern (version-agnostic).
         required_docs, missing_required = _enforce_required_current_docs(docs)
         bootstrap_failures.extend(missing_required)
         for req in required_docs:
             if req not in docs:
                 docs.append(req)
-        for req in MANDATORY_DOC_PATHS:
+        for req in stream_docs + mandatory_static_docs:
             if req in docs:
                 continue
             if (repo_root / req).exists():
