@@ -129,6 +129,13 @@ def _only_requested_session_binding_p0(report_doc: dict[str, Any]) -> bool:
             checks = item.get("checks") or {}
             if not isinstance(checks, dict):
                 return False
+            failed_check_names = sorted(
+                key
+                for key, raw in checks.items()
+                if isinstance(raw, dict) and not bool(raw.get("ok", False))
+            )
+            if failed_check_names != ["requested_session_binding"]:
+                return False
             requested = checks.get("requested_session_binding") or {}
             requested_tail = str((requested or {}).get("tail", "")).strip()
             requested_ok = bool((requested or {}).get("ok", False))

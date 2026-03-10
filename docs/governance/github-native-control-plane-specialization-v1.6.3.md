@@ -458,7 +458,7 @@ Evidence mirrors:
 ### 9.2 Canonical contract surface
 
 1. Mapping SSOT:
-   - `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
+   - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
 2. Bundle execution entry:
    - `scripts/required_gate_bundle_runner.py`
    - added `--gate-profile` / `--gate-profile-file`

@@ -1,6 +1,6 @@
 schema_version: 1
 invariants_version: "v1.6"
-last_updated_utc: "2026-03-10T14:00:00Z"
+last_updated_utc: "2026-03-10T14:28:00Z"
 invariants:
   bundle_mapping_parity:
     mode: freeze
@@ -33,6 +33,18 @@ invariants:
     failclose_governance_current_file: identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
     forbid_versioned_reference:
       regex: (PLUGIN_REGISTRY|PROVIDER_PROFILES|FAILCLOSE_PLUGIN_GOVERNANCE)\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
+  layer_targeted_gate_profile_alias:
+    current_file: identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+    required_fields:
+      - profile_version
+      - default_profile
+      - strict_no_trim_operations
+      - profiles
+    forbid_versioned_reference:
+      regex: layer-targeted-gate-profile\\.v[0-9]+\\.[0-9]+\\.yaml
       surfaces:
         - scripts
         - .github/workflows

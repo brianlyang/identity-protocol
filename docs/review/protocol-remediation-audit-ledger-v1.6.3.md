@@ -307,7 +307,7 @@ Observed:
 ### 11.1 Change set (repo)
 
 1. Added canonical mapping:
-   - `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
+   - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
 2. Added profile validator:
    - `scripts/validate_layer_targeted_gate_profile.py`
 3. Extended bundle runner with profile contract:
@@ -404,6 +404,7 @@ Observed:
 2. Fix:
    - Added fixture-scoped skip contract in `scripts/validate_full_scan_target_regression.py` via `--allow-fixture-session-skip`.
    - Skip is applied only when **all** `P0` rows are exactly `requested_session_binding` with `IP-ASB-SESSION-ENTRY-001`.
+   - Additional hard guard: per `P0` identity, failed-check set must be exactly one entry (`requested_session_binding`) or skip is rejected.
    - Any other `P0` (or mixed failure) remains `FAIL_REQUIRED`.
 3. CI wiring:
    - `scripts/ci/run_full_scan_target_regression_ci.sh` now passes `--allow-fixture-session-skip` for fixture branch only.
@@ -411,3 +412,25 @@ Observed:
 4. Safety boundary:
    - this does not downgrade strict semantics for real runtime identities.
    - this removes only fixture-mode false blocking caused by synthetic strict-session expectations.
+
+### 11.9 Round-33.5 layer-profile alias anti-break-chain closure (2026-03-10)
+
+1. Gap:
+   - `layer-targeted-gate-profile` was still consumed via versioned literal (`...v1.6.yaml`) on execution surfaces.
+   - this required script edits on every profile schema version bump, conflicting with pointer-switch governance.
+2. Fix:
+   - added alias entry file:
+     - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
+   - switched execution defaults to alias path:
+     - `scripts/required_gate_bundle_runner.py`
+     - `scripts/full_identity_protocol_scan.py`
+     - `scripts/validate_layer_targeted_gate_profile.py`
+   - extended invariants with alias + anti-drift enforcement:
+     - `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+     - `scripts/validate_control_plane_invariants.py`
+3. Contract hardening:
+   - invariants now fail-close when current alias is missing/invalid, active profile file is missing, or required profile keys are dropped.
+   - invariants now block direct versioned `layer-targeted-gate-profile.v*` literals under strict execution surfaces (`scripts/`, `.github/workflows/`).
+4. SSOT/doc registry alignment:
+   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml` now references `layer-targeted-gate-profile.current.yaml`.
+   - governance/readme index references are updated to current alias entry.

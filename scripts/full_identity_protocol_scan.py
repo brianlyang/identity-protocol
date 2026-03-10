@@ -71,7 +71,7 @@ CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
     "normalization_error_code",
     "semantic_convergence_error_code",
 )
-DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml"
+DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 
 

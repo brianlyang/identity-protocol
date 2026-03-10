@@ -14,7 +14,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_PROFILE_PARSE = "IP-GATE-ENTRY-001"
 ERR_PROFILE_CONTRACT = "IP-GATE-ENTRY-002"
 
-DEFAULT_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml"
+DEFAULT_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -45,6 +45,24 @@ def _resolve_contract_mapping(repo_root: Path, explicit: str) -> Path:
     return mapping_dir / "contract-binding.yaml"
 
 
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    current_doc = _load_yaml(configured_path)
+    if not current_doc:
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate layer-targeted gate profile mapping for strict fail-close safety.")
     ap.add_argument("--repo-root", default=".")
@@ -54,7 +72,10 @@ def main() -> int:
     args = ap.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    profile_path = (repo_root / str(args.profile_file)).resolve()
+    profile_entry_path = (repo_root / str(args.profile_file)).resolve()
+    profile_path, profile_active_file, profile_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.profile_file)
+    )
     mapping_path = _resolve_contract_mapping(repo_root, str(args.contract_mapping or ""))
 
     stale_reasons: list[str] = []
@@ -63,10 +84,13 @@ def main() -> int:
 
     profile_doc: dict[str, Any] = {}
     mapping_doc: dict[str, Any] = {}
-    try:
-        profile_doc = _load_yaml(profile_path)
-    except Exception as exc:
-        parse_errors.append(f"profile_file_invalid:{profile_path}:{exc}")
+    if profile_alias_error:
+        parse_errors.append(f"profile_file_alias_invalid:{profile_entry_path}:{profile_alias_error}")
+    else:
+        try:
+            profile_doc = _load_yaml(profile_path)
+        except Exception as exc:
+            parse_errors.append(f"profile_file_invalid:{profile_path}:{exc}")
     try:
         mapping_doc = _load_yaml(mapping_path)
     except Exception as exc:
@@ -195,7 +219,9 @@ def main() -> int:
     payload: dict[str, Any] = {
         "layer_targeted_gate_profile_status": status,
         "error_code": error_code,
+        "profile_entry_file": str(profile_entry_path),
         "profile_file": str(profile_path),
+        "profile_active_file": profile_active_file,
         "contract_mapping": str(mapping_path),
         "profile_count": len((profile_doc.get("profiles") or {})) if isinstance(profile_doc, dict) else 0,
         "default_profile": str((profile_doc.get("default_profile") or "")) if isinstance(profile_doc, dict) else "",

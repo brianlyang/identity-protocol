@@ -15,6 +15,7 @@ ERR_INVARIANT = "IP-CP-INV-001"
 PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
 PLUGIN_FAILCLOSE_GOVERNANCE_CURRENT_DEFAULT_REL = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
 GITHUB_OFFLOAD_CURRENT_DEFAULT_REL = "identity/protocol/mappings/github-control-plane-offload.current.yaml"
+LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -174,6 +175,10 @@ def main() -> int:
         "--github-offload-current-file",
         default=GITHUB_OFFLOAD_CURRENT_DEFAULT_REL,
     )
+    parser.add_argument(
+        "--layer-gate-profile-current-file",
+        default=LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL,
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -199,6 +204,13 @@ def main() -> int:
     github_offload_alias_enabled = False
     github_offload_parse_ok = False
     github_offload_violation_count = 0
+    layer_gate_profile_current_configured_file = str(args.layer_gate_profile_current_file)
+    layer_gate_profile_current_path = (repo_root / layer_gate_profile_current_configured_file).resolve()
+    layer_gate_profile_current_resolved_path = layer_gate_profile_current_path
+    layer_gate_profile_active_file = ""
+    layer_gate_profile_alias_enabled = False
+    layer_gate_profile_parse_ok = False
+    layer_gate_profile_violation_count = 0
     plugin_control_plane_alias_enabled = False
     plugin_control_plane_alias_parse_ok = False
     plugin_control_plane_alias_violation_count = 0
@@ -452,6 +464,136 @@ def main() -> int:
                                 surfaces=ref_surfaces,
                                 hit_files=uniq_hits,
                                 hit_count=len(uniq_hits),
+                            )
+
+        layer_profile_alias_cfg = (
+            (invariants.get("layer_targeted_gate_profile_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        if isinstance(layer_profile_alias_cfg, dict) and layer_profile_alias_cfg:
+            layer_gate_profile_alias_enabled = True
+            configured_current_file = str(layer_profile_alias_cfg.get("current_file", "")).strip()
+            if configured_current_file:
+                layer_gate_profile_current_configured_file = configured_current_file
+                layer_gate_profile_current_path = (repo_root / configured_current_file).resolve()
+                layer_gate_profile_current_resolved_path = layer_gate_profile_current_path
+            if not layer_gate_profile_current_configured_file.endswith(".current.yaml"):
+                layer_gate_profile_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="layer_targeted_gate_profile_alias",
+                    reason="current_file_non_canonical",
+                    current_file=layer_gate_profile_current_configured_file,
+                )
+
+            layer_profile_active_path, layer_profile_active_file, layer_profile_alias_error = _resolve_current_yaml_alias(
+                repo_root,
+                layer_gate_profile_current_configured_file,
+            )
+            layer_gate_profile_active_file = layer_profile_active_file
+            if layer_profile_alias_error:
+                layer_gate_profile_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="layer_targeted_gate_profile_alias",
+                    reason=layer_profile_alias_error,
+                    current_file=layer_gate_profile_current_configured_file,
+                    active_file=layer_profile_active_file,
+                )
+            else:
+                layer_gate_profile_current_resolved_path = layer_profile_active_path
+                if layer_gate_profile_active_file and not layer_gate_profile_active_file.startswith(
+                    "identity/protocol/mappings/layer-targeted-gate-profile.v"
+                ):
+                    layer_gate_profile_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="layer_targeted_gate_profile_alias",
+                        reason="active_file_non_canonical",
+                        active_file=layer_gate_profile_active_file,
+                    )
+                if not layer_profile_active_path.exists() or not layer_profile_active_path.is_file():
+                    layer_gate_profile_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="layer_targeted_gate_profile_alias",
+                        reason="active_file_not_found",
+                        active_file=layer_gate_profile_active_file,
+                    )
+                else:
+                    active_doc = _load_yaml(layer_profile_active_path)
+                    if not active_doc:
+                        layer_gate_profile_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="layer_targeted_gate_profile_alias",
+                            reason="active_file_parse_failed",
+                            active_file=layer_gate_profile_active_file,
+                        )
+                    else:
+                        layer_gate_profile_parse_ok = True
+                        required_fields = _as_str_list(layer_profile_alias_cfg.get("required_fields"))
+                        for field_name in required_fields:
+                            value = active_doc.get(field_name)
+                            if value in (None, "", [], {}):
+                                layer_gate_profile_violation_count += 1
+                                _append_violation(
+                                    violations,
+                                    field="layer_targeted_gate_profile_alias",
+                                    reason="required_field_missing_or_empty",
+                                    active_file=layer_gate_profile_active_file,
+                                    required_field=field_name,
+                                )
+
+            forbid_cfg = layer_profile_alias_cfg.get("forbid_versioned_reference")
+            if isinstance(forbid_cfg, dict):
+                ref_regex = str(forbid_cfg.get("regex", "")).strip()
+                ref_surfaces = _as_str_list(forbid_cfg.get("surfaces"))
+                if not ref_regex:
+                    layer_gate_profile_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="layer_targeted_gate_profile_alias",
+                        reason="forbid_versioned_reference_regex_missing",
+                    )
+                elif not ref_surfaces:
+                    layer_gate_profile_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="layer_targeted_gate_profile_alias",
+                        reason="forbid_versioned_reference_surfaces_missing",
+                    )
+                else:
+                    skip_files: set[Path] = set()
+                    resolved_active = (repo_root / layer_gate_profile_active_file).resolve() if layer_gate_profile_active_file else None
+                    if resolved_active and resolved_active.exists():
+                        skip_files.add(resolved_active)
+                    ref_violations, ref_stale = _scan_forbidden_versioned_refs(
+                        repo_root=repo_root,
+                        regex=ref_regex,
+                        surfaces=ref_surfaces,
+                        skip_files=skip_files,
+                    )
+                    if ref_stale:
+                        layer_gate_profile_violation_count += len(ref_stale)
+                        for reason in ref_stale:
+                            _append_violation(
+                                violations,
+                                field="layer_targeted_gate_profile_alias",
+                                reason=reason,
+                                regex=ref_regex,
+                                surfaces=ref_surfaces,
+                            )
+                    if ref_violations:
+                        for row in ref_violations:
+                            layer_gate_profile_violation_count += int(row.get("hit_count", 1))
+                            _append_violation(
+                                violations,
+                                field="layer_targeted_gate_profile_alias",
+                                reason=str(row.get("reason", "")),
+                                regex=ref_regex,
+                                surfaces=ref_surfaces,
+                                hit_files=row.get("hit_files", []),
+                                hit_count=row.get("hit_count", 0),
                             )
 
         plugin_alias_cfg = (invariants.get("plugin_control_plane_alias") or {}) if isinstance(invariants, dict) else {}
@@ -1418,6 +1560,13 @@ def main() -> int:
         "github_offload_active_file": github_offload_active_file,
         "github_offload_parse_ok": github_offload_parse_ok,
         "github_offload_violation_count": github_offload_violation_count,
+        "layer_gate_profile_alias_enabled": layer_gate_profile_alias_enabled,
+        "layer_gate_profile_current_file": str(layer_gate_profile_current_path),
+        "layer_gate_profile_current_configured_file": layer_gate_profile_current_configured_file,
+        "layer_gate_profile_current_resolved_file": str(layer_gate_profile_current_resolved_path),
+        "layer_gate_profile_active_file": layer_gate_profile_active_file,
+        "layer_gate_profile_parse_ok": layer_gate_profile_parse_ok,
+        "layer_gate_profile_violation_count": layer_gate_profile_violation_count,
         "plugin_control_plane_alias_enabled": plugin_control_plane_alias_enabled,
         "plugin_control_plane_alias_parse_ok": plugin_control_plane_alias_parse_ok,
         "plugin_control_plane_alias_violation_count": plugin_control_plane_alias_violation_count,

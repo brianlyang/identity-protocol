@@ -19,7 +19,7 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 
 BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
 BUNDLE_KEY = "required_gate_bundle_runner"
-DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml"
+DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 STRICT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
     "activate",
@@ -241,6 +241,27 @@ def _resolve_default_contract_mapping(repo_root: Path) -> Path:
     return fallback
 
 
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    try:
+        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return configured_path, "", "current_file_parse_failed"
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
 def _parse_validator_entry(raw_entry: str) -> tuple[str, tuple[str, ...]]:
     # Example raw entries:
     # - scripts/validate_v16_intake_evidence_core.py::mode=intake_contract
@@ -317,8 +338,17 @@ def _load_gate_profile_selection(
     resolved_work_layer: str,
 ) -> tuple[GateProfileSelection | None, Path, list[str]]:
     errors: list[str] = []
-    profile_path = (repo_root / str(profile_file or DEFAULT_GATE_PROFILE_FILE)).resolve()
-    if not profile_path.exists():
+    profile_entry_path = (repo_root / str(profile_file or DEFAULT_GATE_PROFILE_FILE)).resolve()
+    profile_path = profile_entry_path
+    profile_alias_error = ""
+    if profile_entry_path.name.endswith(".current.yaml"):
+        profile_path, _active_file, profile_alias_error = _resolve_current_yaml_alias(
+            repo_root, str(profile_file or DEFAULT_GATE_PROFILE_FILE)
+        )
+        if profile_alias_error:
+            errors.append(f"gate_profile_alias_error:{profile_entry_path}:{profile_alias_error}")
+            return None, profile_path, errors
+    elif not profile_path.exists():
         errors.append(f"gate_profile_file_missing:{profile_path}")
         return None, profile_path, errors
 
