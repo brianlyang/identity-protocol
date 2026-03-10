@@ -618,7 +618,6 @@ def _run_validator(
         "scripts/validate_instance_protocol_split_receipt.py",
         "scripts/validate_vendor_namespace_separation.py",
         "scripts/validate_protocol_feedback_sidecar_contract.py",
-        "scripts/validate_prompt_kernel_executable_coupling.py",
         "scripts/validate_run_id_report_selection.py",
     }:
         if expected_work_layer:

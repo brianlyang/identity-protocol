@@ -502,3 +502,14 @@ Observed:
    - `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`
    - `python3 scripts/validate_plugin_contract_literal_paths.py --json-only` => `PASS_REQUIRED`
    - `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`
+
+### 11.13 Round-33.9 required-coverage run-id passthrough compatibility fix (2026-03-10)
+
+1. Gap:
+   - `scripts/validate_required_contract_coverage.py` passed `--run-id` to `scripts/validate_prompt_kernel_executable_coupling.py`.
+   - that validator does not define `--run-id`, causing `unrecognized arguments: --run-id ...` noise in coverage replay.
+2. Fix:
+   - removed `scripts/validate_prompt_kernel_executable_coupling.py` from the run-id passthrough set in `_run_validator`.
+3. Replay outcome:
+   - coverage replay no longer reports `FAIL_OPTIONAL` caused by unsupported argument passthrough.
+   - residual failures remain semantic (`IP-PBOOT-001`, `IP-PCAPM-001`) and are unrelated to CLI wiring.
