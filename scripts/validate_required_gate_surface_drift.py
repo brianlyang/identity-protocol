@@ -133,6 +133,7 @@ BUNDLE_ARGS_FORBID_UNKNOWN: tuple[str, ...] = (
     "--final-emit-contract-status",
     "--final-emit-schema-status",
 )
+CANONICAL_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 
 VERSIONED_SCRIPT_ALIAS_RE = re.compile(r"^(?P<prefix>validate|normalize|emit)_v\d+_(?P<tail>.+)\.py$")
 WRAPPER_MAIN_IMPORT_RE = re.compile(r"^\s*from\s+([A-Za-z0-9_.]+)\s+import\s+main\s*$", re.MULTILINE)
@@ -481,6 +482,32 @@ def _block_contains_unknown_value(*, block: str, flag: str) -> bool:
     return bool(pattern_inline.search(block)) or bool(pattern_python_list.search(block))
 
 
+def _block_contains_noncanonical_gate_profile_file(*, block: str) -> bool:
+    candidates: list[str] = []
+    inline_pattern = re.compile(
+        r"--gate-profile-file\s+(?:\"([^\"]+)\"|'([^']+)'|([^\s\\]+))",
+        re.IGNORECASE,
+    )
+    list_pattern = re.compile(
+        r"--gate-profile-file\"\s*,\s*\"([^\"]+)\"|--gate-profile-file'\s*,\s*'([^']+)'",
+        re.IGNORECASE,
+    )
+    for match in inline_pattern.finditer(block):
+        value = next((grp for grp in match.groups() if grp), "")
+        value = str(value or "").strip()
+        if value:
+            candidates.append(value)
+    for match in list_pattern.finditer(block):
+        value = next((grp for grp in match.groups() if grp), "")
+        value = str(value or "").strip()
+        if value:
+            candidates.append(value)
+    for value in candidates:
+        if value != CANONICAL_GATE_PROFILE_FILE:
+            return True
+    return False
+
+
 def _invalid_bundle_arg_values_for_surface(*, surface_path: Path, text: str) -> list[dict[str, Any]]:
     suffix = surface_path.suffix.lower()
     if suffix == ".py":
@@ -493,14 +520,18 @@ def _invalid_bundle_arg_values_for_surface(*, surface_path: Path, text: str) -> 
     rows: list[dict[str, Any]] = []
     for idx, block in enumerate(blocks, start=1):
         bad_flags = [flag for flag in BUNDLE_ARGS_FORBID_UNKNOWN if _block_contains_unknown_value(block=block, flag=flag)]
-        if bad_flags:
-            rows.append(
-                {
-                    "command_index": idx,
-                    "forbidden_unknown_args": bad_flags,
-                    "command_excerpt": block,
+        noncanonical_gate_profile = _block_contains_noncanonical_gate_profile_file(block=block)
+        if bad_flags or noncanonical_gate_profile:
+            row: dict[str, Any] = {
+                "command_index": idx,
+                "forbidden_unknown_args": bad_flags,
+                "command_excerpt": block,
+            }
+            if noncanonical_gate_profile:
+                row["forbidden_noncanonical_args"] = {
+                    "--gate-profile-file": f"must_equal:{CANONICAL_GATE_PROFILE_FILE}"
                 }
-            )
+            rows.append(row)
     return rows
 
 
@@ -713,6 +744,9 @@ def main() -> int:
         "bundle_runner_required_args": list(BUNDLE_REQUIRED_ARGS),
         "bundle_arg_contract_missing": bundle_arg_contract_missing,
         "bundle_args_forbid_unknown": list(BUNDLE_ARGS_FORBID_UNKNOWN),
+        "bundle_args_forbid_noncanonical": {
+            "--gate-profile-file": CANONICAL_GATE_PROFILE_FILE
+        },
         "bundle_arg_value_invalid": bundle_arg_value_invalid,
     }
 
