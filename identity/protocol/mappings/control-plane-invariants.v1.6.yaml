@@ -1,11 +1,26 @@
 schema_version: 1
 invariants_version: "v1.6"
-last_updated_utc: "2026-03-10T14:52:00Z"
+last_updated_utc: "2026-03-10T16:05:00Z"
 invariants:
   bundle_mapping_parity:
     mode: freeze
     baseline_missing_rows: 0
     reduction_plan_file: identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml
+  contract_binding_alias:
+    current_file: identity/protocol/mappings/contract-binding.current.yaml
+    required_fields:
+      - _meta
+    required_row_fields:
+      - requirement_id
+      - validator_ids
+      - gate_surfaces
+      - governance_anchor
+      - review_anchor
+    forbid_versioned_reference:
+      regex: contract-binding\\.v[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows
   github_control_plane_offload_alias:
     current_file: identity/protocol/mappings/github-control-plane-offload.current.yaml
     required_fields:

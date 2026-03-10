@@ -85,12 +85,30 @@ def _load_mapping_rows(mapping_path: Path) -> tuple[dict[str, dict[str, Any]], l
     return rows, sorted(orphan_keys)
 
 
+def _resolve_current_yaml_alias(configured_path: Path) -> tuple[Path, str, str]:
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    repo_root = Path(__file__).resolve().parents[1]
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate kernel contract mapping coverage contract (RQ-026).")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--governance-doc", default="docs/governance/identity-actor-session-binding-governance-v1.6.0.md")
-    ap.add_argument("--mapping-file", default="identity/protocol/mappings/contract-binding.v1.6.yaml")
+    ap.add_argument("--mapping-file", default="identity/protocol/mappings/contract-binding.current.yaml")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection"],
@@ -117,6 +135,9 @@ def main() -> int:
     if args.force_required:
         required = True
 
+    mapping_entry_path = Path(args.mapping_file).expanduser().resolve()
+    mapping_path, mapping_active_file, mapping_alias_error = _resolve_current_yaml_alias(mapping_entry_path)
+
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
@@ -130,7 +151,10 @@ def main() -> int:
         "contract_mapping_coverage_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "governance_doc_path": str(Path(args.governance_doc).expanduser().resolve()),
-        "mapping_file_path": str(Path(args.mapping_file).expanduser().resolve()),
+        "mapping_file_entry_path": str(mapping_entry_path),
+        "mapping_file_path": str(mapping_path),
+        "mapping_file_active_file": mapping_active_file,
+        "mapping_file_alias_error": mapping_alias_error,
         "total_requirements": 0,
         "p0_total": 0,
         "mapped_total": 0,
@@ -142,7 +166,7 @@ def main() -> int:
         "orphan_count": 0,
         "orphan_rows": [],
         "stale_reasons": [],
-        "evidence_ref": str(Path(args.mapping_file).expanduser().resolve()),
+        "evidence_ref": str(mapping_path),
     }
 
     if not required:
@@ -151,7 +175,13 @@ def main() -> int:
         return 0
 
     governance_path = Path(args.governance_doc).expanduser().resolve()
-    mapping_path = Path(args.mapping_file).expanduser().resolve()
+    if mapping_alias_error:
+        payload["contract_mapping_coverage_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_MAPPING_FILE_MISSING
+        payload["stale_reasons"] = [f"mapping_file_alias_error:{mapping_alias_error}:{mapping_active_file}"]
+        _emit(payload, json_only=args.json_only)
+        return 1
+
     if not governance_path.exists() or not mapping_path.exists():
         payload["contract_mapping_coverage_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_MAPPING_FILE_MISSING

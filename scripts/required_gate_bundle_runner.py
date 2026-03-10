@@ -234,6 +234,9 @@ def _as_str_list(value: Any) -> list[str]:
 
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
     mapping_dir = repo_root / "identity" / "protocol" / "mappings"
+    current_file = mapping_dir / "contract-binding.current.yaml"
+    if current_file.exists():
+        return current_file
     candidates = sorted(mapping_dir.glob("contract-binding.v*.yaml"))
     if candidates:
         return candidates[-1]
@@ -661,6 +664,13 @@ def main() -> int:
 
     repo_root = Path(__file__).resolve().parents[1]
     mapping_path = Path(args.contract_mapping).expanduser().resolve() if str(args.contract_mapping or "").strip() else _resolve_default_contract_mapping(repo_root)
+    mapping_alias_error = ""
+    if mapping_path.name.endswith(".current.yaml"):
+        resolved_mapping_path, _active_mapping_file, mapping_alias_error = _resolve_current_yaml_alias(
+            repo_root, str(mapping_path)
+        )
+        if not mapping_alias_error:
+            mapping_path = resolved_mapping_path
     target_name = str(args.target_name or "").strip()
     gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
     gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
@@ -677,6 +687,8 @@ def main() -> int:
         else BUNDLE_REQUIREMENT_ORDER
     )
     mapping_errors: list[str] = []
+    if mapping_alias_error:
+        mapping_errors.append(f"contract_mapping_alias_resolution_failed:{mapping_alias_error}")
     mapping_errors.extend(gate_profile_errors)
     if target_name:
         target_key = REQUIREMENT_BY_TARGET.get(target_name, "")

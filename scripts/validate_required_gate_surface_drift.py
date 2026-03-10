@@ -127,10 +127,30 @@ INLINE_SCRIPT_SET_RE = re.compile(r"cmd\[1\]\s+in\s+\{(?P<body>.*?)\}", re.DOTAL
 
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
     mapping_dir = repo_root / "identity" / "protocol" / "mappings"
+    current_file = mapping_dir / "contract-binding.current.yaml"
+    if current_file.exists():
+        return current_file
     candidates = sorted(mapping_dir.glob("contract-binding.v*.yaml"))
     if candidates:
         return candidates[-1]
     return mapping_dir / "contract-binding.yaml"
+
+
+def _resolve_contract_mapping_alias(repo_root: Path, mapping_path: Path) -> tuple[Path, str]:
+    if not mapping_path.name.endswith(".current.yaml"):
+        return mapping_path, ""
+    if not mapping_path.exists() or not mapping_path.is_file():
+        return mapping_path, "current_file_missing"
+    doc = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(doc, dict):
+        return mapping_path, "current_file_parse_failed"
+    active_file = str(doc.get("active_file", "")).strip()
+    if not active_file:
+        return mapping_path, "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, "active_file_not_found"
+    return active_path, ""
 
 
 def _read_text(path: Path) -> str:
@@ -476,15 +496,18 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    mapping_path = (
+    mapping_entry_path = (
         Path(args.contract_mapping).expanduser().resolve()
         if str(args.contract_mapping or "").strip()
         else _resolve_default_contract_mapping(repo_root)
     )
+    mapping_path, mapping_alias_error = _resolve_contract_mapping_alias(repo_root, mapping_entry_path)
     forbidden_direct_validators, mapping_errors = _load_forbidden_direct_validators(
         repo_root=repo_root,
         mapping_path=mapping_path,
     )
+    if mapping_alias_error:
+        mapping_errors.append(f"contract_mapping_alias_resolution_failed:{mapping_alias_error}")
 
     missing_surface_files: list[str] = []
     missing_lineage_refs: dict[str, list[str]] = {}
@@ -610,6 +633,7 @@ def main() -> int:
         "recurrence_escalator_script": RECURRENCE_ESCALATOR_SCRIPT,
         "tuple_parity_script": TUPLE_PARITY_SCRIPT,
         "mandatory_lineage_scripts": list(MANDATORY_LINEAGE_SCRIPTS),
+        "contract_mapping_entry": str(mapping_entry_path),
         "contract_mapping": str(mapping_path),
         "mapping_errors": mapping_errors,
         "strict_surfaces": list(STRICT_SURFACES),

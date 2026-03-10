@@ -723,7 +723,7 @@ def _contract_mapping_coverage_contract_skeleton() -> dict:
     return {
         "required": False,
         "validator": "scripts/validate_contract_mapping_coverage.py",
-        "mapping_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
+        "mapping_file": "identity/protocol/mappings/contract-binding.current.yaml",
         "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
         "required_fields": [
             "total_requirements",
@@ -898,7 +898,7 @@ def _kernel_canonical_source_contract_skeleton() -> dict:
         "canonical_source_paths": [
             "identity/protocol/IDENTITY_PROTOCOL.md",
             "identity/protocol/IDENTITY_RUNTIME.md",
-            "identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "identity/protocol/mappings/contract-binding.current.yaml",
         ],
         "fail_action": "block_when_kernel_source_not_canonical",
     }

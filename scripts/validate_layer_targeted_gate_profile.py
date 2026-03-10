@@ -37,8 +37,31 @@ def _as_str_list(value: Any) -> list[str]:
 
 def _resolve_contract_mapping(repo_root: Path, explicit: str) -> Path:
     if str(explicit or "").strip():
-        return Path(explicit).expanduser().resolve()
+        configured = Path(explicit).expanduser().resolve()
+        if configured.name.endswith(".current.yaml") and configured.exists():
+            try:
+                current_doc = _load_yaml(configured)
+            except Exception:
+                current_doc = {}
+            active_file = str(current_doc.get("active_file", "")).strip() if isinstance(current_doc, dict) else ""
+            if active_file:
+                active_path = (repo_root / active_file).resolve()
+                if active_path.exists():
+                    return active_path
+        return configured
     mapping_dir = repo_root / "identity" / "protocol" / "mappings"
+    current_file = mapping_dir / "contract-binding.current.yaml"
+    if current_file.exists():
+        try:
+            current_doc = _load_yaml(current_file)
+        except Exception:
+            current_doc = {}
+        active_file = str(current_doc.get("active_file", "")).strip() if isinstance(current_doc, dict) else ""
+        if active_file:
+            active_path = (repo_root / active_file).resolve()
+            if active_path.exists():
+                return active_path
+        return current_file
     candidates = sorted(mapping_dir.glob("contract-binding.v*.yaml"))
     if candidates:
         return candidates[-1]

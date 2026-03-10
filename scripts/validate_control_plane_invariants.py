@@ -18,6 +18,7 @@ GITHUB_OFFLOAD_CURRENT_DEFAULT_REL = "identity/protocol/mappings/github-control-
 LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 STREAM_DOC_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 DOC_EVIDENCE_ALLOWLIST_CURRENT_DEFAULT_REL = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
+CONTRACT_BINDING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/contract-binding.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -253,6 +254,37 @@ def _validate_mapping_alias_contract(
                                 "required_field": field_name,
                             }
                         )
+                required_row_fields = _as_str_list(alias_cfg.get("required_row_fields"))
+                if required_row_fields:
+                    mapping_rows = [
+                        (key, value)
+                        for key, value in active_doc.items()
+                        if isinstance(key, str) and key.startswith("asb16-rq-") and isinstance(value, dict)
+                    ]
+                    if not mapping_rows:
+                        violation_count += 1
+                        violations.append(
+                            {
+                                "field": alias_field,
+                                "reason": "required_row_fields_mapping_rows_missing",
+                                "active_file": active_file,
+                            }
+                        )
+                    else:
+                        for requirement_key, row in mapping_rows:
+                            for field_name in required_row_fields:
+                                value = row.get(field_name)
+                                if value in (None, "", [], {}):
+                                    violation_count += 1
+                                    violations.append(
+                                        {
+                                            "field": alias_field,
+                                            "reason": "required_row_field_missing_or_empty",
+                                            "active_file": active_file,
+                                            "requirement_key": requirement_key,
+                                            "required_row_field": field_name,
+                                        }
+                                    )
 
     forbid_cfg = alias_cfg.get("forbid_versioned_reference")
     if isinstance(forbid_cfg, dict):
@@ -325,7 +357,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--contract-mapping",
-        default="identity/protocol/mappings/contract-binding.v1.6.yaml",
+        default=CONTRACT_BINDING_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
         "--plugin-governance-file",
@@ -356,7 +388,12 @@ def main() -> int:
 
     repo_root = Path(args.repo_root).expanduser().resolve()
     invariants_path = (repo_root / str(args.invariants_file)).resolve()
-    mapping_path = (repo_root / str(args.contract_mapping)).resolve()
+    contract_mapping_configured_file = str(args.contract_mapping)
+    contract_mapping_entry_path = (repo_root / contract_mapping_configured_file).resolve()
+    mapping_path, contract_mapping_active_file, contract_mapping_alias_error = _resolve_current_yaml_alias(
+        repo_root,
+        contract_mapping_configured_file,
+    )
     plugin_governance_configured_file = str(args.plugin_governance_file)
     plugin_governance_entry_path = (repo_root / plugin_governance_configured_file).resolve()
     plugin_governance_path, plugin_governance_active_file, plugin_governance_alias_error = _resolve_current_yaml_alias(
@@ -408,6 +445,10 @@ def main() -> int:
 
     if not invariants_path.exists():
         stale_reasons.append(f"invariants_file_missing:{invariants_path}")
+    if not contract_mapping_entry_path.exists():
+        stale_reasons.append(f"contract_mapping_entry_missing:{contract_mapping_entry_path}")
+    if contract_mapping_alias_error:
+        stale_reasons.append(f"contract_mapping_alias_error:{contract_mapping_alias_error}")
     if not mapping_path.exists():
         stale_reasons.append(f"contract_mapping_missing:{mapping_path}")
     if not plugin_governance_entry_path.exists():
@@ -438,11 +479,41 @@ def main() -> int:
     reduction_plan_status = "SKIPPED_NOT_REQUIRED"
     reduction_plan_target_zero = False
     reduction_plan_targets: list[int] = []
+    contract_binding_alias_enabled = contract_mapping_entry_path.name.endswith(".current.yaml")
+    contract_binding_current_configured_file = contract_mapping_configured_file
+    contract_binding_current_path = contract_mapping_entry_path
+    contract_binding_current_resolved_path = mapping_path
+    contract_binding_active_file = contract_mapping_active_file
+    contract_binding_parse_ok = False
+    contract_binding_violation_count = 0
 
     if invariants_path.exists() and mapping_path.exists():
         inv_doc = _load_yaml(invariants_path)
         invariants = inv_doc.get("invariants") or {}
         parity_cfg = (invariants.get("bundle_mapping_parity") or {}) if isinstance(invariants, dict) else {}
+        contract_binding_alias_cfg = (
+            (invariants.get("contract_binding_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        contract_binding_state, contract_binding_violations, contract_binding_violation_count = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="contract_binding_alias",
+            alias_cfg=contract_binding_alias_cfg if isinstance(contract_binding_alias_cfg, dict) else {},
+            configured_current_file=contract_binding_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/contract-binding.v",
+        )
+        contract_binding_alias_enabled = bool(contract_binding_state.get("alias_enabled", False))
+        contract_binding_current_configured_file = str(contract_binding_state.get("current_configured_file", ""))
+        contract_binding_current_path = Path(contract_binding_state.get("current_path", contract_binding_current_path))
+        contract_binding_current_resolved_path = Path(
+            contract_binding_state.get("current_resolved_path", contract_binding_current_resolved_path)
+        )
+        contract_binding_active_file = str(contract_binding_state.get("active_file", contract_mapping_active_file))
+        contract_binding_parse_ok = bool(contract_binding_state.get("parse_ok", False))
+        contract_mapping_active_file = contract_binding_active_file
+        mapping_path = contract_binding_current_resolved_path
+        for row in contract_binding_violations:
+            violations.append(row)
+
         github_offload_cfg = (
             (invariants.get("github_control_plane_offload_alias") or {}) if isinstance(invariants, dict) else {}
         )
@@ -1772,7 +1843,16 @@ def main() -> int:
         "control_plane_invariants_status": status,
         "error_code": error_code,
         "invariants_file": str(invariants_path),
+        "contract_mapping_entry": str(contract_mapping_entry_path),
         "contract_mapping": str(mapping_path),
+        "contract_mapping_active_file": contract_mapping_active_file,
+        "contract_mapping_alias_error": contract_mapping_alias_error,
+        "contract_binding_alias_enabled": contract_binding_alias_enabled,
+        "contract_binding_current_file": str(contract_binding_current_path),
+        "contract_binding_current_configured_file": contract_binding_current_configured_file,
+        "contract_binding_current_resolved_file": str(contract_binding_current_resolved_path),
+        "contract_binding_parse_ok": contract_binding_parse_ok,
+        "contract_binding_violation_count": contract_binding_violation_count,
         "plugin_governance_configured_file": plugin_governance_configured_file,
         "plugin_governance_entry_file": str(plugin_governance_entry_path),
         "plugin_governance_file": str(plugin_governance_path),

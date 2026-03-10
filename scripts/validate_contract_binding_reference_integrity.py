@@ -175,7 +175,7 @@ def _load_stream_allowed_docs(registry_path: Path) -> tuple[set[str], list[str]]
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate contract-binding reference integrity across docs/scripts.")
     parser.add_argument("--repo-root", default=".")
-    parser.add_argument("--contract-mapping", default="identity/protocol/mappings/contract-binding.v1.6.yaml")
+    parser.add_argument("--contract-mapping", default="identity/protocol/mappings/contract-binding.current.yaml")
     parser.add_argument(
         "--stream-doc-registry",
         default="identity/protocol/mappings/stream-doc-registry.current.yaml",
@@ -184,7 +184,10 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
-    mapping_path = (repo_root / str(args.contract_mapping)).resolve()
+    mapping_entry_path = (repo_root / str(args.contract_mapping)).resolve()
+    mapping_path, mapping_active_file, mapping_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.contract_mapping)
+    )
     stream_doc_registry_entry_path = (repo_root / str(args.stream_doc_registry)).resolve()
     stream_doc_registry_path, stream_doc_registry_active_file, stream_doc_registry_alias_error = _resolve_current_yaml_alias(
         repo_root, str(args.stream_doc_registry)
@@ -192,6 +195,10 @@ def main() -> int:
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
+    if mapping_alias_error:
+        stale_reasons.append(
+            f"contract_mapping_alias_resolution_failed:{mapping_entry_path}:{mapping_alias_error}:{mapping_active_file}"
+        )
     if stream_doc_registry_alias_error:
         stale_reasons.append(
             f"stream_doc_registry_alias_resolution_failed:{stream_doc_registry_entry_path}:{stream_doc_registry_alias_error}:{stream_doc_registry_active_file}"
@@ -375,7 +382,10 @@ def main() -> int:
     payload = {
         "contract_binding_reference_integrity_status": status,
         "error_code": error_code,
+        "contract_mapping_entry": str(mapping_entry_path),
         "contract_mapping": str(mapping_path),
+        "contract_mapping_active_file": mapping_active_file,
+        "contract_mapping_alias_error": mapping_alias_error,
         "stream_doc_registry_entry": str(stream_doc_registry_entry_path),
         "stream_doc_registry": str(stream_doc_registry_path),
         "stream_doc_registry_active_file": stream_doc_registry_active_file,

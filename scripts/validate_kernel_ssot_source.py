@@ -20,7 +20,7 @@ STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
 CANONICAL_PATHS = (
     "identity/protocol/IDENTITY_PROTOCOL.md",
     "identity/protocol/IDENTITY_RUNTIME.md",
-    "identity/protocol/mappings/contract-binding.v1.6.yaml",
+    "identity/protocol/mappings/contract-binding.current.yaml",
 )
 
 

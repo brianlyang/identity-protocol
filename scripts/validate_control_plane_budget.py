@@ -45,8 +45,29 @@ def _count_error_codes(repo_root: Path) -> int:
     return len(codes)
 
 
+def _resolve_contract_mapping(repo_root: Path) -> Path:
+    mapping_dir = repo_root / "identity" / "protocol" / "mappings"
+    current_file = mapping_dir / "contract-binding.current.yaml"
+    if current_file.exists():
+        try:
+            doc = yaml.safe_load(current_file.read_text(encoding="utf-8")) or {}
+        except Exception:
+            doc = {}
+        if isinstance(doc, dict):
+            active_file = str(doc.get("active_file", "")).strip()
+            if active_file:
+                active_path = (repo_root / active_file).resolve()
+                if active_path.exists():
+                    return active_path
+        return current_file
+    candidates = sorted(mapping_dir.glob("contract-binding.v*.yaml"))
+    if candidates:
+        return candidates[-1]
+    return mapping_dir / "contract-binding.yaml"
+
+
 def _mapping_bundle_gap(repo_root: Path) -> tuple[int, list[str], int]:
-    mapping_path = repo_root / "identity" / "protocol" / "mappings" / "contract-binding.v1.6.yaml"
+    mapping_path = _resolve_contract_mapping(repo_root)
     data = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
     mapping_rows = sorted(k for k in data.keys() if isinstance(k, str) and k.startswith("asb16-rq-"))
 
