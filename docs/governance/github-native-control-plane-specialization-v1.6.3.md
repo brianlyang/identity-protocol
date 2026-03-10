@@ -570,3 +570,49 @@ Evidence mirrors:
    - raw count (telemetry continuity)
    - family-normalized count (convergence decision signal)
 3. Creator strict-surface validator fan-out should continue to prefer delegated bundles for repeatable blocks to avoid reintroducing direct literal sprawl.
+
+## 11) Round-35 file-level semantic unification addendum (2026-03-11)
+
+### 11.1 Why this addendum exists
+
+1. Deep-scan feedback identified a file-level semantics risk: legacy v1.6/v1.2 governance-review docs still carried historical thresholds/snapshots that could be misread as current-state truth.
+2. Control-plane runtime already follows current-pointer mappings, but docs-side semantics needed the same machine-enforced convergence to avoid dual-source interpretation.
+
+### 11.2 What was hardened (code + mapping + legacy docs)
+
+1. Legacy v1.6 governance/review docs now include explicit current-state redirects:
+   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+2. Legacy branch-protection checklist migration routing now explicitly references stream registry pointer:
+   - `docs/governance/branch-protection-required-checks-v1.2.8.md`
+3. Stream registry now defines static-doc alias-reference requirements (not only stream-doc requirements):
+   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+4. Docs contract gate now fail-closes when mandatory static docs miss required current-pointer alias refs:
+   - `scripts/docs_command_contract_check.py`
+
+### 11.3 Unified semantic contract (frozen)
+
+1. Runtime execution truth:
+   - `scripts/**` + `identity/protocol/mappings/*.current.yaml`
+2. Documentation truth boundary:
+   - legacy docs may retain historical snapshots, but must include explicit redirect to current-pointer SSOT.
+3. Machine anti-drift:
+   - static legacy docs are now covered by alias-reference checks through the stream-doc registry contract.
+
+### 11.4 Replay results for this round
+
+1. `python3 scripts/docs_command_contract_check.py` -> PASS
+2. `python3 scripts/validate_protocol_ssot_source.py` -> OK
+3. `python3 scripts/validate_doc_evidence_persistence.py --json-only` -> PASS_REQUIRED
+4. `python3 scripts/validate_control_plane_invariants.py --json-only` -> PASS_REQUIRED
+5. `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> PASS_REQUIRED
+6. `python3 scripts/validate_control_plane_status_sync.py --json-only` -> PASS_REQUIRED
+
+### 11.5 Evidence (persistent mirror + tuple-complete)
+
+1. Root:
+   - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/`
+2. Manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json`
+3. Tuple contract:
+   - every record contains `sha256`, `command`, `rc`, `timestamp_utc`.
