@@ -358,6 +358,7 @@ Observed:
    - `validator_ids` non-empty and script existence
    - `gate_surfaces` token validity
    - `governance_anchor` / `review_anchor` / `kernel_source_path` file existence and markdown anchor resolvability
+   - `governance_anchor` / `review_anchor` path-prefix + stream-doc-registry membership (anti-break-chain)
 3. Fixed stale anchors in:
    - `identity/protocol/mappings/contract-binding.v1.6.yaml`
 4. Integrated into machine control-plane status rendering:

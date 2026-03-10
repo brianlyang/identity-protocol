@@ -18,6 +18,10 @@ REFERENCE_FIELDS: tuple[str, ...] = (
     "review_anchor",
     "kernel_source_path",
 )
+STREAM_ANCHOR_FIELDS: tuple[str, ...] = (
+    "governance_anchor",
+    "review_anchor",
+)
 ALLOWED_GATE_SURFACES: set[str] = {
     "creator",
     "readiness",
@@ -25,6 +29,10 @@ ALLOWED_GATE_SURFACES: set[str] = {
     "full-scan",
     "three-plane",
     "ci",
+}
+STREAM_FIELD_PREFIX: dict[str, str] = {
+    "governance_anchor": "docs/governance/",
+    "review_anchor": "docs/review/",
 }
 RQ_KEY_RE = re.compile(r"^asb16-rq-\d{3}$")
 RQ_ID_RE = re.compile(r"^ASB16-RQ-\d{3}$")
@@ -108,18 +116,63 @@ def _split_ref(ref: str) -> tuple[str, str]:
     return path.strip(), fragment.strip().lower()
 
 
+def _load_stream_allowed_docs(registry_path: Path) -> tuple[set[str], list[str]]:
+    errors: list[str] = []
+    allowed: set[str] = set()
+    if not registry_path.exists():
+        errors.append(f"stream_doc_registry_missing:{registry_path}")
+        return allowed, errors
+    try:
+        doc = _load_yaml(registry_path)
+    except Exception as exc:
+        errors.append(f"stream_doc_registry_parse_failed:{registry_path}:{exc}")
+        return allowed, errors
+
+    stream_rows = doc.get("stream_docs")
+    if not isinstance(stream_rows, list) or not stream_rows:
+        errors.append("stream_doc_registry_stream_docs_invalid")
+    else:
+        for row in stream_rows:
+            if not isinstance(row, dict):
+                errors.append("stream_doc_registry_row_not_object")
+                continue
+            for field in ("governance_doc", "review_doc"):
+                value = str(row.get(field, "")).strip()
+                if value:
+                    allowed.add(value)
+                else:
+                    errors.append(f"stream_doc_registry_field_missing:{field}")
+
+    mandatory_static_docs = doc.get("mandatory_static_docs")
+    if not isinstance(mandatory_static_docs, list) or not mandatory_static_docs:
+        errors.append("stream_doc_registry_mandatory_static_docs_invalid")
+    else:
+        for row in mandatory_static_docs:
+            token = str(row or "").strip()
+            if token:
+                allowed.add(token)
+    return allowed, errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate contract-binding reference integrity across docs/scripts.")
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--contract-mapping", default="identity/protocol/mappings/contract-binding.v1.6.yaml")
+    parser.add_argument(
+        "--stream-doc-registry",
+        default="identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
     mapping_path = (repo_root / str(args.contract_mapping)).resolve()
+    stream_doc_registry_path = (repo_root / str(args.stream_doc_registry)).resolve()
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
+    stream_allowed_docs, stream_registry_errors = _load_stream_allowed_docs(stream_doc_registry_path)
+    stale_reasons.extend(stream_registry_errors)
 
     if not mapping_path.exists():
         stale_reasons.append(f"contract_mapping_missing:{mapping_path}")
@@ -229,6 +282,39 @@ def main() -> int:
                     reference=ref,
                 )
                 continue
+
+            if field_name in STREAM_ANCHOR_FIELDS:
+                required_prefix = STREAM_FIELD_PREFIX.get(field_name, "")
+                if required_prefix and not rel_path.startswith(required_prefix):
+                    _append_violation(
+                        violations,
+                        requirement_key=requirement_key,
+                        field=field_name,
+                        reason="reference_path_prefix_mismatch",
+                        reference=ref,
+                        required_prefix=required_prefix,
+                        reference_path=rel_path,
+                    )
+                if not anchor:
+                    _append_violation(
+                        violations,
+                        requirement_key=requirement_key,
+                        field=field_name,
+                        reason="reference_anchor_required_for_stream_field",
+                        reference=ref,
+                        reference_path=rel_path,
+                    )
+                if stream_allowed_docs and rel_path not in stream_allowed_docs:
+                    _append_violation(
+                        violations,
+                        requirement_key=requirement_key,
+                        field=field_name,
+                        reason="reference_doc_not_registered_in_stream_registry",
+                        reference=ref,
+                        reference_path=rel_path,
+                        stream_doc_registry=str(stream_doc_registry_path),
+                    )
+
             resolved = (repo_root / rel_path).resolve()
             if not resolved.exists():
                 _append_violation(
@@ -265,8 +351,12 @@ def main() -> int:
         "contract_binding_reference_integrity_status": status,
         "error_code": error_code,
         "contract_mapping": str(mapping_path),
+        "stream_doc_registry": str(stream_doc_registry_path),
+        "stream_doc_registry_parse_ok": len(stream_registry_errors) == 0,
+        "stream_allowed_doc_count": len(stream_allowed_docs),
         "requirement_row_count": len(rows),
         "reference_fields": list(REFERENCE_FIELDS),
+        "stream_anchor_fields": list(STREAM_ANCHOR_FIELDS),
         "allowed_gate_surfaces": sorted(ALLOWED_GATE_SURFACES),
         "violation_count": len(violations),
         "violations": violations,
