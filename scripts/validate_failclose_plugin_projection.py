@@ -58,6 +58,16 @@ def _as_str_list(value: Any) -> list[str]:
     return [str(x).strip() for x in _as_list(value) if str(x).strip()]
 
 
+def _resolve_current_yaml_alias(repo_root: Path, rel: str) -> tuple[Path, str]:
+    configured_path = (repo_root / str(rel or "").strip()).resolve()
+    if configured_path.name.endswith(".current.yaml") and configured_path.exists() and configured_path.is_file():
+        current_doc = _load_yaml(configured_path)
+        active_file = str(current_doc.get("active_file", "")).strip()
+        if active_file:
+            return (repo_root / active_file).resolve(), active_file
+    return configured_path, ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description="Validate fail-close plugin projection via governance-driven target probes."
@@ -79,18 +89,23 @@ def main() -> int:
     ap.add_argument("--surface-label", default="projection")
     ap.add_argument(
         "--plugin-governance-file",
-        default="identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+        default="identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
     )
     ap.add_argument("--out", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
-    governance_path = (repo_root / str(args.plugin_governance_file)).resolve()
+    governance_entry_path = (repo_root / str(args.plugin_governance_file)).resolve()
+    governance_path, governance_active_file = _resolve_current_yaml_alias(repo_root, str(args.plugin_governance_file))
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
     rows: list[dict[str, Any]] = []
 
+    if not governance_entry_path.exists():
+        stale_reasons.append(f"plugin_governance_file_missing:{governance_entry_path}")
+    if governance_entry_path.name.endswith(".current.yaml") and not governance_active_file:
+        stale_reasons.append(f"plugin_governance_alias_active_file_missing:{governance_entry_path}")
     if not governance_path.exists():
         stale_reasons.append(f"plugin_governance_file_missing:{governance_path}")
     governance_doc = _load_yaml(governance_path) if governance_path.exists() else {}
@@ -221,6 +236,8 @@ def main() -> int:
         "failclose_plugin_projection_status": status,
         "error_code": error_code,
         "plugin_governance_file": str(governance_path),
+        "plugin_governance_entry_file": str(governance_entry_path),
+        "plugin_governance_active_file": governance_active_file,
         "identity_id": str(args.identity_id),
         "operation": str(args.operation),
         "run_id": run_id,

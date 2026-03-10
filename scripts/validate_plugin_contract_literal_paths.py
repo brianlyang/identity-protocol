@@ -30,8 +30,9 @@ TOKENS = (
     "plugin.input.schema.json",
     "plugin.output.schema.json",
     "plugin.error-codes.yaml",
-    "PLUGIN_REGISTRY.v1.6.2.yaml",
-    "PROVIDER_PROFILES.v1.6.2.yaml",
+    "PLUGIN_REGISTRY.current.yaml",
+    "PROVIDER_PROFILES.current.yaml",
+    "FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
 )
 
 

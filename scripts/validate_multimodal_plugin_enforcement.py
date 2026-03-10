@@ -106,6 +106,16 @@ def _load_json_file(path: Path) -> dict[str, Any]:
     return data
 
 
+def _resolve_current_yaml_alias(repo_root: Path, rel: str) -> tuple[Path, str]:
+    configured_path = (repo_root / str(rel or "").strip()).resolve()
+    if configured_path.name.endswith(".current.yaml") and configured_path.exists() and configured_path.is_file():
+        current_doc = _load_yaml(configured_path)
+        active_file = str(current_doc.get("active_file", "")).strip()
+        if active_file:
+            return (repo_root / active_file).resolve(), active_file
+    return configured_path, ""
+
+
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
     for key in (
         "multimodal_plugin_enforcement_contract_v1",
@@ -250,14 +260,22 @@ def main() -> int:
         return 1
 
     repo_root = Path(__file__).resolve().parents[1]
+    contract = _select_contract(task)
     plugin_root = (repo_root / "identity" / "protocol" / "plugins").resolve()
-    registry_path = (plugin_root / "PLUGIN_REGISTRY.v1.6.2.yaml").resolve()
+    registry_rel = str(
+        contract.get("plugin_registry_path", "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml")
+    ).strip()
+    provider_profiles_rel = str(
+        contract.get("provider_profiles_path", "identity/protocol/plugins/PROVIDER_PROFILES.current.yaml")
+    ).strip()
+    registry_entry_path = (repo_root / registry_rel).resolve()
+    provider_profiles_entry_path = (repo_root / provider_profiles_rel).resolve()
+    registry_path, registry_active_file = _resolve_current_yaml_alias(repo_root, registry_rel)
+    provider_profiles_path, provider_profiles_active_file = _resolve_current_yaml_alias(repo_root, provider_profiles_rel)
     registry_schema_path = (plugin_root / "schemas" / "plugin-registry.schema.json").resolve()
-    provider_profiles_path = (plugin_root / "PROVIDER_PROFILES.v1.6.2.yaml").resolve()
     provider_schema_path = (plugin_root / "schemas" / "provider-profiles.schema.json").resolve()
     binding_path = (pack_path / "runtime" / "plugins" / "provider-bindings.local.yaml").resolve()
 
-    contract = _select_contract(task)
     required = contract_required(contract)
     auto_required_signal = registry_path.exists()
     if auto_required_signal:
@@ -284,6 +302,12 @@ def main() -> int:
         "provider_profile_id": "",
         "plugin_contract_owner": "protocol_base_repo",
         "plugin_resolution_mode": "central_registry",
+        "plugin_registry_file": str(registry_path),
+        "plugin_registry_entry_file": str(registry_entry_path),
+        "plugin_registry_active_file": registry_active_file,
+        "provider_profiles_file": str(provider_profiles_path),
+        "provider_profiles_entry_file": str(provider_profiles_entry_path),
+        "provider_profiles_active_file": provider_profiles_active_file,
         "multimodal_runtime_evidence_status": STATUS_SKIPPED_NOT_REQUIRED,
         "runtime_stage_producer_detected": False,
         "runtime_stage_deferred": False,
@@ -309,6 +333,21 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
+    if registry_entry_path.name.endswith(".current.yaml") and not registry_active_file:
+        payload["multimodal_plugin_enforcement_status"] = STATUS_FAIL_REQUIRED
+        payload["plugin_registry_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_REGISTRY
+        payload["stale_reasons"] = [f"plugin_registry_alias_active_file_missing:{registry_entry_path}"]
+        _emit(payload, json_only=args.json_only)
+        return 1
+    if provider_profiles_entry_path.name.endswith(".current.yaml") and not provider_profiles_active_file:
+        payload["multimodal_plugin_enforcement_status"] = STATUS_FAIL_REQUIRED
+        payload["provider_config_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONF_FIELDS
+        payload["stale_reasons"] = [f"provider_profiles_alias_active_file_missing:{provider_profiles_entry_path}"]
+        _emit(payload, json_only=args.json_only)
+        return 1
+
     payload["producer_readiness"] = True
     payload["plugin_registry_status"] = STATUS_PASS_REQUIRED
     payload["plugin_naming_status"] = STATUS_PASS_REQUIRED
@@ -328,8 +367,10 @@ def main() -> int:
         error_code = error_code or ERR_PATH
 
     required_registry_files = [
+        registry_entry_path,
         registry_path,
         registry_schema_path,
+        provider_profiles_entry_path,
         provider_profiles_path,
         provider_schema_path,
     ]

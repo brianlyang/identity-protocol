@@ -27,3 +27,12 @@ invariants:
       surfaces:
         - scripts
         - .github/workflows
+  plugin_control_plane_alias:
+    plugin_registry_current_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+    provider_profiles_current_file: identity/protocol/plugins/PROVIDER_PROFILES.current.yaml
+    failclose_governance_current_file: identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+    forbid_versioned_reference:
+      regex: (PLUGIN_REGISTRY|PROVIDER_PROFILES|FAILCLOSE_PLUGIN_GOVERNANCE)\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

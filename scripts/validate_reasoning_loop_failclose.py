@@ -162,6 +162,16 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _resolve_current_yaml_alias(repo_root: Path, rel: str) -> tuple[Path, str]:
+    configured_path = (repo_root / str(rel or "").strip()).resolve()
+    if configured_path.name.endswith(".current.yaml") and configured_path.exists() and configured_path.is_file():
+        doc = _load_yaml(configured_path)
+        active_file = str(doc.get("active_file", "")).strip()
+        if active_file:
+            return (repo_root / active_file).resolve(), active_file
+    return configured_path, ""
+
+
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
@@ -484,10 +494,11 @@ def main() -> int:
 
     contract = _select_contract(task)
     repo_root = Path(__file__).resolve().parents[1]
-    registry_path = (
-        repo_root
-        / str(contract.get("plugin_registry_path", "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml"))
-    ).resolve()
+    registry_rel = str(
+        contract.get("plugin_registry_path", "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml")
+    ).strip()
+    registry_entry_path = (repo_root / registry_rel).resolve()
+    registry_path, registry_active_file = _resolve_current_yaml_alias(repo_root, registry_rel)
     required = contract_required(contract)
     auto_required_signal = registry_path.exists()
     if auto_required_signal:
@@ -513,6 +524,9 @@ def main() -> int:
         "external_source_freshness_status": STATUS_SKIPPED_NOT_REQUIRED,
         "reasoning_enforcement_level": "",
         "plugin_registry_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "plugin_registry_file": str(registry_path),
+        "plugin_registry_entry_file": str(registry_entry_path),
+        "plugin_registry_active_file": registry_active_file,
         "runtime_report_path": "",
         "runtime_report_run_id": "",
         "runtime_report_source": "",
@@ -542,6 +556,16 @@ def main() -> int:
         return 0
 
     payload["producer_readiness"] = True
+
+    if registry_entry_path.name.endswith(".current.yaml") and not registry_active_file:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["plugin_registry_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_REGISTRY
+        payload["stale_reasons"] = [f"plugin_registry_alias_active_file_missing:{registry_entry_path}"]
+        payload["evidence_ref"] = str(registry_entry_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
 
     if not registry_path.exists() or not registry_path.is_file():
         payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED

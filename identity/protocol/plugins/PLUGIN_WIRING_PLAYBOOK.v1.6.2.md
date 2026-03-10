@@ -31,13 +31,13 @@ Machine policy for this playbook and plugin READMEs:
    - `plugin.output.schema.json`
    - `plugin.error-codes.yaml`
    - `README.md`
-2. Register plugin in `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml`:
+2. Register plugin in `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml` (resolved by alias):
    - `plugin_id`
    - `requirement_key`
    - `bundle_target_name`
    - `gate_mode=fail_close_strict`
    - `ssot_mapping_ref`
-3. Add governance profile in `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml`:
+3. Add governance profile in `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml` (resolved by alias):
    - `requirement_key`
    - `target_name`
    - `validator_script`

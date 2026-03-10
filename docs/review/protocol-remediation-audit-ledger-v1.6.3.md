@@ -367,3 +367,31 @@ Observed:
 5. Round replay outcome:
    - `validate_contract_binding_reference_integrity` = `PASS_REQUIRED`
    - control-plane status sync remains `PASS_REQUIRED`
+
+### 11.7 Round-33.3 plugin current-alias hardening closure (2026-03-10)
+
+1. Added stable plugin alias entry files:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+2. Switched strict validators and pack skeleton defaults from version file literals to alias-driven resolution:
+   - `scripts/validate_multimodal_plugin_enforcement.py`
+   - `scripts/validate_reasoning_loop_failclose.py`
+   - `scripts/validate_failclose_plugin_projection.py`
+   - `scripts/create_identity_pack.py`
+3. Extended invariants with plugin control-plane alias enforcement and versioned-reference block on strict execution surfaces:
+   - `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+   - `scripts/validate_control_plane_invariants.py`
+4. Updated plugin SSOT readability and onboarding references to stable alias entries:
+   - `identity/protocol/plugins/README.md`
+   - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`
+   - `identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml`
+   - `identity/protocol/IDENTITY_PROTOCOL.md`
+5. Replay outcome:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`
+   - `python3 scripts/validate_plugin_contract_literal_paths.py --json-only` => `PASS_REQUIRED`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`
+6. Target full-scan note:
+   - `full_identity_protocol_scan --scan-mode target` was replayed.
+   - Local run with `--session-id run:v163-audit-20260310` reported `P0=1` caused by `IP-ASB-SESSION-ENTRY-001` (requested session not pre-bound in local project runtime), not by alias hardening regressions.

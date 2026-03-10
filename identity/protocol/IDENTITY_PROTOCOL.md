@@ -187,8 +187,8 @@ To avoid “statement-only” drift, the accurate judgement contract is hard-bou
 3. Canonical validator: `scripts/validate_multimodal_plugin_enforcement.py`
 4. Canonical plugin root: `identity/protocol/plugins/`
 5. Canonical registries:
-   - `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml`
-   - `identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml`
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
 6. Mandatory done-transition gate:
    - `requires_multimodal_evidence_consistency=true`
    - `inconsistent_evidence_transition=block_done`

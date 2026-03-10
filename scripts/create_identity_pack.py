@@ -471,8 +471,8 @@ def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
         "required": True,
         "contract_id": "rq_034_multimodal_plugin_enforcement_contract_v1",
         "validator": "scripts/validate_multimodal_plugin_enforcement.py",
-        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
-        "provider_profiles_path": "identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml",
+        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
+        "provider_profiles_path": "identity/protocol/plugins/PROVIDER_PROFILES.current.yaml",
         "required_fields": [
             "multimodal_plugin_enforcement_status",
             "plugin_registry_status",
@@ -503,7 +503,7 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
         "contract_id": "rq_035_reasoning_loop_failclose_contract_v1",
         "plugin_id": "reasoning-loop-enforcement",
         "validator": "scripts/validate_reasoning_loop_failclose.py",
-        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
         "contract_file": "identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml",
         "reasoning_enforcement_level": "L1",
         "level_required_attempt_fields": {

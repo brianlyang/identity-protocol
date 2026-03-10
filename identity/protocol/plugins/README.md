@@ -10,9 +10,9 @@ This directory is the canonical plugin governance root for protocol-level plugin
 
 ## Canonical files
 
-1. `PLUGIN_REGISTRY.v1.6.2.yaml` (registry, when landed)
-2. `PROVIDER_PROFILES.v1.6.2.yaml` (provider capabilities and endpoint policy)
-3. `FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml` (single-source fail-close plugin wiring policy: paths + mapping + surfaces + prompt binding)
+1. `PLUGIN_REGISTRY.current.yaml` (stable registry entry; points to current versioned registry)
+2. `PROVIDER_PROFILES.current.yaml` (stable provider profile entry; points to current versioned provider profile file)
+3. `FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml` (stable fail-close governance entry; points to current versioned policy)
 4. `PLUGIN_WIRING_PLAYBOOK.current.md` (stable playbook entry; points to current versioned playbook)
 5. `PLUGIN_DOC_CONTROL.current.yaml` (stable doc-control entry; points to current versioned policy)
 6. `schemas/*.schema.json` (strict schema validation)

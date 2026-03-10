@@ -13,6 +13,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_INVARIANT = "IP-CP-INV-001"
 PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
+PLUGIN_FAILCLOSE_GOVERNANCE_CURRENT_DEFAULT_REL = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
 GITHUB_OFFLOAD_CURRENT_DEFAULT_REL = "identity/protocol/mappings/github-control-plane-offload.current.yaml"
 
 
@@ -79,6 +80,77 @@ def _surface_token_present(repo_root: Path, rel_path: str, token: str) -> tuple[
     return (token in text), ""
 
 
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    current_doc = _load_yaml(configured_path)
+    if not current_doc:
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
+def _scan_forbidden_versioned_refs(
+    *,
+    repo_root: Path,
+    regex: str,
+    surfaces: list[str],
+    skip_files: set[Path] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    violations: list[dict[str, Any]] = []
+    stale_reasons: list[str] = []
+    skip = {p.resolve() for p in (skip_files or set())}
+    try:
+        pattern = re.compile(regex)
+    except re.error:
+        stale_reasons.append(f"forbid_versioned_reference_regex_invalid:{regex}")
+        return violations, stale_reasons
+
+    hit_files: list[str] = []
+    for rel_surface in surfaces:
+        surface_path = (repo_root / rel_surface).resolve()
+        if not surface_path.exists():
+            stale_reasons.append(f"forbid_versioned_reference_surface_missing:{rel_surface}")
+            continue
+        candidates: list[Path] = []
+        if surface_path.is_file():
+            candidates = [surface_path]
+        elif surface_path.is_dir():
+            candidates = [p for p in surface_path.rglob("*") if p.is_file()]
+        for candidate in candidates:
+            candidate_resolved = candidate.resolve()
+            if candidate_resolved in skip:
+                continue
+            text = _read_text(candidate_resolved)
+            if pattern.search(text):
+                try:
+                    rel_candidate = candidate_resolved.relative_to(repo_root).as_posix()
+                except Exception:
+                    rel_candidate = str(candidate_resolved)
+                hit_files.append(rel_candidate)
+
+    if hit_files:
+        uniq_hits = sorted(set(hit_files))
+        violations.append(
+            {
+                "reason": "direct_versioned_reference_detected_on_forbidden_surfaces",
+                "regex": regex,
+                "surfaces": surfaces,
+                "hit_files": uniq_hits,
+                "hit_count": len(uniq_hits),
+            }
+        )
+    return violations, stale_reasons
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate control-plane invariants (bundle/mapping parity + fail-close plugin wiring).")
     parser.add_argument("--repo-root", default=".")
@@ -92,7 +164,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--plugin-governance-file",
-        default="identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+        default=PLUGIN_FAILCLOSE_GOVERNANCE_CURRENT_DEFAULT_REL,
     )
     parser.add_argument(
         "--plugin-doc-control-file",
@@ -108,9 +180,16 @@ def main() -> int:
     repo_root = Path(args.repo_root).expanduser().resolve()
     invariants_path = (repo_root / str(args.invariants_file)).resolve()
     mapping_path = (repo_root / str(args.contract_mapping)).resolve()
-    plugin_governance_path = (repo_root / str(args.plugin_governance_file)).resolve()
+    plugin_governance_configured_file = str(args.plugin_governance_file)
+    plugin_governance_entry_path = (repo_root / plugin_governance_configured_file).resolve()
+    plugin_governance_path, plugin_governance_active_file, plugin_governance_alias_error = _resolve_current_yaml_alias(
+        repo_root,
+        plugin_governance_configured_file,
+    )
     plugin_doc_control_path = (repo_root / str(args.plugin_doc_control_file)).resolve()
     github_offload_current_path = (repo_root / str(args.github_offload_current_file)).resolve()
+    plugin_governance_alias_enabled = plugin_governance_entry_path.name.endswith(".current.yaml")
+    plugin_governance_violation_count = 0
     plugin_doc_control_resolved_path = plugin_doc_control_path
     plugin_doc_control_active_file = ""
     github_offload_current_configured_file = str(args.github_offload_current_file)
@@ -120,6 +199,11 @@ def main() -> int:
     github_offload_alias_enabled = False
     github_offload_parse_ok = False
     github_offload_violation_count = 0
+    plugin_control_plane_alias_enabled = False
+    plugin_control_plane_alias_parse_ok = False
+    plugin_control_plane_alias_violation_count = 0
+    plugin_control_plane_alias_current_files: dict[str, str] = {}
+    plugin_control_plane_alias_active_files: dict[str, str] = {}
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
@@ -128,6 +212,18 @@ def main() -> int:
         stale_reasons.append(f"invariants_file_missing:{invariants_path}")
     if not mapping_path.exists():
         stale_reasons.append(f"contract_mapping_missing:{mapping_path}")
+    if not plugin_governance_entry_path.exists():
+        stale_reasons.append(f"plugin_governance_entry_file_missing:{plugin_governance_entry_path}")
+    if plugin_governance_alias_error:
+        stale_reasons.append(f"plugin_governance_alias_error:{plugin_governance_alias_error}")
+        plugin_governance_violation_count += 1
+        _append_violation(
+            violations,
+            field="plugin_governance_alias",
+            reason=plugin_governance_alias_error,
+            plugin_governance_file=plugin_governance_configured_file,
+            active_file=plugin_governance_active_file,
+        )
     if not plugin_governance_path.exists():
         stale_reasons.append(f"plugin_governance_file_missing:{plugin_governance_path}")
     if not plugin_doc_control_path.exists():
@@ -358,6 +454,134 @@ def main() -> int:
                                 hit_count=len(uniq_hits),
                             )
 
+        plugin_alias_cfg = (invariants.get("plugin_control_plane_alias") or {}) if isinstance(invariants, dict) else {}
+        if isinstance(plugin_alias_cfg, dict) and plugin_alias_cfg:
+            plugin_control_plane_alias_enabled = True
+            alias_rows = {
+                "plugin_registry_current_file": (
+                    str(plugin_alias_cfg.get("plugin_registry_current_file", "")).strip(),
+                    "identity/protocol/plugins/PLUGIN_REGISTRY.v",
+                ),
+                "provider_profiles_current_file": (
+                    str(plugin_alias_cfg.get("provider_profiles_current_file", "")).strip(),
+                    "identity/protocol/plugins/PROVIDER_PROFILES.v",
+                ),
+                "failclose_governance_current_file": (
+                    str(plugin_alias_cfg.get("failclose_governance_current_file", "")).strip(),
+                    "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v",
+                ),
+            }
+            alias_resolved_ok = True
+            for alias_key, (current_file, active_prefix) in alias_rows.items():
+                plugin_control_plane_alias_current_files[alias_key] = current_file
+                if not current_file:
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason="current_file_missing",
+                        alias_key=alias_key,
+                    )
+                    continue
+                if not current_file.endswith(".current.yaml"):
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason="current_file_non_canonical",
+                        alias_key=alias_key,
+                        current_file=current_file,
+                    )
+                resolved_path, active_file, alias_error = _resolve_current_yaml_alias(repo_root, current_file)
+                plugin_control_plane_alias_active_files[alias_key] = active_file
+                if alias_error:
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason=alias_error,
+                        alias_key=alias_key,
+                        current_file=current_file,
+                        active_file=active_file,
+                    )
+                    continue
+                if active_file and not active_file.startswith(active_prefix):
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason="active_file_non_canonical",
+                        alias_key=alias_key,
+                        active_file=active_file,
+                    )
+                if not resolved_path.exists() or not resolved_path.is_file():
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason="active_file_not_found",
+                        alias_key=alias_key,
+                        active_file=active_file,
+                    )
+
+            forbid_cfg = plugin_alias_cfg.get("forbid_versioned_reference")
+            if isinstance(forbid_cfg, dict):
+                ref_regex = str(forbid_cfg.get("regex", "")).strip()
+                ref_surfaces = _as_str_list(forbid_cfg.get("surfaces"))
+                if not ref_regex:
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason="forbid_versioned_reference_regex_missing",
+                    )
+                elif not ref_surfaces:
+                    alias_resolved_ok = False
+                    plugin_control_plane_alias_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_control_plane_alias",
+                        reason="forbid_versioned_reference_surfaces_missing",
+                    )
+                else:
+                    ref_violations, ref_stale = _scan_forbidden_versioned_refs(
+                        repo_root=repo_root,
+                        regex=ref_regex,
+                        surfaces=ref_surfaces,
+                    )
+                    if ref_stale:
+                        alias_resolved_ok = False
+                        plugin_control_plane_alias_violation_count += len(ref_stale)
+                        for reason in ref_stale:
+                            _append_violation(
+                                violations,
+                                field="plugin_control_plane_alias",
+                                reason=reason,
+                                regex=ref_regex,
+                                surfaces=ref_surfaces,
+                            )
+                    if ref_violations:
+                        alias_resolved_ok = False
+                        for row in ref_violations:
+                            plugin_control_plane_alias_violation_count += int(row.get("hit_count", 1))
+                            _append_violation(
+                                violations,
+                                field="plugin_control_plane_alias",
+                                reason=str(row.get("reason", "")),
+                                regex=ref_regex,
+                                surfaces=ref_surfaces,
+                                hit_files=row.get("hit_files", []),
+                                hit_count=row.get("hit_count", 0),
+                            )
+
+            plugin_control_plane_alias_parse_ok = alias_resolved_ok and bool(alias_rows)
+
         mode = str(parity_cfg.get("mode", "")).strip().lower() or "freeze"
         baseline_missing_rows = int(parity_cfg.get("baseline_missing_rows", -1))
         reduction_plan_file = str(parity_cfg.get("reduction_plan_file", "")).strip()
@@ -495,7 +719,7 @@ def main() -> int:
     registry_source_files: set[str] = set()
     plugin_doc_parse_ok = False
 
-    if plugin_governance_path.exists():
+    if plugin_governance_path.exists() and not plugin_governance_alias_error:
         plugin_doc = _load_yaml(plugin_governance_path)
         plugin_doc_parse_ok = bool(plugin_doc)
         if not plugin_doc_parse_ok:
@@ -702,7 +926,7 @@ def main() -> int:
             registry_cache: dict[str, dict[str, Any]] = {}
             registry_source_files.update(_as_str_list(plugin_doc.get("plugin_registry_files")))
             if not registry_source_files:
-                registry_source_files.add("identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml")
+                registry_source_files.add("identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml")
 
             for profile in profiles:
                 if not isinstance(profile, dict):
@@ -712,7 +936,20 @@ def main() -> int:
                     registry_source_files.add(registry_file)
 
             for registry_file in sorted(registry_source_files):
-                registry_path = (repo_root / registry_file).resolve()
+                registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(
+                    repo_root,
+                    registry_file,
+                )
+                if registry_alias_error:
+                    plugin_wiring_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_registry",
+                        reason=registry_alias_error,
+                        registry_file=registry_file,
+                        active_file=registry_active_file,
+                    )
+                    continue
                 if not registry_path.exists() or not registry_path.is_file():
                     plugin_wiring_violation_count += 1
                     _append_violation(
@@ -775,10 +1012,24 @@ def main() -> int:
                         plugin_id=plugin_id,
                     )
                 else:
-                    registry_path = (repo_root / registry_file).resolve()
+                    registry_path, registry_active_file, registry_alias_error = _resolve_current_yaml_alias(
+                        repo_root,
+                        registry_file,
+                    )
                     cache_key = str(registry_path)
                     registry_doc = registry_cache.get(cache_key)
-                    if registry_doc is None:
+                    if registry_alias_error:
+                        plugin_wiring_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="plugin_registry",
+                            reason=registry_alias_error,
+                            plugin_id=plugin_id,
+                            registry_file=registry_file,
+                            active_file=registry_active_file,
+                        )
+                        registry_doc = {}
+                    elif registry_doc is None:
                         plugin_wiring_violation_count += 1
                         _append_violation(
                             violations,
@@ -1132,6 +1383,12 @@ def main() -> int:
                     reason="prompt_failclose_binding_config_missing",
                 )
 
+    plugin_governance_violation_count = sum(
+        1
+        for row in violations
+        if str(row.get("field", "")).strip() in {"plugin_governance_alias", "plugin_governance_file"}
+    )
+
     if stale_reasons or violations:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_INVARIANT
@@ -1144,7 +1401,13 @@ def main() -> int:
         "error_code": error_code,
         "invariants_file": str(invariants_path),
         "contract_mapping": str(mapping_path),
+        "plugin_governance_configured_file": plugin_governance_configured_file,
+        "plugin_governance_entry_file": str(plugin_governance_entry_path),
         "plugin_governance_file": str(plugin_governance_path),
+        "plugin_governance_active_file": plugin_governance_active_file,
+        "plugin_governance_alias_enabled": plugin_governance_alias_enabled,
+        "plugin_governance_alias_error": plugin_governance_alias_error,
+        "plugin_governance_violation_count": plugin_governance_violation_count,
         "plugin_doc_control_file": str(plugin_doc_control_path),
         "plugin_doc_control_resolved_file": str(plugin_doc_control_resolved_path),
         "plugin_doc_control_active_file": plugin_doc_control_active_file,
@@ -1155,6 +1418,11 @@ def main() -> int:
         "github_offload_active_file": github_offload_active_file,
         "github_offload_parse_ok": github_offload_parse_ok,
         "github_offload_violation_count": github_offload_violation_count,
+        "plugin_control_plane_alias_enabled": plugin_control_plane_alias_enabled,
+        "plugin_control_plane_alias_parse_ok": plugin_control_plane_alias_parse_ok,
+        "plugin_control_plane_alias_violation_count": plugin_control_plane_alias_violation_count,
+        "plugin_control_plane_alias_current_files": plugin_control_plane_alias_current_files,
+        "plugin_control_plane_alias_active_files": plugin_control_plane_alias_active_files,
         "bundle_mapping_parity_mode": mode,
         "bundle_mapping_parity_baseline_missing_rows": baseline_missing_rows,
         "bundle_mapping_parity_reduction_plan_file": reduction_plan_file,

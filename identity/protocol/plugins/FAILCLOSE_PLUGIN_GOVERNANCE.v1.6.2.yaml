@@ -26,7 +26,7 @@ plugin_failclose_profiles:
   - plugin_id: multimodal-vision-enforcement
     requirement_key: asb16-rq-034
     target_name: multimodal_plugin_enforcement
-    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml
+    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
     contract_file: identity/protocol/plugins/multimodal-vision-enforcement/plugin.contract.yaml
     validator_script: scripts/validate_multimodal_plugin_enforcement.py
     strict_surfaces:
@@ -69,7 +69,7 @@ plugin_failclose_profiles:
   - plugin_id: reasoning-loop-enforcement
     requirement_key: asb16-rq-035
     target_name: reasoning_loop_failclose_enforcement
-    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml
+    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
     contract_file: identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml
     validator_script: scripts/validate_reasoning_loop_failclose.py
     strict_surfaces:
