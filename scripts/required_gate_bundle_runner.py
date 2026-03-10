@@ -19,6 +19,18 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 
 BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
 BUNDLE_KEY = "required_gate_bundle_runner"
+DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml"
+DEFAULT_GATE_PROFILE_NAME = "strict_full"
+STRICT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+)
 
 # Order is deterministic for replay and log comparison.
 BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
@@ -201,6 +213,25 @@ class ValidatorSpec:
     fixed_args: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class GateProfileSelection:
+    profile_name: str
+    profile_mode: str
+    requirement_keys: tuple[str, ...]
+    strict_no_trim_operations: tuple[str, ...]
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for item in value:
+        token = str(item or "").strip()
+        if token:
+            out.append(token)
+    return out
+
+
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
     mapping_dir = repo_root / "identity" / "protocol" / "mappings"
     candidates = sorted(mapping_dir.glob("contract-binding.v*.yaml"))
@@ -275,6 +306,93 @@ def _load_validator_specs(mapping_path: Path, requirement_keys: tuple[str, ...])
             continue
         specs.append(spec)
     return specs, errors
+
+
+def _load_gate_profile_selection(
+    *,
+    repo_root: Path,
+    profile_file: str,
+    profile_name: str,
+    operation: str,
+    resolved_work_layer: str,
+) -> tuple[GateProfileSelection | None, Path, list[str]]:
+    errors: list[str] = []
+    profile_path = (repo_root / str(profile_file or DEFAULT_GATE_PROFILE_FILE)).resolve()
+    if not profile_path.exists():
+        errors.append(f"gate_profile_file_missing:{profile_path}")
+        return None, profile_path, errors
+
+    try:
+        doc = yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        errors.append(f"gate_profile_parse_failed:{profile_path}:{exc}")
+        return None, profile_path, errors
+    if not isinstance(doc, dict):
+        errors.append(f"gate_profile_invalid_root:{profile_path}")
+        return None, profile_path, errors
+
+    profiles = doc.get("profiles")
+    if not isinstance(profiles, dict) or not profiles:
+        errors.append(f"gate_profile_profiles_missing_or_invalid:{profile_path}")
+        return None, profile_path, errors
+
+    selected_name = (
+        str(profile_name or "").strip()
+        or str(doc.get("default_profile", "")).strip()
+        or DEFAULT_GATE_PROFILE_NAME
+    )
+    selected = profiles.get(selected_name)
+    if not isinstance(selected, dict):
+        errors.append(f"gate_profile_not_found:{selected_name}")
+        return None, profile_path, errors
+
+    mode = str(selected.get("mode", "")).strip().lower() or "full"
+    if mode not in {"full", "targeted"}:
+        errors.append(f"gate_profile_invalid_mode:{selected_name}:{mode}")
+        return None, profile_path, errors
+
+    strict_no_trim_operations = tuple(
+        _as_str_list(doc.get("strict_no_trim_operations")) or list(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
+    )
+    normalized_operation = str(operation or "").strip().lower()
+    if mode != "full" and normalized_operation in set(strict_no_trim_operations):
+        errors.append(f"gate_profile_forbidden_for_strict_operation:{selected_name}:{normalized_operation}")
+
+    allowed_operations = _as_str_list(selected.get("allowed_operations"))
+    if not allowed_operations:
+        allowed_operations = ["*"] if mode == "full" else []
+    if not allowed_operations:
+        errors.append(f"gate_profile_allowed_operations_missing:{selected_name}")
+    elif "*" not in allowed_operations and normalized_operation not in set(allowed_operations):
+        errors.append(f"gate_profile_operation_not_allowed:{selected_name}:{normalized_operation}")
+
+    require_layers = set(_as_str_list(selected.get("require_work_layers")))
+    normalized_work_layer = str(resolved_work_layer or "").strip().lower()
+    if require_layers and normalized_work_layer and normalized_work_layer not in require_layers:
+        errors.append(f"gate_profile_work_layer_not_allowed:{selected_name}:{normalized_work_layer}")
+
+    if mode == "full":
+        requirement_keys = tuple(BUNDLE_REQUIREMENT_ORDER)
+    else:
+        requested = _as_str_list(selected.get("requirement_keys"))
+        if not requested:
+            errors.append(f"gate_profile_requirement_keys_missing:{selected_name}")
+            requirement_keys = ()
+        else:
+            unknown = [key for key in requested if key not in TARGET_NAME_BY_REQUIREMENT]
+            if unknown:
+                errors.append(f"gate_profile_unknown_requirement_keys:{selected_name}:{','.join(unknown)}")
+            requirement_keys = tuple(key for key in requested if key in TARGET_NAME_BY_REQUIREMENT)
+            if not requirement_keys:
+                errors.append(f"gate_profile_requirement_keys_empty:{selected_name}")
+
+    selection = GateProfileSelection(
+        profile_name=selected_name,
+        profile_mode=mode,
+        requirement_keys=requirement_keys,
+        strict_no_trim_operations=strict_no_trim_operations,
+    )
+    return selection, profile_path, errors
 
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
@@ -494,6 +612,12 @@ def main() -> int:
     )
     parser.add_argument("--surface-label", default="")
     parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
+    parser.add_argument("--gate-profile", default="", help="optional gate profile key for requirement selection")
+    parser.add_argument(
+        "--gate-profile-file",
+        default=DEFAULT_GATE_PROFILE_FILE,
+        help="gate profile mapping yaml for layer-targeted gate selection",
+    )
     parser.add_argument("--out", default="", help="optional path to persist JSON receipt")
     parser.add_argument("--json-only", action="store_true")
     parser.add_argument("--actor-id", default="")
@@ -508,8 +632,22 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     mapping_path = Path(args.contract_mapping).expanduser().resolve() if str(args.contract_mapping or "").strip() else _resolve_default_contract_mapping(repo_root)
     target_name = str(args.target_name or "").strip()
-    requirement_keys = BUNDLE_REQUIREMENT_ORDER
+    gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
+    gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
+    gate_profile_selection, gate_profile_resolved_file, gate_profile_errors = _load_gate_profile_selection(
+        repo_root=repo_root,
+        profile_file=gate_profile_file,
+        profile_name=gate_profile,
+        operation=str(args.operation),
+        resolved_work_layer=str(args.resolved_work_layer or "").strip(),
+    )
+    requirement_keys = (
+        gate_profile_selection.requirement_keys
+        if isinstance(gate_profile_selection, GateProfileSelection)
+        else BUNDLE_REQUIREMENT_ORDER
+    )
     mapping_errors: list[str] = []
+    mapping_errors.extend(gate_profile_errors)
     if target_name:
         target_key = REQUIREMENT_BY_TARGET.get(target_name, "")
         if not target_key:
@@ -701,6 +839,16 @@ def main() -> int:
         "catalog_path": str(Path(args.catalog).expanduser().resolve()),
         "operation": str(args.operation),
         "contract_mapping": str(mapping_path),
+        "gate_profile": gate_profile,
+        "gate_profile_mode": (
+            gate_profile_selection.profile_mode
+            if isinstance(gate_profile_selection, GateProfileSelection)
+            else ""
+        ),
+        "gate_profile_file": gate_profile_file,
+        "gate_profile_resolved_file": str(gate_profile_resolved_file),
+        "gate_profile_requirement_count": len(requirement_keys),
+        "gate_profile_requirement_keys": list(requirement_keys),
         "mapping_errors": mapping_errors,
         "missing_targets": missing_targets,
         "results": result_rows,
@@ -734,6 +882,16 @@ def main() -> int:
                 "bundle_contract_id": BUNDLE_CONTRACT_ID,
                 "bundle_key": BUNDLE_KEY,
                 "bundle_target_name": target_name,
+                "gate_profile": gate_profile,
+                "gate_profile_mode": (
+                    gate_profile_selection.profile_mode
+                    if isinstance(gate_profile_selection, GateProfileSelection)
+                    else ""
+                ),
+                "gate_profile_file": gate_profile_file,
+                "gate_profile_resolved_file": str(gate_profile_resolved_file),
+                "gate_profile_requirement_count": len(requirement_keys),
+                "gate_profile_requirement_keys": list(requirement_keys),
                 "actor_id": str(args.actor_id or "").strip(),
                 "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
                 "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
@@ -759,6 +917,17 @@ def main() -> int:
         target_payload.setdefault("bundle_contract_id", BUNDLE_CONTRACT_ID)
         target_payload.setdefault("bundle_key", BUNDLE_KEY)
         target_payload.setdefault("bundle_target_name", target_name)
+        target_payload.setdefault("gate_profile", gate_profile)
+        target_payload.setdefault(
+            "gate_profile_mode",
+            gate_profile_selection.profile_mode
+            if isinstance(gate_profile_selection, GateProfileSelection)
+            else "",
+        )
+        target_payload.setdefault("gate_profile_file", gate_profile_file)
+        target_payload.setdefault("gate_profile_resolved_file", str(gate_profile_resolved_file))
+        target_payload.setdefault("gate_profile_requirement_count", len(requirement_keys))
+        target_payload.setdefault("gate_profile_requirement_keys", list(requirement_keys))
         target_payload.setdefault("surface_label", surface_label)
         target_payload.setdefault("run_id_binding", run_id_binding)
         target_payload.setdefault("report_selected_path", report_selected_path)

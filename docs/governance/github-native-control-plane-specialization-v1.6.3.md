@@ -446,3 +446,49 @@ Evidence mirrors:
    - `activity/evidence/v163-predev/2026-03-10/audit_feedback_resolution_round32.json`
 3. Manifest:
    - `activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-round32-implementation.json`
+
+## 9) Round-33 layer-targeted gate profile addendum (2026-03-10)
+
+### 9.1 Why this addendum exists
+
+1. Single-layer target regression previously had no canonical gate-profile contract, so scan replay always executed full required-gate bundle.
+2. This created avoidable coupling between target-layer replay and non-target-layer checks.
+3. v1.6.3 now standardizes this as config-first protocol control behavior.
+
+### 9.2 Canonical contract surface
+
+1. Mapping SSOT:
+   - `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
+2. Bundle execution entry:
+   - `scripts/required_gate_bundle_runner.py`
+   - added `--gate-profile` / `--gate-profile-file`
+3. Validation gate:
+   - `scripts/validate_layer_targeted_gate_profile.py`
+4. Control-plane status integration:
+   - `scripts/render_control_plane_status.py`
+   - `scripts/validate_control_plane_status_sync.py`
+
+### 9.3 Hard boundary (fail-close preserved)
+
+1. Default profile is `strict_full`; existing strict behavior remains the default and is backward-compatible.
+2. `targeted` profiles are accepted only for `scan` / `inspection` operations.
+3. Strict operations (`activate/update/readiness/e2e/ci/validate/three-plane/mutation`) are non-trimmable; if a targeted profile is used there, bundle runner returns fail-close.
+4. Target probes excluded by profile return `SKIPPED_NOT_REQUIRED` with explicit profile metadata; they are not treated as silent pass.
+
+### 9.4 Full-scan wiring update
+
+1. `scripts/full_identity_protocol_scan.py` now accepts:
+   - `--gate-profile`
+   - `--gate-profile-file`
+2. The scan executor forwards both arguments to every required-gate bundle runner call.
+3. Bundle receipts now carry profile metadata fields for replay:
+   - `gate_profile`
+   - `gate_profile_mode`
+   - `gate_profile_requirement_keys`
+4. `scripts/validate_required_gate_surface_drift.py` now validates delegated full-scan command arguments from parsed shell invocations (comment lines are ignored), so lineage tokens cannot be spoofed by annotation-only text.
+
+### 9.5 Scope statement
+
+1. This addendum introduces optional scan-layer trimming only.
+2. It does not change semantic validators for retained contracts (`asb16-rq-019/034/035`).
+3. It does not offload protocol semantics to GitHub platform controls.

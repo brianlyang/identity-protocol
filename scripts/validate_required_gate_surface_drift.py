@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,17 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
+)
+FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_full_scan_target_regression.py",
+)
+FULL_SCAN_DELEGATED_REQUIRED_TOKENS: tuple[str, ...] = (
+    "--target-source-layer",
+    "--expected-work-layer",
+    "--expected-source-layer",
+    "--actor-id",
+    "--session-id",
+    "--enforce-m2m-pass",
 )
 FINAL_EGRESS_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
@@ -141,6 +153,53 @@ def _extract_shell_invocations(text: str, executable: str) -> set[str]:
             if target:
                 targets.add(target)
     return targets
+
+
+def _iter_shell_commands(text: str) -> list[str]:
+    commands: list[str] = []
+    buffer = ""
+    for raw_line in text.splitlines():
+        stripped = raw_line.split("#", 1)[0].rstrip()
+        if not stripped:
+            continue
+        if stripped.endswith("\\"):
+            buffer += stripped[:-1].rstrip() + " "
+            continue
+        buffer += stripped
+        cmd = buffer.strip()
+        if cmd:
+            commands.append(cmd)
+        buffer = ""
+    if buffer.strip():
+        commands.append(buffer.strip())
+    return commands
+
+
+def _extract_shell_invocation_args(text: str, *, executable: str, script: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for command in _iter_shell_commands(text):
+        try:
+            parts = shlex.split(command, posix=True)
+        except Exception:
+            continue
+        if len(parts) < 2:
+            continue
+        if Path(parts[0]).name != executable:
+            continue
+        if parts[1] != script:
+            continue
+        rows.append(parts[2:])
+    return rows
+
+
+def _arg_token_present(args: list[str], token: str) -> bool:
+    needle = str(token or "").strip()
+    if not needle:
+        return False
+    for arg in args:
+        if arg == needle or arg.startswith(f"{needle}="):
+            return True
+    return False
 
 
 def _extract_workflow_run_invocations(path: Path, executable: str) -> set[str]:
@@ -490,6 +549,35 @@ def main() -> int:
         if missing:
             missing_lineage_refs[rel] = missing
 
+    full_scan_delegate_path = repo_root / FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT
+    if not full_scan_delegate_path.exists():
+        missing_surface_files.append(FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT)
+    else:
+        rel = FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT
+        text = _read_text(full_scan_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+        full_scan_invocation_args: list[list[str]] = []
+        for script in FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS:
+            full_scan_invocation_args.extend(
+                _extract_shell_invocation_args(text, executable="python3", script=script)
+            )
+        missing_tokens = [
+            token
+            for token in FULL_SCAN_DELEGATED_REQUIRED_TOKENS
+            if not any(_arg_token_present(args, token) for args in full_scan_invocation_args)
+        ]
+        if missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
+
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
@@ -525,6 +613,8 @@ def main() -> int:
         "contract_mapping": str(mapping_path),
         "mapping_errors": mapping_errors,
         "strict_surfaces": list(STRICT_SURFACES),
+        "full_scan_delegate_required_python_scripts": list(FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS),
+        "full_scan_delegate_required_tokens": list(FULL_SCAN_DELEGATED_REQUIRED_TOKENS),
         "forbidden_direct_validators": forbidden_direct_validators,
         "missing_surface_files": missing_surface_files,
         "missing_lineage_refs": missing_lineage_refs,

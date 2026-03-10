@@ -301,3 +301,42 @@ Observed:
    - `activity/evidence/v163-predev/2026-03-10/audit_feedback_resolution_round32.json`
 3. Manifest:
    - `activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-round32-implementation.json`
+
+## 11) Round-33 layer-targeted gate profile absorption (2026-03-10)
+
+### 11.1 Change set (repo)
+
+1. Added canonical mapping:
+   - `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
+2. Added profile validator:
+   - `scripts/validate_layer_targeted_gate_profile.py`
+3. Extended bundle runner with profile contract:
+   - `scripts/required_gate_bundle_runner.py`
+4. Extended full-scan forwarding:
+   - `scripts/full_identity_protocol_scan.py`
+5. Added control-plane status check integration:
+   - `scripts/render_control_plane_status.py`
+6. Hardened delegated full-scan drift validation:
+   - `scripts/validate_required_gate_surface_drift.py`
+   - required tokens are now verified from parsed command args (comment-only tokens do not satisfy lineage checks)
+
+### 11.2 Contract judgment
+
+1. Optional recommendation is accepted as protocol-level standard.
+2. Trimming is configuration-driven and limited to target scan/inspection use.
+3. Strict operations remain hard fail-close full-bundle execution.
+
+### 11.3 Replay checklist for this round
+
+1. `python3 scripts/validate_layer_targeted_gate_profile.py --json-only`
+2. `python3 scripts/validate_control_plane_invariants.py --json-only`
+3. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+4. `python3 scripts/docs_command_contract_check.py`
+5. `python3 scripts/validate_doc_evidence_persistence.py --json-only`
+6. `python3 scripts/render_control_plane_status.py --write --json-only`
+7. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+
+### 11.4 Round-33 posture
+
+1. Layer-targeted profile capability is now protocolized and machine-checkable.
+2. Default runtime path remains `strict_full`; no strict-chain relaxation introduced.

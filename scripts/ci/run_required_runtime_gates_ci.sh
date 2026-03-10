@@ -15,6 +15,7 @@ REPO_CATALOG_PATH="${REPO_CATALOG_PATH:-identity/catalog/identities.yaml}"
 TMP_ROOT_BASE="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-$PWD}/.tmp-runtime}}"
 mkdir -p "${TMP_ROOT_BASE}"
 CATALOG_PARENT="$(dirname "$(realpath "${CATALOG_PATH}")")"
+REPO_CATALOG_ABS="$(REPO_CATALOG_PATH="${REPO_CATALOG_PATH}" python3 -c 'from pathlib import Path; import os; print(Path(os.environ.get(\"REPO_CATALOG_PATH\", \"identity/catalog/identities.yaml\")).expanduser().resolve())')"
 
 HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
 HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID:-ci-local}}"
@@ -37,7 +38,7 @@ for ID in ${IDS}; do
   VIBE_PACK_ROOT="${TMP_ROOT}/vibe-coding-feeding-packs"
   CAPABILITY_FIT_ROOT="${TMP_ROOT}/capability-fit-matrices"
   UPGRADE_REPORT_ROOT="${TMP_ROOT}/identity-upgrade-reports"
-  IS_FIXTURE_ID="$(ID="$ID" python3 -c 'import os,yaml,pathlib; identity_id=os.environ.get("ID","").strip(); doc=yaml.safe_load(pathlib.Path("identity/catalog/identities.yaml").read_text(encoding="utf-8")) or {}; rows=[x for x in (doc.get("identities") or []) if isinstance(x,dict)]; row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), {}); profile=str(row.get("profile","")).strip().lower(); runtime_mode=str(row.get("runtime_mode","")).strip().lower(); print("1" if (profile=="fixture" or runtime_mode=="demo_only") else "0")')"
+  IS_FIXTURE_ID="$(ID="$ID" CATALOG_PATH="$CATALOG_PATH" python3 -c 'import os,yaml,pathlib; identity_id=os.environ.get("ID","").strip(); catalog_path=os.environ.get("CATALOG_PATH","identity/catalog/identities.yaml"); doc=yaml.safe_load(pathlib.Path(catalog_path).read_text(encoding="utf-8")) or {}; rows=[x for x in (doc.get("identities") or []) if isinstance(x,dict)]; row=next((x for x in rows if str(x.get("id","")).strip()==identity_id), {}); profile=str(row.get("profile","")).strip().lower(); runtime_mode=str(row.get("runtime_mode","")).strip().lower(); print("1" if (profile=="fixture" or runtime_mode=="demo_only") else "0")')"
 
   python3 scripts/validate_identity_runtime_contract.py --identity-id "$ID"
   python3 scripts/validate_identity_prompt_quality.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --scope AUTO
@@ -102,7 +103,7 @@ for ID in ${IDS}; do
   python3 scripts/validate_required_contract_coverage.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --operation ci --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID"
   python3 scripts/validate_unlock_formula.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_release_plane_cloud_evidence.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --target-branch "${GITHUB_REF_NAME:-main}" --release-head-sha "${HEAD_SHA}" --required-gates-run-id "${GITHUB_RUN_ID:-}" --run-url "https://github.com/${GITHUB_REPOSITORY:-unknown}/actions/runs/${GITHUB_RUN_ID:-0}" --workflow-file-sha "${HEAD_SHA}" --run-head-sha "${HEAD_SHA}" --run-workflow-file-sha "${HEAD_SHA}" --operation ci --json-only
-  python3 scripts/validate_cross_cwd_absolute_input.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "$(python3 -c 'from pathlib import Path;print(Path("identity/catalog/identities.yaml").resolve())')" --operation ci --json-only
+  python3 scripts/validate_cross_cwd_absolute_input.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_ABS}" --operation ci --json-only
   python3 scripts/validate_run_id_report_selection.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --run-id "${GITHUB_RUN_ID:-ci-local}" --operation ci --json-only
   python3 scripts/validate_phase_bootstrap_before_strict.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_tmp_collision_safety.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --run-id "${GITHUB_RUN_ID:-ci-local}" --operation ci --json-only

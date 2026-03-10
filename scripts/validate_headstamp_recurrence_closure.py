@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -64,6 +65,9 @@ MANDATORY_ENTRYPOINTS = [
     "scripts/execute_identity_upgrade.py",
     "scripts/e2e_smoke_test.sh",
 ]
+
+WORK_LAYER_RE = re.compile(r"\bwork_layer=([a-zA-Z0-9_-]+)\b")
+SOURCE_LAYER_RE = re.compile(r"\bsource_layer=([a-zA-Z0-9_-]+)\b")
 
 
 def _utc_now() -> str:
@@ -164,6 +168,9 @@ def _send_time_cmd(
     blocker_receipt: Path,
     reply_file: Path | None = None,
     reply_text: str = "",
+    expected_work_layer: str = "",
+    expected_source_layer: str = "",
+    layer_intent_text: str = "",
 ) -> list[str]:
     cmd = [
         sys.executable,
@@ -193,7 +200,28 @@ def _send_time_cmd(
         cmd += ["--reply-file", str(reply_file)]
     if reply_text:
         cmd += ["--reply-text", reply_text]
+    if str(expected_work_layer or "").strip():
+        cmd += ["--expected-work-layer", str(expected_work_layer).strip()]
+    if str(expected_source_layer or "").strip():
+        cmd += ["--expected-source-layer", str(expected_source_layer).strip()]
+    if str(layer_intent_text or "").strip():
+        cmd += ["--layer-intent-text", str(layer_intent_text).strip()]
     return cmd
+
+
+def _extract_stamp_layers(first_line: str) -> tuple[str, str]:
+    line = str(first_line or "").strip()
+    if not line:
+        return "", ""
+    work = ""
+    source = ""
+    m_work = WORK_LAYER_RE.search(line)
+    if m_work:
+        work = str(m_work.group(1) or "").strip().lower()
+    m_source = SOURCE_LAYER_RE.search(line)
+    if m_source:
+        source = str(m_source.group(1) or "").strip().lower()
+    return work, source
 
 
 def _catalog_identity_ids(catalog_path: Path, *, include_fixture: bool = True) -> list[str]:
@@ -644,6 +672,7 @@ def main() -> int:
             if line.strip():
                 first_line = line.strip()
                 break
+    first_line_work_layer, first_line_source_layer = _extract_stamp_layers(first_line)
     dynamic_cases["positive_governed_compose"] = {
         "rc": rc_compose,
         "error_code": str(payload_compose.get("error_code", "")),
@@ -676,6 +705,8 @@ def main() -> int:
             outlet_channel_id="final_emit_governed",
             blocker_receipt=coverage_receipt,
             reply_file=pass_file,
+            expected_work_layer=first_line_work_layer,
+            expected_source_layer=first_line_source_layer,
         )
         rc_cov, payload_cov, _, _ = _run_json(coverage_cmd)
         coverage_case = {

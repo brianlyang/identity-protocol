@@ -34,6 +34,11 @@ CHECKS: tuple[CheckSpec, ...] = (
         status_key="control_plane_invariants_status",
     ),
     CheckSpec(
+        name="layer_targeted_gate_profile",
+        command=("python3", "scripts/validate_layer_targeted_gate_profile.py", "--json-only"),
+        status_key="layer_targeted_gate_profile_status",
+    ),
+    CheckSpec(
         name="required_gate_surface_drift",
         command=("python3", "scripts/validate_required_gate_surface_drift.py", "--json-only"),
         status_key="required_gate_surface_drift_status",

@@ -21,6 +21,7 @@ LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 
 M2M_CHECK_NAMES: set[str] = {
+    "requested_session_binding",
     "actor_session_binding",
     "actor_session_multibinding_concurrency",
     "no_implicit_switch",
@@ -70,6 +71,8 @@ CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
     "normalization_error_code",
     "semantic_convergence_error_code",
 )
+DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml"
+DEFAULT_GATE_PROFILE_NAME = "strict_full"
 
 
 @dataclass
@@ -369,6 +372,9 @@ def _resolve_effective_scan_session_id(
         )
         if exact:
             return requested, "requested_bound", True
+        # strict scan semantics: when a caller supplies an explicit session selector,
+        # never silently fallback to identity-scoped latest binding.
+        return requested, "requested_unbound_no_fallback", False
 
     identity_scoped = load_actor_binding(
         catalog_path,
@@ -592,6 +598,16 @@ def main() -> int:
         default="",
         help="explicit actor session id for strict full-scan execution (e.g., run:<run_id>)",
     )
+    ap.add_argument(
+        "--gate-profile",
+        default=os.environ.get("FULL_SCAN_GATE_PROFILE", DEFAULT_GATE_PROFILE_NAME),
+        help="required-gate bundle profile for scan mode (default strict_full)",
+    )
+    ap.add_argument(
+        "--gate-profile-file",
+        default=DEFAULT_GATE_PROFILE_FILE,
+        help="layer-targeted gate profile mapping file passed to required gate bundle runner",
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -621,6 +637,8 @@ def main() -> int:
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
+    gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
+    gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
     target_source_layer_mode = str(args.target_source_layer or "auto").strip().lower() or "auto"
     actor_id_input = str(args.actor_id or "").strip()
     if not actor_id_input:
@@ -666,6 +684,8 @@ def main() -> int:
         "target_identities": sorted(target_set),
         "target_source_layer_mode": target_source_layer_mode,
         "target_source_layer_effective": effective_target_source_layer,
+        "gate_profile": gate_profile,
+        "gate_profile_file": gate_profile_file,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
@@ -854,6 +874,26 @@ def main() -> int:
             item["session_id_effective"] = scan_session_id
             item["session_id_resolution_mode"] = session_resolution_mode
             item["session_id_requested_bound"] = requested_session_bound
+            if session_id_input and not requested_session_bound:
+                item["checks"]["requested_session_binding"] = {
+                    "rc": 1,
+                    "ok": False,
+                    "tail": "IP-ASB-SESSION-ENTRY-001 requested --session-id is not bound for actor+identity",
+                }
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                item["severity"] = "P0"
+                _update_target_severity(iid, str(item["severity"]))
+                payload["summary"]["total_identities"] += 1
+                payload["summary"]["p0"] += 1
+                layer_out["identities"].append(item)
+                continue
 
             is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
             is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
@@ -2406,6 +2446,16 @@ def main() -> int:
                     "work_layer_gate_set_routing",
                 ):
                     checks[key].extend(["--source-layer", effective_source_layer])
+            for cmd in checks.values():
+                if (
+                    isinstance(cmd, list)
+                    and len(cmd) >= 2
+                    and str(cmd[1]).strip() == "scripts/required_gate_bundle_runner.py"
+                ):
+                    if "--gate-profile" not in cmd:
+                        cmd.extend(["--gate-profile", gate_profile])
+                    if "--gate-profile-file" not in cmd:
+                        cmd.extend(["--gate-profile-file", gate_profile_file])
             for key in (
                 "response_stamp_render",
                 "reply_identity_context_first_line",
@@ -2987,6 +3037,12 @@ def main() -> int:
                         "lock_state",
                         "run_id_binding",
                         "report_selected_path",
+                        "gate_profile",
+                        "gate_profile_mode",
+                        "gate_profile_file",
+                        "gate_profile_resolved_file",
+                        "gate_profile_requirement_count",
+                        "gate_profile_requirement_keys",
                         "required_contract",
                         "failed_required_contract_count",
                         "row_contract_error_count",
@@ -3021,6 +3077,12 @@ def main() -> int:
                         "lock_state",
                         "run_id_binding",
                         "report_selected_path",
+                        "gate_profile",
+                        "gate_profile_mode",
+                        "gate_profile_file",
+                        "gate_profile_resolved_file",
+                        "gate_profile_requirement_count",
+                        "gate_profile_requirement_keys",
                         "required_contract",
                         "failed_required_contract_count",
                         "row_contract_error_count",

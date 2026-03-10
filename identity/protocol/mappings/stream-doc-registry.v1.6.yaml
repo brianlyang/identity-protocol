@@ -20,5 +20,6 @@ mandatory_static_docs:
   - docs/review/protocol-remediation-audit-ledger-v1.6.md
   - identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
   - identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md
+  - identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml
   - CHANGELOG.md
   - VERSIONING.md
