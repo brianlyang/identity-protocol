@@ -1,0 +1,9 @@
+{
+  "generated_at_utc": "2026-03-10T06:18:21Z",
+  "anchor_type": "v163_round32_implementation_anchor",
+  "mapping_ssot": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+  "phase_gap_summary": "activity/evidence/v163-predev/2026-03-10/v163_state_gap_summary.json",
+  "resolution_matrix": "activity/evidence/v163-predev/2026-03-10/audit_feedback_resolution_round32.json",
+  "manifest": "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-round32-implementation.json",
+  "note": "Round-32 implementation anchor; use manifest for full replay artifact set."
+}

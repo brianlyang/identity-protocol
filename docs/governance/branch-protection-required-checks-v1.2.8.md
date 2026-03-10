@@ -1,5 +1,11 @@
 # Branch protection required checks (v1.2.8)
 
+> Migration notice (v1.6.3 stream): this file is an operator checklist mirror.
+> During GitHub-native control-plane migration, normative policy source is:
+> 1) repository rulesets (platform state), and
+> 2) `identity/protocol/mappings/github-control-plane-offload.current.yaml` (protocol migration SSOT).
+> If checklist wording conflicts with ruleset+mapping state, treat this file as stale and follow ruleset+mapping.
+
 ## Purpose
 
 Ensure identity protocol gates cannot be bypassed by merge settings drift.

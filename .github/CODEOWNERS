@@ -1,0 +1,14 @@
+# v1.6.3 protocol control-plane ownership baseline
+# NOTE: keep this file path-stable so repository rulesets can enforce required code-owner review.
+
+# Default owner for protocol repository surfaces
+* @yangxi
+
+# Protocol semantic SSOT
+/identity/protocol/** @yangxi
+
+# Executable contract + validators
+/scripts/** @yangxi
+
+# CI/workflow control plane
+/.github/workflows/** @yangxi

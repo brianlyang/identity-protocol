@@ -20,6 +20,8 @@ on:
       - '.github/workflows/identity-protocol-ci.yml'
       - '.github/workflows/protocol-ci.yml'
       - '.github/workflows/_identity-required-gates.yml'
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   required-gates:
