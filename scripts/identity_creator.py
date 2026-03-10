@@ -3086,6 +3086,8 @@ def main() -> int:
             "final_emit_governed",
             "--json-only",
         ]
+        if str(session_id_update or "").strip():
+            pre_mutation_compose_cmd.extend(["--session-id", str(session_id_update).strip()])
         if args.layer_intent_text.strip():
             pre_mutation_compose_cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
         if args.expected_work_layer.strip():
