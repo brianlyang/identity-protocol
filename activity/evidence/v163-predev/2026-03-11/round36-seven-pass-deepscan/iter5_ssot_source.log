@@ -1,0 +1,4 @@
+[OK] protocol SSOT source boundary validated
+     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md
+     core_change_map=docs/governance/templates/protocol-core-change-map.yaml
+     artifacts_policy=evidence_only_non_normative
