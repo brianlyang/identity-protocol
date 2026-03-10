@@ -604,3 +604,24 @@ Observed:
 6. Manifest + summary:
    - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json`
    - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/round36_iteration_summary.json`
+
+### 11.16 Round-39 five-pass serial deep-scan green replay (2026-03-11)
+
+1. Scope:
+   - replayed the deep-scan packet for five consecutive iterations after static authority boundary expansion (`v1.4.13` + `v1.5.0` governance anchors added to mandatory static authority checks).
+2. Iteration outcome (`1..5`, all identical):
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
+   - `validate_protocol_ssot_source` => `OK`
+   - `validate_doc_evidence_persistence` => `PASS_REQUIRED`
+   - `validate_control_plane_status_sync` => `PASS_REQUIRED`
+3. Legacy coverage telemetry:
+   - legacy docs (`<=v1.6.*`) total: `54`
+   - authority-set covered: `10`
+   - uncovered legacy docs: `44` (archival/context default; non-authoritative for current-state decisions).
+4. Evidence root:
+   - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/`
+5. Manifest + summary:
+   - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json`
+   - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/round39_iteration_summary.json`
