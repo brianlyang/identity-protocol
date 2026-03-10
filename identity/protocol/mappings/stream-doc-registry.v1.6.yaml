@@ -16,6 +16,7 @@ stream_docs:
     review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.3.md
 
 mandatory_static_docs:
+  - docs/governance/AUDIT_SNAPSHOT_INDEX.md
   - identity/protocol/mappings/stream-doc-registry.current.yaml
   - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
   - docs/governance/identity-actor-session-binding-governance-v1.6.0.md
@@ -63,6 +64,9 @@ stream_doc_required_alias_refs:
       - identity/protocol/mappings/control-plane-invariants.current.yaml
 
 static_doc_required_alias_refs:
+  - doc: docs/governance/AUDIT_SNAPSHOT_INDEX.md
+    alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
   - doc: docs/governance/identity-actor-session-binding-governance-v1.6.0.md
     alias_refs:
       - identity/protocol/mappings/stream-doc-registry.current.yaml
