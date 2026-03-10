@@ -973,3 +973,61 @@ Key replay outcomes:
    - runtime report source selection policy flag (`runtime_report_selection_mode`)
 2. Governance `required_report_fields` and mapping `report_field_refs` were expanded accordingly to fail-close if projection drops these fields.
 3. `validate_failclose_plugin_projection.py` now recognizes both multimodal and reasoning fail-close status fields when evaluating target probe receipts.
+
+## 20) Round-30.8 bundle parity deep-burn + cross-cwd stability hardening (2026-03-10)
+
+### 20.1 Objective
+
+1. Continue parity debt burn-down under machine-enforced freeze mode.
+2. Improve runtime stability of bundle execution across caller cwd (not only repo-root invocations).
+3. Keep strict-lane fail-close semantics unchanged for active blockers.
+
+### 20.2 Protocol changes landed
+
+1. `scripts/required_gate_bundle_runner.py`
+   - Expanded bundle coverage with stable rows:
+     - `ASB16-RQ-004/005/006/007/008/009/010/011/012/013/014/015/016/023/024/027/028/029`
+   - Added target/status mappings for the above rows so row-level status projection remains deterministic.
+   - Added run-id selected report forwarding for `RQ-009` using validator-native `--report` flag.
+   - Hardened subprocess execution:
+     - validator script paths are resolved to absolute paths under repo root,
+     - each validator subprocess now executes with `cwd=repo_root`.
+   - Effect: bundle execution no longer depends on caller cwd to locate relative validator paths.
+2. `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+   - `bundle_mapping_parity.baseline_missing_rows: 20 -> 2`.
+3. `identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml`
+   - `baseline_missing_rows: 20 -> 2`,
+   - `v1.6.4 target_max_missing_rows: 2`,
+   - zero-target milestone remains preserved for strict closure.
+
+### 20.3 Current freeze debt posture
+
+1. Current parity debt is reduced to two rows:
+   - `asb16-rq-031`
+   - `asb16-rq-032`
+2. These rows remain intentionally outside this round’s bundle expansion because they are high-sensitivity strict output gates and still emit active fail-close signals in some lanes:
+   - prompt-kernel executable coupling / headstamp send-time chain.
+3. This preserves control-plane stability while keeping outstanding strict blockers explicit.
+
+### 20.4 Cross-verification replay (persistent evidence)
+
+Canonical root:
+
+1. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/`
+
+Machine evidence:
+
+1. `candidate_validator_matrix.json`
+2. `bundle_validate_matrix_after_reduce2_final.json`
+3. `EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
+
+Observed replay summary:
+
+1. `validate_control_plane_invariants`:
+   - `PASS_REQUIRED`
+   - `baseline_missing_rows=2`
+   - `mapping_rows_missing_in_bundle_count=2`
+2. bundle validate matrix (4 identities):
+   - row count now `33`,
+   - fail-close rows remain concentrated in active strict fail-close plugin lanes (`RQ-034` / `RQ-035`), not from newly expanded parity rows.
+3. `validate_required_gate_surface_drift` remains `PASS_REQUIRED` after bundle expansion.

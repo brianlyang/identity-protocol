@@ -24,8 +24,26 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-001",
     "asb16-rq-002",
     "asb16-rq-003",
+    "asb16-rq-004",
+    "asb16-rq-005",
+    "asb16-rq-006",
+    "asb16-rq-007",
+    "asb16-rq-008",
+    "asb16-rq-009",
+    "asb16-rq-010",
+    "asb16-rq-011",
+    "asb16-rq-012",
+    "asb16-rq-013",
+    "asb16-rq-014",
+    "asb16-rq-015",
+    "asb16-rq-016",
+    "asb16-rq-023",
+    "asb16-rq-024",
     "asb16-rq-025",
     "asb16-rq-026",
+    "asb16-rq-027",
+    "asb16-rq-028",
+    "asb16-rq-029",
     "asb16-rq-017",
     "asb16-rq-030",
     "asb16-rq-021",
@@ -42,8 +60,26 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-001": "unlock_formula",
     "asb16-rq-002": "capability_boundary_classification",
     "asb16-rq-003": "promotion_pipeline",
+    "asb16-rq-004": "outlet_matrix",
+    "asb16-rq-005": "sidecar_cwd_invariance",
+    "asb16-rq-006": "release_plane_cloud_evidence",
+    "asb16-rq-007": "cross_cwd_absolute_input",
+    "asb16-rq-008": "docs_bridge_consistency",
+    "asb16-rq-009": "run_id_report_selection",
+    "asb16-rq-010": "phase_bootstrap_before_strict",
+    "asb16-rq-011": "tmp_collision_safety",
+    "asb16-rq-012": "handoff_collab_freshness_rotation",
+    "asb16-rq-013": "protocol_feedback_atomic_emit",
+    "asb16-rq-014": "prompt_bootstrap_capability",
+    "asb16-rq-015": "prompt_capability_matrix",
+    "asb16-rq-016": "refresh_strict_business_interference",
+    "asb16-rq-023": "discovery_requiredization_activation",
+    "asb16-rq-024": "discovery_requiredization_coverage",
     "asb16-rq-025": "kernel_canonical_source",
     "asb16-rq-026": "kernel_contract_mapping_projection",
+    "asb16-rq-027": "prompt_derivation_conformance",
+    "asb16-rq-028": "instance_write_boundary_lock",
+    "asb16-rq-029": "semantic_convergence",
     "asb16-rq-017": "cross_verification_tracks",
     "asb16-rq-030": "intake_evidence_quorum",
     "asb16-rq-021": "route_version_pinning",
@@ -61,8 +97,26 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "unlock_formula": "unlock_formula_status",
     "capability_boundary_classification": "capability_boundary_status",
     "promotion_pipeline": "promotion_pipeline_status",
+    "outlet_matrix": "outlet_matrix_status",
+    "sidecar_cwd_invariance": "sidecar_cwd_parity_status",
+    "release_plane_cloud_evidence": "release_plane_cloud_evidence_status",
+    "cross_cwd_absolute_input": "cross_cwd_absolute_input_status",
+    "docs_bridge_consistency": "bridge_consistency_status",
+    "run_id_report_selection": "run_id_report_selection_status",
+    "phase_bootstrap_before_strict": "phase_bootstrap_before_strict_status",
+    "tmp_collision_safety": "tmp_collision_safety_status",
+    "handoff_collab_freshness_rotation": "handoff_collab_freshness_rotation_status",
+    "protocol_feedback_atomic_emit": "protocol_feedback_atomic_emit_status",
+    "prompt_bootstrap_capability": "prompt_bootstrap_contract_status",
+    "prompt_capability_matrix": "prompt_capability_matrix_status",
+    "refresh_strict_business_interference": "refresh_strict_business_interference_status",
+    "discovery_requiredization_activation": "discovery_requiredization_status",
+    "discovery_requiredization_coverage": "discovery_requiredization_status",
     "kernel_canonical_source": "kernel_ssot_source_status",
     "kernel_contract_mapping_projection": "contract_mapping_coverage_status",
+    "prompt_derivation_conformance": "prompt_derivation_conformance_status",
+    "instance_write_boundary_lock": "base_repo_write_boundary_status",
+    "semantic_convergence": "semantic_convergence_status",
     "cross_verification_tracks": "cross_verification_tracks_status",
     "intake_evidence_quorum": "intake_evidence_quorum_status",
     "route_version_pinning": "pin_status",
@@ -206,8 +260,8 @@ def _load_validator_specs(mapping_path: Path, requirement_keys: tuple[str, ...])
     return specs, errors
 
 
-def _run(cmd: list[str]) -> tuple[int, str, str]:
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
     return int(proc.returncode), proc.stdout, proc.stderr
 
 
@@ -400,9 +454,12 @@ def main() -> int:
         failure_count += 1
 
     for spec in specs:
+        validator_path = Path(spec.script_path)
+        if not validator_path.is_absolute():
+            validator_path = (repo_root / validator_path).resolve()
         cmd = [
             sys.executable,
-            spec.script_path,
+            str(validator_path),
             "--catalog",
             str(args.catalog),
             "--identity-id",
@@ -412,11 +469,18 @@ def main() -> int:
             "--json-only",
         ]
         cmd.extend(spec.fixed_args)
-        if spec.target_name in {"multimodal_plugin_enforcement", "reasoning_loop_failclose_enforcement"}:
+        if spec.target_name in {
+            "multimodal_plugin_enforcement",
+            "reasoning_loop_failclose_enforcement",
+            "run_id_report_selection",
+        }:
             cmd.extend(["--run-id", run_id_binding])
             if report_selected_path:
-                cmd.extend(["--report-selected-path", report_selected_path])
-        rc, out, err = _run(cmd)
+                if spec.target_name == "run_id_report_selection":
+                    cmd.extend(["--report", report_selected_path])
+                else:
+                    cmd.extend(["--report-selected-path", report_selected_path])
+        rc, out, err = _run(cmd, cwd=repo_root)
         payload = _parse_payload(out)
         status_value, status_field = _classify_status(target_name=spec.target_name, rc=rc, payload=payload)
         required_contract = bool(payload.get("required_contract", False))

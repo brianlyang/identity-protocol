@@ -726,3 +726,56 @@ Validated matrix outcomes:
    - strict operation + provided `run_id` + mismatched selected/fallback runtime proof now fails-close with `IP-RL-RUN-006`.
 5. Strict default-path behavior is stabilized:
    - with `runtime_report_selection_mode=prefer_run_id`, strict lanes prefer run-id bound runtime reports before latest/fallback paths.
+
+## 19) Round-30.8 addendum: bundle parity debt reduction to 2 + cross-cwd bundle hardening (2026-03-10)
+
+### 19.1 Audit conclusion
+
+1. This round’s parity reduction is effective and machine-validated:
+   - freeze baseline dropped from `20` to `2` without reopening surface drift.
+2. A real stability gap was fixed during replay:
+   - bundle validator subprocesses previously depended on caller cwd for relative validator paths,
+   - now fixed by absolute validator path resolution + repo-root subprocess cwd binding.
+
+### 19.2 Code changes audited
+
+1. `scripts/required_gate_bundle_runner.py`
+   - expanded bundled requirements to include stable rows:
+     - `RQ-004/005/006/007/008/009/010/011/012/013/014/015/016/023/024/027/028/029`
+   - added target/status mappings for these rows.
+   - corrected `RQ-009` report argument forwarding (`--report`).
+   - hardened subprocess execution path/cwd behavior.
+2. `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+   - `baseline_missing_rows=2`.
+3. `identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml`
+   - baseline/phase target aligned to `2`.
+
+### 19.3 Replay evidence (persistent)
+
+Root:
+
+1. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/`
+
+Files:
+
+1. `candidate_validator_matrix.json`
+2. `bundle_validate_matrix_after_reduce2_final.json`
+3. `EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
+
+### 19.4 Replay summary
+
+1. `validate_control_plane_invariants` -> `PASS_REQUIRED`, `missing_rows=2`.
+2. `validate_required_gate_surface_drift` -> `PASS_REQUIRED`.
+3. Bundle matrix across four identities:
+   - rows per identity: `33`,
+   - fail-close remains concentrated in active plugin lanes (`RQ-034` / `RQ-035`),
+   - newly added parity rows do not introduce new unstable failure families.
+
+### 19.5 Remaining debt (explicitly frozen)
+
+1. Remaining non-bundled rows:
+   - `asb16-rq-031`
+   - `asb16-rq-032`
+2. Rationale:
+   - both are strict high-sensitivity output gates with existing fail-close pressure,
+   - held for dedicated hardening stream to avoid mixing parity burn-down with output-gate semantics shifts.
