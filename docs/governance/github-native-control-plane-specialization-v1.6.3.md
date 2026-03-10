@@ -657,3 +657,40 @@ For each iteration (`1..7`):
    - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json`
 3. Iteration summary:
    - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/round36_iteration_summary.json`
+
+## 13) Round-39 five-pass serial deep-scan green closure (2026-03-11)
+
+### 13.1 Execution scope
+
+1. Replayed the same deep-scan packet serially for **5 iterations** after extending static authority boundary to include v1.4.13/v1.5.0 governance anchors.
+2. Scope remained file-level semantic convergence (not business logic):
+   - stream/current-pointer authority alignment
+   - docs contract + evidence persistence
+   - required-gate strict surface drift
+   - control-plane status projection sync.
+
+### 13.2 Five-pass replay outcome (all iterations green)
+
+For each iteration (`1..5`):
+
+1. `validate_control_plane_invariants` -> `PASS_REQUIRED`
+2. `validate_required_gate_surface_drift` -> `PASS_REQUIRED`
+3. `docs_command_contract_check` -> `PASS`
+4. `validate_protocol_ssot_source` -> `OK`
+5. `validate_doc_evidence_persistence` -> `PASS_REQUIRED`
+6. `validate_control_plane_status_sync` -> `PASS_REQUIRED`
+
+### 13.3 Coverage signal (legacy corpus vs authority boundary)
+
+1. legacy docs discovered by version pattern (`<= v1.6.*`): `54`
+2. covered by authoritative set (`stream_docs + mandatory_static_docs`): `10`
+3. uncovered legacy docs: `44` (archival/context by default, non-authoritative for current-state decisions unless promoted into stream registry authority set).
+
+### 13.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json`
+3. iteration summary:
+   - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/round39_iteration_summary.json`
