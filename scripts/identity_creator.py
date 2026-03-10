@@ -268,6 +268,54 @@ def _actor_binding_entry_guard(
     return rc
 
 
+def _update_preflight_context_guard(
+    *,
+    identity_id: str,
+    catalog: str,
+    repo_catalog: str,
+    actor_id: str,
+    session_id: str,
+    scope: str,
+    expect_mode: str,
+    operation: str,
+) -> int:
+    cmd = [
+        "python3",
+        "scripts/validate_identity_update_preflight_context.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        repo_catalog,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(session_id or "").strip(),
+        "--expect-mode",
+        str(expect_mode or "auto"),
+        "--operation",
+        str(operation or "update"),
+        "--json-only",
+    ]
+    if str(scope or "").strip():
+        cmd.extend(["--scope", str(scope).strip()])
+    rc, out, _ = _run_capture(cmd)
+    payload = _parse_json_payload(out) or {}
+    status = str(payload.get("status", "")).strip().upper()
+    error_code = str(payload.get("error_code", "")).strip()
+    next_action = str(payload.get("next_action", "")).strip()
+    if rc != 0 or status == "FAIL_REQUIRED":
+        print(
+            f"[FAIL] {error_code or 'IP-UPDATE-PREFLIGHT-001'} "
+            "update preflight context guard failed; update blocked"
+        )
+        if next_action:
+            print(f"[HINT] {next_action}")
+        return rc or 1
+    return 0
+
+
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -2927,16 +2975,24 @@ def main() -> int:
                     "[INFO] fixture identity detected: overriding scope USER -> AUTO for update runtime guard"
                 )
                 args.scope = ""
-        rc_guard = _runtime_mode_guard(
-            args.identity_id,
-            args.catalog,
-            args.repo_catalog,
-            args.scope,
+        session_id_update, _session_id_update_source = _resolve_bound_session_id_for_identity(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            actor_id=actor_id_update,
+            explicit_session_id=str(args.session_id or "").strip(),
+        )
+        rc_preflight_guard = _update_preflight_context_guard(
+            identity_id=args.identity_id,
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            actor_id=actor_id_update,
+            session_id=session_id_update,
+            scope=args.scope,
             expect_mode=guard_expect_mode,
             operation="update",
         )
-        if rc_guard != 0:
-            return rc_guard
+        if rc_preflight_guard != 0:
+            return rc_preflight_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
         rc_home_align = _run(
             [
@@ -2975,21 +3031,6 @@ def main() -> int:
         if rc_fixture != 0:
             print("[FAIL] fixture/runtime boundary validation failed; update blocked")
             return rc_fixture
-        session_id_update, _session_id_update_source = _resolve_bound_session_id_for_identity(
-            catalog=args.catalog,
-            identity_id=args.identity_id,
-            actor_id=actor_id_update,
-            explicit_session_id=str(args.session_id or "").strip(),
-        )
-        rc_actor_binding_entry = _actor_binding_entry_guard(
-            identity_id=args.identity_id,
-            catalog=args.catalog,
-            actor_id=actor_id_update,
-            session_id=session_id_update,
-            operation="update",
-        )
-        if rc_actor_binding_entry != 0:
-            return rc_actor_binding_entry
         try:
             resolved = resolve_identity(
                 args.identity_id,
