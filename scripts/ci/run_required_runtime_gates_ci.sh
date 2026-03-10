@@ -15,7 +15,7 @@ REPO_CATALOG_PATH="${REPO_CATALOG_PATH:-identity/catalog/identities.yaml}"
 TMP_ROOT_BASE="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-$PWD}/.tmp-runtime}}"
 mkdir -p "${TMP_ROOT_BASE}"
 CATALOG_PARENT="$(dirname "$(realpath "${CATALOG_PATH}")")"
-REPO_CATALOG_ABS="$(REPO_CATALOG_PATH="${REPO_CATALOG_PATH}" python3 -c 'from pathlib import Path; import os; print(Path(os.environ.get(\"REPO_CATALOG_PATH\", \"identity/catalog/identities.yaml\")).expanduser().resolve())')"
+REPO_CATALOG_ABS="$(REPO_CATALOG_PATH="${REPO_CATALOG_PATH}" python3 -c 'from pathlib import Path; import os; print(Path(os.environ.get("REPO_CATALOG_PATH", "identity/catalog/identities.yaml")).expanduser().resolve())')"
 
 HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
 HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID:-ci-local}}"
