@@ -21,6 +21,11 @@ BUNDLE_KEY = "required_gate_bundle_runner"
 
 # Order is deterministic for replay and log comparison.
 BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
+    "asb16-rq-001",
+    "asb16-rq-002",
+    "asb16-rq-003",
+    "asb16-rq-025",
+    "asb16-rq-026",
     "asb16-rq-017",
     "asb16-rq-030",
     "asb16-rq-021",
@@ -34,6 +39,11 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
+    "asb16-rq-001": "unlock_formula",
+    "asb16-rq-002": "capability_boundary_classification",
+    "asb16-rq-003": "promotion_pipeline",
+    "asb16-rq-025": "kernel_canonical_source",
+    "asb16-rq-026": "kernel_contract_mapping_projection",
     "asb16-rq-017": "cross_verification_tracks",
     "asb16-rq-030": "intake_evidence_quorum",
     "asb16-rq-021": "route_version_pinning",
@@ -48,6 +58,11 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
 STATUS_FIELD_BY_TARGET: dict[str, str] = {
+    "unlock_formula": "unlock_formula_status",
+    "capability_boundary_classification": "capability_boundary_status",
+    "promotion_pipeline": "promotion_pipeline_status",
+    "kernel_canonical_source": "kernel_ssot_source_status",
+    "kernel_contract_mapping_projection": "contract_mapping_coverage_status",
     "cross_verification_tracks": "cross_verification_tracks_status",
     "intake_evidence_quorum": "intake_evidence_quorum_status",
     "route_version_pinning": "pin_status",
