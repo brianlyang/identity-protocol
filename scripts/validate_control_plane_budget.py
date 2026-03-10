@@ -22,6 +22,7 @@ STRICT_SURFACES: tuple[str, ...] = (
     "scripts/e2e_smoke_test.sh",
     ".github/workflows/_identity-required-gates.yml",
 )
+GITHUB_OFFLOAD_CURRENT_REL = "identity/protocol/mappings/github-control-plane-offload.current.yaml"
 
 
 def _read_text(path: Path) -> str:
@@ -128,6 +129,40 @@ def _strict_direct_validate_calls(repo_root: Path) -> dict[str, int]:
     return out
 
 
+def _required_gate_workflow_python_stats(repo_root: Path) -> tuple[int, int]:
+    workflow_path = repo_root / ".github/workflows/_identity-required-gates.yml"
+    if not workflow_path.exists():
+        return -1, -1
+    text = _read_text(workflow_path)
+    matches = [m.group(0) for m in re.finditer(r"python3\\s+scripts/[A-Za-z0-9_.-]+\\.py", text)]
+    unique = set(matches)
+    return len(matches), len(unique)
+
+
+def _offload_phase1_python_invocation_max(repo_root: Path) -> tuple[int | None, str, str]:
+    offload_path, offload_active_file, offload_alias_error = _resolve_current_yaml_alias(
+        repo_root, GITHUB_OFFLOAD_CURRENT_REL
+    )
+    if offload_alias_error:
+        return None, str(offload_path), offload_alias_error
+    if not offload_path.exists():
+        return None, str(offload_path), "offload_plan_missing"
+    doc = _load_budget_doc(offload_path)
+    targets = doc.get("acceptance_targets_v163") or {}
+    if not isinstance(targets, dict):
+        return None, str(offload_path), "offload_targets_missing"
+    phase1 = targets.get("phase_1") or {}
+    if not isinstance(phase1, dict):
+        return None, str(offload_path), "offload_phase1_missing"
+    raw = phase1.get("required_gate_workflow_python_invocations_max")
+    if raw is None or str(raw).strip() == "":
+        return None, str(offload_path), "offload_phase1_threshold_missing"
+    try:
+        return int(raw), str(offload_path), ""
+    except Exception:
+        return None, str(offload_path), "offload_phase1_threshold_parse_failed"
+
+
 def _load_budget_doc(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return data if isinstance(data, dict) else {}
@@ -213,6 +248,10 @@ def main() -> int:
     observed_error_code_families = len(observed_error_code_families_set)
     missing_mapping_rows_count, missing_mapping_rows, observed_bundle_rows = _mapping_bundle_gap(repo_root)
     observed_direct_validate_calls = _strict_direct_validate_calls(repo_root)
+    observed_required_gate_workflow_python_invocations, observed_required_gate_workflow_unique_python_scripts = (
+        _required_gate_workflow_python_stats(repo_root)
+    )
+    offload_phase1_max, offload_plan_path, offload_plan_error = _offload_phase1_python_invocation_max(repo_root)
 
     warn_violations: list[dict[str, Any]] = []
     fail_violations: list[dict[str, Any]] = []
@@ -332,7 +371,35 @@ def main() -> int:
                         "budget_fail": fail_limit,
                         "reason": "strict_surface_direct_calls_growth",
                     }
-                )
+                    )
+
+    if observed_required_gate_workflow_python_invocations < 0:
+        fail_violations.append(
+            {
+                "field": "required_gate_workflow_python_invocations",
+                "reason": "required_gate_workflow_missing",
+                "workflow": ".github/workflows/_identity-required-gates.yml",
+            }
+        )
+    elif offload_phase1_max is not None and observed_required_gate_workflow_python_invocations > offload_phase1_max:
+        fail_violations.append(
+            {
+                "field": "required_gate_workflow_python_invocations",
+                "observed": observed_required_gate_workflow_python_invocations,
+                "budget_fail": offload_phase1_max,
+                "reason": "offload_phase1_python_invocation_budget_exceeded",
+                "offload_plan_path": offload_plan_path,
+            }
+        )
+    elif offload_plan_error:
+        fail_violations.append(
+            {
+                "field": "required_gate_workflow_python_invocations",
+                "reason": "offload_plan_resolution_failed",
+                "offload_plan_path": offload_plan_path,
+                "offload_plan_error": offload_plan_error,
+            }
+        )
 
     convergence_enabled = bool(convergence_guard.get("enabled", False))
     convergence_mode = str(convergence_guard.get("mode", "")).strip() or "disabled"
@@ -436,8 +503,16 @@ def main() -> int:
             "bundle_rows": observed_bundle_rows,
             "missing_mapping_rows": missing_mapping_rows,
             "strict_direct_validate_calls": observed_direct_validate_calls,
+            "required_gate_workflow_python_invocations": observed_required_gate_workflow_python_invocations,
+            "required_gate_workflow_unique_python_scripts": observed_required_gate_workflow_unique_python_scripts,
         },
         "budgets": budgets,
+        "offload_budget": {
+            "source_file": GITHUB_OFFLOAD_CURRENT_REL,
+            "resolved_plan_path": offload_plan_path,
+            "plan_resolution_error": offload_plan_error,
+            "phase_1_required_gate_workflow_python_invocations_max": offload_phase1_max,
+        },
         "error_code_family_strategy": budget_doc.get("error_code_family_strategy") or {},
         "convergence_guard": {
             "enabled": convergence_enabled,
