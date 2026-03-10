@@ -197,7 +197,10 @@ def main() -> int:
     else:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         if overall_status != "PASS_REQUIRED":
-            print(f"[FAIL] {error_code or 'IP-UPDATE-PREFLIGHT-001'} update preflight context validation failed")
+            fallback_code = error_code or (
+                ERR_ENV_CATALOG_DRIFT if runtime_status != "PASS_REQUIRED" else ERR_ACTOR_BINDING
+            )
+            print(f"[FAIL] {fallback_code} update preflight context validation failed")
             print(f"       next_action: {next_action}")
         else:
             print("[OK] update preflight context passed")

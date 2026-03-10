@@ -35,9 +35,11 @@ REQUIRED_CURRENT_DOC_PATTERNS = [
 # even when index coverage evolves.
 MANDATORY_DOC_PATHS = (
     "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+    "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
     "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
     "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
     "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
     "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
     "docs/review/protocol-remediation-audit-ledger-v1.6.3.md",
     "identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md",

@@ -305,9 +305,19 @@ def _update_preflight_context_guard(
     status = str(payload.get("status", "")).strip().upper()
     error_code = str(payload.get("error_code", "")).strip()
     next_action = str(payload.get("next_action", "")).strip()
+    runtime_mode_guard_status = str(payload.get("runtime_mode_guard_status", "")).strip().upper()
+    actor_session_binding_status = str(payload.get("actor_session_binding_status", "")).strip().upper()
+    fallback_error_code = error_code
+    if not fallback_error_code:
+        if runtime_mode_guard_status == "FAIL_REQUIRED":
+            fallback_error_code = "IP-ENV-003"
+        elif actor_session_binding_status not in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+            fallback_error_code = "IP-ASB-201"
+        else:
+            fallback_error_code = "IP-ENV-003"
     if rc != 0 or status == "FAIL_REQUIRED":
         print(
-            f"[FAIL] {error_code or 'IP-UPDATE-PREFLIGHT-001'} "
+            f"[FAIL] {fallback_error_code} "
             "update preflight context guard failed; update blocked"
         )
         if next_action:
