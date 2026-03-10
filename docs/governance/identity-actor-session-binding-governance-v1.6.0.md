@@ -50,7 +50,7 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
 | Decision Gate | Unlock condition | Current state |
 | --- | --- | --- |
 | D1 Contract freeze | v1.6 contracts/fields/error semantics finalized in this doc | OPEN |
-| D2 Implementation complete | Mandatory scripts/validators/tools landed for v1.6 P0 items | OPEN |
+| D2 Implementation complete | Mandatory validators/tooling under `scripts/*` landed for v1.6 P0 items | OPEN |
 | D3 Gate wiring complete | creator/e2e/readiness/full-scan/three-plane/CI wired for v1.6 P0 items | OPEN |
 | D4 Acceptance pass | Mandatory acceptance command set green under current live replay window | OPEN |
 | D5 Audit sign-off | Architect + audit expert both PASS on v1.6 P0 closure set | OPEN |
