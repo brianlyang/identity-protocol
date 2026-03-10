@@ -1,11 +1,26 @@
 # Identity Actor-Scoped Session Binding Governance (v1.6.0)
 
-Status: Draft (v1.6 planning + release-governance execution directive)
+Status: Historical baseline (v1.6 planning + release-governance execution directive; current-state redirected to active stream SSOT)
 Governance layer: protocol
 Scope: identity protocol base-repo only (no instance business policy)
 Owner: identity protocol base-repo architect
 Execution mode: topic-level canonical SSOT for v1.6 release governance and remediation closure
 Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DONE` and audit sign-off is `PASS` (`P1` rows block only when explicitly promoted to `P0`)
+
+## 0A) Current-state redirect (mandatory for all post-v1.6.0 operations)
+
+1. This file is retained as **historical baseline + traceability ledger** and is not the sole current-state authority anymore.
+2. Current-state contract resolution must follow active stream registry first:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Current-state control-plane metrics/status must be read from current-pointer mappings:
+   - `identity/protocol/mappings/control-plane-budget.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
+4. Stream-specific normative clauses must follow active stream docs:
+   - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`
+   - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
+   - `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
+5. Any numeric thresholds/status snapshots in this document (for example historical budget baselines such as `142/375`) are historical records only and cannot override current-pointer SSOT.
 
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
