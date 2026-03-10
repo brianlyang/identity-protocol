@@ -62,6 +62,7 @@ Machine policy for this playbook and plugin READMEs:
    - `requirement_key`
    - `bundle_target_name`
 9. If plugin needs provider runtime bindings:
+   - register/update provider capability profile in `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
    - use `identity/protocol/plugins/templates/provider-bindings.local.template.yaml`
    - do not store plaintext secrets in repo
 
