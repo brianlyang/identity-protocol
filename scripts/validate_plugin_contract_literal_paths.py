@@ -33,6 +33,7 @@ TOKENS = (
     "PLUGIN_REGISTRY.current.yaml",
     "PROVIDER_PROFILES.current.yaml",
     "FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+    "PLUGIN_DOC_CONTROL.current.yaml",
 )
 
 

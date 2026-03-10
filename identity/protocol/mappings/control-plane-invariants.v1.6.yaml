@@ -1,6 +1,6 @@
 schema_version: 1
 invariants_version: "v1.6"
-last_updated_utc: "2026-03-10T16:48:00Z"
+last_updated_utc: "2026-03-10T16:02:00Z"
 invariants:
   bundle_mapping_parity:
     mode: freeze
@@ -46,8 +46,9 @@ invariants:
     plugin_registry_current_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
     provider_profiles_current_file: identity/protocol/plugins/PROVIDER_PROFILES.current.yaml
     failclose_governance_current_file: identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+    plugin_doc_control_current_file: identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml
     forbid_versioned_reference:
-      regex: (PLUGIN_REGISTRY|PROVIDER_PROFILES|FAILCLOSE_PLUGIN_GOVERNANCE)\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
+      regex: (PLUGIN_REGISTRY|PROVIDER_PROFILES|FAILCLOSE_PLUGIN_GOVERNANCE|PLUGIN_DOC_CONTROL)\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
       surfaces:
         - scripts
         - .github/workflows

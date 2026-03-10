@@ -482,3 +482,23 @@ Observed:
    - `python3 scripts/validate_control_plane_budget.py --json-only` => `WARN_NON_BLOCKING` (budget only, no fail-close regression)
    - `python3 scripts/render_control_plane_status.py --write` => `PASS_WITH_BLOCKERS`
    - `python3 scripts/validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`
+
+### 11.12 Round-33.8 plugin doc-control alias closure (2026-03-10)
+
+1. Gap:
+   - plugin control-plane alias contract validated `PLUGIN_REGISTRY` / `PROVIDER_PROFILES` / `FAILCLOSE_PLUGIN_GOVERNANCE`, but did not include `PLUGIN_DOC_CONTROL`.
+   - this left one plugin governance pointer outside the same anti-drift fail-close boundary.
+2. Fix:
+   - extended `plugin_control_plane_alias` in:
+     - `identity/protocol/mappings/control-plane-invariants.v1.6.yaml` (resolved via `control-plane-invariants.current.yaml`)
+   - added `plugin_doc_control_current_file` row enforcement in:
+     - `scripts/validate_control_plane_invariants.py`
+   - expanded plugin literal-path lint token set:
+     - `scripts/validate_plugin_contract_literal_paths.py`
+3. Contract hardening:
+   - strict surfaces now fail-close when `PLUGIN_DOC_CONTROL.current.yaml` alias chain is missing/invalid.
+   - direct versioned `PLUGIN_DOC_CONTROL.v*` literals on strict surfaces are blocked by the same anti-drift regex family.
+4. Replay outcome:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`
+   - `python3 scripts/validate_plugin_contract_literal_paths.py --json-only` => `PASS_REQUIRED`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`

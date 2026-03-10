@@ -995,6 +995,10 @@ def main() -> int:
                     str(plugin_alias_cfg.get("failclose_governance_current_file", "")).strip(),
                     "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v",
                 ),
+                "plugin_doc_control_current_file": (
+                    str(plugin_alias_cfg.get("plugin_doc_control_current_file", "")).strip(),
+                    "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v",
+                ),
             }
             alias_resolved_ok = True
             for alias_key, (current_file, active_prefix) in alias_rows.items():

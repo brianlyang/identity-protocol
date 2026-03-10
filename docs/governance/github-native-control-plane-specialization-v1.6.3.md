@@ -492,3 +492,16 @@ Evidence mirrors:
 1. This addendum introduces optional scan-layer trimming only.
 2. It does not change semantic validators for retained contracts (`asb16-rq-019/034/035`).
 3. It does not offload protocol semantics to GitHub platform controls.
+
+### 9.6 Plugin alias completeness note (2026-03-10)
+
+1. Plugin control-plane alias contract now includes:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+   - `identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml`
+2. Rationale:
+   - plugin governance pointers are managed as one control-plane family; one pointer outside alias enforcement reintroduces drift risk.
+3. Enforcement:
+   - `scripts/validate_control_plane_invariants.py` fail-closes alias breakage for all four pointers.
+   - `scripts/validate_plugin_contract_literal_paths.py` blocks non-canonical literals for all four pointer tokens.
