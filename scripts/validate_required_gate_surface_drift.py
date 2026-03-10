@@ -42,6 +42,22 @@ FULL_SCAN_DELEGATED_REQUIRED_TOKENS: tuple[str, ...] = (
     "--session-id",
     "--enforce-m2m-pass",
 )
+DIALOGUE_FEEDBACK_BUNDLE_SCRIPT = "scripts/run_identity_dialogue_feedback_bundle.py"
+DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/identity_creator.py",
+)
+DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS: tuple[str, ...] = (
+    "scripts/validate_identity_experience_feedback_governance.py",
+    "scripts/validate_identity_capability_arbitration.py",
+    "scripts/validate_identity_dialogue_content.py",
+    "scripts/validate_identity_dialogue_cross_validation.py",
+    "scripts/validate_identity_dialogue_result_support.py",
+    "scripts/validate_identity_ci_enforcement.py",
+)
+DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_ARGS: tuple[str, ...] = (
+    "--catalog",
+    "--identity-id",
+)
 FINAL_EGRESS_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
     "scripts/release_readiness_check.py",
@@ -519,6 +535,7 @@ def main() -> int:
     session_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     bundle_arg_contract_missing: dict[str, list[dict[str, Any]]] = {}
     bundle_arg_value_invalid: dict[str, list[dict[str, Any]]] = {}
+    dialogue_bundle_missing: dict[str, list[str]] = {}
 
     for rel in STRICT_SURFACES:
         path = repo_root / rel
@@ -532,6 +549,10 @@ def main() -> int:
             missing = []
         else:
             missing = [needle for needle in MANDATORY_LINEAGE_SCRIPTS if needle not in text]
+        if rel in DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES:
+            if DIALOGUE_FEEDBACK_BUNDLE_SCRIPT not in text:
+                existing = list(missing_execution_tokens.get(rel, []))
+                missing_execution_tokens[rel] = sorted(set(existing + [DIALOGUE_FEEDBACK_BUNDLE_SCRIPT]))
         if missing:
             missing_lineage_refs[rel] = missing
         if rel == WORKFLOW_REQUIRED_GATE_SURFACE:
@@ -601,10 +622,41 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
 
+    dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
+    if not dialogue_bundle_path.exists():
+        missing_surface_files.append(DIALOGUE_FEEDBACK_BUNDLE_SCRIPT)
+    else:
+        rel = DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
+        text = _read_text(dialogue_bundle_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        literal_python_scripts = _parse_script_literals(text)
+        discovered_scripts = set(invoked_python_scripts) | set(literal_python_scripts)
+        missing_validators = [
+            script
+            for script in DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS
+            if script not in discovered_scripts
+        ]
+        if missing_validators:
+            dialogue_bundle_missing[rel] = missing_validators
+        bundle_invocation_args: list[list[str]] = []
+        for script in DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS:
+            bundle_invocation_args.extend(
+                _extract_shell_invocation_args(text, executable="python3", script=script)
+            )
+        missing_bundle_tokens = [
+            token
+            for token in DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_ARGS
+            if not any(_arg_token_present(args, token) for args in bundle_invocation_args)
+            and token not in text
+        ]
+        if missing_bundle_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_bundle_tokens))
+
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
-    elif missing_lineage_refs or missing_execution_tokens or forbidden_hits:
+    elif missing_lineage_refs or missing_execution_tokens or forbidden_hits or dialogue_bundle_missing:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-002"
     elif missing_final_egress_wrapper or forbidden_direct_egress_hits:
@@ -639,10 +691,15 @@ def main() -> int:
         "strict_surfaces": list(STRICT_SURFACES),
         "full_scan_delegate_required_python_scripts": list(FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS),
         "full_scan_delegate_required_tokens": list(FULL_SCAN_DELEGATED_REQUIRED_TOKENS),
+        "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
+        "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),
+        "dialogue_feedback_bundle_required_validators": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS),
+        "dialogue_feedback_bundle_required_args": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_ARGS),
         "forbidden_direct_validators": forbidden_direct_validators,
         "missing_surface_files": missing_surface_files,
         "missing_lineage_refs": missing_lineage_refs,
         "missing_execution_tokens": missing_execution_tokens,
+        "dialogue_bundle_missing": dialogue_bundle_missing,
         "forbidden_hits": forbidden_hits,
         "final_egress_wrapper_script": FINAL_EGRESS_WRAPPER_SCRIPT,
         "final_egress_required_surfaces": list(FINAL_EGRESS_REQUIRED_SURFACES),
