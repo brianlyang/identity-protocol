@@ -226,7 +226,7 @@ Vendor-reference snapshot for this addendum:
    - `asb16-rq-035`
 3. Alias-chain contract remains mandatory:
    - tooling reads `identity/protocol/mappings/github-control-plane-offload.current.yaml`
-   - never direct-couple scripts/workflows to versioned `v1.6.3` file path.
+   - never direct-couple scripts + workflows to versioned `v1.6.3` file path.
 
 #### T4 — Operability/evidence track (non-ephemeral)
 
