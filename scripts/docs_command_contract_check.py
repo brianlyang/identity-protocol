@@ -191,7 +191,7 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
     Returns:
       stream_docs (governance/review docs per active stream),
       mandatory_static_docs (non-stream docs that must be present),
-      stream_doc_alias_requirements (doc -> required alias refs),
+      doc_alias_requirements (doc -> required alias refs),
       validation_errors (fail-close reasons)
     """
     registry_entry_path = (repo_root / STREAM_DOC_REGISTRY_PATH).resolve()
@@ -235,7 +235,7 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
     if not mandatory_static_docs:
         errors.append(f"[INVALID_STREAM_DOC_REGISTRY] mandatory_static_docs must be non-empty list")
 
-    stream_doc_alias_requirements: dict[str, List[str]] = {}
+    doc_alias_requirements: dict[str, List[str]] = {}
     alias_rows = data.get("stream_doc_required_alias_refs")
     if not isinstance(alias_rows, list) or not alias_rows:
         errors.append(
@@ -283,7 +283,7 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
                         errors.append(
                             f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} governance_alias_ref not found: {alias_ref}"
                         )
-                stream_doc_alias_requirements[governance_doc] = governance_alias_refs
+                doc_alias_requirements[governance_doc] = governance_alias_refs
 
             if not review_doc:
                 errors.append(
@@ -309,9 +309,57 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
                         errors.append(
                             f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} review_alias_ref not found: {alias_ref}"
                         )
-                stream_doc_alias_requirements[review_doc] = review_alias_refs
+                doc_alias_requirements[review_doc] = review_alias_refs
 
-    return _dedup(stream_docs), _dedup(mandatory_static_docs), stream_doc_alias_requirements, errors
+    static_alias_rows = data.get("static_doc_required_alias_refs")
+    if not isinstance(static_alias_rows, list) or not static_alias_rows:
+        errors.append(
+            "[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_refs must be a non-empty list"
+        )
+    else:
+        static_docs_seen: set[str] = set()
+        for idx, row in enumerate(static_alias_rows, start=1):
+            if not isinstance(row, dict):
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_refs[{idx}] must be mapping"
+                )
+                continue
+            doc = _norm_path(row.get("doc", ""))
+            alias_refs = _as_str_list(row.get("alias_refs"))
+            if not doc:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_refs[{idx}] missing doc"
+                )
+                continue
+            if doc in static_docs_seen:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] duplicate static_doc_required_alias_refs doc: {doc}"
+                )
+            static_docs_seen.add(doc)
+            if doc not in mandatory_static_docs:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_refs doc not listed in mandatory_static_docs: {doc}"
+                )
+                continue
+            if not alias_refs:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_refs alias_refs must be non-empty: {doc}"
+                )
+                continue
+            for alias_ref in alias_refs:
+                if ".current." not in alias_ref:
+                    errors.append(
+                        f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_ref must be current-pointer: {doc}:{alias_ref}"
+                    )
+                    continue
+                alias_path = (repo_root / alias_ref).resolve()
+                if not alias_path.exists():
+                    errors.append(
+                        f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_ref not found: {doc}:{alias_ref}"
+                    )
+            doc_alias_requirements[doc] = alias_refs
+
+    return _dedup(stream_docs), _dedup(mandatory_static_docs), doc_alias_requirements, errors
 
 
 def _enforce_required_current_docs(index_docs: List[str]) -> tuple[List[str], List[str]]:
