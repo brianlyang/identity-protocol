@@ -305,7 +305,7 @@ Run:
 2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
 3. `python3 scripts/docs_command_contract_check.py`
 4. `python3 scripts/validate_protocol_ssot_source.py`
-5. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --target-source-layer both --with-docs-contract --actor-id assistant:codex --session-id run:V163-PREDEV-CHECK-20260310 --expected-work-layer protocol --out activity/evidence/v163-predev/2026-03-10/target_scan_project_global_both.recheck.json`
+5. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids store-manager,base-repo-audit-expert-v3,custom-creative-ecom-analyst,base-repo-architect --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --global-catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --target-source-layer both --with-docs-contract --actor-id assistant:codex --session-id run:V163-PREDEV-CHECK-20260310 --expected-work-layer protocol --out activity/evidence/v163-predev/2026-03-10/target_scan_project_global_both.summary.json`
 
 Gate rule:
 

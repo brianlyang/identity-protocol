@@ -5,6 +5,22 @@ description: >
   Docs should reference canonical manifest + minimal replay anchors only.
 
 strict_docs:
+  docs/governance/identity-headstamp-egress-governance-v1.6.1.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.1-headstamp\.json$'
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/three_plane\..+\.json$'
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/full_scan_target\..+\.json$'
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/legacy_code_presence_scan\.txt$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v1\.6\.1-headstamp\.json$'
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/legacy_code_presence_scan\.txt$'
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/three_plane\..+\.json$'
+      - '^activity/evidence/v161-headstamp-convergence/\d{4}-\d{2}-\d{2}/full_scan_target\..+\.json$'
+
   docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md:
     max_activity_refs: 20
     allowed_activity_patterns:
@@ -20,3 +36,34 @@ strict_docs:
       - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_invariants_plugin_wiring_.*\.json$'
       - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_surface_drift_.*\.json$'
       - '^activity/evidence/rq034/\d{4}-\d{2}-\d{2}/rq034_full_scan_target_regression_.*\.result\.json$'
+
+  docs/governance/github-native-control-plane-specialization-v1.6.3.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/PREDEV_MIN_ANCHOR\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/v163_state_gap_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/github_vendor_reference_snapshot\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_control_plane_invariants\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_surface_drift\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_docs_command_contract_check\.log$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_ssot_source\.log$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_doc_evidence_persistence\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/target_scan_project_global_both\.summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/audit_feedback_resolution_round32\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v163-predev-round31\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v163-round32-implementation\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/PREDEV_MIN_ANCHOR\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/v163_state_gap_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/github_vendor_reference_snapshot\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_control_plane_invariants\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_surface_drift\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_docs_command_contract_check\.log$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_ssot_source\.log$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round32_doc_evidence_persistence\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/audit_feedback_resolution_round32\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v163-predev-round31\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\.v163-round32-implementation\.json$'

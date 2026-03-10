@@ -12,7 +12,7 @@ Round-29.5 contract (frozen):
    sha256, command, rc, timestamp.
 
 Execution model:
-- Strict full-scan on v1.6.2 stream docs (current control-plane stream).
+- Strict full-scan on v1.6.x stream docs (v1.6.1/v1.6.2/v1.6.3).
 - Delta-scan on newly-added lines for all governance/review docs
   (prevents *new* /tmp debt without breaking historical backlog).
 """
@@ -35,8 +35,12 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_POLICY = "IP-DOC-EVID-001"
 
 STRICT_DOC_SCOPES = {
+    "docs/governance/identity-headstamp-egress-governance-v1.6.1.md": "governance",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md": "review",
     "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md": "governance",
     "docs/review/protocol-remediation-audit-ledger-v1.6.2.md": "review",
+    "docs/governance/github-native-control-plane-specialization-v1.6.3.md": "governance",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.3.md": "review",
 }
 
 TMP_PREFIXES = ("/tmp/", "/private/tmp/")
