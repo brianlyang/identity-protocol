@@ -8,6 +8,14 @@ Protocol-governed plugin contract for multimodal vision-capable provider enforce
 2. Ensure provider profile capability (vision/tool/structured-json) matches plugin requirements.
 3. Ensure runtime binding references use credential indirection (`env:`/`vault:`), not plaintext secrets.
 
+## Contract
+
+1. Requirement key: `asb16-rq-034`
+2. Bundle target name: `multimodal_plugin_enforcement`
+3. Contract id: `rq_034_multimodal_plugin_enforcement_contract_v1`
+4. Validator: `scripts/validate_multimodal_plugin_enforcement.py`
+5. Wiring playbook: `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`
+
 ## Canonical contract files
 
 1. `plugin.contract.yaml`

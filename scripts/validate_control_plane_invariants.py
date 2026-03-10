@@ -11,6 +11,7 @@ import yaml
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_INVARIANT = "IP-CP-INV-001"
+PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -91,6 +92,10 @@ def main() -> int:
         "--plugin-governance-file",
         default="identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
     )
+    parser.add_argument(
+        "--plugin-doc-control-file",
+        default=PLUGIN_DOC_CONTROL_DEFAULT_REL,
+    )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
@@ -98,6 +103,7 @@ def main() -> int:
     invariants_path = (repo_root / str(args.invariants_file)).resolve()
     mapping_path = (repo_root / str(args.contract_mapping)).resolve()
     plugin_governance_path = (repo_root / str(args.plugin_governance_file)).resolve()
+    plugin_doc_control_path = (repo_root / str(args.plugin_doc_control_file)).resolve()
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
@@ -108,6 +114,8 @@ def main() -> int:
         stale_reasons.append(f"contract_mapping_missing:{mapping_path}")
     if not plugin_governance_path.exists():
         stale_reasons.append(f"plugin_governance_file_missing:{plugin_governance_path}")
+    if not plugin_doc_control_path.exists():
+        stale_reasons.append(f"plugin_doc_control_file_missing:{plugin_doc_control_path}")
 
     missing_rows: list[str] = []
     extra_rows: list[str] = []
@@ -254,6 +262,8 @@ def main() -> int:
     unique_egress_violation_count = 0
     bundle_entry_violation_count = 0
     prompt_binding_violation_count = 0
+    plugin_readability_violation_count = 0
+    plugin_doc_control_parse_ok = False
     registry_fail_close_plugin_ids: set[str] = set()
     governance_plugin_ids: set[str] = set()
     duplicate_governance_plugin_ids: set[str] = set()
@@ -271,6 +281,89 @@ def main() -> int:
                 plugin_governance_file=str(plugin_governance_path),
             )
         else:
+            doc_control_doc: dict[str, Any] = {}
+            docs_cfg: dict[str, Any] = {}
+            plugin_doc_map: dict[str, dict[str, Any]] = {}
+            playbook_link_token = ""
+            if plugin_doc_control_path.exists() and plugin_doc_control_path.is_file():
+                doc_control_doc = _load_yaml(plugin_doc_control_path)
+                plugin_doc_control_parse_ok = bool(doc_control_doc)
+                if not plugin_doc_control_parse_ok:
+                    plugin_readability_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_doc_control",
+                        reason="plugin_doc_control_parse_failed",
+                        plugin_doc_control_file=str(plugin_doc_control_path),
+                    )
+                else:
+                    docs_cfg_raw = doc_control_doc.get("docs")
+                    docs_cfg = docs_cfg_raw if isinstance(docs_cfg_raw, dict) else {}
+                    playbook_rel = str(docs_cfg.get("canonical_playbook", "")).strip()
+                    playbook_link_token = str(
+                        docs_cfg.get("playbook_link_token", "PLUGIN_WIRING_PLAYBOOK.v1.6.2.md")
+                    ).strip()
+                    if not playbook_rel:
+                        plugin_readability_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="plugin_doc_control",
+                            reason="canonical_playbook_missing",
+                            plugin_doc_control_file=str(plugin_doc_control_path),
+                        )
+                    else:
+                        playbook_path = (repo_root / playbook_rel).resolve()
+                        if not playbook_path.exists() or not playbook_path.is_file():
+                            plugin_readability_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_wiring_playbook",
+                                reason="playbook_missing",
+                                playbook=playbook_rel,
+                            )
+
+                    root_readme_rel = str(docs_cfg.get("root_readme", "")).strip()
+                    if not root_readme_rel:
+                        plugin_readability_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="plugin_doc_control",
+                            reason="root_readme_missing",
+                            plugin_doc_control_file=str(plugin_doc_control_path),
+                        )
+                    else:
+                        root_readme_path = (repo_root / root_readme_rel).resolve()
+                        if not root_readme_path.exists() or not root_readme_path.is_file():
+                            plugin_readability_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_readme",
+                                reason="root_plugin_readme_missing",
+                                readme=root_readme_rel,
+                            )
+                        else:
+                            root_readme_text = _read_text(root_readme_path)
+                            required_root_tokens = _as_str_list(docs_cfg.get("root_required_tokens"))
+                            if playbook_link_token:
+                                required_root_tokens.append(playbook_link_token)
+                            for token in sorted(set(required_root_tokens)):
+                                if token and token not in root_readme_text:
+                                    plugin_readability_violation_count += 1
+                                    _append_violation(
+                                        violations,
+                                        field="plugin_readme",
+                                        reason="root_plugin_readme_missing_required_token",
+                                        readme=root_readme_rel,
+                                        missing_token=token,
+                                    )
+
+                    for row in _as_list(doc_control_doc.get("plugin_docs")):
+                        if not isinstance(row, dict):
+                            continue
+                        plugin_id = str(row.get("plugin_id", "")).strip()
+                        if plugin_id:
+                            plugin_doc_map[plugin_id] = row
+
             # Unique egress invariants.
             unique_egress = plugin_doc.get("unique_egress")
             if isinstance(unique_egress, dict):
@@ -536,6 +629,50 @@ def main() -> int:
                         plugin_id=plugin_id,
                         contract_file=contract_file,
                     )
+                else:
+                    doc_cfg = plugin_doc_map.get(plugin_id)
+                    if not isinstance(doc_cfg, dict):
+                        plugin_readability_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="plugin_doc_control",
+                            reason="plugin_doc_entry_missing",
+                            plugin_id=plugin_id,
+                            plugin_doc_control_file=str(plugin_doc_control_path),
+                        )
+                        doc_cfg = {}
+                    plugin_dir = Path(contract_file).parent
+                    plugin_readme_rel = str(doc_cfg.get("readme", "")).strip() or (plugin_dir / "README.md").as_posix()
+                    plugin_readme_path = (repo_root / plugin_readme_rel).resolve()
+                    if not plugin_readme_path.exists() or not plugin_readme_path.is_file():
+                        plugin_readability_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="plugin_readme",
+                            reason="plugin_readme_missing",
+                            plugin_id=plugin_id,
+                            readme=plugin_readme_rel,
+                        )
+                    else:
+                        plugin_readme_text = _read_text(plugin_readme_path)
+                        required_tokens = set(_as_str_list(doc_cfg.get("required_tokens")))
+                        if playbook_link_token:
+                            required_tokens.add(playbook_link_token)
+                        if requirement_key:
+                            required_tokens.add(requirement_key)
+                        if target_name:
+                            required_tokens.add(target_name)
+                        for token in sorted(required_tokens):
+                            if token and token not in plugin_readme_text:
+                                plugin_readability_violation_count += 1
+                                _append_violation(
+                                    violations,
+                                    field="plugin_readme",
+                                    reason="plugin_readme_missing_required_token",
+                                    plugin_id=plugin_id,
+                                    readme=plugin_readme_rel,
+                                    missing_token=token,
+                                )
 
                 # Mapping row checks.
                 mapping_row = mapping_doc.get(requirement_key) if isinstance(mapping_doc, dict) else None
@@ -754,6 +891,7 @@ def main() -> int:
         "invariants_file": str(invariants_path),
         "contract_mapping": str(mapping_path),
         "plugin_governance_file": str(plugin_governance_path),
+        "plugin_doc_control_file": str(plugin_doc_control_path),
         "bundle_mapping_parity_mode": mode,
         "bundle_mapping_parity_baseline_missing_rows": baseline_missing_rows,
         "bundle_mapping_parity_reduction_plan_file": reduction_plan_file,
@@ -775,7 +913,9 @@ def main() -> int:
         "unique_egress_violation_count": unique_egress_violation_count,
         "bundle_entry_violation_count": bundle_entry_violation_count,
         "prompt_binding_violation_count": prompt_binding_violation_count,
+        "plugin_readability_violation_count": plugin_readability_violation_count,
         "plugin_governance_parse_ok": plugin_doc_parse_ok,
+        "plugin_doc_control_parse_ok": plugin_doc_control_parse_ok,
         "bundle_target_map_size": len(bundle_target_map),
         "violation_count": len(violations),
         "violations": violations,

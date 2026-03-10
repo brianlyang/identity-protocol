@@ -1,0 +1,26 @@
+schema_version: 1
+governance_version: v1.6.2
+last_updated_utc: "2026-03-10T00:00:00Z"
+
+docs:
+  canonical_playbook: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md
+  root_readme: identity/protocol/plugins/README.md
+  playbook_link_token: PLUGIN_WIRING_PLAYBOOK.v1.6.2.md
+  root_required_tokens:
+    - FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml
+    - PLUGIN_REGISTRY.v1.6.2.yaml
+    - PROVIDER_PROFILES.v1.6.2.yaml
+
+plugin_docs:
+  - plugin_id: multimodal-vision-enforcement
+    readme: identity/protocol/plugins/multimodal-vision-enforcement/README.md
+    required_tokens:
+      - asb16-rq-034
+      - multimodal_plugin_enforcement
+      - scripts/validate_multimodal_plugin_enforcement.py
+  - plugin_id: reasoning-loop-enforcement
+    readme: identity/protocol/plugins/reasoning-loop-enforcement/README.md
+    required_tokens:
+      - asb16-rq-035
+      - reasoning_loop_failclose_enforcement
+      - scripts/validate_reasoning_loop_failclose.py
