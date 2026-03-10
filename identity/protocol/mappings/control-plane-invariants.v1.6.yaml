@@ -22,3 +22,8 @@ invariants:
       - asb16-rq-019
       - asb16-rq-034
       - asb16-rq-035
+    forbid_versioned_reference:
+      regex: github-control-plane-offload\\.v[0-9]+\\.[0-9]+\\.[0-9]+\\.yaml
+      surfaces:
+        - scripts
+        - .github/workflows

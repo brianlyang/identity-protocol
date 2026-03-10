@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -115,6 +116,7 @@ def main() -> int:
     github_offload_current_configured_file = str(args.github_offload_current_file)
     github_offload_current_resolved_path = github_offload_current_path
     github_offload_active_file = ""
+    github_offload_active_path: Path | None = None
     github_offload_alias_enabled = False
     github_offload_parse_ok = False
     github_offload_violation_count = 0
@@ -206,6 +208,7 @@ def main() -> int:
                                 active_file=github_offload_active_file,
                             )
                         active_path = (repo_root / github_offload_active_file).resolve()
+                        github_offload_active_path = active_path
                         github_offload_current_resolved_path = active_path
                         if not active_path.exists() or not active_path.is_file():
                             github_offload_violation_count += 1
@@ -284,6 +287,76 @@ def main() -> int:
                                         active_file=github_offload_active_file,
                                         missing_requirement_keys=missing_requirement_keys,
                                     )
+
+            forbid_cfg = github_offload_cfg.get("forbid_versioned_reference")
+            if isinstance(forbid_cfg, dict):
+                ref_regex = str(forbid_cfg.get("regex", "")).strip()
+                ref_surfaces = _as_str_list(forbid_cfg.get("surfaces"))
+                if not ref_regex:
+                    github_offload_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="github_control_plane_offload_alias",
+                        reason="forbid_versioned_reference_regex_missing",
+                    )
+                elif not ref_surfaces:
+                    github_offload_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="github_control_plane_offload_alias",
+                        reason="forbid_versioned_reference_surfaces_missing",
+                    )
+                else:
+                    try:
+                        ref_pattern = re.compile(ref_regex)
+                    except re.error:
+                        github_offload_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="github_control_plane_offload_alias",
+                            reason="forbid_versioned_reference_regex_invalid",
+                            regex=ref_regex,
+                        )
+                    else:
+                        versioned_hits: list[str] = []
+                        for rel_surface in ref_surfaces:
+                            surface_path = (repo_root / rel_surface).resolve()
+                            if not surface_path.exists():
+                                github_offload_violation_count += 1
+                                _append_violation(
+                                    violations,
+                                    field="github_control_plane_offload_alias",
+                                    reason="forbid_versioned_reference_surface_missing",
+                                    surface=rel_surface,
+                                )
+                                continue
+                            candidates: list[Path] = []
+                            if surface_path.is_file():
+                                candidates = [surface_path]
+                            elif surface_path.is_dir():
+                                candidates = [p for p in surface_path.rglob("*") if p.is_file()]
+                            for candidate in candidates:
+                                if github_offload_active_path and candidate.resolve() == github_offload_active_path.resolve():
+                                    continue
+                                text = _read_text(candidate)
+                                if ref_pattern.search(text):
+                                    try:
+                                        rel_candidate = candidate.relative_to(repo_root).as_posix()
+                                    except Exception:
+                                        rel_candidate = str(candidate)
+                                    versioned_hits.append(rel_candidate)
+                        if versioned_hits:
+                            uniq_hits = sorted(set(versioned_hits))
+                            github_offload_violation_count += len(uniq_hits)
+                            _append_violation(
+                                violations,
+                                field="github_control_plane_offload_alias",
+                                reason="direct_versioned_reference_detected_on_forbidden_surfaces",
+                                regex=ref_regex,
+                                surfaces=ref_surfaces,
+                                hit_files=uniq_hits,
+                                hit_count=len(uniq_hits),
+                            )
 
         mode = str(parity_cfg.get("mode", "")).strip().lower() or "freeze"
         baseline_missing_rows = int(parity_cfg.get("baseline_missing_rows", -1))
