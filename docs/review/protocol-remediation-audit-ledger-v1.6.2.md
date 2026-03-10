@@ -811,3 +811,12 @@ Files:
 
 1. Protocol-layer issues (mapping/bundle parity, wiring, path/cwd stability) are closed by base repo changes in this round.
 2. Instance-layer technical debt (runtime report completeness, run-id-consistent runtime evidence) remains instance-owned and is not relabeled as protocol parity regression.
+
+## 21) Stream Continuity Alias Pointers
+
+1. v1.6.2 review stream now keeps alias-first continuity explicit for plugin/mapping control plane.
+2. Required alias anchors:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+3. Historical versioned references are preserved for replay traceability only; machine checks and future stream upgrades must bind through these current aliases.

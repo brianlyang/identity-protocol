@@ -87,3 +87,12 @@ Cross-surface extension (HS16-104):
 2. `full_identity_protocol_scan --scan-mode target --target-source-layer project` (same actor/session) -> rc=0, `summary.ok=1`, `summary_m2m.pass=1`.
 3. In these replay artifacts, `IP-ASB-STAMP-SESSION-*` / `IP-FE-*` are absent as surfaced defect codes; headstamp negatives remain canonical `IP-HDSTAMP-*`.
 4. Presence scan evidence: `activity/evidence/v161-headstamp-convergence/2026-03-09/legacy_code_presence_scan.txt` (`result=NO_MATCH`).
+
+## 7) Stream Continuity Alias Pointers
+
+1. Review trace for v1.6.1 follows alias-first continuity rules.
+2. Required alias anchors:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Historical versioned files remain replay evidence only; pointer switching is governed by current aliases above.

@@ -69,6 +69,7 @@ invariants:
     required_fields:
       - stream_docs
       - mandatory_static_docs
+      - stream_doc_required_alias_refs
     forbid_versioned_reference:
       regex: stream-doc-registry\\.v[0-9]+\\.[0-9]+\\.yaml
       surfaces:

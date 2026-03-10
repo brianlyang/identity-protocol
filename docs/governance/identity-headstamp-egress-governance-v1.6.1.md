@@ -251,3 +251,12 @@ Reference links:
    - `activity/evidence/v161-headstamp-convergence/2026-03-09/three_plane.base-repo-architect.json`
    - `activity/evidence/v161-headstamp-convergence/2026-03-09/full_scan_target.base-repo-architect.json`
    - `activity/evidence/v161-headstamp-convergence/2026-03-09/legacy_code_presence_scan.txt`
+
+## 10) Stream Continuity Alias Pointers
+
+1. This stream must keep its protocol references pointer-driven (not version-literal coupled).
+2. Required alias anchors for v1.6.1:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Versioned snapshots can still appear as historical evidence, but normative wiring must resolve through these current aliases.

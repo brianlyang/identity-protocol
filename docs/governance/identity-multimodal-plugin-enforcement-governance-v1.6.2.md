@@ -1059,3 +1059,12 @@ Observed replay summary:
 1. Bundle/mapping parity gap is now zero under freeze invariant:
    - `mapping_rows_missing_in_bundle_count=0`.
 2. Remaining fail-close signals seen in replay are active strict validators (for example `RQ-034` / `RQ-035`) and are classified as runtime evidence obligations, not parity wiring regression.
+
+## 22) Stream Continuity Alias Pointers
+
+1. Multimodal/reasoning plugin governance must stay pointer-driven to avoid version bump script churn.
+2. Required alias anchors for v1.6.2:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+3. Versioned plugin/mapping snapshots remain valid as historical replay evidence, while normative integration and audits must resolve through the current aliases above.

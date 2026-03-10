@@ -132,19 +132,20 @@ def _dedup(seq: List[str]) -> List[str]:
     return out
 
 
-def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], List[str]]:
+def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], dict[str, List[str]], List[str]]:
     """
     Returns:
       stream_docs (governance/review docs per active stream),
       mandatory_static_docs (non-stream docs that must be present),
+      stream_doc_alias_requirements (doc -> required alias refs),
       validation_errors (fail-close reasons)
     """
     registry_entry_path = (repo_root / STREAM_DOC_REGISTRY_PATH).resolve()
     registry_path, alias_error = _resolve_current_yaml_alias(repo_root, STREAM_DOC_REGISTRY_PATH)
     if alias_error:
-        return [], [], [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
+        return [], [], {}, [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
     if not registry_path.exists():
-        return [], [], [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {registry_entry_path}"]
+        return [], [], {}, [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {registry_entry_path}"]
 
     data = _load_yaml(registry_path)
     errors: List[str] = []
@@ -153,7 +154,7 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], Li
         errors.append(
             f"[INVALID_STREAM_DOC_REGISTRY] stream_docs must be a non-empty list: {STREAM_DOC_REGISTRY_PATH}"
         )
-        return [], [], errors
+        return [], [], {}, errors
 
     stream_docs: List[str] = []
     stream_versions_seen: set[str] = set()
@@ -180,7 +181,61 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], Li
     if not mandatory_static_docs:
         errors.append(f"[INVALID_STREAM_DOC_REGISTRY] mandatory_static_docs must be non-empty list")
 
-    return _dedup(stream_docs), _dedup(mandatory_static_docs), errors
+    stream_doc_alias_requirements: dict[str, List[str]] = {}
+    alias_rows = data.get("stream_doc_required_alias_refs")
+    if not isinstance(alias_rows, list) or not alias_rows:
+        errors.append(
+            "[INVALID_STREAM_DOC_REGISTRY] stream_doc_required_alias_refs must be a non-empty list"
+        )
+    else:
+        alias_versions_seen: set[str] = set()
+        for idx, row in enumerate(alias_rows, start=1):
+            if not isinstance(row, dict):
+                errors.append(f"[INVALID_STREAM_DOC_REGISTRY] stream_doc_required_alias_refs[{idx}] must be mapping")
+                continue
+            stream_version = str(row.get("stream_version", "")).strip() or f"row-{idx}"
+            if stream_version in alias_versions_seen:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] duplicate stream_doc_required_alias_refs stream_version: {stream_version}"
+                )
+            alias_versions_seen.add(stream_version)
+
+            governance_doc = _norm_path(row.get("governance_doc", ""))
+            review_doc = _norm_path(row.get("review_doc", ""))
+            governance_alias_refs = _as_str_list(row.get("governance_alias_refs"))
+            review_alias_refs = _as_str_list(row.get("review_alias_refs"))
+
+            if not governance_doc:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} missing governance_doc in stream_doc_required_alias_refs"
+                )
+            elif governance_doc not in stream_docs:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} governance_doc not listed in stream_docs: {governance_doc}"
+                )
+            elif not governance_alias_refs:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} governance_alias_refs must be non-empty"
+                )
+            else:
+                stream_doc_alias_requirements[governance_doc] = governance_alias_refs
+
+            if not review_doc:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} missing review_doc in stream_doc_required_alias_refs"
+                )
+            elif review_doc not in stream_docs:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} review_doc not listed in stream_docs: {review_doc}"
+                )
+            elif not review_alias_refs:
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] {stream_version} review_alias_refs must be non-empty"
+                )
+            else:
+                stream_doc_alias_requirements[review_doc] = review_alias_refs
+
+    return _dedup(stream_docs), _dedup(mandatory_static_docs), stream_doc_alias_requirements, errors
 
 
 def _enforce_required_current_docs(index_docs: List[str]) -> tuple[List[str], List[str]]:
@@ -276,8 +331,9 @@ def main() -> int:
     repo_root = Path.cwd()
     docs = args.docs if args.docs else _docs_from_index(repo_root)
     bootstrap_failures: List[str] = []
+    stream_doc_alias_requirements: dict[str, List[str]] = {}
     if args.docs is None:
-        stream_docs, mandatory_static_docs, registry_errors = _load_stream_doc_registry(repo_root)
+        stream_docs, mandatory_static_docs, stream_doc_alias_requirements, registry_errors = _load_stream_doc_registry(repo_root)
         bootstrap_failures.extend(registry_errors)
         governance_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/governance/")]
         review_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/review/")]
@@ -325,6 +381,12 @@ def main() -> int:
             failures.append(f"[MISSING_DOC] {doc}")
             continue
         content = doc_path.read_text(encoding="utf-8")
+        required_alias_refs = stream_doc_alias_requirements.get(doc, [])
+        for ref in required_alias_refs:
+            if ref not in content:
+                failures.append(
+                    f"[MISSING_STREAM_DOC_ALIAS_REF] {doc}: missing `{ref}`"
+                )
         for snippet in extract_backtick_commands(content):
             for cmd_snippet in _snippet_to_commands(snippet):
                 if "scripts/" not in cmd_snippet:

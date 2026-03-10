@@ -25,3 +25,38 @@ mandatory_static_docs:
   - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
   - CHANGELOG.md
   - VERSIONING.md
+
+stream_doc_required_alias_refs:
+  - stream_version: v1.6.1
+    governance_doc: docs/governance/identity-headstamp-egress-governance-v1.6.1.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.2
+    governance_doc: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md
+    governance_alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.2.md
+    review_alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+  - stream_version: v1.6.3
+    governance_doc: docs/governance/github-native-control-plane-specialization-v1.6.3.md
+    governance_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.3.md
+    review_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
