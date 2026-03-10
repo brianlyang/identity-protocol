@@ -222,6 +222,25 @@ def _has_multimodal_validator_receipt(runtime_report_doc: dict[str, Any]) -> boo
     return False
 
 
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        catalog_doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return False
+    rows = catalog_doc.get("identities")
+    if not isinstance(rows, list):
+        return False
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("id", "")).strip() != identity_id:
+            continue
+        profile = str(row.get("profile", "")).strip().lower()
+        runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+        return profile == "fixture" or runtime_mode == "demo_only"
+    return False
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate multimodal plugin enforcement contract (RQ-034).")
     ap.add_argument("--catalog", required=True)
@@ -277,9 +296,12 @@ def main() -> int:
     binding_path = (pack_path / "runtime" / "plugins" / "provider-bindings.local.yaml").resolve()
 
     required = contract_required(contract)
+    fixture_identity = _is_fixture_identity(catalog_path, args.identity_id)
     auto_required_signal = registry_path.exists()
     if auto_required_signal:
         required = True
+    if fixture_identity:
+        required = False
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
@@ -287,6 +309,7 @@ def main() -> int:
         "resolved_pack_path": str(pack_path),
         "task_path": str(task_path),
         "operation": args.operation,
+        "fixture_identity": fixture_identity,
         "required_contract": required,
         "auto_required_signal": auto_required_signal,
         "producer_readiness": False,
@@ -329,7 +352,7 @@ def main() -> int:
     }
 
     if not required:
-        payload["stale_reasons"] = ["contract_not_required"]
+        payload["stale_reasons"] = ["fixture_profile_scope"] if fixture_identity else ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0
 
