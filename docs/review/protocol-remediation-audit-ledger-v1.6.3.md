@@ -581,3 +581,26 @@ Observed:
    - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/`
 5. Manifest (tuple-complete):
    - `activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json`
+
+### 11.15 Round-36 seven-pass serial deep-scan replay (2026-03-11)
+
+1. Execution contract:
+   - same deep-scan packet was replayed serially **7 times** to validate stability depth and eliminate single-run accidental green.
+2. Per-iteration gate result (`1..7` all identical):
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
+   - `validate_protocol_ssot_source` => `OK`
+   - `validate_doc_evidence_persistence` => `PASS_REQUIRED`
+   - `validate_control_plane_status_sync` => `PASS_REQUIRED`
+3. Legacy corpus visibility scan:
+   - version-pattern legacy docs (`<=v1.6.*`): `54`
+   - covered by current authority set (`stream_docs + mandatory_static_docs`): `8`
+   - interpretation locked: non-covered legacy docs are archival/context unless promoted into stream registry authority set.
+4. Additional hardening landed in this round:
+   - `docs/governance/AUDIT_SNAPSHOT_INDEX.md` is now under static authority boundary checks via stream registry.
+5. Evidence root:
+   - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/`
+6. Manifest + summary:
+   - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json`
+   - `activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/round36_iteration_summary.json`
