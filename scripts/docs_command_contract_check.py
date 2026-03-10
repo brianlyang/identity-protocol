@@ -135,11 +135,15 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], Li
         return [], [], errors
 
     stream_docs: List[str] = []
+    stream_versions_seen: set[str] = set()
     for idx, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             errors.append(f"[INVALID_STREAM_DOC_REGISTRY] row[{idx}] must be mapping")
             continue
         stream_version = str(row.get("stream_version", "")).strip() or f"row-{idx}"
+        if stream_version in stream_versions_seen:
+            errors.append(f"[INVALID_STREAM_DOC_REGISTRY] duplicate stream_version: {stream_version}")
+        stream_versions_seen.add(stream_version)
         governance_doc = _norm_path(row.get("governance_doc", ""))
         review_doc = _norm_path(row.get("review_doc", ""))
         if not governance_doc:
@@ -254,6 +258,12 @@ def main() -> int:
     if args.docs is None:
         stream_docs, mandatory_static_docs, registry_errors = _load_stream_doc_registry(repo_root)
         bootstrap_failures.extend(registry_errors)
+        governance_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/governance/")]
+        for doc in governance_stream_docs:
+            if doc not in docs:
+                bootstrap_failures.append(
+                    f"[MISSING_STREAM_GOV_DOC_IN_INDEX] missing index entry for stream governance doc: {doc}"
+                )
 
         # enforce current-version docs by pattern (version-agnostic).
         required_docs, missing_required = _enforce_required_current_docs(docs)

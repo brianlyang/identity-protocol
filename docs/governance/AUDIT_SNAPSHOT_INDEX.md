@@ -24,6 +24,12 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical actor-scoped session binding governance (v1.6.0 planning track):
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+- Canonical headstamp egress governance (v1.6.1 stream):
+  - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md`
+- Canonical multimodal plugin enforcement governance (v1.6.2 stream):
+  - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
 - Canonical GitHub-native control-plane specialization (v1.6.3 planning track):
   - `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`

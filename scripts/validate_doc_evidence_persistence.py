@@ -77,11 +77,15 @@ def _load_strict_doc_scopes(repo_root: Path) -> tuple[dict[str, str], list[str]]
 
     scopes: dict[str, str] = {}
     errors: list[str] = []
+    stream_versions_seen: set[str] = set()
     for idx, row in enumerate(rows, start=1):
         if not isinstance(row, dict):
             errors.append(f"stream_doc_registry_invalid:row_{idx}_must_be_mapping")
             continue
         stream_version = str(row.get("stream_version", "")).strip() or f"row_{idx}"
+        if stream_version in stream_versions_seen:
+            errors.append(f"stream_doc_registry_invalid:duplicate_stream_version:{stream_version}")
+        stream_versions_seen.add(stream_version)
         governance_doc = _norm_path(row.get("governance_doc", ""))
         review_doc = _norm_path(row.get("review_doc", ""))
         if not governance_doc:
@@ -419,6 +423,12 @@ def main() -> int:
     strict_doc_allowlist = evidence_allowlist.get("strict_docs") if isinstance(evidence_allowlist, dict) else {}
     if not isinstance(strict_doc_allowlist, dict):
         strict_doc_allowlist = {}
+    strict_scope_keys = set(strict_doc_scopes.keys())
+    allowlist_scope_keys = {
+        _norm_path(key)
+        for key in strict_doc_allowlist.keys()
+        if _doc_scope(_norm_path(str(key))) in {"governance", "review"}
+    }
     all_persistent_refs: set[str] = set()
 
     for reason in stream_registry_errors:
@@ -428,6 +438,17 @@ def main() -> int:
                 "error_code": ERR_POLICY,
                 "reason": reason,
                 "registry_file": STREAM_DOC_REGISTRY_FILE,
+            }
+        )
+    for orphan in sorted(allowlist_scope_keys - strict_scope_keys):
+        violations.append(
+            {
+                "type": "strict_doc_allowlist_orphan_entry",
+                "doc": orphan,
+                "error_code": ERR_POLICY,
+                "reason": "allowlist_entry_not_in_stream_registry",
+                "registry_file": STREAM_DOC_REGISTRY_FILE,
+                "allowlist_file": EVIDENCE_ALLOWLIST_FILE,
             }
         )
 
