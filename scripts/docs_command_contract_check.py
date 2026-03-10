@@ -29,6 +29,7 @@ import yaml
 
 INDEX_PATH = "docs/governance/AUDIT_SNAPSHOT_INDEX.md"
 STREAM_DOC_REGISTRY_PATH = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+PLUGIN_DOC_CONTROL_PATH = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
 REQUIRED_CURRENT_DOC_PATTERNS = [
     r"^docs/governance/identity-token-efficiency-and-skill-parity-governance-v\d+\.\d+\.\d+\.md$",
     r"^docs/governance/identity-token-governance-audit-checklist-v\d+\.\d+\.\d+\.md$",
@@ -119,6 +120,59 @@ def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[P
     if not active_path.exists() or not active_path.is_file():
         return active_path, "active_file_not_found"
     return active_path, ""
+
+
+def _resolve_current_markdown_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "current_file_missing"
+    if not configured_path.name.endswith(".current.md"):
+        return configured_path, ""
+    text = configured_path.read_text(encoding="utf-8")
+    refs = re.findall(r"`([^`]+\.md)`", text)
+    active_file = ""
+    for candidate in refs:
+        rel = _norm_path(candidate)
+        if rel and not rel.endswith(".current.md"):
+            active_file = rel
+            break
+    if not active_file:
+        return configured_path, "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, "active_file_not_found"
+    return active_path, ""
+
+
+def _load_playbook_requirements(repo_root: Path) -> tuple[Path | None, List[str], List[str]]:
+    errors: List[str] = []
+    doc_control_path, alias_error = _resolve_current_yaml_alias(repo_root, PLUGIN_DOC_CONTROL_PATH)
+    if alias_error:
+        return None, [], [f"[INVALID_PLUGIN_DOC_CONTROL] alias resolution failed: {PLUGIN_DOC_CONTROL_PATH}:{alias_error}"]
+    if not doc_control_path.exists():
+        return None, [], [f"[MISSING_PLUGIN_DOC_CONTROL] required file not found: {PLUGIN_DOC_CONTROL_PATH}"]
+    doc_control = _load_yaml(doc_control_path)
+    if not doc_control:
+        return None, [], [f"[INVALID_PLUGIN_DOC_CONTROL] parse failed: {doc_control_path}"]
+    docs_cfg = doc_control.get("docs")
+    if not isinstance(docs_cfg, dict):
+        return None, [], [f"[INVALID_PLUGIN_DOC_CONTROL] docs section missing: {doc_control_path}"]
+    playbook_rel = _norm_path(str(docs_cfg.get("canonical_playbook", "")))
+    if not playbook_rel:
+        errors.append(f"[INVALID_PLUGIN_DOC_CONTROL] docs.canonical_playbook missing: {doc_control_path}")
+        return None, [], errors
+    playbook_path, playbook_alias_error = _resolve_current_markdown_alias(repo_root, playbook_rel)
+    if playbook_alias_error:
+        errors.append(
+            f"[INVALID_PLUGIN_DOC_CONTROL] canonical_playbook alias resolution failed: {playbook_rel}:{playbook_alias_error}"
+        )
+        return None, [], errors
+    required_tokens = _as_str_list(docs_cfg.get("playbook_required_tokens"))
+    if not required_tokens:
+        errors.append(
+            f"[INVALID_PLUGIN_DOC_CONTROL] docs.playbook_required_tokens must be non-empty: {doc_control_path}"
+        )
+    return playbook_path, required_tokens, errors
 
 
 def _dedup(seq: List[str]) -> List[str]:
@@ -354,8 +408,12 @@ def main() -> int:
     docs = args.docs if args.docs else _docs_from_index(repo_root)
     bootstrap_failures: List[str] = []
     stream_doc_alias_requirements: dict[str, List[str]] = {}
+    playbook_path: Path | None = None
+    playbook_required_tokens: List[str] = []
     stream_docs, mandatory_static_docs, stream_doc_alias_requirements, registry_errors = _load_stream_doc_registry(repo_root)
     bootstrap_failures.extend(registry_errors)
+    playbook_path, playbook_required_tokens, playbook_errors = _load_playbook_requirements(repo_root)
+    bootstrap_failures.extend(playbook_errors)
     if args.docs is None:
         governance_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/governance/")]
         review_stream_docs = [doc for doc in stream_docs if doc.startswith("docs/review/")]
@@ -431,6 +489,14 @@ def main() -> int:
                             failures.append(
                                 f"[FLAG_MISMATCH] {doc}: `{cmd_snippet}` -> `{flag}` not in {script_rel} --help"
                             )
+
+    if playbook_path is not None and playbook_required_tokens:
+        playbook_text = playbook_path.read_text(encoding="utf-8")
+        for token in sorted(set(playbook_required_tokens)):
+            if token and token not in playbook_text:
+                failures.append(
+                    f"[PLAYBOOK_TOKEN_MISSING] {playbook_path}: missing `{token}`"
+                )
 
     # Round-29.5: enforce doc evidence persistence policy
     evidence_policy_script = repo_root / "scripts/validate_doc_evidence_persistence.py"
