@@ -178,7 +178,7 @@ asb16-rq-006:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
   report_field_refs:
     - release_plane_cloud_evidence_status
     - release_plane_status
@@ -207,7 +207,7 @@ asb16-rq-007:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
   report_field_refs:
     - cross_cwd_absolute_input_status
     - cwd_parity_status
@@ -235,7 +235,7 @@ asb16-rq-009:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
   report_field_refs:
     - run_id_report_selection_status
     - run_id
@@ -261,7 +261,7 @@ asb16-rq-010:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#86-batch-2a-row-level-strengthening-profile-asb16-rq-006010-2026-03-06
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-row-level-strengthening-normalization
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-031---batch-2a-asb16-rq-006010-strengthening-normalization
   report_field_refs:
     - phase_bootstrap_before_strict_status
     - phase_a_refresh_applied
@@ -428,7 +428,7 @@ asb16-rq-008:
     - full-scan
     - three-plane
     - ci
-  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-four-track-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-strengthening-profile-asb16-rq-029031032007008-2026-03-06
   review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-033---batch-4-asb16-rq-029031032007008-four-track-strengthening-normalization
   report_field_refs:
     - bridge_consistency_status
@@ -483,7 +483,7 @@ asb16-rq-029:
     - full-scan
     - three-plane
     - ci
-  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-four-track-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-strengthening-profile-asb16-rq-029031032007008-2026-03-06
   review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-033---batch-4-asb16-rq-029031032007008-four-track-strengthening-normalization
   report_field_refs:
     - semantic_convergence_status
@@ -766,7 +766,7 @@ asb16-rq-023:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#412-discovery_dual_track_requiredization_activation_contract_v1-p0
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-020---discovery-dual-track-activation--apply-time-coverage-fail-close-intake-asb16-rq-023024
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-020---sra-discovery-dual-track-hardening-intake-asb16-rq-023024
   report_field_refs:
     - discovery_requiredization_status
     - requiredization_triggered
@@ -845,7 +845,7 @@ asb16-rq-032:
     - full-scan
     - three-plane
     - ci
-  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-four-track-strengthening-profile-asb16-rq-029031032007008-2026-03-06
+  governance_anchor: docs/governance/identity-actor-session-binding-governance-v1.6.0.md#88-batch-4-row-level-strengthening-profile-asb16-rq-029031032007008-2026-03-06
   review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.md#fix16-029---outbound-headstamp-pre-send-hard-gate-intake-asb16-rq-032
   report_field_refs:
     - headstamp_status
@@ -907,7 +907,7 @@ asb16-rq-034:
     - three-plane
     - ci
   governance_anchor: docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md#2-decision-freeze-canonical-plugin-topology--ownership
-  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.2.md#5-required-protocol-execution-set-v162
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.2.md#5-protocol-execution-set-v162-state-update
   report_field_refs:
     - multimodal_plugin_enforcement_status
     - multimodal_runtime_evidence_status

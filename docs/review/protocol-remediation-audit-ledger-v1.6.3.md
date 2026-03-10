@@ -348,3 +348,21 @@ Observed:
    - return `SKIPPED_NOT_REQUIRED` with reason `target_excluded_by_gate_profile`.
 3. If a targeted profile is used on strict operations (`ci/update/readiness/...`):
    - return `FAIL_REQUIRED` with explicit `mapping_errors` in payload (fail-close contract preserved).
+
+### 11.6 Round-33.2 contract-binding reference integrity closure (2026-03-10)
+
+1. Added protocol validator:
+   - `scripts/validate_contract_binding_reference_integrity.py`
+2. Validator scope is requirement-row structural integrity for:
+   - `requirement_key` / `requirement_id` format
+   - `validator_ids` non-empty and script existence
+   - `gate_surfaces` token validity
+   - `governance_anchor` / `review_anchor` / `kernel_source_path` file existence and markdown anchor resolvability
+3. Fixed stale anchors in:
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+4. Integrated into machine control-plane status rendering:
+   - `scripts/render_control_plane_status.py`
+   - `identity/protocol/mappings/control-plane-status.v1.6.json`
+5. Round replay outcome:
+   - `validate_contract_binding_reference_integrity` = `PASS_REQUIRED`
+   - control-plane status sync remains `PASS_REQUIRED`

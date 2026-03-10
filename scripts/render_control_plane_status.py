@@ -34,6 +34,11 @@ CHECKS: tuple[CheckSpec, ...] = (
         status_key="control_plane_invariants_status",
     ),
     CheckSpec(
+        name="contract_binding_reference_integrity",
+        command=("python3", "scripts/validate_contract_binding_reference_integrity.py", "--json-only"),
+        status_key="contract_binding_reference_integrity_status",
+    ),
+    CheckSpec(
         name="layer_targeted_gate_profile",
         command=("python3", "scripts/validate_layer_targeted_gate_profile.py", "--json-only"),
         status_key="layer_targeted_gate_profile_status",
