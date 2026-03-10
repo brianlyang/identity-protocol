@@ -16,6 +16,8 @@ PLUGIN_DOC_CONTROL_DEFAULT_REL = "identity/protocol/plugins/PLUGIN_DOC_CONTROL.c
 PLUGIN_FAILCLOSE_GOVERNANCE_CURRENT_DEFAULT_REL = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
 GITHUB_OFFLOAD_CURRENT_DEFAULT_REL = "identity/protocol/mappings/github-control-plane-offload.current.yaml"
 LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+STREAM_DOC_REGISTRY_CURRENT_DEFAULT_REL = "identity/protocol/mappings/stream-doc-registry.current.yaml"
+DOC_EVIDENCE_ALLOWLIST_CURRENT_DEFAULT_REL = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -152,6 +154,168 @@ def _scan_forbidden_versioned_refs(
     return violations, stale_reasons
 
 
+def _validate_mapping_alias_contract(
+    *,
+    repo_root: Path,
+    alias_field: str,
+    alias_cfg: dict[str, Any],
+    configured_current_file: str,
+    expected_active_prefix: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]], int]:
+    state = {
+        "alias_enabled": False,
+        "current_configured_file": configured_current_file,
+        "current_path": (repo_root / configured_current_file).resolve(),
+        "current_resolved_path": (repo_root / configured_current_file).resolve(),
+        "active_file": "",
+        "parse_ok": False,
+    }
+    violations: list[dict[str, Any]] = []
+    violation_count = 0
+
+    if not isinstance(alias_cfg, dict) or not alias_cfg:
+        return state, violations, violation_count
+
+    state["alias_enabled"] = True
+    cfg_current_file = str(alias_cfg.get("current_file", "")).strip()
+    if cfg_current_file:
+        state["current_configured_file"] = cfg_current_file
+    state["current_path"] = (repo_root / str(state["current_configured_file"])).resolve()
+    state["current_resolved_path"] = state["current_path"]
+
+    if not str(state["current_configured_file"]).endswith(".current.yaml"):
+        violation_count += 1
+        violations.append(
+            {
+                "field": alias_field,
+                "reason": "current_file_non_canonical",
+                "current_file": state["current_configured_file"],
+            }
+        )
+
+    active_path, active_file, alias_error = _resolve_current_yaml_alias(
+        repo_root, str(state["current_configured_file"])
+    )
+    state["active_file"] = active_file
+    if alias_error:
+        violation_count += 1
+        violations.append(
+            {
+                "field": alias_field,
+                "reason": alias_error,
+                "current_file": state["current_configured_file"],
+                "active_file": active_file,
+            }
+        )
+    else:
+        state["current_resolved_path"] = active_path
+        if active_file and expected_active_prefix and not active_file.startswith(expected_active_prefix):
+            violation_count += 1
+            violations.append(
+                {
+                    "field": alias_field,
+                    "reason": "active_file_non_canonical",
+                    "active_file": active_file,
+                }
+            )
+        if not active_path.exists() or not active_path.is_file():
+            violation_count += 1
+            violations.append(
+                {
+                    "field": alias_field,
+                    "reason": "active_file_not_found",
+                    "active_file": active_file,
+                }
+            )
+        else:
+            active_doc = _load_yaml(active_path)
+            if not active_doc:
+                violation_count += 1
+                violations.append(
+                    {
+                        "field": alias_field,
+                        "reason": "active_file_parse_failed",
+                        "active_file": active_file,
+                    }
+                )
+            else:
+                state["parse_ok"] = True
+                required_fields = _as_str_list(alias_cfg.get("required_fields"))
+                for field_name in required_fields:
+                    value = active_doc.get(field_name)
+                    if value in (None, "", [], {}):
+                        violation_count += 1
+                        violations.append(
+                            {
+                                "field": alias_field,
+                                "reason": "required_field_missing_or_empty",
+                                "active_file": active_file,
+                                "required_field": field_name,
+                            }
+                        )
+
+    forbid_cfg = alias_cfg.get("forbid_versioned_reference")
+    if isinstance(forbid_cfg, dict):
+        ref_regex = str(forbid_cfg.get("regex", "")).strip()
+        ref_surfaces = _as_str_list(forbid_cfg.get("surfaces"))
+        if not ref_regex:
+            violation_count += 1
+            violations.append(
+                {
+                    "field": alias_field,
+                    "reason": "forbid_versioned_reference_regex_missing",
+                }
+            )
+        elif not ref_surfaces:
+            violation_count += 1
+            violations.append(
+                {
+                    "field": alias_field,
+                    "reason": "forbid_versioned_reference_surfaces_missing",
+                }
+            )
+        else:
+            skip_files: set[Path] = set()
+            resolved_active = (
+                (repo_root / str(state["active_file"])).resolve()
+                if str(state["active_file"])
+                else None
+            )
+            if resolved_active and resolved_active.exists():
+                skip_files.add(resolved_active)
+            ref_violations, ref_stale = _scan_forbidden_versioned_refs(
+                repo_root=repo_root,
+                regex=ref_regex,
+                surfaces=ref_surfaces,
+                skip_files=skip_files,
+            )
+            for reason in ref_stale:
+                violation_count += 1
+                violations.append(
+                    {
+                        "field": alias_field,
+                        "reason": reason,
+                        "regex": ref_regex,
+                        "surfaces": ref_surfaces,
+                    }
+                )
+            for row in ref_violations:
+                hit_count = int(row.get("hit_count", 1))
+                violation_count += hit_count
+                violations.append(
+                    {
+                        "field": alias_field,
+                        "reason": str(row.get("reason", "")),
+                        "regex": ref_regex,
+                        "surfaces": ref_surfaces,
+                        "hit_files": row.get("hit_files", []),
+                        "hit_count": row.get("hit_count", 0),
+                    }
+                )
+
+    return state, violations, violation_count
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate control-plane invariants (bundle/mapping parity + fail-close plugin wiring).")
     parser.add_argument("--repo-root", default=".")
@@ -178,6 +342,14 @@ def main() -> int:
     parser.add_argument(
         "--layer-gate-profile-current-file",
         default=LAYER_TARGETED_GATE_PROFILE_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
+        "--stream-doc-registry-current-file",
+        default=STREAM_DOC_REGISTRY_CURRENT_DEFAULT_REL,
+    )
+    parser.add_argument(
+        "--doc-evidence-allowlist-current-file",
+        default=DOC_EVIDENCE_ALLOWLIST_CURRENT_DEFAULT_REL,
     )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
@@ -211,6 +383,20 @@ def main() -> int:
     layer_gate_profile_alias_enabled = False
     layer_gate_profile_parse_ok = False
     layer_gate_profile_violation_count = 0
+    stream_doc_registry_current_configured_file = str(args.stream_doc_registry_current_file)
+    stream_doc_registry_current_path = (repo_root / stream_doc_registry_current_configured_file).resolve()
+    stream_doc_registry_current_resolved_path = stream_doc_registry_current_path
+    stream_doc_registry_active_file = ""
+    stream_doc_registry_alias_enabled = False
+    stream_doc_registry_parse_ok = False
+    stream_doc_registry_violation_count = 0
+    doc_evidence_allowlist_current_configured_file = str(args.doc_evidence_allowlist_current_file)
+    doc_evidence_allowlist_current_path = (repo_root / doc_evidence_allowlist_current_configured_file).resolve()
+    doc_evidence_allowlist_current_resolved_path = doc_evidence_allowlist_current_path
+    doc_evidence_allowlist_active_file = ""
+    doc_evidence_allowlist_alias_enabled = False
+    doc_evidence_allowlist_parse_ok = False
+    doc_evidence_allowlist_violation_count = 0
     plugin_control_plane_alias_enabled = False
     plugin_control_plane_alias_parse_ok = False
     plugin_control_plane_alias_violation_count = 0
@@ -595,6 +781,50 @@ def main() -> int:
                                 hit_files=row.get("hit_files", []),
                                 hit_count=row.get("hit_count", 0),
                             )
+
+        stream_doc_registry_alias_cfg = (
+            (invariants.get("stream_doc_registry_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        stream_doc_state, stream_doc_violations, stream_doc_violation_count = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="stream_doc_registry_alias",
+            alias_cfg=stream_doc_registry_alias_cfg if isinstance(stream_doc_registry_alias_cfg, dict) else {},
+            configured_current_file=stream_doc_registry_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/stream-doc-registry.v",
+        )
+        stream_doc_registry_alias_enabled = bool(stream_doc_state.get("alias_enabled", False))
+        stream_doc_registry_current_configured_file = str(stream_doc_state.get("current_configured_file", ""))
+        stream_doc_registry_current_path = Path(stream_doc_state.get("current_path", stream_doc_registry_current_path))
+        stream_doc_registry_current_resolved_path = Path(
+            stream_doc_state.get("current_resolved_path", stream_doc_registry_current_resolved_path)
+        )
+        stream_doc_registry_active_file = str(stream_doc_state.get("active_file", ""))
+        stream_doc_registry_parse_ok = bool(stream_doc_state.get("parse_ok", False))
+        stream_doc_registry_violation_count = stream_doc_violation_count
+        for row in stream_doc_violations:
+            violations.append(row)
+
+        doc_evidence_allowlist_alias_cfg = (
+            (invariants.get("doc_evidence_allowlist_alias") or {}) if isinstance(invariants, dict) else {}
+        )
+        doc_allow_state, doc_allow_violations, doc_allow_violation_count = _validate_mapping_alias_contract(
+            repo_root=repo_root,
+            alias_field="doc_evidence_allowlist_alias",
+            alias_cfg=doc_evidence_allowlist_alias_cfg if isinstance(doc_evidence_allowlist_alias_cfg, dict) else {},
+            configured_current_file=doc_evidence_allowlist_current_configured_file,
+            expected_active_prefix="identity/protocol/mappings/doc-evidence-allowlist.v",
+        )
+        doc_evidence_allowlist_alias_enabled = bool(doc_allow_state.get("alias_enabled", False))
+        doc_evidence_allowlist_current_configured_file = str(doc_allow_state.get("current_configured_file", ""))
+        doc_evidence_allowlist_current_path = Path(doc_allow_state.get("current_path", doc_evidence_allowlist_current_path))
+        doc_evidence_allowlist_current_resolved_path = Path(
+            doc_allow_state.get("current_resolved_path", doc_evidence_allowlist_current_resolved_path)
+        )
+        doc_evidence_allowlist_active_file = str(doc_allow_state.get("active_file", ""))
+        doc_evidence_allowlist_parse_ok = bool(doc_allow_state.get("parse_ok", False))
+        doc_evidence_allowlist_violation_count = doc_allow_violation_count
+        for row in doc_allow_violations:
+            violations.append(row)
 
         plugin_alias_cfg = (invariants.get("plugin_control_plane_alias") or {}) if isinstance(invariants, dict) else {}
         if isinstance(plugin_alias_cfg, dict) and plugin_alias_cfg:
@@ -1567,6 +1797,20 @@ def main() -> int:
         "layer_gate_profile_active_file": layer_gate_profile_active_file,
         "layer_gate_profile_parse_ok": layer_gate_profile_parse_ok,
         "layer_gate_profile_violation_count": layer_gate_profile_violation_count,
+        "stream_doc_registry_alias_enabled": stream_doc_registry_alias_enabled,
+        "stream_doc_registry_current_file": str(stream_doc_registry_current_path),
+        "stream_doc_registry_current_configured_file": stream_doc_registry_current_configured_file,
+        "stream_doc_registry_current_resolved_file": str(stream_doc_registry_current_resolved_path),
+        "stream_doc_registry_active_file": stream_doc_registry_active_file,
+        "stream_doc_registry_parse_ok": stream_doc_registry_parse_ok,
+        "stream_doc_registry_violation_count": stream_doc_registry_violation_count,
+        "doc_evidence_allowlist_alias_enabled": doc_evidence_allowlist_alias_enabled,
+        "doc_evidence_allowlist_current_file": str(doc_evidence_allowlist_current_path),
+        "doc_evidence_allowlist_current_configured_file": doc_evidence_allowlist_current_configured_file,
+        "doc_evidence_allowlist_current_resolved_file": str(doc_evidence_allowlist_current_resolved_path),
+        "doc_evidence_allowlist_active_file": doc_evidence_allowlist_active_file,
+        "doc_evidence_allowlist_parse_ok": doc_evidence_allowlist_parse_ok,
+        "doc_evidence_allowlist_violation_count": doc_evidence_allowlist_violation_count,
         "plugin_control_plane_alias_enabled": plugin_control_plane_alias_enabled,
         "plugin_control_plane_alias_parse_ok": plugin_control_plane_alias_parse_ok,
         "plugin_control_plane_alias_violation_count": plugin_control_plane_alias_violation_count,

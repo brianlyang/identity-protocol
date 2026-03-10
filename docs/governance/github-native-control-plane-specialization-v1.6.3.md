@@ -311,7 +311,7 @@ Gate rule:
 
 1. No claim of "phase delivered" is allowed unless the corresponding phase target fields in `github-control-plane-offload` YAML are machine-evidenced.
 2. No v1.6.3 implementation claim can bypass this addendum with prose-only signoff.
-3. v1.6.x stream governance/review doc set is SSOT-driven by `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`; validators must not hardcode stream doc paths independently.
+3. v1.6.x stream governance/review doc set is SSOT-driven by `identity/protocol/mappings/stream-doc-registry.current.yaml`; validators must not hardcode stream doc paths independently.
 
 ### 7.6 Audit-feedback absorption (Round-31.1, 2026-03-10)
 

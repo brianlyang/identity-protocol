@@ -19,7 +19,7 @@ Quick entrypoint for audit history and remediation closure records.
   - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
   - Any `artifacts/` mirror is non-normative evidence only.
 - Canonical v1.6.x stream doc registry (single source for governance/review stream paths):
-  - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+  - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 - Canonical layer-targeted required-gate profile mapping (scan/inspection-only trims; strict operations stay full):
   - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
 - Canonical actor-scoped session binding governance (v1.5.0):

@@ -432,5 +432,26 @@ Observed:
    - invariants now fail-close when current alias is missing/invalid, active profile file is missing, or required profile keys are dropped.
    - invariants now block direct versioned `layer-targeted-gate-profile.v*` literals under strict execution surfaces (`scripts/`, `.github/workflows/`).
 4. SSOT/doc registry alignment:
-   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml` now references `layer-targeted-gate-profile.current.yaml`.
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml` now references `layer-targeted-gate-profile.current.yaml`.
    - governance/readme index references are updated to current alias entry.
+
+### 11.10 Round-33.6 stream-doc/evidence alias anti-break-chain closure (2026-03-10)
+
+1. Gap:
+   - stream governance registry and evidence allowlist were still consumed via versioned literals in strict validators.
+   - version bump would require touching validator code paths, violating pointer-switch upgrade discipline.
+2. Fix:
+   - added alias entry files:
+     - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+     - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - switched validator defaults to alias entry:
+     - `scripts/docs_command_contract_check.py`
+     - `scripts/validate_doc_evidence_persistence.py`
+     - `scripts/validate_contract_binding_reference_integrity.py`
+   - extended control-plane invariants alias checks:
+     - `stream_doc_registry_alias`
+     - `doc_evidence_allowlist_alias`
+3. Contract hardening:
+   - invariants fail-close when alias entry is invalid, active file missing, required fields dropped, or strict execution surfaces reference versioned literals directly.
+4. SSOT alignment:
+   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml` mandatory static docs now include both new alias files.

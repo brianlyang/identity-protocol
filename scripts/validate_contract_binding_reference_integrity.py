@@ -43,6 +43,24 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    current_doc = _load_yaml(configured_path)
+    if not current_doc:
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
 def _as_str_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -160,17 +178,24 @@ def main() -> int:
     parser.add_argument("--contract-mapping", default="identity/protocol/mappings/contract-binding.v1.6.yaml")
     parser.add_argument(
         "--stream-doc-registry",
-        default="identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+        default="identity/protocol/mappings/stream-doc-registry.current.yaml",
     )
     parser.add_argument("--json-only", action="store_true")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).expanduser().resolve()
     mapping_path = (repo_root / str(args.contract_mapping)).resolve()
-    stream_doc_registry_path = (repo_root / str(args.stream_doc_registry)).resolve()
+    stream_doc_registry_entry_path = (repo_root / str(args.stream_doc_registry)).resolve()
+    stream_doc_registry_path, stream_doc_registry_active_file, stream_doc_registry_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.stream_doc_registry)
+    )
 
     stale_reasons: list[str] = []
     violations: list[dict[str, Any]] = []
+    if stream_doc_registry_alias_error:
+        stale_reasons.append(
+            f"stream_doc_registry_alias_resolution_failed:{stream_doc_registry_entry_path}:{stream_doc_registry_alias_error}:{stream_doc_registry_active_file}"
+        )
     stream_allowed_docs, stream_registry_errors = _load_stream_allowed_docs(stream_doc_registry_path)
     stale_reasons.extend(stream_registry_errors)
 
@@ -351,7 +376,10 @@ def main() -> int:
         "contract_binding_reference_integrity_status": status,
         "error_code": error_code,
         "contract_mapping": str(mapping_path),
+        "stream_doc_registry_entry": str(stream_doc_registry_entry_path),
         "stream_doc_registry": str(stream_doc_registry_path),
+        "stream_doc_registry_active_file": stream_doc_registry_active_file,
+        "stream_doc_registry_alias_error": stream_doc_registry_alias_error,
         "stream_doc_registry_parse_ok": len(stream_registry_errors) == 0,
         "stream_allowed_doc_count": len(stream_allowed_docs),
         "requirement_row_count": len(rows),

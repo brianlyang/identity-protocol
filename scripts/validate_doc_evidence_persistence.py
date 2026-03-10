@@ -33,7 +33,7 @@ import yaml
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_POLICY = "IP-DOC-EVID-001"
-STREAM_DOC_REGISTRY_FILE = "identity/protocol/mappings/stream-doc-registry.v1.6.yaml"
+STREAM_DOC_REGISTRY_FILE = "identity/protocol/mappings/stream-doc-registry.current.yaml"
 
 TMP_PREFIXES = ("/tmp/", "/private/tmp/")
 ALLOWED_PERSISTENT_PREFIXES = (
@@ -46,7 +46,7 @@ PATH_TOKEN_RE = re.compile(
     r"(?P<path>(?:/tmp/|/private/tmp/|activity/evidence/|\.identity/)[^\s`\"'()<>\]]+)"
 )
 REQUIRED_TUPLE_FIELDS = ("sha256", "command", "rc", "timestamp")
-EVIDENCE_ALLOWLIST_FILE = "identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml"
+EVIDENCE_ALLOWLIST_FILE = "identity/protocol/mappings/doc-evidence-allowlist.current.yaml"
 
 
 def _norm_path(value: str) -> str:
@@ -62,18 +62,49 @@ def _doc_scope(rel: str) -> str:
     return "unknown"
 
 
-def _load_strict_doc_scopes(repo_root: Path) -> tuple[dict[str, str], list[str]]:
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    current_doc = _load_yaml(configured_path)
+    if not current_doc:
+        return configured_path, "", "current_file_parse_failed"
+    active_file = _norm_path(current_doc.get("active_file", ""))
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
+def _load_strict_doc_scopes(repo_root: Path) -> tuple[dict[str, str], list[str], Path, Path]:
     """
     Read active stream governance/review docs from registry as single source.
     Returns (doc->scope map, validation_errors).
     """
-    registry_path = (repo_root / STREAM_DOC_REGISTRY_FILE).resolve()
+    registry_entry_path = (repo_root / STREAM_DOC_REGISTRY_FILE).resolve()
+    registry_path, active_file, alias_error = _resolve_current_yaml_alias(repo_root, STREAM_DOC_REGISTRY_FILE)
+    if alias_error:
+        return (
+            {},
+            [f"stream_doc_registry_invalid:alias_resolution_failed:{STREAM_DOC_REGISTRY_FILE}:{alias_error}:{active_file}"],
+            registry_entry_path,
+            registry_path,
+        )
     if not registry_path.exists():
-        return {}, [f"stream_doc_registry_missing:{STREAM_DOC_REGISTRY_FILE}"]
+        return {}, [f"stream_doc_registry_missing:{registry_path}"], registry_entry_path, registry_path
     data = _load_yaml(registry_path)
     rows = data.get("stream_docs")
     if not isinstance(rows, list) or not rows:
-        return {}, [f"stream_doc_registry_invalid:stream_docs_non_empty_list_required:{STREAM_DOC_REGISTRY_FILE}"]
+        return (
+            {},
+            [f"stream_doc_registry_invalid:stream_docs_non_empty_list_required:{registry_path}"],
+            registry_entry_path,
+            registry_path,
+        )
 
     scopes: dict[str, str] = {}
     errors: list[str] = []
@@ -103,7 +134,7 @@ def _load_strict_doc_scopes(repo_root: Path) -> tuple[dict[str, str], list[str]]
 
     if not scopes:
         errors.append("stream_doc_registry_invalid:no_strict_docs_resolved")
-    return scopes, errors
+    return scopes, errors, registry_entry_path, registry_path
 
 
 def _sha256_file(path: Path) -> str:
@@ -417,8 +448,25 @@ def main() -> int:
     violations: list[dict[str, Any]] = []
 
     by_mirror, by_tmp, manifest_files = _load_manifest_records(repo_root)
-    strict_doc_scopes, stream_registry_errors = _load_strict_doc_scopes(repo_root)
-    evidence_allowlist_path = (repo_root / EVIDENCE_ALLOWLIST_FILE).resolve()
+    (
+        strict_doc_scopes,
+        stream_registry_errors,
+        stream_registry_entry_path,
+        stream_registry_resolved_path,
+    ) = _load_strict_doc_scopes(repo_root)
+    evidence_allowlist_entry_path = (repo_root / EVIDENCE_ALLOWLIST_FILE).resolve()
+    evidence_allowlist_path, evidence_allowlist_active_file, evidence_allowlist_alias_error = _resolve_current_yaml_alias(
+        repo_root, EVIDENCE_ALLOWLIST_FILE
+    )
+    if evidence_allowlist_alias_error:
+        violations.append(
+            {
+                "type": "evidence_allowlist_invalid",
+                "error_code": ERR_POLICY,
+                "reason": f"evidence_allowlist_alias_resolution_failed:{EVIDENCE_ALLOWLIST_FILE}:{evidence_allowlist_alias_error}:{evidence_allowlist_active_file}",
+                "allowlist_file": EVIDENCE_ALLOWLIST_FILE,
+            }
+        )
     evidence_allowlist = _load_yaml(evidence_allowlist_path) if evidence_allowlist_path.exists() else {}
     strict_doc_allowlist = evidence_allowlist.get("strict_docs") if isinstance(evidence_allowlist, dict) else {}
     if not isinstance(strict_doc_allowlist, dict):
@@ -438,6 +486,8 @@ def main() -> int:
                 "error_code": ERR_POLICY,
                 "reason": reason,
                 "registry_file": STREAM_DOC_REGISTRY_FILE,
+                "registry_entry_path": str(stream_registry_entry_path),
+                "registry_resolved_path": str(stream_registry_resolved_path),
             }
         )
     for orphan in sorted(allowlist_scope_keys - strict_scope_keys):
@@ -449,6 +499,8 @@ def main() -> int:
                 "reason": "allowlist_entry_not_in_stream_registry",
                 "registry_file": STREAM_DOC_REGISTRY_FILE,
                 "allowlist_file": EVIDENCE_ALLOWLIST_FILE,
+                "allowlist_entry_path": str(evidence_allowlist_entry_path),
+                "allowlist_resolved_path": str(evidence_allowlist_path),
             }
         )
 
@@ -574,10 +626,14 @@ def main() -> int:
         "doc_evidence_persistence_status": status,
         "error_code": "" if status == STATUS_PASS_REQUIRED else ERR_POLICY,
         "stream_doc_registry_file": STREAM_DOC_REGISTRY_FILE,
+        "stream_doc_registry_entry_path": str(stream_registry_entry_path),
+        "stream_doc_registry_resolved_path": str(stream_registry_resolved_path),
         "stream_doc_registry_error_count": len(stream_registry_errors),
         "stream_doc_registry_errors": stream_registry_errors,
         "evidence_allowlist_file": EVIDENCE_ALLOWLIST_FILE,
+        "evidence_allowlist_entry_path": str(evidence_allowlist_entry_path),
         "evidence_allowlist_path": str(evidence_allowlist_path),
+        "evidence_allowlist_alias_error": evidence_allowlist_alias_error,
         "strict_docs_checked": list(strict_doc_scopes.keys()),
         "docs_checked_total": len(docs_checked),
         "docs_checked": sorted(docs_checked),
