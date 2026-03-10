@@ -1031,3 +1031,31 @@ Observed replay summary:
    - row count now `33`,
    - fail-close rows remain concentrated in active strict fail-close plugin lanes (`RQ-034` / `RQ-035`), not from newly expanded parity rows.
 3. `validate_required_gate_surface_drift` remains `PASS_REQUIRED` after bundle expansion.
+
+## 21) Round-30.9 bundle parity zero-gap closure (2026-03-10)
+
+### 21.1 Objective
+
+1. Close the last parity gap rows (`RQ-031` / `RQ-032`) without weakening strict fail-close semantics.
+2. Keep ownership split explicit:
+   - protocol-layer parity wiring is fixed in base repo,
+   - instance runtime evidence debt remains owned by instances.
+
+### 21.2 Protocol changes landed
+
+1. `scripts/required_gate_bundle_runner.py`
+   - added `asb16-rq-031` and `asb16-rq-032` to `BUNDLE_REQUIREMENT_ORDER`.
+   - added target/status mapping:
+     - `asb16-rq-031 -> prompt_import_executable_coupling -> prompt_kernel_executable_coupling_status`
+     - `asb16-rq-032 -> headstamp_pre_send_hard_gate -> send_time_gate_status`
+2. `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+   - `bundle_mapping_parity.baseline_missing_rows: 0`.
+3. `identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml`
+   - baseline updated to `0`,
+   - milestones converge to strict-zero target.
+
+### 21.3 Closure statement
+
+1. Bundle/mapping parity gap is now zero under freeze invariant:
+   - `mapping_rows_missing_in_bundle_count=0`.
+2. Remaining fail-close signals seen in replay are active strict validators (for example `RQ-034` / `RQ-035`) and are classified as runtime evidence obligations, not parity wiring regression.

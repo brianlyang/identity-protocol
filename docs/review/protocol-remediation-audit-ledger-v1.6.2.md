@@ -779,3 +779,35 @@ Files:
 2. Rationale:
    - both are strict high-sensitivity output gates with existing fail-close pressure,
    - held for dedicated hardening stream to avoid mixing parity burn-down with output-gate semantics shifts.
+
+## 20) Round-30.9 addendum: bundle parity zero-gap closure (2026-03-10)
+
+### 20.1 Audit conclusion
+
+1. Final parity residual rows (`asb16-rq-031` / `asb16-rq-032`) are now wired into bundle.
+2. Control-plane parity is closed at mapping level:
+   - `mapping_rows_missing_in_bundle_count=0`.
+3. No new error-code family was introduced by this closure.
+
+### 20.2 Fix set audited
+
+1. `scripts/required_gate_bundle_runner.py`
+   - add requirements:
+     - `asb16-rq-031`
+     - `asb16-rq-032`
+   - add target/status mappings for both rows.
+2. `identity/protocol/mappings/control-plane-invariants.v1.6.yaml`
+   - freeze baseline set to `0`.
+3. `identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml`
+   - baseline and milestones converged to zero-gap target.
+
+### 20.3 Replay summary
+
+1. `validate_control_plane_invariants` -> `PASS_REQUIRED`, baseline `0`, missing rows `0`.
+2. `validate_required_gate_surface_drift` -> `PASS_REQUIRED`.
+3. Bundle validate matrix remains deterministic; active fail-close rows remain concentrated in runtime-proof strict lanes (`RQ-034` / `RQ-035`), not parity mapping.
+
+### 20.4 Ownership split (enforced)
+
+1. Protocol-layer issues (mapping/bundle parity, wiring, path/cwd stability) are closed by base repo changes in this round.
+2. Instance-layer technical debt (runtime report completeness, run-id-consistent runtime evidence) remains instance-owned and is not relabeled as protocol parity regression.
