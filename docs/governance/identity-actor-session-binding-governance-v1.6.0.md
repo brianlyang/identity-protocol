@@ -28,16 +28,17 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
 
 ### 0.1 Single execution entrypoint (topic SSOT)
 
-1. This document is the only normative execution entrypoint for actor-session-binding governance in v1.6.
+1. This document is the historical execution baseline for `v1.6.0` actor-session-binding governance, not the active normative execution entrypoint.
 2. `artifacts/**` and ad-hoc notes are evidence-only; they cannot override this document.
-3. No same-topic parallel normative document is allowed.
+3. New normative updates must be written to active stream docs resolved from `identity/protocol/mappings/stream-doc-registry.current.yaml`, not appended here as current-state policy.
 
 ### 0.2 SSOT layering relationship (anti-drift)
 
-1. This file is topic-canonical for v1.6 planning/execution.
+1. This file is topic-canonical historical baseline for `v1.6.0` planning/execution snapshots.
 2. `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` remains global protocol execution SSOT.
 3. `docs/governance/identity-actor-session-binding-governance-v1.5.0.md` remains the authoritative v1.5 closure record and historical baseline.
 4. v1.6 governance updates must not rewrite historical v1.5 evidence; only carry-over boundaries may be referenced.
+5. For current-state decisions, stream docs registered by `identity/protocol/mappings/stream-doc-registry.current.yaml` take precedence over this historical baseline.
 
 ### 0.2A Headstamp/HUD extraction freeze (v1.6.1 handoff)
 
