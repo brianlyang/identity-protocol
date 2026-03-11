@@ -144,6 +144,46 @@ Operator intent (lightweight by design):
 2. Machines enforce fixed roots and projection parity.
 3. Instance owners install/attach capabilities under fixed runtime roots only.
 
+#### 3.1.5 Protocol Unique Ingress Freeze (mandatory, no ambiguity)
+
+`v1.6.4` freezes one protocol ingress for identity strict actions:
+
+1. Canonical unique ingress script:
+   - `scripts/required_gate_bundle_runner.py`
+2. Canonical ingress key:
+   - `required_gate_bundle_runner`
+3. Canonical ingress error family:
+   - `IP-GATE-ENTRY-001`
+   - `IP-GATE-ENTRY-002`
+
+Hard rules:
+
+1. Every identity `CURRENT_TASK.json` must include:
+   - `protocol_unique_entry_gate_contract_v1`
+2. `protocol_unique_entry_gate_contract_v1.entry_script` must equal:
+   - `scripts/required_gate_bundle_runner.py`
+3. `protocol_unique_entry_gate_contract_v1.bundle_key` must equal:
+   - `required_gate_bundle_runner`
+4. Strict operations (`activate/update/mutation/readiness/e2e/ci/validate/three-plane`) must be covered in:
+   - `protocol_unique_entry_gate_contract_v1.enforce_on_operations`
+5. Any strict operation that cannot prove this unique-ingress contract is treated as `FAIL_REQUIRED`.
+
+Machine enforcement boundary:
+
+1. Contract validator:
+   - `scripts/validate_protocol_unique_entry_gate.py`
+2. Coverage gate binding:
+   - `scripts/validate_required_contract_coverage.py`
+3. Legacy upgrade backfill:
+   - `scripts/repair_contract_backfill.py --apply --json-only`
+4. New pack scaffold default:
+   - `scripts/create_identity_pack.py`
+
+Interpretation:
+
+1. This is protocol-core governance, not business-script-specific hardcoding.
+2. Instance autonomy remains valid only inside this ingress boundary.
+
 ### 3.2 Monotonic level contract (allow upgrade, forbid downgrade)
 
 1. Each strict contract must define an effective enforcement floor.
