@@ -60,6 +60,11 @@ V150_REVIEW_HISTORICAL_DOC = "docs/review/protocol-remediation-audit-ledger-v1.5
 V150_REVIEW_REQUIRED_MARKERS = (
     "historical v1.5 review ledger",
     "stream-doc-registry.current.yaml",
+    "contract-binding.current.yaml",
+    "control-plane-invariants.current.yaml",
+    "control-plane-budget.current.yaml",
+    "control-plane-status.current.yaml",
+    "github-control-plane-offload.current.yaml",
     "historical replay context only and must not be treated as current wiring contract input",
 )
 V150_REVIEW_FORBIDDEN_MARKERS = (
@@ -70,6 +75,11 @@ V16_REVIEW_HISTORICAL_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.
 V16_REVIEW_REQUIRED_MARKERS = (
     "historical/replay trace; it is **not** the standalone source for current-state protocol judgments",
     "stream-doc-registry.current.yaml",
+    "contract-binding.current.yaml",
+    "control-plane-invariants.current.yaml",
+    "control-plane-budget.current.yaml",
+    "control-plane-status.current.yaml",
+    "github-control-plane-offload.current.yaml",
     "historical replay context only and must not be treated as current wiring contract input",
 )
 V16_REVIEW_FORBIDDEN_MARKERS = (
