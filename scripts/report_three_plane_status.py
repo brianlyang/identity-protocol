@@ -761,7 +761,11 @@ def _instance_plane_status(
             ext="json",
         )
     )
-    bundle_run_token = str(args.required_gates_run_id or "").strip() or f"three-plane-{args.identity_id}"
+    bundle_run_token = (
+        str(args.required_gates_run_id or "").strip()
+        or str(report_run_id or "").strip()
+        or f"three-plane-{args.identity_id}"
+    )
     required_gate_bundle_receipt = str(
         runtime_temp_file(
             channel="required-gate-bundle",
