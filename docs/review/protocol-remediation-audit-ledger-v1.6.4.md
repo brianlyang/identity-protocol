@@ -37,6 +37,26 @@ Observed semantic gaps (to be fixed in code phase):
 2. Reasoning effective level can remain `L1` by default without explicit floor promotion.
 3. Required-gate reasoning path can skip run-id propagation when no explicit report path is given.
 
+## 0.1 Discussion alignment snapshot (2026-03-11)
+
+This round records cross-verified discussion conclusions and freezes them as v1.6.4 planning constraints.
+
+1. Four core items are locked as stream-level non-negotiable scope:
+   - config-first standard flow
+   - upgrade-only (no-downgrade) monotonic enforcement
+   - newcomer/memory-loss-safe unique-entry control
+   - dual exemplar plugins for reusable onboarding.
+2. Dual exemplar plugins are explicitly in-scope for planning:
+   - AI folder governance plugin (runtime boundary + pointerized references)
+   - AI search plugin (provider-pluggable, configuration-driven, no protocol hardcoding).
+3. AI search provider strategy is frozen as profile-based replaceable wiring:
+   - BigModel web-search can be first provider reference
+     (`https://docs.bigmodel.cn/cn/guide/tools/web-search`)
+   - provider replacement must not require protocol contract rewrites.
+4. This stream phase is documentation-first:
+   - no validator/business script changes are claimed in this checkpoint.
+   - code-phase starts only after governance/review docs are accepted.
+
 ## 1) Four-track + context verification summary
 
 ### T1 Roundtable/internal replay
@@ -74,12 +94,14 @@ Observed semantic gaps (to be fixed in code phase):
 3. Strict lane multimodal path cannot silently pass with non-materialized runtime proof when done-transition safety is claimed.
 4. AI folder governance plugin template is added via standard plugin-join flow (registry + governance + mapping + bundle).
 5. All stream docs and aliases stay machine-consistent via `docs_command_contract_check`.
+6. AI search plugin template is added with provider-pluggable runtime bindings and evidence projection fields.
 
 ## 3) Residual risk before code-phase closure
 
 1. If monotonic floor remains documentation-only, downgrade risk remains.
 2. If run-id propagation remains conditional in reasoning strict paths, fallback ambiguity remains.
 3. If multimodal defer semantics remain too permissive in strict done-transition contexts, user-perceived enforcement weakness remains.
+4. If AI search onboarding is provider-hardcoded instead of profile-driven, plugin extensibility will regress.
 
 ## 4) Current posture
 

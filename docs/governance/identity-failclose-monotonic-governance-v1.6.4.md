@@ -86,19 +86,38 @@ Protocol control must be understandable and executable without relying on person
    - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`.
 4. If a new engineer follows only current-pointer files, they must be able to wire a new contract without hidden tribal knowledge.
 
-### 3.4 AI folder governance plugin exemplar (new stream template)
+### 3.4 Dual exemplar plugins (AI folder governance + AI search)
 
-v1.6.4 uses AI folder normalization as a standardization exemplar:
+v1.6.4 defines two exemplar plugins so that teams can copy a reusable pattern instead of inventing per-instance wiring:
 
-1. Plugin category: protocol hygiene/control-plane plugin, not business logic plugin.
-2. Contract intent:
-   - enforce canonical runtime directory boundaries
-   - block non-canonical ad-hoc AI artifact roots in strict lanes
-   - require deterministic pointer-based references instead of scattered literal paths
-3. Join path:
-   - register by `plugin_id + requirement_key + bundle_target_name + gate_mode + ssot_mapping_ref`
-   - add projection/report fields before promotion
-   - pass required-gate bundle and drift guards before release claim.
+1. AI folder governance plugin (protocol hygiene/control-plane plugin, not business logic plugin).
+2. AI search plugin (provider-pluggable capability plugin, not provider-hardcoded script logic).
+
+#### 3.4.1 AI folder governance plugin intent
+
+1. Enforce canonical runtime directory boundaries.
+2. Block non-canonical ad-hoc AI artifact roots in strict lanes.
+3. Require deterministic pointer-based references instead of scattered literal paths.
+
+#### 3.4.2 AI search plugin intent
+
+1. Provide a standard protocol plugin contract for web-search evidence intake.
+2. Keep provider selection configuration-driven (`provider_profile_id` + runtime binding), not protocol-script hardcoded.
+3. Support provider evolution without contract rewrites:
+   - initial reference provider can be BigModel web-search:
+     `https://docs.bigmodel.cn/cn/guide/tools/web-search`
+   - alternate providers can be added/replaced by profile binding only.
+4. Require search evidence projection fields before promotion:
+   - provider/model profile used
+   - query and attempt metadata
+   - source URL references and freshness status
+   - conflict resolution evidence when multiple sources disagree
+
+#### 3.4.3 Shared join path (both exemplar plugins)
+
+1. Register by `plugin_id + requirement_key + bundle_target_name + gate_mode + ssot_mapping_ref`.
+2. Add projection/report fields before promotion.
+3. Pass required-gate bundle and drift guards before release claim.
 
 ## 4) Cross-verification (roundtable + vendor + network + reference + context7)
 
@@ -156,7 +175,9 @@ Code phase starts only after this governance freeze is accepted.
 1. Add monotonic-level policy config (floor + upgrade-only) and wire it to strict validators.
 2. For strict operations, reasoning bundle invocation must always propagate run-id semantics consistently.
 3. For strict operations, multimodal runtime-proof defer must not be interpreted as silent pass for done-transition-eligible paths.
-4. Add AI folder governance plugin as a standard plugin-join template requirement row.
+4. Add dual exemplar plugins as standard plugin-join template requirement rows:
+   - AI folder governance plugin
+   - AI search plugin (provider-pluggable, no hardcoded vendor in protocol scripts).
 5. Keep all changes configuration-driven; no per-instance hardcoded policy in protocol scripts.
 
 ## 6) Release gate for v1.6.4 claim
