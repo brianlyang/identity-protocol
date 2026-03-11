@@ -73,6 +73,8 @@ CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
 )
 DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
+SCRIPT_PATH = Path(__file__).resolve()
+DEFAULT_REPO_ROOT = SCRIPT_PATH.parent.parent
 
 
 @dataclass
@@ -556,7 +558,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Scan all configured identities and emit cross-catalog governance status.")
-    ap.add_argument("--repo-root", default=".")
+    ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--project-catalog", default="")
     ap.add_argument("--global-catalog", default="")
