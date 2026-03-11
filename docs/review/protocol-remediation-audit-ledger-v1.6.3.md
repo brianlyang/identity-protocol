@@ -772,3 +772,49 @@ Observed:
    - summary: `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary.json`
 8. Tuple completeness:
    - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
+
+### 11.22 Round-47 direct validator evidence mirror for points 6/7/8 (2026-03-11)
+
+1. Objective:
+   - persist the exact artifact names requested by instance feedback (`validate_kernel_ssot_source.json`, `validate_required_contract_coverage.txt`, `validate_prompt_kernel_executable_coupling.json`) under governed evidence roots.
+2. Delivered artifacts:
+   - `validate_kernel_ssot_source.json`
+   - `validate_required_contract_coverage.txt`
+   - `validate_required_contract_coverage.json` (machine companion)
+   - `validate_prompt_kernel_executable_coupling.json`
+   - `validate_prompt_kernel_executable_coupling.instance_probe.json`
+3. Results:
+   - `kernel_ssot_source=PASS_REQUIRED` (`required_contract=true`);
+   - coverage replay reports `required_contract_total=13`, `required_contract_passed=13`, `skipped_actionable_contract_count=0`;
+   - prompt-kernel default lane `PASS_REQUIRED` with routing tail containing `session_lane_lock_protocol`;
+   - explicit instance lane probe `FAIL_REQUIRED` (`IP-PKX-002`).
+4. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/EVIDENCE_MANIFEST.round47-678-hardclose.json`
+   - summary: `activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/round47_678_hardclose_summary.json`
+
+### 11.23 Round-48 three-pass serial parity replay (legacy semantic classification) (2026-03-11)
+
+1. Objective:
+   - confirm file-level semantic unification for v1.6-and-earlier docs after introducing machine-enforced legacy archival classification in stream registry + docs contract checker.
+2. Protocol patch included:
+   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+     - added `legacy_archival_docs` classification set for non-authoritative historical governance docs.
+   - `scripts/docs_command_contract_check.py`
+     - fail-close if any v1.6-or-earlier governance/review doc is neither authoritative (stream/static/current-required) nor classified in `legacy_archival_docs`;
+     - fail-close on ambiguous authoritative+archival overlap.
+3. Three-pass replay packet (serial):
+   - `docs_command_contract_check`
+   - `validate_control_plane_invariants --json-only`
+   - `validate_required_gate_surface_drift --json-only`
+   - `validate_protocol_ssot_source`
+   - `validate_required_contract_coverage` (SRA strict validate)
+4. Outcome:
+   - all three iterations PASS;
+   - SRA strict coverage stable at `required_contract_total=13`, `required_contract_passed=13`, `skipped_actionable_contract_count=0`.
+5. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/EVIDENCE_MANIFEST.round48-threepass-legacy-semantic-parity.json`
+   - summary: `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/round48_threepass_summary.json`
+6. Tuple completeness:
+   - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
