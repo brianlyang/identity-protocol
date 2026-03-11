@@ -13,6 +13,8 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
 2. Current-state contract resolution must follow active stream registry first:
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 3. Current-state control-plane metrics/status must be read from current-pointer mappings:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
    - `identity/protocol/mappings/control-plane-budget.current.yaml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
    - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
