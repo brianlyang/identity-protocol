@@ -64,8 +64,15 @@ plugin_failclose_profiles:
       - runtime_gate_mode
       - runtime_gate_required_confidence
       - multimodal_runtime_evidence_refs
+      - multimodal_strict_skip_policy_status
       - error_code
       - evidence_ref
+    monotonic_policy:
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required
   - plugin_id: reasoning-loop-enforcement
     requirement_key: asb16-rq-035
     target_name: reasoning_loop_failclose_enforcement
@@ -90,6 +97,13 @@ plugin_failclose_profiles:
       - reasoning_loop_failclose_status
       - reasoning_runtime_evidence_status
       - reasoning_enforcement_level
+      - reasoning_configured_level
+      - reasoning_effective_level
+      - reasoning_minimum_enforcement_level
+      - reasoning_upgrade_only
+      - reasoning_allow_self_upgrade
+      - reasoning_allow_downgrade
+      - reasoning_downgrade_block_status
       - reasoning_attempt_trace_status
       - no_target_done_block_status
       - terminal_attempt_index
@@ -115,6 +129,15 @@ plugin_failclose_profiles:
       - reasoning_runtime_evidence_refs
       - error_code
       - evidence_ref
+    monotonic_policy:
+      minimum_enforcement_level: L1
+      allow_self_upgrade: true
+      allow_downgrade: false
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required
 
 prompt_failclose_binding:
   enforcement_script: scripts/execute_identity_upgrade.py
