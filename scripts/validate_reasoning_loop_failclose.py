@@ -54,6 +54,7 @@ RUNTIME_PROOF_REQUIRED_OPERATIONS = {
     "mutation",
 }
 LEVELS = {"L0", "L1", "L2", "L3"}
+LEVEL_RANK: dict[str, int] = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
 DEFAULT_ATTEMPT_FIELDS: dict[str, tuple[str, ...]] = {
     "L0": (),
     "L1": ("attempt", "hypothesis", "patch", "expected_effect", "result"),
@@ -143,6 +144,7 @@ DEFAULT_ESCALATION_NONEMPTY_FIELDS: set[str] = set()
 DEFAULT_RUNTIME_REPORT_SELECTION_MODE = "prefer_run_id"
 RUNTIME_REPORT_SELECTION_MODE_PREFER_RUN_ID = "prefer_run_id"
 RUNTIME_REPORT_SELECTION_MODE_LATEST_FIRST = "latest_first"
+DEFAULT_PLUGIN_GOVERNANCE_FILE = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -455,6 +457,57 @@ def _normalize_runtime_report_selection_mode(raw: str) -> str:
     return ""
 
 
+def _normalize_level_token(raw: Any) -> str:
+    token = str(raw or "").strip().upper()
+    if not token:
+        return ""
+    if token in LEVELS:
+        return token
+    return "__INVALID__"
+
+
+def _load_plugin_monotonic_policy(
+    *,
+    repo_root: Path,
+    plugin_id: str,
+    requirement_key: str,
+    target_name: str,
+    governance_rel: str,
+) -> tuple[dict[str, Any], Path, str, str]:
+    governance_entry_path = (repo_root / str(governance_rel or "").strip()).resolve()
+    governance_path = governance_entry_path
+    governance_active_file = ""
+    if governance_entry_path.name.endswith(".current.yaml"):
+        governance_path, governance_active_file = _resolve_current_yaml_alias(repo_root, governance_rel)
+    if not governance_path.exists() or not governance_path.is_file():
+        return {}, governance_path, governance_active_file, "plugin_governance_missing"
+    try:
+        governance_doc = _load_yaml(governance_path)
+    except Exception:
+        return {}, governance_path, governance_active_file, "plugin_governance_parse_failed"
+
+    profiles = _as_list(governance_doc.get("plugin_failclose_profiles"))
+    for row in profiles:
+        if not isinstance(row, dict):
+            continue
+        row_plugin_id = str(row.get("plugin_id", "")).strip()
+        row_requirement_key = str(row.get("requirement_key", "")).strip()
+        row_target_name = str(row.get("target_name", "")).strip()
+        if (
+            (plugin_id and row_plugin_id == plugin_id)
+            or (requirement_key and row_requirement_key == requirement_key)
+            or (target_name and row_target_name == target_name)
+        ):
+            monotonic = row.get("monotonic_policy")
+            return (
+                monotonic if isinstance(monotonic, dict) else {},
+                governance_path,
+                governance_active_file,
+                "",
+            )
+    return {}, governance_path, governance_active_file, "plugin_monotonic_policy_row_missing"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate reasoning-loop fail-close contract (RQ-035).")
     ap.add_argument("--catalog", required=True)
@@ -523,10 +576,20 @@ def main() -> int:
         "reasoning_four_track_status": STATUS_SKIPPED_NOT_REQUIRED,
         "external_source_freshness_status": STATUS_SKIPPED_NOT_REQUIRED,
         "reasoning_enforcement_level": "",
+        "reasoning_configured_level": "",
+        "reasoning_minimum_enforcement_level": "",
+        "reasoning_effective_level": "",
+        "reasoning_upgrade_only": True,
+        "reasoning_allow_self_upgrade": True,
+        "reasoning_allow_downgrade": False,
+        "reasoning_downgrade_block_status": STATUS_SKIPPED_NOT_REQUIRED,
         "plugin_registry_status": STATUS_SKIPPED_NOT_REQUIRED,
         "plugin_registry_file": str(registry_path),
         "plugin_registry_entry_file": str(registry_entry_path),
         "plugin_registry_active_file": registry_active_file,
+        "plugin_governance_file": "",
+        "plugin_governance_entry_file": "",
+        "plugin_governance_active_file": "",
         "runtime_report_path": "",
         "runtime_report_run_id": "",
         "runtime_report_source": "",
@@ -611,17 +674,156 @@ def main() -> int:
         _emit_with_status(payload, json_only=args.json_only)
         return 1
     payload["plugin_registry_status"] = STATUS_PASS_REQUIRED
+    payload["reasoning_downgrade_block_status"] = STATUS_PASS_REQUIRED
 
-    level = str(contract.get("reasoning_enforcement_level", "L1")).strip().upper() or "L1"
-    if level not in LEVELS:
+    governance_rel = str(contract.get("plugin_governance_path", DEFAULT_PLUGIN_GOVERNANCE_FILE)).strip()
+    governance_entry_path = (repo_root / governance_rel).resolve()
+    payload["plugin_governance_entry_file"] = str(governance_entry_path)
+    monotonic_policy, governance_path, governance_active_file, governance_error = _load_plugin_monotonic_policy(
+        repo_root=repo_root,
+        plugin_id=plugin_id,
+        requirement_key=str(row.get("requirement_key", "")).strip() or "asb16-rq-035",
+        target_name=str(row.get("bundle_target_name", "")).strip() or "reasoning_loop_failclose_enforcement",
+        governance_rel=governance_rel,
+    )
+    payload["plugin_governance_file"] = str(governance_path)
+    payload["plugin_governance_active_file"] = governance_active_file
+    if governance_entry_path.name.endswith(".current.yaml") and not governance_active_file:
         payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
         payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_CONFIG
-        payload["stale_reasons"] = [f"invalid_reasoning_enforcement_level:{level}"]
+        payload["stale_reasons"] = [f"plugin_governance_alias_active_file_missing:{governance_entry_path}"]
+        payload["evidence_ref"] = str(governance_entry_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    if governance_error in {"plugin_governance_missing", "plugin_governance_parse_failed"}:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = [governance_error]
+        payload["evidence_ref"] = str(governance_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+
+    canonical_contract_rel = str(row.get("contract_file", "")).strip()
+    canonical_contract_path = (repo_root / canonical_contract_rel).resolve() if canonical_contract_rel else Path("")
+    if not canonical_contract_rel or not canonical_contract_path.exists() or not canonical_contract_path.is_file():
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["plugin_registry_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_REGISTRY
+        payload["stale_reasons"] = [f"plugin_registry_contract_file_missing:{canonical_contract_rel or '<missing>'}"]
+        payload["evidence_ref"] = str(registry_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    try:
+        canonical_contract = _load_yaml(canonical_contract_path)
+    except Exception as exc:
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["plugin_registry_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_REGISTRY
+        payload["stale_reasons"] = [f"plugin_registry_contract_parse_failed:{exc}"]
+        payload["evidence_ref"] = str(canonical_contract_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+
+    canonical_enforcement = canonical_contract.get("reasoning_enforcement")
+    canonical_enforcement = canonical_enforcement if isinstance(canonical_enforcement, dict) else {}
+    task_enforcement = contract.get("reasoning_enforcement")
+    task_enforcement = task_enforcement if isinstance(task_enforcement, dict) else {}
+
+    configured_level_token = _normalize_level_token(
+        contract.get("reasoning_enforcement_level", task_enforcement.get("default_level", "L1"))
+    )
+    if configured_level_token == "__INVALID__":
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = [
+            f"invalid_reasoning_enforcement_level:{contract.get('reasoning_enforcement_level')}"
+        ]
         payload["evidence_ref"] = str(task_path)
         _emit_with_status(payload, json_only=args.json_only)
         return 1
+    level = configured_level_token or "L1"
     payload["reasoning_enforcement_level"] = level
+    payload["reasoning_configured_level"] = level
+
+    canonical_min_token = _normalize_level_token(canonical_contract.get("minimum_enforcement_level"))
+    if not canonical_min_token:
+        canonical_min_token = _normalize_level_token(canonical_enforcement.get("minimum_level"))
+    if not canonical_min_token:
+        canonical_min_token = _normalize_level_token(canonical_enforcement.get("default_level"))
+    if canonical_min_token == "__INVALID__":
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = ["invalid_canonical_minimum_enforcement_level"]
+        payload["evidence_ref"] = str(canonical_contract_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    canonical_min_level = canonical_min_token or "L1"
+
+    governance_min_token = _normalize_level_token(monotonic_policy.get("minimum_enforcement_level"))
+    if governance_min_token == "__INVALID__":
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = ["invalid_governance_minimum_enforcement_level"]
+        payload["evidence_ref"] = str(governance_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    governance_min_level = governance_min_token or canonical_min_level
+
+    requested_min_token = _normalize_level_token(
+        contract.get("minimum_enforcement_level", task_enforcement.get("minimum_level", ""))
+    )
+    if requested_min_token == "__INVALID__":
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = ["invalid_requested_minimum_enforcement_level"]
+        payload["evidence_ref"] = str(task_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
+    requested_min_level = requested_min_token or governance_min_level
+    minimum_level = (
+        requested_min_level
+        if LEVEL_RANK.get(requested_min_level, -1)
+        >= max(LEVEL_RANK.get(canonical_min_level, -1), LEVEL_RANK.get(governance_min_level, -1))
+        else (governance_min_level if LEVEL_RANK.get(governance_min_level, -1) >= LEVEL_RANK.get(canonical_min_level, -1) else canonical_min_level)
+    )
+    payload["reasoning_minimum_enforcement_level"] = minimum_level
+
+    allow_self_upgrade = _boolish(monotonic_policy.get("allow_self_upgrade", True))
+    allow_downgrade = _boolish(monotonic_policy.get("allow_downgrade", False))
+    payload["reasoning_allow_self_upgrade"] = allow_self_upgrade
+    payload["reasoning_allow_downgrade"] = allow_downgrade
+
+    canonical_upgrade_only = _boolish(canonical_contract.get("upgrade_only", True))
+    requested_upgrade_only = _boolish(contract.get("upgrade_only", canonical_upgrade_only))
+    upgrade_only = canonical_upgrade_only or requested_upgrade_only or (not allow_downgrade)
+    payload["reasoning_upgrade_only"] = upgrade_only
+    payload["reasoning_effective_level"] = level
+    payload["reasoning_enforcement_level"] = level
+    if (
+        upgrade_only
+        and args.operation in STRICT_OPERATIONS
+        and LEVEL_RANK.get(level, -1) < LEVEL_RANK.get(minimum_level, -1)
+    ):
+        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["reasoning_downgrade_block_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONFIG
+        payload["stale_reasons"] = [
+            f"reasoning_level_below_minimum:{level}<{minimum_level}",
+            f"canonical_contract_file:{canonical_contract_rel}",
+            f"governance_file:{governance_rel}",
+        ]
+        payload["evidence_ref"] = str(canonical_contract_path)
+        _emit_with_status(payload, json_only=args.json_only)
+        return 1
 
     no_target_completion_mode = _normalize_no_target_completion_mode(
         str(
