@@ -73,6 +73,8 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round47-678-hardclose/round47_678_hardclose_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round48-threepass-legacy-semantic-parity/EVIDENCE_MANIFEST\.round48-threepass-legacy-semantic-parity\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round48-threepass-legacy-semantic-parity/round48_threepass_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round49-threepass-current-turn/EVIDENCE_MANIFEST\.round49-threepass-current-turn\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round49-threepass-current-turn/round49_threepass_summary\.json$'
 
   docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
     max_activity_refs: 40
@@ -109,3 +111,5 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round47-678-hardclose/round47_678_hardclose_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round48-threepass-legacy-semantic-parity/EVIDENCE_MANIFEST\.round48-threepass-legacy-semantic-parity\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round48-threepass-legacy-semantic-parity/round48_threepass_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round49-threepass-current-turn/EVIDENCE_MANIFEST\.round49-threepass-current-turn\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round49-threepass-current-turn/round49_threepass_summary\.json$'
