@@ -569,17 +569,15 @@ Reference anchors:
 
 #### T4 Replay track (persistent evidence only)
 
-Canonical evidence root:
+Canonical evidence index:
 
-1. `activity/evidence/m2m-full-scan/2026-03-09-afterfix-v6/`
+1. `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
 
 Key closure artifacts:
 
-1. `m2m_closure_status.afterfix_v6.json`
-2. `m2m_deep_scan_summary.afterfix_v6.json`
-3. `release_readiness_blockers.afterfix_v6.json`
-4. `EVIDENCE_MANIFEST.m2m-deep-scan-afterfix-v6.json`
-5. `m2m_post_commit_quickcheck.423c0e0.json`
+1. `activity/evidence/rq034/2026-03-09/rq034_invariants_plugin_wiring_20260309_r3.json`
+2. `activity/evidence/rq034/2026-03-09/rq034_surface_drift_20260309_r7.json`
+3. `activity/evidence/rq034/2026-03-09/rq034_full_scan_target_regression_20260309_r5.result.json`
 
 Acceptance snapshot (this round):
 
@@ -913,11 +911,9 @@ Key replay outcomes:
 
 #### T4 Replay track (persistent evidence only)
 
-Evidence roots:
+Evidence index:
 
-1. `activity/evidence/v162-cross-verify/2026-03-10/round306-m2m-hardclose/`
-2. `activity/evidence/v162-cross-verify/2026-03-10/round307-compose-session-hardclose/`
-3. `activity/evidence/v162-cross-verify/2026-03-10/round308-m2m-hardclose-matrix/`
+1. `activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json`
 
 Key replay outcomes:
 
