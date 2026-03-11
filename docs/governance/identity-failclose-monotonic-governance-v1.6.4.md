@@ -172,6 +172,58 @@ Protocol control must be understandable and executable without relying on person
    - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`.
 4. If a new engineer follows only current-pointer files, they must be able to wire a new contract without hidden tribal knowledge.
 
+#### 3.3.1 Unique-entry surface contract (mandatory)
+
+To avoid memory-dependent routing, v1.6.4 freezes a unique-entry surface built from current-pointer files only:
+
+1. `identity/protocol/mappings/stream-doc-registry.current.yaml`
+2. `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`
+3. `identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml`
+4. `identity/protocol/plugins/PLUGIN_JOIN_INTAKE.current.yaml`
+
+Hard boundary:
+
+1. Any onboarding or protocol remediation instruction outside this unique-entry surface is non-normative.
+2. Any document claiming canonical onboarding must reference these pointers or is treated as stale.
+
+#### 3.3.2 Mandatory orientation contract (newcomer-safe)
+
+Cold-start orientation must be reproducible in the same sequence, without tribal memory:
+
+1. Resolve active stream docs from `stream-doc-registry.current.yaml`.
+2. Resolve active plugin onboarding playbook from `PLUGIN_WIRING_PLAYBOOK.current.md`.
+3. Run `python3 scripts/docs_command_contract_check.py`.
+4. Run `python3 scripts/validate_control_plane_invariants.py --json-only`.
+5. Run `python3 scripts/sync_plugin_join_wiring.py --check --json-only`.
+
+Fail-close rule:
+
+1. Any failure above blocks “ready-to-edit protocol control-plane” claim.
+
+#### 3.3.3 Mutation-through-entry contract (anti-bypass)
+
+Protocol edits must be auditable from the unique-entry surface:
+
+1. Direct edits to plugin/mapping targets without pointer-chain consistency are invalid.
+2. Drift is judged by machine gates (`docs_command_contract_check` + control-plane invariants), not by reviewer memory.
+3. Required-gate CI must keep intake check wired in `scripts/ci/run_required_runtime_gates_ci.sh`.
+
+#### 3.3.4 Cold-start replay contract (machine proof)
+
+A memory-loss scenario is considered closed only when this replay is green:
+
+1. `python3 scripts/docs_command_contract_check.py`
+2. `python3 scripts/validate_control_plane_invariants.py --json-only`
+3. `python3 scripts/sync_plugin_join_wiring.py --check --json-only`
+4. `python3 scripts/validate_protocol_feedback_bootstrap_ready.py --identity-id <id> --catalog <path> --operation ci --force-check --json-only`
+5. `python3 scripts/validate_protocol_entry_candidate_bridge.py --identity-id <id> --catalog <path> --operation ci --force-check --json-only`
+
+Interpretation:
+
+1. The first three commands validate protocol-level entry continuity.
+2. The last two commands validate instance-side entry/feedback bridge continuity.
+3. All five must pass before claiming newcomer-safe closure.
+
 ### 3.4 Dual exemplar plugins (AI folder governance + AI search)
 
 v1.6.4 defines two exemplar plugins so that teams can copy a reusable pattern instead of inventing per-instance wiring:
@@ -215,6 +267,7 @@ v1.6.4 defines two exemplar plugins so that teams can copy a reusable pattern in
    - non-fixture target still exposes binding-quality gaps if actor-session is not correctly pre-bound (operational, not semantic contract absence).
 3. Projection replay confirms current weak-feel source:
    - multimodal can pass with deferred runtime-proof projection fields in strict flow.
+4. Third-item newcomer chain replay is now explicitly commandized in section 3.3.4 and anchored to existing validators.
 
 ### T2 Vendor (OpenAI official docs)
 
@@ -265,6 +318,11 @@ Code phase starts only after this governance freeze is accepted.
    - AI folder governance plugin
    - AI search plugin (provider-pluggable, no hardcoded vendor in protocol scripts).
 5. Keep all changes configuration-driven; no per-instance hardcoded policy in protocol scripts.
+6. Strengthen third-item unique-entry closure from alias-level checks to tuple-level intake parity:
+   - `PLUGIN_JOIN_INTAKE` must carry non-empty plugin rows for active fail-close plugins.
+   - `sync_plugin_join_wiring --check` must validate cross-plane parity (registry/governance/mapping), not only alias existence.
+7. Promote newcomer cold-start replay into CI delegate form once stable:
+   - compose section 3.3.4 commands into one deterministic CI lane for regression use.
 
 ## 6) Release gate for v1.6.4 claim
 
@@ -280,6 +338,7 @@ No “v1.6.4 closed” claim is valid unless all items pass:
    - strict lane downgrade attempt must fail-close (`reasoning_floor_l0_fail`)
    - strict lane update may defer pre-mutation runtime stage (`multimodal_update_defer_allowed`)
    - strict lane terminal readiness cannot pass deferred skip (`multimodal_readiness_skip_blocked`)
+8. Third-item newcomer replay baseline (from section 3.3.4) is green in strict profile.
 
 ## 7) Alias continuity (mandatory)
 

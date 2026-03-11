@@ -164,6 +164,40 @@ Closure details:
    - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`
    - `identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml`
 
+## 0.7 Third-item newcomer/memory-loss closure cross-verify (2026-03-11)
+
+Verdict: `Policy PASS / Implementation CONDITIONAL PASS (entry continuity strong, parity depth pending)`.
+
+Roundtable replay (repo-local):
+
+1. `python3 scripts/docs_command_contract_check.py` => `PASS`.
+2. `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`.
+3. `python3 scripts/sync_plugin_join_wiring.py --check --json-only` => `PASS_REQUIRED`.
+4. Current limitation captured by payload:
+   - `intake_row_count=0` on `PLUGIN_JOIN_INTAKE.v1.6.4.yaml`.
+   - this proves alias continuity is wired, but tuple-level single-intake parity is not yet fully materialized.
+
+Cross-track interpretation:
+
+1. T1 Roundtable:
+   - entry pointers and command contracts are stable and machine-checkable.
+2. T2 Vendor (OpenAI):
+   - strict schema-first guidance supports newcomer-safe deterministic entry contracts.
+3. T3 Network (GitHub):
+   - required checks + rulesets reinforce “memory-independent guardrails” pattern.
+4. T4 Protocol reference:
+   - `scripts/docs_command_contract_check.py`
+   - `scripts/validate_control_plane_invariants.py`
+   - `scripts/sync_plugin_join_wiring.py`
+   - `scripts/validate_protocol_feedback_bootstrap_ready.py`
+   - `scripts/validate_protocol_entry_candidate_bridge.py`
+
+Action lock for third-item full closure:
+
+1. Fill `PLUGIN_JOIN_INTAKE` with active fail-close plugin rows.
+2. Upgrade `sync_plugin_join_wiring.py` from alias-shape check to cross-plane tuple parity fail-close.
+3. Promote section 3.3.4 cold-start replay chain into a single CI delegate lane.
+
 ## 1) Four-track + context verification summary
 
 ### T1 Roundtable/internal replay
@@ -202,6 +236,8 @@ Closure details:
 4. AI folder governance plugin template is added via standard plugin-join flow (registry + governance + mapping + bundle).
 5. All stream docs and aliases stay machine-consistent via `docs_command_contract_check`.
 6. AI search plugin template is added with provider-pluggable runtime bindings and evidence projection fields.
+7. Third-item newcomer replay chain (governance section 3.3.4) is green and reproducible from current pointers only.
+8. `PLUGIN_JOIN_INTAKE` carries active rows for all strict fail-close plugins; zero-row intake is not accepted for final closure.
 
 ## 3) Residual risk before code-phase closure
 
@@ -209,6 +245,7 @@ Closure details:
 2. If run-id propagation remains conditional in reasoning strict paths, fallback ambiguity remains.
 3. If multimodal defer semantics remain too permissive in strict done-transition contexts, user-perceived enforcement weakness remains.
 4. If AI search onboarding is provider-hardcoded instead of profile-driven, plugin extensibility will regress.
+5. If `PLUGIN_JOIN_INTAKE` remains alias-only (`intake_row_count=0`), newcomer path remains partly descriptive rather than fully executable.
 
 ## 4) Current posture
 
