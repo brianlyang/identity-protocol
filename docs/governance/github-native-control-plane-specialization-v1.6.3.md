@@ -727,3 +727,53 @@ For each iteration (`1..3`):
    - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json`
 3. summary:
    - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/round42_iteration_summary.json`
+
+## 15) Round-43 protocol hardening addendum (instance-lane routing + projection consistency) (2026-03-11)
+
+### 15.1 Trigger and objective
+
+1. Instance-side replay reported a deterministic P0 route block under correct runtime path wiring:
+   - `IP-GATE-ENTRY-001` with `gate_profile_work_layer_not_allowed:strict_full:instance`.
+2. Additional cross-check showed two protocol-level quality gaps:
+   - protocol data sanitization false positives (`IP-DSN-002`) on run/date metadata,
+   - m2m projection noise where nested three-plane projection could diverge from full-scan check results.
+3. Objective:
+   - keep strict fail-close semantics,
+   - remove routing/aggregation false blockers,
+   - preserve machine-auditable evidence tuples.
+
+### 15.2 Applied protocol hardening package
+
+1. Allow strict full-profile routing on instance work layer for creator update/validate strict lanes:
+   - `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml` (`profiles.strict_full.require_work_layers += instance`).
+2. Reduce DSN false positives while keeping contact leak fail-close:
+   - `scripts/validate_protocol_data_sanitization_boundary.py`
+   - added explicit exemptions for run/report/date metadata contexts without weakening contact-context detection.
+3. Align three-plane bundle run binding with selected report run-id:
+   - `scripts/report_three_plane_status.py`
+   - bundle run token now prefers `required_gates_run_id -> report_run_id -> synthetic`.
+4. Stabilize full-scan m2m semantics:
+   - `scripts/full_identity_protocol_scan.py`
+   - `m2m_projection` is now always derived from current scan checks;
+   - nested three-plane projection retained as observational side-channel (`three_plane_m2m_projection`).
+
+### 15.3 Replay validation outcome
+
+1. `validate_protocol_data_sanitization_boundary` (office-ops, scan) => `PASS_REQUIRED` (no `IP-DSN-002` false positives).
+2. `required_gate_bundle_runner` with `--resolved-work-layer instance` (system-requirements-analyst, update) => `PASS_REQUIRED` (no `IP-GATE-ENTRY-001`).
+3. `validate_full_scan_target_regression --enforce-m2m-pass` (system-requirements-analyst, global lane, bound session) => `PASS_REQUIRED`.
+4. Control-plane guardrails remain green:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`.
+
+### 15.4 Evidence (persistent + tuple complete)
+
+1. Root:
+   - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/`
+2. Manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/EVIDENCE_MANIFEST.round43-three-pass-file-semantic-unification.json`
+3. Summary anchors:
+   - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/round43_iteration_summary.json`
+   - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary.json`
+4. Manifest tuple fields (hard requirement):
+   - `sha256`, `command`, `rc`, `timestamp`.
