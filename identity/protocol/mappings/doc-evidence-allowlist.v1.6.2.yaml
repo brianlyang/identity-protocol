@@ -60,6 +60,9 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round39-five-pass-green/round39_iteration_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/EVIDENCE_MANIFEST\.round42-three-pass-post-repair\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/round42_iteration_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/EVIDENCE_MANIFEST\.round43-three-pass-file-semantic-unification\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/round43_iteration_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary\.json$'
 
   docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
     max_activity_refs: 40
@@ -83,3 +86,6 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round39-five-pass-green/round39_iteration_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/EVIDENCE_MANIFEST\.round42-three-pass-post-repair\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/round42_iteration_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/EVIDENCE_MANIFEST\.round43-three-pass-file-semantic-unification\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/round43_iteration_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary\.json$'
