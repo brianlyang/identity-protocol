@@ -1,0 +1,4 @@
+schema_version: 1
+governance_version: current
+last_updated_utc: "2026-03-11T00:00:00Z"
+active_file: identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml
