@@ -77,6 +77,10 @@ STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS = {
     "activate",
     "mutation",
 }
+CREDENTIAL_ENV_DEFER_OPERATIONS = {
+    "scan",
+    "inspection",
+}
 
 PLUGIN_ID_RE = re.compile(r"^[a-z][a-z0-9-]{2,63}$")
 PROFILE_ID_RE = re.compile(r"^[a-z][a-z0-9_-]{2,63}$")
@@ -303,6 +307,7 @@ def main() -> int:
     binding_path = (pack_path / "runtime" / "plugins" / "provider-bindings.local.yaml").resolve()
 
     required = contract_required(contract)
+    operation_name = str(args.operation or "").strip().lower()
     fixture_identity = _is_fixture_identity(catalog_path, args.identity_id)
     auto_required_signal = registry_path.exists()
     if auto_required_signal:
@@ -688,9 +693,12 @@ def main() -> int:
             elif credential_ref.startswith("env:"):
                 env_key = credential_ref.split(":", 1)[1]
                 if not str(os.getenv(env_key, "")).strip():
-                    payload["provider_config_status"] = STATUS_FAIL_REQUIRED
-                    stale_reasons.append("binding_credential_env_unresolved")
-                    error_code = error_code or ERR_CONF_CREDENTIAL
+                    if operation_name in CREDENTIAL_ENV_DEFER_OPERATIONS:
+                        stale_reasons.append("binding_credential_env_unresolved_deferred")
+                    else:
+                        payload["provider_config_status"] = STATUS_FAIL_REQUIRED
+                        stale_reasons.append("binding_credential_env_unresolved")
+                        error_code = error_code or ERR_CONF_CREDENTIAL
     elif required_binding_plugin_ids:
         payload["provider_config_status"] = STATUS_FAIL_REQUIRED
         stale_reasons.append("provider_binding_file_missing")
@@ -1010,7 +1018,6 @@ def main() -> int:
         stale_reasons.append("runtime_report_missing")
         error_code = error_code or ERR_RUNTIME_REPORT_MISSING
 
-    operation_name = str(args.operation or "").strip().lower()
     strict_no_skip_required = (
         operation_name in STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS and required and not fixture_identity
     )
