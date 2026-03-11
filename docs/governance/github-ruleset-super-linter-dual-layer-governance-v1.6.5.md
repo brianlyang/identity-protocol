@@ -195,6 +195,12 @@ No “v1.6.5 closed” claim is valid unless all items pass:
 5. super-linter required check green on PR + merge-group compatible surface
 6. ruleset receipts updated for path/extension/size controls (or explicit platform exception recorded)
 
+Interpretation lock:
+
+1. v1.6.5 governance model suitability can be judged `YES` once sections 2-4 are accepted.
+2. v1.6.5 stream closure can be judged `CLOSED` only when all 6 release gates above are green.
+3. If only items 1-4 are green while 5-6 are pending, status must be `CONDITIONAL_GO` (never “fully closed”).
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

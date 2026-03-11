@@ -72,6 +72,26 @@ Verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
 4. `.github/workflows/_identity-required-gates.yml`
 5. `scripts/validate_required_gate_surface_drift.py`
 
+### 2.4 Instance feedback absorption (2026-03-11, system-requirements-analyst)
+
+Accepted high-value findings from instance-side four-track replay:
+
+1. Manageability verdict is positive for the dual-layer design itself:
+   - governance model `YES` (clear platform-vs-repo split).
+2. Closure verdict must remain conditional at this checkpoint:
+   - script-side 4/6 release gates are currently machine-green.
+   - remaining 2/6 are implementation/activation closures:
+     - super-linter required-check activation in workflow/check surface
+     - ruleset receipt closure for path/extension/size controls (or explicit platform exception).
+3. Merge-queue capability limitation must remain explicit in mapping receipts:
+   - no silent omission when platform API rejects `merge_queue` ruleset rule.
+4. `/tmp` replay files are acceptable for local diagnosis but cannot be promoted as sole governance evidence.
+
+Action taken:
+
+1. Findings above are now normalized into stream-level acceptance wording (section 4 and section 6).
+2. No semantic validator scope was expanded/reduced based on this feedback; only closure posture and activation obligations are tightened.
+
 ## 3) Implementation checklist (v1.6.5)
 
 ### 3.1 Governance/data-plane readiness (must complete first)
