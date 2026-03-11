@@ -26,6 +26,9 @@ STATUS_FAIL_OPTIONAL = "FAIL_OPTIONAL"
 REASON_PASS = "IP-COV-000"
 REASON_SKIPPED = "IP-COV-001"
 REASON_FAIL = "IP-COV-999"
+REASON_LANE_REQUIRED = "IP-COV-LANE-001"
+
+STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 DISCOVERY_TARGET_NAMES = {
@@ -103,6 +106,38 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
+}
+
+INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
+    "prompt_bootstrap_capability",
+    "prompt_capability_matrix",
+    "kernel_ssot_source",
+    "prompt_derivation_conformance",
+    "prompt_kernel_executable_coupling",
+}
+
+FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
+    "scripts/validate_unlock_formula.py",
+    "scripts/validate_release_plane_cloud_evidence.py",
+    "scripts/validate_cross_cwd_absolute_input.py",
+    "scripts/validate_run_id_report_selection.py",
+    "scripts/validate_phase_bootstrap_before_strict.py",
+    "scripts/validate_tmp_collision_safety.py",
+    "scripts/validate_handoff_collab_freshness_rotation.py",
+    "scripts/validate_protocol_feedback_atomic_emit.py",
+    "scripts/validate_capability_boundary_classification.py",
+    "scripts/validate_promotion_pipeline.py",
+    "scripts/validate_outlet_matrix.py",
+    "scripts/validate_sidecar_cwd_parity.py",
+    "scripts/validate_docs_bridge_consistency.py",
+    "scripts/validate_contract_mapping_coverage.py",
+    "scripts/validate_prompt_bootstrap_capability.py",
+    "scripts/validate_prompt_capability_matrix.py",
+    "scripts/validate_refresh_strict_business_interference.py",
+    "scripts/validate_kernel_ssot_source.py",
+    "scripts/validate_prompt_derivation_conformance.py",
+    "scripts/validate_semantic_convergence.py",
+    "scripts/validate_prompt_kernel_executable_coupling.py",
 }
 
 
@@ -562,6 +597,7 @@ def _run_validator(
     expected_source_layer: str,
     layer_intent_text: str,
     run_id: str,
+    force_required: bool,
     extra_args: tuple[str, ...],
 ) -> tuple[int, str, str]:
     cmd = ["python3", script, "--catalog", catalog, "--identity-id", identity_id]
@@ -613,12 +649,15 @@ def _run_validator(
             cmd += ["--actor-id", actor_id]
         if session_id:
             cmd += ["--session-id", session_id]
+        if expected_work_layer:
+            cmd += ["--expected-work-layer", expected_work_layer]
+        if expected_source_layer:
+            cmd += ["--source-layer", expected_source_layer]
     if script in {
         "scripts/validate_semantic_routing_guard.py",
         "scripts/validate_instance_protocol_split_receipt.py",
         "scripts/validate_vendor_namespace_separation.py",
         "scripts/validate_protocol_feedback_sidecar_contract.py",
-        "scripts/validate_run_id_report_selection.py",
     }:
         if expected_work_layer:
             cmd += ["--expected-work-layer", expected_work_layer]
@@ -626,8 +665,10 @@ def _run_validator(
             cmd += ["--expected-source-layer", expected_source_layer]
         if layer_intent_text:
             cmd += ["--layer-intent-text", layer_intent_text]
-        if run_id:
-            cmd += ["--run-id", run_id]
+    if script == "scripts/validate_run_id_report_selection.py" and run_id:
+        cmd += ["--run-id", run_id]
+    if force_required and script in FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS:
+        cmd += ["--force-required"]
     cmd += list(extra_args)
     p = subprocess.run(
         cmd,
@@ -715,12 +756,18 @@ def main() -> int:
     required_total = 0
     required_passed = 0
     skipped_count = 0
+    skipped_lane_excluded_count = 0
+    skipped_actionable_count = 0
     failed_required = 0
     failed_optional = 0
     discovery_required_total = 0
     discovery_required_passed = 0
     protocol_targets_included: list[str] = []
     protocol_targets_blocking: list[str] = []
+    strict_instance_floor_promoted: list[str] = []
+    strict_instance_floor_blocking: list[str] = []
+    strict_instance_floor_missing: list[str] = []
+    prompt_lane_lock_influence_targets: list[str] = []
 
     layer_intent = resolve_layer_intent(
         explicit_work_layer=str(args.expected_work_layer or "").strip(),
@@ -739,9 +786,18 @@ def main() -> int:
     else:
         coverage_target_set = "instance_targets"
 
+    strict_operation = args.operation in STRICT_OPERATIONS
+    strict_instance_floor_enabled = strict_operation and coverage_lane == "instance"
+
     for target in TARGETS:
         contract, contract_key_used = _resolve_contract_for_target(task, target)
         required = contract_required(contract)
+        lane_floor_target = (
+            strict_instance_floor_enabled and target.name in INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES
+        )
+        force_required = bool(
+            lane_floor_target and target.validator_script in FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS
+        )
 
         report_pattern = str(contract.get("report_path_pattern", "")).strip()
         evidence = resolve_report_path(report="", pattern=report_pattern, pack_root=pack_path) if report_pattern else None
@@ -759,6 +815,7 @@ def main() -> int:
             expected_source_layer=str(args.expected_source_layer or "").strip(),
             layer_intent_text=str(args.layer_intent_text or "").strip(),
             run_id=str(args.run_id or "").strip(),
+            force_required=force_required,
             extra_args=target.validator_args,
         )
         payload = _parse_json_payload(out) if target.validator_args else None
@@ -773,7 +830,16 @@ def main() -> int:
             if not requiredization_current_round_linked and str(payload.get("activity_correlation_status", "")).strip().upper() == "CORRELATED_CURRENT_ROUND":
                 requiredization_current_round_linked = True
 
-        if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and coverage_lane == "instance" and not requiredization_current_round_linked:
+        if lane_floor_target and not required_effective:
+            strict_instance_floor_promoted.append(target.name)
+            required_effective = True
+
+        if (
+            target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES
+            and coverage_lane == "instance"
+            and not requiredization_current_round_linked
+            and not lane_floor_target
+        ):
             required_effective = False
             lane_target_included = False
         if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
@@ -795,14 +861,41 @@ def main() -> int:
             if reason_code == REASON_FAIL:
                 reason_code = _extract_reason(out, err, reason_code)
 
+        prompt_routing_work_layer = ""
+        prompt_routing_intent_source = ""
+        prompt_routing_protocol_context_reasons: list[str] = []
+        prompt_lane_lock_influence_observed = False
+        if target.name == "prompt_kernel_executable_coupling" and isinstance(payload, dict):
+            routing_detail = _parse_json_payload(str(payload.get("routing_validator_tail", "")) or "")
+            if routing_detail:
+                prompt_routing_work_layer = str(routing_detail.get("work_layer", "")).strip().lower()
+                prompt_routing_intent_source = str(routing_detail.get("intent_source", "")).strip()
+                raw_reasons = routing_detail.get("protocol_context_reasons")
+                if isinstance(raw_reasons, list):
+                    prompt_routing_protocol_context_reasons = [str(x).strip() for x in raw_reasons if str(x).strip()]
+                prompt_lane_lock_influence_observed = "session_lane_lock_protocol" in prompt_routing_protocol_context_reasons
+                if prompt_lane_lock_influence_observed:
+                    prompt_lane_lock_influence_targets.append(target.name)
+
+        if lane_floor_target and validator_status == STATUS_SKIPPED_NOT_REQUIRED:
+            validator_status = STATUS_FAIL_REQUIRED
+            reason_code = REASON_LANE_REQUIRED
+            strict_instance_floor_missing.append(target.name)
+
         if validator_status == STATUS_PASS_REQUIRED:
             required_passed += 1
         elif validator_status == STATUS_SKIPPED_NOT_REQUIRED:
             skipped_count += 1
+            if not lane_target_included:
+                skipped_lane_excluded_count += 1
+            else:
+                skipped_actionable_count += 1
         elif validator_status == STATUS_FAIL_REQUIRED:
             failed_required += 1
             if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
                 protocol_targets_blocking.append(target.name)
+            if lane_floor_target:
+                strict_instance_floor_blocking.append(target.name)
         elif validator_status == STATUS_FAIL_OPTIONAL:
             failed_optional += 1
 
@@ -822,6 +915,12 @@ def main() -> int:
                 "coverage_lane": coverage_lane,
                 "coverage_target_set": coverage_target_set,
                 "lane_target_included": lane_target_included,
+                "lane_required_floor_target": lane_floor_target,
+                "validator_force_required": force_required,
+                "prompt_routing_work_layer": prompt_routing_work_layer,
+                "prompt_routing_intent_source": prompt_routing_intent_source,
+                "prompt_routing_protocol_context_reasons": prompt_routing_protocol_context_reasons,
+                "prompt_lane_lock_influence_observed": prompt_lane_lock_influence_observed,
                 "requiredization_current_round_linked": requiredization_current_round_linked,
                 "auto_required_signal": (payload.get("auto_required_signal") if isinstance(payload, dict) else False),
                 "reason_code": reason_code,
@@ -852,6 +951,15 @@ def main() -> int:
         "protocol_trigger_reasons": list(layer_intent.get("protocol_trigger_reasons") or []),
         "coverage_protocol_targets_included": sorted(set(protocol_targets_included)),
         "coverage_protocol_targets_blocking": sorted(set(protocol_targets_blocking)),
+        "strict_instance_floor_enabled": strict_instance_floor_enabled,
+        "strict_instance_floor_targets": (
+            sorted(INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES) if strict_instance_floor_enabled else []
+        ),
+        "strict_instance_floor_promoted": sorted(set(strict_instance_floor_promoted)),
+        "strict_instance_floor_missing": sorted(set(strict_instance_floor_missing)),
+        "strict_instance_floor_blocking": sorted(set(strict_instance_floor_blocking)),
+        "prompt_lane_lock_influence_count": len(sorted(set(prompt_lane_lock_influence_targets))),
+        "prompt_lane_lock_influence_targets": sorted(set(prompt_lane_lock_influence_targets)),
         "contracts": rows,
         "required_contract_total": required_total,
         "required_contract_passed": required_passed,
@@ -860,6 +968,8 @@ def main() -> int:
         "discovery_required_passed": discovery_required_passed,
         "discovery_required_coverage_rate": discovery_coverage_rate,
         "skipped_contract_count": skipped_count,
+        "skipped_lane_excluded_contract_count": skipped_lane_excluded_count,
+        "skipped_actionable_contract_count": skipped_actionable_count,
         "failed_required_contract_count": failed_required,
         "failed_optional_contract_count": failed_optional,
         "coverage_counter_overflow": coverage_counter_overflow,
@@ -902,6 +1012,8 @@ def main() -> int:
             f"discovery_required_passed={discovery_required_passed} "
             f"discovery_required_coverage_rate={discovery_coverage_rate} "
             f"skipped_contract_count={skipped_count} "
+            f"skipped_lane_excluded_contract_count={skipped_lane_excluded_count} "
+            f"skipped_actionable_contract_count={skipped_actionable_count} "
             f"failed_required_contract_count={failed_required} "
             f"failed_optional_contract_count={failed_optional}"
         )
