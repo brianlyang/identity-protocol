@@ -166,12 +166,27 @@ Hard rules:
    - `required_gate_bundle_runner`
 4. Strict operations (`activate/update/mutation/readiness/e2e/ci/validate/three-plane`) must be covered in:
    - `protocol_unique_entry_gate_contract_v1.enforce_on_operations`
-5. Any strict operation that cannot prove this unique-ingress contract is treated as `FAIL_REQUIRED`.
+5. Strict operations must emit and persist unique-entry receipt:
+   - `runtime/state/required_gate_bundle_entry.latest.json`
+   - `runtime/state/required_gate_bundle_entry.<operation>.json`
+   - `runtime/reports/required-gate-bundle-entry/required-gate-bundle-entry-*.json`
+6. Any strict operation that cannot prove this unique-ingress contract is treated as `FAIL_REQUIRED`.
+
+Required receipt fields for strict operations:
+
+1. `bundle_key`
+2. `bundle_contract_id`
+3. `identity_id`
+4. `operation`
+5. `run_id_binding`
+6. `bundle_status`
+7. `error_code`
 
 Machine enforcement boundary:
 
 1. Contract validator:
    - `scripts/validate_protocol_unique_entry_gate.py`
+   - strict operations enforce receipt parity (identity/operation/run-id/bundle status)
 2. Coverage gate binding:
    - `scripts/validate_required_contract_coverage.py`
 3. Legacy upgrade backfill:
@@ -183,6 +198,13 @@ Interpretation:
 
 1. This is protocol-core governance, not business-script-specific hardcoding.
 2. Instance autonomy remains valid only inside this ingress boundary.
+3. Newcomer/memory-loss entry is fixed to one command family:
+   - `python3 scripts/identity_creator.py <operation> ...`
+   - strict operations are invalid without ingress receipt proof.
+4. New contract/gate/plugin wiring must attach at the same ingress:
+   - contract row: `CURRENT_TASK.json`
+   - registry row: `identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml`
+   - runtime execution: `scripts/required_gate_bundle_runner.py`
 
 ### 3.2 Monotonic level contract (allow upgrade, forbid downgrade)
 
