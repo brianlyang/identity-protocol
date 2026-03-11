@@ -85,6 +85,17 @@ def _norm_path(value: str) -> str:
     return str(value or "").strip().replace("\\", "/")
 
 
+def _requires_static_alias_ref_row(doc: str) -> bool:
+    normalized = _norm_path(doc)
+    if not normalized.endswith(".md"):
+        return False
+    return (
+        normalized.startswith("docs/governance/")
+        or normalized.startswith("docs/review/")
+        or normalized.startswith("identity/protocol/plugins/")
+    )
+
+
 def _as_str_list(value: object) -> List[str]:
     if not isinstance(value, list):
         return []
@@ -312,12 +323,12 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
                 doc_alias_requirements[review_doc] = review_alias_refs
 
     static_alias_rows = data.get("static_doc_required_alias_refs")
+    static_docs_seen: set[str] = set()
     if not isinstance(static_alias_rows, list) or not static_alias_rows:
         errors.append(
             "[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_refs must be a non-empty list"
         )
     else:
-        static_docs_seen: set[str] = set()
         for idx, row in enumerate(static_alias_rows, start=1):
             if not isinstance(row, dict):
                 errors.append(
@@ -358,6 +369,15 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
                         f"[INVALID_STREAM_DOC_REGISTRY] static_doc_required_alias_ref not found: {doc}:{alias_ref}"
                     )
             doc_alias_requirements[doc] = alias_refs
+
+    required_row_docs = {
+        doc for doc in mandatory_static_docs if _requires_static_alias_ref_row(doc)
+    }
+    missing_static_alias_rows = sorted(required_row_docs - static_docs_seen)
+    for doc in missing_static_alias_rows:
+        errors.append(
+            f"[INVALID_STREAM_DOC_REGISTRY] mandatory static doc missing static_doc_required_alias_refs row: {doc}"
+        )
 
     return _dedup(stream_docs), _dedup(mandatory_static_docs), doc_alias_requirements, errors
 
