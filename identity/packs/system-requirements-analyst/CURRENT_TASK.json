@@ -757,6 +757,20 @@
         ".github/workflows/*",
         "scripts/validate_*"
       ]
+    },
+    "accurate_judgement_enforcement": {
+      "contract_ref": "rq_034_multimodal_plugin_enforcement_contract_v1",
+      "validator": "scripts/validate_multimodal_plugin_enforcement.py",
+      "requires_multimodal_evidence_consistency": true,
+      "inconsistent_evidence_transition": "block_done"
+    },
+    "reasoning_loop_enforcement": {
+      "contract_ref": "rq_035_reasoning_loop_failclose_contract_v1",
+      "validator": "scripts/validate_reasoning_loop_failclose.py",
+      "no_target_reached_cannot_complete": true,
+      "failed_attempt_requires_next_action": true,
+      "threshold_requires_escalation": true,
+      "reasoning_enforcement_level_field": "reasoning_enforcement_level"
     }
   },
   "install_safety_contract": {
@@ -857,5 +871,353 @@
         "max": 0
       }
     }
+  },
+  "multi_track_cross_verification_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_v16_intake_evidence_core.py",
+    "validator_mode": "intake_contract",
+    "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+    "required_tracks": [
+      "t1",
+      "t2",
+      "t3",
+      "t4"
+    ],
+    "required_metadata_fields": [
+      "cross_verification_bundle_id",
+      "source_url_set",
+      "reference_timestamp_utc",
+      "conflict_reconciliation_note"
+    ],
+    "fail_action": "block_merge_and_reenter_cross_verification_intake"
+  },
+  "intake_evidence_quorum_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_v16_intake_evidence_core.py",
+    "validator_mode": "promotion_gate",
+    "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+    "required_tracks": [
+      "t1_roundtable_status",
+      "t2_vendor_status",
+      "t3_openai_context_status",
+      "t4_protocol_spec_status"
+    ],
+    "required_metadata_fields": [
+      "cross_verification_bundle_id",
+      "source_url_set",
+      "reference_timestamp_utc",
+      "conflict_reconciliation_note"
+    ],
+    "fail_action": "block_merge_and_reenter_intake_quorum_gate"
+  },
+  "fallback_taxonomy_normalization_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_fallback_taxonomy_normalization.py",
+    "taxonomy_version": "v1",
+    "fallback_taxonomy_enum": [
+      "data_missing",
+      "model_weak_signal",
+      "transport_error",
+      "policy_blocked"
+    ],
+    "namespace_separation_required": true,
+    "protected_blocker_taxonomy_fields": [
+      "auth_login_required",
+      "anti_automation_challenge_required",
+      "session_reauthentication_required",
+      "manual_verification_required"
+    ],
+    "fail_action": "block_merge_and_reenter_fallback_taxonomy_normalization"
+  },
+  "dedup_monotonic_winner_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_dedup_monotonicity.py",
+    "claims_path_pattern": "runtime/reports/**/*dedup*claim*.json",
+    "required_fields": [
+      "run_id",
+      "earliest_claim_ts",
+      "stable_tiebreaker",
+      "winner_id",
+      "winner_reason",
+      "monotonicity_status"
+    ],
+    "fail_action": "block_merge_and_reenter_dedup_orchestration"
+  },
+  "cross_workflow_evidence_schema_contract_v1": {
+    "required": true,
+    "normalizer": "scripts/normalize_cross_workflow_evidence.py",
+    "validator": "scripts/validate_cross_workflow_schema.py",
+    "evidence_path_pattern": "runtime/reports/identity-upgrade-exec-system-requirements-analyst-*.json",
+    "required_fields": [
+      "run_id",
+      "route_action",
+      "quality_meta_state",
+      "dedup_state",
+      "evidence_hash",
+      "schema_version"
+    ],
+    "fail_action": "block_merge_and_reenter_cross_workflow_schema_alignment"
+  },
+  "skill_path_integrity_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_skill_path_integrity.py",
+    "layout_mode": "active_repo_runtime",
+    "allowed_skill_roots": [
+      "{active_repo_root}/skills",
+      "{active_repo_root}/.codex/skills",
+      "{active_repo_root}/identity-protocol-local/skills",
+      "{active_runtime_root}/skills"
+    ],
+    "required_fields": [
+      "active_repo_root",
+      "active_runtime_root",
+      "layout_mode",
+      "path_integrity_status",
+      "path_integrity_error_code"
+    ],
+    "fail_action": "block_merge_and_reenter_skill_path_integrity_alignment"
+  },
+  "route_workflow_version_pinning_contract_v1": {
+    "required": true,
+    "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
+    "validator": "scripts/validate_route_version_pinning.py",
+    "proof_receipt_path_pattern": "runtime/reports/**/*route-version-pin-receipt*.json",
+    "required_fields": [
+      "route_endpoint",
+      "workflow_id",
+      "workflow_publish_version",
+      "pin_proof_ref"
+    ],
+    "expected_bindings": [],
+    "fail_action": "block_merge_and_reenter_route_workflow_version_alignment"
+  },
+  "prompt_bootstrap_capability_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_prompt_bootstrap_capability.py",
+    "required_capability_drivers": [
+      "scripts/validate_identity_tool_installation.py",
+      "scripts/validate_identity_vendor_api_discovery.py",
+      "scripts/validate_identity_vendor_api_solution.py"
+    ],
+    "fail_action": "block_when_prompt_bootstrap_missing_required_drivers"
+  },
+  "prompt_capability_matrix_fail_closed_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_prompt_capability_matrix.py",
+    "required_driver_ids": [
+      "tool_installation",
+      "vendor_api_discovery",
+      "vendor_api_solution"
+    ],
+    "required_fields": [
+      "capability_driver_required_total",
+      "capability_driver_present_total",
+      "capability_driver_coverage_rate",
+      "missing_capability_drivers"
+    ],
+    "fail_action": "fail_closed_when_prompt_capability_matrix_incomplete"
+  },
+  "derived_prompt_conformance_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_prompt_derivation_conformance.py",
+    "kernel_contract_version": "v1.6",
+    "derived_from_contract_ids": [
+      "rq_014_prompt_bootstrap_capability_contract_v1",
+      "rq_015_prompt_capability_matrix_fail_closed_contract_v1"
+    ],
+    "fail_action": "block_when_prompt_derivation_metadata_incomplete"
+  },
+  "prompt_import_executable_coupling_contract_v1": {
+    "required": true,
+    "validator": "scripts/validate_prompt_kernel_executable_coupling.py",
+    "kernel_contract_ref": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1",
+    "validator_ref": "scripts/validate_work_layer_gate_set_routing.py",
+    "require_explicit_actor": true,
+    "fail_action": "block_when_prompt_import_not_executable_coupled"
+  },
+  "multimodal_plugin_enforcement_contract_v1": {
+    "required": true,
+    "contract_id": "rq_034_multimodal_plugin_enforcement_contract_v1",
+    "validator": "scripts/validate_multimodal_plugin_enforcement.py",
+    "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+    "provider_profiles_path": "identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml",
+    "required_fields": [
+      "multimodal_plugin_enforcement_status",
+      "plugin_registry_status",
+      "plugin_naming_status",
+      "plugin_schema_status",
+      "plugin_threshold_status",
+      "plugin_path_status",
+      "plugin_copy_policy_status",
+      "provider_config_status"
+    ],
+    "provider_binding_path_pattern": "runtime/plugins/provider-bindings.local.yaml",
+    "capability_requirements": {
+      "vision": true,
+      "tool_calling": true,
+      "structured_json": true
+    },
+    "done_transition_guard": {
+      "requires_multimodal_evidence_consistency": true,
+      "inconsistent_evidence_transition": "block_done"
+    },
+    "fail_action": "block_done_transition_on_inconsistent_multimodal_evidence"
+  },
+  "reasoning_loop_failclose_contract_v1": {
+    "required": true,
+    "contract_id": "rq_035_reasoning_loop_failclose_contract_v1",
+    "plugin_id": "reasoning-loop-enforcement",
+    "validator": "scripts/validate_reasoning_loop_failclose.py",
+    "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+    "contract_file": "identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml",
+    "reasoning_enforcement_level": "L1",
+    "level_required_attempt_fields": {
+      "L0": [],
+      "L1": [
+        "attempt",
+        "hypothesis",
+        "patch",
+        "expected_effect",
+        "result"
+      ],
+      "L2": [
+        "attempt",
+        "hypothesis",
+        "patch",
+        "expected_effect",
+        "result",
+        "result_code",
+        "target_reached",
+        "no_target_reached",
+        "next_action",
+        "evidence_refs"
+      ],
+      "L3": [
+        "attempt",
+        "hypothesis",
+        "patch",
+        "expected_effect",
+        "result",
+        "result_code",
+        "target_reached",
+        "no_target_reached",
+        "next_action",
+        "evidence_refs"
+      ]
+    },
+    "level_required_run_fields": {
+      "L2": [
+        "roundtable_evidence_refs",
+        "vendor_evidence_refs",
+        "network_evidence_refs",
+        "reference_evidence_refs"
+      ],
+      "L3": [
+        "roundtable_evidence_refs",
+        "vendor_evidence_refs",
+        "network_evidence_refs",
+        "reference_evidence_refs"
+      ]
+    },
+    "level_required_external_fields": {
+      "L3": [
+        "external_source_freshness_status",
+        "conflict_reconciliation_note",
+        "source_url_set"
+      ]
+    },
+    "completion_states_done": [
+      "done",
+      "pass",
+      "passed",
+      "success",
+      "completed",
+      "closed"
+    ],
+    "no_target_completion_mode": "terminal_attempt_only",
+    "done_requires_terminal_target_reached": true,
+    "no_target_result_tokens": [
+      "no_target_reached",
+      "not_reached",
+      "target_not_reached"
+    ],
+    "failed_result_tokens": [
+      "fail",
+      "failed",
+      "error",
+      "blocked",
+      "no_target_reached",
+      "not_reached",
+      "target_not_reached"
+    ],
+    "pass_result_tokens": [
+      "pass",
+      "passed",
+      "success",
+      "done",
+      "resolved",
+      "target_reached"
+    ],
+    "max_attempts_before_escalation": 3,
+    "escalation_requirement_mode": "at_or_exceed",
+    "failure_requires_next_action": true,
+    "strict_run_id_binding": true,
+    "runtime_report_selection_mode": "prefer_run_id",
+    "escalation_signal_fields": [
+      "route_switch_triggered",
+      "human_collaboration_triggered",
+      "escalation_triggered",
+      "route_switch_ref",
+      "human_collaboration_ref",
+      "escalation_ref",
+      "next_action"
+    ],
+    "escalation_signal_accept_nonempty_ref": true,
+    "escalation_signal_nonempty_fields": [
+      "route_switch_ref",
+      "human_collaboration_ref",
+      "escalation_ref"
+    ],
+    "escalation_signal_values": [
+      "true",
+      "triggered",
+      "escalate",
+      "route_switch",
+      "human_collaboration",
+      "handoff"
+    ],
+    "learning_report_path_pattern": "runtime/examples/*learning-sample*.json",
+    "required_fields": [
+      "reasoning_loop_failclose_status",
+      "reasoning_runtime_evidence_status",
+      "reasoning_attempt_trace_status",
+      "no_target_done_block_status",
+      "terminal_attempt_index",
+      "terminal_attempt_target_reached",
+      "terminal_attempt_no_target_reached",
+      "no_target_completion_mode",
+      "done_requires_terminal_target_reached",
+      "reasoning_next_action_status",
+      "reasoning_escalation_status",
+      "escalation_requirement_mode",
+      "escalation_signal_accept_nonempty_ref",
+      "escalation_signal_nonempty_fields",
+      "strict_run_id_binding",
+      "runtime_report_selection_mode",
+      "reasoning_four_track_status",
+      "external_source_freshness_status",
+      "runtime_report_path",
+      "runtime_report_run_id",
+      "reasoning_attempt_count",
+      "reasoning_failed_attempt_count",
+      "no_target_reached_detected",
+      "reasoning_runtime_evidence_refs"
+    ],
+    "done_transition_guard": {
+      "no_target_reached_cannot_complete": true,
+      "failed_attempt_requires_next_action": true,
+      "threshold_requires_escalation": true
+    },
+    "fail_action": "block_done_transition_on_reasoning_no_target_or_unclosed_attempts"
   }
 }

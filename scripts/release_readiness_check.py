@@ -13,8 +13,9 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import resolve_actor_id
+from actor_session_common import load_actor_binding, resolve_actor_id
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
 PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_changelog_updated.py",
@@ -22,6 +23,9 @@ PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_release_metadata_sync.py",
     "scripts/validate_release_freeze_boundary.py",
 }
+BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
+FAILCLOSE_PLUGIN_PROJECTION_SCRIPT = "scripts/validate_failclose_plugin_projection.py"
+FULL_SCAN_TARGET_REGRESSION_SCRIPT = "scripts/validate_full_scan_target_regression.py"
 
 
 def _run(cmd: list[str]) -> int:
@@ -58,12 +62,68 @@ def _replace_activation_policy(cmd: list[str], policy: str) -> list[str]:
     return out
 
 
+def _replace_flag_value(cmd: list[str], flag: str, value: str) -> None:
+    if flag in cmd:
+        idx = cmd.index(flag)
+        if idx + 1 < len(cmd):
+            cmd[idx + 1] = str(value)
+            return
+    cmd.extend([flag, str(value)])
+
+
+def _apply_bundle_passthrough_from_report(
+    seq: list[list[str]],
+    report_meta: dict[str, Any],
+    report_selected_path: str,
+) -> None:
+    send_time_gate_status = str(report_meta.get("send_time_gate_status", "")).strip().upper() or "UNKNOWN"
+    outlet_bypass_detected = "true" if _boolish(report_meta.get("outlet_bypass_detected")) else "false"
+    final_emit_contract_status = str(report_meta.get("final_emit_contract_status", "")).strip().upper() or "UNKNOWN"
+    final_emit_policy_mode = str(report_meta.get("final_emit_policy_mode", "")).strip() or "tool_choice_required"
+    final_emit_schema_status = str(report_meta.get("final_emit_schema_status", "")).strip().upper() or "UNKNOWN"
+    selected_report = str(report_selected_path or "").strip()
+    for cmd in seq:
+        if len(cmd) < 2 or cmd[1] not in {BUNDLE_RUNNER_SCRIPT, FAILCLOSE_PLUGIN_PROJECTION_SCRIPT}:
+            continue
+        _replace_flag_value(cmd, "--send-time-gate-status", send_time_gate_status)
+        _replace_flag_value(cmd, "--outlet-bypass-detected", outlet_bypass_detected)
+        _replace_flag_value(cmd, "--final-emit-contract-status", final_emit_contract_status)
+        _replace_flag_value(cmd, "--final-emit-policy-mode", final_emit_policy_mode)
+        _replace_flag_value(cmd, "--final-emit-schema-status", final_emit_schema_status)
+        if selected_report:
+            _replace_flag_value(cmd, "--report-selected-path", selected_report)
+
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _resolve_actor_session_id(
+    *,
+    catalog: str,
+    identity_id: str,
+    actor_id: str,
+    explicit_session_id: str,
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if explicit:
+        return explicit, "explicit_session_id"
+    try:
+        binding = load_actor_binding(
+            Path(catalog).expanduser().resolve(),
+            actor_id,
+            identity_id=identity_id,
+        )
+    except Exception:
+        binding = {}
+    bound = str((binding or {}).get("session_id", "")).strip()
+    if bound:
+        return bound, "actor_binding_identity"
+    return "", "binding_missing"
 
 
 def _boolish(v: Any) -> bool:
@@ -74,6 +134,18 @@ def _boolish(v: Any) -> bool:
     if v is None:
         return False
     return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _infer_source_layer_from_catalog_path(catalog: str) -> str:
+    try:
+        text = str(Path(catalog).expanduser().resolve())
+    except Exception:
+        return "project"
+    if "/.codex/.identity/" in text:
+        return "global"
+    if "/.identity/" in text:
+        return "project"
+    return "project"
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
@@ -134,10 +206,10 @@ def _resolve_lane_context(*, layer_intent_text: str, expected_work_layer: str, e
         explicit_source_layer=str(expected_source_layer or "").strip(),
         intent_text=str(layer_intent_text or "").strip(),
         default_work_layer=DEFAULT_WORK_LAYER,
-        default_source_layer="global",
+        default_source_layer="project",
     )
     work_layer = str(resolved.get("resolved_work_layer", DEFAULT_WORK_LAYER)).strip().lower() or DEFAULT_WORK_LAYER
-    source_layer = str(resolved.get("resolved_source_layer", "global")).strip().lower() or "global"
+    source_layer = str(resolved.get("resolved_source_layer", "project")).strip().lower() or "project"
     if work_layer == "instance":
         applied_gate_set = "instance_required_checks"
     elif work_layer == "protocol":
@@ -231,6 +303,14 @@ def main() -> int:
             "(tool_installation/vendor_api_discovery/vendor_api_solution). default disabled."
         ),
     )
+    ap.add_argument("--target-branch", default="")
+    ap.add_argument("--release-head-sha", default="")
+    ap.add_argument("--required-gates-run-id", default="")
+    ap.add_argument("--run-url", default="")
+    ap.add_argument("--workflow-file-sha", default="")
+    ap.add_argument("--run-head-sha", default="")
+    ap.add_argument("--run-workflow-file-sha", default="")
+    ap.add_argument("--checks-json", default="")
     ap.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent for stamp render/validators")
     ap.add_argument("--expected-work-layer", default="", help="optional expected work_layer override for strict reply gates")
     ap.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
@@ -242,16 +322,39 @@ def main() -> int:
             "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
         ),
     )
+    ap.add_argument(
+        "--session-id",
+        default="",
+        help="optional actor session id for actor-session validators; defaults to actor binding for the target identity",
+    )
     args = ap.parse_args()
 
     base = args.base.strip() or _git_rev("HEAD~1")
     head = args.head.strip() or _git_rev("HEAD")
+    target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
+    release_head_sha = str(args.release_head_sha or "").strip() or head
+    required_gates_run_id = str(args.required_gates_run_id or "").strip() or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
+    run_url = str(args.run_url or "").strip()
+    workflow_file_sha = str(args.workflow_file_sha or "").strip() or release_head_sha
+    run_head_sha = str(args.run_head_sha or "").strip() or release_head_sha
+    run_workflow_file_sha = str(args.run_workflow_file_sha or "").strip() or workflow_file_sha
+    checks_json = str(args.checks_json or "").strip()
     identity_id = args.identity_id.strip()
     scope = args.scope.strip().upper()
     layer_intent_text = args.layer_intent_text.strip()
     expected_work_layer = args.expected_work_layer.strip().lower()
     expected_source_layer = args.expected_source_layer.strip().lower()
     actor_id = resolve_actor_id(str(args.actor_id or "").strip())
+    explicit_catalog = args.catalog.strip()
+    env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
+    catalog = explicit_catalog or env_catalog
+    session_id, session_id_source = _resolve_actor_session_id(
+        catalog=catalog,
+        identity_id=identity_id,
+        actor_id=actor_id,
+        explicit_session_id=str(args.session_id or "").strip(),
+    )
+    print(f"[INFO] actor session selector: source={session_id_source} session_id={session_id or '<auto>'}")
     lane_ctx = _resolve_lane_context(
         layer_intent_text=layer_intent_text,
         expected_work_layer=expected_work_layer,
@@ -266,19 +369,106 @@ def main() -> int:
         f"[INFO] lane routing: work_layer={routed_work_layer} "
         f"source_layer={routed_source_layer} applied_gate_set={routed_applied_gate_set}"
     )
-    explicit_catalog = args.catalog.strip()
-    env_catalog = os.environ.get("IDENTITY_CATALOG", "").strip()
-    catalog = explicit_catalog or env_catalog
-    stamp_artifact = f"/tmp/identity-response-stamp-{identity_id}.json"
-    stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{identity_id}.json"
-    reply_first_line_blocker_receipt = f"/tmp/identity-reply-first-line-blocker-receipt-{identity_id}.json"
-    send_time_reply_file = f"/tmp/identity-send-time-reply-{identity_id}.txt"
-    send_time_reply_gate_blocker_receipt = (
-        f"/tmp/identity-send-time-reply-gate-blocker-receipt-{identity_id}.json"
+    stamp_artifact = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-response-stamp-{identity_id}",
+            ext="json",
+        )
     )
-    execution_reply_coherence_blocker_receipt = (
-        f"/tmp/identity-execution-reply-coherence-blocker-receipt-{identity_id}.json"
+    stamp_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-stamp-blocker-receipt-{identity_id}",
+            ext="json",
+        )
     )
+    reply_first_line_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-reply-first-line-blocker-receipt-{identity_id}",
+            ext="json",
+        )
+    )
+    send_time_reply_file = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-send-time-reply-{identity_id}",
+            ext="txt",
+        )
+    )
+    send_time_reply_gate_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-send-time-reply-gate-blocker-receipt-{identity_id}",
+            ext="json",
+        )
+    )
+    execution_reply_coherence_blocker_receipt = str(
+        runtime_temp_file(
+            channel="response-stamp",
+            operation="readiness",
+            identity_id=identity_id,
+            stem=f"identity-execution-reply-coherence-blocker-receipt-{identity_id}",
+            ext="json",
+        )
+    )
+    bundle_run_token = required_gates_run_id or f"local-{identity_id}"
+    required_gate_bundle_receipt = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="readiness",
+            identity_id=identity_id,
+            run_token=bundle_run_token,
+            stem=f"required-gate-bundle-readiness-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    required_gate_bundle_receipt_probe = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="scan",
+            identity_id=identity_id,
+            run_token=f"{bundle_run_token}-scan-probe",
+            stem=f"required-gate-bundle-readiness-scan-probe-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    failclose_plugin_projection_receipt = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="readiness",
+            identity_id=identity_id,
+            run_token=f"{bundle_run_token}-plugin-projection",
+            stem=f"failclose-plugin-projection-readiness-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    full_scan_target_regression_receipt = str(
+        runtime_temp_file(
+            channel="required-gate-bundle",
+            operation="readiness",
+            identity_id=identity_id,
+            run_token=f"{bundle_run_token}-full-scan-target-regression",
+            stem=f"full-scan-target-regression-readiness-{identity_id}-{bundle_run_token}",
+            ext="json",
+        )
+    )
+    vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+    capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
+    health_report_dir = str(named_temp_root("identity-health-reports"))
+    upgrade_reports_runtime_root = named_temp_root("identity-runtime")
+    upgrade_reports_named_root = named_temp_root("identity-upgrade-reports")
     if not catalog:
         print("[FAIL] catalog is required (implicit fallback disabled).")
         print("       pass --catalog <path> or set IDENTITY_CATALOG after mode selection.")
@@ -298,6 +488,8 @@ def main() -> int:
         "identity/catalog/identities.yaml",
         "--expect-mode",
         "auto",
+        "--operation",
+        "readiness",
     ]
     if scope:
         guard_cmd.extend(["--scope", scope])
@@ -383,6 +575,46 @@ def main() -> int:
     )
     if rc_fixture_boundary != 0:
         return rc_fixture_boundary
+    fixture_profile = str(fixture_boundary_payload.get("profile", "")).strip().lower()
+    fixture_runtime_mode = str(fixture_boundary_payload.get("runtime_mode", "")).strip().lower()
+    is_fixture_identity = fixture_profile == "fixture" or fixture_runtime_mode == "demo_only"
+    target_source_layer_mode = (
+        expected_source_layer if expected_source_layer in {"auto", "project", "global", "both"} else "project"
+    )
+    effective_expected_work_layer = str(expected_work_layer or routed_work_layer or "protocol").strip().lower() or "protocol"
+    effective_expected_source_layer = (
+        str(expected_source_layer or routed_source_layer or "project").strip().lower() or "project"
+    )
+    full_scan_target_regression_cmd = [
+        "python3",
+        FULL_SCAN_TARGET_REGRESSION_SCRIPT,
+        "--identity-id",
+        identity_id,
+        "--project-catalog",
+        catalog,
+        "--repo-catalog",
+        "identity/catalog/identities.yaml",
+        "--target-source-layer",
+        target_source_layer_mode,
+        "--actor-id",
+        actor_id,
+        "--expected-work-layer",
+        effective_expected_work_layer,
+        "--expected-source-layer",
+        effective_expected_source_layer,
+        "--out",
+        full_scan_target_regression_receipt,
+        "--json-only",
+    ]
+    if session_id:
+        full_scan_target_regression_cmd.extend(["--session-id", session_id])
+    if not is_fixture_identity:
+        full_scan_target_regression_cmd.append("--enforce-m2m-pass")
+    print(
+        "[INFO] full-scan target regression preflight: "
+        f"fixture_identity={is_fixture_identity} enforce_m2m_pass={not is_fixture_identity} "
+        f"source_layer={target_source_layer_mode}"
+    )
 
     seq: list[list[str]] = [
         ["python3", "scripts/validate_identity_protocol.py"],
@@ -419,7 +651,18 @@ def main() -> int:
             identity_id,
         ],
         ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", catalog],
-        ["python3", "scripts/validate_identity_session_pointer_consistency.py", "--catalog", catalog],
+        [
+            "python3",
+            "scripts/validate_identity_session_pointer_consistency.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+        ],
         [
             "python3",
             "scripts/validate_actor_session_binding.py",
@@ -429,6 +672,8 @@ def main() -> int:
             identity_id,
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--operation",
             "readiness",
         ],
@@ -461,6 +706,8 @@ def main() -> int:
             identity_id,
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--operation",
             "readiness",
             "--json-only",
@@ -509,6 +756,10 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--identity-id",
             identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
             "--view",
             "external",
             "--disclosure-level",
@@ -526,6 +777,10 @@ def main() -> int:
             "identity/catalog/identities.yaml",
             "--identity-id",
             identity_id,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
             "--stamp-json",
             stamp_artifact,
             "--force-check",
@@ -580,12 +835,14 @@ def main() -> int:
             "--enforce-first-line-gate",
             "--operation",
             "readiness",
+            "--actor-id",
+            actor_id,
             "--blocker-receipt-out",
             reply_first_line_blocker_receipt,
         ],
         [
             "python3",
-            "scripts/compose_and_validate_governed_reply.py",
+            "scripts/final_emit_governed.py",
             "--catalog",
             catalog,
             "--repo-catalog",
@@ -599,7 +856,7 @@ def main() -> int:
             "--blocker-receipt-out",
             send_time_reply_gate_blocker_receipt,
             "--outlet-channel-id",
-            "governed_adapter_v1",
+            "final_emit_governed",
             "--actor-id",
             actor_id,
             "--json-only",
@@ -619,7 +876,7 @@ def main() -> int:
             "--enforce-send-time-gate",
             "--reply-outlet-guard-applied",
             "--outlet-channel-id",
-            "governed_adapter_v1",
+            "final_emit_governed",
             "--reply-transport-ref",
             send_time_reply_file,
             "--operation",
@@ -657,6 +914,8 @@ def main() -> int:
             "readiness",
             "--actor-id",
             actor_id,
+            "--session-id",
+            session_id,
             "--json-only",
         ],
         [
@@ -687,6 +946,8 @@ def main() -> int:
             "--enforce-coherence-gate",
             "--operation",
             "readiness",
+            "--actor-id",
+            actor_id,
             "--blocker-receipt-out",
             execution_reply_coherence_blocker_receipt,
             "--json-only",
@@ -818,7 +1079,7 @@ def main() -> int:
             "--operation",
             "readiness",
             "--out-root",
-            "/tmp/vibe-coding-feeding-packs",
+            vibe_pack_out_root,
         ],
         [
             "python3",
@@ -880,7 +1141,7 @@ def main() -> int:
             "--operation",
             "readiness",
             "--out-root",
-            "/tmp/capability-fit-matrices",
+            capability_fit_out_root,
         ],
         [
             "python3",
@@ -903,6 +1164,416 @@ def main() -> int:
             identity_id,
             "--operation",
             "readiness",
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+        ],
+        [
+            "python3",
+            "scripts/validate_unlock_formula.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_release_plane_cloud_evidence.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--target-branch",
+            target_branch,
+            "--release-head-sha",
+            release_head_sha,
+            "--required-gates-run-id",
+            required_gates_run_id,
+            "--run-url",
+            run_url,
+            "--workflow-file-sha",
+            workflow_file_sha,
+            "--run-head-sha",
+            run_head_sha,
+            "--run-workflow-file-sha",
+            run_workflow_file_sha,
+            "--checks-json",
+            checks_json,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_cross_cwd_absolute_input.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            str(Path("identity/catalog/identities.yaml").resolve()),
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_run_id_report_selection.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            required_gates_run_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_phase_bootstrap_before_strict.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_tmp_collision_safety.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            required_gates_run_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_handoff_collab_freshness_rotation.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_protocol_feedback_atomic_emit.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_capability_boundary_classification.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_promotion_pipeline.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_outlet_matrix.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_sidecar_cwd_parity.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_docs_bridge_consistency.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_prompt_bootstrap_capability.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_prompt_capability_matrix.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_refresh_strict_business_interference.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_kernel_ssot_source.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_prompt_derivation_conformance.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_semantic_convergence.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_contract_mapping_coverage.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_prompt_kernel_executable_coupling.py",
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/required_gate_bundle_runner.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            "NOT_APPLICABLE",
+            "--outlet-bypass-detected",
+            "false",
+            "--final-emit-contract-status",
+            "NOT_APPLICABLE",
+            "--final-emit-policy-mode",
+            "tool_choice_required",
+            "--final-emit-schema-status",
+            "NOT_APPLICABLE",
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--resolved-source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--lock-state",
+            "LOCK_MATCH",
+            "--surface-label",
+            "release_readiness",
+            "--operation",
+            "readiness",
+            "--out",
+            required_gate_bundle_receipt,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/required_gate_bundle_runner.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--run-id",
+            bundle_run_token,
+            "--send-time-gate-status",
+            "NOT_APPLICABLE",
+            "--outlet-bypass-detected",
+            "false",
+            "--final-emit-contract-status",
+            "NOT_APPLICABLE",
+            "--final-emit-policy-mode",
+            "tool_choice_required",
+            "--final-emit-schema-status",
+            "NOT_APPLICABLE",
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--resolved-source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--lock-state",
+            "LOCK_MATCH",
+            "--surface-label",
+            "release_readiness_scan_probe",
+            "--operation",
+            "scan",
+            "--out",
+            required_gate_bundle_receipt_probe,
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_required_gate_recurrence_escalator.py",
+            "--identity-id",
+            identity_id,
+            "--surface",
+            "readiness",
+            "--operation",
+            "readiness",
+            "--receipt",
+            required_gate_bundle_receipt,
+            "--enforce-blocking",
+            "--json-only",
+        ],
+        [
+            "python3",
+            "scripts/validate_required_gate_tuple_parity.py",
+            "--receipt",
+            required_gate_bundle_receipt,
+            "--receipt",
+            required_gate_bundle_receipt_probe,
+            "--require-distinct-operations",
+            "--json-only",
+        ],
+        [
+            "python3",
+            FAILCLOSE_PLUGIN_PROJECTION_SCRIPT,
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--run-id",
+            bundle_run_token,
+            "--report-selected-path",
+            str(args.execution_report or "").strip(),
+            "--send-time-gate-status",
+            "NOT_APPLICABLE",
+            "--outlet-bypass-detected",
+            "false",
+            "--final-emit-contract-status",
+            "NOT_APPLICABLE",
+            "--final-emit-policy-mode",
+            "tool_choice_required",
+            "--final-emit-schema-status",
+            "NOT_APPLICABLE",
+            "--actor-id",
+            actor_id,
+            "--resolved-work-layer",
+            (str(args.expected_work_layer or "").strip().lower() or "instance"),
+            "--resolved-source-layer",
+            (str(args.expected_source_layer or "").strip().lower() or _infer_source_layer_from_catalog_path(catalog)),
+            "--lock-state",
+            "LOCK_MATCH",
+            "--surface-label",
+            "release_readiness_plugin_projection",
+            "--out",
+            failclose_plugin_projection_receipt,
+            "--json-only",
+        ],
+        full_scan_target_regression_cmd,
+        [
+            "python3",
+            "scripts/validate_replay_archive_contract.py",
+            "--catalog",
+            catalog,
+            "--identity-id",
+            identity_id,
+            "--operation",
+            "readiness",
+            "--json-only",
         ],
         [
             "python3",
@@ -994,7 +1665,11 @@ def main() -> int:
             args.capability_activation_policy,
             "--baseline-policy",
             args.baseline_policy,
+            "--run-id",
+            (required_gates_run_id or f"readiness-{identity_id}"),
         ]
+        if session_id:
+            gen_cmd.extend(["--session-id", session_id])
         if scope:
             gen_cmd.extend(["--scope", scope])
         if layer_intent_text:
@@ -1013,8 +1688,8 @@ def main() -> int:
         if pack_path is not None:
             roots.append((pack_path / "runtime" / "reports").resolve())
             roots.append((pack_path / "runtime").resolve())
-        roots.append(Path("/tmp/identity-upgrade-reports"))
-        roots.append(Path("/tmp/identity-runtime"))
+        roots.append(upgrade_reports_named_root)
+        roots.append(upgrade_reports_runtime_root)
         if os.environ.get("IDENTITY_HOME", "").strip():
             roots.append(Path(os.environ["IDENTITY_HOME"]).expanduser().resolve())
         candidates: list[Path] = []
@@ -1216,8 +1891,12 @@ def main() -> int:
             "readiness",
             "--execution-report",
             execution_report,
+            "--actor-id",
+            actor_id,
+            "--session-id",
+            session_id,
             "--out-dir",
-            "/tmp/identity-health-reports",
+            health_report_dir,
             "--enforce-pass",
         ]
     )
@@ -1228,7 +1907,7 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--report-dir",
-            "/tmp/identity-health-reports",
+            health_report_dir,
             "--require-pass",
         ]
     )
@@ -1239,7 +1918,7 @@ def main() -> int:
             "--identity-id",
             identity_id,
             "--report-dir",
-            "/tmp/identity-health-reports",
+            health_report_dir,
             "--execution-report",
             execution_report,
             "--operation",
@@ -1405,6 +2084,7 @@ def main() -> int:
         report_meta = json.loads(Path(execution_report).read_text(encoding="utf-8"))
     except Exception:
         report_meta = {}
+    _apply_bundle_passthrough_from_report(seq, report_meta, execution_report)
     permission_cmd = [
         "python3",
         "scripts/validate_identity_permission_state.py",
@@ -1435,8 +2115,12 @@ def main() -> int:
             "scripts/validate_identity_capability_activation.py",
             "--identity-id",
             identity_id,
-            "--report",
-            execution_report,
+            "--catalog",
+            catalog,
+            "--repo-catalog",
+            "identity/catalog/identities.yaml",
+            "--activation-policy",
+            args.capability_activation_policy,
             "--require-activated",
         ]
     )
@@ -1477,7 +2161,7 @@ def main() -> int:
             script = cmd[1]
             if script in {
                 "scripts/render_identity_response_stamp.py",
-                "scripts/compose_and_validate_governed_reply.py",
+                "scripts/final_emit_governed.py",
                 "scripts/validate_layer_intent_resolution.py",
                 "scripts/validate_reply_identity_context_first_line.py",
                 "scripts/validate_send_time_reply_gate.py",
@@ -1504,7 +2188,12 @@ def main() -> int:
             } and "--expected-work-layer" not in cmd:
                 cmd.extend(["--expected-work-layer", expected_work_layer])
             if (
-                cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                cmd[1] == "scripts/final_emit_governed.py"
+                and "--work-layer" not in cmd
+            ):
+                cmd.extend(["--work-layer", expected_work_layer])
+            if (
+                cmd[1] == "scripts/render_identity_response_stamp.py"
                 and "--work-layer" not in cmd
             ):
                 cmd.extend(["--work-layer", expected_work_layer])
@@ -1513,7 +2202,12 @@ def main() -> int:
             if len(cmd) < 2:
                 continue
             if (
-                cmd[1] == "scripts/compose_and_validate_governed_reply.py"
+                cmd[1] == "scripts/final_emit_governed.py"
+                and "--source-layer" not in cmd
+            ):
+                cmd.extend(["--source-layer", expected_source_layer])
+            if (
+                cmd[1] == "scripts/render_identity_response_stamp.py"
                 and "--source-layer" not in cmd
             ):
                 cmd.extend(["--source-layer", expected_source_layer])
@@ -1531,6 +2225,36 @@ def main() -> int:
                 "scripts/validate_work_layer_gate_set_routing.py",
             } and "--source-layer" not in cmd:
                 cmd.extend(["--source-layer", expected_source_layer])
+    actor_id_required_scripts = {
+        "scripts/validate_required_contract_coverage.py",
+        "scripts/render_identity_response_stamp.py",
+        "scripts/validate_identity_response_stamp.py",
+        "scripts/final_emit_governed.py",
+        "scripts/validate_reply_identity_context_first_line.py",
+        "scripts/validate_headstamp_recurrence_closure.py",
+        "scripts/validate_send_time_reply_gate.py",
+        "scripts/validate_execution_reply_identity_coherence.py",
+    }
+    for cmd in seq:
+        if len(cmd) < 2:
+            continue
+        if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
+            cmd.extend(["--actor-id", actor_id])
+        if (
+            session_id
+            and cmd[1] in {
+                "scripts/validate_required_contract_coverage.py",
+                "scripts/render_identity_response_stamp.py",
+                "scripts/validate_identity_response_stamp.py",
+                "scripts/final_emit_governed.py",
+                "scripts/validate_reply_identity_context_first_line.py",
+                "scripts/validate_headstamp_recurrence_closure.py",
+                "scripts/validate_send_time_reply_gate.py",
+                "scripts/validate_execution_reply_identity_coherence.py",
+            }
+            and "--session-id" not in cmd
+        ):
+            cmd.extend(["--session-id", session_id])
 
     for cmd in seq:
         is_capability_validator = len(cmd) >= 2 and cmd[1] == "scripts/validate_identity_capability_activation.py"

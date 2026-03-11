@@ -1,0 +1,60 @@
+{
+  "manifest_id": "round47-678-hardclose",
+  "generated_at": "2026-03-11T05:39:47Z",
+  "required_tuple_fields": [
+    "sha256",
+    "command",
+    "rc",
+    "timestamp_utc"
+  ],
+  "entries": [
+    {
+      "case_id": "validate_kernel_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/validate_kernel_ssot_source.json",
+      "sha256": "c6f857abf00e9cb193c02c32bc5843317d25dd21c923af9b39994600f608ecc5",
+      "command": "python3 scripts/validate_kernel_ssot_source.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --operation validate --force-required --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:39:30Z"
+    },
+    {
+      "case_id": "validate_required_contract_coverage_txt",
+      "path": "activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/validate_required_contract_coverage.txt",
+      "sha256": "8d610f0fc3bd1db78415b603f6134942083588a6933435491395dc394bba81a9",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round47-coverage",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:39:38Z"
+    },
+    {
+      "case_id": "validate_required_contract_coverage_json",
+      "path": "activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/validate_required_contract_coverage.json",
+      "sha256": "5aa308874f144a5a4478c449cad38195e28c2c9bab7d3762b87d4b252c520f80",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round47-coverage --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:39:46Z"
+    },
+    {
+      "case_id": "validate_prompt_kernel_executable_coupling",
+      "path": "activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/validate_prompt_kernel_executable_coupling.json",
+      "sha256": "229c1292681d012d3f286c879c1d3de5290a06151a3f81272e042e2b494df418",
+      "command": "python3 scripts/validate_prompt_kernel_executable_coupling.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round47-coupling-default --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:39:46Z"
+    },
+    {
+      "case_id": "validate_prompt_kernel_executable_coupling_instance_probe",
+      "path": "activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/validate_prompt_kernel_executable_coupling.instance_probe.json",
+      "sha256": "810054061ad5c401c181ae62b7074f9ccae5fb60424e05c44392b3a055ed1dc9",
+      "command": "python3 scripts/validate_prompt_kernel_executable_coupling.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --expected-work-layer instance --source-layer global --actor-id assistant:codex --session-id run:round47-coupling-instance-probe --json-only",
+      "rc": 1,
+      "timestamp_utc": "2026-03-11T05:39:47Z"
+    },
+    {
+      "case_id": "round47_678_hardclose_summary",
+      "path": "activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/round47_678_hardclose_summary.json",
+      "sha256": "20e8d53ca4934a15c43ca9d06969ec80a023cd94a066537c31af50f58e3e533e",
+      "command": "python3 <round47 summary aggregation>",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:39:47Z"
+    }
+  ]
+}

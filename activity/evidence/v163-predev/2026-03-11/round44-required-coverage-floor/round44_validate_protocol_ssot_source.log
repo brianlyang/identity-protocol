@@ -1,0 +1,8 @@
+{
+  "case_id": "validate_protocol_ssot_source",
+  "command": "python3 scripts/validate_protocol_ssot_source.py",
+  "rc": 0,
+  "timestamp_utc": "2026-03-11T04:00:03Z",
+  "stdout": "[OK] protocol SSOT source boundary validated\n     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md\n     core_change_map=docs/governance/templates/protocol-core-change-map.yaml\n     artifacts_policy=evidence_only_non_normative\n",
+  "stderr": ""
+}

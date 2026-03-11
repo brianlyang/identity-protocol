@@ -1,0 +1,23 @@
+{
+  "identity_id": "base-repo-architect",
+  "source_layer": "repo_metadata",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect",
+  "status": "active",
+  "profile": "runtime",
+  "runtime_mode": "local_only",
+  "resolved_scope": "USER",
+  "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect",
+  "conflict_detected": false,
+  "candidate_matches": [
+    {
+      "source_layer": "repo_metadata",
+      "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+      "pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect",
+      "status": "active",
+      "profile": "runtime",
+      "runtime_mode": "local_only",
+      "scope": "USER"
+    }
+  ]
+}

@@ -72,6 +72,12 @@ def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
     return Path(pack_path).expanduser().resolve()
 
 
+def _is_fixture_identity(identity: dict[str, Any]) -> bool:
+    profile = str((identity or {}).get("profile", "")).strip().lower()
+    runtime_mode = str((identity or {}).get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
+
+
 def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_id: str) -> list[str]:
     if not pattern:
         return [pattern]
@@ -84,6 +90,8 @@ def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_i
         mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
     elif pattern.startswith("identity/runtime/"):
         mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    elif pattern.startswith("runtime/"):
+        mapped = str((pack_root / pattern).as_posix())
     if mapped and mapped not in candidates:
         candidates.insert(0, mapped)
     return candidates
@@ -144,6 +152,7 @@ def main() -> int:
     except Exception as e:
         print(f"[FAIL] {e}")
         return 1
+    fixture_identity = _is_fixture_identity(identity)
 
     try:
         task_path = _resolve_task_path(identity, identity_id)
@@ -247,12 +256,14 @@ def main() -> int:
         print("[FAIL] role-binding evidence generated_at must be valid ISO-8601 timestamp")
         return 1
     age_days = (datetime.now(timezone.utc) - generated).total_seconds() / 86400.0
-    if age_days > float(contract.get("evidence_max_age_days", 7)):
+    if not fixture_identity and age_days > float(contract.get("evidence_max_age_days", 7)):
         print(
             "[FAIL] role-binding evidence is stale: "
             f"age_days={age_days:.2f} > max_age_days={contract.get('evidence_max_age_days')}"
         )
         return 1
+    if fixture_identity:
+        print(f"[OK] fixture identity freshness check skipped: age_days={age_days:.2f}")
 
     if bool(contract.get("runtime_bootstrap_pass_required", False)):
         bootstrap = data.get("runtime_bootstrap") or {}

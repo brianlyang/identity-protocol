@@ -1,0 +1,134 @@
+{
+  "manifest_id": "round48-threepass-legacy-semantic-parity",
+  "generated_at": "2026-03-11T05:49:00Z",
+  "entries": [
+    {
+      "case_id": "iter01_docs_command_contract_check",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter01_docs_command_contract_check.out",
+      "sha256": "16c0e619a5768b08d1192cbd306ea8667eb56532bca17b8a6e49c8e11a50c21b",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:49:56Z"
+    },
+    {
+      "case_id": "iter01_validate_control_plane_invariants",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter01_validate_control_plane_invariants.out",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:49:57Z"
+    },
+    {
+      "case_id": "iter01_validate_required_gate_surface_drift",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter01_validate_required_gate_surface_drift.out",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:49:57Z"
+    },
+    {
+      "case_id": "iter01_validate_protocol_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter01_validate_protocol_ssot_source.out",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:49:57Z"
+    },
+    {
+      "case_id": "iter01_validate_required_contract_coverage_sra",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter01_validate_required_contract_coverage_sra.out",
+      "sha256": "9828c0b390695935d307eebdbd596803fff6f2be9e8c01f162b6063936d6ae60",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round48-threepass --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:50:04Z"
+    },
+    {
+      "case_id": "iter02_docs_command_contract_check",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter02_docs_command_contract_check.out",
+      "sha256": "16c0e619a5768b08d1192cbd306ea8667eb56532bca17b8a6e49c8e11a50c21b",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:50:59Z"
+    },
+    {
+      "case_id": "iter02_validate_control_plane_invariants",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter02_validate_control_plane_invariants.out",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:51:00Z"
+    },
+    {
+      "case_id": "iter02_validate_required_gate_surface_drift",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter02_validate_required_gate_surface_drift.out",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:51:01Z"
+    },
+    {
+      "case_id": "iter02_validate_protocol_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter02_validate_protocol_ssot_source.out",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:51:01Z"
+    },
+    {
+      "case_id": "iter02_validate_required_contract_coverage_sra",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter02_validate_required_contract_coverage_sra.out",
+      "sha256": "6a0159fe478da2b82c27b86ca83a7abb0d23dce826bd32f810d04a788806ae3a",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round48-threepass --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:51:08Z"
+    },
+    {
+      "case_id": "iter03_docs_command_contract_check",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter03_docs_command_contract_check.out",
+      "sha256": "16c0e619a5768b08d1192cbd306ea8667eb56532bca17b8a6e49c8e11a50c21b",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:52:05Z"
+    },
+    {
+      "case_id": "iter03_validate_control_plane_invariants",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter03_validate_control_plane_invariants.out",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:52:06Z"
+    },
+    {
+      "case_id": "iter03_validate_required_gate_surface_drift",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter03_validate_required_gate_surface_drift.out",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:52:07Z"
+    },
+    {
+      "case_id": "iter03_validate_protocol_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter03_validate_protocol_ssot_source.out",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:52:07Z"
+    },
+    {
+      "case_id": "iter03_validate_required_contract_coverage_sra",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/iter03_validate_required_contract_coverage_sra.out",
+      "sha256": "370a37d07d68f97aca2e3816385a60a8cea0b3ce0290c0700399645db002ad10",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round48-threepass --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:52:14Z"
+    },
+    {
+      "case_id": "round48_threepass_summary",
+      "path": "activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/round48_threepass_summary.json",
+      "sha256": "c1e9fb4a9c3c6cd1f934053e07e3984cdc35fb660482116aeb5bdff2a82a3e60",
+      "command": "python3 <round48 summary aggregation>",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:52:14Z"
+    }
+  ]
+}

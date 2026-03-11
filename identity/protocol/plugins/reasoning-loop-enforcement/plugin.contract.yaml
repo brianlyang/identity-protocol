@@ -1,0 +1,84 @@
+contract_id: rq_035_reasoning_loop_failclose_contract_v1
+plugin_id: reasoning-loop-enforcement
+version: v1.6.2
+owner: protocol_base_repo
+validator_script: scripts/validate_reasoning_loop_failclose.py
+reasoning_enforcement:
+  default_level: L1
+  supported_levels:
+    - L0
+    - L1
+    - L2
+    - L3
+  level_required_attempt_fields:
+    L0: []
+    L1:
+      - attempt
+      - hypothesis
+      - patch
+      - expected_effect
+      - result
+    L2:
+      - attempt
+      - hypothesis
+      - patch
+      - expected_effect
+      - result
+      - result_code
+      - target_reached
+      - no_target_reached
+      - next_action
+      - evidence_refs
+    L3:
+      - attempt
+      - hypothesis
+      - patch
+      - expected_effect
+      - result
+      - result_code
+      - target_reached
+      - no_target_reached
+      - next_action
+      - evidence_refs
+  level_required_run_fields:
+    L2:
+      - roundtable_evidence_refs
+      - vendor_evidence_refs
+      - network_evidence_refs
+      - reference_evidence_refs
+    L3:
+      - roundtable_evidence_refs
+      - vendor_evidence_refs
+      - network_evidence_refs
+      - reference_evidence_refs
+  level_required_external_fields:
+    L3:
+      - external_source_freshness_status
+      - conflict_reconciliation_note
+      - source_url_set
+semantics:
+  no_target_completion_forbidden: true
+  no_target_completion_mode: terminal_attempt_only
+  done_requires_terminal_target_reached: true
+  failure_requires_next_action: true
+  strict_run_id_binding: true
+  runtime_report_selection_mode: prefer_run_id
+  max_attempts_before_escalation: 3
+  escalation_requirement_mode: at_or_exceed
+  escalation_signal_fields:
+    - route_switch_triggered
+    - human_collaboration_triggered
+    - escalation_triggered
+    - route_switch_ref
+    - human_collaboration_ref
+    - escalation_ref
+    - next_action
+  escalation_signal_accept_nonempty_ref: true
+  escalation_signal_nonempty_fields:
+    - route_switch_ref
+    - human_collaboration_ref
+    - escalation_ref
+error_family:
+  - IP-RL-REG-*
+  - IP-RL-CONF-*
+  - IP-RL-RUN-*

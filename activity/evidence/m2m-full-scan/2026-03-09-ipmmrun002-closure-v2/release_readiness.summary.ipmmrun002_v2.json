@@ -1,0 +1,18 @@
+{
+  "base-repo-audit-expert-v3": {
+    "rc": 1,
+    "contains_ip_mm_run_002": false
+  },
+  "base-repo-architect": {
+    "rc": 1,
+    "contains_ip_mm_run_002": false
+  },
+  "custom-creative-ecom-analyst": {
+    "rc": 1,
+    "contains_ip_mm_run_002": false
+  },
+  "store-manager": {
+    "rc": 2,
+    "contains_ip_mm_run_002": false
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "base-repo-architect": {
+    "rc": 1,
+    "rows": 33,
+    "bundle_status": "FAIL_REQUIRED",
+    "fail_count": 2,
+    "fail_codes": [
+      "IP-MM-RUN-002",
+      "IP-RL-RUN-006"
+    ],
+    "fail_requirements": [
+      "asb16-rq-034",
+      "asb16-rq-035"
+    ],
+    "row_contract_error_count": 2,
+    "failed_required_contract_count": 2
+  },
+  "base-repo-audit-expert-v3": {
+    "rc": 1,
+    "rows": 33,
+    "bundle_status": "FAIL_REQUIRED",
+    "fail_count": 1,
+    "fail_codes": [
+      "IP-RL-RUN-006"
+    ],
+    "fail_requirements": [
+      "asb16-rq-035"
+    ],
+    "row_contract_error_count": 1,
+    "failed_required_contract_count": 1
+  },
+  "store-manager": {
+    "rc": 1,
+    "rows": 33,
+    "bundle_status": "FAIL_REQUIRED",
+    "fail_count": 2,
+    "fail_codes": [
+      "IP-MM-RUN-002",
+      "IP-RL-RUN-006"
+    ],
+    "fail_requirements": [
+      "asb16-rq-034",
+      "asb16-rq-035"
+    ],
+    "row_contract_error_count": 2,
+    "failed_required_contract_count": 2
+  },
+  "custom-creative-ecom-analyst": {
+    "rc": 1,
+    "rows": 33,
+    "bundle_status": "FAIL_REQUIRED",
+    "fail_count": 2,
+    "fail_codes": [
+      "IP-MM-RUN-002",
+      "IP-RL-RUN-006"
+    ],
+    "fail_requirements": [
+      "asb16-rq-034",
+      "asb16-rq-035"
+    ],
+    "row_contract_error_count": 2,
+    "failed_required_contract_count": 2
+  }
+}

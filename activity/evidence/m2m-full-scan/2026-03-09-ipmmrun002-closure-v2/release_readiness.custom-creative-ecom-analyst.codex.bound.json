@@ -1,0 +1,477 @@
+[OK] runtime mode guard passed: identity=custom-creative-ecom-analyst mode=project catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml pack=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst scope=USER
+[INFO] actor session selector: source=explicit_session_id session_id=run:activate-custom-creative-ecom-analyst-1773037601
+[INFO] lane routing: work_layer=protocol source_layer=project applied_gate_set=protocol_required_checks
+[RUN] python3 scripts/validate_identity_runtime_mode_guard.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation readiness --scope USER
+[RUN] python3 scripts/validate_identity_pack_path_canonical.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --json-only
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "pack_path_raw": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "pack_path_resolved": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "path_scope": "runtime", "allowed_runtime_roots": ["/Users/yangxi/claude/codex_project/weixinstore/.identity", "/Users/yangxi/.codex/.identity"], "path_governance_status": "PASS_REQUIRED", "path_error_codes": [], "stale_reasons": []}
+[INFO] pack path canonical preflight: status=PASS_REQUIRED error_codes=- identity=custom-creative-ecom-analyst
+[RUN] python3 scripts/validate_identity_home_catalog_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-home /Users/yangxi/claude/codex_project/weixinstore/.identity --json-only
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "identity_home": "/Users/yangxi/claude/codex_project/weixinstore/.identity", "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "path_scope": "runtime_mutation", "path_governance_status": "PASS_REQUIRED", "path_error_codes": [], "canonicalization_ref": "Path.resolve(strict=False)", "identity_home_expected": "/Users/yangxi/claude/codex_project/weixinstore/.identity", "identity_home_source": "explicit", "stale_reasons": []}
+[INFO] identity home/catalog alignment preflight: status=PASS_REQUIRED error_codes=- identity=custom-creative-ecom-analyst
+[RUN] python3 scripts/validate_fixture_runtime_boundary.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation readiness --json-only
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "profile": "runtime", "runtime_mode": "local_only", "status": "active", "operation": "readiness", "path_scope": "runtime_mutation", "path_governance_status": "PASS_REQUIRED", "path_error_codes": [], "canonicalization_ref": "Path.resolve(strict=False)", "allow_fixture_runtime": false, "fixture_audit_receipt": "", "stale_reasons": [], "fixture_receipt_fields": {}}
+[INFO] fixture/runtime boundary preflight: status=PASS_REQUIRED error_codes=- identity=custom-creative-ecom-analyst
+[RUN] python3 scripts/validate_execution_report_freshness.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --report /Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json --execution-report-policy strict --json-only
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "execution_report_policy": "strict", "selection_mode": "explicit", "report_selected_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json", "candidate_count": 1, "report_mtime_utc": "2026-03-09T08:29:10Z", "key_input_paths": ["/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/IDENTITY_PROMPT.md", "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/CURRENT_TASK.json"], "key_input_latest_mtime_utc": "2026-03-09T04:39:52Z", "checks": {"identity_id_match": true, "catalog_path_match": true, "pack_path_match": true, "prompt_path_match": true, "prompt_sha_match": true, "report_newer_than_key_inputs": true}, "freshness_status": "PASS", "freshness_error_code": "", "stale_reasons": []}
+[INFO] execution report freshness preflight: status=PASS error_code=- report=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json
+[RUN] python3 scripts/validate_identity_execution_report_path_contract.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --report /Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json --json-only
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "report_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json", "report_resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "report_catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "resolved_catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "path_scope": "runtime_report", "path_governance_status": "PASS_REQUIRED", "path_error_codes": [], "stale_reasons": [], "canonicalization_ref": "Path.resolve(strict=False)"}
+[INFO] execution report path preflight: status=PASS_REQUIRED error_codes=- report=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json
+[RUN] python3 scripts/validate_identity_protocol_baseline_freshness.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --execution-report /Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json --baseline-policy strict --json-only
+[OK]   store-manager: CURRENT_TASK core runtime keys present
+[OK]   system-requirements-analyst: CURRENT_TASK core runtime keys present
+[OK]   identity-neutral baseline: default_identity is empty (explicit activation required)
+[OK] identity protocol validation passed (all identities)
+[OK] local persistence boundary validation passed
+     repo_catalog=identity/catalog/identities.yaml
+     local_catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml exists=True
+[OK] identity creation boundary regression passed (4/4 cases)
+[OK] scope resolution deterministic: identity=custom-creative-ecom-analyst, scope=USER, pack=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst
+[OK] scope isolation validated: identity=custom-creative-ecom-analyst, scope=USER, pack=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst
+[OK] scope persistence validated: identity=custom-creative-ecom-analyst, scope=USER, profile=runtime, runtime_mode=local_only
+[OK] identity state consistency validated
+     catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml
+     active_identities=['base-repo-audit-expert-v3', 'custom-creative-ecom-analyst', 'base-repo-architect']
+     active_count=3
+     checked_meta_files=4
+[WARN] canonical_identity_mismatch:pointer=base-repo-architect active=custom-creative-ecom-analyst (allowed under actor-scoped multi-active model)
+[WARN] mirror_identity_mismatch:pointer=base-repo-architect active=custom-creative-ecom-analyst (allowed under actor-scoped multi-active model)
+[OK] session pointer consistency validated: expected_identity=custom-creative-ecom-analyst actor=assistant:codex session_id=run:activate-custom-creative-ecom-analyst-1773037601 active_count=3 catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml canonical=/Users/yangxi/claude/codex_project/weixinstore/.identity/session/active_identity.json
+[OK] actor session binding validated: actor=assistant:codex identity=custom-creative-ecom-analyst path=/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json
+{
+  "identity_id": "custom-creative-ecom-analyst",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "actor_id": "assistant:codex",
+  "operation": "readiness",
+  "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json",
+  "bound_identity_id": "custom-creative-ecom-analyst",
+  "bound_session_id": "run:activate-custom-creative-ecom-analyst-1773037601",
+  "binding_key_mode": "actor_id+identity_id+session_id",
+  "session_entry_count": 32,
+  "catalog_identity_status": "active",
+  "actor_binding_status": "PASS_REQUIRED",
+  "error_code": "",
+  "stale_reasons": []
+}
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "report_selected_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json", "report_protocol_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local", "report_protocol_commit_sha": "dad78cf345e1a94ec82b651dc2ce65e00eb8302b", "protocol_head_sha_at_run_start": "dad78cf345e1a94ec82b651dc2ce65e00eb8302b", "baseline_reference_mode": "run_pinned", "current_protocol_head_sha": "05d8031f343d76c05b7a12ffce8e309db3bd9729", "head_drift_detected": true, "baseline_status": "PASS", "baseline_error_code": "", "lag_commits": 0, "stale_reasons": ["live_head_drift_non_blocking"]}
+[INFO] protocol baseline freshness preflight: status=PASS error_code=- report=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json
+[RUN] python3 scripts/validate_identity_protocol_version_alignment.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --execution-report /Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json --operation readiness --alignment-policy strict --json-only --scope USER
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst", "operation": "readiness", "alignment_policy": "strict", "required_contract": true, "report_selected_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json", "protocol_version_alignment_status": "PASS_REQUIRED", "error_code": "", "tuple_checks": {"execution_report_freshness": true, "protocol_baseline_freshness": true, "prompt_activation": true, "binding_tuple": true}, "execution_report_freshness": {"status": "PASS", "error_code": "", "rc": 0, "tail": "{\"identity_id\": \"custom-creative-ecom-analyst\", \"catalog_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml\", \"resolved_pack_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst\", \"execution_report_policy\": \"strict\", \"selection_mode\": \"explicit\", \"report_selected_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json\", \"candidate_count\": 1, \"report_mtime_utc\": \"2026-03-09T08:29:10Z\", \"key_input_paths\": [\"/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/IDENTITY_PROMPT.md\", \"/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/CURRENT_TASK.json\"], \"key_input_latest_mtime_utc\": \"2026-03-09T04:39:52Z\", \"checks\": {\"identity_id_match\": true, \"catalog_path_match\": true, \"pack_path_match\": true, \"prompt_path_match\": true, \"prompt_sha_match\": true, \"report_newer_than_key_inputs\": true}, \"freshness_status\": \"PASS\", \"freshness_error_code\": \"\", \"stale_reasons\": []}", "report_selected_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json", "stale_reasons": [], "checks": {"identity_id_match": true, "catalog_path_match": true, "pack_path_match": true, "prompt_path_match": true, "prompt_sha_match": true, "report_newer_than_key_inputs": true}}, "protocol_baseline_freshness": {"status": "PASS", "error_code": "", "rc": 0, "tail": "{\"identity_id\": \"custom-creative-ecom-analyst\", \"catalog_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml\", \"resolved_pack_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst\", \"report_selected_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json\", \"report_protocol_root\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local\", \"report_protocol_commit_sha\": \"dad78cf345e1a94ec82b651dc2ce65e00eb8302b\", \"protocol_head_sha_at_run_start\": \"dad78cf345e1a94ec82b651dc2ce65e00eb8302b\", \"baseline_reference_mode\": \"run_pinned\", \"current_protocol_head_sha\": \"05d8031f343d76c05b7a12ffce8e309db3bd9729\", \"head_drift_detected\": true, \"baseline_status\": \"PASS\", \"baseline_error_code\": \"\", \"lag_commits\": 0, \"stale_reasons\": [\"live_head_drift_non_blocking\"]}", "report_selected_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json", "report_protocol_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local", "report_protocol_commit_sha": "dad78cf345e1a94ec82b651dc2ce65e00eb8302b", "protocol_head_sha_at_run_start": "dad78cf345e1a94ec82b651dc2ce65e00eb8302b", "baseline_reference_mode": "run_pinned", "current_protocol_head_sha": "05d8031f343d76c05b7a12ffce8e309db3bd9729", "head_drift_detected": true, "lag_commits": 0, "stale_reasons": ["live_head_drift_non_blocking"]}, "prompt_activation": {"rc": 0, "tail": "     bytes=7383"}, "binding_tuple": {"rc": 0, "tail": "     runtime_output_root=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime"}, "stale_reasons": []}
+[INFO] protocol version alignment preflight: status=PASS_REQUIRED error_code=- report=/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json
+[RUN] python3 scripts/validate_identity_protocol.py
+[RUN] python3 scripts/validate_identity_local_persistence.py
+[RUN] python3 scripts/validate_identity_creation_boundary.py
+[RUN] python3 scripts/validate_identity_scope_resolution.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id custom-creative-ecom-analyst --scope USER
+[RUN] python3 scripts/validate_identity_scope_isolation.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id custom-creative-ecom-analyst --scope USER
+[RUN] python3 scripts/validate_identity_scope_persistence.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id custom-creative-ecom-analyst --scope USER
+[RUN] python3 scripts/validate_identity_state_consistency.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml
+[RUN] python3 scripts/validate_identity_session_pointer_consistency.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --actor-id assistant:codex --session-id run:activate-custom-creative-ecom-analyst-1773037601
+[RUN] python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --actor-id assistant:codex --session-id run:activate-custom-creative-ecom-analyst-1773037601 --operation readiness
+[OK] no implicit switch validated: report=/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-activation-reports/identity-activation-switch-custom-creative-ecom-analyst-1773037839.json
+{
+  "identity_id": "custom-creative-ecom-analyst",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "operation": "readiness",
+  "switch_report_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-activation-reports/identity-activation-switch-custom-creative-ecom-analyst-1773037839.json",
+  "implicit_switch_status": "PASS_REQUIRED",
+  "error_code": "",
+  "stale_reasons": [],
+  "switch_id": "identity-activation-switch-custom-creative-ecom-analyst-1773037839",
+  "actor_id": "assistant:codex",
+  "run_id": "activate-custom-creative-ecom-analyst-1773037601",
+  "cross_actor_demotion_detected": false
+}
+[OK] cross-actor isolation validated: catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml actor_bindings=41 active_identities=['base-repo-audit-expert-v3', 'custom-creative-ecom-analyst', 'base-repo-architect'] status=PASS_REQUIRED
+{
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "identity_id": "custom-creative-ecom-analyst",
+  "operation": "readiness",
+  "active_identities": [
+    "base-repo-audit-expert-v3",
+    "custom-creative-ecom-analyst",
+    "base-repo-architect"
+  ],
+  "actor_binding_count": 41,
+  "cross_actor_isolation_status": "PASS_REQUIRED",
+  "error_code": "",
+  "stale_reasons": [],
+  "actor_bindings": [
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:SWITCH-BRA-20260308",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:SWITCH-BRA-HEADSTAMP-20260308",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:SWITCH-BRA-RECONFIRM-20260308",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772592752",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772594394",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772595227",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772595749",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772595860",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772596481",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772597363",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772609129",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772699816",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772715315",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-1772934016",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:activate-base-repo-architect-20260307-switchback",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:asb-m2m-hotfix-20260309",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:asb-m2m-switch-20260309",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:manual-switch-20260308T165239",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:round28-restore-architect-1772962652",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:activate-base-repo-audit-expert-v3-1772590587",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:activate-base-repo-audit-expert-v3-1772590819",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:activate-base-repo-audit-expert-v3-1772706083",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:activate-base-repo-audit-expert-v3-1772776811",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:activate-base-repo-audit-expert-v3-1772902120",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:fixrun20-activate-20260308",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:reactivate-switch-1772960798",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:activate-custom-creative-ecom-analyst-1772960278",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:activate-custom-creative-ecom-analyst-1772979955",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:activate-custom-creative-ecom-analyst-1773030382",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:activate-custom-creative-ecom-analyst-1773033152",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:activate-custom-creative-ecom-analyst-1773037601",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "assistant:codex",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:update-custom-creative-ecom-analyst",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 32,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json"
+    },
+    {
+      "actor_id": "user:auditor",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:fix015-audit-20260301",
+      "binding_key_mode": "legacy_single_object",
+      "session_entry_count": 1,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_auditor.json"
+    },
+    {
+      "actor_id": "user:round28global",
+      "identity_id": "base-repo-architect",
+      "session_id": "round28-global-session-a",
+      "binding_key_mode": "actor_id+session_id",
+      "session_entry_count": 1,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_round28global.json"
+    },
+    {
+      "actor_id": "user:round28test",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "round28-session-alpha",
+      "binding_key_mode": "actor_id+session_id",
+      "session_entry_count": 2,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_round28test.json"
+    },
+    {
+      "actor_id": "user:round28test",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "round28-session-beta",
+      "binding_key_mode": "actor_id+session_id",
+      "session_entry_count": 2,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_round28test.json"
+    },
+    {
+      "actor_id": "user:yangxi",
+      "identity_id": "base-repo-architect",
+      "session_id": "run:mn-final-yangxi",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 5,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_yangxi.json"
+    },
+    {
+      "actor_id": "user:yangxi",
+      "identity_id": "base-repo-audit-expert-v3",
+      "session_id": "run:fix028-project-base-repo-audit-expert-v3-1772430616",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 5,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_yangxi.json"
+    },
+    {
+      "actor_id": "user:yangxi",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:activate-custom-creative-ecom-analyst-1772789983",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 5,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_yangxi.json"
+    },
+    {
+      "actor_id": "user:yangxi",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:converge-custom-1772383819",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 5,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_yangxi.json"
+    },
+    {
+      "actor_id": "user:yangxi",
+      "identity_id": "custom-creative-ecom-analyst",
+      "session_id": "run:fix028-project-custom-creative-ecom-analyst-1772430616",
+      "binding_key_mode": "actor_id+identity_id+session_id",
+      "session_entry_count": 5,
+      "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/user_yangxi.json"
+    }
+  ]
+}
+{"identity_id": "custom-creative-ecom-analyst", "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml", "actor_id": "assistant:codex", "operation": "readiness", "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json", "actor_session_multibinding_status": "PASS_REQUIRED", "error_code": "", "binding_key_mode": "actor_id+identity_id+session_id", "session_entry_count": 32, "cas_checked": true, "cas_conflict_detected": false, "non_activation_mutation_detected": false, "rebind_receipt_status": "PASS_REQUIRED", "dropped_peer_session_count": 0, "compare_token": "32", "binding_version": 32, "stale_reasons": []}
+{
+  "identity_id": "custom-creative-ecom-analyst",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "operation": "readiness",
+  "session_refresh_status": "PASS_REQUIRED",
+  "error_code": "",
+  "actor_id": "assistant:codex",
+  "lease_status": "ACTIVE",
+  "pointer_consistency": "WARN",
+  "risk_flags": [
+    "legacy_pointer_identity_mismatch",
+    "pointer_consistency_warn"
+  ],
+  "next_action": "review_session_refresh_risk_flags",
+  "baseline_status": "PASS",
+  "baseline_error_code": "",
+  "report_protocol_commit_sha": "dad78cf345e1a94ec82b651dc2ce65e00eb8302b",
+  "protocol_head_sha_at_run_start": "dad78cf345e1a94ec82b651dc2ce65e00eb8302b",
+  "baseline_reference_mode": "run_pinned",
+  "current_protocol_head_sha": "05d8031f343d76c05b7a12ffce8e309db3bd9729",
+  "head_drift_detected": true,
+  "lag_commits": 0,
+  "report_selected_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/custom-creative-ecom-analyst/runtime/reports/identity-upgrade-exec-custom-creative-ecom-analyst-1773044937.json",
+  "required_contract": true,
+  "stale_reasons": []
+}
+[OK] latest snapshot referenced in index: audit-snapshot-2026-02-25-readme-core-goal-alignment-v1.4.13.md
+validate_audit_snapshot_index PASSED
+[OK] protocol SSOT source boundary validated
+     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md
+     core_change_map=docs/governance/templates/protocol-core-change-map.yaml
+     artifacts_policy=evidence_only_non_normative
+{"operation": "readiness", "strict_operation": true, "e2e_hermetic_runtime_status": "PASS_REQUIRED", "pythonpath_bootstrap_mode": "internal_bootstrap", "import_preflight_status": "PASS_REQUIRED", "import_preflight_error_code": "", "missing_modules": [], "stale_reasons": []}
+[INFO] range: 1d5a16ff1dbc472cc45191fea9323501c244e59a..05d8031f343d76c05b7a12ffce8e309db3bd9729
+[INFO] changed files: 1
+[INFO] significant changed files: 1
+[FAIL] significant changes detected but CHANGELOG.md was not updated in this range
+[INFO] significant files:
+  - scripts/validate_control_plane_invariants.py
+[RUN] python3 scripts/validate_no_implicit_switch.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation readiness
+[RUN] python3 scripts/validate_cross_actor_isolation.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation readiness
+[RUN] python3 scripts/validate_actor_session_multibinding_concurrency.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --actor-id assistant:codex --session-id run:activate-custom-creative-ecom-analyst-1773037601 --operation readiness --json-only
+[RUN] python3 scripts/validate_identity_session_refresh_status.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id custom-creative-ecom-analyst --actor-id assistant:codex --operation readiness --baseline-policy strict
+[RUN] python3 scripts/validate_audit_snapshot_index.py
+[RUN] python3 scripts/validate_protocol_ssot_source.py
+[RUN] python3 scripts/validate_e2e_hermetic_runtime_import.py --operation readiness --pythonpath-bootstrap-mode internal_bootstrap --json-only
+[RUN] python3 scripts/validate_changelog_updated.py --base 1d5a16ff1dbc472cc45191fea9323501c244e59a --head 05d8031f343d76c05b7a12ffce8e309db3bd9729
+[FAIL] command failed (1): python3 scripts/validate_changelog_updated.py --base 1d5a16ff1dbc472cc45191fea9323501c244e59a --head 05d8031f343d76c05b7a12ffce8e309db3bd9729

@@ -18,12 +18,29 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical SSOT rule for protocol-strengthening handoff:
   - `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
   - Any `artifacts/` mirror is non-normative evidence only.
+- Canonical v1.6.x stream doc registry (single source for governance/review stream paths):
+  - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+- File-level semantic boundary (mandatory for current-state judgments):
+  - **Current-state authoritative set** = `stream_docs + mandatory_static_docs` resolved from `identity/protocol/mappings/stream-doc-registry.current.yaml`.
+  - Any other entries in this index are archival/context references unless explicitly promoted into that registry set.
+  - If archival wording conflicts with current-pointer mappings or active stream docs, archival wording is stale by definition.
+- Canonical layer-targeted required-gate profile mapping (scan/inspection-only trims; strict operations stay full):
+  - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
 - Canonical actor-scoped session binding governance (v1.5.0):
   - `docs/governance/identity-actor-session-binding-governance-v1.5.0.md`
   - Scope is protocol-only; no instance business policy allowed.
 - Canonical actor-scoped session binding governance (v1.6.0 planning track):
   - `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.md`
+- Canonical headstamp egress governance (v1.6.1 stream):
+  - `docs/governance/identity-headstamp-egress-governance-v1.6.1.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md`
+- Canonical multimodal plugin enforcement governance (v1.6.2 stream):
+  - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
+- Canonical GitHub-native control-plane specialization (v1.6.3 planning track):
+  - `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
 
 ## Snapshots
 
@@ -50,3 +67,4 @@ Quick entrypoint for audit history and remediation closure records.
 ## Protocol hardening plans
 
 - `docs/governance/p1-human-collab-trigger-upgrade-plan-2026-02-21.md` — protocol-level standardization plan for mandatory human-collaboration notification triggers (taxonomy + contract + validator + CI gate), **implemented in v1.3.0**
+- `docs/governance/github-native-control-plane-specialization-v1.6.3.md` — v1.6.3 dedicated migration stream for GitHub-native control-plane offload (rulesets/merge-queue/codeowners/actions-policy) with semantic fail-close retention in protocol validators.

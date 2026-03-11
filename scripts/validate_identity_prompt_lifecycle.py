@@ -199,13 +199,20 @@ def main() -> int:
     if change_applied and runtime_state_path is None:
         print("[FAIL] runtime_state_artifact_path missing while prompt_change_applied=true")
         return 1
+    allow_missing_runtime_state_on_no_upgrade = (
+        (not upgrade_required)
+        and (not change_required)
+        and (not change_applied)
+        and prompt_runtime_state_binding_status in {"MISSING", "", "SKIPPED_NOT_REQUIRED"}
+    )
     if runtime_state_path is not None and not runtime_state_path.exists() and not deferred_blocked:
-        searched = ", ".join(p.as_posix() for p in runtime_candidates) if runtime_candidates else "<none>"
-        print(
-            "[FAIL] runtime state artifact missing: "
-            f"raw={runtime_state_artifact_path!r}; resolved={runtime_state_path}; searched=[{searched}]"
-        )
-        return 1
+        if not allow_missing_runtime_state_on_no_upgrade:
+            searched = ", ".join(p.as_posix() for p in runtime_candidates) if runtime_candidates else "<none>"
+            print(
+                "[FAIL] runtime state artifact missing: "
+                f"raw={runtime_state_artifact_path!r}; resolved={runtime_state_path}; searched=[{searched}]"
+            )
+            return 1
     if runtime_state_path is not None and runtime_state_path.exists():
         doc = _safe_json(runtime_state_path)
         bound = str(doc.get("prompt_policy_hash", "")).strip()

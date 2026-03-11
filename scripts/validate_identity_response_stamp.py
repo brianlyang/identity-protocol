@@ -17,6 +17,7 @@ from response_stamp_common import (
     render_external_stamp,
     resolve_stamp_context,
 )
+from runtime_temp_path_common import runtime_temp_file
 from tool_vendor_governance_common import contract_required, load_json
 
 ERR_STAMP_MISMATCH = "IP-ASB-STAMP-001"
@@ -190,6 +191,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict M:N binding checks")
     ap.add_argument("--stamp-line", default="")
     ap.add_argument("--stamp-file", default="")
     ap.add_argument("--stamp-json", default="", help="render payload json file containing external_stamp field")
@@ -260,6 +262,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=args.session_id,
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:
@@ -432,7 +435,13 @@ def main() -> int:
     receipt_path = (
         Path(args.blocker_receipt_out).expanduser().resolve()
         if args.blocker_receipt_out.strip()
-        else Path(f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json").resolve()
+        else runtime_temp_file(
+            channel="response-stamp",
+            operation=args.operation,
+            identity_id=args.identity_id,
+            stem=f"identity-stamp-blocker-receipt-{args.identity_id}",
+            ext="json",
+        ).resolve()
     )
 
     payload = {

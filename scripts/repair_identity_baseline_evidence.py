@@ -51,6 +51,8 @@ def _materialize_pattern(pattern: str, identity_id: str, ts: int, pack_root: Pat
         return (pack_root / "runtime" / p[len(local_prefix) :]).expanduser()
     if pack_root is not None and p.startswith("identity/runtime/"):
         return (pack_root / "runtime" / p[len("identity/runtime/") :]).expanduser()
+    if pack_root is not None and p.startswith("runtime/"):
+        return (pack_root / p).expanduser()
     return Path(p).expanduser()
 
 

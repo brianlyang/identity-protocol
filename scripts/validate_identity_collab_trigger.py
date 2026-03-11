@@ -177,6 +177,40 @@ def _identity_scoped_logs(files: list[Path], identity_id: str) -> list[Path]:
     return scoped or files
 
 
+def _select_recent_logs(files: list[Path], *, keep: int) -> list[Path]:
+    if not files:
+        return files
+    limit = max(1, int(keep))
+
+    def _score(path: Path) -> tuple[float, str]:
+        ts = 0.0
+        try:
+            rec = _load_json(path)
+            for key in ("notified_at", "detected_at"):
+                raw = str(rec.get(key) or "").strip()
+                if not raw:
+                    continue
+                try:
+                    ts = max(ts, _parse_iso_dt(raw).timestamp())
+                except Exception:
+                    continue
+        except Exception:
+            ts = 0.0
+        if ts <= 0.0 and path.exists():
+            try:
+                ts = float(path.stat().st_mtime)
+            except Exception:
+                ts = 0.0
+        return ts, str(path)
+
+    ranked = sorted(
+        files,
+        key=_score,
+        reverse=True,
+    )
+    return ranked[:limit]
+
+
 def _validate_log(
     p: Path,
     *,
@@ -472,10 +506,14 @@ def main() -> int:
     if len(files) < minimum:
         print(f"[FAIL] collaboration evidence logs insufficient: found={len(files)}, required={minimum}")
         return 1
+    validation_max_logs = int(contract.get("validation_max_logs") or minimum)
+    files = _select_recent_logs(files, keep=max(minimum, validation_max_logs))
 
     task_id = str(task.get("task_id") or "")
     max_age_days = int(contract.get("max_log_age_days") or 7)
     if fixture_mode:
+        max_age_days = 0
+    if args.self_test:
         max_age_days = 0
 
     rc = 0

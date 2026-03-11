@@ -17,7 +17,7 @@ def _default_identity_home() -> Path:
     explicit = os.environ.get("IDENTITY_HOME", "").strip()
     if explicit:
         return Path(explicit).expanduser().resolve()
-    return (_default_codex_home() / "identity").resolve()
+    return (_default_codex_home() / ".identity").resolve()
 
 
 def _default_protocol_home() -> Path:

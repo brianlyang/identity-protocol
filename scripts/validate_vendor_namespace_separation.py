@@ -111,7 +111,7 @@ def main() -> int:
         explicit_source_layer=str(args.expected_source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer="instance",
-        default_source_layer="auto",
+        default_source_layer="project",
     )
     default_corr = discover_default_correlation_keys(pack_path)
     correlation_keys = build_correlation_keys(

@@ -15,6 +15,7 @@ from response_stamp_common import (
     resolve_layer_intent,
     resolve_stamp_context,
 )
+from runtime_temp_path_common import runtime_temp_file
 from tool_vendor_governance_common import contract_required, load_json
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -26,7 +27,7 @@ ERR_TUPLE_MISMATCH = "IP-ASB-CTX-001"
 ERR_REPLY_TUPLE_MISSING = "IP-ASB-CTX-002"
 ERR_DUAL_CATALOG_AMBIGUITY = "IP-ASB-CTX-003"
 
-STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate"}
+STRICT_OPERATIONS = {"activate", "update", "mutation", "readiness", "e2e", "validate", "three-plane", "ci"}
 
 
 def _select_contract(task: dict[str, Any]) -> dict[str, Any]:
@@ -184,6 +185,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict M:N binding checks")
     ap.add_argument("--reply-log", default="")
     ap.add_argument("--reply-file", default="")
     ap.add_argument("--reply-text", default="")
@@ -244,6 +246,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=args.session_id,
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:
@@ -317,7 +320,7 @@ def main() -> int:
     if expected_work_layer not in ALLOWED_WORK_LAYERS:
         expected_work_layer = "instance"
     if expected_source_layer not in ALLOWED_SOURCE_LAYERS:
-        expected_source_layer = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+        expected_source_layer = str(ctx.source_domain or "").strip().lower() or "unknown"
 
     strict_operation = args.operation in STRICT_OPERATIONS
     lock_boundary_enforced = bool(args.enforce_coherence_gate and strict_operation)
@@ -406,7 +409,13 @@ def main() -> int:
     receipt_path = (
         Path(args.blocker_receipt_out).expanduser().resolve()
         if args.blocker_receipt_out.strip()
-        else Path(f"/tmp/identity-execution-reply-coherence-blocker-receipt-{args.identity_id}.json").resolve()
+        else runtime_temp_file(
+            channel="response-stamp",
+            operation=args.operation,
+            identity_id=args.identity_id,
+            stem=f"identity-execution-reply-coherence-blocker-receipt-{args.identity_id}",
+            ext="json",
+        ).resolve()
     )
 
     required_contract = bool(force_required or contract_required(contract))

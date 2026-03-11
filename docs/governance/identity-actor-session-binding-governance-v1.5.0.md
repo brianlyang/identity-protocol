@@ -7,21 +7,36 @@ Owner: identity protocol base-repo architect
 Execution mode: topic-level canonical SSOT for actor-session-binding governance  
 Tag policy: `v1.5` remains locked until all `P0` requirement ledger rows are `DONE` and audit sign-off is `PASS` (`P1` rows block only when explicitly promoted to `P0`)
 
+## 0A) Current-state redirect (mandatory)
+
+1. This file is retained as historical baseline for v1.5 actor-session-binding closure.
+2. Current v1.6.x stream governance/review routing must resolve via:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Current control-plane status/promotion checks must resolve via:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/control-plane-budget.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
+4. If this v1.5 baseline conflicts with active v1.6.x stream docs, follow stream-registry-resolved active stream docs.
+5. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
+
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
 ### 0.1 Single execution entrypoint (topic SSOT)
 
-1. This document is the only normative execution entrypoint for actor-session-binding governance.
+1. This document is the historical execution baseline for `v1.5.0` actor-session-binding governance, not the active normative execution entrypoint.
 2. `artifacts/**` and ad-hoc issue notes are evidence-only; they cannot override this document.
-3. No same-topic parallel normative document is allowed.
+3. New normative updates must be written to active stream docs resolved from `identity/protocol/mappings/stream-doc-registry.current.yaml`, not appended here as current-state policy.
 
 ### 0.2 SSOT layering relationship (to avoid ambiguity)
 
-1. This file is **topic-canonical** for actor-session-binding governance.
+1. This file is topic-canonical historical baseline for `v1.5.0` governance/closure snapshots.
 2. `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md` remains **global protocol execution SSOT**.
 3. Core code changes from this topic must synchronize:
    - topic SSOT (`v1.5.0` actor-session-binding), and
    - global execution handoff (`v1.4.13` canonical handoff).
+4. For current-state decisions, stream docs resolved via `identity/protocol/mappings/stream-doc-registry.current.yaml` take precedence.
 
 ### 0.3 Release lock table (`v1.5` tag is hard-locked)
 

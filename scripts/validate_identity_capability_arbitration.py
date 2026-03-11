@@ -14,6 +14,7 @@ REQ_KEYS = [
     "priority_order",
     "conflict_rules",
     "trigger_thresholds",
+    "accurate_judgement_enforcement",
     "decision_record_required_fields",
     "sample_report_path_pattern",
     "fail_action",
@@ -178,6 +179,71 @@ def main() -> int:
         if not isinstance(v, (int, float)) or v <= 0:
             print(f"[FAIL] trigger_thresholds.{k} must be > 0")
             rc = 1
+
+    judgement = c.get("accurate_judgement_enforcement") or {}
+    if not isinstance(judgement, dict) or not judgement:
+        print("[FAIL] accurate_judgement_enforcement must be non-empty object")
+        rc = 1
+    else:
+        if str(judgement.get("contract_ref", "")).strip() != "rq_034_multimodal_plugin_enforcement_contract_v1":
+            print(
+                "[FAIL] accurate_judgement_enforcement.contract_ref must be "
+                "rq_034_multimodal_plugin_enforcement_contract_v1"
+            )
+            rc = 1
+        if str(judgement.get("validator", "")).strip() != "scripts/validate_multimodal_plugin_enforcement.py":
+            print(
+                "[FAIL] accurate_judgement_enforcement.validator must be "
+                "scripts/validate_multimodal_plugin_enforcement.py"
+            )
+            rc = 1
+        if judgement.get("requires_multimodal_evidence_consistency") is not True:
+            print("[FAIL] accurate_judgement_enforcement.requires_multimodal_evidence_consistency must be true")
+            rc = 1
+        if str(judgement.get("inconsistent_evidence_transition", "")).strip() != "block_done":
+            print("[FAIL] accurate_judgement_enforcement.inconsistent_evidence_transition must be block_done")
+            rc = 1
+
+    reasoning_contract = task.get("reasoning_loop_failclose_contract_v1") or {}
+    reasoning_contract_required = isinstance(reasoning_contract, dict) and reasoning_contract.get("required") is True
+    reasoning_enforcement = c.get("reasoning_loop_enforcement") or {}
+    if reasoning_contract_required or isinstance(reasoning_enforcement, dict):
+        if not isinstance(reasoning_enforcement, dict) or not reasoning_enforcement:
+            print("[WARN] reasoning_loop_enforcement missing; run repair_contract_backfill to materialize arbitration link")
+        else:
+            if str(reasoning_enforcement.get("contract_ref", "")).strip() != "rq_035_reasoning_loop_failclose_contract_v1":
+                print(
+                    "[FAIL] reasoning_loop_enforcement.contract_ref must be "
+                    "rq_035_reasoning_loop_failclose_contract_v1"
+                )
+                rc = 1
+            if str(reasoning_enforcement.get("validator", "")).strip() != "scripts/validate_reasoning_loop_failclose.py":
+                print(
+                    "[FAIL] reasoning_loop_enforcement.validator must be "
+                    "scripts/validate_reasoning_loop_failclose.py"
+                )
+                rc = 1
+            if reasoning_enforcement.get("no_target_reached_cannot_complete") is not True:
+                print("[FAIL] reasoning_loop_enforcement.no_target_reached_cannot_complete must be true")
+                rc = 1
+            if reasoning_enforcement.get("failed_attempt_requires_next_action") is not True:
+                print("[FAIL] reasoning_loop_enforcement.failed_attempt_requires_next_action must be true")
+                rc = 1
+            threshold_requires_escalation = reasoning_enforcement.get(
+                "threshold_requires_escalation",
+                reasoning_enforcement.get("exceed_threshold_requires_escalation"),
+            )
+            if threshold_requires_escalation is not True:
+                print(
+                    "[FAIL] reasoning_loop_enforcement.threshold_requires_escalation "
+                    "(or legacy exceed_threshold_requires_escalation) must be true"
+                )
+                rc = 1
+            if str(reasoning_enforcement.get("reasoning_enforcement_level_field", "")).strip() != "reasoning_enforcement_level":
+                print("[FAIL] reasoning_loop_enforcement.reasoning_enforcement_level_field must be reasoning_enforcement_level")
+                rc = 1
+    else:
+        print("[WARN] reasoning_loop_enforcement not required until reasoning_loop_failclose_contract_v1 is backfilled")
 
     decision_fields = c.get("decision_record_required_fields") or []
     if any(x not in decision_fields for x in REQ_DECISION_FIELDS):

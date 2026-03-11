@@ -1,0 +1,2 @@
+command=rg -n "IP-ASB-STAMP-SESSION|IP-FE-" three_plane.base-repo-architect.json full_scan_target.base-repo-architect.json
+result=NO_MATCH

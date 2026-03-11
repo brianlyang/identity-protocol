@@ -1,0 +1,262 @@
+# Identity Headstamp Egress Governance (v1.6.1)
+
+Status: Draft (headstamp/HUD extraction stream from v1.6.0)  
+Governance layer: protocol  
+Scope: outbound user-visible headstamp and final egress control plane only  
+Owner: identity protocol base-repo architect  
+Execution mode: topic-level canonical SSOT for headstamp/HUD closure after v1.6.0
+
+## 0) Extraction Directive (Mandatory)
+
+### 0.1 Why v1.6.1 exists
+
+1. Headstamp/HUD issues have recurred across many rounds and are no longer manageable as scattered v1.6.0 patches.
+2. A dedicated stream is required to avoid repeated partial fixes and contradictory status interpretations.
+3. From this document onward, headstamp/HUD governance is executed in one place only.
+
+### 0.2 SSOT precedence for headstamp/HUD topics
+
+1. L1 (topic SSOT): `docs/governance/identity-headstamp-egress-governance-v1.6.1.md` (this file)
+2. L2 (historical baseline): `docs/governance/identity-actor-session-binding-governance-v1.6.0.md`
+3. L3 (global protocol baseline): `docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md`
+
+Hard rule:
+
+1. Any new headstamp/HUD normative update must be written in v1.6.1.
+2. v1.6.0 headstamp sections are frozen as historical evidence and cannot be used as active execution source.
+
+### 0.2A Cross-stream boundary (v1.6.2 multimodal)
+
+1. Multimodal-plugin governance is executed in:
+   - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
+2. v1.6.1 must not absorb multimodal-plugin normative clauses.
+3. If a headstamp issue references multimodal state, link to v1.6.2 evidence instead of duplicating contracts here.
+
+### 0.3 Extracted legacy anchors (frozen references)
+
+1. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md:502` (`4.21` headstamp pre-send hard gate)
+2. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md:1152` (`ASB16-RQ-032 PARTIAL` normalization rule)
+3. `docs/governance/identity-actor-session-binding-governance-v1.6.0.md:1193` (Batch-4 headstamp omission/bypass decomposition)
+4. `docs/review/protocol-remediation-audit-ledger-v1.6.md:79` (`FIX16-029` headstamp pre-send intake)
+5. `docs/review/protocol-remediation-audit-ledger-v1.6.md:89` (`HOTFIX16-P0-002` headstamp continuity gap)
+6. `docs/review/protocol-remediation-audit-ledger-v1.6.md:97` (`HOTFIX16-P0-010` HUD tuple hardening)
+
+## 1) Problem Model and Recurrence Taxonomy
+
+### 1.1 Scope definition
+
+Headstamp/HUD issue means any failure in:
+
+1. first-line emission (`Identity-Context` + `Layer-Context`)
+2. actor/identity/session tuple consistency
+3. send-time/final-egress enforcement
+4. parity projection and recurrence observability
+
+### 1.2 Recurrence families (H-series)
+
+1. `H01`: headstamp line missing or malformed
+2. `H02`: actor/identity binding mismatch
+3. `H03`: first-line exists but not emitted through governed egress
+4. `H04`: non-canonical outlet channel accepted
+5. `H05`: final emit policy/schema mismatch
+6. `H06`: strict lane accepted synthetic evidence
+7. `H07`: strict lane accepted missing `--actor-id`
+8. `H08`: lock/session tuple mismatch across surfaces
+9. `H09`: tuple parity omitted core HUD fields
+10. `H10`: three-plane/full-scan projection missing HUD tuple fields
+11. `H11`: recurrence validator and send-time validator classify same defect differently
+12. `H12`: direct/manual path bypasses governed compose/send-time chain
+13. `H13`: workflow/script surface misses mandatory bundle args
+14. `H14`: source-layer lexical drift in strict lane
+15. `H15`: run binding selected by unstable default (mtime-sensitive fallback)
+16. `H16`: sidecar/history noise causes false closure perception
+17. `H17`: health checks green while egress contract still non-required
+
+## 2) v1.6.1 Contract (Headstamp/Egress)
+
+### 2.1 Single Egress SSOT
+
+1. User-visible outbound text must pass through `scripts/final_emit_governed.py`.
+2. `final_emit_governed.py` is the only L3 egress entry and internally routes to `scripts/compose_and_validate_governed_reply.py`.
+3. The compose output must be validated by `scripts/validate_send_time_reply_gate.py` before release to user channel.
+4. Any path that emits text without this chain is protocol violation (fail-close).
+
+### 2.2 Canonical first-line tuple
+
+Required first two lines:
+
+1. `Identity-Context: actor_id=...; identity_id=...; scope=...; lock=...; source=...`
+2. `Layer-Context: work_layer=...; source_layer=...`
+
+Strict tuple invariants:
+
+1. `actor_id`
+2. `identity_id`
+3. `resolved_work_layer`
+4. `resolved_source_layer`
+5. `lock_state`
+6. `run_id_binding`
+
+### 2.3 Strict lane actor rule
+
+1. strict operations (`validate/readiness/e2e/ci/update/three-plane`) require explicit `--actor-id`.
+2. Missing explicit actor in strict lane is immediate fail-close.
+3. Fallback actor resolution is compatibility-only and cannot be promotion-grade evidence.
+
+### 2.4 Canonical source-layer rule
+
+1. Strict source-layer set: `{project,global}`.
+2. Legacy tokens (`local/repo/env/auto`) are migration metadata only.
+3. Any strict receipt using legacy source token is invalid.
+
+### 2.5 Instance self-wiring rule (no manual parameter burden)
+
+1. `scripts/final_emit_governed.py` must support auto context resolution when explicit flags are absent:
+   - catalog: `project/.identity/catalog.local.yaml` first, then `~/.codex/.identity/catalog.local.yaml`
+   - identity: actor binding -> session active pointer -> catalog active/default fallback
+   - actor: `--actor-id` -> `CODEX_ACTOR_ID` -> `assistant:codex`
+2. Any unresolved/ambiguous auto context is `FAIL_REQUIRED` and must not emit reply body.
+3. Strict surfaces can pass explicit flags for determinism, but runtime default path must be auto-wirable for instance autonomy.
+
+## 3) Error Family Convergence
+
+### 3.1 Canonical family (v1.6.1 required)
+
+1. `IP-HDSTAMP-001` -> headstamp missing or malformed
+2. `IP-HDSTAMP-002` -> actor/layer binding mismatch
+3. `IP-HDSTAMP-003` -> pre-send receipt missing
+
+### 3.2 Compatibility alias mapping (migration-only)
+
+1. `IP-ASB-STAMP-SESSION-*` and `IP-FE-*` are legacy aliases only.
+2. Promotion-grade payload field `error_code` must emit canonical `IP-HDSTAMP-*` only.
+3. Legacy aliases may be retained in `legacy_error_code`/`compat_error_code` for replay migration, but cannot replace canonical `error_code`.
+4. Mixed families in same surface for same defect are treated as non-converged.
+
+## 4) Mandatory Control-Plane Wiring Matrix
+
+| Control | Script | Mandatory surfaces |
+| --- | --- | --- |
+| final egress single entry | `scripts/final_emit_governed.py` | creator/readiness/e2e/full-scan/three-plane/ci |
+| governed compose internal stage | `scripts/compose_and_validate_governed_reply.py` | internal only (must not be used as surface entry) |
+| send-time hard gate | `scripts/validate_send_time_reply_gate.py` | creator/readiness/e2e/full-scan/three-plane/ci |
+| first-line validator | `scripts/validate_reply_identity_context_first_line.py` | creator/readiness/e2e/full-scan/three-plane/ci |
+| recurrence closure | `scripts/validate_headstamp_recurrence_closure.py` | scan/three-plane/ci |
+| tuple parity | `scripts/validate_required_gate_tuple_parity.py` | three-plane/full-scan/ci |
+| strict surface drift/arg contract | `scripts/validate_required_gate_surface_drift.py` | ci + local preflight |
+
+## 5) Acceptance Matrix (Promotion-Grade)
+
+### 5.1 Positive
+
+1. governed compose + explicit actor + canonical outlet + live evidence -> `PASS_REQUIRED`
+
+### 5.2 Negative
+
+1. missing/malformed first line -> `FAIL_REQUIRED` + `IP-HDSTAMP-001`
+2. actor tuple mismatch -> `FAIL_REQUIRED` + `IP-HDSTAMP-002`
+3. missing pre-send receipt -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`
+4. non-canonical outlet -> `FAIL_REQUIRED` (`final emit channel contract`)
+5. strict lane without actor -> `FAIL_REQUIRED` (`actor explicitness contract`)
+
+### 5.3 Cross-surface parity
+
+1. `validate` vs `three-plane` receipts must agree on core tuple fields.
+2. Any mismatch is release blocker.
+
+## 6) Current Open Blockers (as-of 2026-03-09)
+
+1. Historical note: this round opened with single-egress enforcement not yet guaranteed for every assistant-visible path outside governed compose invocation.
+2. Headstamp error-family convergence on strict control plane is **closed** (`error_code` canonicalized to `IP-HDSTAMP-*`).
+3. Some status surfaces can still appear green while headstamp closure is not promotion-grade complete (instance/business debt remains out of protocol scope).
+
+### 6.1 Closure Update (as-of 2026-03-10)
+
+1. Protocol strict surfaces now pass single-egress hard gate (`validate_required_gate_surface_drift` = `PASS_REQUIRED`), so v1.6.1 protocol-layer egress closure is no longer blocked by missing wrapper enforcement.
+2. Remaining residuals are instance/business replay debts, not protocol control-plane wiring gaps.
+
+Status boundary:
+
+1. `SPEC_READY / PENDING_INTAKE` remains valid.
+2. `ACCEPT_WITH_FIX != READY_FOR_PROMOTION`.
+
+## 7) Four-Track Cross Verification (Roundtable Model)
+
+1. `T1 governance`: this file + v1.6.0 frozen anchors are consistent.
+2. `T2 vendor`: MCP lifecycle supports explicit initialization/negotiation before action; aligns with pre-send hard gate strategy.
+3. `T3 reference`: OpenAI Codex Skills emphasizes explicit input/output and trigger validation; aligns with strict egress contract.
+4. `T4 replay`: promotion requires positive/negative/parity replay receipts under current head SHA.
+
+Reference links:
+
+1. `https://modelcontextprotocol.io/specification/draft/basic/lifecycle`
+2. `https://developers.openai.com/codex/skills/#best-practices`
+3. `https://developers.openai.com/codex/agent-approvals-security/#sandbox-and-approvals`
+4. `https://agentskills.io/specification`
+
+## 8) Execution Policy (No More Scatter)
+
+1. All headstamp/HUD protocol changes, replay notes, and closure decisions must be appended to v1.6.1 governance + v1.6.1 review ledger.
+2. v1.6.0 keeps historical text for traceability but cannot receive new headstamp normative clauses.
+3. New discussions about headstamp/HUD opened in other docs are invalid unless linked back to this v1.6.1 stream.
+
+## 9) Round-30.3 Addendum — canonical error-family convergence closure
+
+### 9.1 Scope
+
+1. Stream: v1.6.1 headstamp/HUD control-plane.
+2. Objective: remove mixed canonical/compatibility error families from strict emit path.
+3. Non-goal: instance business report debt (`IP-WRB-*`, prompt lifecycle) remediation.
+
+### 9.2 Protocol patch set (strict surfaces)
+
+1. Canonical mapping centralized in `scripts/headstamp_error_family_common.py`.
+2. Strict validators/wrappers now emit canonical `IP-HDSTAMP-*` as `error_code`:
+   - `scripts/validate_send_time_reply_gate.py`
+   - `scripts/validate_reply_identity_context_first_line.py`
+   - `scripts/compose_and_validate_governed_reply.py`
+   - `scripts/final_emit_governed.py`
+   - `scripts/validate_headstamp_recurrence_closure.py`
+   - `scripts/validate_layer_intent_resolution.py`
+3. Projection classifiers include canonical family:
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+
+### 9.3 Four-track cross verification (roundtable/vendor/reference/replay)
+
+1. `T1 governance`: canonical family is now explicit SSOT for `error_code`.
+2. `T2 vendor`: MCP lifecycle “initialize/validate before action” stays aligned with pre-send fail-close.
+3. `T3 reference`: Codex/Skills explicit I/O validation remains aligned with single governed egress gate.
+4. `T4 replay`: positive/negative recurrence probes replayed under persistent evidence root:
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/`
+
+### 9.4 Acceptance snapshot
+
+1. `final_emit_governed.positive.base-repo-architect` -> `PASS_REQUIRED` (rc=0).
+2. `final_emit_governed.negative.nongoverned.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`.
+3. `send_time_gate.negative.inline.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-003`.
+4. `compose_actor_mismatch.base-repo-architect` -> `FAIL_REQUIRED` + `IP-HDSTAMP-002`.
+5. `headstamp_recurrence.base-repo-architect` -> `PASS_REQUIRED` (rc=0).
+
+### 9.5 Cross-surface replay (three-plane/full-scan, strict actor/session bound)
+
+1. `report_three_plane_status` replay under explicit actor/session binding:
+   - actor: `assistant:codex`
+   - session: `run:asb-m2m-hotfix-20260309`
+   - result: rc=0, `m2m_binding_closure_status=PASS`, release remains `Conditional Go` due release-plane preconditions (non-headstamp scope).
+2. `full_identity_protocol_scan --scan-mode target --target-source-layer project` replay under same actor/session binding:
+   - result: rc=0, `summary.ok=1`, `summary_m2m.pass=1`.
+3. `IP-ASB-STAMP-SESSION-*` / `IP-FE-*` no longer appear in these replay outputs as surfaced defect codes; headstamp negatives are canonicalized to `IP-HDSTAMP-*`.
+4. Evidence paths:
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/three_plane.base-repo-architect.json`
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/full_scan_target.base-repo-architect.json`
+   - `activity/evidence/v161-headstamp-convergence/2026-03-09/legacy_code_presence_scan.txt`
+
+## 10) Stream Continuity Alias Pointers
+
+1. This stream must keep its protocol references pointer-driven (not version-literal coupled).
+2. Required alias anchors for v1.6.1:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+3. Versioned snapshots can still appear as historical evidence, but normative wiring must resolve through these current aliases.

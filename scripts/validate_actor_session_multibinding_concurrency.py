@@ -10,6 +10,7 @@ import yaml
 
 from actor_session_common import (
     LEGACY_BINDING_KEY_MODE,
+    SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
     load_actor_binding_store,
     normalize_actor_binding_store,
@@ -234,12 +235,21 @@ def main() -> int:
             )
 
     if status == STATUS_PASS_REQUIRED:
-        # session_id uniqueness contract check
-        session_ids = [str(x.get("session_id", "")).strip() for x in bindings if str(x.get("session_id", "")).strip()]
-        if len(session_ids) != len(set(session_ids)):
+        # binding uniqueness contract check (supports actor+identity+session tuple mode).
+        keys: list[str] = []
+        for row in bindings:
+            sid = str(row.get("session_id", "")).strip()
+            iid = str(row.get("identity_id", "")).strip()
+            if not sid:
+                continue
+            if binding_key_mode == SESSION_ONLY_BINDING_KEY_MODE:
+                keys.append(sid)
+            else:
+                keys.append(f"{iid}::{sid}")
+        if len(keys) != len(set(keys)):
             error_code = ERR_MB_001
             status = STATUS_FAIL_REQUIRED
-            stale_reasons.append("duplicate_session_id_entries")
+            stale_reasons.append("duplicate_binding_key_entries")
 
     status, error_code = _finalize_status(
         operation=operation,

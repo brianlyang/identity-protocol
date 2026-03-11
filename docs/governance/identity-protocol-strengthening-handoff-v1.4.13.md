@@ -7,6 +7,14 @@ Applies to: identity protocol base-repo architecture decisions only
 This handoff note exists to keep index links stable and provide a concise execution bridge
 between audit findings and implementation tasks in v1.4.13.
 
+## Current-state routing contract (mandatory)
+
+1. This document remains the global handoff anchor, but stream-level current-state decisions must resolve through:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+2. Control-plane computed status for operational promotion checks must resolve through:
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+3. If any historical note in this handoff conflicts with active stream docs referenced by the stream registry, follow the stream-registry-resolved stream docs.
+
 ## 2026-03-04 release lane CI hotfix addendum
 
 To keep protocol-core release gates fail-closed without false negatives:

@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from render_control_plane_status import build_status
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+ERR_STATUS_SYNC = "IP-CP-STATUS-001"
+
+VOLATILE_TOP_LEVEL_KEYS = {"generated_at_utc", "git_head_short"}
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
+
+
+def _canonicalize(doc: dict[str, Any]) -> dict[str, Any]:
+    out = {k: v for k, v in doc.items() if k not in VOLATILE_TOP_LEVEL_KEYS}
+    return out
+
+
+def _index_checks(doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    checks = doc.get("checks")
+    if not isinstance(checks, list):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for node in checks:
+        if not isinstance(node, dict):
+            continue
+        name = str(node.get("name", "")).strip()
+        if not name:
+            continue
+        out[name] = node
+    return out
+
+
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    try:
+        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return configured_path, "", "current_file_parse_failed"
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate machine-generated control-plane status artifact is in sync.")
+    parser.add_argument("--repo-root", default=".")
+    parser.add_argument(
+        "--status-file",
+        default="identity/protocol/mappings/control-plane-status.current.yaml",
+    )
+    parser.add_argument("--json-only", action="store_true")
+    args = parser.parse_args()
+
+    repo_root = Path(args.repo_root).expanduser().resolve()
+    status_entry_path = (repo_root / str(args.status_file)).resolve()
+    status_path, status_active_file, status_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.status_file)
+    )
+    stale_reasons: list[str] = []
+    mismatches: list[dict[str, Any]] = []
+
+    if not status_entry_path.exists():
+        stale_reasons.append(f"status_entry_file_missing:{status_entry_path}")
+        current_doc: dict[str, Any] = {}
+    elif status_alias_error:
+        stale_reasons.append(f"status_file_alias_error:{status_alias_error}:{status_active_file}")
+        current_doc = {}
+    elif not status_path.exists():
+        stale_reasons.append(f"status_file_missing:{status_path}")
+        current_doc: dict[str, Any] = {}
+    else:
+        current_doc = _load_json(status_path)
+
+    live_doc = build_status(repo_root)
+    current_norm = _canonicalize(current_doc)
+    live_norm = _canonicalize(live_doc)
+
+    if current_doc:
+        if current_norm.get("control_plane_status") != live_norm.get("control_plane_status"):
+            mismatches.append(
+                {
+                    "field": "control_plane_status",
+                    "expected": live_norm.get("control_plane_status"),
+                    "actual": current_norm.get("control_plane_status"),
+                    "reason": "status_drift",
+                }
+            )
+        if bool(current_norm.get("promotion_ready")) != bool(live_norm.get("promotion_ready")):
+            mismatches.append(
+                {
+                    "field": "promotion_ready",
+                    "expected": bool(live_norm.get("promotion_ready")),
+                    "actual": bool(current_norm.get("promotion_ready")),
+                    "reason": "promotion_flag_drift",
+                }
+            )
+
+        current_checks = _index_checks(current_norm)
+        live_checks = _index_checks(live_norm)
+        if set(current_checks.keys()) != set(live_checks.keys()):
+            mismatches.append(
+                {
+                    "field": "checks.name_set",
+                    "expected": sorted(live_checks.keys()),
+                    "actual": sorted(current_checks.keys()),
+                    "reason": "check_set_drift",
+                }
+            )
+        for name in sorted(set(current_checks.keys()) & set(live_checks.keys())):
+            current_check = current_checks[name]
+            live_check = live_checks[name]
+            for key in ("status", "error_code", "rc"):
+                if current_check.get(key) != live_check.get(key):
+                    mismatches.append(
+                        {
+                            "field": f"checks.{name}.{key}",
+                            "expected": live_check.get(key),
+                            "actual": current_check.get(key),
+                            "reason": "check_result_drift",
+                        }
+                    )
+            if current_check.get("payload") != live_check.get("payload"):
+                mismatches.append(
+                    {
+                        "field": f"checks.{name}.payload",
+                        "reason": "check_payload_drift",
+                    }
+                )
+
+    if stale_reasons or mismatches:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_STATUS_SYNC
+    else:
+        status = STATUS_PASS_REQUIRED
+        error_code = ""
+
+    payload = {
+        "control_plane_status_sync_status": status,
+        "error_code": error_code,
+        "status_entry_file": str(status_entry_path),
+        "status_file": str(status_path),
+        "status_active_file": status_active_file,
+        "status_file_alias_error": status_alias_error,
+        "mismatch_count": len(mismatches),
+        "mismatches": mismatches,
+        "stale_reasons": stale_reasons,
+        "live_control_plane_status": live_norm.get("control_plane_status"),
+        "file_control_plane_status": current_norm.get("control_plane_status"),
+    }
+
+    if args.json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(
+            f"[CONTROL-PLANE-STATUS-SYNC] status={status} "
+            f"mismatches={len(mismatches)} "
+            f"stale={len(stale_reasons)}"
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if status == STATUS_PASS_REQUIRED else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

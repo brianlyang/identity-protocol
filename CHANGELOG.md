@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- **v1.6 protocol-lane closure hardening (wave-3.1 + regression guard)**:
+  - closed three residual classes that repeatedly caused non-green upgrade runs:
+    - three-plane coherence strict fail-close closure (`scripts/validate_execution_reply_identity_coherence.py`, `scripts/report_three_plane_status.py`)
+    - required-gate drift alias bypass closure (`scripts/validate_required_gate_surface_drift.py`)
+    - cross-operation tuple parity closure (`scripts/validate_required_gate_tuple_parity.py` + strict surface wiring)
+  - hardened protocol-lane semantic routing fallback:
+    - `scripts/validate_semantic_routing_guard.py` now infers deterministic semantic tuple values when feedback batches omit explicit metadata, preventing recurrent `IP-SEM-001` false blockers on protocol-context batches.
+  - reduced stale evidence false-failure in runtime handoff/collaboration validators by validating a bounded recent evidence window:
+    - `scripts/validate_agent_handoff_contract.py`
+    - `scripts/validate_identity_collab_trigger.py`
+  - changelog linkage backfill anchors for prior strict-gate head commits:
+    - `0a6359a`
+    - `6af084f`
+  - repaired reply-log first-line extraction parser regression:
+    - `scripts/validate_reply_identity_context_first_line.py`
+    - restores `.json/.jsonl/.txt` evidence parsing paths and removes misplaced
+      unreachable parser block that could hide first-line evidence in non-jsonl logs.
+  - reduced multi-binding false blocker in headstamp recurrence replay:
+    - `scripts/validate_headstamp_recurrence_closure.py`
+    - actor-mismatch negative probe now treats `actor_id+session_id` multi-binding
+      without explicit session selector as `SKIPPED_INCONCLUSIVE_MULTIBINDING`
+      (non-regressive) instead of hard failing `IP-ASB-STAMP-SCAN-007`.
+
 - **v1.5.x headstamp recurrence closure hardening (hotfix)**:
   - added strict recurrence closure validator:
     - `scripts/validate_headstamp_recurrence_closure.py`

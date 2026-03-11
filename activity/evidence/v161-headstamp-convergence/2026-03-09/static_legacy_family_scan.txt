@@ -1,0 +1,16 @@
+scripts/headstamp_error_family_common.py:11:LEGACY_ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
+scripts/headstamp_error_family_common.py:12:LEGACY_ERR_SYNTHETIC_EVIDENCE = "IP-ASB-STAMP-SESSION-002"
+scripts/headstamp_error_family_common.py:13:LEGACY_ERR_OUTLET_GUARD_MISSING = "IP-ASB-STAMP-SESSION-003"
+scripts/headstamp_error_family_common.py:14:LEGACY_ERR_NON_GOVERNED_OUTLET = "IP-ASB-STAMP-SESSION-004"
+scripts/headstamp_error_family_common.py:15:LEGACY_ERR_RUNTIME_BINDING_MISMATCH = "IP-ASB-STAMP-SESSION-005"
+scripts/headstamp_error_family_common.py:16:LEGACY_ERR_FINAL_EMIT_CHANNEL_REQUIRED = "IP-ASB-STAMP-SESSION-006"
+scripts/headstamp_error_family_common.py:17:LEGACY_ERR_FINAL_EMIT_SCHEMA_REQUIRED = "IP-ASB-STAMP-SESSION-007"
+scripts/headstamp_error_family_common.py:19:LEGACY_ERR_FINAL_EMIT_BODY_EMPTY = "IP-FE-001"
+scripts/headstamp_error_family_common.py:20:LEGACY_ERR_FINAL_EMIT_COMPOSE_RUNTIME = "IP-FE-002"
+scripts/headstamp_error_family_common.py:21:LEGACY_ERR_FINAL_EMIT_COMPOSE_JSON_MISSING = "IP-FE-003"
+scripts/headstamp_error_family_common.py:22:LEGACY_ERR_FINAL_EMIT_CONTRACT_FAILED = "IP-FE-004"
+scripts/headstamp_error_family_common.py:23:LEGACY_ERR_FINAL_EMIT_REPLY_FILE_MISSING = "IP-FE-005"
+scripts/headstamp_error_family_common.py:24:LEGACY_ERR_FINAL_EMIT_CONTEXT_RESOLVE = "IP-FE-006"
+scripts/headstamp_error_family_common.py:25:LEGACY_ERR_FINAL_EMIT_IDENTITY_RESOLVE = "IP-FE-007"
+scripts/full_identity_protocol_scan.py:239:        or token.startswith("IP-FE-")
+scripts/report_three_plane_status.py:101:        or token.startswith("IP-FE-")

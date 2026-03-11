@@ -1,0 +1,72 @@
+{
+  "summary_id": "round44-required-coverage-floor-summary",
+  "generated_from_manifest": "activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/EVIDENCE_MANIFEST.round44-required-coverage-floor.json",
+  "coverage_default_lane": {
+    "rc": 0,
+    "required_contract_total": 5,
+    "required_contract_passed": 5,
+    "failed_required_contract_count": 0,
+    "failed_optional_contract_count": 0,
+    "skipped_contract_count": 33,
+    "skipped_lane_excluded_contract_count": 24,
+    "skipped_actionable_contract_count": 9,
+    "kernel_ssot_source_status": "PASS_REQUIRED",
+    "prompt_kernel_executable_coupling_status": "PASS_REQUIRED",
+    "prompt_lane_lock_influence_count": 1,
+    "skipped_actionable_contracts": [
+      "unlock_formula_automation",
+      "run_id_report_selection",
+      "phase_bootstrap_before_strict",
+      "tmp_collision_safety",
+      "tool_installation",
+      "vendor_api_discovery",
+      "vendor_api_solution",
+      "gated_switch_guard",
+      "protocol_lane_headstamp_continuity"
+    ],
+    "skipped_lane_excluded_contracts": [
+      "release_plane_cloud_evidence",
+      "cross_cwd_absolute_input",
+      "handoff_collab_freshness_rotation",
+      "protocol_feedback_atomic_emit",
+      "capability_boundary_classification",
+      "promotion_evidence_pipeline",
+      "outlet_regression_matrix",
+      "sidecar_cwd_parity",
+      "docs_bridge_consistency",
+      "contract_mapping_coverage",
+      "refresh_strict_business_interference",
+      "semantic_convergence",
+      "semantic_routing_guard",
+      "instance_protocol_split_receipt",
+      "vendor_namespace_separation",
+      "protocol_feedback_sidecar",
+      "cross_verification_tracks",
+      "intake_evidence_quorum",
+      "route_version_pinning",
+      "fallback_taxonomy_normalization",
+      "dedup_monotonicity",
+      "cross_workflow_schema",
+      "skill_path_integrity",
+      "execution_target_tuple_isolation"
+    ]
+  },
+  "coverage_explicit_instance_lane": {
+    "rc": 1,
+    "failed_required_contract_count": 1,
+    "prompt_kernel_executable_coupling_status": "FAIL_REQUIRED",
+    "prompt_kernel_executable_coupling_reason": "IP-PKX-002",
+    "prompt_routing_protocol_context_reasons": [
+      "session_lane_lock_protocol"
+    ]
+  },
+  "tuple_contract": {
+    "required_fields": [
+      "sha256",
+      "command",
+      "rc",
+      "timestamp_utc"
+    ],
+    "manifest_entry_count": 6
+  }
+}

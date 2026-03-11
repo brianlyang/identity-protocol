@@ -1,0 +1,90 @@
+{
+  "generated_at_utc": "2026-03-09T13:55:06Z",
+  "ip_mm_run_002_protocol_fix_status": "CLOSED",
+  "verification": {
+    "full_scan_codex": {
+      "artifact": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.codex.r2.json",
+      "summary": {
+        "total_identities": 3,
+        "p0": 0,
+        "p1": 0,
+        "ok": 3
+      },
+      "summary_unique_targets": {
+        "total_identities": 3,
+        "p0": 0,
+        "p1": 0,
+        "ok": 3
+      },
+      "ip_mm_run_002_hits": [],
+      "target_source_layer_effective": "project"
+    },
+    "full_scan_yangxi": {
+      "artifact": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.yangxi.r3.json",
+      "summary": {
+        "total_identities": 3,
+        "p0": 0,
+        "p1": 0,
+        "ok": 3
+      },
+      "summary_unique_targets": {
+        "total_identities": 3,
+        "p0": 0,
+        "p1": 0,
+        "ok": 3
+      },
+      "ip_mm_run_002_hits": [],
+      "target_source_layer_effective": "project"
+    },
+    "three_plane_bound_sessions": {
+      "artifact": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/three_plane.bound_sessions.summary.ipmmrun002_v2.json",
+      "row_count": 6,
+      "ip_mm_run_002_hits": [],
+      "all_send_time_pass": true,
+      "all_mm_pass": true,
+      "remaining_phase_transition_codes": [
+        "IP-CAP-003"
+      ],
+      "remaining_sidecar_statuses": [
+        "PASS_REQUIRED",
+        "SKIPPED_NOT_REQUIRED"
+      ]
+    },
+    "release_readiness_bound": {
+      "artifact": "activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json",
+      "ip_mm_run_002_hits": [],
+      "nonzero_rc_identities": [
+        "base-repo-audit-expert-v3",
+        "base-repo-architect",
+        "custom-creative-ecom-analyst"
+      ],
+      "remaining_blockers": [
+        "validate_changelog_updated (non-multimodal governance gate)"
+      ]
+    },
+    "surface_drift": {
+      "rc": 0,
+      "status": "PASS"
+    },
+    "docs_contract": {
+      "rc": 0,
+      "status": "PASS"
+    },
+    "protocol_ssot": {
+      "rc": 0,
+      "status": "PASS"
+    },
+    "docs_contract_after_docs": {
+      "rc": 0,
+      "status": "PASS"
+    },
+    "protocol_ssot_after_docs": {
+      "rc": 0,
+      "status": "PASS"
+    },
+    "surface_drift_after_fix": {
+      "rc": 0,
+      "status": "PASS"
+    }
+  }
+}

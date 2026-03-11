@@ -114,9 +114,19 @@ def _glob_paths(pattern: str, *, pack_root: Path, protocol_root: Path) -> list[P
         if has_magic:
             return sorted(Path(x).resolve() for x in glob.glob(str(p)))
         return [p.resolve()] if p.exists() else []
-    preferred = sorted(pack_root.glob(raw))
+    local_prefix = f"identity/runtime/local/{pack_root.name}/"
+    mapped_raw = raw
+    if raw.startswith(local_prefix):
+        mapped_raw = f"runtime/{raw[len(local_prefix):]}"
+    elif raw.startswith("identity/runtime/"):
+        mapped_raw = f"runtime/{raw[len('identity/runtime/'):]}"
+    preferred = sorted(pack_root.glob(mapped_raw))
     if preferred:
         return preferred
+    if mapped_raw != raw:
+        fallback = sorted(protocol_root.glob(mapped_raw))
+        if fallback:
+            return fallback
     return sorted(protocol_root.glob(raw))
 
 

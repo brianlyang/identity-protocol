@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "identity/protocol/plugins/multimodal-vision-enforcement/plugin.output.schema.json",
+  "title": "Multimodal Vision Enforcement Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result",
+    "confidence"
+  ],
+  "properties": {
+    "result": {
+      "type": "string",
+      "minLength": 1
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

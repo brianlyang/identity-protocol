@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+ACTIVE_EXECUTION_POINTER_REL = Path("runtime/state/active_execution_report.json")
+
 
 def load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -87,9 +89,8 @@ def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
 
     pack_resolved = pack_root.resolve()
     _push((pack_resolved / "runtime" / "reports").resolve())
-    _push((pack_resolved / "runtime").resolve())
     # Cross-repo custom catalog support:
-    # identity pack often lives at <project>/.agents/identity/<id>, while reports are in <project>/resource/reports.
+    # identity pack often lives at <project>/.identity/<id>, while reports are in <project>/resource/reports.
     for parent in [pack_resolved, *pack_resolved.parents]:
         candidate = (parent / "resource" / "reports").resolve()
         _push(candidate)
@@ -99,7 +100,40 @@ def _candidate_upgrade_report_roots(pack_root: Path) -> list[Path]:
     return roots
 
 
+def _read_active_execution_report_pointer(pack_root: Path, identity_id: str) -> Path | None:
+    pointer_path = (pack_root.resolve() / ACTIVE_EXECUTION_POINTER_REL).resolve()
+    if not pointer_path.exists():
+        return None
+    try:
+        pointer = load_json(pointer_path)
+    except Exception:
+        return None
+    report_raw = str(pointer.get("report_path", "")).strip()
+    run_id = str(pointer.get("run_id", "")).strip()
+    if not report_raw:
+        return None
+    report_path = Path(report_raw).expanduser().resolve()
+    if not report_path.exists() or not report_path.is_file():
+        return None
+    name = report_path.name
+    if not name.startswith("identity-upgrade-exec-") or not name.endswith(".json"):
+        return None
+    if name.endswith("-patch-plan.json"):
+        return None
+    normalized = str(identity_id or "").strip()
+    if normalized not in {"", "*"} and f"identity-upgrade-exec-{normalized}-" not in name:
+        return None
+    if run_id and run_id not in name:
+        # Pointer stale / mismatched run id.
+        return None
+    return report_path
+
+
 def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | None:
+    pointed = _read_active_execution_report_pointer(pack_root, identity_id)
+    if pointed is not None:
+        return pointed
+
     rows: list[Path] = []
     normalized = str(identity_id or "").strip()
     if normalized in {"", "*"}:
@@ -112,7 +146,11 @@ def latest_identity_upgrade_report(identity_id: str, pack_root: Path) -> Path | 
         rows.extend(
             p
             for p in root.glob(pattern)
-            if p.is_file() and not p.name.endswith("-patch-plan.json")
+            if p.is_file()
+            and not p.name.endswith("-patch-plan.json")
+            and "/runtime/protocol-feedback/" not in p.as_posix()
+            and "/archive/" not in p.as_posix()
+            and "/archives/" not in p.as_posix()
         )
     if not rows:
         return None

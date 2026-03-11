@@ -1,0 +1,91 @@
+{
+  "round": "round48-threepass-legacy-semantic-parity",
+  "generated_at": "2026-03-11T05:52:14Z",
+  "iterations": [
+    {
+      "iteration": 1,
+      "results": {
+        "docs_command_contract_check": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_control_plane_invariants": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_required_gate_surface_drift": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_protocol_ssot_source": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_required_contract_coverage_sra": {
+          "rc": 0,
+          "status": "PASS",
+          "required_contract_total": 13,
+          "required_contract_passed": 13,
+          "skipped_actionable_contract_count": 0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "results": {
+        "docs_command_contract_check": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_control_plane_invariants": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_required_gate_surface_drift": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_protocol_ssot_source": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_required_contract_coverage_sra": {
+          "rc": 0,
+          "status": "PASS",
+          "required_contract_total": 13,
+          "required_contract_passed": 13,
+          "skipped_actionable_contract_count": 0
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "results": {
+        "docs_command_contract_check": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_control_plane_invariants": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_required_gate_surface_drift": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_protocol_ssot_source": {
+          "rc": 0,
+          "status": "PASS"
+        },
+        "validate_required_contract_coverage_sra": {
+          "rc": 0,
+          "status": "PASS",
+          "required_contract_total": 13,
+          "required_contract_passed": 13,
+          "skipped_actionable_contract_count": 0
+        }
+      }
+    }
+  ],
+  "all_green": true
+}

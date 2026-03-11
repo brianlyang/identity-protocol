@@ -187,22 +187,21 @@ Enforcement:
 Governance record:
 - `docs/governance/local-instance-persistence-boundary-v1.4.6.md`
 
-### IDENTITY_HOME resolution order (canonical)
+### IDENTITY_HOME resolution order (canonical, v1.6)
 
-All creator/installer/runtime context resolution follows the same order:
+All creator/installer/runtime context resolution follows canonical two-layer path governance:
 
 1. If environment variable `IDENTITY_HOME` is set, use it.
 2. Otherwise, if shared config file exists, use it:
-   - `${CODEX_HOME:-~/.codex}/identity/config/runtime-paths.env`
+   - `${CODEX_HOME:-~/.codex}/.identity/config/runtime-paths.env`
    - key: `IDENTITY_HOME=...`
-3. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/identity`.
-4. Otherwise default to `~/.codex/identity`.
-5. If creating that directory fails, fallback to current workspace local path: `./.codex/identity`.
+3. Otherwise, if `CODEX_HOME` is set, use `${CODEX_HOME}/.identity`.
+4. Otherwise default to `~/.codex/.identity`.
 
-Compatibility note:
-- legacy runtime locations remain readable only inside `IDENTITY_HOME`
-  (`${IDENTITY_HOME}/identity`, `${IDENTITY_HOME}/identities`, `${IDENTITY_HOME}/instances`).
-- there is no implicit fallback to `~/.identity`; migrate old instances explicitly to `$CODEX_HOME/identity`.
+Fail-close rule:
+
+- no implicit runtime fallback to `./.codex/identity` or `/tmp`.
+- non-canonical runtime roots are migration-only signals and must not drive strict runtime decisions.
 
 This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`
 and consumed by `create_identity_pack.py`, `identity_installer.py`, `identity_creator.py`,
@@ -210,15 +209,15 @@ and migration tooling.
 
 ### Identity scope resolution (governance uplift)
 
-To align with skills-style discovery while preserving runtime safety, identity execution now carries an explicit scope interpretation:
+Identity strict execution now carries exactly two runtime source layers:
 
-1. CLI explicit (`--catalog`, `--target-root`, `--scope`)
-2. environment/runtime config (`IDENTITY_HOME`, `runtime-paths.env`)
-3. repo scope (`<repo>/.agents/identity`) when present
-4. user scope (`${CODEX_HOME:-~/.codex}/identity`)
-5. fallback scope (`./.codex/identity`, recovery-only)
+1. `project` => `<project>/.identity`
+2. `global` => `${CODEX_HOME:-~/.codex}/.identity`
 
-If one `identity_id` resolves to multiple pack paths across layers, tooling now fails by default until explicit arbitration (`--scope`) is provided. This prevents silent cross-scope contamination.
+Legacy labels (`local/repo/env/auto`) are compatibility metadata only and must not be used as strict
+release/readiness/update gating semantics.
+
+If one `identity_id` resolves to multiple pack paths across layers, tooling fails by default until explicit arbitration (`--scope`) is provided. This prevents silent cross-scope contamination.
 
 Operational governance commands:
 
@@ -293,12 +292,12 @@ To avoid per-shell drift, configure shared defaults once:
 
 ```bash
 python3 scripts/configure_identity_runtime_paths.py \
-  --identity-home "${IDENTITY_HOME:-${CODEX_HOME:-$HOME/.codex}/identity}" \
+  --identity-home "${IDENTITY_HOME:-${CODEX_HOME:-$HOME/.codex}/.identity}" \
   --protocol-home "${IDENTITY_PROTOCOL_HOME:-$(pwd)}"
 ```
 
 This writes:
-- `${CODEX_HOME:-$HOME/.codex}/identity/config/runtime-paths.env`
+- `${CODEX_HOME:-$HOME/.codex}/.identity/config/runtime-paths.env`
   - `IDENTITY_HOME=...`
   - `IDENTITY_PROTOCOL_HOME=...`
 
@@ -309,7 +308,7 @@ This writes:
 
 Implementation note:
 - `scripts/configure_identity_runtime_paths.py` defaults are now machine-portable:
-  - `IDENTITY_HOME` default derives from `${CODEX_HOME:-~/.codex}/identity`
+  - `IDENTITY_HOME` default derives from `${CODEX_HOME:-~/.codex}/.identity`
   - `IDENTITY_PROTOCOL_HOME` default derives from current repo root/cwd
   - no user-specific absolute path is hardcoded
 

@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_CONTRACT_MISSING_FIELDS = "IP-SID-001"
 ERR_P0_BLOCKING_REQUIRED = "IP-SID-002"
 ERR_VALIDATOR_RUNTIME = "IP-SID-003"
+ERR_ACTIVITY_UNSCOPED_WARNING = "IP-SID-004"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 REQ_CONTRACT_KEYS = (
@@ -40,6 +42,7 @@ DEFAULT_CONTRACT = {
     "blocking_error_prefixes": list(DEFAULT_BLOCKING_PREFIXES),
     "escalation_policy": "p0_governance_boundary",
 }
+UNSCOPED_ALERT_THRESHOLD = 5
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -141,6 +144,11 @@ def main() -> int:
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--report", default="")
+    ap.add_argument(
+        "--current-round-anchor-utc",
+        default="",
+        help="optional explicit current-round anchor timestamp (UTC, ISO-8601). Overrides report mtime anchor when provided.",
+    )
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
@@ -175,7 +183,7 @@ def main() -> int:
         explicit_source_layer=str(args.expected_source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer="instance",
-        default_source_layer="auto",
+        default_source_layer="project",
     )
     default_corr = discover_default_correlation_keys(pack_path)
     correlation_keys = build_correlation_keys(
@@ -183,10 +191,43 @@ def main() -> int:
         run_id=str(args.run_id or "").strip(),
         explicit_keys=list(args.correlation_key or []),
     )
+    current_round_anchor_utc = str(args.current_round_anchor_utc or "").strip()
+    anchor_source = "none"
+    anchor_report_path = ""
+    if current_round_anchor_utc:
+        anchor_source = "explicit"
+    report_token = str(args.report or "").strip()
+    if not current_round_anchor_utc and report_token:
+        report_path = Path(report_token).expanduser().resolve()
+        if report_path.exists():
+            anchor_report_path = str(report_path)
+            try:
+                current_round_anchor_utc = (
+                    datetime.fromtimestamp(report_path.stat().st_mtime, tz=timezone.utc)
+                    .strftime("%Y-%m-%dT%H:%M:%SZ")
+                )
+                anchor_source = "report"
+            except Exception:
+                current_round_anchor_utc = ""
+    if not current_round_anchor_utc:
+        default_report = str(default_corr.get("latest_report_path", "")).strip()
+        if default_report:
+            default_report_path = Path(default_report).expanduser().resolve()
+            if default_report_path.exists():
+                anchor_report_path = str(default_report_path)
+                try:
+                    current_round_anchor_utc = (
+                        datetime.fromtimestamp(default_report_path.stat().st_mtime, tz=timezone.utc)
+                        .strftime("%Y-%m-%dT%H:%M:%SZ")
+                    )
+                    anchor_source = "default_report"
+                except Exception:
+                    current_round_anchor_utc = ""
     activity = collect_protocol_feedback_activity(
         feedback_root=(pack_path / "runtime" / "protocol-feedback"),
         correlation_keys=correlation_keys,
         activity_window_hours=float(args.activity_window_hours or 72.0),
+        current_round_anchor_utc=current_round_anchor_utc,
     )
     auto_required_candidate = (not required_declared) and bool(activity.get("protocol_feedback_activity_detected", False))
     required_scope = decide_requiredization_scope(
@@ -214,9 +255,23 @@ def main() -> int:
         "activity_correlation_status": str(activity.get("activity_correlation_status", "")),
         "activity_correlation_key": str(activity.get("activity_correlation_key", "")),
         "activity_window_hours": float(activity.get("activity_window_hours", args.activity_window_hours)),
+        "current_round_anchor_utc": str(activity.get("current_round_anchor_utc", "")),
+        "anchor_source": anchor_source,
+        "anchor_report_path": anchor_report_path,
         "activity_correlated_refs": list(activity.get("activity_correlated_refs", [])),
         "activity_unscoped_refs": list(activity.get("activity_unscoped_refs", [])),
+        "activity_ref_count": len(list(activity.get("protocol_feedback_activity_refs", []))),
+        "activity_correlated_ref_count": len(list(activity.get("activity_correlated_refs", []))),
+        "activity_unscoped_count": len(list(activity.get("activity_unscoped_refs", []))),
+        "activity_unscoped_ref_count": len(list(activity.get("activity_unscoped_refs", []))),
+        "activity_ignored_missing_correlation_key_refs": list(
+            activity.get("activity_ignored_missing_correlation_key_refs", [])
+        ),
+        "activity_ignored_missing_anchor_refs": list(activity.get("activity_ignored_missing_anchor_refs", [])),
+        "activity_ignored_pre_round_refs": list(activity.get("activity_ignored_pre_round_refs", [])),
         "activity_ignored_stale_refs": list(activity.get("activity_ignored_stale_refs", [])),
+        "activity_ignored_pre_round_ref_count": len(list(activity.get("activity_ignored_pre_round_refs", []))),
+        "activity_ignored_stale_ref_count": len(list(activity.get("activity_ignored_stale_refs", []))),
         "protocol_feedback_activity_detected": bool(activity.get("protocol_feedback_activity_detected", False)),
         "protocol_feedback_activity_refs": list(activity.get("protocol_feedback_activity_refs", [])),
         "resolved_work_layer": str(layer_intent.get("resolved_work_layer", "")),
@@ -235,6 +290,9 @@ def main() -> int:
         "sidecar_error_code": "",
         "escalation_required": False,
         "escalation_decision": "NON_BLOCKING_DEFAULT",
+        "observability_escalation_required": False,
+        "observability_alert_level": "NONE",
+        "observability_escalation_reason": "",
         "blocking_error_codes": [],
         "p0_violations": [],
         "track_a": {},
@@ -245,7 +303,19 @@ def main() -> int:
     }
 
     if not required:
-        if auto_required_candidate and bool(activity.get("requiredization_historical_activity_detected", False)):
+        activity_detected = bool(activity.get("protocol_feedback_activity_detected", False))
+        activity_unscoped = str(activity.get("activity_correlation_status", "")).strip().upper() == "ACTIVITY_UNSCOPED"
+        if activity_detected and activity_unscoped:
+            payload["sidecar_contract_status"] = STATUS_WARN_NON_BLOCKING
+            payload["sidecar_error_code"] = ERR_ACTIVITY_UNSCOPED_WARNING
+            payload["escalation_decision"] = "UNSCOPED_ACTIVITY_NON_BLOCKING"
+            payload["observability_escalation_required"] = payload.get("activity_unscoped_count", 0) >= UNSCOPED_ALERT_THRESHOLD
+            payload["observability_alert_level"] = (
+                "L1" if payload.get("activity_unscoped_count", 0) >= UNSCOPED_ALERT_THRESHOLD else "INFO"
+            )
+            payload["observability_escalation_reason"] = "activity_unscoped_without_current_round_linkage"
+            payload["stale_reasons"] = ["activity_unscoped_without_current_round_linkage"]
+        elif auto_required_candidate and bool(activity.get("requiredization_historical_activity_detected", False)):
             payload["stale_reasons"] = ["contract_not_required_due_lane_scope_history_only_activity"]
         else:
             payload["stale_reasons"] = ["contract_not_required"]
@@ -410,8 +480,18 @@ def main() -> int:
         "post_execution_error_code": post_result["error_code"],
         "writeback_required_contract": wb_payload.get("required_contract"),
         "post_execution_required_contract": post_payload.get("required_contract"),
+        "report_selected_path": post_payload.get("report_selected_path") or wb_payload.get("report_selected_path"),
         "writeback_report_selected_path": wb_payload.get("report_selected_path"),
         "post_execution_report_selected_path": post_payload.get("report_selected_path"),
+        "writeback_mode": post_payload.get("writeback_mode") or wb_payload.get("writeback_mode"),
+        "writeback_status": post_payload.get("writeback_status") or wb_payload.get("writeback_status"),
+        "next_action": post_payload.get("next_action") or wb_payload.get("next_action"),
+        "next_recovery_action": post_payload.get("next_recovery_action") or wb_payload.get("next_recovery_action"),
+        "final_emit_channel_id": post_payload.get("final_emit_channel_id"),
+        "final_emit_policy_mode": post_payload.get("final_emit_policy_mode"),
+        "final_emit_schema_id": post_payload.get("final_emit_schema_id"),
+        "final_emit_schema_status": post_payload.get("final_emit_schema_status"),
+        "final_emit_contract_status": post_payload.get("final_emit_contract_status"),
     }
     payload["track_b"] = {
         "semantic_routing_status": sem_result["status"],

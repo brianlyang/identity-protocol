@@ -40,10 +40,24 @@ def _task_path(identity: dict[str, Any], identity_id: str) -> Path:
     return p
 
 
-def _materialize(pattern: str, identity_id: str, ts: int) -> Path:
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack = str(identity.get("pack_path", "")).strip()
+    if not pack:
+        return None
+    return Path(pack).expanduser().resolve()
+
+
+def _materialize(pattern: str, identity_id: str, ts: int, pack_root: Path | None = None) -> Path:
     p = pattern.replace("<identity-id>", identity_id)
     if "*" in p:
         p = p.replace("*", str(ts))
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if pack_root is not None and p.startswith(local_prefix):
+        return (pack_root / "runtime" / p[len(local_prefix) :]).expanduser()
+    if pack_root is not None and p.startswith("identity/runtime/"):
+        return (pack_root / "runtime" / p[len("identity/runtime/") :]).expanduser()
+    if pack_root is not None and p.startswith("runtime/"):
+        return (pack_root / p).expanduser()
     return Path(p).expanduser()
 
 
@@ -63,6 +77,7 @@ def main() -> int:
     catalog = Path(args.catalog).expanduser().resolve()
     identity = _resolve_identity(catalog, args.identity_id)
     task = _load_json(_task_path(identity, args.identity_id))
+    pack_root = _resolve_pack_root(identity)
     contract = task.get("experience_feedback_contract") or {}
     log_pattern = str(contract.get("feedback_log_path_pattern", "")).strip()
     if not log_pattern:
@@ -73,7 +88,7 @@ def main() -> int:
     ts = int(datetime.now(timezone.utc).timestamp())
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    log_path = _materialize(log_pattern, args.identity_id, ts)
+    log_path = _materialize(log_pattern, args.identity_id, ts, pack_root)
     log_payload = {
         "feedback_id": f"feedback-{args.identity_id}-{ts}",
         "identity_id": args.identity_id,
@@ -93,7 +108,7 @@ def main() -> int:
     outputs = [log_path]
 
     if sample_pattern:
-        sample_path = _materialize(sample_pattern, args.identity_id, ts)
+        sample_path = _materialize(sample_pattern, args.identity_id, ts, pack_root)
         sample_payload = {
             "identity_id": args.identity_id,
             "generated_at": now,

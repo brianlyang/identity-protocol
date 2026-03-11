@@ -78,7 +78,7 @@ def _resolve_protocol_lane(
             explicit_source_layer=source_layer,
             intent_text=layer_intent_text,
             default_work_layer="instance",
-            default_source_layer="global",
+            default_source_layer="project",
         )
         wl = str(intent.get("resolved_work_layer", "")).strip().lower() or "instance"
         protocol_triggered = bool(intent.get("protocol_triggered", False))
