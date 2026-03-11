@@ -3,6 +3,9 @@ governance_version: v1.6.4
 last_updated_utc: "2026-03-11T00:00:00Z"
 plugins:
   - plugin_id: multimodal-vision-enforcement
+    integration_kind: api
+    protocol_contract_root: identity/protocol/plugins
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/api
     requirement_key: asb16-rq-034
     bundle_target_name: multimodal_plugin_enforcement
     gate_mode: fail_close_strict
@@ -69,6 +72,9 @@ plugins:
         - runtime_stage_missing_input_gate_deferred_legacy_report
         - runtime_stage_missing_input_gate_deferred_from_report
   - plugin_id: reasoning-loop-enforcement
+    integration_kind: api
+    protocol_contract_root: identity/protocol/plugins
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/api
     requirement_key: asb16-rq-035
     bundle_target_name: reasoning_loop_failclose_enforcement
     gate_mode: fail_close_strict
