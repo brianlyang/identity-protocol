@@ -102,6 +102,8 @@ static_doc_required_alias_refs:
   - doc: docs/review/protocol-remediation-audit-ledger-v1.6.md
     alias_refs:
       - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
       - identity/protocol/mappings/control-plane-budget.current.yaml
       - identity/protocol/mappings/control-plane-status.current.yaml
       - identity/protocol/mappings/github-control-plane-offload.current.yaml
