@@ -236,7 +236,7 @@ def main() -> int:
         str(out_path),
     ]
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
 
     payload: dict[str, Any] = {
         "full_scan_target_regression_status": STATUS_FAIL_REQUIRED,
@@ -250,6 +250,7 @@ def main() -> int:
         "expected_work_layer": str(args.expected_work_layer).strip(),
         "expected_source_layer": str(args.expected_source_layer).strip(),
         "scan_command": cmd,
+        "scan_cwd": str(REPO_ROOT),
         "scan_rc": proc.returncode,
         "scan_stdout_tail": (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else "",
         "scan_stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
