@@ -279,19 +279,18 @@ Replay evidence (this round):
 7. Third-item newcomer replay chain (governance section 3.3.4) is green and reproducible from current pointers only.
 8. `PLUGIN_JOIN_INTAKE` carries active rows for all strict fail-close plugins; zero-row intake is not accepted for final closure.
 
-## 3) Residual risk before code-phase closure
+## 3) Residual risk after code-phase closure
 
-1. If monotonic floor remains documentation-only, downgrade risk remains.
-2. If run-id propagation remains conditional in reasoning strict paths, fallback ambiguity remains.
-3. If multimodal defer semantics remain too permissive in strict done-transition contexts, user-perceived enforcement weakness remains.
-4. If AI search onboarding is provider-hardcoded instead of profile-driven, plugin extensibility will regress.
+1. No blocking residual risk remains for v1.6.4 fixed-directory integration-kind closure.
+2. Future exemplar plugin expansion (`ai-folder-governance`, `ai-search`) should continue as
+   config-first onboarding and is tracked as stream evolution, not v1.6.4 closure blocker.
 
 ## 4) Current posture
 
-Posture: `CONDITIONAL_GO` for code-phase hardening.
+Posture: `GO` for v1.6.4 code-phase closure.
 
 Reason:
 
 1. Control-plane foundations are strong and stable.
-2. v1.6.4 semantic tightening items are clearly scoped and ready for implementation.
-3. No further stream sprawl is needed; this stream should close with focused validator/policy hardening only.
+2. Integration-kind fixed-directory rules are now machine-enforced in intake parity, schema, and invariants.
+3. 5 self-tests + 5 deep scans completed with expected pass/fail semantics.
