@@ -625,3 +625,24 @@ Observed:
 5. Manifest + summary:
    - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json`
    - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/round39_iteration_summary.json`
+
+### 11.17 Round-42 three-pass post-repair serial replay (2026-03-11)
+
+1. Reason:
+   - post-repair verification after static authority expansion and doc-evidence error-code convergence (raw code count rebound removed).
+2. Iteration outcome (`1..3`, all stable):
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
+   - `validate_protocol_ssot_source` => `OK`
+   - `validate_doc_evidence_persistence` => `PASS_REQUIRED`
+   - `validate_control_plane_status_sync` => `PASS_REQUIRED`
+3. Legacy coverage telemetry:
+   - total legacy docs (`<=v1.6.*`): `54`
+   - authority-set covered: `10`
+   - uncovered legacy docs: `44` (archive/context default).
+4. Evidence root:
+   - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/`
+5. Manifest + summary:
+   - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json`
+   - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/round42_iteration_summary.json`
