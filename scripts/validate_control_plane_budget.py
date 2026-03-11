@@ -163,7 +163,32 @@ def _offload_phase1_python_invocation_max(repo_root: Path) -> tuple[int | None, 
     if not offload_path.exists():
         return None, str(offload_path), "offload_plan_missing"
     doc = _load_budget_doc(offload_path)
-    targets = doc.get("acceptance_targets_v163") or {}
+    targets: dict[str, Any] | None = None
+    canonical_targets = doc.get("acceptance_targets")
+    if isinstance(canonical_targets, dict):
+        targets = canonical_targets
+    if targets is None:
+        for key in ("acceptance_targets_v165", "acceptance_targets_v164", "acceptance_targets_v163"):
+            candidate = doc.get(key)
+            if isinstance(candidate, dict):
+                targets = candidate
+                break
+    if targets is None:
+        versioned_candidates: list[tuple[int, str, dict[str, Any]]] = []
+        for key, value in doc.items():
+            if not (isinstance(key, str) and key.startswith("acceptance_targets_v")):
+                continue
+            if not isinstance(value, dict):
+                continue
+            suffix = key.removeprefix("acceptance_targets_v")
+            try:
+                version = int(suffix)
+            except Exception:
+                version = -1
+            versioned_candidates.append((version, key, value))
+        if versioned_candidates:
+            versioned_candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+            targets = versioned_candidates[0][2]
     if not isinstance(targets, dict):
         return None, str(offload_path), "offload_targets_missing"
     phase1 = targets.get("phase_1") or {}
