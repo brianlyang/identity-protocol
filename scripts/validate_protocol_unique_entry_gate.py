@@ -30,6 +30,8 @@ EXPECTED_ENTRY_SCRIPT = "scripts/required_gate_bundle_runner.py"
 EXPECTED_BUNDLE_KEY = "required_gate_bundle_runner"
 EXPECTED_SCOPE = "all_identity_instance_actions"
 EXPECTED_ENTRY_ERROR_FAMILY = {"IP-GATE-ENTRY-001", "IP-GATE-ENTRY-002"}
+ENTRY_RECEIPT_STATE_FILE = "required_gate_bundle_entry.latest.json"
+ENTRY_RECEIPT_HISTORY_GLOB = "required-gate-bundle-entry-*.json"
 
 CONTRACT_KEYS = (
     "protocol_unique_entry_gate_contract_v1",
@@ -65,6 +67,29 @@ def _as_str_set(value: Any) -> set[str]:
     return {str(item).strip() for item in value if str(item).strip()}
 
 
+def _resolve_entry_receipt_path(*, pack_path: Path, explicit_path: str) -> Path | None:
+    if str(explicit_path or "").strip():
+        p = Path(explicit_path).expanduser().resolve()
+        return p if p.exists() and p.is_file() else None
+
+    latest = (pack_path / "runtime" / "state" / ENTRY_RECEIPT_STATE_FILE).resolve()
+    if latest.exists() and latest.is_file():
+        return latest
+
+    history_dir = (pack_path / "runtime" / "reports" / "required-gate-bundle-entry").resolve()
+    if not history_dir.exists() or not history_dir.is_dir():
+        return None
+    candidates = sorted(history_dir.glob(ENTRY_RECEIPT_HISTORY_GLOB), key=lambda x: x.stat().st_mtime, reverse=True)
+    return candidates[0].resolve() if candidates else None
+
+
+def _load_receipt(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("receipt_payload_not_object")
+    return data
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate protocol unique-entry gate contract.")
     ap.add_argument("--catalog", required=True)
@@ -86,6 +111,10 @@ def main() -> int:
         default="validate",
     )
     ap.add_argument("--force-check", action="store_true")
+    ap.add_argument("--force-required", action="store_true")
+    ap.add_argument("--run-id", default="")
+    ap.add_argument("--entry-receipt", default="")
+    ap.add_argument("--require-entry-receipt", action="store_true")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -95,7 +124,7 @@ def main() -> int:
         return 2
 
     try:
-        _pack_path, task_path = resolve_pack_and_task(catalog_path, args.identity_id)
+        pack_path, task_path = resolve_pack_and_task(catalog_path, args.identity_id)
         task = load_json(task_path)
     except Exception as exc:
         print(f"[FAIL] {exc}")
@@ -104,7 +133,8 @@ def main() -> int:
     contract, contract_key = _resolve_contract(task)
     declared_required = contract_required(contract)
     strict_operation = str(args.operation).strip().lower() in STRICT_OPERATIONS
-    required = bool(args.force_check or declared_required or strict_operation)
+    required = bool(args.force_check or args.force_required or declared_required or strict_operation)
+    run_id = str(args.run_id or "").strip()
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
@@ -120,6 +150,11 @@ def main() -> int:
         "protocol_unique_entry_scope": "",
         "protocol_unique_entry_required_operations": [],
         "protocol_unique_entry_error_family": [],
+        "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_path": "",
+        "protocol_unique_entry_receipt_bundle_key": "",
+        "protocol_unique_entry_receipt_run_id": "",
+        "protocol_unique_entry_receipt_operation": "",
         "error_code": "",
         "stale_reasons": [],
     }
@@ -171,6 +206,58 @@ def main() -> int:
         payload["stale_reasons"] = issues
         _emit(payload, json_only=args.json_only)
         return 1
+
+    receipt_required = bool(args.require_entry_receipt or strict_operation)
+    if receipt_required:
+        receipt_path = _resolve_entry_receipt_path(pack_path=pack_path, explicit_path=str(args.entry_receipt or ""))
+        if receipt_path is None:
+            payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+            payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_CONTRACT_INVALID
+            payload["stale_reasons"] = ["entry_receipt_missing"]
+            _emit(payload, json_only=args.json_only)
+            return 1
+        payload["protocol_unique_entry_receipt_path"] = str(receipt_path)
+        try:
+            receipt = _load_receipt(receipt_path)
+        except Exception as exc:
+            payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+            payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_CONTRACT_INVALID
+            payload["stale_reasons"] = [f"entry_receipt_invalid:{exc}"]
+            _emit(payload, json_only=args.json_only)
+            return 1
+
+        receipt_bundle_key = str(receipt.get("bundle_key", "")).strip()
+        receipt_identity_id = str(receipt.get("identity_id", "")).strip()
+        receipt_operation = str(receipt.get("operation", "")).strip().lower()
+        receipt_run_id = str(receipt.get("run_id_binding", "")).strip()
+        receipt_bundle_status = str(receipt.get("bundle_status", "")).strip().upper()
+        payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
+        payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
+        payload["protocol_unique_entry_receipt_operation"] = receipt_operation
+
+        receipt_issues: list[str] = []
+        if receipt_bundle_key != EXPECTED_BUNDLE_KEY:
+            receipt_issues.append("entry_receipt_bundle_key_mismatch")
+        if receipt_identity_id != str(args.identity_id).strip():
+            receipt_issues.append("entry_receipt_identity_mismatch")
+        if receipt_operation != str(args.operation).strip().lower():
+            receipt_issues.append("entry_receipt_operation_mismatch")
+        if receipt_bundle_status != STATUS_PASS_REQUIRED:
+            receipt_issues.append("entry_receipt_bundle_status_not_pass")
+        if run_id and receipt_run_id != run_id:
+            receipt_issues.append("entry_receipt_run_id_mismatch")
+
+        if receipt_issues:
+            payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+            payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_CONTRACT_INVALID
+            payload["stale_reasons"] = receipt_issues
+            _emit(payload, json_only=args.json_only)
+            return 1
+
+        payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
 
     payload["protocol_unique_entry_gate_status"] = STATUS_PASS_REQUIRED
     payload["error_code"] = ""
