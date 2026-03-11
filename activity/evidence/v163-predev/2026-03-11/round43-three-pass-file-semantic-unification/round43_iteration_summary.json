@@ -1,0 +1,1534 @@
+{
+  "stream": "v163-predev",
+  "date": "2026-03-11",
+  "round": "round43-three-pass-file-semantic-unification",
+  "iterations": [
+    {
+      "iteration": 1,
+      "checks": [
+        {
+          "check": "control_plane_invariants",
+          "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+          "rc": 0,
+          "duration_sec": 1.608,
+          "timed_out": false,
+          "result": {
+            "control_plane_invariants_status": "PASS_REQUIRED",
+            "error_code": "",
+            "invariants_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
+            "invariants_configured_file": "identity/protocol/mappings/control-plane-invariants.current.yaml",
+            "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+            "invariants_active_file": "identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+            "invariants_alias_error": "",
+            "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_mapping_active_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_mapping_alias_error": "",
+            "contract_binding_alias_enabled": true,
+            "contract_binding_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_binding_current_configured_file": "identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_binding_parse_ok": true,
+            "contract_binding_violation_count": 0,
+            "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+            "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+            "plugin_governance_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+            "plugin_governance_active_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+            "plugin_governance_alias_enabled": true,
+            "plugin_governance_alias_error": "",
+            "plugin_governance_violation_count": 0,
+            "plugin_doc_control_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml",
+            "plugin_doc_control_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+            "plugin_doc_control_active_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+            "github_offload_alias_enabled": true,
+            "github_offload_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.current.yaml",
+            "github_offload_current_configured_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+            "github_offload_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+            "github_offload_active_file": "identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+            "github_offload_parse_ok": true,
+            "github_offload_violation_count": 0,
+            "layer_gate_profile_alias_enabled": true,
+            "layer_gate_profile_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+            "layer_gate_profile_current_configured_file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+            "layer_gate_profile_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+            "layer_gate_profile_active_file": "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+            "layer_gate_profile_parse_ok": true,
+            "layer_gate_profile_violation_count": 0,
+            "stream_doc_registry_alias_enabled": true,
+            "stream_doc_registry_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_current_configured_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_parse_ok": true,
+            "stream_doc_registry_violation_count": 0,
+            "doc_evidence_allowlist_alias_enabled": true,
+            "doc_evidence_allowlist_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "doc_evidence_allowlist_current_configured_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "doc_evidence_allowlist_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "doc_evidence_allowlist_active_file": "identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "doc_evidence_allowlist_parse_ok": true,
+            "doc_evidence_allowlist_violation_count": 0,
+            "control_plane_budget_alias_enabled": true,
+            "control_plane_budget_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+            "control_plane_budget_current_configured_file": "identity/protocol/mappings/control-plane-budget.current.yaml",
+            "control_plane_budget_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "control_plane_budget_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "control_plane_budget_parse_ok": true,
+            "control_plane_budget_violation_count": 0,
+            "control_plane_status_alias_enabled": true,
+            "control_plane_status_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+            "control_plane_status_current_configured_file": "identity/protocol/mappings/control-plane-status.current.yaml",
+            "control_plane_status_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+            "control_plane_status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+            "control_plane_status_parse_ok": true,
+            "control_plane_status_violation_count": 0,
+            "plugin_control_plane_alias_enabled": true,
+            "plugin_control_plane_alias_parse_ok": true,
+            "plugin_control_plane_alias_violation_count": 0,
+            "plugin_control_plane_alias_current_files": {
+              "plugin_registry_current_file": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
+              "provider_profiles_current_file": "identity/protocol/plugins/PROVIDER_PROFILES.current.yaml",
+              "failclose_governance_current_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+              "plugin_doc_control_current_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
+            },
+            "plugin_control_plane_alias_active_files": {
+              "plugin_registry_current_file": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+              "provider_profiles_current_file": "identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml",
+              "failclose_governance_current_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+              "plugin_doc_control_current_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml"
+            },
+            "bundle_mapping_parity_mode": "freeze",
+            "bundle_mapping_parity_baseline_missing_rows": 0,
+            "bundle_mapping_parity_reduction_plan_file": "identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml",
+            "bundle_mapping_parity_reduction_plan_status": "SKIPPED_NOT_REQUIRED",
+            "bundle_mapping_parity_reduction_plan_targets": [],
+            "bundle_mapping_parity_reduction_plan_zero_target": false,
+            "mapping_rows_missing_in_bundle_count": 0,
+            "mapping_rows_missing_in_bundle": [],
+            "bundle_rows_not_in_mapping_count": 0,
+            "bundle_rows_not_in_mapping": [],
+            "plugin_profile_count": 2,
+            "plugin_wiring_violation_count": 0,
+            "registry_fail_close_plugin_count": 2,
+            "registry_fail_close_plugin_ids": [
+              "multimodal-vision-enforcement",
+              "reasoning-loop-enforcement"
+            ],
+            "governance_profile_plugin_count": 2,
+            "governance_profile_plugin_ids": [
+              "multimodal-vision-enforcement",
+              "reasoning-loop-enforcement"
+            ],
+            "duplicate_governance_profile_count": 0,
+            "duplicate_governance_plugin_ids": [],
+            "unique_egress_violation_count": 0,
+            "bundle_entry_violation_count": 0,
+            "prompt_binding_violation_count": 0,
+            "plugin_readability_violation_count": 0,
+            "plugin_governance_parse_ok": true,
+            "plugin_doc_control_parse_ok": true,
+            "bundle_target_map_size": 35,
+            "violation_count": 0,
+            "violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "required_gate_surface_drift",
+          "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.289,
+          "timed_out": false,
+          "result": {
+            "required_gate_surface_drift_status": "PASS_REQUIRED",
+            "error_code": "",
+            "bundle_runner_script": "scripts/required_gate_bundle_runner.py",
+            "recurrence_escalator_script": "scripts/validate_required_gate_recurrence_escalator.py",
+            "tuple_parity_script": "scripts/validate_required_gate_tuple_parity.py",
+            "mandatory_lineage_scripts": [
+              "scripts/required_gate_bundle_runner.py",
+              "scripts/validate_required_gate_recurrence_escalator.py",
+              "scripts/validate_required_gate_tuple_parity.py"
+            ],
+            "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "mapping_errors": [],
+            "strict_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh",
+              ".github/workflows/_identity-required-gates.yml"
+            ],
+            "full_scan_delegate_required_python_scripts": [
+              "scripts/validate_full_scan_target_regression.py"
+            ],
+            "full_scan_delegate_required_tokens": [
+              "--target-source-layer",
+              "--expected-work-layer",
+              "--expected-source-layer",
+              "--actor-id",
+              "--session-id",
+              "--enforce-m2m-pass"
+            ],
+            "dialogue_feedback_bundle_script": "scripts/run_identity_dialogue_feedback_bundle.py",
+            "dialogue_feedback_bundle_required_surfaces": [
+              "scripts/identity_creator.py"
+            ],
+            "dialogue_feedback_bundle_required_validators": [
+              "scripts/validate_identity_experience_feedback_governance.py",
+              "scripts/validate_identity_capability_arbitration.py",
+              "scripts/validate_identity_dialogue_content.py",
+              "scripts/validate_identity_dialogue_cross_validation.py",
+              "scripts/validate_identity_dialogue_result_support.py",
+              "scripts/validate_identity_ci_enforcement.py"
+            ],
+            "dialogue_feedback_bundle_required_args": [
+              "--catalog",
+              "--identity-id"
+            ],
+            "forbidden_direct_validators": [
+              "scripts/emit_route_version_pin_receipt.py",
+              "scripts/normalize_cross_workflow_evidence.py",
+              "scripts/normalize_v16_cross_workflow_evidence.py",
+              "scripts/validate_cross_verification_tracks.py",
+              "scripts/validate_cross_workflow_schema.py",
+              "scripts/validate_dedup_monotonicity.py",
+              "scripts/validate_execution_target_tuple_isolation.py",
+              "scripts/validate_fallback_taxonomy_normalization.py",
+              "scripts/validate_intake_evidence_core.py",
+              "scripts/validate_intake_evidence_quorum.py",
+              "scripts/validate_multimodal_plugin_enforcement.py",
+              "scripts/validate_reasoning_loop_failclose.py",
+              "scripts/validate_route_version_pinning.py",
+              "scripts/validate_skill_path_integrity.py",
+              "scripts/validate_v16_cross_verification_tracks.py",
+              "scripts/validate_v16_cross_workflow_schema.py",
+              "scripts/validate_v16_dedup_monotonicity.py",
+              "scripts/validate_v16_intake_evidence_core.py",
+              "scripts/validate_v16_intake_evidence_quorum.py",
+              "scripts/validate_v16_skill_path_integrity.py"
+            ],
+            "missing_surface_files": [],
+            "missing_lineage_refs": {},
+            "missing_execution_tokens": {},
+            "dialogue_bundle_missing": {},
+            "forbidden_hits": {},
+            "final_egress_wrapper_script": "scripts/final_emit_governed.py",
+            "final_egress_required_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh"
+            ],
+            "missing_final_egress_wrapper": [],
+            "forbidden_direct_egress_scripts": [
+              "scripts/compose_and_validate_governed_reply.py"
+            ],
+            "forbidden_direct_egress_hits": {},
+            "actor_id_required_scripts": [
+              "scripts/render_identity_response_stamp.py",
+              "scripts/final_emit_governed.py",
+              "scripts/validate_reply_identity_context_first_line.py",
+              "scripts/validate_send_time_reply_gate.py",
+              "scripts/validate_execution_reply_identity_coherence.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py"
+            ],
+            "actor_id_passthrough_missing": {},
+            "session_id_required_scripts": [
+              "scripts/validate_required_contract_coverage.py",
+              "scripts/render_identity_response_stamp.py",
+              "scripts/validate_identity_response_stamp.py",
+              "scripts/final_emit_governed.py",
+              "scripts/validate_headstamp_recurrence_closure.py",
+              "scripts/validate_reply_identity_context_first_line.py",
+              "scripts/validate_send_time_reply_gate.py",
+              "scripts/validate_execution_reply_identity_coherence.py",
+              "scripts/validate_actor_session_binding.py",
+              "scripts/validate_actor_session_multibinding_concurrency.py",
+              "scripts/validate_prompt_kernel_executable_coupling.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py"
+            ],
+            "session_id_passthrough_missing": {},
+            "bundle_runner_required_args": [
+              "--run-id",
+              "--send-time-gate-status",
+              "--outlet-bypass-detected",
+              "--final-emit-contract-status",
+              "--final-emit-policy-mode",
+              "--final-emit-schema-status",
+              "--actor-id",
+              "--resolved-work-layer",
+              "--resolved-source-layer",
+              "--lock-state"
+            ],
+            "bundle_arg_contract_missing": {},
+            "bundle_args_forbid_unknown": [
+              "--send-time-gate-status",
+              "--final-emit-contract-status",
+              "--final-emit-schema-status"
+            ],
+            "bundle_args_forbid_noncanonical": {
+              "--gate-profile-file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+            },
+            "bundle_arg_value_invalid": {}
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "docs_command_contract_check",
+          "command": "python3 scripts/docs_command_contract_check.py",
+          "rc": 0,
+          "duration_sec": 52.004,
+          "timed_out": false,
+          "stdout_tail": "[INFO] docs checked: 45\n[INFO] command snippets checked: 1213\n[PASS] docs command contract check passed.",
+          "stderr_tail": "",
+          "status": "PASS",
+          "error_code": ""
+        },
+        {
+          "check": "protocol_ssot_source",
+          "command": "python3 scripts/validate_protocol_ssot_source.py",
+          "rc": 0,
+          "duration_sec": 0.109,
+          "timed_out": false,
+          "stdout_tail": "[OK] protocol SSOT source boundary validated\n     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md\n     core_change_map=docs/governance/templates/protocol-core-change-map.yaml\n     artifacts_policy=evidence_only_non_normative",
+          "stderr_tail": "",
+          "status": "PASS",
+          "error_code": ""
+        },
+        {
+          "check": "doc_evidence_persistence",
+          "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.129,
+          "timed_out": false,
+          "result": {
+            "doc_evidence_persistence_status": "PASS_REQUIRED",
+            "error_code": "",
+            "stream_doc_registry_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_error_count": 0,
+            "stream_doc_registry_errors": [],
+            "evidence_allowlist_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "evidence_allowlist_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "evidence_allowlist_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "evidence_allowlist_alias_error": "",
+            "strict_docs_checked": [
+              "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
+              "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+              "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.3.md"
+            ],
+            "docs_checked_total": 6,
+            "docs_checked": [
+              "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+              "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
+              "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.3.md"
+            ],
+            "delta_enforced": false,
+            "delta_docs_detected": 0,
+            "delta_mode": "local_git_diff",
+            "delta_base": "",
+            "delta_head": "",
+            "required_tuple_fields": [
+              "sha256",
+              "command",
+              "rc",
+              "timestamp"
+            ],
+            "allowed_persistent_prefixes": [
+              "activity/evidence/",
+              ".identity/"
+            ],
+            "manifest_files_scanned": [
+              "activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json",
+              "activity/evidence/v161-headstamp-convergence/2026-03-09/EVIDENCE_MANIFEST.v1.6.1-headstamp.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/EVIDENCE_MANIFEST.bundle-parity-round2.v1.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2-regression/EVIDENCE_MANIFEST.bundle-parity-round2-regression.v1.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round3-zero-gap/EVIDENCE_MANIFEST.bundle-parity-round3-zero-gap.v1.json",
+              "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-predev-round31.json",
+              "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-round32-implementation.json",
+              "activity/evidence/v163-predev/2026-03-11/round34-hardclose/EVIDENCE_MANIFEST.round34-hardclose.json",
+              "activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json",
+              "activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json",
+              "activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json",
+              "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json"
+            ],
+            "violation_count": 0,
+            "violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "control_plane_status_sync",
+          "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+          "rc": 0,
+          "duration_sec": 64.763,
+          "timed_out": false,
+          "result": {
+            "control_plane_status_sync_status": "PASS_REQUIRED",
+            "error_code": "",
+            "status_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+            "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+            "status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+            "status_file_alias_error": "",
+            "mismatch_count": 0,
+            "mismatches": [],
+            "stale_reasons": [],
+            "live_control_plane_status": "PASS_REQUIRED",
+            "file_control_plane_status": "PASS_REQUIRED"
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "control_plane_budget",
+          "command": "python3 scripts/validate_control_plane_budget.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.215,
+          "timed_out": false,
+          "result": {
+            "control_plane_budget_status": "PASS_REQUIRED",
+            "error_code": "",
+            "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+            "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "budget_file_alias_error": "",
+            "strict_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh",
+              ".github/workflows/_identity-required-gates.yml"
+            ],
+            "observed": {
+              "validator_scripts": 148,
+              "error_codes": 410,
+              "error_code_families": 137,
+              "mapping_rows_missing_in_bundle": 0,
+              "bundle_rows": 35,
+              "missing_mapping_rows": [],
+              "strict_direct_validate_calls": {
+                "scripts/identity_creator.py": 84,
+                "scripts/release_readiness_check.py": 107,
+                "scripts/report_three_plane_status.py": 75,
+                "scripts/full_identity_protocol_scan.py": 82,
+                "scripts/e2e_smoke_test.sh": 116,
+                ".github/workflows/_identity-required-gates.yml": 12
+              },
+              "required_gate_workflow_python_invocations": 15,
+              "required_gate_workflow_unique_python_scripts": 15,
+              "required_gate_delegate_inclusive_python_invocations": 121,
+              "required_gate_delegate_inclusive_unique_python_scripts": 115
+            },
+            "budgets": {
+              "validator_scripts": {
+                "warn": 148,
+                "fail": 152
+              },
+              "error_codes": {
+                "warn": 410,
+                "fail": 430
+              },
+              "error_code_families": {
+                "warn": 145,
+                "fail": 152
+              },
+              "mapping_rows_missing_in_bundle": {
+                "warn": 0,
+                "fail": 1
+              },
+              "direct_validate_calls": {
+                "scripts/identity_creator.py": {
+                  "warn": 84,
+                  "fail": 89
+                },
+                "scripts/release_readiness_check.py": {
+                  "warn": 107,
+                  "fail": 112
+                },
+                "scripts/report_three_plane_status.py": {
+                  "warn": 75,
+                  "fail": 80
+                },
+                "scripts/full_identity_protocol_scan.py": {
+                  "warn": 82,
+                  "fail": 87
+                },
+                "scripts/e2e_smoke_test.sh": {
+                  "warn": 116,
+                  "fail": 121
+                },
+                ".github/workflows/_identity-required-gates.yml": {
+                  "warn": 103,
+                  "fail": 105
+                }
+              }
+            },
+            "offload_budget": {
+              "source_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+              "resolved_plan_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+              "plan_resolution_error": "",
+              "phase_1_required_gate_workflow_python_invocations_max": 95
+            },
+            "error_code_family_strategy": {
+              "mode": "numeric_suffix_collapse",
+              "rationale": "Enforce convergence on stable contract families while preserving raw code telemetry.",
+              "family_regex": "s/-[0-9]+$//",
+              "migration_note": "Raw error-code count remains monitored; promotion guard now also enforces family-level budgets and no-rebound ceilings."
+            },
+            "convergence_guard": {
+              "enabled": true,
+              "mode": "no_rebound",
+              "enforce_mode": "fail_required",
+              "ceiling_count": 5,
+              "violations": []
+            },
+            "warn_violation_count": 0,
+            "warn_violations": [],
+            "fail_violation_count": 0,
+            "fail_violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "checks": [
+        {
+          "check": "control_plane_invariants",
+          "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.901,
+          "timed_out": false,
+          "result": {
+            "control_plane_invariants_status": "PASS_REQUIRED",
+            "error_code": "",
+            "invariants_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
+            "invariants_configured_file": "identity/protocol/mappings/control-plane-invariants.current.yaml",
+            "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+            "invariants_active_file": "identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+            "invariants_alias_error": "",
+            "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_mapping_active_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_mapping_alias_error": "",
+            "contract_binding_alias_enabled": true,
+            "contract_binding_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_binding_current_configured_file": "identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_binding_parse_ok": true,
+            "contract_binding_violation_count": 0,
+            "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+            "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+            "plugin_governance_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+            "plugin_governance_active_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+            "plugin_governance_alias_enabled": true,
+            "plugin_governance_alias_error": "",
+            "plugin_governance_violation_count": 0,
+            "plugin_doc_control_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml",
+            "plugin_doc_control_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+            "plugin_doc_control_active_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+            "github_offload_alias_enabled": true,
+            "github_offload_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.current.yaml",
+            "github_offload_current_configured_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+            "github_offload_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+            "github_offload_active_file": "identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+            "github_offload_parse_ok": true,
+            "github_offload_violation_count": 0,
+            "layer_gate_profile_alias_enabled": true,
+            "layer_gate_profile_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+            "layer_gate_profile_current_configured_file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+            "layer_gate_profile_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+            "layer_gate_profile_active_file": "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+            "layer_gate_profile_parse_ok": true,
+            "layer_gate_profile_violation_count": 0,
+            "stream_doc_registry_alias_enabled": true,
+            "stream_doc_registry_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_current_configured_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_parse_ok": true,
+            "stream_doc_registry_violation_count": 0,
+            "doc_evidence_allowlist_alias_enabled": true,
+            "doc_evidence_allowlist_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "doc_evidence_allowlist_current_configured_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "doc_evidence_allowlist_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "doc_evidence_allowlist_active_file": "identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "doc_evidence_allowlist_parse_ok": true,
+            "doc_evidence_allowlist_violation_count": 0,
+            "control_plane_budget_alias_enabled": true,
+            "control_plane_budget_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+            "control_plane_budget_current_configured_file": "identity/protocol/mappings/control-plane-budget.current.yaml",
+            "control_plane_budget_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "control_plane_budget_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "control_plane_budget_parse_ok": true,
+            "control_plane_budget_violation_count": 0,
+            "control_plane_status_alias_enabled": true,
+            "control_plane_status_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+            "control_plane_status_current_configured_file": "identity/protocol/mappings/control-plane-status.current.yaml",
+            "control_plane_status_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+            "control_plane_status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+            "control_plane_status_parse_ok": true,
+            "control_plane_status_violation_count": 0,
+            "plugin_control_plane_alias_enabled": true,
+            "plugin_control_plane_alias_parse_ok": true,
+            "plugin_control_plane_alias_violation_count": 0,
+            "plugin_control_plane_alias_current_files": {
+              "plugin_registry_current_file": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
+              "provider_profiles_current_file": "identity/protocol/plugins/PROVIDER_PROFILES.current.yaml",
+              "failclose_governance_current_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+              "plugin_doc_control_current_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
+            },
+            "plugin_control_plane_alias_active_files": {
+              "plugin_registry_current_file": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+              "provider_profiles_current_file": "identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml",
+              "failclose_governance_current_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+              "plugin_doc_control_current_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml"
+            },
+            "bundle_mapping_parity_mode": "freeze",
+            "bundle_mapping_parity_baseline_missing_rows": 0,
+            "bundle_mapping_parity_reduction_plan_file": "identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml",
+            "bundle_mapping_parity_reduction_plan_status": "SKIPPED_NOT_REQUIRED",
+            "bundle_mapping_parity_reduction_plan_targets": [],
+            "bundle_mapping_parity_reduction_plan_zero_target": false,
+            "mapping_rows_missing_in_bundle_count": 0,
+            "mapping_rows_missing_in_bundle": [],
+            "bundle_rows_not_in_mapping_count": 0,
+            "bundle_rows_not_in_mapping": [],
+            "plugin_profile_count": 2,
+            "plugin_wiring_violation_count": 0,
+            "registry_fail_close_plugin_count": 2,
+            "registry_fail_close_plugin_ids": [
+              "multimodal-vision-enforcement",
+              "reasoning-loop-enforcement"
+            ],
+            "governance_profile_plugin_count": 2,
+            "governance_profile_plugin_ids": [
+              "multimodal-vision-enforcement",
+              "reasoning-loop-enforcement"
+            ],
+            "duplicate_governance_profile_count": 0,
+            "duplicate_governance_plugin_ids": [],
+            "unique_egress_violation_count": 0,
+            "bundle_entry_violation_count": 0,
+            "prompt_binding_violation_count": 0,
+            "plugin_readability_violation_count": 0,
+            "plugin_governance_parse_ok": true,
+            "plugin_doc_control_parse_ok": true,
+            "bundle_target_map_size": 35,
+            "violation_count": 0,
+            "violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "required_gate_surface_drift",
+          "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.174,
+          "timed_out": false,
+          "result": {
+            "required_gate_surface_drift_status": "PASS_REQUIRED",
+            "error_code": "",
+            "bundle_runner_script": "scripts/required_gate_bundle_runner.py",
+            "recurrence_escalator_script": "scripts/validate_required_gate_recurrence_escalator.py",
+            "tuple_parity_script": "scripts/validate_required_gate_tuple_parity.py",
+            "mandatory_lineage_scripts": [
+              "scripts/required_gate_bundle_runner.py",
+              "scripts/validate_required_gate_recurrence_escalator.py",
+              "scripts/validate_required_gate_tuple_parity.py"
+            ],
+            "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "mapping_errors": [],
+            "strict_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh",
+              ".github/workflows/_identity-required-gates.yml"
+            ],
+            "full_scan_delegate_required_python_scripts": [
+              "scripts/validate_full_scan_target_regression.py"
+            ],
+            "full_scan_delegate_required_tokens": [
+              "--target-source-layer",
+              "--expected-work-layer",
+              "--expected-source-layer",
+              "--actor-id",
+              "--session-id",
+              "--enforce-m2m-pass"
+            ],
+            "dialogue_feedback_bundle_script": "scripts/run_identity_dialogue_feedback_bundle.py",
+            "dialogue_feedback_bundle_required_surfaces": [
+              "scripts/identity_creator.py"
+            ],
+            "dialogue_feedback_bundle_required_validators": [
+              "scripts/validate_identity_experience_feedback_governance.py",
+              "scripts/validate_identity_capability_arbitration.py",
+              "scripts/validate_identity_dialogue_content.py",
+              "scripts/validate_identity_dialogue_cross_validation.py",
+              "scripts/validate_identity_dialogue_result_support.py",
+              "scripts/validate_identity_ci_enforcement.py"
+            ],
+            "dialogue_feedback_bundle_required_args": [
+              "--catalog",
+              "--identity-id"
+            ],
+            "forbidden_direct_validators": [
+              "scripts/emit_route_version_pin_receipt.py",
+              "scripts/normalize_cross_workflow_evidence.py",
+              "scripts/normalize_v16_cross_workflow_evidence.py",
+              "scripts/validate_cross_verification_tracks.py",
+              "scripts/validate_cross_workflow_schema.py",
+              "scripts/validate_dedup_monotonicity.py",
+              "scripts/validate_execution_target_tuple_isolation.py",
+              "scripts/validate_fallback_taxonomy_normalization.py",
+              "scripts/validate_intake_evidence_core.py",
+              "scripts/validate_intake_evidence_quorum.py",
+              "scripts/validate_multimodal_plugin_enforcement.py",
+              "scripts/validate_reasoning_loop_failclose.py",
+              "scripts/validate_route_version_pinning.py",
+              "scripts/validate_skill_path_integrity.py",
+              "scripts/validate_v16_cross_verification_tracks.py",
+              "scripts/validate_v16_cross_workflow_schema.py",
+              "scripts/validate_v16_dedup_monotonicity.py",
+              "scripts/validate_v16_intake_evidence_core.py",
+              "scripts/validate_v16_intake_evidence_quorum.py",
+              "scripts/validate_v16_skill_path_integrity.py"
+            ],
+            "missing_surface_files": [],
+            "missing_lineage_refs": {},
+            "missing_execution_tokens": {},
+            "dialogue_bundle_missing": {},
+            "forbidden_hits": {},
+            "final_egress_wrapper_script": "scripts/final_emit_governed.py",
+            "final_egress_required_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh"
+            ],
+            "missing_final_egress_wrapper": [],
+            "forbidden_direct_egress_scripts": [
+              "scripts/compose_and_validate_governed_reply.py"
+            ],
+            "forbidden_direct_egress_hits": {},
+            "actor_id_required_scripts": [
+              "scripts/render_identity_response_stamp.py",
+              "scripts/final_emit_governed.py",
+              "scripts/validate_reply_identity_context_first_line.py",
+              "scripts/validate_send_time_reply_gate.py",
+              "scripts/validate_execution_reply_identity_coherence.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py"
+            ],
+            "actor_id_passthrough_missing": {},
+            "session_id_required_scripts": [
+              "scripts/validate_required_contract_coverage.py",
+              "scripts/render_identity_response_stamp.py",
+              "scripts/validate_identity_response_stamp.py",
+              "scripts/final_emit_governed.py",
+              "scripts/validate_headstamp_recurrence_closure.py",
+              "scripts/validate_reply_identity_context_first_line.py",
+              "scripts/validate_send_time_reply_gate.py",
+              "scripts/validate_execution_reply_identity_coherence.py",
+              "scripts/validate_actor_session_binding.py",
+              "scripts/validate_actor_session_multibinding_concurrency.py",
+              "scripts/validate_prompt_kernel_executable_coupling.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py"
+            ],
+            "session_id_passthrough_missing": {},
+            "bundle_runner_required_args": [
+              "--run-id",
+              "--send-time-gate-status",
+              "--outlet-bypass-detected",
+              "--final-emit-contract-status",
+              "--final-emit-policy-mode",
+              "--final-emit-schema-status",
+              "--actor-id",
+              "--resolved-work-layer",
+              "--resolved-source-layer",
+              "--lock-state"
+            ],
+            "bundle_arg_contract_missing": {},
+            "bundle_args_forbid_unknown": [
+              "--send-time-gate-status",
+              "--final-emit-contract-status",
+              "--final-emit-schema-status"
+            ],
+            "bundle_args_forbid_noncanonical": {
+              "--gate-profile-file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+            },
+            "bundle_arg_value_invalid": {}
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "docs_command_contract_check",
+          "command": "python3 scripts/docs_command_contract_check.py",
+          "rc": 0,
+          "duration_sec": 47.213,
+          "timed_out": false,
+          "stdout_tail": "[INFO] docs checked: 45\n[INFO] command snippets checked: 1213\n[PASS] docs command contract check passed.",
+          "stderr_tail": "",
+          "status": "PASS",
+          "error_code": ""
+        },
+        {
+          "check": "protocol_ssot_source",
+          "command": "python3 scripts/validate_protocol_ssot_source.py",
+          "rc": 0,
+          "duration_sec": 0.094,
+          "timed_out": false,
+          "stdout_tail": "[OK] protocol SSOT source boundary validated\n     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md\n     core_change_map=docs/governance/templates/protocol-core-change-map.yaml\n     artifacts_policy=evidence_only_non_normative",
+          "stderr_tail": "",
+          "status": "PASS",
+          "error_code": ""
+        },
+        {
+          "check": "doc_evidence_persistence",
+          "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.106,
+          "timed_out": false,
+          "result": {
+            "doc_evidence_persistence_status": "PASS_REQUIRED",
+            "error_code": "",
+            "stream_doc_registry_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_error_count": 0,
+            "stream_doc_registry_errors": [],
+            "evidence_allowlist_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "evidence_allowlist_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "evidence_allowlist_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "evidence_allowlist_alias_error": "",
+            "strict_docs_checked": [
+              "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
+              "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+              "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.3.md"
+            ],
+            "docs_checked_total": 6,
+            "docs_checked": [
+              "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+              "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
+              "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.3.md"
+            ],
+            "delta_enforced": false,
+            "delta_docs_detected": 0,
+            "delta_mode": "local_git_diff",
+            "delta_base": "",
+            "delta_head": "",
+            "required_tuple_fields": [
+              "sha256",
+              "command",
+              "rc",
+              "timestamp"
+            ],
+            "allowed_persistent_prefixes": [
+              "activity/evidence/",
+              ".identity/"
+            ],
+            "manifest_files_scanned": [
+              "activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json",
+              "activity/evidence/v161-headstamp-convergence/2026-03-09/EVIDENCE_MANIFEST.v1.6.1-headstamp.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/EVIDENCE_MANIFEST.bundle-parity-round2.v1.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2-regression/EVIDENCE_MANIFEST.bundle-parity-round2-regression.v1.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round3-zero-gap/EVIDENCE_MANIFEST.bundle-parity-round3-zero-gap.v1.json",
+              "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-predev-round31.json",
+              "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-round32-implementation.json",
+              "activity/evidence/v163-predev/2026-03-11/round34-hardclose/EVIDENCE_MANIFEST.round34-hardclose.json",
+              "activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json",
+              "activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json",
+              "activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json",
+              "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json"
+            ],
+            "violation_count": 0,
+            "violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "control_plane_status_sync",
+          "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+          "rc": 0,
+          "duration_sec": 60.043,
+          "timed_out": false,
+          "result": {
+            "control_plane_status_sync_status": "PASS_REQUIRED",
+            "error_code": "",
+            "status_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+            "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+            "status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+            "status_file_alias_error": "",
+            "mismatch_count": 0,
+            "mismatches": [],
+            "stale_reasons": [],
+            "live_control_plane_status": "PASS_REQUIRED",
+            "file_control_plane_status": "PASS_REQUIRED"
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "control_plane_budget",
+          "command": "python3 scripts/validate_control_plane_budget.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.45,
+          "timed_out": false,
+          "result": {
+            "control_plane_budget_status": "PASS_REQUIRED",
+            "error_code": "",
+            "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+            "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "budget_file_alias_error": "",
+            "strict_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh",
+              ".github/workflows/_identity-required-gates.yml"
+            ],
+            "observed": {
+              "validator_scripts": 148,
+              "error_codes": 410,
+              "error_code_families": 137,
+              "mapping_rows_missing_in_bundle": 0,
+              "bundle_rows": 35,
+              "missing_mapping_rows": [],
+              "strict_direct_validate_calls": {
+                "scripts/identity_creator.py": 84,
+                "scripts/release_readiness_check.py": 107,
+                "scripts/report_three_plane_status.py": 75,
+                "scripts/full_identity_protocol_scan.py": 82,
+                "scripts/e2e_smoke_test.sh": 116,
+                ".github/workflows/_identity-required-gates.yml": 12
+              },
+              "required_gate_workflow_python_invocations": 15,
+              "required_gate_workflow_unique_python_scripts": 15,
+              "required_gate_delegate_inclusive_python_invocations": 121,
+              "required_gate_delegate_inclusive_unique_python_scripts": 115
+            },
+            "budgets": {
+              "validator_scripts": {
+                "warn": 148,
+                "fail": 152
+              },
+              "error_codes": {
+                "warn": 410,
+                "fail": 430
+              },
+              "error_code_families": {
+                "warn": 145,
+                "fail": 152
+              },
+              "mapping_rows_missing_in_bundle": {
+                "warn": 0,
+                "fail": 1
+              },
+              "direct_validate_calls": {
+                "scripts/identity_creator.py": {
+                  "warn": 84,
+                  "fail": 89
+                },
+                "scripts/release_readiness_check.py": {
+                  "warn": 107,
+                  "fail": 112
+                },
+                "scripts/report_three_plane_status.py": {
+                  "warn": 75,
+                  "fail": 80
+                },
+                "scripts/full_identity_protocol_scan.py": {
+                  "warn": 82,
+                  "fail": 87
+                },
+                "scripts/e2e_smoke_test.sh": {
+                  "warn": 116,
+                  "fail": 121
+                },
+                ".github/workflows/_identity-required-gates.yml": {
+                  "warn": 103,
+                  "fail": 105
+                }
+              }
+            },
+            "offload_budget": {
+              "source_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+              "resolved_plan_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+              "plan_resolution_error": "",
+              "phase_1_required_gate_workflow_python_invocations_max": 95
+            },
+            "error_code_family_strategy": {
+              "mode": "numeric_suffix_collapse",
+              "rationale": "Enforce convergence on stable contract families while preserving raw code telemetry.",
+              "family_regex": "s/-[0-9]+$//",
+              "migration_note": "Raw error-code count remains monitored; promotion guard now also enforces family-level budgets and no-rebound ceilings."
+            },
+            "convergence_guard": {
+              "enabled": true,
+              "mode": "no_rebound",
+              "enforce_mode": "fail_required",
+              "ceiling_count": 5,
+              "violations": []
+            },
+            "warn_violation_count": 0,
+            "warn_violations": [],
+            "fail_violation_count": 0,
+            "fail_violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        }
+      ]
+    },
+    {
+      "iteration": 3,
+      "checks": [
+        {
+          "check": "control_plane_invariants",
+          "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+          "rc": 0,
+          "duration_sec": 1.911,
+          "timed_out": false,
+          "result": {
+            "control_plane_invariants_status": "PASS_REQUIRED",
+            "error_code": "",
+            "invariants_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.current.yaml",
+            "invariants_configured_file": "identity/protocol/mappings/control-plane-invariants.current.yaml",
+            "invariants_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+            "invariants_active_file": "identity/protocol/mappings/control-plane-invariants.v1.6.yaml",
+            "invariants_alias_error": "",
+            "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_mapping_active_file": "identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_mapping_alias_error": "",
+            "contract_binding_alias_enabled": true,
+            "contract_binding_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_binding_current_configured_file": "identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_binding_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "contract_binding_parse_ok": true,
+            "contract_binding_violation_count": 0,
+            "plugin_governance_configured_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+            "plugin_governance_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+            "plugin_governance_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+            "plugin_governance_active_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+            "plugin_governance_alias_enabled": true,
+            "plugin_governance_alias_error": "",
+            "plugin_governance_violation_count": 0,
+            "plugin_doc_control_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml",
+            "plugin_doc_control_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+            "plugin_doc_control_active_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml",
+            "github_offload_alias_enabled": true,
+            "github_offload_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.current.yaml",
+            "github_offload_current_configured_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+            "github_offload_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+            "github_offload_active_file": "identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+            "github_offload_parse_ok": true,
+            "github_offload_violation_count": 0,
+            "layer_gate_profile_alias_enabled": true,
+            "layer_gate_profile_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+            "layer_gate_profile_current_configured_file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml",
+            "layer_gate_profile_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+            "layer_gate_profile_active_file": "identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml",
+            "layer_gate_profile_parse_ok": true,
+            "layer_gate_profile_violation_count": 0,
+            "stream_doc_registry_alias_enabled": true,
+            "stream_doc_registry_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_current_configured_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_active_file": "identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_parse_ok": true,
+            "stream_doc_registry_violation_count": 0,
+            "doc_evidence_allowlist_alias_enabled": true,
+            "doc_evidence_allowlist_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "doc_evidence_allowlist_current_configured_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "doc_evidence_allowlist_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "doc_evidence_allowlist_active_file": "identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "doc_evidence_allowlist_parse_ok": true,
+            "doc_evidence_allowlist_violation_count": 0,
+            "control_plane_budget_alias_enabled": true,
+            "control_plane_budget_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+            "control_plane_budget_current_configured_file": "identity/protocol/mappings/control-plane-budget.current.yaml",
+            "control_plane_budget_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "control_plane_budget_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "control_plane_budget_parse_ok": true,
+            "control_plane_budget_violation_count": 0,
+            "control_plane_status_alias_enabled": true,
+            "control_plane_status_current_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+            "control_plane_status_current_configured_file": "identity/protocol/mappings/control-plane-status.current.yaml",
+            "control_plane_status_current_resolved_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+            "control_plane_status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+            "control_plane_status_parse_ok": true,
+            "control_plane_status_violation_count": 0,
+            "plugin_control_plane_alias_enabled": true,
+            "plugin_control_plane_alias_parse_ok": true,
+            "plugin_control_plane_alias_violation_count": 0,
+            "plugin_control_plane_alias_current_files": {
+              "plugin_registry_current_file": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
+              "provider_profiles_current_file": "identity/protocol/plugins/PROVIDER_PROFILES.current.yaml",
+              "failclose_governance_current_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml",
+              "plugin_doc_control_current_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml"
+            },
+            "plugin_control_plane_alias_active_files": {
+              "plugin_registry_current_file": "identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml",
+              "provider_profiles_current_file": "identity/protocol/plugins/PROVIDER_PROFILES.v1.6.2.yaml",
+              "failclose_governance_current_file": "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml",
+              "plugin_doc_control_current_file": "identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml"
+            },
+            "bundle_mapping_parity_mode": "freeze",
+            "bundle_mapping_parity_baseline_missing_rows": 0,
+            "bundle_mapping_parity_reduction_plan_file": "identity/protocol/mappings/bundle-parity-reduction-plan.v1.6.2.yaml",
+            "bundle_mapping_parity_reduction_plan_status": "SKIPPED_NOT_REQUIRED",
+            "bundle_mapping_parity_reduction_plan_targets": [],
+            "bundle_mapping_parity_reduction_plan_zero_target": false,
+            "mapping_rows_missing_in_bundle_count": 0,
+            "mapping_rows_missing_in_bundle": [],
+            "bundle_rows_not_in_mapping_count": 0,
+            "bundle_rows_not_in_mapping": [],
+            "plugin_profile_count": 2,
+            "plugin_wiring_violation_count": 0,
+            "registry_fail_close_plugin_count": 2,
+            "registry_fail_close_plugin_ids": [
+              "multimodal-vision-enforcement",
+              "reasoning-loop-enforcement"
+            ],
+            "governance_profile_plugin_count": 2,
+            "governance_profile_plugin_ids": [
+              "multimodal-vision-enforcement",
+              "reasoning-loop-enforcement"
+            ],
+            "duplicate_governance_profile_count": 0,
+            "duplicate_governance_plugin_ids": [],
+            "unique_egress_violation_count": 0,
+            "bundle_entry_violation_count": 0,
+            "prompt_binding_violation_count": 0,
+            "plugin_readability_violation_count": 0,
+            "plugin_governance_parse_ok": true,
+            "plugin_doc_control_parse_ok": true,
+            "bundle_target_map_size": 35,
+            "violation_count": 0,
+            "violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "required_gate_surface_drift",
+          "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.199,
+          "timed_out": false,
+          "result": {
+            "required_gate_surface_drift_status": "PASS_REQUIRED",
+            "error_code": "",
+            "bundle_runner_script": "scripts/required_gate_bundle_runner.py",
+            "recurrence_escalator_script": "scripts/validate_required_gate_recurrence_escalator.py",
+            "tuple_parity_script": "scripts/validate_required_gate_tuple_parity.py",
+            "mandatory_lineage_scripts": [
+              "scripts/required_gate_bundle_runner.py",
+              "scripts/validate_required_gate_recurrence_escalator.py",
+              "scripts/validate_required_gate_tuple_parity.py"
+            ],
+            "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+            "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+            "mapping_errors": [],
+            "strict_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh",
+              ".github/workflows/_identity-required-gates.yml"
+            ],
+            "full_scan_delegate_required_python_scripts": [
+              "scripts/validate_full_scan_target_regression.py"
+            ],
+            "full_scan_delegate_required_tokens": [
+              "--target-source-layer",
+              "--expected-work-layer",
+              "--expected-source-layer",
+              "--actor-id",
+              "--session-id",
+              "--enforce-m2m-pass"
+            ],
+            "dialogue_feedback_bundle_script": "scripts/run_identity_dialogue_feedback_bundle.py",
+            "dialogue_feedback_bundle_required_surfaces": [
+              "scripts/identity_creator.py"
+            ],
+            "dialogue_feedback_bundle_required_validators": [
+              "scripts/validate_identity_experience_feedback_governance.py",
+              "scripts/validate_identity_capability_arbitration.py",
+              "scripts/validate_identity_dialogue_content.py",
+              "scripts/validate_identity_dialogue_cross_validation.py",
+              "scripts/validate_identity_dialogue_result_support.py",
+              "scripts/validate_identity_ci_enforcement.py"
+            ],
+            "dialogue_feedback_bundle_required_args": [
+              "--catalog",
+              "--identity-id"
+            ],
+            "forbidden_direct_validators": [
+              "scripts/emit_route_version_pin_receipt.py",
+              "scripts/normalize_cross_workflow_evidence.py",
+              "scripts/normalize_v16_cross_workflow_evidence.py",
+              "scripts/validate_cross_verification_tracks.py",
+              "scripts/validate_cross_workflow_schema.py",
+              "scripts/validate_dedup_monotonicity.py",
+              "scripts/validate_execution_target_tuple_isolation.py",
+              "scripts/validate_fallback_taxonomy_normalization.py",
+              "scripts/validate_intake_evidence_core.py",
+              "scripts/validate_intake_evidence_quorum.py",
+              "scripts/validate_multimodal_plugin_enforcement.py",
+              "scripts/validate_reasoning_loop_failclose.py",
+              "scripts/validate_route_version_pinning.py",
+              "scripts/validate_skill_path_integrity.py",
+              "scripts/validate_v16_cross_verification_tracks.py",
+              "scripts/validate_v16_cross_workflow_schema.py",
+              "scripts/validate_v16_dedup_monotonicity.py",
+              "scripts/validate_v16_intake_evidence_core.py",
+              "scripts/validate_v16_intake_evidence_quorum.py",
+              "scripts/validate_v16_skill_path_integrity.py"
+            ],
+            "missing_surface_files": [],
+            "missing_lineage_refs": {},
+            "missing_execution_tokens": {},
+            "dialogue_bundle_missing": {},
+            "forbidden_hits": {},
+            "final_egress_wrapper_script": "scripts/final_emit_governed.py",
+            "final_egress_required_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh"
+            ],
+            "missing_final_egress_wrapper": [],
+            "forbidden_direct_egress_scripts": [
+              "scripts/compose_and_validate_governed_reply.py"
+            ],
+            "forbidden_direct_egress_hits": {},
+            "actor_id_required_scripts": [
+              "scripts/render_identity_response_stamp.py",
+              "scripts/final_emit_governed.py",
+              "scripts/validate_reply_identity_context_first_line.py",
+              "scripts/validate_send_time_reply_gate.py",
+              "scripts/validate_execution_reply_identity_coherence.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py"
+            ],
+            "actor_id_passthrough_missing": {},
+            "session_id_required_scripts": [
+              "scripts/validate_required_contract_coverage.py",
+              "scripts/render_identity_response_stamp.py",
+              "scripts/validate_identity_response_stamp.py",
+              "scripts/final_emit_governed.py",
+              "scripts/validate_headstamp_recurrence_closure.py",
+              "scripts/validate_reply_identity_context_first_line.py",
+              "scripts/validate_send_time_reply_gate.py",
+              "scripts/validate_execution_reply_identity_coherence.py",
+              "scripts/validate_actor_session_binding.py",
+              "scripts/validate_actor_session_multibinding_concurrency.py",
+              "scripts/validate_prompt_kernel_executable_coupling.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py"
+            ],
+            "session_id_passthrough_missing": {},
+            "bundle_runner_required_args": [
+              "--run-id",
+              "--send-time-gate-status",
+              "--outlet-bypass-detected",
+              "--final-emit-contract-status",
+              "--final-emit-policy-mode",
+              "--final-emit-schema-status",
+              "--actor-id",
+              "--resolved-work-layer",
+              "--resolved-source-layer",
+              "--lock-state"
+            ],
+            "bundle_arg_contract_missing": {},
+            "bundle_args_forbid_unknown": [
+              "--send-time-gate-status",
+              "--final-emit-contract-status",
+              "--final-emit-schema-status"
+            ],
+            "bundle_args_forbid_noncanonical": {
+              "--gate-profile-file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+            },
+            "bundle_arg_value_invalid": {}
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "docs_command_contract_check",
+          "command": "python3 scripts/docs_command_contract_check.py",
+          "rc": 0,
+          "duration_sec": 94.743,
+          "timed_out": false,
+          "stdout_tail": "[INFO] docs checked: 45\n[INFO] command snippets checked: 1213\n[PASS] docs command contract check passed.",
+          "stderr_tail": "",
+          "status": "PASS",
+          "error_code": ""
+        },
+        {
+          "check": "protocol_ssot_source",
+          "command": "python3 scripts/validate_protocol_ssot_source.py",
+          "rc": 0,
+          "duration_sec": 0.155,
+          "timed_out": false,
+          "stdout_tail": "[OK] protocol SSOT source boundary validated\n     canonical_handoff=docs/governance/identity-protocol-strengthening-handoff-v1.4.13.md\n     core_change_map=docs/governance/templates/protocol-core-change-map.yaml\n     artifacts_policy=evidence_only_non_normative",
+          "stderr_tail": "",
+          "status": "PASS",
+          "error_code": ""
+        },
+        {
+          "check": "doc_evidence_persistence",
+          "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.249,
+          "timed_out": false,
+          "result": {
+            "doc_evidence_persistence_status": "PASS_REQUIRED",
+            "error_code": "",
+            "stream_doc_registry_file": "identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.current.yaml",
+            "stream_doc_registry_resolved_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/stream-doc-registry.v1.6.yaml",
+            "stream_doc_registry_error_count": 0,
+            "stream_doc_registry_errors": [],
+            "evidence_allowlist_file": "identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "evidence_allowlist_entry_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.current.yaml",
+            "evidence_allowlist_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml",
+            "evidence_allowlist_alias_error": "",
+            "strict_docs_checked": [
+              "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
+              "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+              "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.3.md"
+            ],
+            "docs_checked_total": 6,
+            "docs_checked": [
+              "docs/governance/github-native-control-plane-specialization-v1.6.3.md",
+              "docs/governance/identity-headstamp-egress-governance-v1.6.1.md",
+              "docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.2.md",
+              "docs/review/protocol-remediation-audit-ledger-v1.6.3.md"
+            ],
+            "delta_enforced": false,
+            "delta_docs_detected": 0,
+            "delta_mode": "local_git_diff",
+            "delta_base": "",
+            "delta_head": "",
+            "required_tuple_fields": [
+              "sha256",
+              "command",
+              "rc",
+              "timestamp"
+            ],
+            "allowed_persistent_prefixes": [
+              "activity/evidence/",
+              ".identity/"
+            ],
+            "manifest_files_scanned": [
+              "activity/evidence/rq034/2026-03-09/EVIDENCE_MANIFEST.v1.6.2.json",
+              "activity/evidence/v161-headstamp-convergence/2026-03-09/EVIDENCE_MANIFEST.v1.6.1-headstamp.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/EVIDENCE_MANIFEST.bundle-parity-round2.v1.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2-regression/EVIDENCE_MANIFEST.bundle-parity-round2-regression.v1.json",
+              "activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round3-zero-gap/EVIDENCE_MANIFEST.bundle-parity-round3-zero-gap.v1.json",
+              "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-predev-round31.json",
+              "activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-round32-implementation.json",
+              "activity/evidence/v163-predev/2026-03-11/round34-hardclose/EVIDENCE_MANIFEST.round34-hardclose.json",
+              "activity/evidence/v163-predev/2026-03-11/round35-file-level-unification/EVIDENCE_MANIFEST.round35-file-level-unification.json",
+              "activity/evidence/v163-predev/2026-03-11/round36-seven-pass-deepscan/EVIDENCE_MANIFEST.round36-seven-pass-deepscan.json",
+              "activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json",
+              "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json"
+            ],
+            "violation_count": 0,
+            "violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "control_plane_status_sync",
+          "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+          "rc": 0,
+          "duration_sec": 80.328,
+          "timed_out": false,
+          "result": {
+            "control_plane_status_sync_status": "PASS_REQUIRED",
+            "error_code": "",
+            "status_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+            "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+            "status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+            "status_file_alias_error": "",
+            "mismatch_count": 0,
+            "mismatches": [],
+            "stale_reasons": [],
+            "live_control_plane_status": "PASS_REQUIRED",
+            "file_control_plane_status": "PASS_REQUIRED"
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        },
+        {
+          "check": "control_plane_budget",
+          "command": "python3 scripts/validate_control_plane_budget.py --json-only",
+          "rc": 0,
+          "duration_sec": 0.22,
+          "timed_out": false,
+          "result": {
+            "control_plane_budget_status": "PASS_REQUIRED",
+            "error_code": "",
+            "budget_file_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml",
+            "budget_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "budget_file_active_file": "identity/protocol/mappings/control-plane-budget.v1.6.yaml",
+            "budget_file_alias_error": "",
+            "strict_surfaces": [
+              "scripts/identity_creator.py",
+              "scripts/release_readiness_check.py",
+              "scripts/report_three_plane_status.py",
+              "scripts/full_identity_protocol_scan.py",
+              "scripts/e2e_smoke_test.sh",
+              ".github/workflows/_identity-required-gates.yml"
+            ],
+            "observed": {
+              "validator_scripts": 148,
+              "error_codes": 410,
+              "error_code_families": 137,
+              "mapping_rows_missing_in_bundle": 0,
+              "bundle_rows": 35,
+              "missing_mapping_rows": [],
+              "strict_direct_validate_calls": {
+                "scripts/identity_creator.py": 84,
+                "scripts/release_readiness_check.py": 107,
+                "scripts/report_three_plane_status.py": 75,
+                "scripts/full_identity_protocol_scan.py": 82,
+                "scripts/e2e_smoke_test.sh": 116,
+                ".github/workflows/_identity-required-gates.yml": 12
+              },
+              "required_gate_workflow_python_invocations": 15,
+              "required_gate_workflow_unique_python_scripts": 15,
+              "required_gate_delegate_inclusive_python_invocations": 121,
+              "required_gate_delegate_inclusive_unique_python_scripts": 115
+            },
+            "budgets": {
+              "validator_scripts": {
+                "warn": 148,
+                "fail": 152
+              },
+              "error_codes": {
+                "warn": 410,
+                "fail": 430
+              },
+              "error_code_families": {
+                "warn": 145,
+                "fail": 152
+              },
+              "mapping_rows_missing_in_bundle": {
+                "warn": 0,
+                "fail": 1
+              },
+              "direct_validate_calls": {
+                "scripts/identity_creator.py": {
+                  "warn": 84,
+                  "fail": 89
+                },
+                "scripts/release_readiness_check.py": {
+                  "warn": 107,
+                  "fail": 112
+                },
+                "scripts/report_three_plane_status.py": {
+                  "warn": 75,
+                  "fail": 80
+                },
+                "scripts/full_identity_protocol_scan.py": {
+                  "warn": 82,
+                  "fail": 87
+                },
+                "scripts/e2e_smoke_test.sh": {
+                  "warn": 116,
+                  "fail": 121
+                },
+                ".github/workflows/_identity-required-gates.yml": {
+                  "warn": 103,
+                  "fail": 105
+                }
+              }
+            },
+            "offload_budget": {
+              "source_file": "identity/protocol/mappings/github-control-plane-offload.current.yaml",
+              "resolved_plan_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml",
+              "plan_resolution_error": "",
+              "phase_1_required_gate_workflow_python_invocations_max": 95
+            },
+            "error_code_family_strategy": {
+              "mode": "numeric_suffix_collapse",
+              "rationale": "Enforce convergence on stable contract families while preserving raw code telemetry.",
+              "family_regex": "s/-[0-9]+$//",
+              "migration_note": "Raw error-code count remains monitored; promotion guard now also enforces family-level budgets and no-rebound ceilings."
+            },
+            "convergence_guard": {
+              "enabled": true,
+              "mode": "no_rebound",
+              "enforce_mode": "fail_required",
+              "ceiling_count": 5,
+              "violations": []
+            },
+            "warn_violation_count": 0,
+            "warn_violations": [],
+            "fail_violation_count": 0,
+            "fail_violations": [],
+            "stale_reasons": []
+          },
+          "status": "PASS_REQUIRED",
+          "error_code": ""
+        }
+      ]
+    }
+  ]
+}
