@@ -768,6 +768,9 @@ def main() -> int:
     strict_instance_floor_blocking: list[str] = []
     strict_instance_floor_missing: list[str] = []
     prompt_lane_lock_influence_targets: list[str] = []
+    skipped_lane_excluded_targets: list[str] = []
+    skipped_actionable_targets: list[str] = []
+    failed_optional_targets: list[str] = []
 
     layer_intent = resolve_layer_intent(
         explicit_work_layer=str(args.expected_work_layer or "").strip(),
@@ -888,8 +891,10 @@ def main() -> int:
             skipped_count += 1
             if not lane_target_included:
                 skipped_lane_excluded_count += 1
+                skipped_lane_excluded_targets.append(target.name)
             else:
                 skipped_actionable_count += 1
+                skipped_actionable_targets.append(target.name)
         elif validator_status == STATUS_FAIL_REQUIRED:
             failed_required += 1
             if target.name in PROTOCOL_GOVERNANCE_TARGET_NAMES and required_effective:
@@ -898,6 +903,7 @@ def main() -> int:
                 strict_instance_floor_blocking.append(target.name)
         elif validator_status == STATUS_FAIL_OPTIONAL:
             failed_optional += 1
+            failed_optional_targets.append(target.name)
 
         if target.name in DISCOVERY_TARGET_NAMES and required_effective:
             discovery_required_total += 1
@@ -970,8 +976,11 @@ def main() -> int:
         "skipped_contract_count": skipped_count,
         "skipped_lane_excluded_contract_count": skipped_lane_excluded_count,
         "skipped_actionable_contract_count": skipped_actionable_count,
+        "skipped_lane_excluded_contracts": sorted(set(skipped_lane_excluded_targets)),
+        "skipped_actionable_contracts": sorted(set(skipped_actionable_targets)),
         "failed_required_contract_count": failed_required,
         "failed_optional_contract_count": failed_optional,
+        "failed_optional_contracts": sorted(set(failed_optional_targets)),
         "coverage_counter_overflow": coverage_counter_overflow,
         "discovery_counter_overflow": discovery_counter_overflow,
     }
