@@ -1,6 +1,6 @@
 schema_version: 1
 alias: github_control_plane_offload
-active_file: identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml
+active_file: identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml
 notes:
   - "Stable entrypoint for tooling; switch this pointer when upgrading offload-plan versions."
   - "Historical versioned files remain immutable replay snapshots."
