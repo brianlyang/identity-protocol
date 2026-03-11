@@ -58,6 +58,8 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round36-seven-pass-deepscan/round36_iteration_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round39-five-pass-green/EVIDENCE_MANIFEST\.round39-five-pass-green\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round39-five-pass-green/round39_iteration_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/EVIDENCE_MANIFEST\.round42-three-pass-post-repair\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/round42_iteration_summary\.json$'
 
   docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
     max_activity_refs: 40
@@ -79,3 +81,5 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round36-seven-pass-deepscan/round36_iteration_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round39-five-pass-green/EVIDENCE_MANIFEST\.round39-five-pass-green\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round39-five-pass-green/round39_iteration_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/EVIDENCE_MANIFEST\.round42-three-pass-post-repair\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round42-three-pass-post-repair/round42_iteration_summary\.json$'
