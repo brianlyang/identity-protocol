@@ -3,12 +3,12 @@ plugin_id: reasoning-loop-enforcement
 version: v1.6.2
 owner: protocol_base_repo
 validator_script: scripts/validate_reasoning_loop_failclose.py
-reasoning_enforcement_level: L1
-minimum_enforcement_level: L1
+reasoning_enforcement_level: L3
+minimum_enforcement_level: L3
 upgrade_only: true
 reasoning_enforcement:
-  default_level: L1
-  minimum_level: L1
+  default_level: L3
+  minimum_level: L3
   supported_levels:
     - L0
     - L1
