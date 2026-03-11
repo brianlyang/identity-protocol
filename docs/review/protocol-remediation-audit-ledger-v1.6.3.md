@@ -646,3 +646,33 @@ Observed:
 5. Manifest + summary:
    - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json`
    - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/round42_iteration_summary.json`
+
+### 11.18 Round-43 instance-lane route closure + projection consistency hardening (2026-03-11)
+
+1. Triggered by instance replay feedback under correct global runtime catalog wiring:
+   - path reference drift resolved,
+   - residual P0 remained at `required_gate_bundle_runner` with
+     `IP-GATE-ENTRY-001: gate_profile_work_layer_not_allowed:strict_full:instance`.
+2. Protocol hardening applied:
+   - `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
+     - `strict_full.require_work_layers` expanded to include `instance`.
+   - `scripts/validate_protocol_data_sanitization_boundary.py`
+     - false-positive mitigation for run/report/date numeric metadata (retaining contact-context hard fail-close).
+   - `scripts/report_three_plane_status.py`
+     - bundle run token now prefers selected report run-id before synthetic fallback.
+   - `scripts/full_identity_protocol_scan.py`
+     - m2m projection now derived from local scan checks only;
+       nested three-plane m2m projection retained as observation field to avoid cross-surface noise.
+3. Replay outcomes:
+   - `validate_protocol_data_sanitization_boundary` (office-ops, scan) => `PASS_REQUIRED`.
+   - `required_gate_bundle_runner` (`resolved_work_layer=instance`, system-requirements-analyst, update) => `PASS_REQUIRED`.
+   - `validate_full_scan_target_regression --enforce-m2m-pass` (system-requirements-analyst, global, bound session) => `PASS_REQUIRED`.
+   - `validate_control_plane_invariants` and `validate_required_gate_surface_drift` remain `PASS_REQUIRED`.
+4. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/EVIDENCE_MANIFEST.round43-three-pass-file-semantic-unification.json`
+   - summaries:
+     - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/round43_iteration_summary.json`
+     - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary.json`
+5. Tuple completeness contract:
+   - every manifest entry includes `sha256`, `command`, `rc`, `timestamp`.
