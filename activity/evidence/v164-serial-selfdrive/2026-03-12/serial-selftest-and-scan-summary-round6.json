@@ -1,0 +1,207 @@
+{
+  "run_label": "v164-serial-selfdrive-round6",
+  "date": "2026-03-12",
+  "timezone": "Asia/Shanghai",
+  "work_layer": "protocol",
+  "source_layer": "project",
+  "repo": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+  "catalog": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "identity_id": "base-repo-audit-expert-v3",
+  "serial_execution": true,
+  "self_tests": [
+    {
+      "seq": 1,
+      "name": "activate_base_session_bind",
+      "command": "source ./scripts/use_project_identity_runtime.sh >/tmp/v164_runtime_select_round6_activate.log 2>&1 && python3 scripts/identity_creator.py activate --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-audit-expert-v3 --actor-id assistant:codex --run-id v164-round6-activate --session-id run:v164-round6-main --scope USER",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 2,
+      "name": "update_base_safe_auto_warn",
+      "command": "source ./scripts/use_project_identity_runtime.sh >/tmp/v164_runtime_select_round6_update.log 2>&1 && python3 scripts/identity_creator.py update --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-id base-repo-audit-expert-v3 --mode safe-auto --actor-id assistant:codex --run-id v164-round6-main --session-id run:v164-round6-main --scope USER --baseline-policy warn",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 3,
+      "name": "backfill_custom_instance",
+      "command": "python3 scripts/repair_contract_backfill.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --apply --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 4,
+      "name": "reasoning_custom_l3",
+      "command": "python3 scripts/validate_reasoning_loop_failclose.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation update --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "reasoning_enforcement_level": "L3",
+        "reasoning_minimum_enforcement_level": "L3"
+      }
+    },
+    {
+      "seq": 5,
+      "name": "multimodal_custom_dual_provider",
+      "command": "python3 scripts/validate_multimodal_plugin_enforcement.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation update --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "provider_config_status": "PASS_REQUIRED",
+        "stale_reasons": [
+          "runtime_stage_missing_input_gate_deferred_from_report"
+        ]
+      }
+    },
+    {
+      "seq": 6,
+      "name": "skill_path_custom_file_governance",
+      "command": "python3 scripts/validate_v16_skill_path_integrity.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation update --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "required_skills": [
+          "ai-folder-governance",
+          "weixinstore-sku-onboarding",
+          "product-visual-qa",
+          "weixinstore-ui-agent",
+          "identity-creator",
+          "web-docs-to-markdown",
+          "wechat-shop-hot-picks",
+          "taobao-search-automation"
+        ],
+        "missing_skill_paths": []
+      }
+    },
+    {
+      "seq": 7,
+      "name": "reasoning_levels_L0_L1_L2_L3_matrix",
+      "command": "/tmp/v164_reasoning_level_matrix.py --repo-root /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local --round-label v164-round6 --out /tmp/v164-round6-reasoning-level-matrix.json",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "result": "PASS_REQUIRED",
+        "cases": [
+          {
+            "level": "L0",
+            "identity_id": "rl-l0",
+            "rc": 1,
+            "status": "FAIL_REQUIRED",
+            "error_code": "IP-RL-CONF-001",
+            "reasoning_enforcement_level": "L0",
+            "reasoning_minimum_enforcement_level": "L3",
+            "expected_pass": true
+          },
+          {
+            "level": "L1",
+            "identity_id": "rl-l1",
+            "rc": 1,
+            "status": "FAIL_REQUIRED",
+            "error_code": "IP-RL-CONF-001",
+            "reasoning_enforcement_level": "L1",
+            "reasoning_minimum_enforcement_level": "L3",
+            "expected_pass": true
+          },
+          {
+            "level": "L2",
+            "identity_id": "rl-l2",
+            "rc": 1,
+            "status": "FAIL_REQUIRED",
+            "error_code": "IP-RL-CONF-001",
+            "reasoning_enforcement_level": "L2",
+            "reasoning_minimum_enforcement_level": "L3",
+            "expected_pass": true
+          },
+          {
+            "level": "L3",
+            "identity_id": "rl-l3",
+            "rc": 0,
+            "status": "PASS_REQUIRED",
+            "error_code": "",
+            "reasoning_enforcement_level": "L3",
+            "reasoning_minimum_enforcement_level": "L3",
+            "expected_pass": true
+          }
+        ],
+        "out": "/tmp/v164-round6-reasoning-level-matrix.json"
+      }
+    }
+  ],
+  "deep_scans": [
+    {
+      "seq": 1,
+      "name": "validate_control_plane_invariants",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 2,
+      "name": "validate_required_gate_surface_drift",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 3,
+      "name": "validate_control_plane_status_sync",
+      "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+      "rc": 1,
+      "status": "FAIL_REQUIRED"
+    },
+    {
+      "seq": 4,
+      "name": "validate_control_plane_budget",
+      "command": "python3 scripts/validate_control_plane_budget.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 5,
+      "name": "docs_command_contract_check",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "status": "PASS"
+    },
+    {
+      "seq": 6,
+      "name": "sync_plugin_join_wiring",
+      "command": "python3 scripts/sync_plugin_join_wiring.py --check --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 7,
+      "name": "full_identity_protocol_scan_target_base",
+      "command": "python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-audit-expert-v3 --project-catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --target-source-layer project --expected-work-layer protocol --expected-source-layer project --actor-id assistant:codex --session-id run:v164-round6-main --out /tmp/v164_round6_fullscan.json",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "out": "/tmp/v164_round6_fullscan.json",
+        "summary": {
+          "total_identities": 1,
+          "p0": 0,
+          "p1": 0,
+          "ok": 1
+        },
+        "summary_m2m": {
+          "total_identities": 1,
+          "pass": 1,
+          "fail": 0
+        }
+      }
+    }
+  ],
+  "summary": {
+    "self_test_count": 7,
+    "deep_scan_count": 7,
+    "self_test_pass_count": 7,
+    "deep_scan_pass_count": 6,
+    "blocking_regression_detected": true,
+    "notes": [
+      "All commands executed serially.",
+      "Reasoning level matrix enforces L3 floor (L0-L2 fail-close, L3 pass)."
+    ]
+  }
+}

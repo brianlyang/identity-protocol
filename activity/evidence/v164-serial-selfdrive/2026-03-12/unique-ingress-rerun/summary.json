@@ -1,0 +1,98 @@
+{
+  "actor_id": "assistant:codex",
+  "identity_id": "base-repo-audit-expert-v3",
+  "scope": "USER",
+  "lock_state": "LOCK_MATCH",
+  "work_layer": "protocol",
+  "source_layer": "project",
+  "generated_at_utc": "2026-03-11T19:31:35Z",
+  "identity_under_test": "custom-creative-ecom-analyst",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "selftest_rounds": [
+    {
+      "round": 1,
+      "steps": [
+        {
+          "step": 1,
+          "command": "python3 scripts/repair_contract_backfill.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --apply --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_01.json",
+          "sha256": "296f735e3d51a56c91176b7df6d0ae41b3bdfeaaac3d821cf6a8e81ec59d2b9d"
+        },
+        {
+          "step": 2,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation activate --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_02.json",
+          "sha256": "69cf63097baa90845a8f8b0e843c5df3a9ace87f5c3a635cd2343411f35a4676"
+        },
+        {
+          "step": 3,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation update --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_03.json",
+          "sha256": "99eb60da908f3f8967f65a489940d422645f5f6b97b8496e59543ce8e2b8d5d1"
+        },
+        {
+          "step": 4,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation mutation --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_04.json",
+          "sha256": "75c59c69b67833b6a09b8f499a191a246a50a8b511d33834489ff965b8630004"
+        },
+        {
+          "step": 5,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation readiness --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_05.json",
+          "sha256": "6d74aefd1726841a0ef7a673fb79c9b8b230af2a8d8d2939a7ab62676b300833"
+        },
+        {
+          "step": 6,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation e2e --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_06.json",
+          "sha256": "0b51cf701ba9da5c33dc5f22731ced858b5ea989c3c9a043bae3043fc5694f44"
+        },
+        {
+          "step": 7,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation ci --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_07.json",
+          "sha256": "c40d357f2bb3305127f5e66747d2e20a760144bd50044dbe95ccc0bb35937afb"
+        },
+        {
+          "step": 8,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation validate --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_08.json",
+          "sha256": "5cf064ddf623e36f50ed7c92e90a444f752b5a137007d41060cbca7c70d36e7e"
+        },
+        {
+          "step": 9,
+          "command": "python3 scripts/validate_protocol_unique_entry_gate.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation three-plane --force-check --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_09.json",
+          "sha256": "5a701c5681571d71879f3bbc99a4d2f6d3b5d7934c4c024f1812f04adeec9c35"
+        },
+        {
+          "step": 10,
+          "command": "python3 scripts/required_gate_bundle_runner.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation update --run-id v164-selftest-r1-1773257495 --actor-id assistant:codex --session-id v164-selftest-session-r1 --resolved-work-layer instance --resolved-source-layer project --lock-state LOCK_MATCH --surface-label v164_selftest_round_1 --json-only",
+          "rc": 0,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_10.json",
+          "sha256": "10d2b5d350a693b7f7be0a813481bdd879d0790b4425a296f86cae19fd6622d8"
+        },
+        {
+          "step": 11,
+          "command": "python3 scripts/validate_required_contract_coverage.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --operation validate --actor-id assistant:codex --session-id v164-selftest-session-r1 --expected-work-layer instance --expected-source-layer project --run-id v164-selftest-r1-1773257495 --json-only",
+          "rc": 1,
+          "out": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun/selftests/round_1/step_11.json",
+          "sha256": "34df47cc19d3217a6dbe15076b3fd01c2ddf8f023ca0da2d020310ec0f9736f8"
+        }
+      ],
+      "status": "FAIL"
+    }
+  ],
+  "deepscan_rounds": [],
+  "status": "FAIL"
+}
