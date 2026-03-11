@@ -76,6 +76,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_gated_switch_guard.py": "gated_switch_guard_status",
     "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
     "scripts/validate_execution_target_tuple_isolation.py": "execution_target_tuple_isolation_status",
+    "scripts/validate_protocol_unique_entry_gate.py": "protocol_unique_entry_gate_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -110,6 +111,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
+    "protocol_unique_entry_gate",
     "protocol_lane_headstamp_continuity",
 }
 
@@ -127,6 +129,7 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "vendor_api_discovery",
     "vendor_api_solution",
     "gated_switch_guard",
+    "protocol_unique_entry_gate",
 }
 
 FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
@@ -151,6 +154,7 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_prompt_derivation_conformance.py",
     "scripts/validate_semantic_convergence.py",
     "scripts/validate_prompt_kernel_executable_coupling.py",
+    "scripts/validate_protocol_unique_entry_gate.py",
 }
 
 
@@ -536,6 +540,16 @@ TARGETS = (
         validator_script="scripts/validate_execution_target_tuple_isolation.py",
         validator_args=("--json-only",),
     ),
+    ContractTarget(
+        name="protocol_unique_entry_gate",
+        contract_keys=(
+            "protocol_unique_entry_gate_contract_v1",
+            "protocol_unique_entry_gate_contract",
+            "rq_036_protocol_unique_entry_gate_contract_v1",
+        ),
+        validator_script="scripts/validate_protocol_unique_entry_gate.py",
+        validator_args=("--force-check", "--json-only"),
+    ),
 )
 
 
@@ -565,6 +579,13 @@ def _resolve_contract_for_target(task: dict[str, Any], target: ContractTarget) -
                 continue
             token = str(key or "").strip().lower()
             if "execution_target_tuple" in token and "contract" in token:
+                return raw, str(key)
+    if target.name == "protocol_unique_entry_gate":
+        for key, raw in task.items():
+            if not isinstance(raw, dict):
+                continue
+            token = str(key or "").strip().lower()
+            if "unique_entry" in token and "contract" in token:
                 return raw, str(key)
     return {}, target.contract_keys[0]
 
@@ -674,6 +695,7 @@ def _run_validator(
         "scripts/validate_gated_switch_guard.py",
         "scripts/validate_protocol_lane_headstamp_continuity.py",
         "scripts/validate_execution_target_tuple_isolation.py",
+        "scripts/validate_protocol_unique_entry_gate.py",
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
