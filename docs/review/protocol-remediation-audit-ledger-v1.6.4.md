@@ -166,16 +166,16 @@ Closure details:
 
 ## 0.7 Third-item newcomer/memory-loss closure cross-verify (2026-03-11)
 
-Verdict: `Policy PASS / Implementation CONDITIONAL PASS (entry continuity strong, parity depth pending)`.
+Verdict: `Policy PASS / Implementation PASS (entry continuity + tuple parity closed)`.
 
 Roundtable replay (repo-local):
 
 1. `python3 scripts/docs_command_contract_check.py` => `PASS`.
 2. `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`.
 3. `python3 scripts/sync_plugin_join_wiring.py --check --json-only` => `PASS_REQUIRED`.
-4. Current limitation captured by payload:
-   - `intake_row_count=0` on `PLUGIN_JOIN_INTAKE.v1.6.4.yaml`.
-   - this proves alias continuity is wired, but tuple-level single-intake parity is not yet fully materialized.
+4. Closure payload facts:
+   - `intake_row_count=2` on `PLUGIN_JOIN_INTAKE.v1.6.4.yaml` (strict plugin rows materialized).
+   - no parity violations across intake, registry, governance, and contract-binding.
 
 Cross-track interpretation:
 
@@ -194,9 +194,8 @@ Cross-track interpretation:
 
 Action lock for third-item full closure:
 
-1. Fill `PLUGIN_JOIN_INTAKE` with active fail-close plugin rows.
-2. Upgrade `sync_plugin_join_wiring.py` from alias-shape check to cross-plane tuple parity fail-close.
-3. Promote section 3.3.4 cold-start replay chain into a single CI delegate lane.
+1. Keep section 3.3.4 cold-start replay chain green in CI regression lanes.
+2. Keep `sync_plugin_join_wiring.py` as tuple-parity fail-close (no downgrade to alias-only checks).
 
 ## 1) Four-track + context verification summary
 
@@ -245,7 +244,6 @@ Action lock for third-item full closure:
 2. If run-id propagation remains conditional in reasoning strict paths, fallback ambiguity remains.
 3. If multimodal defer semantics remain too permissive in strict done-transition contexts, user-perceived enforcement weakness remains.
 4. If AI search onboarding is provider-hardcoded instead of profile-driven, plugin extensibility will regress.
-5. If `PLUGIN_JOIN_INTAKE` remains alias-only (`intake_row_count=0`), newcomer path remains partly descriptive rather than fully executable.
 
 ## 4) Current posture
 

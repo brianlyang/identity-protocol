@@ -318,9 +318,9 @@ Code phase starts only after this governance freeze is accepted.
    - AI folder governance plugin
    - AI search plugin (provider-pluggable, no hardcoded vendor in protocol scripts).
 5. Keep all changes configuration-driven; no per-instance hardcoded policy in protocol scripts.
-6. Strengthen third-item unique-entry closure from alias-level checks to tuple-level intake parity:
+6. Third-item unique-entry closure is machine-closed (2026-03-11):
    - `PLUGIN_JOIN_INTAKE` must carry non-empty plugin rows for active fail-close plugins.
-   - `sync_plugin_join_wiring --check` must validate cross-plane parity (registry/governance/mapping), not only alias existence.
+   - `sync_plugin_join_wiring --check` validates cross-plane parity (registry/governance/mapping), not only alias existence.
 7. Promote newcomer cold-start replay into CI delegate form once stable:
    - compose section 3.3.4 commands into one deterministic CI lane for regression use.
 
