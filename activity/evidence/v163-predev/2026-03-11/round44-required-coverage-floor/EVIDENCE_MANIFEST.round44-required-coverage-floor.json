@@ -58,10 +58,10 @@
     {
       "case_id": "round44_required_coverage_summary",
       "path": "activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/round44_required_coverage_summary.json",
-      "sha256": "451eccd70bc2dae2590c021216346bb8042ce7bd3fa4c3e4935361bc752686a2",
+      "sha256": "19aad0d586206d0b518b18011f26c89137c669e7583fd432b61b9c530f306013",
       "command": "python3 <round44 summary aggregator>",
       "rc": 0,
-      "timestamp_utc": "2026-03-11T04:01:29Z"
+      "timestamp_utc": "2026-03-11T04:05:41Z"
     }
   ]
 }
