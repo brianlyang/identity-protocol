@@ -3222,6 +3222,21 @@ def main() -> int:
         rc = _run(
             [
                 "python3",
+                "scripts/repair_contract_backfill.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--apply",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] contract backfill repair failed during update; update blocked")
+            return rc
+        rc = _run(
+            [
+                "python3",
                 "scripts/validate_identity_instance_isolation.py",
                 "--catalog",
                 args.catalog,
