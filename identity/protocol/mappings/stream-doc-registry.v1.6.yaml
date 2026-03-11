@@ -131,3 +131,28 @@ static_doc_required_alias_refs:
       - identity/protocol/mappings/contract-binding.current.yaml
       - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
       - identity/protocol/mappings/stream-doc-registry.current.yaml
+
+legacy_archival_docs:
+  - docs/governance/audit-snapshot-2026-02-21-control-loop-v1.4.0.md
+  - docs/governance/audit-snapshot-2026-02-21-release-closure-v1.4.2.md
+  - docs/governance/audit-snapshot-2026-02-22-release-closure-v1.4.4.md
+  - docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md
+  - docs/governance/audit-snapshot-2026-02-24-identity-path-governance-final-closure-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-24-release-doc-governance-closure-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-24-self-heal-and-permission-state-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-25-protocol-runtime-boundary-closure-v1.4.12.md
+  - docs/governance/audit-snapshot-2026-02-25-readme-core-goal-alignment-v1.4.13.md
+  - docs/governance/audit-snapshot-policy-v1.2.11.md
+  - docs/governance/audit-unified-result-package-v1.4.12.md
+  - docs/governance/ci-required-gates-release-hotfix-v1.5.0.md
+  - docs/governance/identity-base-protocol-runtime-retro-and-governance-feedback-v1.4.13.md
+  - docs/governance/identity-environment-path-deep-audit-and-self-drive-upgrade-v1.4.13.md
+  - docs/governance/identity-instance-closure-checklist-v1.4.12.md
+  - docs/governance/identity-instance-self-driven-upgrade-and-base-feedback-design-v1.4.6.md
+  - docs/governance/identity-runtime-path-selection-governance-v1.4.12.md
+  - docs/governance/local-instance-persistence-boundary-v1.4.6.md
+  - docs/governance/office-ops-expert-instance-runtime-retro-and-protocol-feedback-v1.4.13.md
+  - docs/governance/roundtable-multi-agent-multi-identity-binding-governance-v1.4.12.md
+  - docs/governance/roundtable-multi-vendor-discussion-playbook-v1.4.12.md
+  - docs/governance/roundtable-protocol-root-dual-mode-convergence-v1.4.9.md
+  - docs/governance/runtime-artifact-isolation-root-cause-and-remediation-v1.4.12.md
