@@ -209,6 +209,10 @@ STRICT_SKIP_BLOCKING_POLICIES: set[str] = {
     "strict_no_skip",
     "forbid_skip",
 }
+STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET: dict[str, str] = {
+    "multimodal_plugin_enforcement": "multimodal_runtime_evidence_status",
+    "reasoning_loop_failclose_enforcement": "reasoning_runtime_evidence_status",
+}
 
 
 @dataclass(frozen=True)
@@ -1032,11 +1036,14 @@ def main() -> int:
             for token in (monotonic_policy.get("strict_skip_allowed_reasons") or set())
             if str(token).strip()
         }
+        runtime_status_field = STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET.get(spec.target_name, "")
+        runtime_status_value = str(payload.get(runtime_status_field, "")).strip().upper()
         if (
-            status_value == STATUS_SKIPPED_NOT_REQUIRED
-            and required_contract
+            required_contract
             and _is_strict_no_trim_operation(operation_normalized)
             and strict_skip_policy in STRICT_SKIP_BLOCKING_POLICIES
+            and runtime_status_field
+            and runtime_status_value == STATUS_SKIPPED_NOT_REQUIRED
         ):
             stale_reason_tokens = {
                 str(token).strip()
@@ -1082,6 +1089,8 @@ def main() -> int:
                 "monotonic_policy": {
                     "strict_skip_policy": strict_skip_policy,
                     "strict_skip_allowed_reasons": sorted(strict_skip_allowed_reasons),
+                    "runtime_status_field": runtime_status_field,
+                    "runtime_status_value": runtime_status_value,
                 },
                 "payload": payload,
                 "stderr_tail": (err.splitlines()[-1] if err else ""),

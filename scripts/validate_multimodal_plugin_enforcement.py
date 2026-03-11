@@ -989,7 +989,10 @@ def main() -> int:
 
     payload["multimodal_plugin_enforcement_status"] = STATUS_PASS_REQUIRED
     payload["error_code"] = ""
-    payload["stale_reasons"] = []
+    if payload["multimodal_runtime_evidence_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["stale_reasons"] = sorted(dict.fromkeys(stale_reasons))
+    else:
+        payload["stale_reasons"] = []
     _emit(payload, json_only=args.json_only)
     return 0
 
