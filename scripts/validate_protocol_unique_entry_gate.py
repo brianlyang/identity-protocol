@@ -150,6 +150,10 @@ def main() -> int:
         "protocol_unique_entry_scope": "",
         "protocol_unique_entry_required_operations": [],
         "protocol_unique_entry_error_family": [],
+        "protocol_unique_entry_receipt_required": False,
+        "protocol_unique_entry_receipt_state_file": "",
+        "protocol_unique_entry_receipt_history_pattern": "",
+        "protocol_unique_entry_receipt_required_fields": [],
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_bundle_key": "",
@@ -178,12 +182,20 @@ def main() -> int:
     scope = str(contract.get("scope", "")).strip()
     required_ops = _as_str_set(contract.get("enforce_on_operations"))
     error_family = _as_str_set(contract.get("entry_error_family"))
+    receipt_required_by_contract = bool(contract.get("require_strict_operation_receipt", False))
+    entry_receipt_state_file = str(contract.get("entry_receipt_state_file", "")).strip()
+    entry_receipt_history_pattern = str(contract.get("entry_receipt_history_pattern", "")).strip()
+    entry_receipt_required_fields = _as_str_set(contract.get("entry_receipt_required_fields"))
 
     payload["protocol_unique_entry_script"] = entry_script
     payload["protocol_unique_entry_bundle_key"] = bundle_key
     payload["protocol_unique_entry_scope"] = scope
     payload["protocol_unique_entry_required_operations"] = sorted(required_ops)
     payload["protocol_unique_entry_error_family"] = sorted(error_family)
+    payload["protocol_unique_entry_receipt_required"] = receipt_required_by_contract
+    payload["protocol_unique_entry_receipt_state_file"] = entry_receipt_state_file
+    payload["protocol_unique_entry_receipt_history_pattern"] = entry_receipt_history_pattern
+    payload["protocol_unique_entry_receipt_required_fields"] = sorted(entry_receipt_required_fields)
 
     if contract.get("required") is not True:
         issues.append("contract_required_flag_not_true")
@@ -199,6 +211,14 @@ def main() -> int:
         issues.append("strict_operations_not_fully_covered")
     if not EXPECTED_ENTRY_ERROR_FAMILY.issubset(error_family):
         issues.append("entry_error_family_missing_required_codes")
+    if receipt_required_by_contract is not True:
+        issues.append("entry_receipt_required_flag_mismatch")
+    if not entry_receipt_state_file:
+        issues.append("entry_receipt_state_file_missing")
+    if not entry_receipt_history_pattern:
+        issues.append("entry_receipt_history_pattern_missing")
+    if not entry_receipt_required_fields:
+        issues.append("entry_receipt_required_fields_missing")
 
     if issues:
         payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
@@ -207,7 +227,7 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    receipt_required = bool(args.require_entry_receipt or strict_operation)
+    receipt_required = bool(args.require_entry_receipt or (strict_operation and receipt_required_by_contract))
     if receipt_required:
         receipt_path = _resolve_entry_receipt_path(pack_path=pack_path, explicit_path=str(args.entry_receipt or ""))
         if receipt_path is None:
@@ -248,6 +268,11 @@ def main() -> int:
             receipt_issues.append("entry_receipt_bundle_status_not_pass")
         if run_id and receipt_run_id != run_id:
             receipt_issues.append("entry_receipt_run_id_mismatch")
+        missing_fields = sorted(
+            field for field in entry_receipt_required_fields if field not in receipt
+        )
+        if missing_fields:
+            receipt_issues.append("entry_receipt_required_fields_missing:" + ",".join(missing_fields))
 
         if receipt_issues:
             payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
