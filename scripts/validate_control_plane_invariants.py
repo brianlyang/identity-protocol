@@ -505,6 +505,9 @@ def main() -> int:
     missing_rows: list[str] = []
     extra_rows: list[str] = []
     mapping_doc: dict[str, Any] = {}
+    contract_binding_meta_row_count = -1
+    contract_binding_actual_row_count = 0
+    contract_binding_row_count_match = False
     bundle_rows = _bundle_rows()
     bundle_target_map = _bundle_target_map()
     mode = ""
@@ -1117,6 +1120,49 @@ def main() -> int:
 
         mapping_doc = _load_yaml(mapping_path)
         mapping_rows = _mapping_rows(mapping_doc)
+        contract_binding_actual_row_count = len(mapping_rows)
+        meta_doc = mapping_doc.get("_meta")
+        if isinstance(meta_doc, dict):
+            raw_meta_count = meta_doc.get("row_count")
+            if raw_meta_count in (None, ""):
+                contract_binding_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="contract_binding_row_count",
+                    reason="meta_row_count_missing",
+                    actual_row_count=contract_binding_actual_row_count,
+                )
+            else:
+                try:
+                    contract_binding_meta_row_count = int(raw_meta_count)
+                except Exception:
+                    contract_binding_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="contract_binding_row_count",
+                        reason="meta_row_count_not_integer",
+                        meta_row_count=raw_meta_count,
+                        actual_row_count=contract_binding_actual_row_count,
+                    )
+                else:
+                    contract_binding_row_count_match = contract_binding_meta_row_count == contract_binding_actual_row_count
+                    if not contract_binding_row_count_match:
+                        contract_binding_violation_count += 1
+                        _append_violation(
+                            violations,
+                            field="contract_binding_row_count",
+                            reason="meta_row_count_mismatch",
+                            meta_row_count=contract_binding_meta_row_count,
+                            actual_row_count=contract_binding_actual_row_count,
+                        )
+        else:
+            contract_binding_violation_count += 1
+            _append_violation(
+                violations,
+                field="contract_binding_row_count",
+                reason="meta_section_missing",
+                actual_row_count=contract_binding_actual_row_count,
+            )
         missing_rows = sorted(x for x in mapping_rows if x not in bundle_rows)
         extra_rows = sorted(x for x in bundle_rows if x not in mapping_rows)
 
@@ -1943,6 +1989,9 @@ def main() -> int:
         "contract_binding_current_resolved_file": str(contract_binding_current_resolved_path),
         "contract_binding_parse_ok": contract_binding_parse_ok,
         "contract_binding_violation_count": contract_binding_violation_count,
+        "contract_binding_meta_row_count": contract_binding_meta_row_count,
+        "contract_binding_actual_row_count": contract_binding_actual_row_count,
+        "contract_binding_row_count_match": contract_binding_row_count_match,
         "plugin_governance_configured_file": plugin_governance_configured_file,
         "plugin_governance_entry_file": str(plugin_governance_entry_path),
         "plugin_governance_file": str(plugin_governance_path),

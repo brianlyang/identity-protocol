@@ -5,7 +5,7 @@ _meta:
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
   last_updated_utc: "2026-03-09T03:40:00Z"
-  row_count: 34
+  row_count: 35
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
