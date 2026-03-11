@@ -121,10 +121,48 @@ Cross-verified hardening landed:
 Acceptance notes:
 
 1. This closure removes the implicit downgrade channel for strict required gates.
-2. Remaining extensibility work stays in v1.6.4 backlog (single-intake generation and full map-seed retirement),
-   not in monotonic semantics.
+2. Single-intake generation moved out of backlog and into machine wiring closure (see section 0.6).
 3. Hardening keeps control-plane budget convergence stable by reusing existing error-code families
    (`IP-RL-CONF-001`, `IP-MM-RUN-003`) instead of introducing new literal codes.
+
+## 0.5 Release-gate monotonic probes wiring closure (2026-03-11)
+
+Verdict: `Policy PASS / Implementation PASS (release lane wired)`.
+
+Closure details:
+
+1. CI now runs dedicated monotonic probes via:
+   - `scripts/ci/run_monotonic_floor_probes_ci.sh`
+   - workflow hook:
+     `.github/workflows/_identity-required-gates.yml` (`Validate monotonic floor probes (v1.6.4)`).
+2. Probe suite is machine-fixed to three outcomes:
+   - `reasoning_floor_l0_fail` => strict downgrade blocked (`FAIL_REQUIRED`)
+   - `multimodal_update_defer_allowed` => pre-mutation defer allowed (`PASS_REQUIRED`)
+   - `multimodal_readiness_skip_blocked` => terminal strict skip blocked (`FAIL_REQUIRED`).
+3. Probe run emits machine evidence manifest (sha256/command/rc/timestamp) at runtime:
+   - `${RUNNER_TEMP}/identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json`
+4. Surface-drift anti-bypass is extended:
+   - `scripts/validate_required_gate_surface_drift.py` now requires
+     `scripts/ci/run_monotonic_floor_probes_ci.sh` to stay wired and checks probe command tokens.
+
+## 0.6 First-item single-intake wiring closure (2026-03-11)
+
+Verdict: `Policy PASS / Implementation PASS (single-entry plugin join)`.
+
+Closure details:
+
+1. Single authoring pointer is active:
+   - `identity/protocol/plugins/PLUGIN_JOIN_INTAKE.current.yaml`
+   - `identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml`
+2. Intake compiler/check is executable and fail-close:
+   - `scripts/sync_plugin_join_wiring.py --check --json-only`
+   - checks parity across intake, plugin registry, fail-close governance, and contract-binding mapping.
+3. CI required-gates delegate now enforces intake parity pre-loop:
+   - `scripts/ci/run_required_runtime_gates_ci.sh`
+4. Plugin onboarding docs are aligned to single-entry flow:
+   - `identity/protocol/plugins/README.md`
+   - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md`
+   - `identity/protocol/plugins/PLUGIN_DOC_CONTROL.v1.6.2.yaml`
 
 ## 1) Four-track + context verification summary
 

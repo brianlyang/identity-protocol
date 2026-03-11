@@ -90,18 +90,25 @@ New plugin onboarding must not require adding plugin-specific static maps in bun
    - derive wiring from mapping sources (`contract-binding` + plugin registry/governance metadata).
 3. Any new plugin that can only be wired by editing bundle runner static maps is considered a control-plane regression.
 
-#### 3.1.3 Single-intake + generated wiring contract (mandatory target for code phase)
+#### 3.1.3 Single-intake + generated wiring contract (machine-wired mandatory)
 
 Human onboarding must converge to one intake record, while control-plane audit remains layered:
 
 1. Canonical intake:
    - one plugin-join row per plugin (minimum tuple + strict surfaces + report projection contract).
 2. Generated artifacts:
-   - registry/governance/contract-binding/layer-profile/doc-registry rows are generated from intake, not manually diverged.
+   - registry/governance/contract-binding rows are generated from intake, not manually diverged.
 3. Drift gate:
-   - CI must fail-close when generated artifacts differ from intake intent.
+   - `scripts/sync_plugin_join_wiring.py --check --json-only` must fail-close when generated artifacts differ from intake intent.
 4. Editing boundary:
    - generated files are not the primary authoring surface for new plugin join requests.
+
+Current implementation boundary (v1.6.4):
+
+1. Single authoring pointer: `identity/protocol/plugins/PLUGIN_JOIN_INTAKE.current.yaml`
+2. Compiler/check tool: `scripts/sync_plugin_join_wiring.py`
+3. Required-gate CI delegate must run intake parity check:
+   `scripts/ci/run_required_runtime_gates_ci.sh`
 
 Rationale:
 
@@ -268,10 +275,11 @@ No “v1.6.4 closed” claim is valid unless all items pass:
 3. `scripts/validate_control_plane_status_sync.py --json-only`
 4. `scripts/docs_command_contract_check.py`
 5. `scripts/full_identity_protocol_scan.py --scan-mode target` with strict profile and explicit actor/session binding
-6. Negative probes:
-   - strict lane downgrade attempt must fail-close
-   - strict lane `run_id` mismatch must fail-close for required reasoning runtime-proof
-   - strict lane unresolved multimodal evidence cannot be promoted to done-transition-safe status
+6. `scripts/ci/run_monotonic_floor_probes_ci.sh`
+7. Negative probes (machine-enforced by item 6):
+   - strict lane downgrade attempt must fail-close (`reasoning_floor_l0_fail`)
+   - strict lane update may defer pre-mutation runtime stage (`multimodal_update_defer_allowed`)
+   - strict lane terminal readiness cannot pass deferred skip (`multimodal_readiness_skip_blocked`)
 
 ## 7) Alias continuity (mandatory)
 
