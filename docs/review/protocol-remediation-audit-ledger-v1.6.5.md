@@ -197,3 +197,30 @@ Post-fix serial replay results:
 
 1. `validate_full_scan_target_regression` (workspace root invocation) => `PASS_REQUIRED`.
 2. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root invocation) => `summary.p0=0`, `summary_m2m.fail=0`.
+
+### 7.5 Serial integration cycle-2 (2026-03-12, base-repo-architect)
+
+Strict serial replay (self-test >=5 + deep-scan >=5) was re-run after cross-cwd hardening to verify v1.6.5 and inherited v1.6.x validators from workspace-root entrypoint.
+
+New positive hardening in this cycle:
+
+1. `35b51cd` — make `validate_prompt_kernel_executable_coupling.py` cwd-safe:
+   - kernel contract reference now resolves against protocol repo root;
+   - delegated routing validator now runs with absolute script path + repo-root cwd.
+
+Serial self-test rounds (5):
+
+1. actor/session binding (`validate_actor_session_binding`) => `PASS_REQUIRED`.
+2. prompt bootstrap capability (`validate_prompt_bootstrap_capability --force-required`) => `PASS_REQUIRED`.
+3. prompt capability matrix (`validate_prompt_capability_matrix --force-required`) => `PASS_REQUIRED`.
+4. prompt derivation conformance (`validate_prompt_derivation_conformance --force-required`) => `PASS_REQUIRED`.
+5. prompt-kernel executable coupling (`validate_prompt_kernel_executable_coupling --force-required`) => `PASS_REQUIRED` after cwd-safe fix.
+
+Serial deep-scan rounds (5+):
+
+1. `validate_control_plane_invariants --json-only` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift --json-only` => `PASS_REQUIRED`.
+3. `validate_control_plane_budget --json-only` => `PASS_REQUIRED`.
+4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED`.
+5. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root) => `summary.p0=0`, `summary_m2m.fail=0`.
+6. `validate_full_scan_target_regression --enforce-m2m-pass` (workspace root) => `PASS_REQUIRED`.
