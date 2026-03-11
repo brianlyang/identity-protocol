@@ -842,3 +842,41 @@ Observed:
    - summary: `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/round49_threepass_summary.json`
 5. Tuple completeness:
    - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
+
+### 11.25 Round-50 integrated closure decision (2026-03-11)
+
+1. Closure scope:
+   - v1.6 / v1.6.1 / v1.6.2 / v1.6.3 remediation tracks are closed under protocol-governance criteria.
+   - Closure includes repository controls and external GitHub platform activation replay.
+2. External activation receipts (GitHub):
+   - ruleset active: `identity-protocol-control-plane-v1.6.3` (`id=13763460`)
+   - main branch protection hardened:
+     - required status check `required-gates / validate-identity`
+     - `require_code_owner_reviews=true`
+     - `required_approving_review_count=1`
+     - `enforce_admins=true`
+     - `required_conversation_resolution=true`
+   - actions policy hardened:
+     - `allowed_actions=selected`
+     - `github_owned_allowed=true`
+     - `verified_allowed=true`
+3. Mapping status update:
+   - `identity/protocol/mappings/github-control-plane-offload.v1.6.3.yaml`
+   - status set to `platform_activation_completed_with_merge_queue_rule_unavailable`
+   - activation receipts persisted in `platform_activation_receipts`.
+4. Exception (non-blocking, platform capability):
+   - `merge_queue` ruleset rule update returned `HTTP 422 Invalid rule 'merge_queue'`.
+   - This is tracked as platform capability unavailability, not protocol control-plane regression.
+5. Closure gate replay:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+   - `bash scripts/ci/run_full_scan_target_regression_ci.sh store-manager`
+   - `bash scripts/ci/run_full_scan_target_regression_ci.sh system-requirements-analyst`
+6. Gate outcome:
+   - all closure gates green (`PASS_REQUIRED` / `PASS`);
+   - target-regression remains `p0=0` for both target identities.
+7. Final decision:
+   - approve close for all v1.6-v1.6.3 fixes with one explicit tracked platform exception (`merge_queue` ruleset rule support).
