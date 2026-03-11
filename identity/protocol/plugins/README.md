@@ -53,8 +53,9 @@ This directory is the canonical plugin governance root for protocol-level plugin
    `identity/protocol/mappings/stream-doc-registry.current.yaml`.
 4. Bundle runner onboarding must be mapping-derived:
    new plugin join must not depend on adding plugin-specific static maps in `scripts/required_gate_bundle_runner.py`.
-5. Target operating model (v1.6.4 code-phase):
-   single intake row + generated expansion + CI drift fail-close, so human operator flow remains `add one row`.
+5. Operating model (v1.6.4 code-sync baseline):
+   fail-close plugin requirement onboarding is mapping-derived in bundle runner; plugin-specific static map edits are not required.
+   Single-intake generation remains the target for the next hardening slice.
 6. Prove integration with machine checks:
    `validate_control_plane_invariants`, `validate_required_gate_surface_drift`, plugin projection validator, and target full-scan regression.
 
