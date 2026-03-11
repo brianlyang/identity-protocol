@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **v1.6.5 dual-layer governance/review stream bootstrap**:
+  - added canonical governance/review stream docs for GitHub rulesets +
+    super-linter dual-layer hardening:
+    - `docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md`
+    - `docs/review/protocol-remediation-audit-ledger-v1.6.5.md`
+  - registered v1.6.5 stream pointers and alias requirements in:
+    - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+  - extended strict-doc evidence allowlist coverage for v1.6.5 stream docs:
+    - `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
+  - updated audit snapshot index to include v1.6.5 stream canonical pointers:
+    - `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
+
 - **v1.6 protocol-lane closure hardening (wave-3.1 + regression guard)**:
   - closed three residual classes that repeatedly caused non-green upgrade runs:
     - three-plane coherence strict fail-close closure (`scripts/validate_execution_reply_identity_coherence.py`, `scripts/report_three_plane_status.py`)

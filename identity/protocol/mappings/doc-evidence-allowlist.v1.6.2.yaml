@@ -135,3 +135,19 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/github_vendor_reference_snapshot\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round[0-9]+-[a-z0-9-]+/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round[0-9]+-[a-z0-9-]+/.+_summary\.json$'
+
+  docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/ruleset_snapshot\..+\.json$'
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/super_linter_runtime\..+\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.5.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/ruleset_snapshot\..+\.json$'
+      - '^activity/evidence/v165-dual-layer/\d{4}-\d{2}-\d{2}/super_linter_runtime\..+\.json$'

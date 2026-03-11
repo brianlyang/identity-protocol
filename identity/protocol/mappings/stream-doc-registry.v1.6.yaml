@@ -17,6 +17,9 @@ stream_docs:
   - stream_version: v1.6.4
     governance_doc: docs/governance/identity-failclose-monotonic-governance-v1.6.4.md
     review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.4.md
+  - stream_version: v1.6.5
+    governance_doc: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.5.md
 
 mandatory_static_docs:
   - docs/governance/AUDIT_SNAPSHOT_INDEX.md
@@ -81,6 +84,20 @@ stream_doc_required_alias_refs:
       - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
       - identity/protocol/mappings/contract-binding.current.yaml
       - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.5
+    governance_doc: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md
+    governance_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.5.md
+    review_alias_refs:
+      - identity/protocol/mappings/github-control-plane-offload.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
       - identity/protocol/mappings/stream-doc-registry.current.yaml
 
 static_doc_required_alias_refs:
