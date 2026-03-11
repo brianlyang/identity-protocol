@@ -466,6 +466,32 @@ def _execution_target_tuple_isolation_contract_skeleton() -> dict:
     }
 
 
+def _protocol_unique_entry_gate_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "protocol_unique_entry_gate_contract_v1",
+        "validator": "scripts/validate_protocol_unique_entry_gate.py",
+        "entry_script": "scripts/required_gate_bundle_runner.py",
+        "bundle_key": "required_gate_bundle_runner",
+        "entry_error_family": [
+            "IP-GATE-ENTRY-001",
+            "IP-GATE-ENTRY-002",
+        ],
+        "enforce_on_operations": [
+            "activate",
+            "update",
+            "mutation",
+            "readiness",
+            "e2e",
+            "ci",
+            "validate",
+            "three-plane",
+        ],
+        "scope": "all_identity_instance_actions",
+        "fail_action": "block_execution_when_not_entered_via_required_gate_bundle_runner",
+    }
+
+
 def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
     return {
         "required": True,
@@ -1145,6 +1171,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
+        "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
         "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
         "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
     }
