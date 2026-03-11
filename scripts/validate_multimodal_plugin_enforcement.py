@@ -473,6 +473,7 @@ def main() -> int:
     referenced_profile_ids: set[str] = set()
     registry_plugin_ids: set[str] = set()
     required_binding_plugin_ids: set[str] = set()
+    provider_binding_policy_by_plugin: dict[str, dict[str, Any]] = {}
     for plugin_row in plugins:
         if not isinstance(plugin_row, dict):
             payload["plugin_registry_status"] = STATUS_FAIL_REQUIRED
@@ -538,6 +539,37 @@ def main() -> int:
         provider_binding = contract_doc.get("provider_binding")
         if isinstance(provider_binding, dict) and _boolish(provider_binding.get("required", False)):
             required_binding_plugin_ids.add(plugin_id)
+            allowed_profiles = {
+                str(x).strip()
+                for x in (provider_binding.get("allowed_profiles") or [])
+                if str(x).strip()
+            }
+            minimum_enabled_bindings = _to_int(provider_binding.get("minimum_enabled_bindings"))
+            if minimum_enabled_bindings is None or minimum_enabled_bindings < 1:
+                minimum_enabled_bindings = 1
+            require_all_allowed_profiles = _boolish(provider_binding.get("require_all_allowed_profiles", False))
+            if is_multimodal_plugin_row and isinstance(contract.get("provider_binding_requirements"), dict):
+                task_requirements = contract.get("provider_binding_requirements") or {}
+                if isinstance(task_requirements, dict):
+                    override_profiles = {
+                        str(x).strip()
+                        for x in (task_requirements.get("required_profiles") or [])
+                        if str(x).strip()
+                    }
+                    if override_profiles:
+                        allowed_profiles = override_profiles
+                    override_min_bindings = _to_int(task_requirements.get("minimum_enabled_bindings"))
+                    if override_min_bindings is not None and override_min_bindings >= 1:
+                        minimum_enabled_bindings = override_min_bindings
+                    if "require_all_required_profiles" in task_requirements:
+                        require_all_allowed_profiles = _boolish(
+                            task_requirements.get("require_all_required_profiles")
+                        )
+            provider_binding_policy_by_plugin[plugin_id] = {
+                "required_profiles": allowed_profiles,
+                "minimum_enabled_bindings": minimum_enabled_bindings,
+                "require_all_required_profiles": require_all_allowed_profiles,
+            }
 
         if is_multimodal_plugin_row:
             thresholds = contract_doc.get("required_thresholds")
@@ -611,6 +643,7 @@ def main() -> int:
     # Runtime binding verification (instance-local pointers only)
     selected_profile_id = ""
     seen_enabled_binding_for_plugin: set[str] = set()
+    enabled_profiles_by_plugin: dict[str, set[str]] = {}
     if binding_path.exists():
         try:
             binding_doc = _load_yaml(binding_path)
@@ -630,6 +663,7 @@ def main() -> int:
             credential_ref = str(row.get("credential_ref", "")).strip()
             if plugin_id:
                 seen_enabled_binding_for_plugin.add(plugin_id)
+                enabled_profiles_by_plugin.setdefault(plugin_id, set())
             if plugin_id and not PLUGIN_ID_RE.fullmatch(plugin_id):
                 payload["plugin_naming_status"] = STATUS_FAIL_REQUIRED
                 stale_reasons.append("binding_plugin_id_invalid")
@@ -644,6 +678,8 @@ def main() -> int:
                 error_code = error_code or ERR_CONF_PROFILE
             else:
                 selected_profile_id = profile_id
+                if plugin_id:
+                    enabled_profiles_by_plugin.setdefault(plugin_id, set()).add(profile_id)
 
             if not credential_ref or not CREDENTIAL_REF_RE.fullmatch(credential_ref):
                 payload["provider_config_status"] = STATUS_FAIL_REQUIRED
@@ -669,6 +705,34 @@ def main() -> int:
             stale_reasons.append("provider_binding_required_plugin_missing")
             error_code = error_code or ERR_CONF_PROFILE
             payload["missing_required_binding_plugins"] = missing_required_bindings
+        for plugin_id in sorted(required_binding_plugin_ids):
+            policy = provider_binding_policy_by_plugin.get(plugin_id, {})
+            enabled_profiles = enabled_profiles_by_plugin.get(plugin_id, set())
+            minimum_enabled_bindings = _to_int(policy.get("minimum_enabled_bindings"))
+            if minimum_enabled_bindings is None or minimum_enabled_bindings < 1:
+                minimum_enabled_bindings = 1
+            if len(enabled_profiles) < minimum_enabled_bindings:
+                payload["provider_config_status"] = STATUS_FAIL_REQUIRED
+                stale_reasons.append(
+                    f"provider_binding_min_enabled_not_met:{plugin_id}:{len(enabled_profiles)}<{minimum_enabled_bindings}"
+                )
+                error_code = error_code or ERR_CONF_PROFILE
+            required_profiles = {
+                str(x).strip()
+                for x in (policy.get("required_profiles") or set())
+                if str(x).strip()
+            }
+            if _boolish(policy.get("require_all_required_profiles", False)) and required_profiles:
+                missing_profiles = sorted(required_profiles - enabled_profiles)
+                if missing_profiles:
+                    payload["provider_config_status"] = STATUS_FAIL_REQUIRED
+                    stale_reasons.append(
+                        "provider_binding_required_profiles_missing:"
+                        + plugin_id
+                        + ":"
+                        + ",".join(missing_profiles)
+                    )
+                    error_code = error_code or ERR_CONF_PROFILE
 
     if selected_profile_id:
         payload["provider_profile_id"] = selected_profile_id
