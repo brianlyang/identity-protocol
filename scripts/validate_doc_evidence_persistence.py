@@ -613,7 +613,7 @@ def main() -> int:
                         "doc": rel,
                         "path": ref,
                         "reason": "directory_refs_are_not_replayable;use_manifest_or_concrete_file_path",
-                        "error_code": "IP-DOC-EVID-014",
+                        "error_code": "IP-DOC-EVID-005",
                     }
                 )
 
