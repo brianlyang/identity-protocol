@@ -20,10 +20,12 @@ This directory is the canonical plugin governance root for protocol-level plugin
 
 ## Control-plane pointers (integration boundary)
 
-1. `identity/protocol/mappings/contract-binding.current.yaml` is the requirement-level contract mapping source.
-2. `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml` controls strict vs targeted gate-profile trimming behavior.
-3. `identity/protocol/mappings/stream-doc-registry.current.yaml` is the machine SSOT for active governance/review streams.
-4. Plugin docs are onboarding guides only; runtime enforcement comes from validators + control-plane pointers above.
+1. `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml` is the plugin registration SSOT (requirement/bundle/gate-mode wiring).
+2. `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml` is the strict fail-close profile SSOT.
+3. `identity/protocol/mappings/contract-binding.current.yaml` is the requirement-level contract mapping source.
+4. `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml` controls strict vs targeted gate-profile trimming behavior.
+5. `identity/protocol/mappings/stream-doc-registry.current.yaml` is the machine SSOT for active governance/review streams.
+6. Plugin docs are onboarding guides only; runtime enforcement comes from validators + control-plane pointers above.
 
 ## Security
 
