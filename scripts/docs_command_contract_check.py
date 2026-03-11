@@ -34,6 +34,17 @@ REQUIRED_CURRENT_DOC_PATTERNS = [
     r"^docs/governance/identity-token-efficiency-and-skill-parity-governance-v\d+\.\d+\.\d+\.md$",
     r"^docs/governance/identity-token-governance-audit-checklist-v\d+\.\d+\.\d+\.md$",
 ]
+V160_HISTORICAL_DOC = "docs/governance/identity-actor-session-binding-governance-v1.6.0.md"
+V160_REQUIRED_MARKERS = (
+    "historical baseline + traceability ledger",
+    "Current-state contract resolution must follow active stream registry first",
+    "historical replay context only and must not be treated as current wiring contract input",
+    "stream-doc-registry.current.yaml",
+)
+V160_FORBIDDEN_MARKERS = (
+    "This document is the only normative execution entrypoint for actor-session-binding governance in v1.6.",
+    "This file is topic-canonical for v1.6 planning/execution.",
+)
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -529,6 +540,17 @@ def main() -> int:
             failures.append(f"[MISSING_DOC] {doc}")
             continue
         content = doc_path.read_text(encoding="utf-8")
+        if _norm_path(doc) == V160_HISTORICAL_DOC:
+            for marker in V160_REQUIRED_MARKERS:
+                if marker not in content:
+                    failures.append(
+                        f"[V160_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
+                    )
+            for marker in V160_FORBIDDEN_MARKERS:
+                if marker in content:
+                    failures.append(
+                        f"[V160_HISTORICAL_BOUNDARY_CONFLICT] {doc}: contains forbidden legacy marker `{marker}`"
+                    )
         required_alias_refs = stream_doc_alias_requirements.get(doc, [])
         for ref in required_alias_refs:
             if ref not in content:
