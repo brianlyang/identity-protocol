@@ -265,6 +265,85 @@ def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[P
     return active_path, active_file, ""
 
 
+def _pick_primary_status_field(row: dict[str, Any]) -> str:
+    report_fields = _as_str_list(row.get("report_field_refs"))
+    if not report_fields:
+        return ""
+    for field in report_fields:
+        if field.endswith("_status"):
+            return field
+    return report_fields[0]
+
+
+def _build_effective_requirement_maps(
+    *,
+    repo_root: Path,
+    mapping_path: Path,
+) -> tuple[tuple[str, ...], dict[str, str], dict[str, str], list[str]]:
+    errors: list[str] = []
+    requirement_order = list(BUNDLE_REQUIREMENT_ORDER)
+    target_name_by_requirement = dict(TARGET_NAME_BY_REQUIREMENT)
+    status_field_by_target = dict(STATUS_FIELD_BY_TARGET)
+
+    try:
+        mapping_doc = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        errors.append(f"contract_mapping_parse_failed:{mapping_path}:{exc}")
+        mapping_doc = {}
+    if not isinstance(mapping_doc, dict):
+        errors.append(f"contract_mapping_invalid_root:{mapping_path}")
+        mapping_doc = {}
+
+    registry_entry = "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml"
+    registry_path, _registry_active_file, registry_alias_error = _resolve_current_yaml_alias(repo_root, registry_entry)
+    if registry_alias_error:
+        errors.append(f"plugin_registry_alias_error:{registry_entry}:{registry_alias_error}")
+        return tuple(requirement_order), target_name_by_requirement, status_field_by_target, errors
+    if not registry_path.exists() or not registry_path.is_file():
+        errors.append(f"plugin_registry_missing:{registry_path}")
+        return tuple(requirement_order), target_name_by_requirement, status_field_by_target, errors
+
+    try:
+        registry_doc = yaml.safe_load(registry_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        errors.append(f"plugin_registry_parse_failed:{registry_path}:{exc}")
+        return tuple(requirement_order), target_name_by_requirement, status_field_by_target, errors
+
+    plugins = registry_doc.get("plugins") if isinstance(registry_doc, dict) else None
+    if not isinstance(plugins, list):
+        errors.append(f"plugin_registry_plugins_missing_or_invalid:{registry_path}")
+        return tuple(requirement_order), target_name_by_requirement, status_field_by_target, errors
+
+    for row in plugins:
+        if not isinstance(row, dict):
+            continue
+        gate_mode = str(row.get("gate_mode", "")).strip().lower()
+        if gate_mode != "fail_close_strict":
+            continue
+        requirement_key = str(row.get("requirement_key", "")).strip()
+        target_name = str(row.get("bundle_target_name", "")).strip()
+        if not requirement_key or not target_name:
+            errors.append(f"plugin_registry_tuple_missing:{row.get('plugin_id','')}")
+            continue
+        target_name_by_requirement[requirement_key] = target_name
+        if requirement_key not in requirement_order:
+            requirement_order.append(requirement_key)
+
+        if target_name in status_field_by_target:
+            continue
+        mapping_row = mapping_doc.get(requirement_key)
+        if not isinstance(mapping_row, dict):
+            errors.append(f"contract_mapping_row_missing_for_plugin_requirement:{requirement_key}")
+            continue
+        status_field = _pick_primary_status_field(mapping_row)
+        if not status_field:
+            errors.append(f"status_field_unresolved_for_plugin_requirement:{requirement_key}")
+            continue
+        status_field_by_target[target_name] = status_field
+
+    return tuple(requirement_order), target_name_by_requirement, status_field_by_target, errors
+
+
 def _parse_validator_entry(raw_entry: str) -> tuple[str, tuple[str, ...]]:
     # Example raw entries:
     # - scripts/validate_v16_intake_evidence_core.py::mode=intake_contract
@@ -286,8 +365,13 @@ def _parse_validator_entry(raw_entry: str) -> tuple[str, tuple[str, ...]]:
     return script_part.strip(), ()
 
 
-def _select_validator_spec(requirement_key: str, row: dict[str, Any]) -> ValidatorSpec | None:
-    target_name = TARGET_NAME_BY_REQUIREMENT.get(requirement_key, requirement_key)
+def _select_validator_spec(
+    requirement_key: str,
+    row: dict[str, Any],
+    *,
+    target_name_by_requirement: dict[str, str],
+) -> ValidatorSpec | None:
+    target_name = target_name_by_requirement.get(requirement_key, requirement_key)
     validator_ids = list(row.get("validator_ids") or [])
     parsed: list[tuple[str, tuple[str, ...]]] = [
         _parse_validator_entry(entry) for entry in validator_ids if str(entry or "").strip()
@@ -312,7 +396,12 @@ def _select_validator_spec(requirement_key: str, row: dict[str, Any]) -> Validat
     )
 
 
-def _load_validator_specs(mapping_path: Path, requirement_keys: tuple[str, ...]) -> tuple[list[ValidatorSpec], list[str]]:
+def _load_validator_specs(
+    mapping_path: Path,
+    requirement_keys: tuple[str, ...],
+    *,
+    target_name_by_requirement: dict[str, str],
+) -> tuple[list[ValidatorSpec], list[str]]:
     if not mapping_path.exists():
         return [], [f"contract_mapping_missing:{mapping_path}"]
 
@@ -324,7 +413,11 @@ def _load_validator_specs(mapping_path: Path, requirement_keys: tuple[str, ...])
         if not isinstance(row, dict):
             errors.append(f"mapping_row_missing:{requirement_key}")
             continue
-        spec = _select_validator_spec(requirement_key, row)
+        spec = _select_validator_spec(
+            requirement_key,
+            row,
+            target_name_by_requirement=target_name_by_requirement,
+        )
         if spec is None:
             errors.append(f"validator_ids_missing:{requirement_key}")
             continue
@@ -339,6 +432,8 @@ def _load_gate_profile_selection(
     profile_name: str,
     operation: str,
     resolved_work_layer: str,
+    default_requirement_order: tuple[str, ...],
+    known_requirement_keys: set[str],
 ) -> tuple[GateProfileSelection | None, Path, list[str]]:
     errors: list[str] = []
     profile_entry_path = (repo_root / str(profile_file or DEFAULT_GATE_PROFILE_FILE)).resolve()
@@ -405,17 +500,17 @@ def _load_gate_profile_selection(
         errors.append(f"gate_profile_work_layer_not_allowed:{selected_name}:{normalized_work_layer}")
 
     if mode == "full":
-        requirement_keys = tuple(BUNDLE_REQUIREMENT_ORDER)
+        requirement_keys = tuple(default_requirement_order)
     else:
         requested = _as_str_list(selected.get("requirement_keys"))
         if not requested:
             errors.append(f"gate_profile_requirement_keys_missing:{selected_name}")
             requirement_keys = ()
         else:
-            unknown = [key for key in requested if key not in TARGET_NAME_BY_REQUIREMENT]
+            unknown = [key for key in requested if key not in known_requirement_keys]
             if unknown:
                 errors.append(f"gate_profile_unknown_requirement_keys:{selected_name}:{','.join(unknown)}")
-            requirement_keys = tuple(key for key in requested if key in TARGET_NAME_BY_REQUIREMENT)
+            requirement_keys = tuple(key for key in requested if key in known_requirement_keys)
             if not requirement_keys:
                 errors.append(f"gate_profile_requirement_keys_empty:{selected_name}")
 
@@ -463,8 +558,14 @@ def _extract_error_code(payload: dict[str, Any], stderr_text: str) -> str:
     return ""
 
 
-def _classify_status(*, target_name: str, rc: int, payload: dict[str, Any]) -> tuple[str, str]:
-    status_field = STATUS_FIELD_BY_TARGET[target_name]
+def _classify_status(
+    *,
+    target_name: str,
+    rc: int,
+    payload: dict[str, Any],
+    status_field_by_target: dict[str, str],
+) -> tuple[str, str]:
+    status_field = status_field_by_target[target_name]
     status_value = str(payload.get(status_field, "")).strip().upper()
     if status_value in {
         STATUS_PASS_REQUIRED,
@@ -683,6 +784,17 @@ def main() -> int:
         )
         if not mapping_alias_error:
             mapping_path = resolved_mapping_path
+    (
+        effective_requirement_order,
+        effective_target_name_by_requirement,
+        effective_status_field_by_target,
+        effective_wiring_errors,
+    ) = _build_effective_requirement_maps(repo_root=repo_root, mapping_path=mapping_path)
+    effective_requirement_by_target = {
+        target: requirement
+        for requirement, target in effective_target_name_by_requirement.items()
+    }
+    known_requirement_keys = set(effective_target_name_by_requirement.keys())
     target_name = str(args.target_name or "").strip()
     gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
     gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
@@ -696,15 +808,18 @@ def main() -> int:
         profile_name=gate_profile,
         operation=operation,
         resolved_work_layer=str(args.resolved_work_layer or "").strip(),
+        default_requirement_order=effective_requirement_order,
+        known_requirement_keys=known_requirement_keys,
     )
     requirement_keys = (
         gate_profile_selection.requirement_keys
         if isinstance(gate_profile_selection, GateProfileSelection)
-        else BUNDLE_REQUIREMENT_ORDER
+        else effective_requirement_order
     )
     mapping_errors: list[str] = []
     if mapping_alias_error:
         mapping_errors.append(f"contract_mapping_alias_resolution_failed:{mapping_alias_error}")
+    mapping_errors.extend(effective_wiring_errors)
     mapping_errors.extend(gate_profile_errors)
     if _is_strict_no_trim_operation(operation_normalized) and gate_profile_entry_file != canonical_gate_profile_entry_file:
         mapping_errors.append(
@@ -712,7 +827,7 @@ def main() -> int:
             f"{gate_profile_file}:expected={DEFAULT_GATE_PROFILE_FILE}"
         )
     if target_name:
-        target_key = REQUIREMENT_BY_TARGET.get(target_name, "")
+        target_key = effective_requirement_by_target.get(target_name, "")
         if not target_key:
             mapping_errors.append(f"unknown_target_name:{target_name}")
             requirement_keys = ()
@@ -726,7 +841,11 @@ def main() -> int:
             else:
                 requirement_keys = (target_key,)
 
-    specs, spec_errors = _load_validator_specs(mapping_path, requirement_keys)
+    specs, spec_errors = _load_validator_specs(
+        mapping_path,
+        requirement_keys,
+        target_name_by_requirement=effective_target_name_by_requirement,
+    )
     mapping_errors.extend(spec_errors)
     result_rows: list[dict[str, Any]] = []
     failure_count = 0
@@ -821,7 +940,12 @@ def main() -> int:
         else:
             rc, out, err = _run(cmd, cwd=repo_root)
             payload = _parse_payload(out)
-        status_value, status_field = _classify_status(target_name=spec.target_name, rc=rc, payload=payload)
+        status_value, status_field = _classify_status(
+            target_name=spec.target_name,
+            rc=rc,
+            payload=payload,
+            status_field_by_target=effective_status_field_by_target,
+        )
         required_contract = bool(payload.get("required_contract", False))
         payload_contract_issues = _validate_row_payload_contract(
             payload=payload,
@@ -866,9 +990,9 @@ def main() -> int:
         )
 
     missing_targets = [
-        TARGET_NAME_BY_REQUIREMENT[key]
+        effective_target_name_by_requirement[key]
         for key in requirement_keys
-        if TARGET_NAME_BY_REQUIREMENT.get(key) not in {row.get("target_name") for row in result_rows}
+        if effective_target_name_by_requirement.get(key) not in {row.get("target_name") for row in result_rows}
     ]
     if missing_targets:
         failure_count += len(missing_targets)
@@ -945,7 +1069,7 @@ def main() -> int:
 
     if target_name:
         if not result_rows and not mapping_errors:
-            target_status_field = STATUS_FIELD_BY_TARGET.get(target_name, "status")
+            target_status_field = effective_status_field_by_target.get(target_name, "status")
             target_payload = {
                 target_status_field: STATUS_SKIPPED_NOT_REQUIRED,
                 "required_contract": False,
@@ -995,7 +1119,7 @@ def main() -> int:
             stale_reasons = ["bundle_target_missing"]
             if mapping_errors:
                 stale_reasons = ["bundle_entry_contract_failed"] + [f"mapping_error:{x}" for x in mapping_errors]
-            target_status_field = STATUS_FIELD_BY_TARGET.get(target_name, "status")
+            target_status_field = effective_status_field_by_target.get(target_name, "status")
             target_payload = {
                 target_status_field: STATUS_FAIL_REQUIRED,
                 "error_code": "IP-GATE-ENTRY-001",
@@ -1030,7 +1154,7 @@ def main() -> int:
         target_payload = dict(
             target_row.get("payload") if isinstance(target_row.get("payload"), dict) else {}
         )
-        target_status_field = STATUS_FIELD_BY_TARGET[target_name]
+        target_status_field = effective_status_field_by_target[target_name]
         target_payload.setdefault(target_status_field, target_row.get("status", STATUS_FAIL_REQUIRED))
         target_payload.setdefault("required_contract", bool(target_row.get("required_contract", False)))
         target_payload.setdefault("auto_required_signal", bool(target_row.get("auto_required_signal", False)))
