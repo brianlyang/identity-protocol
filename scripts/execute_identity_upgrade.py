@@ -992,6 +992,28 @@ def _ensure_runtime_state_allowlist_entry(
     return normalized, True
 
 
+def _ensure_runtime_arbitration_allowlist_entry(
+    *,
+    allowlist: list[str],
+    arbitration_log_target: Path,
+    pack_root: Path,
+) -> tuple[list[str], bool]:
+    """
+    Safe-auto writes runtime/logs/arbitration/<identity>-<run>.json by design.
+    Auto-include this canonical path when omitted from instance allowlist.
+    """
+    normalized = [str(x).strip() for x in (allowlist or []) if str(x).strip()]
+    target = arbitration_log_target.resolve()
+    if not _is_within(target, pack_root):
+        return normalized, False
+    target_text = str(target)
+    for pat in normalized:
+        if fnmatch.fnmatch(target_text, pat):
+            return normalized, False
+    normalized.append(target_text)
+    return normalized, True
+
+
 def _append_task_history(history_path: Path, line: str) -> None:
     history_path.parent.mkdir(parents=True, exist_ok=True)
     with history_path.open("a", encoding="utf-8") as f:
@@ -2378,11 +2400,12 @@ def main() -> int:
     upgrade_required, reasons = _needs_upgrade(metrics, thresholds)
 
     safe_auto = ((arb.get("safe_auto_patch_surface") or {}) if isinstance(arb, dict) else {}) or {}
+    arbitration_log_target = runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json"
     touched_paths = [
         str(pack / "RULEBOOK.jsonl"),
         str(pack / "TASK_HISTORY.md"),
         str(runtime_state_target),
-        str(runtime_output_root / "logs" / "arbitration" / f"{args.identity_id}-{run_id}.json"),
+        str(arbitration_log_target),
     ]
     if args.mode == "safe-auto":
         patch_surface = touched_paths
@@ -2500,6 +2523,7 @@ def main() -> int:
         prompt_contract.get("prompt_runtime_state_externalization_error_code", "")
     )
     safe_auto_runtime_state_allowlist_autowired = False
+    safe_auto_runtime_arbitration_allowlist_autowired = False
 
     if upgrade_required and args.mode == "safe-auto" and precheck.get("all_writable", True):
         if safe_auto.get("enforce_path_policy") is True:
@@ -2512,6 +2536,13 @@ def main() -> int:
             )
             if safe_auto_runtime_state_allowlist_autowired:
                 actions_taken.append("safe_auto_allowlist_runtime_state_autowired")
+            allowlist, safe_auto_runtime_arbitration_allowlist_autowired = _ensure_runtime_arbitration_allowlist_entry(
+                allowlist=allowlist,
+                arbitration_log_target=arbitration_log_target,
+                pack_root=pack,
+            )
+            if safe_auto_runtime_arbitration_allowlist_autowired:
+                actions_taken.append("safe_auto_allowlist_runtime_arbitration_autowired")
             violations: list[dict[str, str]] = []
             for pth in touched_paths:
                 ok, reason = _path_allowed(pth, allowlist, denylist)
@@ -2579,6 +2610,7 @@ def main() -> int:
                     "all_ok": False,
                     "path_policy_violations": violations,
                     "safe_auto_runtime_state_allowlist_autowired": safe_auto_runtime_state_allowlist_autowired,
+                    "safe_auto_runtime_arbitration_allowlist_autowired": safe_auto_runtime_arbitration_allowlist_autowired,
                     "permission_state": "BLOCKED",
                     "permission_error_code": "IP-UPG-001",
                     "writeback_precheck": precheck,
@@ -2935,6 +2967,7 @@ def main() -> int:
         "header_first_gate_status": header_first_gate_status,
         "send_time_gate_status": str(send_time_gate_status or ""),
         "safe_auto_runtime_state_allowlist_autowired": safe_auto_runtime_state_allowlist_autowired,
+        "safe_auto_runtime_arbitration_allowlist_autowired": safe_auto_runtime_arbitration_allowlist_autowired,
         "scaffold_consent_gate_status": scaffold_consent_gate_status,
         "mutation_plan_disclosed": bool(mutation_plan_disclosed),
         "planned_files": list(planned_files),
