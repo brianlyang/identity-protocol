@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,34 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_STATUS_SYNC = "IP-CP-STATUS-001"
 
 VOLATILE_TOP_LEVEL_KEYS = {"generated_at_utc", "git_head_short"}
+VOLATILE_PAYLOAD_KEY_SUFFIXES = (
+    "_path",
+    "_file",
+    "_entry",
+    "_ref",
+    "_sha",
+)
+VOLATILE_PAYLOAD_KEY_TOKENS = (
+    "timestamp",
+    "generated_at",
+    "stdout_tail",
+    "stderr_tail",
+    "catalog_path",
+    "pack_path",
+    "resolved_pack_path",
+    "task_path",
+    "status_file",
+    "status_entry_file",
+    "status_file_entry",
+    "current_file",
+    "resolved_file",
+    "active_file",
+    "configured_file",
+    "workflow_file_sha",
+    "run_workflow_file_sha",
+    "run_url",
+    "evidence_ref",
+)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -40,6 +69,43 @@ def _index_checks(doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
             continue
         out[name] = node
     return out
+
+
+def _is_volatile_payload_key(key: str) -> bool:
+    lowered = key.strip().lower()
+    if not lowered:
+        return False
+    if any(lowered.endswith(suffix) for suffix in VOLATILE_PAYLOAD_KEY_SUFFIXES):
+        return True
+    if any(token in lowered for token in VOLATILE_PAYLOAD_KEY_TOKENS):
+        return True
+    return False
+
+
+def _canonicalize_payload(value: Any, repo_root: Path) -> Any:
+    if isinstance(value, dict):
+        normalized: dict[str, Any] = {}
+        for key, node in value.items():
+            key_str = str(key)
+            if _is_volatile_payload_key(key_str):
+                continue
+            normalized[key_str] = _canonicalize_payload(node, repo_root)
+        return normalized
+    if isinstance(value, list):
+        return [_canonicalize_payload(item, repo_root) for item in value]
+    if isinstance(value, str):
+        text = value
+        repo_root_text = str(repo_root)
+        if repo_root_text:
+            text = text.replace(repo_root_text, "${REPO_ROOT}")
+        text = re.sub(r"/home/runner/work/[^/\s]+/[^/\s]+", "${REPO_ROOT}", text)
+        text = re.sub(
+            r"/Users/[^/\s]+/claude/codex_project/[^/\s]+/identity-protocol-local",
+            "${REPO_ROOT}",
+            text,
+        )
+        return text
+    return value
 
 
 def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
@@ -141,7 +207,9 @@ def main() -> int:
                             "reason": "check_result_drift",
                         }
                     )
-            if current_check.get("payload") != live_check.get("payload"):
+            current_payload = _canonicalize_payload(current_check.get("payload"), repo_root)
+            live_payload = _canonicalize_payload(live_check.get("payload"), repo_root)
+            if current_payload != live_payload:
                 mismatches.append(
                     {
                         "field": f"checks.{name}.payload",
