@@ -923,3 +923,70 @@ Perform the final strict close for points 6/7/8 by eliminating instance-lane act
    - `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary.json`
 4. tuple contract:
    - every manifest entry includes `sha256`, `command`, `rc`, `timestamp_utc`.
+
+## 19) Round-47 direct validator artifact mirror for points 6/7/8 (2026-03-11)
+
+### 19.1 Objective
+
+Materialize the exact three artifacts requested by instance feedback so replay uses stable filenames instead of ad-hoc temporary output naming.
+
+### 19.2 Delivered artifact set
+
+1. `validate_kernel_ssot_source.json`
+2. `validate_required_contract_coverage.txt`
+3. `validate_prompt_kernel_executable_coupling.json`
+
+Additional boundary probe:
+
+4. `validate_prompt_kernel_executable_coupling.instance_probe.json`
+
+### 19.3 Result
+
+1. `kernel_ssot_source` => `PASS_REQUIRED` (`required_contract=true`)
+2. coverage replay => `required_contract_total=13`, `required_contract_passed=13`, `skipped_actionable_contract_count=0`
+3. prompt-kernel default lane => `PASS_REQUIRED` with routing tail signal containing `session_lane_lock_protocol`
+4. explicit instance-lane probe => `FAIL_REQUIRED` (`IP-PKX-002`)
+
+### 19.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/EVIDENCE_MANIFEST.round47-678-hardclose.json`
+3. summary:
+   - `activity/evidence/v163-predev/2026-03-11/round47-678-hardclose/round47_678_hardclose_summary.json`
+
+## 20) Round-48 three-pass serial deep-scan for legacy semantic parity (2026-03-11)
+
+### 20.1 Objective
+
+Run the same deep-scan packet for three serial iterations after introducing machine-enforced legacy doc semantic classification, ensuring no drift between v1.6-and-earlier docs and protocol code surfaces.
+
+### 20.2 Three-pass packet
+
+Per iteration:
+
+1. `docs_command_contract_check`
+2. `validate_control_plane_invariants --json-only`
+3. `validate_required_gate_surface_drift --json-only`
+4. `validate_protocol_ssot_source`
+5. `validate_required_contract_coverage` (system-requirements-analyst strict validate)
+
+### 20.3 Outcome
+
+All three iterations are green:
+
+1. docs command contract => `PASS`
+2. control-plane invariants => `PASS_REQUIRED`
+3. required-gate surface drift => `PASS_REQUIRED`
+4. protocol SSOT source => `OK`
+5. required coverage => `required_contract_total=13`, `required_contract_passed=13`, `skipped_actionable_contract_count=0`
+
+### 20.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/EVIDENCE_MANIFEST.round48-threepass-legacy-semantic-parity.json`
+3. summary:
+   - `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/round48_threepass_summary.json`
