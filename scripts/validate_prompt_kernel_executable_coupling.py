@@ -18,6 +18,8 @@ ERR_ROUTING_VALIDATOR_FAILED = "IP-PKX-002"
 ERR_KERNEL_REF_MISSING = "IP-PKX-003"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+SCRIPT_PATH = Path(__file__).resolve()
+REPO_ROOT = SCRIPT_PATH.parent.parent
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -57,6 +59,13 @@ def _parse_json(raw: str) -> dict[str, Any]:
     except Exception:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def _resolve_repo_path(path_like: str) -> Path:
+    candidate = Path(str(path_like)).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (REPO_ROOT / candidate).resolve()
 
 
 def main() -> int:
@@ -133,7 +142,7 @@ def main() -> int:
         payload["stale_reasons"] = ["kernel_contract_ref_missing"]
         _emit(payload, json_only=args.json_only)
         return 1
-    if not Path(kernel_path).expanduser().resolve().exists():
+    if not _resolve_repo_path(kernel_path).exists():
         payload["prompt_kernel_executable_coupling_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_KERNEL_REF_MISSING
         payload["stale_reasons"] = ["kernel_contract_ref_not_found"]
@@ -149,11 +158,11 @@ def main() -> int:
 
     cmd = [
         "python3",
-        "scripts/validate_work_layer_gate_set_routing.py",
+        str((REPO_ROOT / "scripts/validate_work_layer_gate_set_routing.py").resolve()),
         "--catalog",
         str(catalog_path),
         "--repo-catalog",
-        str(Path(args.repo_catalog).expanduser().resolve()),
+        str(_resolve_repo_path(str(args.repo_catalog))),
         "--identity-id",
         args.identity_id,
         "--operation",
@@ -167,7 +176,7 @@ def main() -> int:
     if str(args.expected_work_layer or "").strip():
         cmd += ["--expected-work-layer", str(args.expected_work_layer).strip()]
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
     detail = _parse_json(proc.stdout)
     payload["producer_readiness"] = bool(detail)
     payload["routing_validator_rc"] = proc.returncode
