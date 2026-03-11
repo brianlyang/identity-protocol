@@ -1,13 +1,13 @@
 schema_version: 1
 budget_version: "v1.6"
-last_updated_utc: "2026-03-11T00:00:00Z"
+last_updated_utc: "2026-03-11T04:10:00Z"
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
     warn: 148
     fail: 152
   error_codes:
-    warn: 410
+    warn: 411
     fail: 430
   error_code_families:
     warn: 145
@@ -41,8 +41,8 @@ convergence_guard:
   baseline_snapshot_utc: "2026-03-11T00:00:00Z"
   ceilings:
     validator_scripts: 148
-    error_codes: 410
-    error_code_families: 137
+    error_codes: 411
+    error_code_families: 138
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:
       scripts/identity_creator.py: 84
