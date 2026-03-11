@@ -90,6 +90,25 @@ New plugin onboarding must not require adding plugin-specific static maps in bun
    - derive wiring from mapping sources (`contract-binding` + plugin registry/governance metadata).
 3. Any new plugin that can only be wired by editing bundle runner static maps is considered a control-plane regression.
 
+#### 3.1.3 Single-intake + generated wiring contract (mandatory target for code phase)
+
+Human onboarding must converge to one intake record, while control-plane audit remains layered:
+
+1. Canonical intake:
+   - one plugin-join row per plugin (minimum tuple + strict surfaces + report projection contract).
+2. Generated artifacts:
+   - registry/governance/contract-binding/layer-profile/doc-registry rows are generated from intake, not manually diverged.
+3. Drift gate:
+   - CI must fail-close when generated artifacts differ from intake intent.
+4. Editing boundary:
+   - generated files are not the primary authoring surface for new plugin join requests.
+
+Rationale:
+
+1. Keep audit-safe layered governance model.
+2. Deliver single-entry operator experience (`add one row` instead of hand-editing multiple files).
+3. Remove tribal-memory dependency for newcomers and memory-loss scenarios.
+
 ### 3.2 Monotonic level contract (allow upgrade, forbid downgrade)
 
 1. Each strict contract must define an effective enforcement floor.

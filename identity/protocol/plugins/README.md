@@ -44,14 +44,17 @@ This directory is the canonical plugin governance root for protocol-level plugin
 
 1. Define plugin contract bundle under `identity/protocol/plugins/<plugin-id>/`:
    `plugin.contract.yaml`, input/output schemas, error-code map, and per-plugin README.
-2. Register plugin identity in `PLUGIN_REGISTRY.current.yaml`:
+2. Author plugin join through the canonical minimum tuple:
    `plugin_id`, `requirement_key`, `bundle_target_name`, `gate_mode`, `ssot_mapping_ref`.
-3. Add strict fail-close profile in `FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`:
-   validator script, required strict surfaces, and required projection/report fields.
-4. Add requirement row in `identity/protocol/mappings/contract-binding.current.yaml`:
-   validator IDs, gate surfaces, report fields, and error-code family references.
-5. Wire bundle routing in `scripts/required_gate_bundle_runner.py`:
-   requirement order + `target_name -> status_field` mapping.
+3. Keep wiring configuration-driven across control-plane sources:
+   `PLUGIN_REGISTRY.current.yaml`, `FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`,
+   `identity/protocol/mappings/contract-binding.current.yaml`,
+   `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`,
+   `identity/protocol/mappings/stream-doc-registry.current.yaml`.
+4. Bundle runner onboarding must be mapping-derived:
+   new plugin join must not depend on adding plugin-specific static maps in `scripts/required_gate_bundle_runner.py`.
+5. Target operating model (v1.6.4 code-phase):
+   single intake row + generated expansion + CI drift fail-close, so human operator flow remains `add one row`.
 6. Prove integration with machine checks:
    `validate_control_plane_invariants`, `validate_required_gate_surface_drift`, plugin projection validator, and target full-scan regression.
 
