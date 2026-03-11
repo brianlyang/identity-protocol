@@ -62,11 +62,19 @@ V150_REVIEW_REQUIRED_MARKERS = (
     "stream-doc-registry.current.yaml",
     "historical replay context only and must not be treated as current wiring contract input",
 )
+V150_REVIEW_FORBIDDEN_MARKERS = (
+    "This file is the only normative execution entrypoint for actor-session-binding governance.",
+    "This file is **topic-canonical** for actor-session-binding governance.",
+)
 V16_REVIEW_HISTORICAL_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.md"
 V16_REVIEW_REQUIRED_MARKERS = (
     "historical/replay trace; it is **not** the standalone source for current-state protocol judgments",
     "stream-doc-registry.current.yaml",
     "historical replay context only and must not be treated as current wiring contract input",
+)
+V16_REVIEW_FORBIDDEN_MARKERS = (
+    "it is **the** standalone source for current-state protocol judgments",
+    "This document is the only normative execution entrypoint for actor-session-binding governance in v1.6.",
 )
 
 def extract_backtick_commands(text: str) -> List[str]:
@@ -591,11 +599,21 @@ def main() -> int:
                     failures.append(
                         f"[V150_REVIEW_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
                     )
+            for marker in V150_REVIEW_FORBIDDEN_MARKERS:
+                if marker in content:
+                    failures.append(
+                        f"[V150_REVIEW_HISTORICAL_BOUNDARY_CONFLICT] {doc}: contains forbidden legacy marker `{marker}`"
+                    )
         if _norm_path(doc) == V16_REVIEW_HISTORICAL_DOC:
             for marker in V16_REVIEW_REQUIRED_MARKERS:
                 if marker not in content:
                     failures.append(
                         f"[V16_REVIEW_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
+                    )
+            for marker in V16_REVIEW_FORBIDDEN_MARKERS:
+                if marker in content:
+                    failures.append(
+                        f"[V16_REVIEW_HISTORICAL_BOUNDARY_CONFLICT] {doc}: contains forbidden legacy marker `{marker}`"
                     )
         required_alias_refs = stream_doc_alias_requirements.get(doc, [])
         for ref in required_alias_refs:
