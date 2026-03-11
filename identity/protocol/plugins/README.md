@@ -67,7 +67,9 @@ This directory is the canonical plugin governance root for protocol-level plugin
    new plugin join must not depend on adding plugin-specific static maps in `scripts/required_gate_bundle_runner.py`.
 5. Operating model (v1.6.4 code-sync baseline):
    fail-close plugin requirement onboarding is mapping-derived in bundle runner; plugin-specific static map edits are not required.
-   Single-intake generation remains the target for the next hardening slice.
+   Single-intake authoring/check flow is active through `PLUGIN_JOIN_INTAKE.current.yaml` +
+   `scripts/sync_plugin_join_wiring.py --check --json-only`.
+   Auto-apply generation mode remains optional and does not block current fail-close governance.
 6. Prove integration with machine checks:
    `validate_control_plane_invariants`, `validate_required_gate_surface_drift`, plugin projection validator, and target full-scan regression.
 
