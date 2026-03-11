@@ -409,7 +409,7 @@ Hard rules:
 1. direct manual prompt mutation without derivation metadata is fail-closed in strict lanes.
 2. prompt hash mismatch between derived metadata and runtime report is fail-closed.
 3. derived prompt conformance is required for P0 release assertions.
-4. protocol layer must not introduce same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+4. protocol layer must not introduce the same-name runtime artifact file "identity/protocol/IDENTITY_PROMPT.md" (forbidden placeholder path; must remain absent).
 5. protocol-side prompt baseline, if needed, must be expressed as contract source (existing kernel anchors in `identity/protocol/IDENTITY_PROTOCOL.md` / `identity/protocol/IDENTITY_RUNTIME.md` or a dedicated prompt-bootstrap contract file) and then compiled into pack-level `IDENTITY_PROMPT.md`.
 6. any protocol-side prompt baseline source is non-compliant unless mapping + validator + lane consumption are wired (`kernel_ref -> mapping_ref -> validator_ref -> acceptance replay`).
 7. canonical protocol-side prompt baseline contract source for this track is `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`, which must remain continuously updatable with capability-ingestion traceability and replay obligations.
@@ -1664,7 +1664,7 @@ Promotion guard:
 
 Decision lock:
 
-1. protocol layer must not add same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+1. protocol layer must not add the same-name runtime artifact file "identity/protocol/IDENTITY_PROMPT.md" (forbidden placeholder path; must remain absent).
 2. protocol-side prompt baseline source is tracked via `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`.
 3. runtime prompt artifact remains pack-local (`identity/packs/<id>/IDENTITY_PROMPT.md` or resolved runtime pack path).
 
