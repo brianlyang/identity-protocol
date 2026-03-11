@@ -21,6 +21,7 @@ BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
 BUNDLE_KEY = "required_gate_bundle_runner"
 DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
+DEFAULT_PLUGIN_GOVERNANCE_FILE = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
 STRICT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
     "activate",
     "update",
@@ -203,6 +204,15 @@ RL_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
     "reasoning_attempt_count",
     "reasoning_runtime_evidence_refs",
 )
+STRICT_NO_SKIP_TARGETS: set[str] = {
+    "multimodal_plugin_enforcement",
+    "reasoning_loop_failclose_enforcement",
+}
+STRICT_SKIP_BLOCKING_POLICIES: set[str] = {
+    "fail_close",
+    "strict_no_skip",
+    "forbid_skip",
+}
 
 
 @dataclass(frozen=True)
@@ -273,6 +283,62 @@ def _pick_primary_status_field(row: dict[str, Any]) -> str:
         if field.endswith("_status"):
             return field
     return report_fields[0]
+
+
+def _load_monotonic_policy_by_target(
+    *,
+    repo_root: Path,
+    governance_file: str = DEFAULT_PLUGIN_GOVERNANCE_FILE,
+) -> tuple[dict[str, dict[str, Any]], Path, list[str]]:
+    errors: list[str] = []
+    policy_by_target: dict[str, dict[str, Any]] = {}
+    governance_entry_path = (repo_root / str(governance_file or DEFAULT_PLUGIN_GOVERNANCE_FILE)).resolve()
+    governance_path = governance_entry_path
+
+    if governance_entry_path.name.endswith(".current.yaml"):
+        governance_path, _active_file, alias_error = _resolve_current_yaml_alias(
+            repo_root,
+            str(governance_file or DEFAULT_PLUGIN_GOVERNANCE_FILE),
+        )
+        if alias_error:
+            errors.append(f"plugin_governance_alias_error:{governance_entry_path}:{alias_error}")
+            return policy_by_target, governance_path, errors
+    if not governance_path.exists() or not governance_path.is_file():
+        errors.append(f"plugin_governance_file_missing:{governance_path}")
+        return policy_by_target, governance_path, errors
+
+    try:
+        governance_doc = yaml.safe_load(governance_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        errors.append(f"plugin_governance_parse_failed:{governance_path}:{exc}")
+        return policy_by_target, governance_path, errors
+    if not isinstance(governance_doc, dict):
+        errors.append(f"plugin_governance_invalid_root:{governance_path}")
+        return policy_by_target, governance_path, errors
+
+    profiles = governance_doc.get("plugin_failclose_profiles")
+    if not isinstance(profiles, list):
+        errors.append(f"plugin_governance_profiles_missing_or_invalid:{governance_path}")
+        return policy_by_target, governance_path, errors
+
+    for row in profiles:
+        if not isinstance(row, dict):
+            continue
+        target_name = str(row.get("target_name", "")).strip()
+        if not target_name:
+            continue
+        monotonic = row.get("monotonic_policy")
+        if not isinstance(monotonic, dict):
+            monotonic = {}
+        strict_skip_allowed_reasons = _as_str_list(monotonic.get("strict_skip_allowed_reasons"))
+        policy_by_target[target_name] = {
+            "strict_skip_policy": str(monotonic.get("strict_skip_policy", "")).strip().lower(),
+            "strict_skip_allowed_reasons": set(strict_skip_allowed_reasons),
+            "minimum_enforcement_level": str(monotonic.get("minimum_enforcement_level", "")).strip().upper(),
+            "allow_self_upgrade": _parse_bool_token(monotonic.get("allow_self_upgrade", False)),
+            "allow_downgrade": _parse_bool_token(monotonic.get("allow_downgrade", False)),
+        }
+    return policy_by_target, governance_path, errors
 
 
 def _build_effective_requirement_maps(
@@ -601,6 +667,14 @@ def _validate_row_payload_contract(
     if "required_contract" not in payload:
         issues.append("required_contract_missing")
     op = str(operation or "").strip().lower()
+    status_value = str(payload.get(status_field, "")).strip().upper()
+    if (
+        required_contract
+        and op in RUNTIME_PROOF_REQUIRED_OPERATIONS
+        and target_name in STRICT_NO_SKIP_TARGETS
+        and status_value == STATUS_SKIPPED_NOT_REQUIRED
+    ):
+        issues.append("strict_no_skip_violation")
     if (
         target_name == "multimodal_plugin_enforcement"
         and required_contract
@@ -790,6 +864,9 @@ def main() -> int:
         effective_status_field_by_target,
         effective_wiring_errors,
     ) = _build_effective_requirement_maps(repo_root=repo_root, mapping_path=mapping_path)
+    monotonic_policy_by_target, monotonic_policy_file, monotonic_policy_errors = _load_monotonic_policy_by_target(
+        repo_root=repo_root
+    )
     effective_requirement_by_target = {
         target: requirement
         for requirement, target in effective_target_name_by_requirement.items()
@@ -821,6 +898,7 @@ def main() -> int:
         mapping_errors.append(f"contract_mapping_alias_resolution_failed:{mapping_alias_error}")
     mapping_errors.extend(effective_wiring_errors)
     mapping_errors.extend(gate_profile_errors)
+    mapping_errors.extend(monotonic_policy_errors)
     if _is_strict_no_trim_operation(operation_normalized) and gate_profile_entry_file != canonical_gate_profile_entry_file:
         mapping_errors.append(
             "gate_profile_file_non_canonical_for_strict_operation:"
@@ -958,6 +1036,35 @@ def main() -> int:
             payload_contract_issues.append("validator_rc_nonzero")
         if payload_contract_issues:
             status_value = STATUS_FAIL_REQUIRED
+
+        monotonic_policy = monotonic_policy_by_target.get(spec.target_name, {})
+        strict_skip_policy = str(monotonic_policy.get("strict_skip_policy", "")).strip().lower()
+        strict_skip_allowed_reasons = {
+            str(token).strip()
+            for token in (monotonic_policy.get("strict_skip_allowed_reasons") or set())
+            if str(token).strip()
+        }
+        if (
+            status_value == STATUS_SKIPPED_NOT_REQUIRED
+            and required_contract
+            and _is_strict_no_trim_operation(operation_normalized)
+            and strict_skip_policy in STRICT_SKIP_BLOCKING_POLICIES
+        ):
+            stale_reason_tokens = {
+                str(token).strip()
+                for token in (payload.get("stale_reasons") or [])
+                if str(token).strip()
+            }
+            if not stale_reason_tokens:
+                payload_contract_issues.append("strict_skip_not_allowed:missing_stale_reason")
+            else:
+                disallowed_reasons = sorted(stale_reason_tokens - strict_skip_allowed_reasons)
+                if disallowed_reasons:
+                    payload_contract_issues.append(
+                        "strict_skip_not_allowed:" + ",".join(disallowed_reasons)
+                    )
+        if payload_contract_issues:
+            status_value = STATUS_FAIL_REQUIRED
             row_contract_error_count += 1
         error_code = _extract_error_code(payload, err)
         if payload_contract_issues and not error_code:
@@ -984,6 +1091,10 @@ def main() -> int:
                 "stale_reasons": list(payload.get("stale_reasons") or []),
                 "evidence_ref": str(payload.get("evidence_ref", "")).strip(),
                 "payload_contract_issues": payload_contract_issues,
+                "monotonic_policy": {
+                    "strict_skip_policy": strict_skip_policy,
+                    "strict_skip_allowed_reasons": sorted(strict_skip_allowed_reasons),
+                },
                 "payload": payload,
                 "stderr_tail": (err.splitlines()[-1] if err else ""),
             }
@@ -1045,6 +1156,7 @@ def main() -> int:
         "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
         "gate_profile_requirement_count": len(requirement_keys),
         "gate_profile_requirement_keys": list(requirement_keys),
+        "monotonic_policy_file": str(monotonic_policy_file),
         "mapping_errors": mapping_errors,
         "missing_targets": missing_targets,
         "results": result_rows,
