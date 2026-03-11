@@ -150,13 +150,13 @@ Canonical root:
 
 Core evidence files:
 
-1. `PREDEV_MIN_ANCHOR.json`
-2. `v163_state_gap_summary.json`
-3. `EVIDENCE_MANIFEST.v163-predev-round31.json`
+1. `activity/evidence/v163-predev/2026-03-10/PREDEV_MIN_ANCHOR.json`
+2. `activity/evidence/v163-predev/2026-03-10/v163_state_gap_summary.json`
+3. `activity/evidence/v163-predev/2026-03-10/EVIDENCE_MANIFEST.v163-predev-round31.json`
 
 Replay rule:
 
-1. Use `PREDEV_MIN_ANCHOR.json` as first hop.
+1. Use `activity/evidence/v163-predev/2026-03-10/PREDEV_MIN_ANCHOR.json` as first hop.
 2. Expand to full artifact set through manifest records (do not duplicate file lists in review prose).
 
 ### 8.3 Measured pre-dev state (machine extracted)
