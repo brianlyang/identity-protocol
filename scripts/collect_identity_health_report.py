@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from actor_session_common import load_actor_binding_store, resolve_actor_id
 
 
 DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
@@ -75,6 +78,16 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
         ],
     ),
     (
+        "headstamp_recurrence_closure",
+        [
+            "python3",
+            "scripts/validate_headstamp_recurrence_closure.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
         "semantic_routing_guard",
         [
             "python3",
@@ -125,6 +138,16 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
         ],
     ),
     (
+        "outlet_matrix",
+        [
+            "python3",
+            "scripts/validate_outlet_matrix.py",
+            "--operation",
+            "scan",
+            "--json-only",
+        ],
+    ),
+    (
         "protocol_baseline_freshness",
         [
             "python3",
@@ -151,6 +174,22 @@ DEFAULT_CHECKS: list[tuple[str, list[str]]] = [
     ("ci_enforcement", ["python3", "scripts/validate_identity_ci_enforcement.py"]),
 ]
 
+OPERATION_AWARE_CHECKS: set[str] = {
+    "actor_session_binding",
+    "implicit_switch_guard",
+    "cross_actor_isolation",
+    "session_refresh_status",
+    "headstamp_recurrence_closure",
+    "semantic_routing_guard",
+    "vendor_namespace_separation",
+    "protocol_feedback_sidecar",
+    "writeback_continuity",
+    "post_execution_mandatory",
+    "outlet_matrix",
+    "protocol_version_alignment",
+}
+STRICT_SESSION_BOUND_OPERATIONS = {"validate", "readiness", "e2e", "ci", "three-plane"}
+
 SUGGESTIONS = {
     "scope_resolution": "Run `identity_creator heal --identity-id <id> --apply` to arbitrate duplicate paths and lock canonical scope.",
     "scope_isolation": "Check for cross-identity/shared pack paths, then run scan/adopt/lock.",
@@ -170,11 +209,13 @@ SUGGESTIONS = {
     "cross_actor_isolation": "Run `validate_cross_actor_isolation --operation validate` and eliminate cross-actor identity contamination before closure.",
     "pointer_drift_guard": "Run `validate_identity_session_pointer_consistency --require-mirror` and fix canonical/mirror pointer drift.",
     "session_refresh_status": "Run refresh_identity_session_status and repair actor binding/session pointer drift before re-validating health.",
+    "headstamp_recurrence_closure": "Run `validate_headstamp_recurrence_closure --operation validate --actor-id <actor> --session-id <run:...>` and enforce governed final emission (compose + send-time gate + canonical blocker receipt).",
     "semantic_routing_guard": "Add semantic_routing_guard_contract_v1 evidence and ensure intent_domain/intent_confidence/classifier_reason are present in feedback batches.",
     "vendor_namespace_separation": "Split protocol feedback artifacts into protocol-vendor-intel and business-partner-intel namespaces; eliminate legacy vendor-intel default writes.",
     "protocol_feedback_sidecar": "Align protocol_feedback_sidecar_contract_v1 (default non-blocking + auditable P0 escalation); resolve blocking IP-WRB/IP-SEM violations before strict gates.",
     "writeback_continuity": "Regenerate update execution report and ensure writeback_mode/degrade_reason/risk_level/next_recovery_action satisfy continuity contract.",
     "post_execution_mandatory": "Ensure post-execution mandatory fields and recovery actions are complete in execution report; rerun update and validate.",
+    "outlet_matrix": "Run `validate_outlet_matrix --operation validate --force-required --report <execution_report>` and fix final_emit_governed / tool_choice_required / schema passthrough before release promotion.",
     "protocol_baseline_freshness": "Run identity_creator update to regenerate execution report on current protocol baseline commit.",
     "protocol_version_alignment": "Run identity_creator update (or refresh execution report) and resolve prompt/binding tuple mismatches before release closure.",
     "experience_feedback_governance": "Refresh feedback sample/log linkage for target identity only.",
@@ -189,6 +230,151 @@ ACTOR_RISK_FIELDS = (
     "implicit_switch_guard",
     "pointer_drift_guard",
 )
+UPGRADE_TRIGGER_CHECKS = {
+    "update_lifecycle",
+    "install_safety",
+    "install_provenance",
+    "session_refresh_status",
+    "headstamp_recurrence_closure",
+    "writeback_continuity",
+    "post_execution_mandatory",
+    "outlet_matrix",
+    "protocol_baseline_freshness",
+    "protocol_version_alignment",
+    "experience_feedback_governance",
+    "capability_arbitration",
+}
+UPGRADE_TRIGGER_CODE_PREFIXES = (
+    "IP-WRB-",
+    "IP-PBL-",
+    "IP-PVA-",
+    "IP-UPG-",
+    "IP-OUTLET-",
+)
+
+
+def _build_self_upgrade_plan(
+    *,
+    identity_id: str,
+    catalog: str,
+    repo_catalog: str,
+    actor_id: str,
+    out_dir: str,
+    checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    trigger_rows: list[dict[str, str]] = []
+    trigger_codes: list[str] = []
+
+    for row in checks:
+        name = str(row.get("name", "")).strip()
+        status = str(row.get("status", "")).strip().upper()
+        error_code = str(row.get("error_code", "")).strip()
+        is_trigger_name = name in UPGRADE_TRIGGER_CHECKS
+        is_trigger_code = bool(error_code) and any(error_code.startswith(p) for p in UPGRADE_TRIGGER_CODE_PREFIXES)
+        if status in {"FAIL", "WARN"} and (is_trigger_name or is_trigger_code):
+            trigger_rows.append(
+                {
+                    "check": name,
+                    "status": status,
+                    "error_code": error_code,
+                }
+            )
+            if error_code:
+                trigger_codes.append(error_code)
+
+    dedup_codes = sorted({c for c in trigger_codes if c})
+    if not trigger_rows:
+        return {
+            "upgrade_required": False,
+            "plan_status": "NOT_REQUIRED",
+            "trigger_checks": [],
+            "trigger_error_codes": [],
+            "upgrade_report_dir": "",
+            "commands": [],
+            "notes": ["No upgrade-triggering health failures/warnings detected."],
+        }
+
+    actor_hint = actor_id.strip() or "${CODEX_ACTOR_ID:-assistant:codex}"
+    session_hint = "${CODEX_SESSION_ID:-}"
+    upgrade_report_dir = str((Path(out_dir).expanduser().resolve() / "upgrade-reports" / identity_id).resolve())
+    catalog_path = str(Path(catalog).expanduser().resolve())
+    identity_home = str(Path(catalog_path).parent)
+    codex_home = str(Path(identity_home).parent)
+    latest_expr = f"$(ls -t {upgrade_report_dir}/identity-upgrade-exec-{identity_id}-*.json 2>/dev/null | head -n 1)"
+
+    commands = [
+        f"export IDENTITY_CATALOG={catalog_path}",
+        f"export IDENTITY_HOME={identity_home}",
+        f"export CODEX_HOME={codex_home}",
+        'export IDENTITY_PROTOCOL_HOME="${IDENTITY_PROTOCOL_HOME:-$PWD}"',
+        (
+            "python3 scripts/identity_creator.py update "
+            f"--identity-id {identity_id} "
+            f"--catalog {catalog_path} "
+            f"--repo-catalog {repo_catalog} "
+            f"--actor-id {actor_hint} "
+            f"--session-id {session_hint} "
+            "--mode review-required "
+            "--baseline-policy strict "
+            f"--out-dir {upgrade_report_dir}"
+        ),
+        f"LATEST_REPORT={latest_expr}",
+        (
+            "python3 scripts/validate_writeback_continuity.py "
+            f"--identity-id {identity_id} "
+            f"--catalog {catalog_path} "
+            f"--repo-catalog {repo_catalog} "
+            '--report "$LATEST_REPORT" '
+            "--operation validate --json-only"
+        ),
+        (
+            "python3 scripts/validate_post_execution_mandatory.py "
+            f"--identity-id {identity_id} "
+            f"--catalog {catalog_path} "
+            f"--repo-catalog {repo_catalog} "
+            '--report "$LATEST_REPORT" '
+            "--operation validate --json-only"
+        ),
+        (
+            "python3 scripts/validate_outlet_matrix.py "
+            f"--identity-id {identity_id} "
+            f"--catalog {catalog_path} "
+            '--report "$LATEST_REPORT" '
+            "--operation validate --force-required --json-only"
+        ),
+        (
+            "python3 scripts/validate_identity_protocol_version_alignment.py "
+            f"--identity-id {identity_id} "
+            f"--catalog {catalog_path} "
+            f"--repo-catalog {repo_catalog} "
+            '--execution-report "$LATEST_REPORT" '
+            "--operation validate --alignment-policy strict --json-only"
+        ),
+        (
+            "python3 scripts/collect_identity_health_report.py "
+            f"--identity-id {identity_id} "
+            f"--catalog {catalog_path} "
+            f"--repo-catalog {repo_catalog} "
+            f"--actor-id {actor_hint} "
+            f"--session-id {session_hint} "
+            "--operation validate "
+            '--execution-report "$LATEST_REPORT" '
+            f"--out-dir {out_dir} --enforce-pass"
+        ),
+    ]
+
+    return {
+        "upgrade_required": True,
+        "plan_status": "ACTION_REQUIRED",
+        "trigger_checks": trigger_rows,
+        "trigger_error_codes": dedup_codes,
+        "upgrade_report_dir": upgrade_report_dir,
+        "commands": commands,
+        "notes": [
+            "Health report detected upgrade-triggering contracts (writeback/post-execution/baseline/alignment family).",
+            "Run commands sequentially in protocol repo root; instance owns migration/repair, protocol only validates/rejects.",
+        ],
+    }
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -213,6 +399,38 @@ def _override_operation(cmd: list[str], operation: str) -> list[str]:
             return out
     out.extend(["--operation", operation])
     return out
+
+
+def _resolve_actor_session_id(
+    *,
+    catalog: str,
+    identity_id: str,
+    actor_id: str,
+    explicit_session_id: str,
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if explicit:
+        return explicit, "explicit_session_id"
+    actor = str(actor_id or "").strip()
+    if not actor:
+        return "", "actor_missing"
+    try:
+        store = load_actor_binding_store(Path(catalog).expanduser().resolve(), actor)
+    except Exception:
+        return "", "actor_binding_store_unavailable"
+    bindings = [x for x in (store.get("bindings") or []) if isinstance(x, dict)]
+    scoped = [
+        x
+        for x in bindings
+        if str(x.get("identity_id", "")).strip() == str(identity_id or "").strip()
+        and str(x.get("session_id", "")).strip()
+    ]
+    if not scoped:
+        return "", "actor_binding_identity_missing"
+    session_ids = sorted({str(x.get("session_id", "")).strip() for x in scoped if str(x.get("session_id", "")).strip()})
+    if len(session_ids) == 1:
+        return session_ids[0], "actor_binding_identity"
+    return "", "actor_binding_identity_ambiguous"
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
@@ -249,18 +467,39 @@ def main() -> int:
     )
     ap.add_argument("--execution-report", default="")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for strict actor-bound checks")
     ap.add_argument("--out-dir", default="/tmp/identity-health-reports")
     ap.add_argument("--enforce-pass", action="store_true", help="return non-zero if any check fails")
     args = ap.parse_args()
 
-    catalog = args.catalog.strip() or str((Path.home() / ".codex" / "identity" / "catalog.local.yaml").resolve())
+    catalog = (
+        args.catalog.strip()
+        or str(os.environ.get("IDENTITY_CATALOG", "")).strip()
+        or str((Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve())
+    )
     execution_report = str(args.execution_report or "").strip()
-    actor_id = str(args.actor_id or "").strip()
+    actor_id_raw = str(args.actor_id or "").strip()
+    actor_id = resolve_actor_id(actor_id_raw) if actor_id_raw else ""
+    session_id, session_id_source = _resolve_actor_session_id(
+        catalog=catalog,
+        identity_id=args.identity_id,
+        actor_id=actor_id,
+        explicit_session_id=str(args.session_id or "").strip(),
+    )
+    strict_session_bound = str(args.operation or "").strip().lower() in STRICT_SESSION_BOUND_OPERATIONS
+    if strict_session_bound and actor_id and not session_id:
+        print(
+            "[FAIL] IP-ASB-SESSION-ENTRY-001 strict health requires actor-session binding context "
+            f"(actor_id={actor_id}, identity_id={args.identity_id}, session_source={session_id_source})"
+        )
+        print("[HINT] pass --session-id <run:...> or refresh actor binding for the target identity.")
+        return 1
 
     checks: list[dict[str, Any]] = []
     for name, base in DEFAULT_CHECKS:
         cmd = [*base, "--identity-id", args.identity_id]
-        cmd = _override_operation(cmd, args.operation if name not in {"state_consistency"} else "")
+        if name in OPERATION_AWARE_CHECKS:
+            cmd = _override_operation(cmd, args.operation)
         if name == "state_consistency":
             cmd = [*base, "--catalog", catalog]
         elif name in {"protocol_baseline_freshness", "protocol_version_alignment"}:
@@ -277,6 +516,12 @@ def main() -> int:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
             if execution_report:
                 cmd += ["--report", execution_report]
+        elif name == "outlet_matrix":
+            cmd += ["--catalog", catalog]
+            if execution_report:
+                cmd += ["--report", execution_report]
+            if args.operation in {"validate", "readiness", "e2e", "ci", "three-plane"}:
+                cmd += ["--force-required"]
         elif name in {"scope_resolution", "scope_isolation", "scope_persistence"}:
             cmd += ["--catalog", catalog, "--repo-catalog", args.repo_catalog]
             if args.scope:
@@ -288,10 +533,14 @@ def main() -> int:
                 cmd += ["--execution-report", execution_report]
             if actor_id:
                 cmd += ["--actor-id", actor_id]
-        if name == "actor_session_binding" and actor_id:
+        if name in {"actor_session_binding", "headstamp_recurrence_closure"} and actor_id:
             cmd += ["--actor-id", actor_id]
+        if name in {"actor_session_binding", "headstamp_recurrence_closure"} and session_id:
+            cmd += ["--session-id", session_id]
         if name == "pointer_drift_guard" and actor_id:
             cmd += ["--actor-id", actor_id]
+        if name == "pointer_drift_guard" and session_id:
+            cmd += ["--session-id", session_id]
 
         rc, out, err = _run(cmd)
         status = "PASS" if rc == 0 else "FAIL"
@@ -373,6 +622,22 @@ def main() -> int:
             post_exec_code = str(payload.get("error_code", "")).strip()
             if post_exec_code:
                 error_code = post_exec_code
+        elif name == "outlet_matrix":
+            outlet_status = str(payload.get("outlet_matrix_status", "")).strip().upper()
+            if outlet_status == "PASS_REQUIRED":
+                status = "PASS"
+            elif outlet_status == "SKIPPED_NOT_REQUIRED":
+                if args.operation in {"validate", "readiness", "e2e", "ci", "three-plane"}:
+                    status = "WARN"
+                else:
+                    status = "PASS"
+            elif outlet_status == "WARN_NON_BLOCKING":
+                status = "WARN"
+            elif outlet_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            outlet_code = str(payload.get("error_code", "")).strip()
+            if outlet_code:
+                error_code = outlet_code
         elif name == "actor_session_binding":
             asb_status = str(payload.get("actor_binding_status", "")).strip().upper()
             if asb_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
@@ -406,6 +671,20 @@ def main() -> int:
             x_code = str(payload.get("error_code", "")).strip()
             if x_code:
                 error_code = x_code
+        elif name == "headstamp_recurrence_closure":
+            h_status = str(payload.get("headstamp_recurrence_closure_status", "")).strip().upper()
+            if h_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+                status = "PASS"
+            elif h_status == "WARN_NON_BLOCKING":
+                status = "WARN"
+            elif h_status == "FAIL_REQUIRED":
+                status = "FAIL"
+            h_code = str(payload.get("error_code", "")).strip()
+            if h_code:
+                error_code = h_code
+
+        if status == "PASS":
+            error_code = ""
 
         suggestion = "" if status == "PASS" else SUGGESTIONS.get(name, "Review validator output and fix failing contract fields.")
         checks.append(
@@ -478,6 +757,14 @@ def main() -> int:
     ) if actor_risk_required_count else 0.0
     actor_risk_profile_complete = actor_risk_coverage_rate >= 100.0
 
+    outlet_payload = by_name.get("outlet_matrix", {}).get("payload")
+    if not isinstance(outlet_payload, dict):
+        outlet_payload = {}
+    final_emit_only_mode_status = str(outlet_payload.get("outlet_matrix_status", "")).strip().upper()
+    final_emit_only_mode_enforced = bool(outlet_payload.get("governed_outlet_enforced", False))
+    final_emit_contract_status = str(outlet_payload.get("final_emit_contract_status", "")).strip().upper()
+    final_emit_only_mode_required = args.operation in {"validate", "readiness", "e2e", "ci", "three-plane"}
+
     if not actor_risk_profile_complete:
         failed.append(
             {
@@ -494,6 +781,15 @@ def main() -> int:
         overall = "WARN"
     else:
         overall = "PASS"
+
+    self_upgrade_plan = _build_self_upgrade_plan(
+        identity_id=args.identity_id,
+        catalog=catalog,
+        repo_catalog=args.repo_catalog,
+        actor_id=actor_id,
+        out_dir=args.out_dir,
+        checks=checks,
+    )
     now = datetime.now(timezone.utc)
     report = {
         "report_id": f"identity-health-{args.identity_id}-{int(now.timestamp())}",
@@ -504,6 +800,9 @@ def main() -> int:
         "operation": args.operation,
         "execution_report_ref": execution_report,
         "report_binding_mode": "explicit_report" if execution_report else "latest_report",
+        "actor_id": actor_id,
+        "session_id": session_id,
+        "session_id_source": session_id_source,
         "overall_status": overall,
         "warning_count": len(warns),
         "failed_count": len(failed),
@@ -515,6 +814,10 @@ def main() -> int:
         "actor_risk_present_count": actor_risk_present_count,
         "actor_risk_coverage_rate": actor_risk_coverage_rate,
         "actor_risk_profile_complete": actor_risk_profile_complete,
+        "final_emit_only_mode_status": final_emit_only_mode_status,
+        "final_emit_only_mode_enforced": final_emit_only_mode_enforced,
+        "final_emit_only_mode_required": final_emit_only_mode_required,
+        "final_emit_contract_status": final_emit_contract_status,
         "checks": checks,
         "recommendations": [
             {
@@ -526,6 +829,7 @@ def main() -> int:
             for c in checks
             if str(c.get("status", "")).upper() in {"FAIL", "WARN"}
         ],
+        "self_upgrade_plan": self_upgrade_plan,
     }
 
     out_dir = Path(args.out_dir).expanduser().resolve()
@@ -542,6 +846,17 @@ def main() -> int:
     if warns:
         for c in warns:
             print(f"- warn:{c['name']} -> {c['suggestion']}")
+
+    if bool(self_upgrade_plan.get("upgrade_required", False)):
+        print("[UPGRADE] instance self-upgrade plan is required before next health pass.")
+        print(f"upgrade_plan_status={self_upgrade_plan.get('plan_status')}")
+        for item in list(self_upgrade_plan.get("trigger_checks") or []):
+            print(
+                f"- trigger:{item.get('check','')} status={item.get('status','')} "
+                f"error_code={item.get('error_code','')}"
+            )
+        for cmd in list(self_upgrade_plan.get("commands") or []):
+            print(f"$ {cmd}")
 
     if args.enforce_pass and failed:
         return 2

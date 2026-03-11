@@ -1,0 +1,56 @@
+[OK] runtime mode guard passed: identity=base-repo-audit-expert-v3 mode=project catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml pack=/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3 scope=USER
+[OK] identity home/catalog alignment gate passed: identity=base-repo-audit-expert-v3 identity_home=/Users/yangxi/claude/codex_project/weixinstore/.identity catalog_parent=/Users/yangxi/claude/codex_project/weixinstore/.identity
+{
+  "identity_id": "base-repo-audit-expert-v3",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "identity_home": "/Users/yangxi/claude/codex_project/weixinstore/.identity",
+  "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3",
+  "path_scope": "runtime_mutation",
+  "path_governance_status": "PASS_REQUIRED",
+  "path_error_codes": [],
+  "canonicalization_ref": "Path.resolve(strict=False)",
+  "identity_home_expected": "/Users/yangxi/claude/codex_project/weixinstore/.identity",
+  "identity_home_source": "explicit",
+  "stale_reasons": []
+}
+[OK] fixture/runtime boundary gate passed: identity=base-repo-audit-expert-v3 operation=update fixture=False
+{
+  "identity_id": "base-repo-audit-expert-v3",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "resolved_pack_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3",
+  "profile": "runtime",
+  "runtime_mode": "local_only",
+  "status": "active",
+  "operation": "update",
+  "path_scope": "runtime_mutation",
+  "path_governance_status": "PASS_REQUIRED",
+  "path_error_codes": [],
+  "canonicalization_ref": "Path.resolve(strict=False)",
+  "allow_fixture_runtime": false,
+  "fixture_audit_receipt": "",
+  "stale_reasons": [],
+  "fixture_receipt_fields": {}
+}
+[FAIL] IP-ASB-201 actor session binding validation failed: actor=assistant:codex target=base-repo-audit-expert-v3
+{
+  "identity_id": "base-repo-audit-expert-v3",
+  "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "actor_id": "assistant:codex",
+  "operation": "update",
+  "actor_session_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json",
+  "bound_identity_id": "",
+  "bound_session_id": "",
+  "binding_key_mode": "actor_id+identity_id+session_id",
+  "session_entry_count": 32,
+  "catalog_identity_status": "active",
+  "actor_binding_status": "FAIL_REQUIRED",
+  "error_code": "IP-ASB-201",
+  "stale_reasons": [
+    "target_identity_binding_missing_for_actor"
+  ]
+}
+$ python3 scripts/validate_identity_runtime_mode_guard.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation update --scope USER
+$ python3 scripts/validate_identity_home_catalog_alignment.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --identity-home /Users/yangxi/claude/codex_project/weixinstore/.identity
+$ python3 scripts/validate_fixture_runtime_boundary.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation update
+$ python3 scripts/validate_actor_session_binding.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --actor-id assistant:codex --session-id run:identity-upgrade-exec-base-repo-audit-expert-v3-ipmmrun002fix-1773060528 --operation update
+[FAIL] actor-bound unified entry guard failed; activation/switch acknowledgement may be required before continuing.

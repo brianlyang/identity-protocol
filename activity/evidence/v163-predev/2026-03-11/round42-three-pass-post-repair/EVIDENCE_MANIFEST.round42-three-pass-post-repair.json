@@ -1,0 +1,183 @@
+{
+  "manifest_id": "EVIDENCE_MANIFEST.round42-three-pass-post-repair",
+  "stream": "v163-predev",
+  "generated_at_utc": "2026-03-11T01:15:40Z",
+  "evidence_records": [
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_control_plane_invariants.json",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:04:27Z",
+      "timestamp_utc": "2026-03-11T01:04:27Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_doc_evidence_persistence.json",
+      "sha256": "d699557b9d85ae600e8bcf8f16ec835c0ed3aafccb8cc0aa1dec31c91120af00",
+      "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:05:38Z",
+      "timestamp_utc": "2026-03-11T01:05:38Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_docs_command_contract_check.log",
+      "sha256": "296e686734bc0f037e0ae90b0a3454016df7e2f9cd37f096e5cd45cf404ed3cc",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:05:38Z",
+      "timestamp_utc": "2026-03-11T01:05:38Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_legacy_doc_coverage.json",
+      "sha256": "3be88b113d95de83ecc7c8d6971762ef1f01be4cc2e5b6593297ebce1432bf70",
+      "command": "python3 <inline> legacy doc coverage scan",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:07:05Z",
+      "timestamp_utc": "2026-03-11T01:07:05Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_ssot_source.log",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:05:38Z",
+      "timestamp_utc": "2026-03-11T01:05:38Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_status_sync.json",
+      "sha256": "c54f892ac97f34b7ffb0d944887eb2a0f0c7f54568681e8a1c84474d418cd149",
+      "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:07:05Z",
+      "timestamp_utc": "2026-03-11T01:07:05Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter1_surface_drift.json",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:04:27Z",
+      "timestamp_utc": "2026-03-11T01:04:27Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_control_plane_invariants.json",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:07:07Z",
+      "timestamp_utc": "2026-03-11T01:07:07Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_doc_evidence_persistence.json",
+      "sha256": "d699557b9d85ae600e8bcf8f16ec835c0ed3aafccb8cc0aa1dec31c91120af00",
+      "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:08:22Z",
+      "timestamp_utc": "2026-03-11T01:08:22Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_docs_command_contract_check.log",
+      "sha256": "296e686734bc0f037e0ae90b0a3454016df7e2f9cd37f096e5cd45cf404ed3cc",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:08:21Z",
+      "timestamp_utc": "2026-03-11T01:08:21Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_legacy_doc_coverage.json",
+      "sha256": "1b330197d76a74808a32397f25acc54a477d42554d5d3032fd94d4247f5ee9b5",
+      "command": "python3 <inline> legacy doc coverage scan",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:09:32Z",
+      "timestamp_utc": "2026-03-11T01:09:32Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_ssot_source.log",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:08:22Z",
+      "timestamp_utc": "2026-03-11T01:08:22Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_status_sync.json",
+      "sha256": "c54f892ac97f34b7ffb0d944887eb2a0f0c7f54568681e8a1c84474d418cd149",
+      "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:09:32Z",
+      "timestamp_utc": "2026-03-11T01:09:32Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter2_surface_drift.json",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:07:07Z",
+      "timestamp_utc": "2026-03-11T01:07:07Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_control_plane_invariants.json",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:09:34Z",
+      "timestamp_utc": "2026-03-11T01:09:34Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_doc_evidence_persistence.json",
+      "sha256": "d699557b9d85ae600e8bcf8f16ec835c0ed3aafccb8cc0aa1dec31c91120af00",
+      "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:10:47Z",
+      "timestamp_utc": "2026-03-11T01:10:47Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_docs_command_contract_check.log",
+      "sha256": "296e686734bc0f037e0ae90b0a3454016df7e2f9cd37f096e5cd45cf404ed3cc",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:10:47Z",
+      "timestamp_utc": "2026-03-11T01:10:47Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_legacy_doc_coverage.json",
+      "sha256": "95ada49e218410f90a8f479a7e2669996edff34cc05f1cc3da2eb6235a7fcc5e",
+      "command": "python3 <inline> legacy doc coverage scan",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:12:03Z",
+      "timestamp_utc": "2026-03-11T01:12:03Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_ssot_source.log",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:10:47Z",
+      "timestamp_utc": "2026-03-11T01:10:47Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_status_sync.json",
+      "sha256": "c54f892ac97f34b7ffb0d944887eb2a0f0c7f54568681e8a1c84474d418cd149",
+      "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:12:03Z",
+      "timestamp_utc": "2026-03-11T01:12:03Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/iter3_surface_drift.json",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:09:34Z",
+      "timestamp_utc": "2026-03-11T01:09:34Z"
+    },
+    {
+      "mirror_path": "activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/round42_iteration_summary.json",
+      "sha256": "54301611ec3662b0b77c13640c9a1a926070eed5ba7a19476f0384ba74ef4275",
+      "command": "python3 <inline> round42 summary aggregation",
+      "rc": 0,
+      "timestamp": "2026-03-11T01:12:03Z",
+      "timestamp_utc": "2026-03-11T01:12:03Z"
+    }
+  ]
+}

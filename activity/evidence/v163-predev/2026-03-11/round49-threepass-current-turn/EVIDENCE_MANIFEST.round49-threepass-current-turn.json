@@ -1,0 +1,134 @@
+{
+  "manifest_id": "round49-threepass-current-turn",
+  "generated_at": "2026-03-11T06:07:01Z",
+  "entries": [
+    {
+      "case_id": "iter01_docs_command_contract_check",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_docs_command_contract_check.out",
+      "sha256": "db490d67aaea1e7f0e70c8c210656893030181290a5091e7a430cf82d124a3c1",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:01:24Z"
+    },
+    {
+      "case_id": "iter01_validate_control_plane_invariants",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_control_plane_invariants.out",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:01:26Z"
+    },
+    {
+      "case_id": "iter01_validate_required_gate_surface_drift",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_required_gate_surface_drift.out",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:01:26Z"
+    },
+    {
+      "case_id": "iter01_validate_protocol_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_protocol_ssot_source.out",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:01:26Z"
+    },
+    {
+      "case_id": "iter01_validate_required_contract_coverage_bra",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_required_contract_coverage_bra.out",
+      "sha256": "60cfddf5b6b2e551c2140180931c1e8f8c577551ae2e3f848793212c003652b9",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round49-threepass --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:01:32Z"
+    },
+    {
+      "case_id": "iter02_docs_command_contract_check",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_docs_command_contract_check.out",
+      "sha256": "db490d67aaea1e7f0e70c8c210656893030181290a5091e7a430cf82d124a3c1",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:05:48Z"
+    },
+    {
+      "case_id": "iter02_validate_control_plane_invariants",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_control_plane_invariants.out",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:05:50Z"
+    },
+    {
+      "case_id": "iter02_validate_required_gate_surface_drift",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_required_gate_surface_drift.out",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:05:51Z"
+    },
+    {
+      "case_id": "iter02_validate_protocol_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_protocol_ssot_source.out",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:05:51Z"
+    },
+    {
+      "case_id": "iter02_validate_required_contract_coverage_bra",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_required_contract_coverage_bra.out",
+      "sha256": "05d92e8cbae8c899f7572e386c3d73db3491989d1df30de90615ab7ba980fc5a",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round49-threepass --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:05:58Z"
+    },
+    {
+      "case_id": "iter03_docs_command_contract_check",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_docs_command_contract_check.out",
+      "sha256": "db490d67aaea1e7f0e70c8c210656893030181290a5091e7a430cf82d124a3c1",
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:06:55Z"
+    },
+    {
+      "case_id": "iter03_validate_control_plane_invariants",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_control_plane_invariants.out",
+      "sha256": "1284305b5bf078bd523e2a88e606688b4af3237649f18f8e9ede40fdcd1a087f",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:06:55Z"
+    },
+    {
+      "case_id": "iter03_validate_required_gate_surface_drift",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_required_gate_surface_drift.out",
+      "sha256": "38854c8bdbb69ebff215ed499323290fa8298146112199a37e60145fa90950a2",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:06:56Z"
+    },
+    {
+      "case_id": "iter03_validate_protocol_ssot_source",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_protocol_ssot_source.out",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:06:56Z"
+    },
+    {
+      "case_id": "iter03_validate_required_contract_coverage_bra",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_required_contract_coverage_bra.out",
+      "sha256": "eaba4998d6ff9bdf9a752ec9e696a2ac4495b81c77d3356564f3c97ac32cd55a",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round49-threepass --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:07:01Z"
+    },
+    {
+      "case_id": "round49_threepass_summary",
+      "path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/round49_threepass_summary.json",
+      "sha256": "bfa0628d7277e55affddbc37dad79958316c065daae6f60ddd8684a31c528642",
+      "command": "python3 <round49 summary aggregation>",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T06:07:01Z"
+    }
+  ]
+}

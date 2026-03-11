@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_PASS_WITH_BLOCKERS = "PASS_WITH_BLOCKERS"
+
+
+@dataclass(frozen=True)
+class CheckSpec:
+    name: str
+    command: tuple[str, ...]
+    status_key: str | None
+
+
+CHECKS: tuple[CheckSpec, ...] = (
+    CheckSpec(
+        name="control_plane_budget",
+        command=("python3", "scripts/validate_control_plane_budget.py", "--json-only"),
+        status_key="control_plane_budget_status",
+    ),
+    CheckSpec(
+        name="control_plane_invariants",
+        command=("python3", "scripts/validate_control_plane_invariants.py", "--json-only"),
+        status_key="control_plane_invariants_status",
+    ),
+    CheckSpec(
+        name="contract_binding_reference_integrity",
+        command=("python3", "scripts/validate_contract_binding_reference_integrity.py", "--json-only"),
+        status_key="contract_binding_reference_integrity_status",
+    ),
+    CheckSpec(
+        name="layer_targeted_gate_profile",
+        command=("python3", "scripts/validate_layer_targeted_gate_profile.py", "--json-only"),
+        status_key="layer_targeted_gate_profile_status",
+    ),
+    CheckSpec(
+        name="required_gate_surface_drift",
+        command=("python3", "scripts/validate_required_gate_surface_drift.py", "--json-only"),
+        status_key="required_gate_surface_drift_status",
+    ),
+    CheckSpec(
+        name="docs_command_contract",
+        command=("python3", "scripts/docs_command_contract_check.py"),
+        status_key=None,
+    ),
+    CheckSpec(
+        name="protocol_ssot_source",
+        command=("python3", "scripts/validate_protocol_ssot_source.py"),
+        status_key=None,
+    ),
+)
+
+
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    try:
+        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return configured_path, "", "current_file_parse_failed"
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _extract_json_blob(text: str) -> dict[str, Any]:
+    raw = (text or "").strip()
+    if not raw:
+        return {}
+    try:
+        obj = json.loads(raw)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        pass
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start < 0 or end <= start:
+        return {}
+    try:
+        obj = json.loads(raw[start : end + 1])
+    except Exception:
+        return {}
+    return obj if isinstance(obj, dict) else {}
+
+
+def _git_head_short(repo_root: Path) -> str:
+    proc = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=str(repo_root),
+        check=False,
+    )
+    if proc.returncode != 0:
+        return ""
+    return (proc.stdout or "").strip()
+
+
+def _run_check(spec: CheckSpec, repo_root: Path) -> dict[str, Any]:
+    proc = subprocess.run(
+        list(spec.command),
+        capture_output=True,
+        text=True,
+        cwd=str(repo_root),
+        check=False,
+    )
+    payload = _extract_json_blob(proc.stdout)
+    status = ""
+    error_code = ""
+    if spec.status_key:
+        status = str(payload.get(spec.status_key, "")).strip()
+        error_code = str(payload.get("error_code", "")).strip()
+    else:
+        status = STATUS_PASS_REQUIRED if proc.returncode == 0 else STATUS_FAIL_REQUIRED
+    if not status:
+        status = STATUS_PASS_REQUIRED if proc.returncode == 0 else STATUS_FAIL_REQUIRED
+    return {
+        "name": spec.name,
+        "command": list(spec.command),
+        "rc": int(proc.returncode),
+        "status": status,
+        "error_code": error_code,
+        "stdout_tail": (proc.stdout or "").strip().splitlines()[-5:],
+        "stderr_tail": (proc.stderr or "").strip().splitlines()[-5:],
+        "payload": payload,
+    }
+
+
+def _derive_overall_status(checks: list[dict[str, Any]]) -> tuple[str, bool, list[str]]:
+    statuses = [str(item.get("status", "")).strip() for item in checks]
+    reasons: list[str] = []
+    if any(s == STATUS_FAIL_REQUIRED for s in statuses):
+        for item in checks:
+            if item.get("status") == STATUS_FAIL_REQUIRED:
+                reasons.append(f"{item.get('name')}:FAIL_REQUIRED")
+        return STATUS_FAIL_REQUIRED, False, reasons
+    if any(s == STATUS_WARN_NON_BLOCKING for s in statuses):
+        for item in checks:
+            if item.get("status") == STATUS_WARN_NON_BLOCKING:
+                reasons.append(f"{item.get('name')}:WARN_NON_BLOCKING")
+        return STATUS_PASS_WITH_BLOCKERS, False, reasons
+    return STATUS_PASS_REQUIRED, True, reasons
+
+
+def build_status(repo_root: Path) -> dict[str, Any]:
+    checks = [_run_check(spec, repo_root) for spec in CHECKS]
+    overall_status, promotion_ready, reasons = _derive_overall_status(checks)
+    status = {
+        "schema_version": 1,
+        "status_version": "v1.6",
+        "generated_at_utc": _utc_now(),
+        "git_head_short": _git_head_short(repo_root),
+        "machine_promotion_policy": {
+            "promotion_ready_requires": [STATUS_PASS_REQUIRED],
+            "blocked_by": [STATUS_FAIL_REQUIRED, STATUS_PASS_WITH_BLOCKERS],
+            "warnings_non_promotional": [STATUS_WARN_NON_BLOCKING],
+        },
+        "checks": checks,
+        "summary": {
+            "check_count": len(checks),
+            "fail_count": sum(1 for c in checks if c.get("status") == STATUS_FAIL_REQUIRED),
+            "warn_count": sum(1 for c in checks if c.get("status") == STATUS_WARN_NON_BLOCKING),
+            "pass_count": sum(1 for c in checks if c.get("status") == STATUS_PASS_REQUIRED),
+        },
+        "control_plane_status": overall_status,
+        "promotion_ready": promotion_ready,
+        "promotion_block_reasons": reasons,
+    }
+    return status
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Render machine-generated control-plane status artifact.")
+    parser.add_argument("--repo-root", default=".")
+    parser.add_argument(
+        "--status-file",
+        default="identity/protocol/mappings/control-plane-status.current.yaml",
+    )
+    parser.add_argument("--write", action="store_true")
+    parser.add_argument("--json-only", action="store_true")
+    args = parser.parse_args()
+
+    repo_root = Path(args.repo_root).expanduser().resolve()
+    status_entry_file = (repo_root / str(args.status_file)).resolve()
+    status_file, status_active_file, status_alias_error = _resolve_current_yaml_alias(
+        repo_root, str(args.status_file)
+    )
+    if not status_entry_file.exists():
+        print(f"[FAIL] control-plane status entry missing: {status_entry_file}")
+        return 1
+    if status_alias_error:
+        print(f"[FAIL] control-plane status alias resolution failed: {status_alias_error} ({status_active_file})")
+        return 1
+    payload = build_status(repo_root)
+    payload["status_file_entry"] = str(status_entry_file)
+    payload["status_file"] = str(status_file)
+    payload["status_file_active_file"] = status_active_file
+    payload["status_file_alias_error"] = status_alias_error
+
+    if args.write:
+        status_file.parent.mkdir(parents=True, exist_ok=True)
+        status_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    if args.json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(
+            f"[CONTROL-PLANE-STATUS] status={payload.get('control_plane_status')} "
+            f"promotion_ready={payload.get('promotion_ready')} "
+            f"fails={payload.get('summary', {}).get('fail_count', 0)} "
+            f"warns={payload.get('summary', {}).get('warn_count', 0)}"
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0 if payload.get("control_plane_status") != STATUS_FAIL_REQUIRED else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

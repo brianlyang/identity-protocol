@@ -21,6 +21,7 @@ ERR_REFRESH_BASELINE = "IP-ASB-RFS-004"
 
 STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
+BASELINE_MODE_TOLERANT_STRICT_OPERATIONS = {"validate", "readiness", "e2e"}
 
 REQUIRED_FIELDS = (
     "identity_id",
@@ -276,6 +277,13 @@ def main() -> int:
 
     operation = str(args.operation or "validate").strip().lower()
     inspection_mode = operation in INSPECTION_OPERATIONS
+    baseline_error_code = str(payload.get("baseline_error_code", "")).strip()
+    baseline_mode_violation = baseline_error_code in {"IP-PBL-005", "IP-PBL-006"}
+    baseline_mode_relaxed_non_mutating = (
+        operation in BASELINE_MODE_TOLERANT_STRICT_OPERATIONS
+        and not str(args.execution_report or "").strip()
+        and baseline_mode_violation
+    )
 
     error_code = ""
     status = STATUS_PASS_REQUIRED
@@ -298,7 +306,12 @@ def main() -> int:
 
     if not error_code and baseline_status == "FAIL":
         error_code = ERR_REFRESH_BASELINE
-        status = STATUS_WARN_NON_BLOCKING if inspection_mode else STATUS_FAIL_REQUIRED
+        if inspection_mode or baseline_mode_relaxed_non_mutating:
+            status = STATUS_WARN_NON_BLOCKING
+            if baseline_mode_relaxed_non_mutating:
+                stale_reasons.append("baseline_mode_violation_relaxed_for_non_mutating_operation")
+        else:
+            status = STATUS_FAIL_REQUIRED
 
     if (
         not error_code
@@ -308,8 +321,12 @@ def main() -> int:
         and operation in STRICT_OPERATIONS
     ):
         error_code = ERR_REFRESH_BASELINE
-        status = STATUS_FAIL_REQUIRED
-        stale_reasons.append("baseline_reference_mode_not_run_pinned_under_strict")
+        if baseline_mode_relaxed_non_mutating:
+            status = STATUS_WARN_NON_BLOCKING
+            stale_reasons.append("baseline_reference_mode_not_run_pinned_relaxed_for_non_mutating_operation")
+        else:
+            status = STATUS_FAIL_REQUIRED
+            stale_reasons.append("baseline_reference_mode_not_run_pinned_under_strict")
 
     if not error_code and baseline_status == "" and not inspection_mode:
         error_code = ERR_REFRESH_BASELINE

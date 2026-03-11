@@ -1,0 +1,117 @@
+{
+  "stream": "v163-predev",
+  "round": "round49-threepass-current-turn",
+  "generated_at": "2026-03-11T06:07:01Z",
+  "serial_iterations": 3,
+  "iterations": [
+    {
+      "iteration": 1,
+      "checks": [
+        {
+          "name": "docs_command_contract_check",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_docs_command_contract_check.out"
+        },
+        {
+          "name": "validate_control_plane_invariants",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_control_plane_invariants.out"
+        },
+        {
+          "name": "validate_required_gate_surface_drift",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_required_gate_surface_drift.out"
+        },
+        {
+          "name": "validate_protocol_ssot_source",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_protocol_ssot_source.out"
+        },
+        {
+          "name": "validate_required_contract_coverage_bra",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter01_validate_required_contract_coverage_bra.out"
+        }
+      ],
+      "all_pass": true
+    },
+    {
+      "iteration": 2,
+      "checks": [
+        {
+          "name": "docs_command_contract_check",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_docs_command_contract_check.out"
+        },
+        {
+          "name": "validate_control_plane_invariants",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_control_plane_invariants.out"
+        },
+        {
+          "name": "validate_required_gate_surface_drift",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_required_gate_surface_drift.out"
+        },
+        {
+          "name": "validate_protocol_ssot_source",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_protocol_ssot_source.out"
+        },
+        {
+          "name": "validate_required_contract_coverage_bra",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter02_validate_required_contract_coverage_bra.out"
+        }
+      ],
+      "all_pass": true
+    },
+    {
+      "iteration": 3,
+      "checks": [
+        {
+          "name": "docs_command_contract_check",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_docs_command_contract_check.out"
+        },
+        {
+          "name": "validate_control_plane_invariants",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_control_plane_invariants.out"
+        },
+        {
+          "name": "validate_required_gate_surface_drift",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_required_gate_surface_drift.out"
+        },
+        {
+          "name": "validate_protocol_ssot_source",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_protocol_ssot_source.out"
+        },
+        {
+          "name": "validate_required_contract_coverage_bra",
+          "rc": 0,
+          "pass": true,
+          "output_path": "activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/iter03_validate_required_contract_coverage_bra.out"
+        }
+      ],
+      "all_pass": true
+    }
+  ],
+  "all_iterations_pass": true
+}

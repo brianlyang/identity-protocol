@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from runtime_temp_path_common import named_temp_root
+
 ERR_NO_IMPLICIT_SWITCH = "IP-ASB-202"
 STRICT_OPS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPS = {"scan", "three-plane", "inspection"}
@@ -24,7 +26,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _latest_switch_report(identity_id: str) -> Path | None:
-    root = Path("/tmp/identity-activation-reports")
+    root = named_temp_root("identity-activation-reports")
     if not root.exists():
         return None
     candidates = sorted(root.glob(f"identity-activation-switch-{identity_id}-*.json"), key=lambda p: p.stat().st_mtime)

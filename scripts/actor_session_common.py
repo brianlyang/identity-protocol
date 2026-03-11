@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA_VERSION = "actor_session_multibinding_v1"
-DEFAULT_BINDING_KEY_MODE = "actor_id+session_id"
+DEFAULT_BINDING_KEY_MODE = "actor_id+identity_id+session_id"
+SESSION_ONLY_BINDING_KEY_MODE = "actor_id+session_id"
 LEGACY_BINDING_KEY_MODE = "legacy_single_object"
 
 
@@ -116,6 +117,16 @@ def _entry_sort_key(row: dict[str, Any]) -> tuple[int, str]:
     return (version, updated)
 
 
+def _binding_entry_key(row: dict[str, Any], *, key_mode: str) -> str:
+    sid = str(row.get("session_id", "")).strip()
+    identity = str(row.get("identity_id", "")).strip()
+    mode = str(key_mode or "").strip() or DEFAULT_BINDING_KEY_MODE
+    if mode == SESSION_ONLY_BINDING_KEY_MODE:
+        return sid
+    # default: actor + identity + session tuple
+    return f"{identity}::{sid}"
+
+
 def normalize_actor_binding_store(
     *,
     data: dict[str, Any] | None,
@@ -156,13 +167,19 @@ def normalize_actor_binding_store(
 
     dedup: dict[str, dict[str, Any]] = {}
     for row in normalized:
-        sid = str(row.get("session_id", "")).strip()
-        if not sid:
+        key = _binding_entry_key(row, key_mode=key_mode)
+        if not key or key.endswith("::"):
             continue
-        old = dedup.get(sid)
+        old = dedup.get(key)
         if old is None or _entry_sort_key(row) >= _entry_sort_key(old):
-            dedup[sid] = row
-    bindings = sorted(dedup.values(), key=lambda x: str(x.get("session_id", "")))
+            dedup[key] = row
+    bindings = sorted(
+        dedup.values(),
+        key=lambda x: (
+            str(x.get("identity_id", "")).strip(),
+            str(x.get("session_id", "")).strip(),
+        ),
+    )
 
     has_binding_version_field = "binding_version" in payload
     version = _as_int(payload.get("binding_version"))
@@ -232,6 +249,11 @@ def _select_binding(
         candidates = [x for x in candidates if str(x.get("session_id", "")).strip() == session_id]
     if identity_id:
         candidates = [x for x in candidates if str(x.get("identity_id", "")).strip() == identity_id]
+    # actor/session scoped latest binding is ambiguous when identity is omitted and multiple identities are present.
+    if not identity_id:
+        identity_set = {str(x.get("identity_id", "")).strip() for x in candidates if str(x.get("identity_id", "")).strip()}
+        if len(identity_set) > 1:
+            return {}
     if not candidates:
         return {}
     selected = sorted(candidates, key=_entry_sort_key)[-1]

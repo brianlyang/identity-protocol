@@ -39,10 +39,24 @@ def _task(identity: dict[str, Any], identity_id: str) -> dict[str, Any]:
     return _load_json(p)
 
 
-def _materialize(pattern: str, identity_id: str, ts: int) -> Path:
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack_path = str(identity.get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    return Path(pack_path).expanduser().resolve()
+
+
+def _materialize(pattern: str, identity_id: str, ts: int, pack_root: Path | None = None) -> Path:
     p = pattern.replace("<identity-id>", identity_id)
     if "*" in p:
         p = p.replace("*", str(ts))
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if pack_root is not None and p.startswith(local_prefix):
+        return (pack_root / "runtime" / p[len(local_prefix) :]).expanduser()
+    if pack_root is not None and p.startswith("identity/runtime/"):
+        return (pack_root / "runtime" / p[len("identity/runtime/") :]).expanduser()
+    if pack_root is not None and p.startswith("runtime/"):
+        return (pack_root / p).expanduser()
     return Path(p).expanduser()
 
 
@@ -54,6 +68,7 @@ def main() -> int:
     args = ap.parse_args()
 
     identity = _resolve_identity(Path(args.catalog).expanduser().resolve(), args.identity_id)
+    pack_root = _resolve_pack_root(identity)
     task = _task(identity, args.identity_id)
     c = task.get("capability_arbitration_contract") or {}
     pattern = str(c.get("sample_report_path_pattern", "")).strip()
@@ -63,7 +78,7 @@ def main() -> int:
 
     ts = int(datetime.now(timezone.utc).timestamp())
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    out = _materialize(pattern, args.identity_id, ts)
+    out = _materialize(pattern, args.identity_id, ts, pack_root)
 
     payload = {
         "records": [

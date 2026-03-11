@@ -1,0 +1,22 @@
+error_family: IP-RL
+codes:
+  - code: IP-RL-REG-001
+    description: plugin registry row missing or inconsistent with reasoning-loop enforcement validator contract
+  - code: IP-RL-CONF-001
+    description: invalid reasoning enforcement level or malformed reasoning-loop fail-close contract configuration
+  - code: IP-RL-RUN-001
+    description: runtime/learning report missing or does not contain reasoning attempt evidence
+  - code: IP-RL-RUN-002
+    description: reasoning attempt payload missing mandatory fields for current enforcement level
+  - code: IP-RL-RUN-003
+    description: no-target-reached evidence appears while run is marked as completion/done
+  - code: IP-RL-RUN-004
+    description: failed reasoning attempt lacks required next_action instruction
+  - code: IP-RL-RUN-005
+    description: failed attempts reach/exceed escalation threshold without valid escalation signal
+  - code: IP-RL-RUN-006
+    description: strict run-id binding failed because selected runtime proof source (including fallback source) mismatches current run binding
+  - code: IP-RL-RUN-007
+    description: L2/L3 four-track evidence references are missing from run evidence
+  - code: IP-RL-RUN-008
+    description: L3 external-source freshness or reconciliation evidence is missing or non-pass

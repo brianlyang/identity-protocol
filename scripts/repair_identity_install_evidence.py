@@ -40,10 +40,24 @@ def _resolve_task(identity: dict[str, Any], identity_id: str) -> dict[str, Any]:
     return _load_json(p)
 
 
-def _materialize(pattern: str, identity_id: str, ts: int) -> Path:
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack_path = str(identity.get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    return Path(pack_path).expanduser().resolve()
+
+
+def _materialize(pattern: str, identity_id: str, ts: int, pack_root: Path | None = None) -> Path:
     p = pattern.replace("<identity-id>", identity_id)
     if "*" in p:
         p = p.replace("*", str(ts))
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    if pack_root is not None and p.startswith(local_prefix):
+        return (pack_root / "runtime" / p[len(local_prefix) :]).expanduser()
+    if pack_root is not None and p.startswith("identity/runtime/"):
+        return (pack_root / "runtime" / p[len("identity/runtime/") :]).expanduser()
+    if pack_root is not None and p.startswith("runtime/"):
+        return (pack_root / p).expanduser()
     return Path(p).expanduser()
 
 
@@ -57,6 +71,7 @@ def main() -> int:
     catalog = Path(args.catalog).expanduser().resolve()
     identity = _resolve_identity(catalog, args.identity_id)
     task = _resolve_task(identity, args.identity_id)
+    pack_root = _resolve_pack_root(identity)
     contract = task.get("install_safety_contract") or {}
     pattern = str(contract.get("install_report_path_pattern", "")).strip()
     if not pattern:
@@ -65,26 +80,61 @@ def main() -> int:
 
     ts = int(datetime.now(timezone.utc).timestamp())
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    out = _materialize(pattern, args.identity_id, ts)
+    out = _materialize(pattern, args.identity_id, ts, pack_root)
     pack_path = str(identity.get("pack_path", "")).strip()
     payload = {
         "report_id": f"identity-install-{args.identity_id}-repair-{ts}",
         "identity_id": args.identity_id,
         "generated_at": now,
-        "operation": "repair-generated",
+        "operation": "install",
         "conflict_type": "fresh_install",
         "action": "guarded_apply",
         "source_pack": pack_path,
         "target_pack": pack_path,
         "preserved_paths": [pack_path],
         "dry_run": False,
+        "installer_invocation": {
+            "tool": "identity-installer",
+            "entrypoint": "scripts/repair_identity_install_evidence.py",
+            "command": f"python3 scripts/repair_identity_install_evidence.py --identity-id {args.identity_id} --catalog {catalog} --apply",
+        },
     }
 
     if args.apply:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+    provenance = task.get("install_provenance_contract") or {}
+    provenance_pattern = str(provenance.get("report_path_pattern", "")).strip()
+    provenance_ops = [str(x).strip() for x in (provenance.get("operations_required") or []) if str(x).strip()]
+    provenance_paths: list[Path] = []
+    if provenance_pattern and provenance_ops:
+        for idx, op in enumerate(provenance_ops, start=1):
+            op_ts = ts + idx
+            op_time = datetime.fromtimestamp(op_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            op_path = _materialize(provenance_pattern, args.identity_id, op_ts, pack_root)
+            op_payload = {
+                "report_id": f"identity-install-{args.identity_id}-{op}-{op_ts}",
+                "identity_id": args.identity_id,
+                "generated_at": op_time,
+                "operation": op,
+                "conflict_type": "fresh_install",
+                "action": "guarded_apply",
+                "preserved_paths": [pack_path],
+                "installer_invocation": {
+                    "tool": "identity-installer",
+                    "entrypoint": "scripts/repair_identity_install_evidence.py",
+                    "command": f"identity-installer {op} --identity-id {args.identity_id}",
+                },
+            }
+            if args.apply:
+                op_path.parent.mkdir(parents=True, exist_ok=True)
+                op_path.write_text(json.dumps(op_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            provenance_paths.append(op_path)
+
     print(f"[OK] install evidence repair {'applied' if args.apply else 'preview'}: {out}")
+    for p in provenance_paths:
+        print(f"[OK] install provenance evidence {'applied' if args.apply else 'preview'}: {p}")
     return 0
 
 

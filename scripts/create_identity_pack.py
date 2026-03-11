@@ -179,8 +179,27 @@ def _minimal_current_task(identity_id: str, title: str, description: str) -> dic
         },
         "reasoning_loop_contract": {
             "max_attempts_before_escalation": 3,
+            "escalation_requirement_mode": "at_or_exceed",
             "mandatory_fields_per_attempt": ["attempt", "hypothesis", "patch", "expected_effect", "result"],
             "failure_requires_next_action": True,
+            "strict_run_id_binding": True,
+            "runtime_report_selection_mode": "prefer_run_id",
+            "escalation_signal_fields": [
+                "route_switch_triggered",
+                "human_collaboration_triggered",
+                "escalation_triggered",
+                "route_switch_ref",
+                "human_collaboration_ref",
+                "escalation_ref",
+                "next_action",
+            ],
+            "escalation_signal_values": ["true", "triggered", "escalate", "route_switch", "human_collaboration", "handoff"],
+            "escalation_signal_accept_nonempty_ref": True,
+            "escalation_signal_nonempty_fields": [
+                "route_switch_ref",
+                "human_collaboration_ref",
+                "escalation_ref",
+            ],
         },
         "routing_contract": {
             "auto_route_enabled": True,
@@ -385,8 +404,724 @@ def _protocol_feedback_sidecar_contract_skeleton() -> dict:
     }
 
 
+def _gated_switch_guard_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "enforcement_validator": "scripts/validate_gated_switch_guard.py",
+        "safe_switch_states": ["WAITING_INPUT", "DONE_WAITING_INPUT", "IDLE"],
+        "blocked_switch_states": ["RUNNING", "TOOL_CALLING", "STREAMING"],
+        "handshake_timeout_seconds": 90,
+        "mandatory_switch_chain": [
+            "switch_request",
+            "pre_switch_gate",
+            "switch_apply",
+            "switch_ack",
+            "ack_verify",
+            "dispatch",
+        ],
+    }
+
+
+def _protocol_lane_activation_headstamp_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "enforcement_validator": "scripts/validate_protocol_lane_headstamp_continuity.py",
+        "required_lane": "protocol",
+        "route_non_starvation": True,
+        "headstamp_dual_context_required": True,
+        "required_fields": [
+            "requested_lane",
+            "previous_lane",
+            "resolved_lane",
+            "lane_activation_status",
+            "lane_activation_error_code",
+            "route_source_ref",
+            "lane_activation_evidence_ref",
+            "headstamp_continuity_status",
+            "headstamp_error_code",
+        ],
+    }
+
+
+def _execution_target_tuple_isolation_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "validator": "scripts/validate_execution_target_tuple_isolation.py",
+        "runtime_bridge_root_env": "IDENTITY_RUNTIME_BRIDGE_ROOT",
+        "required_fields": [
+            "execution_target_kind",
+            "execution_target_key",
+            "execution_target_ref",
+            "route_conflict_status",
+            "route_conflict_error_code",
+        ],
+        "target_kind_enum": ["tmux_session", "codex_home", "process_call", "worker_queue"],
+        "error_code_family": [
+            "IP-XTARGET-001",
+            "IP-XTARGET-002",
+            "IP-XTARGET-003",
+            "IP-XTARGET-004",
+        ],
+        "fail_action": "block_when_execution_target_tuple_isolation_violated",
+    }
+
+
+def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "rq_034_multimodal_plugin_enforcement_contract_v1",
+        "validator": "scripts/validate_multimodal_plugin_enforcement.py",
+        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
+        "provider_profiles_path": "identity/protocol/plugins/PROVIDER_PROFILES.current.yaml",
+        "required_fields": [
+            "multimodal_plugin_enforcement_status",
+            "plugin_registry_status",
+            "plugin_naming_status",
+            "plugin_schema_status",
+            "plugin_threshold_status",
+            "plugin_path_status",
+            "plugin_copy_policy_status",
+            "provider_config_status",
+        ],
+        "provider_binding_path_pattern": "runtime/plugins/provider-bindings.local.yaml",
+        "capability_requirements": {
+            "vision": True,
+            "tool_calling": True,
+            "structured_json": True,
+        },
+        "done_transition_guard": {
+            "requires_multimodal_evidence_consistency": True,
+            "inconsistent_evidence_transition": "block_done",
+        },
+        "fail_action": "block_done_transition_on_inconsistent_multimodal_evidence",
+    }
+
+
+def _reasoning_loop_failclose_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": "rq_035_reasoning_loop_failclose_contract_v1",
+        "plugin_id": "reasoning-loop-enforcement",
+        "validator": "scripts/validate_reasoning_loop_failclose.py",
+        "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
+        "contract_file": "identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml",
+        "reasoning_enforcement_level": "L1",
+        "level_required_attempt_fields": {
+            "L0": [],
+            "L1": ["attempt", "hypothesis", "patch", "expected_effect", "result"],
+            "L2": [
+                "attempt",
+                "hypothesis",
+                "patch",
+                "expected_effect",
+                "result",
+                "result_code",
+                "target_reached",
+                "no_target_reached",
+                "next_action",
+                "evidence_refs",
+            ],
+            "L3": [
+                "attempt",
+                "hypothesis",
+                "patch",
+                "expected_effect",
+                "result",
+                "result_code",
+                "target_reached",
+                "no_target_reached",
+                "next_action",
+                "evidence_refs",
+            ],
+        },
+        "level_required_run_fields": {
+            "L2": [
+                "roundtable_evidence_refs",
+                "vendor_evidence_refs",
+                "network_evidence_refs",
+                "reference_evidence_refs",
+            ],
+            "L3": [
+                "roundtable_evidence_refs",
+                "vendor_evidence_refs",
+                "network_evidence_refs",
+                "reference_evidence_refs",
+            ],
+        },
+        "level_required_external_fields": {
+            "L3": [
+                "external_source_freshness_status",
+                "conflict_reconciliation_note",
+                "source_url_set",
+            ],
+        },
+        "completion_states_done": ["done", "pass", "passed", "success", "completed", "closed"],
+        "no_target_completion_mode": "terminal_attempt_only",
+        "done_requires_terminal_target_reached": True,
+        "no_target_result_tokens": ["no_target_reached", "not_reached", "target_not_reached"],
+        "failed_result_tokens": ["fail", "failed", "error", "blocked", "no_target_reached", "not_reached", "target_not_reached"],
+        "pass_result_tokens": ["pass", "passed", "success", "done", "resolved", "target_reached"],
+        "max_attempts_before_escalation": 3,
+        "escalation_requirement_mode": "at_or_exceed",
+        "failure_requires_next_action": True,
+        "strict_run_id_binding": True,
+        "runtime_report_selection_mode": "prefer_run_id",
+        "escalation_signal_fields": [
+            "route_switch_triggered",
+            "human_collaboration_triggered",
+            "escalation_triggered",
+            "route_switch_ref",
+            "human_collaboration_ref",
+            "escalation_ref",
+            "next_action",
+        ],
+        "escalation_signal_accept_nonempty_ref": True,
+        "escalation_signal_nonempty_fields": ["route_switch_ref", "human_collaboration_ref", "escalation_ref"],
+        "escalation_signal_values": ["true", "triggered", "escalate", "route_switch", "human_collaboration", "handoff"],
+        "learning_report_path_pattern": "runtime/examples/*learning-sample*.json",
+        "required_fields": [
+            "reasoning_loop_failclose_status",
+            "reasoning_runtime_evidence_status",
+            "reasoning_attempt_trace_status",
+            "no_target_done_block_status",
+            "terminal_attempt_index",
+            "terminal_attempt_target_reached",
+            "terminal_attempt_no_target_reached",
+            "no_target_completion_mode",
+            "done_requires_terminal_target_reached",
+            "reasoning_next_action_status",
+            "reasoning_escalation_status",
+            "escalation_requirement_mode",
+            "escalation_signal_accept_nonempty_ref",
+            "escalation_signal_nonempty_fields",
+            "strict_run_id_binding",
+            "runtime_report_selection_mode",
+            "reasoning_four_track_status",
+            "external_source_freshness_status",
+            "runtime_report_path",
+            "runtime_report_run_id",
+            "reasoning_attempt_count",
+            "reasoning_failed_attempt_count",
+            "no_target_reached_detected",
+            "reasoning_runtime_evidence_refs",
+        ],
+        "done_transition_guard": {
+            "no_target_reached_cannot_complete": True,
+            "failed_attempt_requires_next_action": True,
+            "threshold_requires_escalation": True,
+        },
+        "fail_action": "block_done_transition_on_reasoning_no_target_or_unclosed_attempts",
+    }
+
+
+def _release_unlock_formula_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_unlock_formula.py",
+        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+        "required_fields": [
+            "unlock_allowed",
+            "decision_gates",
+            "p0_total",
+            "p0_done",
+            "p0_not_done_refs",
+            "audit_signoff_status",
+            "env_blockers",
+            "protocol_blockers",
+            "evidence_refs",
+        ],
+        "d6_derived_only": True,
+        "fail_action": "block_release_tag_and_reenter_p0_closure",
+    }
+
+
+def _capability_boundary_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_capability_boundary_classification.py",
+        "required_fields": [
+            "boundary_classification",
+            "classification_source",
+            "capability_activation_status",
+            "capability_activation_error_code",
+        ],
+        "classification_rules": {
+            "ip_cap_prefix": "env_auth_blocker",
+            "activated": "protocol_ready",
+            "blocked_non_ip_cap": "protocol_blocker",
+        },
+        "fail_action": "keep_env_protocol_boundary_explicit",
+    }
+
+
+def _promotion_evidence_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_promotion_pipeline.py",
+        "receipt_path_pattern": "runtime/reports/**/*promotion-receipt*.json",
+        "required_fields": [
+            "decision_hash",
+            "input_hash",
+            "reviewer_role",
+            "reviewer_signature_ref",
+            "evidence_bundle_refs",
+        ],
+        "fail_action": "block_done_promotion_without_non_repudiation_receipt",
+    }
+
+
+def _outlet_matrix_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_outlet_matrix.py",
+        "report_path_pattern": "runtime/reports/identity-upgrade-exec-*.json",
+        "required_fields": [
+            "send_time_gate_status",
+            "governed_outlet_enforced",
+            "outlet_channel_id",
+            "outlet_preflight_receipt",
+            "outlet_bypass_detected",
+        ],
+        "negative_path_required": True,
+        "fail_action": "block_outlet_regression_promotion",
+    }
+
+
+def _sidecar_cwd_parity_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_sidecar_cwd_parity.py",
+        "required_fields": [
+            "cwd_parity_status",
+            "passthrough_digest",
+            "sidecar_contract_status",
+            "sidecar_error_code",
+        ],
+        "root_tmp_parity_required": True,
+        "fail_action": "block_sidecar_cwd_parity_regression",
+    }
+
+
+def _docs_bridge_consistency_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "validator": "scripts/validate_docs_bridge_consistency.py",
+        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.md",
+        "required_fields": [
+            "bridge_consistency_status",
+            "contradiction_pairs",
+            "governance_anchor_refs",
+            "review_anchor_refs",
+        ],
+        "fail_action": "reenter_docs_bridge_sync",
+    }
+
+
+def _contract_mapping_coverage_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "validator": "scripts/validate_contract_mapping_coverage.py",
+        "mapping_file": "identity/protocol/mappings/contract-binding.current.yaml",
+        "governance_doc": "docs/governance/identity-actor-session-binding-governance-v1.6.0.md",
+        "required_fields": [
+            "total_requirements",
+            "p0_total",
+            "p0_mapped",
+            "p0_coverage_rate",
+            "orphan_count",
+        ],
+        "target_p0_coverage_rate": 100.0,
+        "target_orphan_count": 0,
+        "fail_action": "block_mapping_lock_claim",
+    }
+
+
+def _release_plane_cloud_evidence_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_release_plane_cloud_evidence.py",
+        "required_fields": [
+            "target_branch",
+            "release_head_sha",
+            "required_gates_run_id",
+            "run_url",
+            "workflow_file_sha",
+            "run_head_sha",
+            "run_workflow_file_sha",
+            "conditions",
+            "release_plane_status",
+        ],
+        "fail_action": "block_release_when_cloud_evidence_incomplete",
+    }
+
+
+def _cross_cwd_absolute_input_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_cross_cwd_absolute_input.py",
+        "required_fields": [
+            "repo_catalog_input",
+            "repo_catalog_is_absolute",
+            "repo_cwd_resolved_repo_catalog",
+            "tmp_cwd_resolved_repo_catalog",
+            "cwd_parity_status",
+        ],
+        "fail_action": "block_non_absolute_or_non_parity_repo_catalog_usage",
+    }
+
+
+def _run_id_report_selection_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_run_id_report_selection.py",
+        "required_fields": [
+            "run_id",
+            "selection_strategy",
+            "report_selected_path",
+            "candidate_count",
+        ],
+        "fail_action": "block_strict_lane_when_run_id_selection_not_deterministic",
+    }
+
+
+def _phase_bootstrap_before_strict_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_phase_bootstrap_before_strict.py",
+        "required_fields": [
+            "phase_a_refresh_applied",
+            "phase_b_strict_revalidate_status",
+            "phase_trace_status",
+        ],
+        "fail_action": "block_when_phase_a_phase_b_semantics_not_closed",
+    }
+
+
+def _tmp_collision_safe_allocator_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_tmp_collision_safety.py",
+        "required_fields": [
+            "tmp_root",
+            "generated_paths",
+            "collision_count",
+            "unique_path_count",
+            "path_scope_guard_status",
+        ],
+        "fail_action": "block_when_tmp_paths_collide_or_escape_scope",
+    }
+
+
+def _handoff_collab_freshness_autorotation_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "bootstrap_emitter": "scripts/rotate_handoff_collab_freshness.py",
+        "validator": "scripts/validate_handoff_collab_freshness_rotation.py",
+        "rotation_receipt_pattern": "runtime/reports/handoff-collab-freshness-rotation-*.json",
+        "required_fields": [
+            "rotation_applied",
+            "freshness_age_days",
+            "rotation_receipt_ref",
+            "freshness_status",
+        ],
+        "fail_action": "block_when_freshness_rotation_receipt_missing_or_failed",
+    }
+
+
+def _protocol_feedback_atomic_emit_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "atomic_emitter": "scripts/emit_protocol_feedback_atomic.py",
+        "validator": "scripts/validate_protocol_feedback_atomic_emit.py",
+        "receipt_path_pattern": "runtime/protocol-feedback/atomic/*.receipt.json",
+        "required_fields": [
+            "transaction_id",
+            "batch_ref",
+            "index_ref",
+            "receipt_ref",
+        ],
+        "fail_action": "block_when_atomic_emit_receipt_chain_invalid",
+    }
+
+
+def _prompt_bootstrap_capability_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_bootstrap_capability.py",
+        "required_capability_drivers": [
+            "scripts/validate_identity_tool_installation.py",
+            "scripts/validate_identity_vendor_api_discovery.py",
+            "scripts/validate_identity_vendor_api_solution.py",
+        ],
+        "fail_action": "block_when_prompt_bootstrap_missing_required_drivers",
+    }
+
+
+def _prompt_capability_matrix_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_capability_matrix.py",
+        "required_driver_ids": ["tool_installation", "vendor_api_discovery", "vendor_api_solution"],
+        "required_fields": [
+            "capability_driver_required_total",
+            "capability_driver_present_total",
+            "capability_driver_coverage_rate",
+            "missing_capability_drivers",
+        ],
+        "fail_action": "fail_closed_when_prompt_capability_matrix_incomplete",
+    }
+
+
+def _refresh_strict_business_interference_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "matrix_emitter": "scripts/emit_business_interference_matrix.py",
+        "validator": "scripts/validate_refresh_strict_business_interference.py",
+        "refresh_receipt_pattern": "runtime/reports/business-interference-matrix-*-refresh-*.json",
+        "strict_receipt_pattern": "runtime/reports/business-interference-matrix-*-strict-*.json",
+        "required_fields": [
+            "refresh_receipt_ref",
+            "strict_receipt_ref",
+            "interference_row_count_refresh",
+            "interference_row_count_strict",
+        ],
+        "fail_action": "block_when_refresh_strict_interference_matrix_not_closed",
+    }
+
+
+def _kernel_canonical_source_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_kernel_ssot_source.py",
+        "canonical_source_paths": [
+            "identity/protocol/IDENTITY_PROTOCOL.md",
+            "identity/protocol/IDENTITY_RUNTIME.md",
+            "identity/protocol/mappings/contract-binding.current.yaml",
+        ],
+        "fail_action": "block_when_kernel_source_not_canonical",
+    }
+
+
+def _derived_prompt_conformance_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_derivation_conformance.py",
+        "kernel_contract_version": "v1.6",
+        "derived_from_contract_ids": [
+            "rq_014_prompt_bootstrap_capability_contract_v1",
+            "rq_015_prompt_capability_matrix_fail_closed_contract_v1",
+        ],
+        "fail_action": "block_when_prompt_derivation_metadata_incomplete",
+    }
+
+
+def _semantic_convergence_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_semantic_convergence.py",
+        "required_fields": [
+            "semantic_tuple_update",
+            "semantic_tuple_three_plane",
+            "semantic_tuple_full_scan",
+            "mismatch_count",
+        ],
+        "fail_action": "block_when_semantic_verdict_not_convergent",
+    }
+
+
+def _prompt_kernel_executable_coupling_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "validator": "scripts/validate_prompt_kernel_executable_coupling.py",
+        "kernel_contract_ref": "identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md#rq_031_prompt_import_executable_coupling_contract_v1",
+        "validator_ref": "scripts/validate_work_layer_gate_set_routing.py",
+        "require_explicit_actor": True,
+        "fail_action": "block_when_prompt_import_not_executable_coupled",
+    }
+
+
+def _intake_p1_contract_defaults(identity_id: str) -> dict[str, dict]:
+    return {
+        "multi_track_cross_verification_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_v16_intake_evidence_core.py",
+            "validator_mode": "intake_contract",
+            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+            "required_tracks": ["t1", "t2", "t3", "t4"],
+            "required_metadata_fields": [
+                "cross_verification_bundle_id",
+                "source_url_set",
+                "reference_timestamp_utc",
+                "conflict_reconciliation_note",
+            ],
+            "fail_action": "block_merge_and_reenter_cross_verification_intake",
+        },
+        "intake_evidence_quorum_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_v16_intake_evidence_core.py",
+            "validator_mode": "promotion_gate",
+            "bundle_path_pattern": "runtime/protocol-feedback/**/*cross-verification*bundle*.json",
+            "required_tracks": [
+                "t1_roundtable_status",
+                "t2_vendor_status",
+                "t3_openai_context_status",
+                "t4_protocol_spec_status",
+            ],
+            "required_metadata_fields": [
+                "cross_verification_bundle_id",
+                "source_url_set",
+                "reference_timestamp_utc",
+                "conflict_reconciliation_note",
+            ],
+            "fail_action": "block_merge_and_reenter_intake_quorum_gate",
+        },
+        "fallback_taxonomy_normalization_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_fallback_taxonomy_normalization.py",
+            "taxonomy_version": "v1",
+            "fallback_taxonomy_enum": [
+                "data_missing",
+                "model_weak_signal",
+                "transport_error",
+                "policy_blocked",
+            ],
+            "namespace_separation_required": True,
+            "protected_blocker_taxonomy_fields": [
+                "auth_login_required",
+                "anti_automation_challenge_required",
+                "session_reauthentication_required",
+                "manual_verification_required",
+            ],
+            "fail_action": "block_merge_and_reenter_fallback_taxonomy_normalization",
+        },
+        "dedup_monotonic_winner_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_dedup_monotonicity.py",
+            "claims_path_pattern": "runtime/reports/**/*dedup*claim*.json",
+            "required_fields": [
+                "run_id",
+                "earliest_claim_ts",
+                "stable_tiebreaker",
+                "winner_id",
+                "winner_reason",
+                "monotonicity_status",
+            ],
+            "fail_action": "block_merge_and_reenter_dedup_orchestration",
+        },
+        "cross_workflow_evidence_schema_contract_v1": {
+            "required": True,
+            "normalizer": "scripts/normalize_cross_workflow_evidence.py",
+            "validator": "scripts/validate_cross_workflow_schema.py",
+            "evidence_path_pattern": f"runtime/reports/identity-upgrade-exec-{identity_id}-*.json",
+            "required_fields": [
+                "run_id",
+                "route_action",
+                "quality_meta_state",
+                "dedup_state",
+                "evidence_hash",
+                "schema_version",
+            ],
+            "fail_action": "block_merge_and_reenter_cross_workflow_schema_alignment",
+        },
+        "skill_path_integrity_contract_v1": {
+            "required": True,
+            "validator": "scripts/validate_skill_path_integrity.py",
+            "layout_mode": "active_repo_runtime",
+            "allowed_skill_roots": [
+                "{active_repo_root}/skills",
+                "{active_repo_root}/.codex/skills",
+                "{active_repo_root}/identity-protocol-local/skills",
+                "{active_runtime_root}/skills",
+            ],
+            "required_fields": [
+                "active_repo_root",
+                "active_runtime_root",
+                "layout_mode",
+                "path_integrity_status",
+                "path_integrity_error_code",
+            ],
+            "fail_action": "block_merge_and_reenter_skill_path_integrity_alignment",
+        },
+        "route_workflow_version_pinning_contract_v1": {
+            "required": True,
+            "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
+            "validator": "scripts/validate_route_version_pinning.py",
+            "proof_receipt_path_pattern": "runtime/reports/**/*route-version-pin-receipt*.json",
+            "required_fields": [
+                "route_endpoint",
+                "workflow_id",
+                "workflow_publish_version",
+                "pin_proof_ref",
+            ],
+            "expected_bindings": [],
+            "fail_action": "block_merge_and_reenter_route_workflow_version_alignment",
+        },
+    }
+
+
+def _normalize_intake_p1_legacy_contract_paths(task: dict, identity_id: str) -> dict:
+    def _legacy_prefix() -> str:
+        return f"identity/runtime/local/{identity_id}/reports/"
+
+    legacy = _legacy_prefix()
+
+    dedup = task.get("dedup_monotonic_winner_contract_v1")
+    if isinstance(dedup, dict):
+        pattern = str(dedup.get("claims_path_pattern", "")).strip()
+        if pattern.startswith(legacy):
+            dedup["claims_path_pattern"] = "runtime/reports/**/*dedup*claim*.json"
+
+    cross = task.get("cross_workflow_evidence_schema_contract_v1")
+    if isinstance(cross, dict):
+        pattern = str(cross.get("evidence_path_pattern", "")).strip()
+        if pattern.startswith(legacy):
+            cross["evidence_path_pattern"] = f"runtime/reports/identity-upgrade-exec-{identity_id}-*.json"
+
+    route = task.get("route_workflow_version_pinning_contract_v1")
+    if isinstance(route, dict):
+        pattern = str(route.get("proof_receipt_path_pattern", "")).strip()
+        if pattern.startswith(legacy):
+            route["proof_receipt_path_pattern"] = "runtime/reports/**/*route-version-pin-receipt*.json"
+
+    return task
+
+
+def _ensure_intake_p1_contracts(task: dict, identity_id: str) -> dict:
+    defaults = _intake_p1_contract_defaults(identity_id)
+    for key, default in defaults.items():
+        cur = task.get(key)
+        if not isinstance(cur, dict):
+            task[key] = default
+            continue
+        task[key] = _deep_merge_defaults(default, cur)
+    return _normalize_intake_p1_legacy_contract_paths(task, identity_id)
+
+
 def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> dict:
     defaults = {
+        "release_unlock_formula_automation_contract_v1": _release_unlock_formula_contract_skeleton(),
+        "release_plane_cloud_evidence_contract_v1": _release_plane_cloud_evidence_contract_skeleton(),
+        "cross_cwd_absolute_input_contract_v1": _cross_cwd_absolute_input_contract_skeleton(),
+        "run_id_report_selection_contract_v1": _run_id_report_selection_contract_skeleton(),
+        "phase_bootstrap_before_strict_contract_v1": _phase_bootstrap_before_strict_contract_skeleton(),
+        "tmp_collision_safe_allocator_contract_v1": _tmp_collision_safe_allocator_contract_skeleton(),
+        "handoff_collab_freshness_autorotation_contract_v1": _handoff_collab_freshness_autorotation_contract_skeleton(),
+        "protocol_feedback_atomic_emit_contract_v1": _protocol_feedback_atomic_emit_contract_skeleton(),
+        "capability_activation_boundary_contract_v2": _capability_boundary_contract_skeleton(),
+        "status_promotion_evidence_contract_v1": _promotion_evidence_contract_skeleton(),
+        "outbound_reply_outlet_regression_matrix_contract_v1": _outlet_matrix_contract_skeleton(),
+        "sidecar_cwd_invariance_contract_v1": _sidecar_cwd_parity_contract_skeleton(),
+        "docs_bridge_consistency_contract_v1": _docs_bridge_consistency_contract_skeleton(),
+        "contract_mapping_projection_contract_v1": _contract_mapping_coverage_contract_skeleton(),
+        "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
+        "prompt_capability_matrix_fail_closed_contract_v1": _prompt_capability_matrix_contract_skeleton(),
+        "refresh_strict_business_interference_matrix_contract_v1": _refresh_strict_business_interference_contract_skeleton(),
+        "kernel_canonical_source_contract_v1": _kernel_canonical_source_contract_skeleton(),
+        "derived_prompt_conformance_contract_v1": _derived_prompt_conformance_contract_skeleton(),
+        "semantic_single_source_convergence_contract_v1": _semantic_convergence_contract_skeleton(),
+        "prompt_import_executable_coupling_contract_v1": _prompt_kernel_executable_coupling_contract_skeleton(),
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
@@ -394,6 +1129,11 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "instance_protocol_split_receipt_contract_v1": _instance_protocol_split_receipt_contract_skeleton(),
         "protocol_feedback_canonical_reply_channel_contract_v1": _protocol_feedback_reply_channel_contract_skeleton(),
         "protocol_feedback_sidecar_contract_v1": _protocol_feedback_sidecar_contract_skeleton(),
+        "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
+        "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
+        "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
+        "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
+        "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
     }
     for key, default in defaults.items():
         cur = task.get(key)
@@ -401,7 +1141,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
             task[key] = default
             continue
         task[key] = _deep_merge_defaults(default, cur)
-    return task
+    return _ensure_intake_p1_contracts(task, identity_id)
 
 
 def _default_protocol_review_sample(identity_id: str) -> dict:
@@ -592,6 +1332,27 @@ def _legacy_full_contract_current_task(identity_id: str, title: str, description
 
 def _default_required_checks() -> list[str]:
     return [
+        "scripts/validate_unlock_formula.py",
+        "scripts/validate_release_plane_cloud_evidence.py",
+        "scripts/validate_cross_cwd_absolute_input.py",
+        "scripts/validate_run_id_report_selection.py",
+        "scripts/validate_phase_bootstrap_before_strict.py",
+        "scripts/validate_tmp_collision_safety.py",
+        "scripts/validate_handoff_collab_freshness_rotation.py",
+        "scripts/validate_protocol_feedback_atomic_emit.py",
+        "scripts/validate_capability_boundary_classification.py",
+        "scripts/validate_promotion_pipeline.py",
+        "scripts/validate_outlet_matrix.py",
+        "scripts/validate_sidecar_cwd_parity.py",
+        "scripts/validate_docs_bridge_consistency.py",
+        "scripts/validate_contract_mapping_coverage.py",
+        "scripts/validate_prompt_bootstrap_capability.py",
+        "scripts/validate_prompt_capability_matrix.py",
+        "scripts/validate_refresh_strict_business_interference.py",
+        "scripts/validate_kernel_ssot_source.py",
+        "scripts/validate_prompt_derivation_conformance.py",
+        "scripts/validate_semantic_convergence.py",
+        "scripts/validate_prompt_kernel_executable_coupling.py",
         "scripts/validate_identity_runtime_contract.py",
         "scripts/validate_identity_upgrade_prereq.py",
         "scripts/validate_identity_update_lifecycle.py",
@@ -611,6 +1372,10 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_identity_experience_feedback_governance.py",
         "scripts/validate_identity_self_upgrade_enforcement.py",
         "scripts/validate_identity_install_provenance.py",
+        "scripts/required_gate_bundle_runner.py",
+        "scripts/validate_replay_archive_contract.py",
+        "scripts/validate_gated_switch_guard.py",
+        "scripts/validate_protocol_lane_headstamp_continuity.py",
     ]
 
 
@@ -757,6 +1522,72 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "policy_drift_incidents",
         ],
         "validator": "scripts/export_route_quality_metrics.py",
+    }
+    task["dedup_monotonic_winner_contract_v1"] = {
+        "required": True,
+        "validator": "scripts/validate_dedup_monotonicity.py",
+        "claims_path_pattern": "runtime/reports/**/*dedup*claim*.json",
+        "required_fields": [
+            "run_id",
+            "earliest_claim_ts",
+            "stable_tiebreaker",
+            "winner_id",
+            "winner_reason",
+            "monotonicity_status",
+        ],
+        "fail_action": "block_merge_and_reenter_dedup_orchestration",
+    }
+    task["cross_workflow_evidence_schema_contract_v1"] = {
+        "required": True,
+        "normalizer": "scripts/normalize_cross_workflow_evidence.py",
+        "validator": "scripts/validate_cross_workflow_schema.py",
+        "evidence_path_pattern": (
+            f"identity/runtime/local/{identity_id}/reports/identity-upgrade-exec-{identity_id}-*.json"
+        ),
+        "required_fields": [
+            "run_id",
+            "route_action",
+            "quality_meta_state",
+            "dedup_state",
+            "evidence_hash",
+            "schema_version",
+        ],
+        "fail_action": "block_merge_and_reenter_cross_workflow_schema_alignment",
+    }
+    task["skill_path_integrity_contract_v1"] = {
+        "required": True,
+        "validator": "scripts/validate_skill_path_integrity.py",
+        "layout_mode": "active_repo_runtime",
+        "allowed_skill_roots": [
+            "{active_repo_root}/skills",
+            "{active_repo_root}/.codex/skills",
+            "{active_repo_root}/identity-protocol-local/skills",
+            "{active_runtime_root}/skills",
+        ],
+        "required_fields": [
+            "active_repo_root",
+            "active_runtime_root",
+            "layout_mode",
+            "path_integrity_status",
+            "path_integrity_error_code",
+        ],
+        "fail_action": "block_merge_and_reenter_skill_path_integrity_alignment",
+    }
+    task["route_workflow_version_pinning_contract_v1"] = {
+        "required": True,
+        "receipt_emitter": "scripts/emit_route_version_pin_receipt.py",
+        "validator": "scripts/validate_route_version_pinning.py",
+        "proof_receipt_path_pattern": (
+            f"identity/runtime/local/{identity_id}/reports/{identity_id}-route-version-pin-receipt*.json"
+        ),
+        "required_fields": [
+            "route_endpoint",
+            "workflow_id",
+            "workflow_publish_version",
+            "pin_proof_ref",
+        ],
+        "expected_bindings": [],
+        "fail_action": "block_merge_and_reenter_route_workflow_version_alignment",
     }
     task["learning_verification_contract"] = {
         "run_id_required": True,
@@ -1024,7 +1855,7 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "handoff_logs_max_age_days": 7,
             "route_metrics_max_age_days": 7,
         },
-        "required_validator_set_label": "v1.1-required",
+        "required_validator_set_label": "v1.2-required-intake-p1",
         "candidate_validators_v1_2": [
             "scripts/validate_identity_feedback_freshness.py",
             "scripts/validate_identity_feedback_promotion.py",
@@ -1071,6 +1902,20 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             "replay_failure_rate_percent": 20,
             "first_pass_success_drop_percent": 15,
         },
+        "accurate_judgement_enforcement": {
+            "contract_ref": "rq_034_multimodal_plugin_enforcement_contract_v1",
+            "validator": "scripts/validate_multimodal_plugin_enforcement.py",
+            "requires_multimodal_evidence_consistency": True,
+            "inconsistent_evidence_transition": "block_done",
+        },
+        "reasoning_loop_enforcement": {
+            "contract_ref": "rq_035_reasoning_loop_failclose_contract_v1",
+            "validator": "scripts/validate_reasoning_loop_failclose.py",
+            "no_target_reached_cannot_complete": True,
+            "failed_attempt_requires_next_action": True,
+            "threshold_requires_escalation": True,
+            "reasoning_enforcement_level_field": "reasoning_enforcement_level",
+        },
         "decision_record_required_fields": [
             "arbitration_id",
             "task_id",
@@ -1107,7 +1952,7 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
             f"identity/packs/{identity_id}/RULEBOOK.jsonl",
         ],
         "required_toolkit_steps": [
-            f"scripts/execute_identity_upgrade.py --identity-id {identity_id} --mode review-required",
+            f"scripts/execute_identity_upgrade.py --identity-id {identity_id} --mode review-required --actor-id <actor_id>",
             f"scripts/validate_identity_upgrade_prereq.py --identity-id {identity_id}",
             f"scripts/validate_identity_runtime_contract.py --identity-id {identity_id}",
             f"scripts/validate_identity_update_lifecycle.py --identity-id {identity_id}",

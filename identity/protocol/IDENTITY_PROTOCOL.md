@@ -50,6 +50,14 @@ This protocol is scenario-agnostic by design.
 2. Identity prompt layer (role cognition + decision principles)
 3. Runtime task layer (single source of truth state)
 
+### Protocol-side prompt bootstrap source (v1.6 additive)
+
+1. Runtime `IDENTITY_PROMPT.md` is a pack-level artifact and must remain under identity pack paths.
+2. Protocol layer must not add same-name runtime artifact file `identity/protocol/IDENTITY_PROMPT.md`.
+3. Prompt baseline source for protocol-side capability evolution is tracked in:
+   - `identity/protocol/IDENTITY_PROMPT_BOOTSTRAP_CONTRACT.md`
+4. Any update to the bootstrap source must close mapping + validator + replay chain before promotion-grade claims.
+
 ## Required identity pack files
 
 For each identity id `<id>`:
@@ -76,9 +84,10 @@ Identity resolution must be deterministic and auditable across layered scopes:
 
 1. CLI explicit parameters (`--catalog`, `--target-root`, `--scope`)
 2. Environment/config (`IDENTITY_HOME`, `runtime-paths.env`)
-3. Repo scope (`<repo>/.agents/identity`)
-4. User scope (`${CODEX_HOME:-~/.codex}/identity`)
-5. Fallback scope (`./.codex/identity`, recovery only)
+3. Project runtime scope (`<project>/.identity`)
+4. Global runtime scope (`${CODEX_HOME:-~/.codex}/.identity`)
+
+Legacy labels/paths (`local`, `repo`, `env`, `auto`, `.agents/identity`, `~/.codex/identity`) are migration metadata only and must not enter strict runtime gate semantics.
 
 If one `identity_id` resolves to multiple pack paths across scopes, tooling MUST fail unless explicit arbitration (`--scope`) is provided.
 
@@ -168,6 +177,48 @@ Identity protocol must be verifiable against four capability contracts:
 4. **Rule learning contract**
    - Requires append-only rulebook linkage to run evidence.
    - Requires both negative and positive rule accumulation over time.
+
+### Accurate judgement canonical binding (v1.6.2 multimodal stream)
+
+To avoid “statement-only” drift, the accurate judgement contract is hard-bound to protocol plugin governance:
+
+1. Contract ID: `rq_034_multimodal_plugin_enforcement_contract_v1`
+2. Requirement key: `asb16-rq-034`
+3. Canonical validator: `scripts/validate_multimodal_plugin_enforcement.py`
+4. Canonical plugin root: `identity/protocol/plugins/`
+5. Canonical registries:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
+6. Mandatory done-transition gate:
+   - `requires_multimodal_evidence_consistency=true`
+   - `inconsistent_evidence_transition=block_done`
+7. Any non-canonical plugin contract/profile source in strict lane must fail-close (`IP-MM-REG-001`).
+
+### Reasoning loop canonical binding (v1.6.2 fail-close stream)
+
+To avoid “trace-present but semantic-invalid” drift, the reasoning loop contract is hard-bound to protocol fail-close plugin governance:
+
+1. Contract ID: `rq_035_reasoning_loop_failclose_contract_v1`
+2. Requirement key: `asb16-rq-035`
+3. Canonical validator: `scripts/validate_reasoning_loop_failclose.py`
+4. Canonical plugin root:
+   - `identity/protocol/plugins/reasoning-loop-enforcement/`
+5. Mandatory semantic gate:
+   - done/pass completion block is controlled by `no_target_completion_mode`:
+     - default `terminal_attempt_only`: terminal unresolved attempt cannot transition to done/pass.
+     - optional `any_attempt`: any historical `no_target_reached=true` blocks done/pass.
+   - `done_requires_terminal_target_reached=true` preserves strict closure for unresolved terminal completion.
+   - failed attempt without `next_action` is fail-close.
+   - escalation threshold is controlled by `escalation_requirement_mode` (default `at_or_exceed`).
+   - once escalation threshold is hit, missing escalation signal is fail-close.
+   - escalation signal accepts boolean/token markers and configurable non-empty reference fields when enabled; generic retry text is not escalation by default.
+   - strict operations use `strict_run_id_binding=true`: when `run_id` is provided, any selected runtime proof source (including fallback sources) must bind to the same run id or fail-close with `IP-RL-RUN-006`.
+   - runtime proof source selection is configuration-driven via `runtime_report_selection_mode` (default `prefer_run_id`) to reduce strict-lane volatility without requiring explicit `report_selected_path`.
+6. Enforcement-level policy is configuration-driven (no validator hardcoding):
+   - `L1`: attempt trace integrity
+   - `L2`: `L1` + four-track evidence refs
+   - `L3`: `L2` + external freshness/reconciliation constraints
+7. Any registry/profile/contract mismatch for reasoning plugin in strict lane must fail-close (`IP-RL-REG-001` / `IP-RL-CONF-001`).
 
 ## Protocol baseline review contract (v1.2.3+)
 
@@ -429,3 +480,367 @@ To reduce protocol drift and avoid ad-hoc logic:
 ## Email escalation policy
 
 Email is only for offline blocking actions. Non-blocking updates are routed to logs or dashboards.
+
+## Batch-1 anchor placeholders (v1.6 intake, non-promotional)
+
+The following sections provide stable kernel anchors for v1.6 Batch-1 mapping rows.
+Execution closure remains governed by v1.6 governance/review and must stay
+`SPEC_READY / PENDING_INTAKE` until validator + replay closure is complete.
+
+### rq_001_unlock_formula_contract_v1
+
+Required receipt fields:
+
+- `unlock_allowed`
+- `decision_gates`
+- `p0_total`
+- `p0_done`
+- `p0_not_done_refs`
+- `audit_signoff_status`
+- `env_blockers`
+- `protocol_blockers`
+- `evidence_refs`
+
+Hard constraints:
+
+1. `D6` is derived output only (`D1..D5` + `P0` ledger are the only formula inputs).
+2. Same governance/review inputs must produce stable `formula_input_digest`.
+
+### rq_002_capability_boundary_contract_v1
+
+Required receipt fields:
+
+- `boundary_classification`
+- `classification_source`
+- `capability_activation_status`
+- `capability_activation_error_code`
+
+Hard constraints:
+
+1. `IP-CAP-*` must classify to `env_auth_blocker` by default.
+2. Classification must keep env/auth blockers separate from protocol-code blockers.
+
+### rq_003_promotion_evidence_pipeline_contract_v1
+
+Required receipt fields:
+
+- `decision_hash`
+- `input_hash`
+- `reviewer_role`
+- `reviewer_signature_ref`
+- `evidence_bundle_refs`
+
+Hard constraints:
+
+1. Promotion evidence must be non-repudiable and deterministic for same inputs.
+2. Narrative-only promotion without receipt fields is invalid.
+
+### rq_004_outlet_matrix_contract_v1
+
+Required receipt fields:
+
+- `outlet_matrix_status`
+- `matrix_positive_status`
+- `matrix_negative_status`
+- `cross_cwd_parity_status`
+- `send_time_gate_status`
+- `governed_outlet_enforced`
+- `outlet_channel_id`
+- `outlet_bypass_detected`
+
+Hard constraints:
+
+1. Positive + negative paths are both mandatory.
+2. Bypass/manual/direct outlet drift must be fail-closed.
+
+### rq_005_sidecar_cwd_invariance_contract_v1
+
+Required receipt fields:
+
+- `cwd_parity_status`
+- `passthrough_digest`
+- `sidecar_contract_status`
+- `sidecar_error_code`
+
+Hard constraints:
+
+1. Root and temp execution must produce identical normalized passthrough digest.
+2. CWD-only noise cannot change sidecar verdict semantics.
+
+### rq_006_release_plane_cloud_evidence_contract_v1
+
+Required receipt fields:
+
+- `target_branch`
+- `release_head_sha`
+- `required_gates_run_id`
+- `run_url`
+- `workflow_file_sha`
+- `run_head_sha`
+- `run_workflow_file_sha`
+- `conditions`
+- `release_plane_status`
+
+Hard constraints:
+
+1. Release-plane evidence must bind to one run tuple (`run_id + head + workflow_file_sha`).
+2. Missing cloud evidence under strict lanes must fail-close.
+
+### rq_007_cross_cwd_absolute_input_contract_v1
+
+Required receipt fields:
+
+- `repo_catalog_input`
+- `repo_catalog_is_absolute`
+- `repo_cwd_resolved_repo_catalog`
+- `tmp_cwd_resolved_repo_catalog`
+- `cwd_parity_status`
+
+Hard constraints:
+
+1. Non-absolute `repo_catalog` must fail-close in strict lanes.
+2. Root-cwd and temp-cwd resolution must converge to the same canonical path.
+
+### rq_008_docs_bridge_consistency_contract_v1
+
+Required receipt fields:
+
+- `bridge_consistency_status`
+- `contradiction_pairs`
+- `governance_anchor_refs`
+- `review_anchor_refs`
+
+Hard constraints:
+
+1. Contradiction tuples must be deterministic for unchanged docs inputs.
+2. Bridge checker output must be machine-replayable.
+
+### rq_009_run_id_anchored_report_selection_contract_v1
+
+Required receipt fields:
+
+- `run_id`
+- `selection_strategy`
+- `report_selected_path`
+- `candidate_count`
+
+Hard constraints:
+
+1. If run-id is present, selection must be run-id anchored before mtime fallback.
+2. Same run-id + candidate set must produce stable selected report path.
+
+### rq_010_phase_a_bootstrap_before_strict_contract_v1
+
+Required receipt fields:
+
+- `phase_a_refresh_applied`
+- `phase_b_strict_revalidate_status`
+- `phase_trace_status`
+
+Hard constraints:
+
+1. Strict revalidate must preserve phase-A bootstrap traceability.
+2. Update/readiness/aggregation lanes must consume the same phase tuple semantics.
+
+### rq_011_tmp_collision_safe_allocator_contract_v1
+
+Required receipt fields:
+
+- `tmp_root`
+- `generated_paths`
+- `collision_count`
+- `unique_path_count`
+- `path_scope_guard_status`
+
+Hard constraints:
+
+1. Runtime temp allocation must be run-scoped and collision-safe.
+2. Temp artifacts must remain within runtime temp root (no path escape).
+
+### rq_012_handoff_collab_freshness_autorotation_contract_v1
+
+Required receipt fields:
+
+- `rotation_applied`
+- `freshness_age_days`
+- `rotation_receipt_ref`
+- `freshness_status`
+
+Hard constraints:
+
+1. Freshness decisions must be receipted and replayable.
+2. Stale freshness without rotation closure must fail-close in strict lanes.
+
+### rq_013_protocol_feedback_atomic_emit_contract_v1
+
+Required receipt fields:
+
+- `transaction_id`
+- `batch_ref`
+- `index_ref`
+- `receipt_ref`
+
+Hard constraints:
+
+1. Feedback emit must be atomic across batch/index/receipt.
+2. Partial-write failure must rollback and emit deterministic failure code.
+
+### rq_016_refresh_strict_business_interference_matrix_contract_v1
+
+Required receipt fields:
+
+- `refresh_receipt_ref`
+- `strict_receipt_ref`
+- `interference_row_count_refresh`
+- `interference_row_count_strict`
+
+Hard constraints:
+
+1. Refresh and strict modes must both emit interference matrix receipts.
+2. Missing either replay side invalidates closure.
+
+### rq_023_discovery_dual_track_requiredization_activation_contract_v1
+
+Required receipt fields:
+
+- `requiredization_triggered`
+- `trigger_classes`
+- `required_contract_declared`
+- `required_contract`
+- `discovery_requiredization_status`
+
+Hard constraints:
+
+1. Requiredization must be trigger-conditioned (`not_triggered -> optional`, `triggered_no_apply -> fail-close`).
+2. Trigger classification and requiredization status must be deterministic for same inputs.
+
+### rq_024_discovery_apply_coverage_fail_closed_contract_v1
+
+Required receipt fields:
+
+- `discovery_required_total`
+- `discovery_required_passed`
+- `discovery_required_coverage_rate`
+- `discovery_requiredization_status`
+- `error_code`
+
+Hard constraints:
+
+1. Apply-time requiredization cannot pass with partial coverage.
+2. Coverage mismatch must fail-close with canonical discovery error semantics.
+
+### rq_025_kernel_canonical_source_contract_v1
+
+Required receipt fields:
+
+- `canonical_source_paths`
+- `missing_source_paths`
+- `kernel_ssot_source_status`
+- `ssot_validator_rc`
+
+Hard constraints:
+
+1. Canonical kernel source set is fixed to protocol/runtime/mapping artifacts.
+2. Any canonical source drift or missing path is fail-close.
+
+### rq_026_kernel_contract_mapping_projection_contract_v1
+
+Required receipt fields:
+
+- `total_requirements`
+- `p0_total`
+- `p0_mapped`
+- `p0_coverage_rate`
+- `orphan_count`
+- `unmapped_p0_requirements`
+
+Hard constraints:
+
+1. P0 mapping coverage target is `100%`.
+2. Orphan mapping rows must be `0`.
+
+### rq_028_instance_write_boundary_lock_contract_v1
+
+Required receipt fields:
+
+- `base_repo_write_boundary_status`
+- `error_code`
+- `violation_path`
+- `normalized_violation_path`
+- `evidence_ref`
+
+Hard constraints:
+
+1. Instance lanes must fail-close on protocol/governance/review write attempts.
+2. Canonical boundary classification must stay deterministic across lanes.
+
+### rq_029_semantic_single_source_convergence_contract_v1
+
+Required receipt fields:
+
+- `semantic_tuple_update`
+- `semantic_tuple_three_plane`
+- `semantic_tuple_full_scan`
+- `mismatch_count`
+- `mismatch_fields`
+
+Hard constraints:
+
+1. Same lineage must converge to identical semantic tuple across lanes.
+2. Tuple mismatch is deterministic fail-close with canonical convergence error code.
+
+### rq_032_headstamp_pre_send_hard_gate_contract_v1
+
+Required receipt fields:
+
+- `headstamp_status`
+- `error_code`
+- `evidence_ref`
+- `actor_binding_ref`
+
+Hard constraints:
+
+1. Missing/malformed/mismatched headstamp must block outbound send.
+2. Governed and direct/manual send paths must share canonical pre-send verdict semantics.
+
+## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
+
+The following sections are **kernel anchor placeholders** for v1.6 Batch-6/7 mapping survivability.
+They are intentionally non-promotional until corresponding runtime validators and replay evidence are
+fully wired. Governance/review authority remains in:
+
+- `docs/governance/identity-actor-session-binding-governance-v1.6.0.md` (`8.10`, `8.11`)
+- `docs/review/protocol-remediation-audit-ledger-v1.6.md` (`FIX16-035`, `FIX16-036`)
+
+### rq_017_multi_track_cross_verification_contract_v1
+
+Required receipt fields:
+
+- `t1_status`, `t2_status`, `t3_status`, `t4_status`
+- `cross_verification_bundle_id`
+- `source_url_set`
+- `reference_timestamp_utc`
+- `conflict_reconciliation_note`
+
+### rq_022_fallback_taxonomy_normalization_contract_v1
+
+Required receipt fields:
+
+- `fallback_reason_raw`
+- `fallback_taxonomy_class`
+- `taxonomy_version`
+- `normalization_status`
+- `normalization_error_code`
+
+### rq_030_intake_evidence_quorum_contract_v1
+
+Required receipt fields:
+
+- `t1_roundtable_status`
+- `t2_vendor_status`
+- `t3_openai_context_status`
+- `t4_protocol_spec_status`
+- `cross_verification_bundle_id`
+- `source_url_set`
+- `reference_timestamp_utc`
+- `conflict_reconciliation_note`

@@ -1,0 +1,38 @@
+schema_version: 1
+profile_version: v1.6
+last_updated_utc: "2026-03-10T09:20:00Z"
+default_profile: strict_full
+
+# For strict write/update/release lanes we never allow targeted trimming.
+strict_no_trim_operations:
+  - activate
+  - update
+  - mutation
+  - readiness
+  - e2e
+  - ci
+  - validate
+  - three-plane
+
+profiles:
+  strict_full:
+    mode: full
+    allowed_operations:
+      - "*"
+    require_work_layers:
+      - protocol
+      - instance
+
+  inspection_targeted:
+    mode: targeted
+    allowed_operations:
+      - scan
+      - inspection
+    require_work_layers:
+      - protocol
+    requirement_keys:
+      - asb16-rq-031
+      - asb16-rq-032
+      - asb16-rq-033
+      - asb16-rq-034
+      - asb16-rq-035

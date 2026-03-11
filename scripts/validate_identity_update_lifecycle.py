@@ -63,23 +63,43 @@ def _require_keys(block: dict[str, Any], keys: list[str], prefix: str) -> list[s
     return missing
 
 
-def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, Any], override: str) -> Path:
+def _runtime_pattern_candidates(pattern: str, identity_id: str, pack_root: Path) -> list[str]:
+    if not pattern:
+        return [pattern]
+    candidates: list[str] = [pattern]
+    local_prefix = f"identity/runtime/local/{identity_id}/"
+    mapped = ""
+    if pattern.startswith(local_prefix):
+        mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
+    elif pattern.startswith("identity/runtime/"):
+        mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    elif pattern.startswith("runtime/"):
+        mapped = str((pack_root / pattern).as_posix())
+    if mapped and mapped not in candidates:
+        candidates.insert(0, mapped)
+    return candidates
+
+
+def _resolve_replay_evidence_path(identity_id: str, replay_contract: dict[str, Any], override: str, pack_root: Path) -> Path:
     if override:
         return Path(override)
 
     pattern = str(replay_contract.get("evidence_path_pattern") or "")
     if pattern:
-        if Path(pattern).is_absolute():
-            matched = sorted(Path(p) for p in glob.glob(pattern))
-        else:
-            matched = sorted(Path(".").glob(pattern))
-        identity_scoped = [p for p in matched if identity_id in p.name]
-        if identity_scoped:
-            matched = identity_scoped
-        if matched:
-            return matched[-1]
+        for candidate in _runtime_pattern_candidates(pattern, identity_id, pack_root):
+            if Path(candidate).is_absolute():
+                matched = sorted(Path(p) for p in glob.glob(candidate))
+            else:
+                matched = sorted(Path(".").glob(candidate))
+            if not matched:
+                continue
+            identity_scoped = [p for p in matched if identity_id in p.name]
+            if identity_scoped:
+                matched = identity_scoped
+            if matched:
+                return matched[-1]
 
-    return Path(f"identity/runtime/examples/{identity_id}-update-replay-sample.json")
+    return (pack_root / "runtime" / "examples" / f"{identity_id}-update-replay-sample.json").resolve()
 
 
 def _sha256_file(path: Path) -> str:
@@ -223,7 +243,12 @@ def main() -> int:
     print("[OK] trigger_regression_contract present")
 
     # Replay evidence validation (execution-level)
-    replay_evidence_path = _resolve_replay_evidence_path(args.identity_id, replay, args.replay_evidence)
+    replay_evidence_path = _resolve_replay_evidence_path(
+        args.identity_id,
+        replay,
+        args.replay_evidence,
+        pack_root,
+    )
     if not replay_evidence_path.exists():
         print(f"[FAIL] replay evidence file not found: {replay_evidence_path}")
         return 1

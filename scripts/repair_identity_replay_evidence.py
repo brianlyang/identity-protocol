@@ -43,6 +43,13 @@ def _resolve_task_path(identity: dict[str, Any], identity_id: str) -> Path:
     raise FileNotFoundError(f"CURRENT_TASK.json not found for identity={identity_id}")
 
 
+def _resolve_pack_root(identity: dict[str, Any]) -> Path | None:
+    pack_path = str(identity.get("pack_path", "")).strip()
+    if not pack_path:
+        return None
+    return Path(pack_path).expanduser().resolve()
+
+
 def _sha256_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -51,14 +58,23 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def _replay_path(task: dict[str, Any], identity_id: str, ts: int) -> Path:
+def _replay_path(task: dict[str, Any], identity_id: str, ts: int, pack_root: Path | None) -> Path:
     replay = (task.get("identity_update_lifecycle_contract") or {}).get("replay_contract") or {}
     pattern = str(replay.get("evidence_path_pattern") or "").strip()
     if pattern:
         p = pattern.replace("<identity-id>", identity_id)
         if "*" in p:
             p = p.replace("*", str(ts))
+        local_prefix = f"identity/runtime/local/{identity_id}/"
+        if pack_root is not None and p.startswith(local_prefix):
+            return (pack_root / "runtime" / p[len(local_prefix) :]).expanduser()
+        if pack_root is not None and p.startswith("identity/runtime/"):
+            return (pack_root / "runtime" / p[len("identity/runtime/") :]).expanduser()
+        if pack_root is not None and p.startswith("runtime/"):
+            return (pack_root / p).expanduser()
         return Path(p).expanduser()
+    if pack_root is not None:
+        return (pack_root / "runtime" / "examples" / f"{identity_id}-update-replay-sample.json").expanduser()
     return Path(f"identity/runtime/examples/{identity_id}-update-replay-sample.json")
 
 
@@ -83,6 +99,7 @@ def main() -> int:
     catalog = Path(args.catalog).expanduser().resolve()
     identity = _resolve_identity(catalog, args.identity_id)
     task = _load_json(_resolve_task_path(identity, args.identity_id))
+    pack_root = _resolve_pack_root(identity)
     contract = (task.get("identity_update_lifecycle_contract") or {}).get("validation_contract") or {}
     checks = [str(x) for x in (contract.get("required_checks") or []) if str(x).strip()]
     if not checks:
@@ -91,7 +108,10 @@ def main() -> int:
 
     ts = int(datetime.now(timezone.utc).timestamp())
     run_id = f"{args.identity_id}-replay-repair-{ts}"
-    log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
+    if pack_root is not None:
+        log_dir = (pack_root / "runtime" / "logs" / "upgrade" / args.identity_id).expanduser()
+    else:
+        log_dir = Path(f"identity/runtime/logs/upgrade/{args.identity_id}")
     results = []
     now = datetime.now(timezone.utc)
 
@@ -124,7 +144,7 @@ def main() -> int:
             }
         )
 
-    out = _replay_path(task, args.identity_id, ts)
+    out = _replay_path(task, args.identity_id, ts, pack_root)
     payload = {
         "identity_id": args.identity_id,
         "replay_status": "PASS",

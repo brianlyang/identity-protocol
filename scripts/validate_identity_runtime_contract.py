@@ -171,6 +171,11 @@ def _runtime_pattern_candidates(pattern: str, pack_root: Path | None, identity_i
         mapped = str((pack_root / "runtime" / pattern[len(local_prefix) :]).as_posix())
     elif pattern.startswith("identity/runtime/"):
         mapped = str((pack_root / "runtime" / pattern[len("identity/runtime/") :]).as_posix())
+    elif pattern.startswith("runtime/"):
+        # Canonical pack-local runtime layout (pack_root/runtime/**).
+        # Keep this mapping ahead of repository-relative glob so project-mode
+        # runtime evidence under .identity/<id>/runtime is discovered first.
+        mapped = str((pack_root / pattern).as_posix())
     if mapped and mapped not in candidates:
         # pack-local runtime first, then fallback to repository-relative runtime pattern
         candidates.insert(0, mapped)

@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0",
+  "stream": "v163-predev",
+  "date": "2026-03-10",
+  "generated_at": "2026-03-10T05:44:09.908397Z",
+  "evidence_records": [
+    {
+      "evidence_id": "PREDEV_MIN_ANCHOR.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/PREDEV_MIN_ANCHOR.json",
+      "sha256": "0ed98b2293b48c848c45e2de67b268035f3b5f6e4f020c808f02d1da5c7cf448",
+      "command": "python3 <inline> generate minimal anchor pointer for v1.6.3 predev package",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "audit_feedback_absorption_round31_1.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/audit_feedback_absorption_round31_1.json",
+      "sha256": "5ff0dcb699b1537a59277908eb209c39fe5c77e2b7f449f97deb1c29631c27dd",
+      "command": "python3 <inline> absorb roundtable audit findings into machine-readable predev matrix",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "control_plane_invariants.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/control_plane_invariants.json",
+      "sha256": "fe5fcc59625f4749cb9313e53de043d7e6f8f70d48506f5f2dd999a20b646055",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only > activity/evidence/v163-predev/2026-03-10/control_plane_invariants.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "docs_command_contract_check.log",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/docs_command_contract_check.log",
+      "sha256": "84713ef59e524e620f30f77bae299888916278064e857a424dfb6efe2fc7b48c",
+      "command": "python3 scripts/docs_command_contract_check.py > activity/evidence/v163-predev/2026-03-10/docs_command_contract_check.log",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "full_scan_project_global_repo.summary.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/full_scan_project_global_repo.summary.json",
+      "sha256": "62d1668817edf41d12dab6d7151f92abddd5535260187258fe6bf929a5570d1f",
+      "command": "python3 scripts/full_identity_protocol_scan.py ... --out activity/evidence/v162-l3-distance/2026-03-10/fullscan/full_scan_project_global_repo.json && jq summary > activity/evidence/v163-predev/2026-03-10/full_scan_project_global_repo.summary.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "github_vendor_reference_snapshot.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/github_vendor_reference_snapshot.json",
+      "sha256": "7a37ee00375b64816d1f1fa8809d50536accdbe9b063eff1e94aac9eb74f97a3",
+      "command": "python3 <inline> generate github official reference snapshot for v1.6.3 vendor track",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "round31_1_control_plane_invariants.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/round31_1_control_plane_invariants.json",
+      "sha256": "fe5fcc59625f4749cb9313e53de043d7e6f8f70d48506f5f2dd999a20b646055",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only > activity/evidence/v163-predev/2026-03-10/round31_1_control_plane_invariants.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "round31_1_doc_evidence_persistence.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/round31_1_doc_evidence_persistence.json",
+      "sha256": "1875e4e6ec5d9161b7ead758412218bcb02fd0a2c8245771cea783e33fec2481",
+      "command": "python3 scripts/validate_doc_evidence_persistence.py --json-only > activity/evidence/v163-predev/2026-03-10/round31_1_doc_evidence_persistence.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "round31_1_docs_command_contract_check.log",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/round31_1_docs_command_contract_check.log",
+      "sha256": "fb1b8ebbefdfbc700d11ee3848daba31cbf45378902719315bfd44092d46bf32",
+      "command": "python3 scripts/docs_command_contract_check.py > activity/evidence/v163-predev/2026-03-10/round31_1_docs_command_contract_check.log",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "round31_1_ssot_source.log",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/round31_1_ssot_source.log",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py > activity/evidence/v163-predev/2026-03-10/round31_1_ssot_source.log",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "round31_1_surface_drift.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/round31_1_surface_drift.json",
+      "sha256": "0b287a14dbb26f18b84cfed5a20daea3595e9edd6c087f609e199d342f87b65b",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only > activity/evidence/v163-predev/2026-03-10/round31_1_surface_drift.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "ssot_source.log",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/ssot_source.log",
+      "sha256": "b0c92ca73af28ec363aeeafc17896890b01ed1c5b242bb58bbcdf4471573d0cb",
+      "command": "python3 scripts/validate_protocol_ssot_source.py > activity/evidence/v163-predev/2026-03-10/ssot_source.log",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "surface_drift.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/surface_drift.json",
+      "sha256": "0b287a14dbb26f18b84cfed5a20daea3595e9edd6c087f609e199d342f87b65b",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only > activity/evidence/v163-predev/2026-03-10/surface_drift.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "target_scan_project_global_both.summary.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/target_scan_project_global_both.summary.json",
+      "sha256": "6ddf3ec08c3ac08a058694f57c6904190a6405dd01a5ddabaf1d8301bcc2dc44",
+      "command": "python3 scripts/full_identity_protocol_scan.py --scan-mode target ... --target-source-layer both ... && jq summary > activity/evidence/v163-predev/2026-03-10/target_scan_project_global_both.summary.json",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    },
+    {
+      "evidence_id": "v163_state_gap_summary.json",
+      "tmp_path": "",
+      "mirror_path": "activity/evidence/v163-predev/2026-03-10/v163_state_gap_summary.json",
+      "sha256": "a34205d06b192952d16739456dbcdc636df54ffc4431ce9fc584489b90c4a831",
+      "command": "python3 <inline> summarize v1.6.3 phase gap metrics from workflows + mapping",
+      "rc": 0,
+      "timestamp": "2026-03-10T05:44:09.908397Z"
+    }
+  ]
+}

@@ -23,10 +23,11 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="", help="optional actor session selector (run:<id>) for M:N binding alignment")
     ap.add_argument("--view", choices=["external", "internal", "dual"], default="external")
     ap.add_argument("--disclosure-level", choices=["minimal", "standard", "verbose", "audit"], default="")
     ap.add_argument("--work-layer", default="", help="explicit work layer override (protocol|instance|dual)")
-    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global|env|auto)")
+    ap.add_argument("--source-layer", default="", help="explicit source layer override (project|global)")
     ap.add_argument(
         "--layer-intent-text",
         default="",
@@ -63,6 +64,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=args.actor_id,
+            session_id=args.session_id,
             explicit_catalog=bool(args.catalog.strip()),
         )
     except Exception as exc:
@@ -102,6 +104,7 @@ def main() -> int:
         "pack_path": str(ctx.pack_path),
         "view": args.view,
         "disclosure_level": disclosure_level,
+        "session_id": str(args.session_id or "").strip(),
         "disclosure_source": disclosure.get("disclosure_source", ""),
         "trigger_applied": bool(disclosure.get("trigger_applied", False)),
         "trigger_scope": disclosure.get("trigger_scope", ""),
@@ -118,6 +121,9 @@ def main() -> int:
         "intent_confidence": intent.get("intent_confidence", 0.0),
         "intent_source": intent.get("intent_source", "default_fallback"),
         "fallback_reason": intent.get("fallback_reason", ""),
+        "fallback_reason_raw": intent.get("fallback_reason_raw", intent.get("fallback_reason", "")),
+        "fallback_taxonomy_class": intent.get("fallback_taxonomy_class", ""),
+        "fallback_taxonomy_version": intent.get("fallback_taxonomy_version", ""),
         "protocol_triggered": bool(intent.get("protocol_triggered", False)),
         "protocol_trigger_reasons": list(intent.get("protocol_trigger_reasons") or []),
         "protocol_trigger_confidence": float(intent.get("protocol_trigger_confidence", 0.0) or 0.0),

@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 
 from actor_session_common import list_actor_bindings, load_actor_binding, load_actor_binding_store, resolve_actor_id
+from runtime_temp_path_common import named_temp_root, runtime_temp_file
 from resolve_identity_context import (
     collect_protocol_evidence,
     default_identity_home,
@@ -25,6 +26,10 @@ from resolve_identity_context import (
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
+ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
+SWITCH_GUARD_SCOPE_ACTOR_SESSION = "actor_session"
+SWITCH_GUARD_SCOPE_ACTOR_GLOBAL = "actor_global"
+SWITCH_GUARD_SCOPE_CHOICES = {SWITCH_GUARD_SCOPE_ACTOR_SESSION, SWITCH_GUARD_SCOPE_ACTOR_GLOBAL}
 SCAFFOLD_CONSENT_TOKEN = "I_ACK_IDENTITY_SCAFFOLD_SCOPE_STACK_RUNTIME"
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROTOCOL_ROOT = SCRIPT_DIR.parent
@@ -65,6 +70,53 @@ def _parse_json_payload(raw: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def _resolve_active_execution_report_from_pack(pack_path: Path, identity_id: str) -> str:
+    pointer_path = (pack_path / "runtime" / "state" / "active_execution_report.json").resolve()
+    if not pointer_path.exists():
+        return ""
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    if not isinstance(pointer, dict):
+        return ""
+    report_path_raw = str(pointer.get("report_path", "")).strip()
+    if not report_path_raw:
+        return ""
+    report_path = Path(report_path_raw).expanduser().resolve()
+    if not report_path.exists() or not report_path.is_file():
+        return ""
+    name = report_path.name
+    if not name.startswith("identity-upgrade-exec-") or not name.endswith(".json"):
+        return ""
+    if name.endswith("-patch-plan.json"):
+        return ""
+    token = str(identity_id or "").strip()
+    if token and f"identity-upgrade-exec-{token}-" not in name:
+        return ""
+    run_id = str(pointer.get("run_id", "")).strip()
+    if run_id and run_id not in name:
+        return ""
+    return str(report_path)
+
+
+def _inject_bundle_report_selected_path(commands: list[list[str]], report_selected_path: str) -> None:
+    path = str(report_selected_path or "").strip()
+    if not path:
+        return
+    for cmd in commands:
+        if len(cmd) < 2 or cmd[1] != "scripts/required_gate_bundle_runner.py":
+            continue
+        if "--report-selected-path" in cmd:
+            idx = cmd.index("--report-selected-path")
+            if idx + 1 < len(cmd):
+                cmd[idx + 1] = path
+            else:
+                cmd.append(path)
+            continue
+        cmd.extend(["--report-selected-path", path])
+
+
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -74,13 +126,47 @@ def _infer_source_domain_from_catalog(catalog: str) -> str:
     try:
         p = Path(catalog).expanduser().resolve()
     except Exception:
-        return "auto"
-    txt = str(p)
-    if "/.agents/" in txt:
         return "project"
-    if "/.codex/" in txt:
+    txt = str(p)
+    if "/.codex/.identity/" in txt:
         return "global"
-    return "auto"
+    if "/.identity/" in txt:
+        return "project"
+    return "project"
+
+
+def _derive_actor_session_id(explicit_session_id: str, run_id: str) -> tuple[str, str]:
+    session_id = str(explicit_session_id or "").strip()
+    if session_id:
+        return session_id, "explicit_session_id"
+    rid = str(run_id or "").strip()
+    if rid:
+        return f"run:{rid}", "run_id"
+    return "", "missing"
+
+
+def _resolve_bound_session_id_for_identity(
+    *,
+    catalog: str,
+    identity_id: str,
+    actor_id: str,
+    explicit_session_id: str = "",
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if explicit:
+        return explicit, "explicit_session_id"
+    try:
+        binding = load_actor_binding(
+            Path(catalog).expanduser().resolve(),
+            actor_id,
+            identity_id=identity_id,
+        )
+    except Exception:
+        binding = {}
+    bound_session_id = str((binding or {}).get("session_id", "")).strip()
+    if bound_session_id:
+        return bound_session_id, "actor_binding_identity"
+    return "", "binding_missing"
 
 
 def _emit_two_phase_trace(
@@ -107,6 +193,7 @@ def _runtime_mode_guard(
     repo_catalog: str,
     scope: str = "",
     expect_mode: str = "auto",
+    operation: str = "validate",
 ) -> int:
     cmd = [
         "python3",
@@ -119,6 +206,8 @@ def _runtime_mode_guard(
         repo_catalog,
         "--expect-mode",
         str(expect_mode or "auto"),
+        "--operation",
+        str(operation or "validate"),
     ]
     if scope.strip():
         cmd.extend(["--scope", scope.strip()])
@@ -126,6 +215,115 @@ def _runtime_mode_guard(
     if rc != 0:
         print("[FAIL] runtime mode/catalog binding guard failed; aborting identity operation.")
     return rc
+
+
+def _resolve_actor_entry_or_fail(
+    actor_id_raw: str,
+    *,
+    operation: str,
+    identity_id: str,
+) -> tuple[str, int]:
+    actor_raw = str(actor_id_raw or "").strip()
+    if not actor_raw:
+        print(
+            f"[FAIL] {ERR_ACTOR_ENTRY_REQUIRED} explicit --actor-id required for strict operation "
+            f"(operation={operation}, identity={identity_id})"
+        )
+        print(
+            "[HINT] pass --actor-id <actor_id> and ensure actor-scoped binding is established "
+            "before validate/update/activate."
+        )
+        return "", 1
+    return resolve_actor_id(actor_raw), 0
+
+
+def _actor_binding_entry_guard(
+    *,
+    identity_id: str,
+    catalog: str,
+    actor_id: str,
+    session_id: str,
+    operation: str,
+) -> int:
+    cmd = [
+        "python3",
+        "scripts/validate_actor_session_binding.py",
+        "--catalog",
+        catalog,
+        "--identity-id",
+        identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(session_id or "").strip(),
+        "--operation",
+        operation,
+    ]
+    rc = _run(cmd)
+    if rc != 0:
+        print(
+            "[FAIL] actor-bound unified entry guard failed; "
+            "activation/switch acknowledgement may be required before continuing."
+        )
+    return rc
+
+
+def _update_preflight_context_guard(
+    *,
+    identity_id: str,
+    catalog: str,
+    repo_catalog: str,
+    actor_id: str,
+    session_id: str,
+    scope: str,
+    expect_mode: str,
+    operation: str,
+) -> int:
+    cmd = [
+        "python3",
+        "scripts/validate_identity_update_preflight_context.py",
+        "--identity-id",
+        identity_id,
+        "--catalog",
+        catalog,
+        "--repo-catalog",
+        repo_catalog,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        str(session_id or "").strip(),
+        "--expect-mode",
+        str(expect_mode or "auto"),
+        "--operation",
+        str(operation or "update"),
+        "--json-only",
+    ]
+    if str(scope or "").strip():
+        cmd.extend(["--scope", str(scope).strip()])
+    rc, out, _ = _run_capture(cmd)
+    payload = _parse_json_payload(out) or {}
+    status = str(payload.get("status", "")).strip().upper()
+    error_code = str(payload.get("error_code", "")).strip()
+    next_action = str(payload.get("next_action", "")).strip()
+    runtime_mode_guard_status = str(payload.get("runtime_mode_guard_status", "")).strip().upper()
+    actor_session_binding_status = str(payload.get("actor_session_binding_status", "")).strip().upper()
+    fallback_error_code = error_code
+    if not fallback_error_code:
+        if runtime_mode_guard_status == "FAIL_REQUIRED":
+            fallback_error_code = "IP-ENV-003"
+        elif actor_session_binding_status not in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}:
+            fallback_error_code = "IP-ASB-201"
+        else:
+            fallback_error_code = "IP-ENV-003"
+    if rc != 0 or status == "FAIL_REQUIRED":
+        print(
+            f"[FAIL] {fallback_error_code} "
+            "update preflight context guard failed; update blocked"
+        )
+        if next_action:
+            print(f"[HINT] {next_action}")
+        return rc or 1
+    return 0
 
 
 def _load_json(path: Path) -> dict:
@@ -186,6 +384,8 @@ def _resolve_evidence_output_path(pattern: str, identity_id: str, ts: datetime, 
         return (pack_path / "runtime" / candidate[len(local_prefix) :]).resolve()
     if candidate.startswith("identity/runtime/"):
         return (pack_path / "runtime" / candidate[len("identity/runtime/") :]).resolve()
+    if candidate.startswith("runtime/"):
+        return (pack_path / candidate).resolve()
     return Path(candidate).expanduser().resolve()
 
 
@@ -369,7 +569,9 @@ def _activate_identity(
     protocol_mode: str = "mode_a_shared",
     actor_id: str = "",
     run_id: str = "",
+    session_id: str = "",
     switch_reason: str = "",
+    switch_guard_scope: str = SWITCH_GUARD_SCOPE_ACTOR_SESSION,
     allow_identity_switch: bool = False,
     switch_intent_receipt: str = "",
     allow_cross_actor_switch: bool = False,
@@ -383,8 +585,27 @@ def _activate_identity(
         return 1
     actor_id_resolved = resolve_actor_id(actor_id)
     run_id_resolved = str(run_id or "").strip() or f"activate-{identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+    session_id_resolved, session_id_source = _derive_actor_session_id(session_id, run_id_resolved)
+    if session_id_source != "explicit_session_id":
+        print(
+            "[FAIL] activation requires explicit session-id under strict M:N actor binding "
+            "(error_code=IP-ACT-SESSION-001, session_id_source="
+            f"{session_id_source or 'missing'}, derived_session_id={session_id_resolved or 'EMPTY'})."
+        )
+        print("[HINT] re-run activate with --session-id run:<stable-session-id> (run-id derivation is disabled).")
+        return 1
+    switch_scope = str(switch_guard_scope or SWITCH_GUARD_SCOPE_ACTOR_SESSION).strip().lower()
+    if switch_scope not in SWITCH_GUARD_SCOPE_CHOICES:
+        switch_scope = SWITCH_GUARD_SCOPE_ACTOR_SESSION
     switch_reason_resolved = str(switch_reason or "").strip() or "explicit_activate"
-    actor_binding = load_actor_binding(local_catalog, actor_id_resolved)
+    if switch_scope == SWITCH_GUARD_SCOPE_ACTOR_GLOBAL:
+        actor_binding = load_actor_binding(local_catalog, actor_id_resolved)
+    else:
+        actor_binding = load_actor_binding(
+            local_catalog,
+            actor_id_resolved,
+            session_id=session_id_resolved,
+        )
     current_actor_identity = str(actor_binding.get("identity_id", "")).strip()
     switch_intent_payload: dict = {}
     switch_intent_receipt_path = ""
@@ -393,9 +614,9 @@ def _activate_identity(
     if identity_switch_detected:
         if not allow_identity_switch:
             print(
-                "[FAIL] activation would switch actor-bound identity without explicit switch intent "
+                "[FAIL] activation would switch actor-bound identity within guarded scope without explicit switch intent "
                 f"(error_code=IP-ACT-SWITCH-001, actor_id={actor_id_resolved}, current_identity={current_actor_identity}, "
-                f"target_identity={identity_id})."
+                f"target_identity={identity_id}, switch_guard_scope={switch_scope}, session_id={session_id_resolved})."
             )
             print("[HINT] re-run with --allow-identity-switch --switch-intent-receipt <path.json>")
             return 1
@@ -477,7 +698,7 @@ def _activate_identity(
         if rc != 0:
             raise RuntimeError("post-activation state consistency validation failed")
 
-        switch_dir = Path("/tmp/identity-activation-reports")
+        switch_dir = named_temp_root("identity-activation-reports")
         switch_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc)
         switch_report = switch_dir / f"identity-activation-switch-{identity_id}-{int(ts.timestamp())}.json"
@@ -491,8 +712,12 @@ def _activate_identity(
             "activation_model": "actor_scoped_catalog_with_multi_active",
             "actor_id": actor_id_resolved,
             "run_id": run_id_resolved,
+            "session_id": session_id_resolved,
+            "session_id_source": session_id_source,
             "entrypoint_pid": str(os.getpid()),
             "switch_reason": switch_reason_resolved,
+            "switch_guard_scope": switch_scope,
+            "switch_guard_binding_ref": str(actor_binding.get("binding_ref", "")).strip(),
             "identity_switch_detected": identity_switch_detected,
             "identity_switch_from": current_actor_identity,
             "identity_switch_to": identity_id,
@@ -529,36 +754,41 @@ def _activate_identity(
         switch_report.write_text(json.dumps(switch_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         actor_store = load_actor_binding_store(local_catalog, actor_id_resolved)
         compare_token = str(actor_store.get("compare_token", "")).strip() or str(actor_store.get("binding_version", 0))
-        session_id = f"run:{run_id_resolved}"
+        switch_intent_receipt_sync = switch_intent_receipt_path or str(switch_intent_receipt or "").strip()
+        sync_cmd = [
+            "python3",
+            "scripts/sync_session_identity.py",
+            "--catalog",
+            str(local_catalog),
+            "--identity-id",
+            identity_id,
+            "--out",
+            str(canonical_session_pointer),
+            "--mirror-out",
+            str(scoped_session_mirror),
+            "--actor-id",
+            actor_id_resolved,
+            "--run-id",
+            run_id_resolved,
+            "--session-id",
+            session_id_resolved,
+            "--session-id-source",
+            session_id_source,
+            "--compare-token",
+            compare_token,
+            "--mutation-lane",
+            "activate",
+            "--switch-reason",
+            switch_reason_resolved,
+            "--entrypoint-pid",
+            str(os.getpid()),
+            "--cross-actor-override-receipt",
+            cross_actor_receipt_path,
+        ]
+        if switch_intent_receipt_sync:
+            sync_cmd.extend(["--switch-intent-receipt", switch_intent_receipt_sync])
         sync = subprocess.run(
-            [
-                "python3",
-                "scripts/sync_session_identity.py",
-                "--catalog",
-                str(local_catalog),
-                "--identity-id",
-                identity_id,
-                "--out",
-                str(canonical_session_pointer),
-                "--mirror-out",
-                str(scoped_session_mirror),
-                "--actor-id",
-                actor_id_resolved,
-                "--run-id",
-                run_id_resolved,
-                "--session-id",
-                session_id,
-                "--compare-token",
-                compare_token,
-                "--mutation-lane",
-                "activate",
-                "--switch-reason",
-                switch_reason_resolved,
-                "--entrypoint-pid",
-                str(os.getpid()),
-                "--cross-actor-override-receipt",
-                cross_actor_receipt_path,
-            ],
+            sync_cmd,
             capture_output=True,
             text=True,
         )
@@ -580,6 +810,8 @@ def _activate_identity(
                 identity_id,
                 "--actor-id",
                 actor_id_resolved,
+                "--session-id",
+                session_id_resolved,
                 "--canonical-out",
                 str(canonical_session_pointer),
                 "--mirror-out",
@@ -598,6 +830,8 @@ def _activate_identity(
                 identity_id,
                 "--actor-id",
                 actor_id_resolved,
+                "--session-id",
+                session_id_resolved,
                 "--operation",
                 "activate",
                 "--json-only",
@@ -624,6 +858,7 @@ def _heal_identity(
     repo_catalog: Path,
     local_catalog: Path,
     identity_id: str,
+    actor_id: str,
     scope: str,
     source_pack: str,
     canonical_root: str,
@@ -638,6 +873,7 @@ def _heal_identity(
         "report_id": report_id,
         "generated_at": report_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "identity_id": identity_id,
+        "actor_id": actor_id,
         "scope": scope,
         "catalog": str(local_catalog),
         "repo_catalog": str(repo_catalog),
@@ -680,6 +916,14 @@ def _heal_identity(
         base_opts += ["--scope", scope]
     if canonical_root:
         base_opts += ["--canonical-root", canonical_root]
+    health_session_id = ""
+    if actor_id:
+        health_session_id, _ = _resolve_bound_session_id_for_identity(
+            catalog=str(local_catalog),
+            identity_id=identity_id,
+            actor_id=actor_id,
+            explicit_session_id="",
+        )
 
     detect_cmd = [
         "python3",
@@ -697,6 +941,10 @@ def _heal_identity(
     ]
     if scope:
         detect_cmd.extend(["--scope", scope])
+    if actor_id:
+        detect_cmd.extend(["--actor-id", actor_id])
+    if health_session_id:
+        detect_cmd.extend(["--session-id", health_session_id])
     rc_detect = _step("health_detect", detect_cmd)
     if rc_detect == 0:
         detect_step = report["steps"][-1]
@@ -770,6 +1018,24 @@ def _heal_identity(
         _write_heal_report(report, out_dir)
         return rc
 
+    rc = _step(
+        "repair_contract_backfill",
+        [
+            "python3",
+            "scripts/repair_contract_backfill.py",
+            "--catalog",
+            str(local_catalog),
+            "--identity-id",
+            identity_id,
+            "--apply",
+            "--json-only",
+        ],
+    )
+    if rc != 0:
+        report["result"] = "FAIL_CONTRACT_BACKFILL"
+        _write_heal_report(report, out_dir)
+        return rc
+
     # Normalize duplicate runtime directories to prevent scope validator hard-fail.
     try:
         resolved_after = resolve_identity(identity_id, repo_catalog, local_catalog, preferred_scope=scope)
@@ -809,6 +1075,8 @@ def _heal_identity(
     ]
     if scope:
         validate_cmd += ["--scope", scope]
+    if actor_id:
+        validate_cmd += ["--actor-id", actor_id]
     rc = _step("validate", validate_cmd)
     if rc != 0:
         last = report["steps"][-1]
@@ -919,6 +1187,10 @@ def _heal_identity(
     ]
     if scope:
         post_health_cmd.extend(["--scope", scope])
+    if actor_id:
+        post_health_cmd.extend(["--actor-id", actor_id])
+    if health_session_id:
+        post_health_cmd.extend(["--session-id", health_session_id])
     rc_post_health = _step("health_post_validate_recheck", post_health_cmd)
     if rc_post_health == 0:
         post_step = report["steps"][-1]
@@ -958,7 +1230,7 @@ def _write_heal_report(report: dict, out_dir: str, announce: bool = True) -> Pat
 
 def _cleanup_duplicate_instance_dirs(identity_id: str, canonical_pack_path: str) -> tuple[list[str], list[str]]:
     """
-    Quarantine duplicate runtime instance directories under ~/.codex/identity.
+    Quarantine duplicate runtime instance directories under ~/.codex/.identity.
     Returns (moved_paths, skipped_paths).
     """
     moved: list[str] = []
@@ -1115,6 +1387,7 @@ def main() -> int:
     p_validate.add_argument("--repo-catalog", default=repo_catalog_default)
     p_validate.add_argument("--catalog", default=local_catalog_default)
     p_validate.add_argument("--scope", default="")
+    p_validate.add_argument("--run-id", default="", help="optional validate run id for run-id anchored validators")
     p_validate.add_argument(
         "--baseline-policy",
         choices=["strict", "warn"],
@@ -1126,10 +1399,10 @@ def main() -> int:
     p_validate.add_argument("--expected-source-layer", default="", help="optional expected source_layer override for strict reply gates")
     p_validate.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"),
+        default="",
         help=(
             "explicit actor id for strict governed-outlet/headstamp recurrence closure checks. "
-            "Defaults to CODEX_ACTOR_ID; falls back to assistant:codex."
+            "required for strict validate entry."
         ),
     )
 
@@ -1143,14 +1416,28 @@ def main() -> int:
     p_activate.add_argument("--scope", default="")
     p_activate.add_argument("--protocol-root", default="")
     p_activate.add_argument("--protocol-mode", choices=["mode_a_shared", "mode_b_standalone"], default="mode_a_shared")
-    p_activate.add_argument("--actor-id", default="", help="actor id for actor-scoped session binding")
+    p_activate.add_argument(
+        "--actor-id",
+        default="",
+        help="explicit actor id for actor-scoped session binding (required for strict activate entry)",
+    )
     p_activate.add_argument("--run-id", default="", help="activation run id for audit traceability")
+    p_activate.add_argument("--session-id", default="", help="optional actor session id; defaults to run:<run-id>")
     p_activate.add_argument("--switch-reason", default="explicit_activate", help="reason for activation switch")
+    p_activate.add_argument(
+        "--switch-guard-scope",
+        choices=sorted(SWITCH_GUARD_SCOPE_CHOICES),
+        default=SWITCH_GUARD_SCOPE_ACTOR_SESSION,
+        help=(
+            "switch guard scope: actor_session enforces receipt when same actor+session switches identity; "
+            "actor_global preserves legacy actor-wide guard."
+        ),
+    )
     p_activate.add_argument(
         "--allow-identity-switch",
         action="store_true",
         help=(
-            "explicitly allow switching actor-bound identity; required when current actor binding points to a different identity"
+            "explicitly allow switching actor-bound identity; required when guarded actor binding points to a different identity"
         ),
     )
     p_activate.add_argument(
@@ -1226,15 +1513,29 @@ def main() -> int:
         help="JSON receipt path required when --allow-fixture-runtime is used for fixture mutation",
     )
     p_update.add_argument("--auto-converge-active", action="store_true")
+    p_update.add_argument("--run-id", default="", help="optional update run id for run-id anchored validators")
+    p_update.add_argument(
+        "--session-id",
+        default="",
+        help="optional actor session id for actor-session entry guard; defaults to actor binding for target identity",
+    )
+    p_update.add_argument("--target-branch", default="")
+    p_update.add_argument("--release-head-sha", default="")
+    p_update.add_argument("--required-gates-run-id", default="")
+    p_update.add_argument("--run-url", default="")
+    p_update.add_argument("--workflow-file-sha", default="")
+    p_update.add_argument("--run-head-sha", default="")
+    p_update.add_argument("--run-workflow-file-sha", default="")
+    p_update.add_argument("--checks-json", default="")
     p_update.add_argument("--layer-intent-text", default="", help="optional natural-language layer intent passthrough")
     p_update.add_argument("--expected-work-layer", default="", help="optional expected work_layer passthrough")
     p_update.add_argument("--expected-source-layer", default="", help="optional expected source_layer passthrough")
     p_update.add_argument(
         "--actor-id",
-        default=os.environ.get("CODEX_ACTOR_ID", ""),
+        default="",
         help=(
-            "optional actor id override for actor-scoped refresh/session validators during update. "
-            "When omitted, runtime fallback resolution is used."
+            "explicit actor id for actor-scoped refresh/session validators during update. "
+            "required for strict update entry."
         ),
     )
     p_update.add_argument("--why-now", default="", help="pre-mutation disclosure rationale for update")
@@ -1258,12 +1559,13 @@ def main() -> int:
     p_heal.add_argument("--identity-id", required=True)
     p_heal.add_argument("--repo-catalog", default=repo_catalog_default)
     p_heal.add_argument("--catalog", default=local_catalog_default)
+    p_heal.add_argument("--actor-id", default="", help="explicit actor id for strict validate/health steps in heal flow")
     p_heal.add_argument("--scope", default="USER")
     p_heal.add_argument("--source-pack", default="")
     p_heal.add_argument("--canonical-root", default="")
     p_heal.add_argument("--apply", action="store_true", help="execute fixes; otherwise scan-only dry run")
     p_heal.add_argument("--destructive-replace", action="store_true")
-    p_heal.add_argument("--out-dir", default="/tmp/identity-heal-reports")
+    p_heal.add_argument("--out-dir", default=str(named_temp_root("identity-heal-reports")))
 
 
     args = ap.parse_args()
@@ -1307,7 +1609,13 @@ def main() -> int:
         receipt_path = (
             Path(args.pre_mutation_gate_receipt).expanduser().resolve()
             if str(args.pre_mutation_gate_receipt or "").strip()
-            else Path(f"/tmp/identity-pre-mutation-gate-init-{args.id}-{int(datetime.now(timezone.utc).timestamp())}.json")
+            else runtime_temp_file(
+                channel="pre-mutation-gate",
+                operation="init",
+                identity_id=args.id,
+                stem=f"identity-pre-mutation-gate-init-{args.id}-{int(datetime.now(timezone.utc).timestamp())}",
+                ext="json",
+            )
         )
         _write_json(
             receipt_path,
@@ -1366,29 +1674,80 @@ def main() -> int:
 
     if args.command == "validate":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
-        actor_id_validate = resolve_actor_id(str(args.actor_id or "").strip())
+        actor_id_validate, rc_actor_validate = _resolve_actor_entry_or_fail(
+            str(args.actor_id or ""),
+            operation="validate",
+            identity_id=args.identity_id,
+        )
+        if rc_actor_validate != 0:
+            return rc_actor_validate
         rc_guard = _runtime_mode_guard(
             args.identity_id,
             args.catalog,
             args.repo_catalog,
             args.scope,
-            expect_mode="any",
+            expect_mode="auto",
+            operation="validate",
         )
         if rc_guard != 0:
             return rc_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
-        stamp_artifact = f"/tmp/identity-response-stamp-{args.identity_id}.json"
-        stamp_blocker_receipt = f"/tmp/identity-stamp-blocker-receipt-{args.identity_id}.json"
-        reply_first_line_blocker_receipt = (
-            f"/tmp/identity-reply-first-line-blocker-receipt-{args.identity_id}.json"
+        stamp_artifact = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-response-stamp-{args.identity_id}",
+                ext="json",
+            )
         )
-        send_time_reply_file = f"/tmp/identity-send-time-reply-{args.identity_id}.txt"
-        send_time_reply_gate_blocker_receipt = (
-            f"/tmp/identity-send-time-reply-gate-blocker-receipt-{args.identity_id}.json"
+        stamp_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-stamp-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
         )
-        execution_reply_coherence_blocker_receipt = (
-            f"/tmp/identity-execution-reply-coherence-blocker-receipt-{args.identity_id}.json"
+        reply_first_line_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-reply-first-line-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
         )
+        send_time_reply_file = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-send-time-reply-{args.identity_id}",
+                ext="txt",
+            )
+        )
+        send_time_reply_gate_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-send-time-reply-gate-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
+        )
+        execution_reply_coherence_blocker_receipt = str(
+            runtime_temp_file(
+                channel="response-stamp",
+                operation="validate",
+                identity_id=args.identity_id,
+                stem=f"identity-execution-reply-coherence-blocker-receipt-{args.identity_id}",
+                ext="json",
+            )
+        )
+        vibe_pack_out_root = str(named_temp_root("vibe-coding-feeding-packs"))
+        capability_fit_out_root = str(named_temp_root("capability-fit-matrices"))
         try:
             _ = resolve_identity(
                 args.identity_id,
@@ -1399,12 +1758,52 @@ def main() -> int:
         except Exception as e:
             print(f"[FAIL] {e}")
             return 1
+        validate_run_token = str(args.run_id or "").strip() or f"validate-{args.identity_id}"
+        validate_session_id = f"run:{validate_run_token}"
+        rc_actor_binding_entry = _actor_binding_entry_guard(
+            identity_id=args.identity_id,
+            catalog=args.catalog,
+            actor_id=actor_id_validate,
+            session_id=validate_session_id,
+            operation="validate",
+        )
+        if rc_actor_binding_entry != 0:
+            return rc_actor_binding_entry
+        required_gate_bundle_receipt_validate = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="validate",
+                identity_id=args.identity_id,
+                run_token=validate_run_token,
+                stem=f"required-gate-bundle-validate-{args.identity_id}-{validate_run_token}",
+                ext="json",
+            )
+        )
+        required_gate_bundle_receipt_validate_probe = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="scan",
+                identity_id=args.identity_id,
+                run_token=f"{validate_run_token}-scan-probe",
+                stem=f"required-gate-bundle-validate-scan-probe-{args.identity_id}-{validate_run_token}",
+                ext="json",
+            )
+        )
         checks = [
             ["python3", "scripts/validate_identity_scope_resolution.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_isolation.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_scope_persistence.py", "--catalog", args.catalog, "--repo-catalog", args.repo_catalog, "--identity-id", args.identity_id, "--scope", args.scope],
             ["python3", "scripts/validate_identity_state_consistency.py", "--catalog", args.catalog],
-            ["python3", "scripts/validate_identity_instance_isolation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            [
+                "python3",
+                "scripts/validate_identity_instance_isolation.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--scope",
+                args.scope,
+            ],
             ["python3", "scripts/validate_identity_runtime_contract.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             ["python3", "scripts/validate_identity_role_binding.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
             [
@@ -1428,18 +1827,6 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
-                "--operation",
-                "validate",
-            ],
-            [
-                "python3",
-                "scripts/validate_actor_session_binding.py",
-                "--catalog",
-                args.catalog,
-                "--identity-id",
-                args.identity_id,
-                "--actor-id",
-                actor_id_validate,
                 "--operation",
                 "validate",
             ],
@@ -1472,6 +1859,8 @@ def main() -> int:
                 args.identity_id,
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--operation",
                 "validate",
                 "--json-only",
@@ -1501,6 +1890,10 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--view",
                 "external",
                 "--disclosure-level",
@@ -1518,6 +1911,10 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--stamp-json",
                 stamp_artifact,
                 "--force-check",
@@ -1555,6 +1952,8 @@ def main() -> int:
                 "--enforce-first-line-gate",
                 "--operation",
                 "validate",
+                "--actor-id",
+                actor_id_validate,
                 "--blocker-receipt-out",
                 reply_first_line_blocker_receipt,
             ],
@@ -1577,7 +1976,7 @@ def main() -> int:
             ],
             [
                 "python3",
-                "scripts/compose_and_validate_governed_reply.py",
+                "scripts/final_emit_governed.py",
                 "--catalog",
                 args.catalog,
                 "--repo-catalog",
@@ -1591,7 +1990,7 @@ def main() -> int:
                 "--blocker-receipt-out",
                 send_time_reply_gate_blocker_receipt,
                 "--outlet-channel-id",
-                "governed_adapter_v1",
+                "final_emit_governed",
                 "--actor-id",
                 actor_id_validate,
                 "--json-only",
@@ -1611,7 +2010,7 @@ def main() -> int:
                 "--enforce-send-time-gate",
                 "--reply-outlet-guard-applied",
                 "--outlet-channel-id",
-                "governed_adapter_v1",
+                "final_emit_governed",
                 "--reply-transport-ref",
                 send_time_reply_file,
                 "--operation",
@@ -1677,6 +2076,8 @@ def main() -> int:
                 "--enforce-coherence-gate",
                 "--operation",
                 "validate",
+                "--actor-id",
+                actor_id_validate,
                 "--blocker-receipt-out",
                 execution_reply_coherence_blocker_receipt,
             ],
@@ -1711,6 +2112,358 @@ def main() -> int:
                 args.identity_id,
                 "--operation",
                 "validate",
+            ],
+            [
+                "python3",
+                "scripts/validate_unlock_formula.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_release_plane_cloud_evidence.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_cross_cwd_absolute_input.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                str(Path(args.repo_catalog).expanduser().resolve()),
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_run_id_report_selection.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                validate_run_token,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_phase_bootstrap_before_strict.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_tmp_collision_safety.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                validate_run_token,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_handoff_collab_freshness_rotation.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_atomic_emit.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_capability_boundary_classification.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_promotion_pipeline.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_outlet_matrix.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_sidecar_cwd_parity.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_docs_bridge_consistency.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_bootstrap_capability.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_capability_matrix.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_refresh_strict_business_interference.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_kernel_ssot_source.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_derivation_conformance.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_semantic_convergence.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_contract_mapping_coverage.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_kernel_executable_coupling.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--actor-id",
+                args.actor_id,
+                "--session-id",
+                validate_session_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/required_gate_bundle_runner.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                validate_run_token,
+                "--send-time-gate-status",
+                "NOT_APPLICABLE",
+                "--outlet-bypass-detected",
+                "false",
+                "--final-emit-contract-status",
+                "NOT_APPLICABLE",
+                "--final-emit-policy-mode",
+                "tool_choice_required",
+                "--final-emit-schema-status",
+                "NOT_APPLICABLE",
+                "--actor-id",
+                actor_id_validate,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
+                "--surface-label",
+                "creator_validate",
+                "--operation",
+                "validate",
+                "--out",
+                required_gate_bundle_receipt_validate,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/required_gate_bundle_runner.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                validate_run_token,
+                "--send-time-gate-status",
+                "NOT_APPLICABLE",
+                "--outlet-bypass-detected",
+                "false",
+                "--final-emit-contract-status",
+                "NOT_APPLICABLE",
+                "--final-emit-policy-mode",
+                "tool_choice_required",
+                "--final-emit-schema-status",
+                "NOT_APPLICABLE",
+                "--actor-id",
+                actor_id_validate,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
+                "--surface-label",
+                "creator_validate_scan_probe",
+                "--operation",
+                "scan",
+                "--out",
+                required_gate_bundle_receipt_validate_probe,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_recurrence_escalator.py",
+                "--identity-id",
+                args.identity_id,
+                "--surface",
+                "creator_validate",
+                "--operation",
+                "validate",
+                "--receipt",
+                required_gate_bundle_receipt_validate,
+                "--enforce-blocking",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_tuple_parity.py",
+                "--receipt",
+                required_gate_bundle_receipt_validate,
+                "--receipt",
+                required_gate_bundle_receipt_validate_probe,
+                "--require-distinct-operations",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_replay_archive_contract.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
             ],
             [
                 "python3",
@@ -1785,7 +2538,7 @@ def main() -> int:
                 "--operation",
                 "validate",
                 "--out-root",
-                "/tmp/vibe-coding-feeding-packs",
+                vibe_pack_out_root,
             ],
             [
                 "python3",
@@ -1847,7 +2600,7 @@ def main() -> int:
                 "--operation",
                 "validate",
                 "--out-root",
-                "/tmp/capability-fit-matrices",
+                capability_fit_out_root,
             ],
             [
                 "python3",
@@ -2031,12 +2784,14 @@ def main() -> int:
                 args.baseline_policy,
                 "--json-only",
             ],
-            ["python3", "scripts/validate_identity_experience_feedback_governance.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_capability_arbitration.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_dialogue_content.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_dialogue_cross_validation.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_dialogue_result_support.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
-            ["python3", "scripts/validate_identity_ci_enforcement.py", "--catalog", args.catalog, "--identity-id", args.identity_id],
+            [
+                "python3",
+                "scripts/run_identity_dialogue_feedback_bundle.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+            ],
         ]
         layer_intent_text = str(args.layer_intent_text or "").strip()
         expected_work_layer = str(args.expected_work_layer or "").strip().lower()
@@ -2047,7 +2802,7 @@ def main() -> int:
                     continue
                 if cmd[1] in {
                     "scripts/render_identity_response_stamp.py",
-                    "scripts/compose_and_validate_governed_reply.py",
+                    "scripts/final_emit_governed.py",
                     "scripts/validate_layer_intent_resolution.py",
                     "scripts/validate_reply_identity_context_first_line.py",
                     "scripts/validate_send_time_reply_gate.py",
@@ -2062,6 +2817,8 @@ def main() -> int:
             for cmd in checks:
                 if len(cmd) < 2:
                     continue
+                if cmd[1] == "scripts/render_identity_response_stamp.py":
+                    cmd.extend(["--work-layer", expected_work_layer])
                 if cmd[1] in {
                     "scripts/validate_layer_intent_resolution.py",
                     "scripts/validate_reply_identity_context_first_line.py",
@@ -2073,13 +2830,15 @@ def main() -> int:
                     "scripts/validate_protocol_inquiry_followup_chain.py",
                 }:
                     cmd.extend(["--expected-work-layer", expected_work_layer])
-                if cmd[1] == "scripts/compose_and_validate_governed_reply.py":
+                if cmd[1] == "scripts/final_emit_governed.py":
                     cmd.extend(["--work-layer", expected_work_layer])
         if expected_source_layer:
             for cmd in checks:
                 if len(cmd) < 2:
                     continue
-                if cmd[1] == "scripts/compose_and_validate_governed_reply.py":
+                if cmd[1] == "scripts/render_identity_response_stamp.py":
+                    cmd.extend(["--source-layer", expected_source_layer])
+                if cmd[1] == "scripts/final_emit_governed.py":
                     cmd.extend(["--source-layer", expected_source_layer])
                 if cmd[1] in {
                     "scripts/validate_layer_intent_resolution.py",
@@ -2098,6 +2857,33 @@ def main() -> int:
                     "scripts/validate_work_layer_gate_set_routing.py",
                 }:
                     cmd.extend(["--source-layer", expected_source_layer])
+        actor_id_required_scripts = {
+            "scripts/validate_required_contract_coverage.py",
+            "scripts/render_identity_response_stamp.py",
+            "scripts/validate_identity_response_stamp.py",
+            "scripts/final_emit_governed.py",
+            "scripts/validate_headstamp_recurrence_closure.py",
+            "scripts/validate_reply_identity_context_first_line.py",
+            "scripts/validate_send_time_reply_gate.py",
+            "scripts/validate_execution_reply_identity_coherence.py",
+        }
+        session_id_required_scripts = {
+            "scripts/validate_required_contract_coverage.py",
+            "scripts/render_identity_response_stamp.py",
+            "scripts/validate_identity_response_stamp.py",
+            "scripts/final_emit_governed.py",
+            "scripts/validate_headstamp_recurrence_closure.py",
+            "scripts/validate_reply_identity_context_first_line.py",
+            "scripts/validate_send_time_reply_gate.py",
+            "scripts/validate_execution_reply_identity_coherence.py",
+        }
+        for cmd in checks:
+            if len(cmd) < 2:
+                continue
+            if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
+                cmd.extend(["--actor-id", actor_id_validate])
+            if cmd[1] in session_id_required_scripts and "--session-id" not in cmd:
+                cmd.extend(["--session-id", validate_session_id])
         for cmd in checks:
             rc = _run(cmd)
             if rc != 0:
@@ -2113,7 +2899,20 @@ def main() -> int:
         return 0
 
     if args.command == "activate":
-        rc_guard = _runtime_mode_guard(args.identity_id, args.catalog, args.repo_catalog, args.scope)
+        actor_id_activate, rc_actor_activate = _resolve_actor_entry_or_fail(
+            str(args.actor_id or ""),
+            operation="activate",
+            identity_id=args.identity_id,
+        )
+        if rc_actor_activate != 0:
+            return rc_actor_activate
+        rc_guard = _runtime_mode_guard(
+            args.identity_id,
+            args.catalog,
+            args.repo_catalog,
+            args.scope,
+            operation="activate",
+        )
         if rc_guard != 0:
             return rc_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
@@ -2161,9 +2960,11 @@ def main() -> int:
             args.scope,
             args.protocol_root,
             args.protocol_mode,
-            args.actor_id,
+            actor_id_activate,
             args.run_id,
+            args.session_id,
             args.switch_reason,
+            args.switch_guard_scope,
             bool(args.allow_identity_switch),
             args.switch_intent_receipt,
             bool(args.allow_cross_actor_switch),
@@ -2172,7 +2973,13 @@ def main() -> int:
 
     if args.command == "update":
         ensure_local_catalog(Path(args.repo_catalog), Path(args.catalog))
-        actor_id_update = resolve_actor_id(str(args.actor_id or "").strip())
+        actor_id_update, rc_actor_update = _resolve_actor_entry_or_fail(
+            str(args.actor_id or ""),
+            operation="update",
+            identity_id=args.identity_id,
+        )
+        if rc_actor_update != 0:
+            return rc_actor_update
         guard_expect_mode = "auto"
         if _is_fixture_identity_in_catalog(args.catalog, args.identity_id):
             if str(args.scope or "").strip().upper() == "USER":
@@ -2180,25 +2987,24 @@ def main() -> int:
                     "[INFO] fixture identity detected: overriding scope USER -> AUTO for update runtime guard"
                 )
                 args.scope = ""
-            try:
-                catalog_resolved = Path(args.catalog).expanduser().resolve()
-                repo_catalog_resolved = Path(args.repo_catalog).expanduser().resolve()
-                if catalog_resolved == repo_catalog_resolved:
-                    guard_expect_mode = "any"
-                    print(
-                        "[INFO] fixture identity detected on repo catalog: overriding runtime mode guard expect-mode AUTO -> ANY"
-                    )
-            except Exception:
-                pass
-        rc_guard = _runtime_mode_guard(
-            args.identity_id,
-            args.catalog,
-            args.repo_catalog,
-            args.scope,
-            expect_mode=guard_expect_mode,
+        session_id_update, _session_id_update_source = _resolve_bound_session_id_for_identity(
+            catalog=args.catalog,
+            identity_id=args.identity_id,
+            actor_id=actor_id_update,
+            explicit_session_id=str(args.session_id or "").strip(),
         )
-        if rc_guard != 0:
-            return rc_guard
+        rc_preflight_guard = _update_preflight_context_guard(
+            identity_id=args.identity_id,
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            actor_id=actor_id_update,
+            session_id=session_id_update,
+            scope=args.scope,
+            expect_mode=guard_expect_mode,
+            operation="update",
+        )
+        if rc_preflight_guard != 0:
+            return rc_preflight_guard
         identity_home_expected = str(Path(args.catalog).expanduser().resolve().parent)
         rc_home_align = _run(
             [
@@ -2264,14 +3070,57 @@ def main() -> int:
         if rc_boundary != 0:
             return rc_boundary
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
+        update_run_id = str(args.run_id or "").strip() or creator_run_id
+        update_target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
+        update_release_head_sha = str(args.release_head_sha or "").strip()
+        if not update_release_head_sha:
+            try:
+                p_head = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if p_head.returncode == 0:
+                    update_release_head_sha = str(p_head.stdout or "").strip()
+            except Exception:
+                update_release_head_sha = ""
+        update_required_gates_run_id = (
+            str(args.required_gates_run_id or "").strip()
+            or str(os.environ.get("GITHUB_RUN_ID", "")).strip()
+            or update_run_id
+        )
+        update_run_url = str(args.run_url or "").strip()
+        update_workflow_file_sha = str(args.workflow_file_sha or "").strip() or update_release_head_sha
+        update_run_head_sha = str(args.run_head_sha or "").strip() or update_release_head_sha
+        update_run_workflow_file_sha = (
+            str(args.run_workflow_file_sha or "").strip() or update_workflow_file_sha
+        )
+        update_checks_json = str(args.checks_json or "").strip()
         pre_mutation_gate_ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        pre_mutation_reply_file = f"/tmp/identity-pre-mutation-reply-{args.identity_id}-{creator_run_id}.txt"
-        pre_mutation_send_time_blocker = (
-            f"/tmp/identity-pre-mutation-send-time-blocker-{args.identity_id}-{creator_run_id}.json"
+        pre_mutation_reply_file = str(
+            runtime_temp_file(
+                channel="pre-mutation",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=creator_run_id,
+                stem=f"identity-pre-mutation-reply-{args.identity_id}-{creator_run_id}",
+                ext="txt",
+            )
+        )
+        pre_mutation_send_time_blocker = str(
+            runtime_temp_file(
+                channel="pre-mutation",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=creator_run_id,
+                stem=f"identity-pre-mutation-send-time-blocker-{args.identity_id}-{creator_run_id}",
+                ext="json",
+            )
         )
         pre_mutation_compose_cmd = [
             "python3",
-            "scripts/compose_and_validate_governed_reply.py",
+            "scripts/final_emit_governed.py",
             "--catalog",
             args.catalog,
             "--repo-catalog",
@@ -2287,9 +3136,11 @@ def main() -> int:
             "--blocker-receipt-out",
             pre_mutation_send_time_blocker,
             "--outlet-channel-id",
-            "governed_adapter_v1",
+            "final_emit_governed",
             "--json-only",
         ]
+        if str(session_id_update or "").strip():
+            pre_mutation_compose_cmd.extend(["--session-id", str(session_id_update).strip()])
         if args.layer_intent_text.strip():
             pre_mutation_compose_cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
         if args.expected_work_layer.strip():
@@ -2326,7 +3177,14 @@ def main() -> int:
         pre_mutation_gate_receipt = (
             Path(args.pre_mutation_gate_receipt).expanduser().resolve()
             if str(args.pre_mutation_gate_receipt or "").strip()
-            else Path(f"/tmp/identity-pre-mutation-gate-update-{args.identity_id}-{creator_run_id}.json")
+            else runtime_temp_file(
+                channel="pre-mutation-gate",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=creator_run_id,
+                stem=f"identity-pre-mutation-gate-update-{args.identity_id}-{creator_run_id}",
+                ext="json",
+            )
         )
         _write_json(
             pre_mutation_gate_receipt,
@@ -2345,9 +3203,15 @@ def main() -> int:
                     pre_mutation_header_payload.get("blocker_receipt_path", "") or pre_mutation_send_time_blocker
                 ),
                 "governed_outlet_enforced": bool(pre_mutation_header_payload.get("governed_outlet_enforced", False)),
+                "send_time_gate_status": str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper(),
                 "outlet_channel_id": str(pre_mutation_header_payload.get("outlet_channel_id", "")),
                 "outlet_preflight_receipt": str(pre_mutation_header_payload.get("outlet_preflight_receipt", "")),
                 "outlet_bypass_detected": bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)),
+                "final_emit_channel_id": str(pre_mutation_header_payload.get("final_emit_channel_id", "")),
+                "final_emit_policy_mode": str(pre_mutation_header_payload.get("final_emit_policy_mode", "")),
+                "final_emit_schema_id": str(pre_mutation_header_payload.get("final_emit_schema_id", "")),
+                "final_emit_schema_status": str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper(),
+                "final_emit_contract_status": str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper(),
                 "status": "PASS_REQUIRED" if not pre_mutation_gate_error_code else "FAIL_REQUIRED",
             },
         )
@@ -2363,6 +3227,8 @@ def main() -> int:
                 args.catalog,
                 "--identity-id",
                 args.identity_id,
+                "--scope",
+                args.scope,
             ]
         )
         if rc != 0:
@@ -2608,6 +3474,402 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] discovery requiredization validation failed; update blocked")
             return rc
+        update_bundle_run_token = str(update_required_gates_run_id or update_run_id or args.identity_id).strip()
+        required_gate_bundle_receipt_update = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="update",
+                identity_id=args.identity_id,
+                run_token=update_bundle_run_token,
+                stem=f"required-gate-bundle-update-{args.identity_id}-{update_bundle_run_token}",
+                ext="json",
+            )
+        )
+        required_gate_bundle_receipt_update_probe = str(
+            runtime_temp_file(
+                channel="required-gate-bundle",
+                operation="scan",
+                identity_id=args.identity_id,
+                run_token=f"{update_bundle_run_token}-scan-probe",
+                stem=f"required-gate-bundle-update-scan-probe-{args.identity_id}-{update_bundle_run_token}",
+                ext="json",
+            )
+        )
+        intake_update_gates: list[list[str]] = [
+            [
+                "python3",
+                "scripts/validate_unlock_formula.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_release_plane_cloud_evidence.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--target-branch",
+                update_target_branch,
+                "--release-head-sha",
+                update_release_head_sha,
+                "--required-gates-run-id",
+                update_required_gates_run_id,
+                "--run-url",
+                update_run_url,
+                "--workflow-file-sha",
+                update_workflow_file_sha,
+                "--run-head-sha",
+                update_run_head_sha,
+                "--run-workflow-file-sha",
+                update_run_workflow_file_sha,
+                "--checks-json",
+                update_checks_json,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_cross_cwd_absolute_input.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                str(Path(args.repo_catalog).expanduser().resolve()),
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_run_id_report_selection.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                update_run_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_phase_bootstrap_before_strict.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_tmp_collision_safety.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                update_run_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_handoff_collab_freshness_rotation.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_feedback_atomic_emit.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_capability_boundary_classification.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_promotion_pipeline.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_outlet_matrix.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_sidecar_cwd_parity.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_docs_bridge_consistency.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_bootstrap_capability.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_capability_matrix.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_refresh_strict_business_interference.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_kernel_ssot_source.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_derivation_conformance.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_semantic_convergence.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_contract_mapping_coverage.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_prompt_kernel_executable_coupling.py",
+                "--catalog",
+                args.catalog,
+                "--repo-catalog",
+                args.repo_catalog,
+                "--identity-id",
+                args.identity_id,
+                "--actor-id",
+                args.actor_id,
+                "--session-id",
+                session_id_update,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/required_gate_bundle_runner.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                update_bundle_run_token,
+                "--send-time-gate-status",
+                str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--outlet-bypass-detected",
+                "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
+                "--final-emit-contract-status",
+                str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--final-emit-policy-mode",
+                str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip() or "tool_choice_required",
+                "--final-emit-schema-status",
+                str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--actor-id",
+                actor_id_update,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
+                "--surface-label",
+                "creator_update",
+                "--operation",
+                "update",
+                "--out",
+                required_gate_bundle_receipt_update,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/required_gate_bundle_runner.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--run-id",
+                update_bundle_run_token,
+                "--send-time-gate-status",
+                str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--outlet-bypass-detected",
+                "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
+                "--final-emit-contract-status",
+                str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--final-emit-policy-mode",
+                str(pre_mutation_header_payload.get("final_emit_policy_mode", "")).strip() or "tool_choice_required",
+                "--final-emit-schema-status",
+                str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper() or "FAIL_REQUIRED",
+                "--actor-id",
+                actor_id_update,
+                "--resolved-work-layer",
+                (str(args.expected_work_layer or "").strip().lower() or "instance"),
+                "--resolved-source-layer",
+                (str(args.expected_source_layer or "").strip().lower() or _infer_source_domain_from_catalog(args.catalog)),
+                "--lock-state",
+                "LOCK_MATCH",
+                "--surface-label",
+                "creator_update_scan_probe",
+                "--operation",
+                "scan",
+                "--out",
+                required_gate_bundle_receipt_update_probe,
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_recurrence_escalator.py",
+                "--identity-id",
+                args.identity_id,
+                "--surface",
+                "creator_update",
+                "--operation",
+                "update",
+                "--receipt",
+                required_gate_bundle_receipt_update,
+                "--enforce-blocking",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_required_gate_tuple_parity.py",
+                "--receipt",
+                required_gate_bundle_receipt_update,
+                "--receipt",
+                required_gate_bundle_receipt_update_probe,
+                "--require-distinct-operations",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_replay_archive_contract.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+        ]
+        for gate_cmd in intake_update_gates:
+            rc_gate = _run(gate_cmd)
+            if rc_gate != 0:
+                print(f"[FAIL] batch6/7 gate failed during update: {gate_cmd[1]}")
+                return rc_gate
         cmd = [
             "python3",
             "scripts/execute_identity_upgrade.py",
@@ -2625,6 +3887,8 @@ def main() -> int:
             args.protocol_mode,
             "--repo-catalog",
             args.repo_catalog,
+            "--actor-id",
+            actor_id_update,
             "--run-id",
             creator_run_id,
             "--resolved-scope",
@@ -2643,6 +3907,24 @@ def main() -> int:
             pre_mutation_gate_ts,
             "--pre-mutation-gate-receipt",
             str(pre_mutation_gate_receipt),
+            "--send-time-gate-status",
+            str(pre_mutation_header_payload.get("send_time_gate_status", "")).strip().upper(),
+            "--outlet-channel-id",
+            str(pre_mutation_header_payload.get("outlet_channel_id", "")),
+            "--outlet-preflight-receipt",
+            str(pre_mutation_header_payload.get("outlet_preflight_receipt", "")),
+            "--outlet-bypass-detected",
+            "true" if bool(pre_mutation_header_payload.get("outlet_bypass_detected", False)) else "false",
+            "--final-emit-channel-id",
+            str(pre_mutation_header_payload.get("final_emit_channel_id", "")),
+            "--final-emit-policy-mode",
+            str(pre_mutation_header_payload.get("final_emit_policy_mode", "")),
+            "--final-emit-schema-id",
+            str(pre_mutation_header_payload.get("final_emit_schema_id", "")),
+            "--final-emit-schema-status",
+            str(pre_mutation_header_payload.get("final_emit_schema_status", "")).strip().upper(),
+            "--final-emit-contract-status",
+            str(pre_mutation_header_payload.get("final_emit_contract_status", "")).strip().upper(),
             "--why-now",
             why_now,
         ]
@@ -2674,10 +3956,12 @@ def main() -> int:
         return _run(cmd)
 
     if args.command == "heal":
+        heal_actor_id = resolve_actor_id(str(args.actor_id or "").strip())
         return _heal_identity(
             Path(args.repo_catalog),
             Path(args.catalog),
             args.identity_id,
+            heal_actor_id,
             args.scope,
             args.source_pack,
             args.canonical_root,

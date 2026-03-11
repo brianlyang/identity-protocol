@@ -1,0 +1,46 @@
+{
+  "summary_id": "round46-strict-floor-actionable-zero-summary",
+  "sra_default_lane": {
+    "rc": 0,
+    "required_contract_total": 13,
+    "required_contract_passed": 13,
+    "failed_required_contract_count": 0,
+    "skipped_contract_count": 25,
+    "skipped_actionable_contract_count": 0,
+    "skipped_lane_excluded_contract_count": 25,
+    "skipped_actionable_contracts": [],
+    "strict_instance_floor_promoted": [
+      "gated_switch_guard",
+      "tool_installation",
+      "vendor_api_discovery",
+      "vendor_api_solution"
+    ]
+  },
+  "sra_explicit_instance_probe": {
+    "rc": 1,
+    "failed_required_contract_count": 1,
+    "strict_instance_floor_blocking": [
+      "prompt_kernel_executable_coupling"
+    ],
+    "prompt_kernel_executable_coupling_status": "FAIL_REQUIRED",
+    "prompt_kernel_executable_coupling_reason": "IP-PKX-002",
+    "prompt_routing_protocol_context_reasons": [
+      "session_lane_lock_protocol"
+    ]
+  },
+  "base_repo_architect_regression": {
+    "rc": 0,
+    "required_contract_total": 13,
+    "required_contract_passed": 13,
+    "failed_required_contract_count": 0,
+    "failed_optional_contract_count": 1
+  },
+  "tuple_contract": {
+    "required_fields": [
+      "sha256",
+      "command",
+      "rc",
+      "timestamp_utc"
+    ]
+  }
+}

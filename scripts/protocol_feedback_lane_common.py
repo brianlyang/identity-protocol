@@ -8,6 +8,31 @@ from typing import Any, Iterable
 
 from tool_vendor_governance_common import latest_identity_upgrade_report
 
+IGNORED_ACTIVITY_SUFFIXES = (
+    ".bak",
+    ".tmp",
+    ".swp",
+    "~",
+)
+IGNORED_ACTIVITY_FILENAMES = {
+    ".DS_Store",
+}
+
+
+def _should_ignore_activity_file(path: Path) -> bool:
+    name = path.name
+    lower = name.lower()
+    if name in IGNORED_ACTIVITY_FILENAMES:
+        return True
+    if lower.endswith((".bak", ".tmp", ".swp")):
+        return True
+    if lower.endswith("~"):
+        return True
+    if ".bak-" in lower:
+        return True
+    return False
+
+
 def _safe_json(path: Path) -> dict[str, Any]:
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
@@ -64,16 +89,33 @@ def collect_protocol_feedback_activity(
     feedback_root: Path,
     correlation_keys: Iterable[str] | None = None,
     activity_window_hours: float = 72.0,
+    current_round_anchor_utc: str = "",
 ) -> dict[str, Any]:
     root = feedback_root.resolve()
+    anchor_text = str(current_round_anchor_utc or "").strip()
+    anchor_ts: datetime | None = None
+    if anchor_text:
+        try:
+            token = anchor_text.replace("Z", "+00:00")
+            anchor_ts = datetime.fromisoformat(token)
+            if anchor_ts.tzinfo is None:
+                anchor_ts = anchor_ts.replace(tzinfo=timezone.utc)
+            else:
+                anchor_ts = anchor_ts.astimezone(timezone.utc)
+        except Exception:
+            anchor_ts = None
     if not root.exists():
         return {
             "feedback_root": str(root),
             "activity_window_hours": activity_window_hours,
+            "current_round_anchor_utc": anchor_text,
             "protocol_feedback_activity_detected": False,
             "protocol_feedback_activity_refs": [],
             "activity_correlated_refs": [],
             "activity_unscoped_refs": [],
+            "activity_ignored_missing_correlation_key_refs": [],
+            "activity_ignored_missing_anchor_refs": [],
+            "activity_ignored_pre_round_refs": [],
             "activity_ignored_stale_refs": [],
             "activity_correlation_status": "NO_ACTIVITY",
             "activity_correlation_key": "",
@@ -90,6 +132,9 @@ def collect_protocol_feedback_activity(
     activity_refs: list[str] = []
     correlated_refs: list[str] = []
     unscoped_refs: list[str] = []
+    ignored_no_key_refs: list[str] = []
+    ignored_no_anchor_refs: list[str] = []
+    ignored_pre_round_refs: list[str] = []
     ignored_stale_refs: list[str] = []
     first_hit_key = ""
 
@@ -100,6 +145,8 @@ def collect_protocol_feedback_activity(
         for p in sorted(d.rglob("*")):
             if not p.is_file():
                 continue
+            if _should_ignore_activity_file(p):
+                continue
             try:
                 rel = p.relative_to(root).as_posix()
             except Exception:
@@ -109,6 +156,9 @@ def collect_protocol_feedback_activity(
                 mtime = datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc)
             except Exception:
                 mtime = now
+            if anchor_ts is not None and mtime < anchor_ts:
+                ignored_pre_round_refs.append(rel)
+                continue
             in_window = mtime >= cutoff
 
             text = ""
@@ -126,11 +176,26 @@ def collect_protocol_feedback_activity(
                 correlated_refs.append(rel)
                 continue
 
+            # No correlation keys means current-round linkage cannot be evaluated.
+            # Keep refs for observability but avoid false ACTIVITY_UNSCOPED on
+            # historical noise / unscoped archives.
+            if not keys_lower:
+                if in_window:
+                    ignored_no_key_refs.append(rel)
+                else:
+                    ignored_stale_refs.append(rel)
+                continue
+
             if in_window:
                 activity_refs.append(rel)
                 unscoped_refs.append(rel)
             else:
                 ignored_stale_refs.append(rel)
+
+    if anchor_ts is None and unscoped_refs and not correlated_refs:
+        ignored_no_anchor_refs.extend(unscoped_refs)
+        activity_refs = []
+        unscoped_refs = []
 
     detected = bool(activity_refs)
     linked = bool(correlated_refs)
@@ -144,10 +209,14 @@ def collect_protocol_feedback_activity(
     return {
         "feedback_root": str(root),
         "activity_window_hours": activity_window_hours,
+        "current_round_anchor_utc": anchor_text,
         "protocol_feedback_activity_detected": detected,
         "protocol_feedback_activity_refs": activity_refs,
         "activity_correlated_refs": correlated_refs,
         "activity_unscoped_refs": unscoped_refs,
+        "activity_ignored_missing_correlation_key_refs": ignored_no_key_refs,
+        "activity_ignored_missing_anchor_refs": ignored_no_anchor_refs,
+        "activity_ignored_pre_round_refs": ignored_pre_round_refs,
         "activity_ignored_stale_refs": ignored_stale_refs,
         "activity_correlation_status": status,
         "activity_correlation_key": first_hit_key,

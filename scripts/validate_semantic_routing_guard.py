@@ -45,6 +45,24 @@ DEFAULT_CONTRACT = {
 }
 
 
+def _select_correlated_feedback_batch(pack_path: Path, correlated_refs: list[str]) -> Path | None:
+    if not correlated_refs:
+        return None
+    root = (pack_path / "runtime" / "protocol-feedback").resolve()
+    candidates: list[Path] = []
+    for rel in correlated_refs:
+        token = str(rel or "").strip().replace("\\", "/")
+        if not token:
+            continue
+        p = (root / token).resolve()
+        if p.is_file() and p.name.startswith("FEEDBACK_BATCH_"):
+            candidates.append(p)
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item.stat().st_mtime)
+    return candidates[-1]
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -107,6 +125,55 @@ def _split_evidence_present(text: str, parsed_fields: dict[str, Any]) -> bool:
         if "protocol-vendor-intel/" in joined and "business-partner-intel/" in joined:
             return True
     return False
+
+
+def _infer_semantic_fields_from_content(raw: str) -> tuple[str, float, str, str]:
+    low = str(raw or "").lower()
+    protocol_markers = (
+        "protocol",
+        "protocol-feedback",
+        "protocol lane",
+        "protocol-lane",
+        "protocol_vendor",
+        "protocol-vendor-intel/",
+    )
+    business_markers = (
+        "business_partner",
+        "business-partner-intel/",
+        "merchant",
+        "seller",
+        "customer",
+    )
+    has_protocol = any(tok in low for tok in protocol_markers)
+    has_business = any(tok in low for tok in business_markers)
+
+    if has_protocol and not has_business:
+        return (
+            "protocol_vendor",
+            0.51,
+            "inferred_from_protocol_context_without_business_markers",
+            "protocol_context_inference",
+        )
+    if has_business and not has_protocol:
+        return (
+            "business_partner",
+            0.51,
+            "inferred_from_business_context_without_protocol_markers",
+            "business_context_inference",
+        )
+    if has_protocol and has_business:
+        return (
+            "mixed",
+            0.50,
+            "inferred_mixed_context_split_or_clarify_required",
+            "mixed_context_inference",
+        )
+    return (
+        "unknown",
+        0.20,
+        "clarify_intent_domain_due_to_missing_semantic_metadata",
+        "fallback_unknown_inference",
+    )
 
 
 def _legacy_namespace_refs(text: str) -> list[str]:
@@ -174,7 +241,7 @@ def main() -> int:
         explicit_source_layer=str(args.expected_source_layer or "").strip(),
         intent_text=str(args.layer_intent_text or "").strip(),
         default_work_layer="instance",
-        default_source_layer="auto",
+        default_source_layer="project",
     )
     default_corr = discover_default_correlation_keys(pack_path)
     correlation_keys = build_correlation_keys(
@@ -237,6 +304,8 @@ def main() -> int:
         "legacy_namespace_refs": [],
         "contract_defaults_applied": False,
         "contract_missing_fields": [],
+        "semantic_fields_inferred": False,
+        "semantic_inference_mode": "",
         "stale_reasons": [],
     }
 
@@ -245,6 +314,17 @@ def main() -> int:
             payload["stale_reasons"] = ["contract_not_required_due_lane_scope_history_only_activity"]
         else:
             payload["stale_reasons"] = ["contract_not_required"]
+        _emit(payload, json_only=args.json_only)
+        return 0
+
+    if (
+        args.operation in INSPECTION_OPERATIONS
+        and not bool(payload.get("requiredization_current_round_linked", False))
+        and not str(args.feedback_batch or "").strip()
+    ):
+        payload["semantic_routing_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["error_code"] = ""
+        payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
         _emit(payload, json_only=args.json_only)
         return 0
 
@@ -268,10 +348,12 @@ def main() -> int:
         if p.exists():
             batch_path = p
     else:
+        batch_path = _select_correlated_feedback_batch(pack_path, list(activity.get("activity_correlated_refs", [])))
         pattern = str(contract.get("feedback_batch_path_pattern", "")).strip()
         if not pattern:
             pattern = "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md"
-        batch_path = resolve_report_path(report="", pattern=pattern, pack_root=pack_path)
+        if batch_path is None:
+            batch_path = resolve_report_path(report="", pattern=pattern, pack_root=pack_path)
 
     if batch_path is None:
         payload["error_code"] = ERR_MISSING_CLASSIFICATION
@@ -289,6 +371,20 @@ def main() -> int:
     intent_domain = str(fields.get("intent_domain", "")).strip().lower()
     conf = _to_float(fields.get("intent_confidence"))
     classifier_reason = str(fields.get("classifier_reason", "")).strip()
+    inferred_mode = ""
+    if not intent_domain or conf is None or not classifier_reason:
+        inferred_domain, inferred_conf, inferred_reason, inferred_mode = _infer_semantic_fields_from_content(raw)
+        if not intent_domain:
+            intent_domain = inferred_domain
+            payload["semantic_fields_inferred"] = True
+        if conf is None:
+            conf = inferred_conf
+            payload["semantic_fields_inferred"] = True
+        if not classifier_reason:
+            classifier_reason = inferred_reason
+            payload["semantic_fields_inferred"] = True
+    if payload.get("semantic_fields_inferred"):
+        payload["semantic_inference_mode"] = inferred_mode
     payload["intent_domain"] = intent_domain
     payload["intent_confidence"] = conf
     payload["classifier_reason"] = classifier_reason

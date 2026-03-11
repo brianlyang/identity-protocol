@@ -45,14 +45,14 @@ def _get_identity_row(catalog_path: Path, identity_id: str) -> dict[str, Any] | 
 def _default_global_identity_home() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser().resolve() / "identity").resolve()
-    return (Path.home() / ".codex" / "identity").resolve()
+        return (Path(codex_home).expanduser().resolve() / ".identity").resolve()
+    return (Path.home() / ".codex" / ".identity").resolve()
 
 
 def _resolve_project_identity_home(repo_root: Path) -> Path:
     if repo_root.name == "identity-protocol-local":
-        return (repo_root.parent / ".agents" / "identity").resolve()
-    return (repo_root / ".agents" / "identity").resolve()
+        return (repo_root.parent / ".identity").resolve()
+    return (repo_root / ".identity").resolve()
 
 
 def _within(path: Path, root: Path) -> bool:
@@ -67,13 +67,8 @@ def _resolve_allowed_roots(catalog_path: Path, repo_root: Path, *, is_fixture: b
     roots: list[Path] = []
     roots.append(catalog_path.parent.resolve())
 
-    env_identity_home = os.environ.get("IDENTITY_HOME", "").strip()
-    if env_identity_home:
-        roots.append(Path(env_identity_home).expanduser().resolve())
-
     roots.append(_default_global_identity_home())
     roots.append(_resolve_project_identity_home(repo_root))
-    roots.append(Path("/etc/codex/identity").resolve())
 
     if is_fixture:
         roots.append((repo_root / "identity").resolve())

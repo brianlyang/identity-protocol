@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "stream_version": "v1.6.3",
+  "closure_round": "round50-integrated-closure",
+  "recorded_at_utc": "2026-03-11T06:46:00Z",
+  "repository": "brianlyang/identity-protocol",
+  "head_commit": "fbeb29a",
+  "closure_scope": [
+    "v1.6",
+    "v1.6.1",
+    "v1.6.2",
+    "v1.6.3"
+  ],
+  "platform_activation": {
+    "ruleset": {
+      "id": 13763460,
+      "name": "identity-protocol-control-plane-v1.6.3",
+      "enforcement": "active",
+      "required_status_checks": [
+        "required-gates / validate-identity"
+      ],
+      "require_code_owner_review": true,
+      "required_approving_review_count": 1,
+      "required_review_thread_resolution": true
+    },
+    "branch_protection": {
+      "required_status_checks": [
+        "required-gates / validate-identity"
+      ],
+      "require_code_owner_reviews": true,
+      "required_approving_review_count": 1,
+      "enforce_admins": true,
+      "required_conversation_resolution": true
+    },
+    "actions_policy": {
+      "allowed_actions": "selected",
+      "github_owned_allowed": true,
+      "verified_allowed": true,
+      "sha_pinning_required": false
+    }
+  },
+  "gate_replay": {
+    "validate_control_plane_invariants": "PASS_REQUIRED",
+    "validate_control_plane_budget": "PASS_REQUIRED",
+    "validate_control_plane_status_sync": "PASS_REQUIRED",
+    "validate_required_gate_surface_drift": "PASS_REQUIRED",
+    "docs_command_contract_check": "PASS",
+    "target_regression_store_manager": {
+      "status": "PASS_REQUIRED",
+      "p0_count": 0
+    },
+    "target_regression_system_requirements_analyst": {
+      "status": "PASS_REQUIRED",
+      "p0_count": 0
+    }
+  },
+  "tracked_exception": {
+    "key": "merge_queue_ruleset_rule_unavailable",
+    "blocking": false,
+    "activation_status": "pending_platform_capability",
+    "api_error": "HTTP 422 Invalid rule 'merge_queue'"
+  },
+  "final_decision": "close_all_v16_to_v163_fixes_with_tracked_platform_exception"
+}

@@ -1,0 +1,1114 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_FAIL_OPTIONAL = "FAIL_OPTIONAL"
+STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
+
+BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
+BUNDLE_KEY = "required_gate_bundle_runner"
+DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+DEFAULT_GATE_PROFILE_NAME = "strict_full"
+STRICT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+)
+
+# Order is deterministic for replay and log comparison.
+BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
+    "asb16-rq-001",
+    "asb16-rq-002",
+    "asb16-rq-003",
+    "asb16-rq-004",
+    "asb16-rq-005",
+    "asb16-rq-006",
+    "asb16-rq-007",
+    "asb16-rq-008",
+    "asb16-rq-009",
+    "asb16-rq-010",
+    "asb16-rq-011",
+    "asb16-rq-012",
+    "asb16-rq-013",
+    "asb16-rq-014",
+    "asb16-rq-015",
+    "asb16-rq-016",
+    "asb16-rq-023",
+    "asb16-rq-024",
+    "asb16-rq-025",
+    "asb16-rq-026",
+    "asb16-rq-027",
+    "asb16-rq-028",
+    "asb16-rq-029",
+    "asb16-rq-031",
+    "asb16-rq-032",
+    "asb16-rq-017",
+    "asb16-rq-030",
+    "asb16-rq-021",
+    "asb16-rq-022",
+    "asb16-rq-018",
+    "asb16-rq-019",
+    "asb16-rq-020",
+    "asb16-rq-033",
+    "asb16-rq-034",
+    "asb16-rq-035",
+)
+
+TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
+    "asb16-rq-001": "unlock_formula",
+    "asb16-rq-002": "capability_boundary_classification",
+    "asb16-rq-003": "promotion_pipeline",
+    "asb16-rq-004": "outlet_matrix",
+    "asb16-rq-005": "sidecar_cwd_invariance",
+    "asb16-rq-006": "release_plane_cloud_evidence",
+    "asb16-rq-007": "cross_cwd_absolute_input",
+    "asb16-rq-008": "docs_bridge_consistency",
+    "asb16-rq-009": "run_id_report_selection",
+    "asb16-rq-010": "phase_bootstrap_before_strict",
+    "asb16-rq-011": "tmp_collision_safety",
+    "asb16-rq-012": "handoff_collab_freshness_rotation",
+    "asb16-rq-013": "protocol_feedback_atomic_emit",
+    "asb16-rq-014": "prompt_bootstrap_capability",
+    "asb16-rq-015": "prompt_capability_matrix",
+    "asb16-rq-016": "refresh_strict_business_interference",
+    "asb16-rq-023": "discovery_requiredization_activation",
+    "asb16-rq-024": "discovery_requiredization_coverage",
+    "asb16-rq-025": "kernel_canonical_source",
+    "asb16-rq-026": "kernel_contract_mapping_projection",
+    "asb16-rq-027": "prompt_derivation_conformance",
+    "asb16-rq-028": "instance_write_boundary_lock",
+    "asb16-rq-029": "semantic_convergence",
+    "asb16-rq-031": "prompt_import_executable_coupling",
+    "asb16-rq-032": "headstamp_pre_send_hard_gate",
+    "asb16-rq-017": "cross_verification_tracks",
+    "asb16-rq-030": "intake_evidence_quorum",
+    "asb16-rq-021": "route_version_pinning",
+    "asb16-rq-022": "fallback_taxonomy_normalization",
+    "asb16-rq-018": "dedup_monotonicity",
+    "asb16-rq-019": "cross_workflow_schema",
+    "asb16-rq-020": "skill_path_integrity",
+    "asb16-rq-033": "execution_target_tuple_isolation",
+    "asb16-rq-034": "multimodal_plugin_enforcement",
+    "asb16-rq-035": "reasoning_loop_failclose_enforcement",
+}
+REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
+
+STATUS_FIELD_BY_TARGET: dict[str, str] = {
+    "unlock_formula": "unlock_formula_status",
+    "capability_boundary_classification": "capability_boundary_status",
+    "promotion_pipeline": "promotion_pipeline_status",
+    "outlet_matrix": "outlet_matrix_status",
+    "sidecar_cwd_invariance": "sidecar_cwd_parity_status",
+    "release_plane_cloud_evidence": "release_plane_cloud_evidence_status",
+    "cross_cwd_absolute_input": "cross_cwd_absolute_input_status",
+    "docs_bridge_consistency": "bridge_consistency_status",
+    "run_id_report_selection": "run_id_report_selection_status",
+    "phase_bootstrap_before_strict": "phase_bootstrap_before_strict_status",
+    "tmp_collision_safety": "tmp_collision_safety_status",
+    "handoff_collab_freshness_rotation": "handoff_collab_freshness_rotation_status",
+    "protocol_feedback_atomic_emit": "protocol_feedback_atomic_emit_status",
+    "prompt_bootstrap_capability": "prompt_bootstrap_contract_status",
+    "prompt_capability_matrix": "prompt_capability_matrix_status",
+    "refresh_strict_business_interference": "refresh_strict_business_interference_status",
+    "discovery_requiredization_activation": "discovery_requiredization_status",
+    "discovery_requiredization_coverage": "discovery_requiredization_status",
+    "kernel_canonical_source": "kernel_ssot_source_status",
+    "kernel_contract_mapping_projection": "contract_mapping_coverage_status",
+    "prompt_derivation_conformance": "prompt_derivation_conformance_status",
+    "instance_write_boundary_lock": "base_repo_write_boundary_status",
+    "semantic_convergence": "semantic_convergence_status",
+    "prompt_import_executable_coupling": "prompt_kernel_executable_coupling_status",
+    "headstamp_pre_send_hard_gate": "send_time_gate_status",
+    "cross_verification_tracks": "cross_verification_tracks_status",
+    "intake_evidence_quorum": "intake_evidence_quorum_status",
+    "route_version_pinning": "pin_status",
+    "fallback_taxonomy_normalization": "fallback_taxonomy_normalization_status",
+    "dedup_monotonicity": "monotonicity_status",
+    "cross_workflow_schema": "cross_workflow_schema_status",
+    "skill_path_integrity": "path_integrity_status",
+    "execution_target_tuple_isolation": "execution_target_tuple_isolation_status",
+    "multimodal_plugin_enforcement": "multimodal_plugin_enforcement_status",
+    "reasoning_loop_failclose_enforcement": "reasoning_loop_failclose_status",
+}
+
+ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
+    "error_code",
+    "pin_error_code",
+    "normalization_error_code",
+    "path_integrity_error_code",
+    "route_conflict_error_code",
+)
+
+TRUTHY_VALUES: tuple[str, ...] = ("1", "true", "yes", "y", "on")
+FALSY_VALUES: tuple[str, ...] = ("0", "false", "no", "n", "off", "")
+HEADSTAMP_EVIDENCE_REQUIRED_OPERATIONS: tuple[str, ...] = (
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+)
+RUNTIME_PROOF_REQUIRED_OPERATIONS: tuple[str, ...] = (
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+    "mutation",
+)
+MM_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
+    "multimodal_runtime_evidence_status",
+    "multimodal_preflight_status",
+    "runtime_report_path",
+    "runtime_report_run_id",
+    "multimodal_calls",
+    "multimodal_resolved",
+    "multimodal_unresolved",
+    "multimodal_errors",
+    "multimodal_retry_calls",
+    "runtime_gate_mode",
+    "runtime_gate_required_confidence",
+)
+RL_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
+    "reasoning_runtime_evidence_status",
+    "reasoning_enforcement_level",
+    "reasoning_attempt_trace_status",
+    "no_target_done_block_status",
+    "reasoning_next_action_status",
+    "reasoning_escalation_status",
+    "runtime_report_path",
+    "runtime_report_run_id",
+    "reasoning_attempt_count",
+    "reasoning_runtime_evidence_refs",
+)
+
+
+@dataclass(frozen=True)
+class ValidatorSpec:
+    requirement_key: str
+    target_name: str
+    script_path: str
+    fixed_args: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class GateProfileSelection:
+    profile_name: str
+    profile_mode: str
+    requirement_keys: tuple[str, ...]
+    strict_no_trim_operations: tuple[str, ...]
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for item in value:
+        token = str(item or "").strip()
+        if token:
+            out.append(token)
+    return out
+
+
+def _resolve_default_contract_mapping(repo_root: Path) -> Path:
+    mapping_dir = repo_root / "identity" / "protocol" / "mappings"
+    current_file = mapping_dir / "contract-binding.current.yaml"
+    if current_file.exists():
+        return current_file
+    candidates = sorted(mapping_dir.glob("contract-binding.v*.yaml"))
+    if candidates:
+        return candidates[-1]
+    fallback = mapping_dir / "contract-binding.yaml"
+    return fallback
+
+
+def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[Path, str, str]:
+    configured_path = (repo_root / str(configured_rel or "").strip()).resolve()
+    if not configured_path.exists() or not configured_path.is_file():
+        return configured_path, "", "current_file_missing"
+    if not configured_path.name.endswith(".current.yaml"):
+        return configured_path, "", ""
+    try:
+        current_doc = yaml.safe_load(configured_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return configured_path, "", "current_file_parse_failed"
+    if not isinstance(current_doc, dict):
+        return configured_path, "", "current_file_parse_failed"
+    active_file = str(current_doc.get("active_file", "")).strip()
+    if not active_file:
+        return configured_path, "", "active_file_missing"
+    active_path = (repo_root / active_file).resolve()
+    if not active_path.exists() or not active_path.is_file():
+        return active_path, active_file, "active_file_not_found"
+    return active_path, active_file, ""
+
+
+def _parse_validator_entry(raw_entry: str) -> tuple[str, tuple[str, ...]]:
+    # Example raw entries:
+    # - scripts/validate_v16_intake_evidence_core.py::mode=intake_contract
+    # - scripts/validate_v16_cross_verification_tracks.py::wrapper_only_optional
+    raw = str(raw_entry or "").strip()
+    if not raw:
+        return "", ()
+    if "::" not in raw:
+        return raw, ()
+    script_part, suffix = raw.split("::", 1)
+    suffix = suffix.strip()
+    if not suffix:
+        return script_part.strip(), ()
+    if suffix.startswith("mode="):
+        mode_value = suffix.split("=", 1)[1].strip()
+        if mode_value:
+            return script_part.strip(), ("--mode", mode_value)
+    # wrapper/optional annotations are metadata only and do not map to CLI flags.
+    return script_part.strip(), ()
+
+
+def _select_validator_spec(requirement_key: str, row: dict[str, Any]) -> ValidatorSpec | None:
+    target_name = TARGET_NAME_BY_REQUIREMENT.get(requirement_key, requirement_key)
+    validator_ids = list(row.get("validator_ids") or [])
+    parsed: list[tuple[str, tuple[str, ...]]] = [
+        _parse_validator_entry(entry) for entry in validator_ids if str(entry or "").strip()
+    ]
+    if not parsed:
+        return None
+
+    # Prefer validate_* scripts for gate execution (emit/normalize helpers are non-gating helpers).
+    preferred: tuple[str, tuple[str, ...]] | None = None
+    for script_path, fixed_args in parsed:
+        base = Path(script_path).name
+        if base.startswith("validate_"):
+            preferred = (script_path, fixed_args)
+            break
+    if preferred is None:
+        preferred = parsed[0]
+    return ValidatorSpec(
+        requirement_key=requirement_key,
+        target_name=target_name,
+        script_path=preferred[0],
+        fixed_args=preferred[1],
+    )
+
+
+def _load_validator_specs(mapping_path: Path, requirement_keys: tuple[str, ...]) -> tuple[list[ValidatorSpec], list[str]]:
+    if not mapping_path.exists():
+        return [], [f"contract_mapping_missing:{mapping_path}"]
+
+    data = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
+    errors: list[str] = []
+    specs: list[ValidatorSpec] = []
+    for requirement_key in requirement_keys:
+        row = data.get(requirement_key)
+        if not isinstance(row, dict):
+            errors.append(f"mapping_row_missing:{requirement_key}")
+            continue
+        spec = _select_validator_spec(requirement_key, row)
+        if spec is None:
+            errors.append(f"validator_ids_missing:{requirement_key}")
+            continue
+        specs.append(spec)
+    return specs, errors
+
+
+def _load_gate_profile_selection(
+    *,
+    repo_root: Path,
+    profile_file: str,
+    profile_name: str,
+    operation: str,
+    resolved_work_layer: str,
+) -> tuple[GateProfileSelection | None, Path, list[str]]:
+    errors: list[str] = []
+    profile_entry_path = (repo_root / str(profile_file or DEFAULT_GATE_PROFILE_FILE)).resolve()
+    profile_path = profile_entry_path
+    profile_alias_error = ""
+    if profile_entry_path.name.endswith(".current.yaml"):
+        profile_path, _active_file, profile_alias_error = _resolve_current_yaml_alias(
+            repo_root, str(profile_file or DEFAULT_GATE_PROFILE_FILE)
+        )
+        if profile_alias_error:
+            errors.append(f"gate_profile_alias_error:{profile_entry_path}:{profile_alias_error}")
+            return None, profile_path, errors
+    elif not profile_path.exists():
+        errors.append(f"gate_profile_file_missing:{profile_path}")
+        return None, profile_path, errors
+
+    try:
+        doc = yaml.safe_load(profile_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        errors.append(f"gate_profile_parse_failed:{profile_path}:{exc}")
+        return None, profile_path, errors
+    if not isinstance(doc, dict):
+        errors.append(f"gate_profile_invalid_root:{profile_path}")
+        return None, profile_path, errors
+
+    profiles = doc.get("profiles")
+    if not isinstance(profiles, dict) or not profiles:
+        errors.append(f"gate_profile_profiles_missing_or_invalid:{profile_path}")
+        return None, profile_path, errors
+
+    selected_name = (
+        str(profile_name or "").strip()
+        or str(doc.get("default_profile", "")).strip()
+        or DEFAULT_GATE_PROFILE_NAME
+    )
+    selected = profiles.get(selected_name)
+    if not isinstance(selected, dict):
+        errors.append(f"gate_profile_not_found:{selected_name}")
+        return None, profile_path, errors
+
+    mode = str(selected.get("mode", "")).strip().lower() or "full"
+    if mode not in {"full", "targeted"}:
+        errors.append(f"gate_profile_invalid_mode:{selected_name}:{mode}")
+        return None, profile_path, errors
+
+    strict_no_trim_operations = tuple(
+        _as_str_list(doc.get("strict_no_trim_operations")) or list(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
+    )
+    normalized_operation = str(operation or "").strip().lower()
+    if mode != "full" and normalized_operation in set(strict_no_trim_operations):
+        errors.append(f"gate_profile_forbidden_for_strict_operation:{selected_name}:{normalized_operation}")
+
+    allowed_operations = _as_str_list(selected.get("allowed_operations"))
+    if not allowed_operations:
+        allowed_operations = ["*"] if mode == "full" else []
+    if not allowed_operations:
+        errors.append(f"gate_profile_allowed_operations_missing:{selected_name}")
+    elif "*" not in allowed_operations and normalized_operation not in set(allowed_operations):
+        errors.append(f"gate_profile_operation_not_allowed:{selected_name}:{normalized_operation}")
+
+    require_layers = set(_as_str_list(selected.get("require_work_layers")))
+    normalized_work_layer = str(resolved_work_layer or "").strip().lower()
+    if require_layers and normalized_work_layer and normalized_work_layer not in require_layers:
+        errors.append(f"gate_profile_work_layer_not_allowed:{selected_name}:{normalized_work_layer}")
+
+    if mode == "full":
+        requirement_keys = tuple(BUNDLE_REQUIREMENT_ORDER)
+    else:
+        requested = _as_str_list(selected.get("requirement_keys"))
+        if not requested:
+            errors.append(f"gate_profile_requirement_keys_missing:{selected_name}")
+            requirement_keys = ()
+        else:
+            unknown = [key for key in requested if key not in TARGET_NAME_BY_REQUIREMENT]
+            if unknown:
+                errors.append(f"gate_profile_unknown_requirement_keys:{selected_name}:{','.join(unknown)}")
+            requirement_keys = tuple(key for key in requested if key in TARGET_NAME_BY_REQUIREMENT)
+            if not requirement_keys:
+                errors.append(f"gate_profile_requirement_keys_empty:{selected_name}")
+
+    selection = GateProfileSelection(
+        profile_name=selected_name,
+        profile_mode=mode,
+        requirement_keys=requirement_keys,
+        strict_no_trim_operations=strict_no_trim_operations,
+    )
+    return selection, profile_path, errors
+
+
+def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
+    return int(proc.returncode), proc.stdout, proc.stderr
+
+
+def _parse_payload(stdout_text: str) -> dict[str, Any]:
+    text = (stdout_text or "").strip()
+    if not text:
+        return {}
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    for line in reversed(lines):
+        if not line.startswith("{"):
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            return data
+    return {}
+
+
+def _extract_error_code(payload: dict[str, Any], stderr_text: str) -> str:
+    for key in ERROR_FIELD_CANDIDATES:
+        value = str(payload.get(key, "")).strip()
+        if value:
+            return value
+    err = str(stderr_text or "").strip()
+    if "IP-" in err:
+        # keep tail concise for replay readability
+        tail = err.splitlines()[-1] if err.splitlines() else err
+        return tail.strip()
+    return ""
+
+
+def _classify_status(*, target_name: str, rc: int, payload: dict[str, Any]) -> tuple[str, str]:
+    status_field = STATUS_FIELD_BY_TARGET[target_name]
+    status_value = str(payload.get(status_field, "")).strip().upper()
+    if status_value in {
+        STATUS_PASS_REQUIRED,
+        STATUS_SKIPPED_NOT_REQUIRED,
+        STATUS_FAIL_REQUIRED,
+    }:
+        return status_value, status_field
+    if status_value == STATUS_FAIL_OPTIONAL:
+        return STATUS_FAIL_REQUIRED, status_field
+
+    if rc != 0:
+        return STATUS_FAIL_REQUIRED, status_field
+    if status_field not in payload:
+        return STATUS_FAIL_REQUIRED, status_field
+    required_contract = bool(payload.get("required_contract", False))
+    return (STATUS_PASS_REQUIRED if required_contract else STATUS_SKIPPED_NOT_REQUIRED), status_field
+
+
+def _validate_row_payload_contract(
+    *,
+    payload: dict[str, Any],
+    status_field: str,
+    target_name: str,
+    operation: str,
+    required_contract: bool,
+) -> list[str]:
+    issues: list[str] = []
+    if not isinstance(payload, dict) or not payload:
+        issues.append("payload_missing_or_not_object")
+        return issues
+    if status_field not in payload:
+        issues.append("status_field_missing")
+    if "required_contract" not in payload:
+        issues.append("required_contract_missing")
+    op = str(operation or "").strip().lower()
+    if (
+        target_name == "multimodal_plugin_enforcement"
+        and required_contract
+        and op in RUNTIME_PROOF_REQUIRED_OPERATIONS
+    ):
+        for field in MM_RUNTIME_REQUIRED_FIELDS:
+            if field not in payload:
+                issues.append(f"mm_runtime_field_missing:{field}")
+    if (
+        target_name == "reasoning_loop_failclose_enforcement"
+        and required_contract
+        and op in RUNTIME_PROOF_REQUIRED_OPERATIONS
+    ):
+        for field in RL_RUNTIME_REQUIRED_FIELDS:
+            if field not in payload:
+                issues.append(f"rl_runtime_field_missing:{field}")
+    return issues
+
+
+def _write_payload_out(out_path: str, payload: dict[str, Any]) -> None:
+    target = Path(out_path).expanduser().resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _parse_bool_token(raw: Any) -> bool:
+    if isinstance(raw, bool):
+        return raw
+    text = str(raw or "").strip().lower()
+    if text in TRUTHY_VALUES:
+        return True
+    if text in FALSY_VALUES:
+        return False
+    return False
+
+
+def _derive_parity_operation_scope(*, operation: str, surface_label: str) -> str:
+    op = str(operation or "").strip().lower()
+    label = str(surface_label or "").strip().lower()
+    if op in {"scan", "inspection"} and label.endswith("_scan_probe"):
+        return "scan_probe"
+    if op:
+        return f"operation:{op}"
+    if label:
+        return f"surface:{label}"
+    return "default"
+
+
+def _derive_required_contract_reason(
+    *,
+    required_contract: bool,
+    operation: str,
+    surface_label: str,
+) -> str:
+    if bool(required_contract):
+        return "required_contract_detected"
+    op = str(operation or "").strip().lower()
+    label = str(surface_label or "").strip().lower()
+    if op in {"scan", "inspection"} and label.endswith("_scan_probe"):
+        return "scan_probe_optional_not_required"
+    return "no_required_contract_detected"
+
+
+def _normalize_headstamp_projection_status(raw: str) -> tuple[str, bool]:
+    token = str(raw or "").strip().upper()
+    if token in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED, STATUS_SKIPPED_NOT_REQUIRED, STATUS_WARN_NON_BLOCKING}:
+        required_contract = token in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED, STATUS_WARN_NON_BLOCKING}
+        return token, required_contract
+    if token in {"NOT_APPLICABLE", "PASS_NOT_APPLICABLE"}:
+        return STATUS_SKIPPED_NOT_REQUIRED, False
+    if token:
+        return STATUS_FAIL_REQUIRED, True
+    return STATUS_SKIPPED_NOT_REQUIRED, False
+
+
+def _build_headstamp_projection_payload(
+    *,
+    send_time_gate_status: str,
+    operation: str,
+    evidence_ref: str,
+) -> dict[str, Any]:
+    status, required_contract = _normalize_headstamp_projection_status(send_time_gate_status)
+    normalized = str(send_time_gate_status or "").strip().upper()
+    payload: dict[str, Any] = {
+        "required_contract": required_contract,
+        "send_time_gate_status": status,
+        "reply_first_line_status": status,
+        "error_code": "",
+        "evidence_ref": str(evidence_ref or "").strip(),
+        "stale_reasons": ["headstamp_projection_from_bundle_signal"],
+        "auto_required_signal": False,
+    }
+    if normalized and normalized not in {
+        STATUS_PASS_REQUIRED,
+        STATUS_FAIL_REQUIRED,
+        STATUS_SKIPPED_NOT_REQUIRED,
+        STATUS_WARN_NON_BLOCKING,
+        "NOT_APPLICABLE",
+        "PASS_NOT_APPLICABLE",
+    }:
+        payload["send_time_gate_status"] = STATUS_FAIL_REQUIRED
+        payload["reply_first_line_status"] = STATUS_FAIL_REQUIRED
+        payload["required_contract"] = True
+        payload["error_code"] = "IP-GATE-ENTRY-001"
+        payload["stale_reasons"] = [f"invalid_send_time_gate_status_token:{normalized}"]
+        return payload
+
+    if status == STATUS_FAIL_REQUIRED and not str(payload.get("error_code", "")).strip():
+        # Canonical headstamp family when upstream status is explicit fail but no detailed code is provided.
+        payload["error_code"] = "IP-HDSTAMP-003"
+    if status == STATUS_WARN_NON_BLOCKING:
+        payload["stale_reasons"].append("headstamp_warn_non_blocking_projection")
+    if status == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["stale_reasons"].append("headstamp_pre_send_gate_not_applicable_for_surface")
+    op = str(operation or "").strip().lower()
+    if status == STATUS_SKIPPED_NOT_REQUIRED and op in HEADSTAMP_EVIDENCE_REQUIRED_OPERATIONS:
+        payload["stale_reasons"].append("strict_operation_without_reply_evidence_projection")
+    return payload
+
+
+def _resolve_input_path(repo_root: Path, raw_path: str) -> Path:
+    value = str(raw_path or "").strip()
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (repo_root / path).resolve()
+
+
+def _is_strict_no_trim_operation(operation: str) -> bool:
+    return str(operation or "").strip().lower() in set(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run required gate bundle from mapping single-source registry.")
+    parser.add_argument("--catalog", required=True)
+    parser.add_argument("--identity-id", required=True)
+    parser.add_argument("--operation", default="validate")
+    parser.add_argument("--repo-catalog", default="")
+    parser.add_argument("--contract-mapping", default="")
+    parser.add_argument("--run-id", default="")
+    parser.add_argument("--report-selected-path", default="")
+    parser.add_argument("--session-id", default="")
+    parser.add_argument("--send-time-gate-status", default="")
+    parser.add_argument("--reply-text", default="")
+    parser.add_argument("--reply-file", default="")
+    parser.add_argument("--reply-log", default="")
+    parser.add_argument("--reply-transport-ref", default="")
+    parser.add_argument("--reply-outlet-guard-applied", action="store_true")
+    parser.add_argument(
+        "--outlet-bypass-detected",
+        nargs="?",
+        const="true",
+        default="",
+        help="explicit outlet bypass flag (true/false). bare flag implies true.",
+    )
+    parser.add_argument("--surface-label", default="")
+    parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
+    parser.add_argument("--gate-profile", default="", help="optional gate profile key for requirement selection")
+    parser.add_argument(
+        "--gate-profile-file",
+        default=DEFAULT_GATE_PROFILE_FILE,
+        help="gate profile mapping yaml for layer-targeted gate selection",
+    )
+    parser.add_argument("--out", default="", help="optional path to persist JSON receipt")
+    parser.add_argument("--json-only", action="store_true")
+    parser.add_argument("--actor-id", default="")
+    parser.add_argument("--resolved-work-layer", default="")
+    parser.add_argument("--resolved-source-layer", default="")
+    parser.add_argument("--lock-state", default="")
+    parser.add_argument("--final-emit-contract-status", default="")
+    parser.add_argument("--final-emit-policy-mode", default="")
+    parser.add_argument("--final-emit-schema-status", default="")
+    args = parser.parse_args()
+
+    repo_root = Path(__file__).resolve().parents[1]
+    mapping_path = Path(args.contract_mapping).expanduser().resolve() if str(args.contract_mapping or "").strip() else _resolve_default_contract_mapping(repo_root)
+    mapping_alias_error = ""
+    if mapping_path.name.endswith(".current.yaml"):
+        resolved_mapping_path, _active_mapping_file, mapping_alias_error = _resolve_current_yaml_alias(
+            repo_root, str(mapping_path)
+        )
+        if not mapping_alias_error:
+            mapping_path = resolved_mapping_path
+    target_name = str(args.target_name or "").strip()
+    gate_profile = str(args.gate_profile or "").strip() or DEFAULT_GATE_PROFILE_NAME
+    gate_profile_file = str(args.gate_profile_file or "").strip() or DEFAULT_GATE_PROFILE_FILE
+    operation = str(args.operation or "").strip()
+    operation_normalized = operation.lower()
+    gate_profile_entry_file = _resolve_input_path(repo_root, gate_profile_file)
+    canonical_gate_profile_entry_file = (repo_root / DEFAULT_GATE_PROFILE_FILE).resolve()
+    gate_profile_selection, gate_profile_resolved_file, gate_profile_errors = _load_gate_profile_selection(
+        repo_root=repo_root,
+        profile_file=gate_profile_file,
+        profile_name=gate_profile,
+        operation=operation,
+        resolved_work_layer=str(args.resolved_work_layer or "").strip(),
+    )
+    requirement_keys = (
+        gate_profile_selection.requirement_keys
+        if isinstance(gate_profile_selection, GateProfileSelection)
+        else BUNDLE_REQUIREMENT_ORDER
+    )
+    mapping_errors: list[str] = []
+    if mapping_alias_error:
+        mapping_errors.append(f"contract_mapping_alias_resolution_failed:{mapping_alias_error}")
+    mapping_errors.extend(gate_profile_errors)
+    if _is_strict_no_trim_operation(operation_normalized) and gate_profile_entry_file != canonical_gate_profile_entry_file:
+        mapping_errors.append(
+            "gate_profile_file_non_canonical_for_strict_operation:"
+            f"{gate_profile_file}:expected={DEFAULT_GATE_PROFILE_FILE}"
+        )
+    if target_name:
+        target_key = REQUIREMENT_BY_TARGET.get(target_name, "")
+        if not target_key:
+            mapping_errors.append(f"unknown_target_name:{target_name}")
+            requirement_keys = ()
+        else:
+            if (
+                isinstance(gate_profile_selection, GateProfileSelection)
+                and gate_profile_selection.profile_mode != "full"
+                and target_key not in set(gate_profile_selection.requirement_keys)
+            ):
+                requirement_keys = ()
+            else:
+                requirement_keys = (target_key,)
+
+    specs, spec_errors = _load_validator_specs(mapping_path, requirement_keys)
+    mapping_errors.extend(spec_errors)
+    result_rows: list[dict[str, Any]] = []
+    failure_count = 0
+    row_contract_error_count = 0
+    surface_label = str(args.surface_label or "").strip() or str(args.operation or "").strip().replace("-", "_") or "unknown_surface"
+    run_id_binding = str(args.run_id or "").strip()
+    report_selected_path = str(args.report_selected_path or "").strip()
+    actor_id = str(args.actor_id or "").strip()
+    session_id = str(args.session_id or "").strip()
+    send_time_gate_status = str(args.send_time_gate_status or "").strip()
+    reply_text = str(args.reply_text or "").strip()
+    reply_file = str(args.reply_file or "").strip()
+    reply_log = str(args.reply_log or "").strip()
+    reply_transport_ref = str(args.reply_transport_ref or "").strip()
+    explicit_reply_guard = bool(args.reply_outlet_guard_applied)
+    outlet_bypass_detected = _parse_bool_token(args.outlet_bypass_detected)
+    reply_outlet_guard_applied = explicit_reply_guard or (not outlet_bypass_detected)
+
+    if mapping_errors:
+        failure_count += len(mapping_errors)
+    if not run_id_binding:
+        mapping_errors.append("run_id_binding_missing")
+        failure_count += 1
+
+    for spec in specs:
+        validator_path = Path(spec.script_path)
+        if not validator_path.is_absolute():
+            validator_path = (repo_root / validator_path).resolve()
+        cmd = [
+            sys.executable,
+            str(validator_path),
+            "--catalog",
+            str(args.catalog),
+            "--identity-id",
+            str(args.identity_id),
+            "--operation",
+            str(args.operation),
+            "--json-only",
+        ]
+        cmd.extend(spec.fixed_args)
+        if spec.target_name == "prompt_import_executable_coupling":
+            if actor_id:
+                cmd.extend(["--actor-id", actor_id])
+            if session_id:
+                cmd.extend(["--session-id", session_id])
+        if spec.target_name == "headstamp_pre_send_hard_gate":
+            if actor_id:
+                cmd.extend(["--actor-id", actor_id])
+            if session_id:
+                cmd.extend(["--session-id", session_id])
+            if reply_text:
+                cmd.extend(["--reply-text", reply_text])
+            if reply_file:
+                cmd.extend(["--reply-file", reply_file])
+            if reply_log:
+                cmd.extend(["--reply-log", reply_log])
+            if reply_transport_ref:
+                cmd.extend(["--reply-transport-ref", reply_transport_ref])
+            if reply_outlet_guard_applied:
+                cmd.append("--reply-outlet-guard-applied")
+            if str(args.final_emit_policy_mode or "").strip():
+                cmd.extend(["--final-emit-policy-mode", str(args.final_emit_policy_mode).strip()])
+            if str(args.final_emit_schema_status or "").strip():
+                cmd.extend(["--final-emit-schema-status", str(args.final_emit_schema_status).strip()])
+
+        if spec.target_name in {
+            "multimodal_plugin_enforcement",
+            "run_id_report_selection",
+        }:
+            cmd.extend(["--run-id", run_id_binding])
+            if report_selected_path:
+                if spec.target_name == "run_id_report_selection":
+                    cmd.extend(["--report", report_selected_path])
+                else:
+                    cmd.extend(["--report-selected-path", report_selected_path])
+        if spec.target_name == "reasoning_loop_failclose_enforcement":
+            if run_id_binding and report_selected_path:
+                cmd.extend(["--run-id", run_id_binding])
+            if report_selected_path:
+                cmd.extend(["--report-selected-path", report_selected_path])
+
+        # RQ-032: if no concrete reply evidence is provided, project the upstream
+        # gate signal instead of forcing a synthetic re-validation pass.
+        if spec.target_name == "headstamp_pre_send_hard_gate" and not any([reply_text, reply_file, reply_log]):
+            payload = _build_headstamp_projection_payload(
+                send_time_gate_status=send_time_gate_status,
+                operation=str(args.operation),
+                evidence_ref=reply_transport_ref,
+            )
+            rc = 0 if str(payload.get("send_time_gate_status", "")).strip().upper() != STATUS_FAIL_REQUIRED else 1
+            err = ""
+        else:
+            rc, out, err = _run(cmd, cwd=repo_root)
+            payload = _parse_payload(out)
+        status_value, status_field = _classify_status(target_name=spec.target_name, rc=rc, payload=payload)
+        required_contract = bool(payload.get("required_contract", False))
+        payload_contract_issues = _validate_row_payload_contract(
+            payload=payload,
+            status_field=status_field,
+            target_name=spec.target_name,
+            operation=str(args.operation),
+            required_contract=required_contract,
+        )
+        if rc != 0:
+            payload_contract_issues.append("validator_rc_nonzero")
+        if payload_contract_issues:
+            status_value = STATUS_FAIL_REQUIRED
+            row_contract_error_count += 1
+        error_code = _extract_error_code(payload, err)
+        if payload_contract_issues and not error_code:
+            error_code = "IP-GATE-ENTRY-002"
+
+        if status_value == STATUS_FAIL_REQUIRED:
+            failure_count += 1
+        elif status_value == STATUS_FAIL_OPTIONAL and required_contract:
+            failure_count += 1
+
+        result_rows.append(
+            {
+                "requirement_key": spec.requirement_key,
+                "target_name": spec.target_name,
+                "validator": spec.script_path,
+                "fixed_args": list(spec.fixed_args),
+                "validator_rc": rc,
+                "status_field": status_field,
+                "status": status_value,
+                "error_code": error_code,
+                "required_contract": required_contract,
+                "auto_required_signal": bool(payload.get("auto_required_signal", False)),
+                "surface_label": surface_label,
+                "stale_reasons": list(payload.get("stale_reasons") or []),
+                "evidence_ref": str(payload.get("evidence_ref", "")).strip(),
+                "payload_contract_issues": payload_contract_issues,
+                "payload": payload,
+                "stderr_tail": (err.splitlines()[-1] if err else ""),
+            }
+        )
+
+    missing_targets = [
+        TARGET_NAME_BY_REQUIREMENT[key]
+        for key in requirement_keys
+        if TARGET_NAME_BY_REQUIREMENT.get(key) not in {row.get("target_name") for row in result_rows}
+    ]
+    if missing_targets:
+        failure_count += len(missing_targets)
+
+    required_contract_any = any(bool(row.get("required_contract", False)) for row in result_rows)
+    failed_required_contract_count = sum(
+        1
+        for row in result_rows
+        if str(row.get("status", "")).upper() == STATUS_FAIL_REQUIRED
+    )
+
+    if mapping_errors or missing_targets or row_contract_error_count > 0:
+        bundle_status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-001"
+    elif failed_required_contract_count > 0:
+        bundle_status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-002"
+    else:
+        bundle_status = STATUS_PASS_REQUIRED
+        error_code = ""
+
+    parity_operation_scope = _derive_parity_operation_scope(
+        operation=str(args.operation or "").strip(),
+        surface_label=surface_label,
+    )
+    required_contract_reason = _derive_required_contract_reason(
+        required_contract=required_contract_any,
+        operation=str(args.operation or "").strip(),
+        surface_label=surface_label,
+    )
+
+    payload: dict[str, Any] = {
+        "bundle_contract_id": BUNDLE_CONTRACT_ID,
+        "bundle_key": BUNDLE_KEY,
+        "bundle_status": bundle_status,
+        "error_code": error_code,
+        "identity_id": str(args.identity_id),
+        "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+        "operation": str(args.operation),
+        "contract_mapping": str(mapping_path),
+        "gate_profile": gate_profile,
+        "gate_profile_mode": (
+            gate_profile_selection.profile_mode
+            if isinstance(gate_profile_selection, GateProfileSelection)
+            else ""
+        ),
+        "gate_profile_file": gate_profile_file,
+        "gate_profile_entry_file": str(gate_profile_entry_file),
+        "gate_profile_resolved_file": str(gate_profile_resolved_file),
+        "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
+        "gate_profile_requirement_count": len(requirement_keys),
+        "gate_profile_requirement_keys": list(requirement_keys),
+        "mapping_errors": mapping_errors,
+        "missing_targets": missing_targets,
+        "results": result_rows,
+        "surface_label": surface_label,
+        "run_id_binding": run_id_binding,
+        "report_selected_path": report_selected_path,
+        "actor_id": str(args.actor_id or "").strip(),
+        "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
+        "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
+        "lock_state": str(args.lock_state or "").strip(),
+        "required_contract": required_contract_any,
+        "required_contract_reason": required_contract_reason,
+        "failed_required_contract_count": failed_required_contract_count,
+        "parity_operation_scope": parity_operation_scope,
+        "send_time_gate_status": str(args.send_time_gate_status or "").strip().upper(),
+        "outlet_bypass_detected": _parse_bool_token(args.outlet_bypass_detected),
+        "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
+        "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
+        "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
+        "row_contract_error_count": row_contract_error_count,
+    }
+
+    if target_name:
+        if not result_rows and not mapping_errors:
+            target_status_field = STATUS_FIELD_BY_TARGET.get(target_name, "status")
+            target_payload = {
+                target_status_field: STATUS_SKIPPED_NOT_REQUIRED,
+                "required_contract": False,
+                "auto_required_signal": False,
+                "error_code": "",
+                "stale_reasons": ["target_excluded_by_gate_profile"],
+                "bundle_contract_id": BUNDLE_CONTRACT_ID,
+                "bundle_key": BUNDLE_KEY,
+                "bundle_target_name": target_name,
+                "surface_label": surface_label,
+                "run_id_binding": run_id_binding,
+                "report_selected_path": report_selected_path,
+                "gate_profile": gate_profile,
+                "gate_profile_mode": (
+                    gate_profile_selection.profile_mode
+                    if isinstance(gate_profile_selection, GateProfileSelection)
+                    else ""
+                ),
+                "gate_profile_file": gate_profile_file,
+                "gate_profile_entry_file": str(gate_profile_entry_file),
+                "gate_profile_resolved_file": str(gate_profile_resolved_file),
+                "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
+                "gate_profile_requirement_count": len(requirement_keys),
+                "gate_profile_requirement_keys": list(requirement_keys),
+                "actor_id": str(args.actor_id or "").strip(),
+                "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
+                "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
+                "lock_state": str(args.lock_state or "").strip(),
+                "parity_operation_scope": parity_operation_scope,
+                "required_contract_reason": "scan_probe_profile_filtered_not_required",
+                "send_time_gate_status": str(args.send_time_gate_status or "").strip().upper(),
+                "outlet_bypass_detected": _parse_bool_token(args.outlet_bypass_detected),
+                "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
+                "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
+                "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
+            }
+            if str(args.out or "").strip():
+                _write_payload_out(str(args.out), target_payload)
+            if args.json_only:
+                print(json.dumps(target_payload, ensure_ascii=False))
+            else:
+                print(json.dumps(target_payload, ensure_ascii=False, indent=2))
+            return 0
+
+        target_row = next((row for row in result_rows if row.get("target_name") == target_name), None)
+        if not target_row:
+            stale_reasons = ["bundle_target_missing"]
+            if mapping_errors:
+                stale_reasons = ["bundle_entry_contract_failed"] + [f"mapping_error:{x}" for x in mapping_errors]
+            target_status_field = STATUS_FIELD_BY_TARGET.get(target_name, "status")
+            target_payload = {
+                target_status_field: STATUS_FAIL_REQUIRED,
+                "error_code": "IP-GATE-ENTRY-001",
+                "stale_reasons": stale_reasons,
+                "bundle_contract_id": BUNDLE_CONTRACT_ID,
+                "bundle_key": BUNDLE_KEY,
+                "bundle_target_name": target_name,
+                "mapping_errors": mapping_errors,
+                "gate_profile": gate_profile,
+                "gate_profile_mode": (
+                    gate_profile_selection.profile_mode
+                    if isinstance(gate_profile_selection, GateProfileSelection)
+                    else ""
+                ),
+                "gate_profile_file": gate_profile_file,
+                "gate_profile_entry_file": str(gate_profile_entry_file),
+                "gate_profile_resolved_file": str(gate_profile_resolved_file),
+                "canonical_gate_profile_entry_file": str(canonical_gate_profile_entry_file),
+                "gate_profile_requirement_count": len(requirement_keys),
+                "gate_profile_requirement_keys": list(requirement_keys),
+                "actor_id": str(args.actor_id or "").strip(),
+                "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
+                "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
+                "lock_state": str(args.lock_state or "").strip(),
+            }
+            if args.json_only:
+                print(json.dumps(target_payload, ensure_ascii=False))
+            else:
+                print(json.dumps(target_payload, ensure_ascii=False, indent=2))
+            return 1
+
+        target_payload = dict(
+            target_row.get("payload") if isinstance(target_row.get("payload"), dict) else {}
+        )
+        target_status_field = STATUS_FIELD_BY_TARGET[target_name]
+        target_payload.setdefault(target_status_field, target_row.get("status", STATUS_FAIL_REQUIRED))
+        target_payload.setdefault("required_contract", bool(target_row.get("required_contract", False)))
+        target_payload.setdefault("auto_required_signal", bool(target_row.get("auto_required_signal", False)))
+        target_payload.setdefault("stale_reasons", list(target_row.get("stale_reasons") or []))
+        target_payload.setdefault("evidence_ref", str(target_row.get("evidence_ref", "")))
+        if not str(target_payload.get("error_code", "")).strip() and str(target_row.get("error_code", "")).strip():
+            target_payload["error_code"] = target_row.get("error_code", "")
+        target_payload.setdefault("bundle_contract_id", BUNDLE_CONTRACT_ID)
+        target_payload.setdefault("bundle_key", BUNDLE_KEY)
+        target_payload.setdefault("bundle_target_name", target_name)
+        target_payload.setdefault("gate_profile", gate_profile)
+        target_payload.setdefault(
+            "gate_profile_mode",
+            gate_profile_selection.profile_mode
+            if isinstance(gate_profile_selection, GateProfileSelection)
+            else "",
+        )
+        target_payload.setdefault("gate_profile_file", gate_profile_file)
+        target_payload.setdefault("gate_profile_entry_file", str(gate_profile_entry_file))
+        target_payload.setdefault("gate_profile_resolved_file", str(gate_profile_resolved_file))
+        target_payload.setdefault("canonical_gate_profile_entry_file", str(canonical_gate_profile_entry_file))
+        target_payload.setdefault("gate_profile_requirement_count", len(requirement_keys))
+        target_payload.setdefault("gate_profile_requirement_keys", list(requirement_keys))
+        target_payload.setdefault("surface_label", surface_label)
+        target_payload.setdefault("run_id_binding", run_id_binding)
+        target_payload.setdefault("report_selected_path", report_selected_path)
+        target_payload.setdefault("actor_id", str(args.actor_id or "").strip())
+        target_payload.setdefault("resolved_work_layer", str(args.resolved_work_layer or "").strip())
+        target_payload.setdefault("resolved_source_layer", str(args.resolved_source_layer or "").strip())
+        target_payload.setdefault("lock_state", str(args.lock_state or "").strip())
+        target_payload.setdefault("parity_operation_scope", parity_operation_scope)
+        target_payload.setdefault(
+            "required_contract_reason",
+            _derive_required_contract_reason(
+                required_contract=bool(target_payload.get("required_contract", False)),
+                operation=str(args.operation or "").strip(),
+                surface_label=surface_label,
+            ),
+        )
+        target_payload.setdefault("send_time_gate_status", str(args.send_time_gate_status or "").strip().upper())
+        target_payload.setdefault("outlet_bypass_detected", _parse_bool_token(args.outlet_bypass_detected))
+        target_payload.setdefault("final_emit_contract_status", str(args.final_emit_contract_status or "").strip().upper())
+        target_payload.setdefault("final_emit_policy_mode", str(args.final_emit_policy_mode or "").strip())
+        target_payload.setdefault("final_emit_schema_status", str(args.final_emit_schema_status or "").strip().upper())
+        if bundle_status == STATUS_FAIL_REQUIRED:
+            target_payload[target_status_field] = STATUS_FAIL_REQUIRED
+            if not str(target_payload.get("error_code", "")).strip():
+                target_payload["error_code"] = error_code or "IP-GATE-ENTRY-001"
+            stale = list(target_payload.get("stale_reasons") or [])
+            if "bundle_entry_contract_failed" not in stale:
+                stale.append("bundle_entry_contract_failed")
+            target_payload["stale_reasons"] = stale
+        if str(args.out or "").strip():
+            _write_payload_out(str(args.out), target_payload)
+        if args.json_only:
+            print(json.dumps(target_payload, ensure_ascii=False))
+        else:
+            print(json.dumps(target_payload, ensure_ascii=False, indent=2))
+        return 1 if str(target_payload.get(target_status_field, "")).upper() == STATUS_FAIL_REQUIRED else 0
+
+    if str(args.out or "").strip():
+        _write_payload_out(str(args.out), payload)
+    if args.json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(
+            f"[BUNDLE] {BUNDLE_KEY} status={bundle_status} failed_required_contract_count={failed_required_contract_count} "
+            f"mapping_errors={len(mapping_errors)} missing_targets={len(missing_targets)}"
+        )
+        for row in result_rows:
+            print(
+                f"[BUNDLE] {row['target_name']}: status={row['status']} rc={row['validator_rc']} "
+                f"required_contract={row['required_contract']} error_code={row['error_code'] or '-'}"
+            )
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+    return 1 if bundle_status == STATUS_FAIL_REQUIRED else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

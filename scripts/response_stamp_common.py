@@ -32,7 +32,13 @@ class StampContext:
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
 DEFAULT_DISCLOSURE_LEVEL = "standard"
 ALLOWED_WORK_LAYERS = {"protocol", "instance", "dual"}
-ALLOWED_SOURCE_LAYERS = {"project", "global", "env", "auto"}
+ALLOWED_SOURCE_LAYERS = {"project", "global"}
+LEGACY_SOURCE_LAYER_ALIASES = {
+    "local": "project",
+    "repo": "global",
+    "env": "global",
+    "auto": "project",
+}
 LAYER_INTENT_STRICT_THRESHOLD = 0.75
 DEFAULT_WORK_LAYER = "instance"
 
@@ -94,6 +100,43 @@ LAYER_LITERAL_META_TOKENS = (
     "layer-context:",
 )
 
+FALLBACK_TAXONOMY_VERSION = "v1"
+FALLBACK_TAXONOMY_ENUM = {
+    "data_missing",
+    "model_weak_signal",
+    "transport_error",
+    "policy_blocked",
+}
+FALLBACK_REASON_CLASS_MAP = {
+    "intent_text_missing": "data_missing",
+    "no_intent_signal": "data_missing",
+    "zero_action_counters": "data_missing",
+    "instance_intent_low_confidence": "model_weak_signal",
+    "ambiguous_intent_signal": "model_weak_signal",
+    "protocol_trigger_not_met": "policy_blocked",
+    "actor_binding_lock_mismatch": "policy_blocked",
+    "non_governed_outlet_channel": "policy_blocked",
+    "synthetic_reply_evidence_forbidden": "policy_blocked",
+    "reply_outlet_guard_missing": "policy_blocked",
+}
+BLOCKER_TAXONOMY_RESERVED = {
+    "auth_login_required",
+    "anti_automation_challenge_required",
+    "session_reauthentication_required",
+    "manual_verification_required",
+}
+TRANSPORT_ERROR_HINTS = (
+    "transport",
+    "network",
+    "timeout",
+    "connection",
+    "dns",
+    "socket",
+    "unreachable",
+    "http_5",
+    "ioerror",
+)
+
 
 def _has_protocol_lane_directive(text: str) -> bool:
     raw = str(text or "").strip().lower()
@@ -118,15 +161,15 @@ def _detect_repo_root(start: Path | None = None) -> Path:
 
 def _project_identity_home(repo_root: Path) -> Path:
     if repo_root.name == "identity-protocol-local":
-        return (repo_root.parent / ".agents" / "identity").resolve()
-    return (repo_root / ".agents" / "identity").resolve()
+        return (repo_root.parent / ".identity").resolve()
+    return (repo_root / ".identity").resolve()
 
 
 def _global_identity_home() -> Path:
     codex_home = os.environ.get("CODEX_HOME", "").strip()
     if codex_home:
-        return (Path(codex_home).expanduser().resolve() / "identity").resolve()
-    return (Path.home() / ".codex" / "identity").resolve()
+        return (Path(codex_home).expanduser().resolve() / ".identity").resolve()
+    return (Path.home() / ".codex" / ".identity").resolve()
 
 
 def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint: Path | None = None) -> str:
@@ -145,7 +188,7 @@ def _source_domain(catalog_path: Path, explicit_catalog: bool, *, repo_root_hint
         return "global"
     except Exception:
         pass
-    return "env" if explicit_catalog else "auto"
+    return "unknown"
 
 
 def _ref_token(path: Path) -> str:
@@ -158,8 +201,13 @@ def _session_pointer_path(catalog_path: Path) -> Path:
     return (catalog_path.parent / "session" / "active_identity.json").resolve()
 
 
-def _session_data(catalog_path: Path, actor_id: str, identity_id: str) -> dict[str, Any]:
-    actor_binding = load_actor_binding(catalog_path, actor_id, identity_id=identity_id)
+def _session_data(catalog_path: Path, actor_id: str, identity_id: str, session_id: str = "") -> dict[str, Any]:
+    actor_binding = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id=str(session_id or "").strip(),
+    )
     if actor_binding:
         payload = dict(actor_binding)
         payload["session_pointer_source"] = "actor"
@@ -207,6 +255,7 @@ def resolve_stamp_context(
     catalog_path: Path,
     repo_catalog_path: Path,
     actor_id: str = "",
+    session_id: str = "",
     explicit_catalog: bool = True,
 ) -> StampContext:
     actor = resolve_actor_id(actor_id)
@@ -218,14 +267,23 @@ def resolve_stamp_context(
     )
     pack_path = Path(str(resolved.get("pack_path", "")).strip()).expanduser().resolve()
     resolved_scope = str(resolved.get("resolved_scope", "")).strip().upper() or "UNKNOWN"
-    pointer = _session_data(catalog_path, actor, identity_id)
+    pointer = _session_data(
+        catalog_path,
+        actor,
+        identity_id,
+        session_id=str(session_id or "").strip(),
+    )
     lock_state = _lock_state(identity_id, pointer)
     lease_id = _lease_id(pointer)
-    source = _source_domain(
-        catalog_path,
-        explicit_catalog=explicit_catalog,
-        repo_root_hint=repo_catalog_path.parent,
-    )
+    resolved_source = str(resolved.get("source_layer", "")).strip().lower()
+    if resolved_source:
+        source = resolved_source
+    else:
+        source = _source_domain(
+            catalog_path,
+            explicit_catalog=explicit_catalog,
+            repo_root_hint=repo_catalog_path.parent,
+        )
     return StampContext(
         actor_id=actor,
         identity_id=identity_id,
@@ -297,12 +355,21 @@ def _normalize_work_layer(value: str, *, fallback: str = "protocol") -> str:
     return fb if fb in ALLOWED_WORK_LAYERS else "protocol"
 
 
-def _normalize_source_layer(value: str, *, fallback: str = "auto") -> str:
+def _normalize_source_layer(value: str, *, fallback: str = "project") -> str:
     v = str(value or "").strip().lower()
+    if v in LEGACY_SOURCE_LAYER_ALIASES:
+        v = LEGACY_SOURCE_LAYER_ALIASES[v]
     if v in ALLOWED_SOURCE_LAYERS:
         return v
     fb = str(fallback or "").strip().lower()
-    return fb if fb in ALLOWED_SOURCE_LAYERS else "auto"
+    if fb in LEGACY_SOURCE_LAYER_ALIASES:
+        fb = LEGACY_SOURCE_LAYER_ALIASES[fb]
+    if fb in ALLOWED_SOURCE_LAYERS:
+        return fb
+    raw_fallback = str(fallback or "").strip().lower()
+    if raw_fallback:
+        return raw_fallback
+    return "unknown"
 
 
 def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
@@ -346,6 +413,25 @@ def _detect_protocol_trigger(intent_text: str) -> dict[str, Any]:
     }
 
 
+def normalize_fallback_taxonomy_class(fallback_reason: str) -> str:
+    raw = str(fallback_reason or "").strip().lower()
+    if not raw:
+        return ""
+    if raw in FALLBACK_REASON_CLASS_MAP:
+        return FALLBACK_REASON_CLASS_MAP[raw]
+    if raw in BLOCKER_TAXONOMY_RESERVED:
+        return "policy_blocked"
+    if any(h in raw for h in TRANSPORT_ERROR_HINTS):
+        return "transport_error"
+    if "missing" in raw:
+        return "data_missing"
+    if any(x in raw for x in ("low_confidence", "weak_signal", "ambiguous", "uncertain")):
+        return "model_weak_signal"
+    if any(x in raw for x in ("blocked", "forbidden", "mismatch", "policy", "not_met", "not_met")):
+        return "policy_blocked"
+    return ""
+
+
 def _sanitize_layer_intent_text(intent_text: str) -> str:
     raw = str(intent_text or "").strip()
     if not raw:
@@ -376,7 +462,7 @@ def resolve_layer_intent(
     explicit_source_layer: str = "",
     intent_text: str = "",
     default_work_layer: str = DEFAULT_WORK_LAYER,
-    default_source_layer: str = "auto",
+    default_source_layer: str = "project",
 ) -> dict[str, Any]:
     resolved_source = _normalize_source_layer(explicit_source_layer, fallback=default_source_layer)
     fallback_work = _normalize_work_layer(default_work_layer, fallback=DEFAULT_WORK_LAYER)
@@ -396,6 +482,8 @@ def resolve_layer_intent(
         protocol_trigger_reasons: list[str] | None = None,
     ) -> dict[str, Any]:
         resolved_work = _normalize_work_layer(work_layer, fallback=fallback_work)
+        fallback_reason_raw = str(fallback_reason or "").strip()
+        fallback_taxonomy_class = normalize_fallback_taxonomy_class(fallback_reason_raw)
         applied_trigger = bool(protocol_triggered and resolved_work in {"protocol", "dual"})
         reasons = sorted(set(protocol_trigger_reasons or [])) if applied_trigger else []
         return {
@@ -403,7 +491,10 @@ def resolve_layer_intent(
             "resolved_source_layer": resolved_source,
             "intent_confidence": confidence,
             "intent_source": intent_source,
-            "fallback_reason": fallback_reason,
+            "fallback_reason": fallback_reason_raw,
+            "fallback_reason_raw": fallback_reason_raw,
+            "fallback_taxonomy_class": fallback_taxonomy_class,
+            "fallback_taxonomy_version": FALLBACK_TAXONOMY_VERSION,
             "strict_threshold": LAYER_INTENT_STRICT_THRESHOLD,
             "protocol_triggered": applied_trigger,
             "protocol_trigger_reasons": reasons,
@@ -442,7 +533,7 @@ def resolve_layer_intent(
         )
 
     m_work = re.search(r"(work[_\-\s]?layer)\s*[:=]\s*(protocol|instance|dual)\b", text)
-    m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|env|auto)\b", text)
+    m_source = re.search(r"(source[_\-\s]?layer)\s*[:=]\s*(project|global|local|repo|env|auto)\b", text)
     if m_source:
         resolved_source = _normalize_source_layer(m_source.group(2), fallback=resolved_source)
     if m_work:
@@ -820,9 +911,7 @@ def render_external_stamp_with_layer_context(
     wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
         wl = DEFAULT_WORK_LAYER
-    sl = str(source_layer or "").strip().lower() or ctx.source_domain
-    if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+    sl = str(source_layer or "").strip().lower() or str(ctx.source_domain or "").strip().lower() or "unknown"
     parts = [
         f"actor_id={ctx.actor_id}",
         f"identity_id={ctx.identity_id}",
@@ -869,9 +958,7 @@ def render_structured_context(
     wl = str(work_layer or "").strip().lower() or DEFAULT_WORK_LAYER
     if wl not in ALLOWED_WORK_LAYERS:
         wl = DEFAULT_WORK_LAYER
-    sl = str(source_layer or "").strip().lower() or ctx.source_domain
-    if sl not in ALLOWED_SOURCE_LAYERS:
-        sl = ctx.source_domain if ctx.source_domain in ALLOWED_SOURCE_LAYERS else "auto"
+    sl = str(source_layer or "").strip().lower() or str(ctx.source_domain or "").strip().lower() or "unknown"
     return {
         "actor_id": ctx.actor_id,
         "identity_id": ctx.identity_id,
