@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-03-11T12:57:56Z",
+  "entries": [
+    {
+      "name": "reasoning_floor_l0_fail",
+      "file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-monotonic-second-item/2026-03-11/probe_reasoning_floor_l0_fail.json",
+      "sha256": "e5d660f09fb254fbbd2bb7a71ffc775b4d23c6672edcf8f8680def60ab53a502",
+      "command": "python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/validate_reasoning_loop_failclose.py --catalog /tmp/v164_reasoning_floor_probe/catalog.yaml --identity-id probe-store-manager-floor --operation validate --json-only",
+      "rc": 1,
+      "timestamp_utc": "2026-03-11T12:57:31Z"
+    },
+    {
+      "name": "multimodal_update_defer_allowed",
+      "file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-monotonic-second-item/2026-03-11/probe_multimodal_update_defer_allowed.json",
+      "sha256": "c874db1acd539a400e2b25e9b2e34936e657231d404a972b2c382dd9456de234",
+      "command": "python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/required_gate_bundle_runner.py --catalog /tmp/v164_multimodal_skip_probe/catalog.yaml --identity-id probe-store-manager-mm --operation update --run-id identity-upgrade-exec-probe-store-manager-mm-new --target-name multimodal_plugin_enforcement --actor-id assistant:codex --resolved-work-layer protocol --resolved-source-layer project --lock-state LOCK_MATCH --send-time-gate-status PASS_REQUIRED --outlet-bypass-detected false --final-emit-contract-status PASS_REQUIRED --final-emit-policy-mode tool_choice_required --final-emit-schema-status PASS_REQUIRED --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T12:55:31Z"
+    },
+    {
+      "name": "multimodal_readiness_skip_blocked",
+      "file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-monotonic-second-item/2026-03-11/probe_multimodal_readiness_skip_blocked.json",
+      "sha256": "2b83289832ec95bb50b5c3e0002db877fbe4e70bf2656933e07a9950186d330d",
+      "command": "python3 /Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/scripts/required_gate_bundle_runner.py --catalog /tmp/v164_multimodal_skip_probe/catalog.yaml --identity-id probe-store-manager-mm --operation readiness --run-id identity-upgrade-exec-probe-store-manager-mm-new --target-name multimodal_plugin_enforcement --actor-id assistant:codex --resolved-work-layer protocol --resolved-source-layer project --lock-state LOCK_MATCH --send-time-gate-status PASS_REQUIRED --outlet-bypass-detected false --final-emit-contract-status PASS_REQUIRED --final-emit-policy-mode tool_choice_required --final-emit-schema-status PASS_REQUIRED --json-only",
+      "rc": 1,
+      "timestamp_utc": "2026-03-11T12:55:31Z"
+    }
+  ]
+}
