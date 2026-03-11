@@ -23,6 +23,24 @@ Machine policy for this playbook and plugin READMEs:
    - `requirement_key`: `asb16-rq-035`
    - `bundle_target_name`: `reasoning_loop_failclose_enforcement`
 
+## Control-plane file map (config-first)
+
+1. Plugin registry pointer:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml`
+   - stores plugin rows (`plugin_id`, `requirement_key`, `bundle_target_name`, `gate_mode`, `ssot_mapping_ref`)
+2. Plugin fail-close profile pointer:
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+   - stores per-plugin strict surfaces + projection/report requirements
+3. Requirement mapping pointer:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - stores requirement-level validator/surface/report/error-code contracts
+4. Layer-targeted gate profile pointer:
+   - `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml`
+   - controls `strict_full` vs targeted inspection trimming (strict operations stay no-trim)
+5. Stream-doc registry pointer:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+   - keeps governance/review SSOT docs in one machine-resolved set
+
 ## Mandatory wiring checklist
 
 1. Add plugin contract bundle files under `identity/protocol/plugins/<plugin-id>/`:
@@ -65,6 +83,18 @@ Machine policy for this playbook and plugin READMEs:
    - register/update provider capability profile in `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
    - use `identity/protocol/plugins/templates/provider-bindings.local.template.yaml`
    - do not store plaintext secrets in repo
+
+## Runtime and CI routing boundary
+
+1. Runtime strict routing:
+   - `scripts/required_gate_bundle_runner.py` resolves plugin+mapping+gate-profile pointers and enforces fail-close.
+2. CI required runtime gates:
+   - `scripts/ci/run_required_runtime_gates_ci.sh` must invoke bundle runner; do not direct-call plugin validators from workflow shell.
+3. Full-scan targeted regression:
+   - `scripts/ci/run_full_scan_target_regression_ci.sh` and `scripts/validate_full_scan_target_regression.py` enforce `p0=0` on target source-layer.
+4. GitHub offload boundary (v1.6.3):
+   - branch/ruleset/merge-queue can offload control-plane mechanics,
+   - semantic plugin fail-close checks remain protocol validator responsibilities.
 
 ## Required verification commands
 
