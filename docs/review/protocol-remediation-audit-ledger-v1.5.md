@@ -10,8 +10,13 @@ Purpose: Central place for architect + audit-expert review/verification of each 
 2. Current v1.6.x stream routing must resolve through:
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 3. Current control-plane status/promotion checks must resolve through:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/control-plane-budget.current.yaml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
 4. If this v1.5 review ledger conflicts with active stream governance/review docs resolved by stream registry, follow the stream-registry-resolved active stream docs.
+5. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
 
 ## 0) Boundary and usage rules
 
