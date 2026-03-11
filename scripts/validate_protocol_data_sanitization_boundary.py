@@ -57,6 +57,11 @@ EXEMPT_DOMAIN_TERMS = {
 CONTACT_CONTEXT_PATTERN = re.compile(
     r"(?i)(phone|mobile|tel|contact|whatsapp|wechat|手机号|电话|联系方式|联系电话|联系号码)"
 )
+DATE_LIKE_PATTERN = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
+RUN_METADATA_CONTEXT_PATTERN = re.compile(
+    r"(?i)(run[_-]?id|report|报告|回执|receipt|batch|批次|identity-upgrade-exec|required_gates_run_id|session[_-]?id)"
+)
+RUN_METADATA_NUMERIC_TOKEN_PATTERN = re.compile(r"`?\d{9,}`?")
 PATH_LIKE_CONTEXT_PATTERN = re.compile(
     r"(?i)(/|\\|\.json\b|\.md\b|\.ya?ml\b|\.log\b|\.txt\b|\.csv\b|"
     r"runtime/protocol-feedback|outbox-to-protocol|evidence-index|upgrade-proposals|"
@@ -196,12 +201,32 @@ def _has_contact_context(text: str) -> bool:
     return bool(CONTACT_CONTEXT_PATTERN.search(str(text or "")))
 
 
+def _looks_like_run_metadata_context(text: str) -> bool:
+    raw = str(text or "")
+    if not raw.strip():
+        return False
+    return bool(RUN_METADATA_CONTEXT_PATTERN.search(raw) and RUN_METADATA_NUMERIC_TOKEN_PATTERN.search(raw))
+
+
+def _looks_like_calendar_date_context(text: str) -> bool:
+    raw = str(text or "")
+    if not raw.strip():
+        return False
+    return bool(DATE_LIKE_PATTERN.search(raw))
+
+
 def _should_exempt_phone_like_hit(pat: re.Pattern[str], text: str) -> bool:
     if not _is_phone_like_pattern(pat):
         return False
-    if not _looks_like_path_context(text):
+    if _has_contact_context(text):
         return False
-    return not _has_contact_context(text)
+    if _looks_like_path_context(text):
+        return True
+    if _looks_like_calendar_date_context(text):
+        return True
+    if _looks_like_run_metadata_context(text):
+        return True
+    return False
 
 
 def main() -> int:
