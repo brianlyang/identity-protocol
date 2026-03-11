@@ -9,9 +9,7 @@ bindings:
     provider_profile_id: glm46v_vision_prod
     credential_ref: env:GLM_API_KEY
     enabled: true
-
-# Optional second profile (switch by toggling enabled flag; keep single active binding per plugin).
-#  - plugin_id: multimodal-vision-enforcement
-#    provider_profile_id: openai_vision_prod
-#    credential_ref: env:OPENAI_API_KEY
-#    enabled: false
+  - plugin_id: multimodal-vision-enforcement
+    provider_profile_id: openai_vision_prod
+    credential_ref: env:OPENAI_API_KEY
+    enabled: true
