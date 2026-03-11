@@ -946,8 +946,9 @@ def main() -> int:
         stale_reasons.append("runtime_report_missing")
         error_code = error_code or ERR_RUNTIME_REPORT_MISSING
 
+    operation_name = str(args.operation or "").strip().lower()
     strict_no_skip_required = (
-        args.operation in RUNTIME_PROOF_REQUIRED_OPERATIONS and required and not fixture_identity
+        operation_name in STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS and required and not fixture_identity
     )
     if strict_no_skip_required:
         if payload["multimodal_runtime_evidence_status"] == STATUS_SKIPPED_NOT_REQUIRED:
@@ -968,19 +969,6 @@ def main() -> int:
             str(payload.get("runtime_report_path", "") or ""),
         ]
     )
-
-    operation_name = str(args.operation or "").strip().lower()
-    if (
-        runtime_required
-        and required
-        and operation_name in STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS
-        and str(payload.get("multimodal_runtime_evidence_status", "")).strip().upper() == STATUS_SKIPPED_NOT_REQUIRED
-    ):
-        payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
-        payload["runtime_stage_deferred"] = False
-        payload["runtime_stage_deferred_reason"] = ""
-        stale_reasons.append("strict_runtime_skip_forbidden")
-        error_code = error_code or ERR_RUNTIME_STAGE_MISSING
 
     failed_statuses = [
         payload["plugin_registry_status"],

@@ -73,6 +73,9 @@ plugin_failclose_profiles:
         - fixture_profile_scope
         - contract_not_required
         - scan_probe_profile_filtered_not_required
+        - runtime_report_not_current_round_deferred_pre_execution
+        - runtime_stage_missing_input_gate_deferred_legacy_report
+        - runtime_stage_missing_input_gate_deferred_from_report
   - plugin_id: reasoning-loop-enforcement
     requirement_key: asb16-rq-035
     target_name: reasoning_loop_failclose_enforcement

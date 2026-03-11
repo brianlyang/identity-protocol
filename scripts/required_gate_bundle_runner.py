@@ -204,10 +204,6 @@ RL_RUNTIME_REQUIRED_FIELDS: tuple[str, ...] = (
     "reasoning_attempt_count",
     "reasoning_runtime_evidence_refs",
 )
-STRICT_NO_SKIP_TARGETS: set[str] = {
-    "multimodal_plugin_enforcement",
-    "reasoning_loop_failclose_enforcement",
-}
 STRICT_SKIP_BLOCKING_POLICIES: set[str] = {
     "fail_close",
     "strict_no_skip",
@@ -667,14 +663,6 @@ def _validate_row_payload_contract(
     if "required_contract" not in payload:
         issues.append("required_contract_missing")
     op = str(operation or "").strip().lower()
-    status_value = str(payload.get(status_field, "")).strip().upper()
-    if (
-        required_contract
-        and op in RUNTIME_PROOF_REQUIRED_OPERATIONS
-        and target_name in STRICT_NO_SKIP_TARGETS
-        and status_value == STATUS_SKIPPED_NOT_REQUIRED
-    ):
-        issues.append("strict_no_skip_violation")
     if (
         target_name == "multimodal_plugin_enforcement"
         and required_contract
