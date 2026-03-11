@@ -1389,6 +1389,11 @@ def main() -> int:
     p_validate.add_argument("--scope", default="")
     p_validate.add_argument("--run-id", default="", help="optional validate run id for run-id anchored validators")
     p_validate.add_argument(
+        "--session-id",
+        default="",
+        help="optional actor session id for strict validate entry; defaults to run:<run-id>",
+    )
+    p_validate.add_argument(
         "--baseline-policy",
         choices=["strict", "warn"],
         default="strict",
@@ -1759,7 +1764,7 @@ def main() -> int:
             print(f"[FAIL] {e}")
             return 1
         validate_run_token = str(args.run_id or "").strip() or f"validate-{args.identity_id}"
-        validate_session_id = f"run:{validate_run_token}"
+        validate_session_id = str(args.session_id or "").strip() or f"run:{validate_run_token}"
         rc_actor_binding_entry = _actor_binding_entry_guard(
             identity_id=args.identity_id,
             catalog=args.catalog,
