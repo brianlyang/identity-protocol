@@ -197,6 +197,26 @@ Action lock for third-item full closure:
 1. Keep section 3.3.4 cold-start replay chain green in CI regression lanes.
 2. Keep `sync_plugin_join_wiring.py` as tuple-parity fail-close (no downgrade to alias-only checks).
 
+## 0.8 Integration-kind fixed-directory decision freeze (2026-03-11)
+
+Verdict: `Policy PASS (doc freeze) / Implementation PENDING`.
+
+Decision locked for v1.6.4:
+
+1. Plugin architecture keeps one lightweight intake, but directories are protocol-fixed by `integration_kind`.
+2. Three canonical roots are frozen:
+   - `skill`: `identity/protocol/plugins/skill` + `.identity/{identity_id}/runtime/plugins/skills`
+   - `mcp`: `identity/protocol/plugins/mcp` + `.identity/{identity_id}/runtime/plugins/mcp`
+   - `api`: `identity/protocol/plugins` + `.identity/{identity_id}/runtime/plugins/api`
+3. Non-canonical roots are considered governance drift and must fail-close once code checks are wired.
+4. File-management skill reference is accepted as lightweight seed pattern (instance-side install):
+   - `https://github.com/ComposioHQ/awesome-claude-skills/blob/master/file-organizer/SKILL.md`
+
+Implementation note:
+
+1. This ledger entry is documentation-first by design; validator/schema wiring is intentionally deferred
+   until doc wording is accepted.
+
 ## 1) Four-track + context verification summary
 
 ### T1 Roundtable/internal replay

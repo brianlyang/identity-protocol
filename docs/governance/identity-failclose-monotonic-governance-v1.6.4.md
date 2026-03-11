@@ -116,6 +116,34 @@ Rationale:
 2. Deliver single-entry operator experience (`add one row` instead of hand-editing multiple files).
 3. Remove tribal-memory dependency for newcomers and memory-loss scenarios.
 
+#### 3.1.4 Integration-kind directory freeze (mandatory, no ambiguity)
+
+To keep instance onboarding lightweight while preventing path drift, plugin integration kinds are fixed to one directory contract each:
+
+| integration_kind | protocol_contract_root (fixed) | instance_runtime_root (fixed) |
+|---|---|---|
+| `skill` | `identity/protocol/plugins/skill` | `.identity/{identity_id}/runtime/plugins/skills` |
+| `mcp` | `identity/protocol/plugins/mcp` | `.identity/{identity_id}/runtime/plugins/mcp` |
+| `api` | `identity/protocol/plugins` | `.identity/{identity_id}/runtime/plugins/api` |
+
+Hard rules:
+
+1. Every fail-close plugin row must carry:
+   - `integration_kind`
+   - `protocol_contract_root`
+   - `instance_runtime_root`
+2. `contract_file` must stay within the declared `protocol_contract_root`.
+3. Any non-canonical root (including ad-hoc folders) is `FAIL_REQUIRED`.
+4. This freeze is protocol-level and applies to both:
+   - newcomer onboarding
+   - memory-loss replay scenarios
+
+Operator intent (lightweight by design):
+
+1. Humans still add one intake row.
+2. Machines enforce fixed roots and projection parity.
+3. Instance owners install/attach capabilities under fixed runtime roots only.
+
 ### 3.2 Monotonic level contract (allow upgrade, forbid downgrade)
 
 1. Each strict contract must define an effective enforcement floor.
@@ -236,6 +264,11 @@ v1.6.4 defines two exemplar plugins so that teams can copy a reusable pattern in
 1. Enforce canonical runtime directory boundaries.
 2. Block non-canonical ad-hoc AI artifact roots in strict lanes.
 3. Require deterministic pointer-based references instead of scattered literal paths.
+4. Skill baseline is frozen to a lightweight file-organizer pattern:
+   - reference seed:
+     `https://github.com/ComposioHQ/awesome-claude-skills/blob/master/file-organizer/SKILL.md`
+   - protocol scope only governs contract and evidence projection;
+     instance installation stays instance-side under fixed runtime roots.
 
 #### 3.4.2 AI search plugin intent
 

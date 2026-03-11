@@ -41,9 +41,45 @@ Machine policy for this playbook and plugin READMEs:
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - keeps governance/review SSOT docs in one machine-resolved set
 
+## Integration kind + fixed directory contract
+
+All plugin onboarding must declare `integration_kind` and use fixed roots only:
+
+1. `skill`
+   - `protocol_contract_root=identity/protocol/plugins/skill`
+   - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/skills`
+2. `mcp`
+   - `protocol_contract_root=identity/protocol/plugins/mcp`
+   - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/mcp`
+3. `api`
+   - `protocol_contract_root=identity/protocol/plugins`
+   - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/api`
+
+Hard boundary:
+
+1. Non-canonical roots are invalid for fail-close plugin onboarding.
+2. `contract_file` must stay under the selected `protocol_contract_root`.
+3. Skill installation stays instance-side (lightweight attach model), while protocol only manages:
+   - contract wiring
+   - report/evidence fields
+   - strict gate routing
+4. File-organizer skill can be used as seed reference for skill-style folder governance:
+   - `https://github.com/ComposioHQ/awesome-claude-skills/blob/master/file-organizer/SKILL.md`
+
 ## Mandatory wiring checklist
 
-1. Add plugin contract bundle files under `identity/protocol/plugins/<plugin-id>/`:
+0. Select one `integration_kind` first (`skill | mcp | api`) and use only canonical roots:
+   - `skill`:
+     - `protocol_contract_root=identity/protocol/plugins/skill`
+     - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/skills`
+   - `mcp`:
+     - `protocol_contract_root=identity/protocol/plugins/mcp`
+     - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/mcp`
+   - `api`:
+     - `protocol_contract_root=identity/protocol/plugins`
+     - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/api`
+   - Any non-canonical root is invalid for fail-close onboarding.
+1. Add plugin contract bundle files under `<protocol_contract_root>/<plugin-id>/`:
    - `plugin.contract.yaml`
    - `plugin.input.schema.json`
    - `plugin.output.schema.json`
@@ -51,6 +87,9 @@ Machine policy for this playbook and plugin READMEs:
    - `README.md`
 2. Register plugin in `identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml` (resolved by alias):
    - `plugin_id`
+   - `integration_kind`
+   - `protocol_contract_root`
+   - `instance_runtime_root`
    - `requirement_key`
    - `bundle_target_name`
    - `gate_mode=fail_close_strict`
@@ -79,6 +118,9 @@ Machine policy for this playbook and plugin READMEs:
 8. Ensure per-plugin README points back to this playbook and includes:
    - `requirement_key`
    - `bundle_target_name`
+   - `integration_kind`
+   - `protocol_contract_root`
+   - `instance_runtime_root`
 9. If plugin needs provider runtime bindings:
    - register/update provider capability profile in `identity/protocol/plugins/PROVIDER_PROFILES.current.yaml`
    - use `identity/protocol/plugins/templates/provider-bindings.local.template.yaml`
