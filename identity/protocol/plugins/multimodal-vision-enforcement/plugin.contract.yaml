@@ -17,6 +17,8 @@ provider_binding:
   allowed_profiles:
     - glm46v_vision_prod
     - openai_vision_prod
+  minimum_enabled_bindings: 2
+  require_all_allowed_profiles: true
 error_family:
   - IP-MM-NAME-*
   - IP-MM-THR-*
