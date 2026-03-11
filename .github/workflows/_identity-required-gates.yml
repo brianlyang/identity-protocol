@@ -220,6 +220,9 @@ jobs:
           # scripts/validate_required_gate_tuple_parity.py
           bash scripts/ci/run_required_runtime_gates_ci.sh "${IDS}" "${BASE_SHA}" "${HEAD_SHA}"
 
+      - name: Validate monotonic floor probes (v1.6.4)
+        run: bash scripts/ci/run_monotonic_floor_probes_ci.sh
+
       - name: Validate full-scan target regression (p0=0)
         run: |
           IDS="${IDS:-}"

@@ -24,8 +24,10 @@ STRICT_SURFACES: tuple[str, ...] = (
 WORKFLOW_REQUIRED_GATE_SURFACE = ".github/workflows/_identity-required-gates.yml"
 REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
 FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
+MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
+    MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
@@ -42,6 +44,11 @@ FULL_SCAN_DELEGATED_REQUIRED_TOKENS: tuple[str, ...] = (
     "--session-id",
     "--enforce-m2m-pass",
 )
+MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_reasoning_loop_failclose.py",
+    "scripts/required_gate_bundle_runner.py",
+)
+MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
 DIALOGUE_FEEDBACK_BUNDLE_SCRIPT = "scripts/run_identity_dialogue_feedback_bundle.py"
 DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
@@ -649,9 +656,74 @@ def main() -> int:
             for token in FULL_SCAN_DELEGATED_REQUIRED_TOKENS
             if not any(_arg_token_present(args, token) for args in full_scan_invocation_args)
         ]
-        if missing_tokens:
+    if missing_tokens:
+        existing_tokens = list(missing_execution_tokens.get(rel, []))
+        missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
+
+    monotonic_probe_delegate_path = repo_root / MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT
+    if not monotonic_probe_delegate_path.exists():
+        missing_surface_files.append(MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(monotonic_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_reasoning_probe = all(
+            token in text
+            for token in (
+                "run_probe reasoning_floor_l0_fail",
+                "scripts/validate_reasoning_loop_failclose.py",
+                "--identity-id probe-floor",
+                "--operation validate",
+                "--json-only",
+            )
+        )
+        if not has_reasoning_probe:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
-            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
+            missing_execution_tokens[rel] = sorted(
+                set(existing_tokens + ["reasoning_floor_probe_invocation_missing"])
+            )
+
+        has_runner_update_probe = all(
+            token in text
+            for token in (
+                "run_probe multimodal_update_defer_allowed",
+                "scripts/required_gate_bundle_runner.py",
+                "--identity-id probe-mm",
+                "--operation update",
+                "--target-name " + MONOTONIC_PROBE_REQUIRED_TARGET,
+                "--run-id identity-upgrade-exec-probe-mm-new",
+                "--json-only",
+            )
+        )
+        has_runner_readiness_probe = all(
+            token in text
+            for token in (
+                "run_probe multimodal_readiness_skip_blocked",
+                "scripts/required_gate_bundle_runner.py",
+                "--identity-id probe-mm",
+                "--operation readiness",
+                "--target-name " + MONOTONIC_PROBE_REQUIRED_TARGET,
+                "--run-id identity-upgrade-exec-probe-mm-new",
+                "--json-only",
+            )
+        )
+        monotonic_missing_tokens: list[str] = []
+        if not has_runner_update_probe:
+            monotonic_missing_tokens.append("multimodal_update_probe_invocation_missing")
+        if not has_runner_readiness_probe:
+            monotonic_missing_tokens.append("multimodal_readiness_probe_invocation_missing")
+        if monotonic_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + monotonic_missing_tokens))
 
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():
@@ -722,6 +794,9 @@ def main() -> int:
         "strict_surfaces": list(STRICT_SURFACES),
         "full_scan_delegate_required_python_scripts": list(FULL_SCAN_DELEGATED_REQUIRED_PYTHON_SCRIPTS),
         "full_scan_delegate_required_tokens": list(FULL_SCAN_DELEGATED_REQUIRED_TOKENS),
+        "monotonic_floor_probe_ci_delegate_script": MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
+        "monotonic_probe_delegate_required_python_scripts": list(MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS),
+        "monotonic_probe_required_target": MONOTONIC_PROBE_REQUIRED_TARGET,
         "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),
         "dialogue_feedback_bundle_required_validators": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS),
