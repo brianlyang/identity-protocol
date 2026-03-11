@@ -23,6 +23,38 @@ bundle_entry:
     - .github/workflows/_identity-required-gates.yml
 
 plugin_failclose_profiles:
+  - plugin_id: ai-folder-governance-enforcement
+    requirement_key: asb16-rq-020
+    target_name: skill_path_integrity
+    registry_file: identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+    contract_file: identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_v16_skill_path_integrity.py
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - active_repo_root
+      - active_runtime_root
+      - layout_mode
+      - path_integrity_status
+      - path_integrity_error_code
+    monotonic_policy:
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required
   - plugin_id: multimodal-vision-enforcement
     requirement_key: asb16-rq-034
     target_name: multimodal_plugin_enforcement
@@ -133,7 +165,7 @@ plugin_failclose_profiles:
       - error_code
       - evidence_ref
     monotonic_policy:
-      minimum_enforcement_level: L1
+      minimum_enforcement_level: L3
       allow_self_upgrade: true
       allow_downgrade: false
       strict_skip_policy: fail_close
