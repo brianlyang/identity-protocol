@@ -98,3 +98,16 @@ static_doc_required_alias_refs:
     alias_refs:
       - identity/protocol/mappings/stream-doc-registry.current.yaml
       - identity/protocol/mappings/github-control-plane-offload.current.yaml
+  - doc: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md
+    alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - doc: identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.v1.6.2.md
+    alias_refs:
+      - identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml
+      - identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/layer-targeted-gate-profile.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
