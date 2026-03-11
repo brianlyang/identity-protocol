@@ -180,3 +180,20 @@ All rounds passed under strict actor/session binding:
 Cross-check note:
 
 1. A deliberate negative probe (reusing one session id across multiple identities) produced expected strict failure (`summary_m2m.fail>0`), confirming actor-session isolation hardening still blocks silent cross-identity drift.
+
+### 7.4 Cross-CWD robustness hardening (2026-03-12 follow-up)
+
+During serial replay from workspace root (not `identity-protocol-local` cwd), two path-coupling defects were reproduced and fixed:
+
+1. `validate_full_scan_target_regression.py` invoked `scripts/full_identity_protocol_scan.py` via relative path and inherited caller cwd.
+   - Fix commits:
+     - `ab13d5a` (repo-path aware script/catalog resolution)
+     - `6ad7b61` (force subprocess cwd to protocol repo root)
+2. `full_identity_protocol_scan.py` defaulted `--repo-root` to `"."`, causing repo-catalog miss when invoked outside protocol repo cwd.
+   - Fix commit:
+     - `8fd8808` (default repo-root switched to script-local protocol root)
+
+Post-fix serial replay results:
+
+1. `validate_full_scan_target_regression` (workspace root invocation) => `PASS_REQUIRED`.
+2. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root invocation) => `summary.p0=0`, `summary_m2m.fail=0`.
