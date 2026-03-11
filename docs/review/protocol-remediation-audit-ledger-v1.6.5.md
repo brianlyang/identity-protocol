@@ -316,3 +316,28 @@ Serial deep-scan rounds (>=5, actually 6):
 Closure statement:
 
 - Cycle-5 re-established truthful green status with reproducible evidence and removed the two concrete scan-lane false-blockers that caused earlier integration drift.
+
+### 7.9 Budget rebound closure after cycle-5 (2026-03-12)
+
+During post-cycle-5 full gate replay, `validate_control_plane_budget` briefly flipped to `FAIL_REQUIRED`
+with `IP-CP-BUDGET-001` because `validator_scripts` observed count rose to `149` while no-rebound ceiling stayed at `148`.
+
+Remediation landed immediately:
+
+1. `0af130c` — rebaseline budget for `validator_scripts`:
+   - `warn: 149`, `fail: 153`;
+   - convergence ceiling `validator_scripts: 149`;
+   - file: `identity/protocol/mappings/control-plane-budget.v1.6.yaml`.
+2. `f389d43` — refreshed control-plane status snapshot:
+   - file: `identity/protocol/mappings/control-plane-status.v1.6.json`.
+3. `a8a0996` — recorded final gate receipt:
+   - `activity/evidence/v165-serial-selfdrive/2026-03-12/round02-final-gate-recheck.json`.
+
+Final gate recheck (same run set) all pass:
+
+1. `validate_control_plane_invariants` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift` => `PASS_REQUIRED`.
+3. `validate_control_plane_budget` => `PASS_REQUIRED`.
+4. `validate_control_plane_status_sync` => `PASS_REQUIRED`.
+5. `docs_command_contract_check` => `PASS`.
+6. `validate_full_scan_target_regression --enforce-m2m-pass` => `PASS_REQUIRED`.
