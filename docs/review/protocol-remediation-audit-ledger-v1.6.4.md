@@ -199,7 +199,7 @@ Action lock for third-item full closure:
 
 ## 0.8 Integration-kind fixed-directory decision freeze (2026-03-11)
 
-Verdict: `Policy PASS (doc freeze) / Implementation PENDING`.
+Verdict: `Policy PASS / Implementation PASS (schema + intake + parity + invariants)`.
 
 Decision locked for v1.6.4:
 
@@ -208,14 +208,35 @@ Decision locked for v1.6.4:
    - `skill`: `identity/protocol/plugins/skill` + `.identity/{identity_id}/runtime/plugins/skills`
    - `mcp`: `identity/protocol/plugins/mcp` + `.identity/{identity_id}/runtime/plugins/mcp`
    - `api`: `identity/protocol/plugins` + `.identity/{identity_id}/runtime/plugins/api`
-3. Non-canonical roots are considered governance drift and must fail-close once code checks are wired.
+3. Non-canonical roots are governance drift and now fail-close in machine checks.
 4. File-management skill reference is accepted as lightweight seed pattern (instance-side install):
    - `https://github.com/ComposioHQ/awesome-claude-skills/blob/master/file-organizer/SKILL.md`
 
-Implementation note:
+Implementation closure:
 
-1. This ledger entry is documentation-first by design; validator/schema wiring is intentionally deferred
-   until doc wording is accepted.
+1. Intake rows now carry fixed-root fields:
+   - `identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml`
+2. Registry rows now carry fixed-root fields:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml`
+3. Registry schema now enforces `integration_kind` with fixed root constants:
+   - `identity/protocol/plugins/schemas/plugin-registry.schema.json`
+4. Intake parity checker fail-closes integration-root drift:
+   - `scripts/sync_plugin_join_wiring.py`
+5. Control-plane invariant scan fail-closes integration-root drift:
+   - `scripts/validate_control_plane_invariants.py`
+
+Replay evidence (this round):
+
+1. Self-tests (5 scenarios):
+   - positive parity pass: `sync_plugin_join_wiring --check` => `PASS_REQUIRED`
+   - negative probes (invalid kind / wrong protocol root / contract out-of-root / registry runtime root mismatch)
+     all return `FAIL_REQUIRED`
+2. Deep scans (5 validators):
+   - `validate_control_plane_invariants --json-only` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift --json-only` => `PASS_REQUIRED`
+   - `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED`
+   - `validate_control_plane_budget --json-only` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
 
 ## 1) Four-track + context verification summary
 
