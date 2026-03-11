@@ -66,6 +66,30 @@ Every new protocol fail-close plugin must be wired through:
 
 No direct workflow-shell business logic is accepted as a substitute for those mappings.
 
+#### 3.1.1 Schema-contract parity (mandatory)
+
+The minimum wiring tuple is not documentation-only. It must be machine-enforced as a three-way contract:
+
+1. Documentation contract:
+   - `plugin_id`, `requirement_key`, `bundle_target_name`, `gate_mode`, `ssot_mapping_ref`
+2. Schema contract:
+   - plugin registry schema must allow and validate the same tuple fields.
+   - tuple fields must be required for fail-close plugin rows.
+3. Validator contract:
+   - at least one required gate must fail-close when schema/tuple parity is broken.
+
+If documentation tuple and schema tuple diverge, this contract is `FAIL_REQUIRED` by design.
+
+#### 3.1.2 Bundle runner decoupling rule (mandatory)
+
+New plugin onboarding must not require adding plugin-specific static maps in bundle runner source.
+
+1. Disallowed onboarding pattern:
+   - extending hardcoded lookup maps for requirement->target->status as primary wiring path.
+2. Required onboarding pattern:
+   - derive wiring from mapping sources (`contract-binding` + plugin registry/governance metadata).
+3. Any new plugin that can only be wired by editing bundle runner static maps is considered a control-plane regression.
+
 ### 3.2 Monotonic level contract (allow upgrade, forbid downgrade)
 
 1. Each strict contract must define an effective enforcement floor.

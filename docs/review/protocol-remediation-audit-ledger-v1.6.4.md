@@ -57,6 +57,26 @@ This round records cross-verified discussion conclusions and freezes them as v1.
    - no validator/business script changes are claimed in this checkpoint.
    - code-phase starts only after governance/review docs are accepted.
 
+## 0.2 First-contract closure verdict (2026-03-11)
+
+Verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
+
+Independent cross-check (repo-local) confirms two mandatory hardening gaps before first-contract can be called machine-closed:
+
+1. Schema-contract mismatch exists:
+   - `identity/protocol/plugins/PLUGIN_REGISTRY.v1.6.2.yaml` carries the minimum tuple fields.
+   - `identity/protocol/plugins/schemas/plugin-registry.schema.json` still rejects those tuple fields.
+2. Bundle runner still has static requirement/target/status maps:
+   - `BUNDLE_REQUIREMENT_ORDER`
+   - `TARGET_NAME_BY_REQUIREMENT`
+   - `STATUS_FIELD_BY_TARGET`
+   New plugin onboarding can still require script edits, which conflicts with config-first-only intent.
+
+Action freeze for this item:
+
+1. Promote tuple parity to schema+validator fail-close.
+2. Move plugin onboarding path away from static map additions to mapping-driven derivation.
+
 ## 1) Four-track + context verification summary
 
 ### T1 Roundtable/internal replay
