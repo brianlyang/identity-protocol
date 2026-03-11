@@ -357,14 +357,14 @@ Pending:
 
 Canonical root:
 
-1. `activity/evidence/m2m-full-scan/2026-03-09-afterfix-v6/`
+1. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/`
 
 Primary artifacts:
 
 1. `m2m_closure_status.afterfix_v6.json`
 2. `m2m_deep_scan_summary.afterfix_v6.json`
 3. `release_readiness_blockers.afterfix_v6.json`
-4. `EVIDENCE_MANIFEST.m2m-deep-scan-afterfix-v6.json`
+4. `evidence_manifest.ipmmrun002_closure_v2.json`
 5. `m2m_post_commit_quickcheck.423c0e0.json`
 
 ### 12.4 Cross-verified findings (four tracks)
@@ -662,11 +662,11 @@ Cross-surface replay:
 
 Canonical root:
 
-1. `activity/evidence/v162-cross-verify/2026-03-10/round308-m2m-hardclose-matrix/`
+1. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/`
 
 Manifest:
 
-1. `EVIDENCE_MANIFEST.round308-m2m-hardclose-matrix.json`
+1. `EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
 
 Validated matrix outcomes:
 
