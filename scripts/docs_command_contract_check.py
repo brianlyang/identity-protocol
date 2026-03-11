@@ -62,6 +62,12 @@ V150_REVIEW_REQUIRED_MARKERS = (
     "stream-doc-registry.current.yaml",
     "historical replay context only and must not be treated as current wiring contract input",
 )
+V16_REVIEW_HISTORICAL_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.md"
+V16_REVIEW_REQUIRED_MARKERS = (
+    "historical/replay trace; it is **not** the standalone source for current-state protocol judgments",
+    "stream-doc-registry.current.yaml",
+    "historical replay context only and must not be treated as current wiring contract input",
+)
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -584,6 +590,12 @@ def main() -> int:
                 if marker not in content:
                     failures.append(
                         f"[V150_REVIEW_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
+                    )
+        if _norm_path(doc) == V16_REVIEW_HISTORICAL_DOC:
+            for marker in V16_REVIEW_REQUIRED_MARKERS:
+                if marker not in content:
+                    failures.append(
+                        f"[V16_REVIEW_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
                     )
         required_alias_refs = stream_doc_alias_requirements.get(doc, [])
         for ref in required_alias_refs:
