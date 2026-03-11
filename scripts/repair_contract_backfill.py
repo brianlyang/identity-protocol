@@ -307,6 +307,30 @@ def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], 
             node["bundle_key"] = ENTRY_BUNDLE_KEY
         if not str(node.get("scope", "")).strip():
             node["scope"] = "all_identity_instance_actions"
+        if node.get("require_strict_operation_receipt") is not True:
+            node["require_strict_operation_receipt"] = True
+        if not str(node.get("entry_receipt_state_file", "")).strip():
+            node["entry_receipt_state_file"] = str(default.get("entry_receipt_state_file", "")).strip()
+        if not str(node.get("entry_receipt_history_pattern", "")).strip():
+            node["entry_receipt_history_pattern"] = str(default.get("entry_receipt_history_pattern", "")).strip()
+        receipt_fields = node.get("entry_receipt_required_fields")
+        default_receipt_fields = [
+            str(item).strip()
+            for item in (default.get("entry_receipt_required_fields") or [])
+            if str(item).strip()
+        ]
+        if not isinstance(receipt_fields, list):
+            node["entry_receipt_required_fields"] = list(default_receipt_fields)
+        else:
+            merged = [str(item).strip() for item in receipt_fields if str(item).strip()]
+            for field in default_receipt_fields:
+                if field not in merged:
+                    merged.append(field)
+            node["entry_receipt_required_fields"] = merged
+        if not str(node.get("onboarding_single_entry_command", "")).strip():
+            node["onboarding_single_entry_command"] = str(default.get("onboarding_single_entry_command", "")).strip()
+        if not str(node.get("extension_attach_entrypoint", "")).strip():
+            node["extension_attach_entrypoint"] = str(default.get("extension_attach_entrypoint", "")).strip()
     return forced_required_keys, restored_validator_keys
 
 
@@ -389,6 +413,11 @@ def main() -> int:
             or not str((updated.get(k) or {}).get("validator", "")).strip()
             or str((updated.get(k) or {}).get("entry_script", "")).strip() != ENTRY_SCRIPT
             or str((updated.get(k) or {}).get("bundle_key", "")).strip() != ENTRY_BUNDLE_KEY
+            or updated.get(k, {}).get("require_strict_operation_receipt") is not True
+            or not str((updated.get(k) or {}).get("entry_receipt_state_file", "")).strip()
+            or not str((updated.get(k) or {}).get("entry_receipt_history_pattern", "")).strip()
+            or not isinstance((updated.get(k) or {}).get("entry_receipt_required_fields"), list)
+            or not list((updated.get(k) or {}).get("entry_receipt_required_fields") or [])
         )
     ]
     legacy_drift_after = _legacy_path_drift_fields(updated, args.identity_id)
