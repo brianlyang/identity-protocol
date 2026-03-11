@@ -22,6 +22,7 @@ STRICT_SURFACES: tuple[str, ...] = (
     ".github/workflows/_identity-required-gates.yml",
 )
 WORKFLOW_REQUIRED_GATE_SURFACE = ".github/workflows/_identity-required-gates.yml"
+SUPER_LINTER_WORKFLOW_SURFACE = ".github/workflows/super-linter.yml"
 REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
 FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
 MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
@@ -49,6 +50,17 @@ MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/required_gate_bundle_runner.py",
 )
 MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
+SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
+    "name: super-linter",
+    "merge_group:",
+    "checks_requested",
+    "super-linter/super-linter/slim@",
+    "VALIDATE_ALL_CODEBASE: false",
+    "VALIDATE_GITHUB_ACTIONS: true",
+    "VALIDATE_JSON: true",
+    "VALIDATE_MARKDOWN: true",
+    "VALIDATE_YAML: true",
+)
 DIALOGUE_FEEDBACK_BUNDLE_SCRIPT = "scripts/run_identity_dialogue_feedback_bundle.py"
 DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
@@ -756,6 +768,16 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_bundle_tokens))
 
+    super_linter_workflow_path = repo_root / SUPER_LINTER_WORKFLOW_SURFACE
+    if not super_linter_workflow_path.exists():
+        missing_surface_files.append(SUPER_LINTER_WORKFLOW_SURFACE)
+    else:
+        text = _read_text(super_linter_workflow_path)
+        missing_tokens = [token for token in SUPER_LINTER_REQUIRED_TOKENS if token not in text]
+        if missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(SUPER_LINTER_WORKFLOW_SURFACE, []))
+            missing_execution_tokens[SUPER_LINTER_WORKFLOW_SURFACE] = sorted(set(existing_tokens + missing_tokens))
+
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
@@ -801,6 +823,8 @@ def main() -> int:
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),
         "dialogue_feedback_bundle_required_validators": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS),
         "dialogue_feedback_bundle_required_args": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_ARGS),
+        "super_linter_workflow_surface": SUPER_LINTER_WORKFLOW_SURFACE,
+        "super_linter_required_tokens": list(SUPER_LINTER_REQUIRED_TOKENS),
         "forbidden_direct_validators": forbidden_direct_validators,
         "missing_surface_files": missing_surface_files,
         "missing_lineage_refs": missing_lineage_refs,
