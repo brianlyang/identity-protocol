@@ -45,6 +45,23 @@ V160_FORBIDDEN_MARKERS = (
     "This document is the only normative execution entrypoint for actor-session-binding governance in v1.6.",
     "This file is topic-canonical for v1.6 planning/execution.",
 )
+V150_GOV_HISTORICAL_DOC = "docs/governance/identity-actor-session-binding-governance-v1.5.0.md"
+V150_GOV_REQUIRED_MARKERS = (
+    "historical baseline for v1.5 actor-session-binding closure",
+    "stream-doc-registry.current.yaml",
+    "not the active normative execution entrypoint",
+    "historical replay context only and must not be treated as current wiring contract input",
+)
+V150_GOV_FORBIDDEN_MARKERS = (
+    "This document is the only normative execution entrypoint for actor-session-binding governance.",
+    "This file is **topic-canonical** for actor-session-binding governance.",
+)
+V150_REVIEW_HISTORICAL_DOC = "docs/review/protocol-remediation-audit-ledger-v1.5.md"
+V150_REVIEW_REQUIRED_MARKERS = (
+    "historical v1.5 review ledger",
+    "stream-doc-registry.current.yaml",
+    "historical replay context only and must not be treated as current wiring contract input",
+)
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -550,6 +567,23 @@ def main() -> int:
                 if marker in content:
                     failures.append(
                         f"[V160_HISTORICAL_BOUNDARY_CONFLICT] {doc}: contains forbidden legacy marker `{marker}`"
+                    )
+        if _norm_path(doc) == V150_GOV_HISTORICAL_DOC:
+            for marker in V150_GOV_REQUIRED_MARKERS:
+                if marker not in content:
+                    failures.append(
+                        f"[V150_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
+                    )
+            for marker in V150_GOV_FORBIDDEN_MARKERS:
+                if marker in content:
+                    failures.append(
+                        f"[V150_HISTORICAL_BOUNDARY_CONFLICT] {doc}: contains forbidden legacy marker `{marker}`"
+                    )
+        if _norm_path(doc) == V150_REVIEW_HISTORICAL_DOC:
+            for marker in V150_REVIEW_REQUIRED_MARKERS:
+                if marker not in content:
+                    failures.append(
+                        f"[V150_REVIEW_HISTORICAL_BOUNDARY_MISSING] {doc}: missing `{marker}`"
                     )
         required_alias_refs = stream_doc_alias_requirements.get(doc, [])
         for ref in required_alias_refs:
