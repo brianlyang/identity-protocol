@@ -10,6 +10,7 @@ from create_identity_pack import (
     _derived_prompt_conformance_contract_skeleton,
     _ensure_intake_p1_contracts,
     _multimodal_plugin_enforcement_contract_skeleton,
+    _protocol_unique_entry_gate_contract_skeleton,
     _prompt_bootstrap_capability_contract_skeleton,
     _prompt_capability_matrix_contract_skeleton,
     _prompt_kernel_executable_coupling_contract_skeleton,
@@ -45,6 +46,9 @@ REQUIRED_MULTIMODAL_KEYS = (
 REQUIRED_REASONING_KEYS = (
     "reasoning_loop_failclose_contract_v1",
 )
+REQUIRED_ENTRY_KEYS = (
+    "protocol_unique_entry_gate_contract_v1",
+)
 
 PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
@@ -59,6 +63,9 @@ MULTIMODAL_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 REASONING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
 }
+ENTRY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
+}
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
@@ -66,9 +73,13 @@ ERR_MM_WIRE_MISSING = "IP-MM-WIRE-001"
 ERR_MM_WIRE_INVALID = "IP-MM-WIRE-002"
 ERR_RL_WIRE_MISSING = "IP-RL-WIRE-001"
 ERR_RL_WIRE_INVALID = "IP-RL-WIRE-002"
+ERR_ENTRY_WIRE_MISSING = "IP-GATE-ENTRY-001"
+ERR_ENTRY_WIRE_INVALID = "IP-GATE-ENTRY-002"
 REASONING_LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
 REASONING_MIN_LEVEL = "L3"
 FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
+ENTRY_SCRIPT = "scripts/required_gate_bundle_runner.py"
+ENTRY_BUNDLE_KEY = "required_gate_bundle_runner"
 
 
 def _norm_level(value: Any) -> str:
@@ -272,6 +283,33 @@ def _normalize_reasoning_contracts(task: dict[str, Any]) -> tuple[list[str], lis
     return forced_required_keys, restored_validator_keys, arbitration_link_restored
 
 
+def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    forced_required_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key in REQUIRED_ENTRY_KEYS:
+        default = ENTRY_CONTRACT_DEFAULTS.get(key, {})
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            forced_required_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        if node.get("required") is not True:
+            node["required"] = True
+            forced_required_keys.append(key)
+        validator = str(node.get("validator", "")).strip()
+        if not validator:
+            node["validator"] = str(default.get("validator", "")).strip()
+            restored_validator_keys.append(key)
+        if not str(node.get("entry_script", "")).strip():
+            node["entry_script"] = ENTRY_SCRIPT
+        if not str(node.get("bundle_key", "")).strip():
+            node["bundle_key"] = ENTRY_BUNDLE_KEY
+        if not str(node.get("scope", "")).strip():
+            node["scope"] = "all_identity_instance_actions"
+    return forced_required_keys, restored_validator_keys
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Backfill intake contract set into CURRENT_TASK.json.")
     ap.add_argument("--catalog", required=True)
@@ -297,6 +335,7 @@ def main() -> int:
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
+    entry_missing_before = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(task_doc.get(k), dict)]
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
@@ -306,10 +345,12 @@ def main() -> int:
     forced_required_keys, restored_validator_keys = _normalize_prompt_contracts(updated)
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
     forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
+    forced_entry_required_keys, restored_entry_validator_keys = _normalize_unique_entry_contracts(updated)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     prompt_missing_after = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(updated.get(k), dict)]
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
     reasoning_missing_after = [k for k in REQUIRED_REASONING_KEYS if not isinstance(updated.get(k), dict)]
+    entry_missing_after = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(updated.get(k), dict)]
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -337,6 +378,17 @@ def main() -> int:
             updated.get(k, {}).get("required") is not True
             or not str((updated.get(k) or {}).get("validator", "")).strip()
             or not str((updated.get(k) or {}).get("contract_id", "")).strip()
+        )
+    ]
+    entry_invalid_after = [
+        k
+        for k in REQUIRED_ENTRY_KEYS
+        if isinstance(updated.get(k), dict)
+        and (
+            updated.get(k, {}).get("required") is not True
+            or not str((updated.get(k) or {}).get("validator", "")).strip()
+            or str((updated.get(k) or {}).get("entry_script", "")).strip() != ENTRY_SCRIPT
+            or str((updated.get(k) or {}).get("bundle_key", "")).strip() != ENTRY_BUNDLE_KEY
         )
     ]
     legacy_drift_after = _legacy_path_drift_fields(updated, args.identity_id)
@@ -375,6 +427,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_RL_WIRE_INVALID
         stale_reasons = ["required_reasoning_contract_invalid_after_backfill"]
+    elif entry_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_ENTRY_WIRE_MISSING
+        stale_reasons = ["required_unique_entry_contract_keys_missing_after_backfill"]
+    elif entry_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_ENTRY_WIRE_INVALID
+        stale_reasons = ["required_unique_entry_contract_invalid_after_backfill"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -419,6 +479,20 @@ def main() -> int:
         "forced_reasoning_required_keys": forced_rl_required_keys,
         "restored_reasoning_validator_keys": restored_rl_validator_keys,
         "reasoning_arbitration_link_restored": reasoning_arbitration_link_restored,
+        "required_unique_entry_contract_keys": list(REQUIRED_ENTRY_KEYS),
+        "missing_unique_entry_contract_keys_before": entry_missing_before,
+        "missing_unique_entry_contract_keys_after": entry_missing_after,
+        "invalid_unique_entry_contract_keys_after": entry_invalid_after,
+        "forced_unique_entry_required_keys": forced_entry_required_keys,
+        "restored_unique_entry_validator_keys": restored_entry_validator_keys,
+        "unique_entry_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "unique_entry_contract_auto_wire_error_code": (
+            ""
+            if not entry_missing_after and not entry_invalid_after
+            else (ERR_ENTRY_WIRE_MISSING if entry_missing_after else ERR_ENTRY_WIRE_INVALID)
+        ),
         "prompt_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not prompt_missing_after and not prompt_invalid_after else STATUS_FAIL_REQUIRED
         ),
@@ -445,7 +519,12 @@ def main() -> int:
         ),
         "legacy_path_drift_fields_before": legacy_drift_before,
         "legacy_path_drift_fields_after": legacy_drift_after,
-        "required_contract_keys": list(REQUIRED_INTAKE_KEYS) + list(REQUIRED_MULTIMODAL_KEYS) + list(REQUIRED_REASONING_KEYS),
+        "required_contract_keys": (
+            list(REQUIRED_INTAKE_KEYS)
+            + list(REQUIRED_MULTIMODAL_KEYS)
+            + list(REQUIRED_REASONING_KEYS)
+            + list(REQUIRED_ENTRY_KEYS)
+        ),
         "stale_reasons": stale_reasons,
         "evidence_ref": str(task_path),
     }
