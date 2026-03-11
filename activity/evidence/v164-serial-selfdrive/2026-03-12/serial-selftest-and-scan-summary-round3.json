@@ -1,0 +1,129 @@
+{
+  "run_label": "v164-serial-selfdrive-round3",
+  "date": "2026-03-12",
+  "timezone": "Asia/Shanghai",
+  "work_layer": "protocol",
+  "source_layer": "project",
+  "repo": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+  "catalog": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "identity_id": "base-repo-audit-expert-v3",
+  "serial_execution": true,
+  "self_tests": [
+    {
+      "seq": 1,
+      "name": "reasoning_update_default",
+      "command": "python3 scripts/validate_reasoning_loop_failclose.py --catalog ... --identity-id base-repo-audit-expert-v3 --operation update --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "reasoning_four_track_status": "PASS_REQUIRED",
+        "reasoning_enforcement_level": "L3",
+        "runtime_report_source": "learning_sample_fallback"
+      }
+    },
+    {
+      "seq": 2,
+      "name": "multimodal_update_explicit_report",
+      "command": "python3 scripts/validate_multimodal_plugin_enforcement.py --catalog ... --identity-id base-repo-audit-expert-v3 --operation update --run-id identity-upgrade-exec-base-repo-audit-expert-v3-1773251121 --report-selected-path ...1773251121.json --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "multimodal_runtime_evidence_status": "SKIPPED_NOT_REQUIRED",
+        "runtime_stage_deferred": true,
+        "runtime_stage_deferred_reason": "legacy_report_missing_runtime_stage_pre_execution"
+      }
+    },
+    {
+      "seq": 3,
+      "name": "multimodal_readiness_strict_no_skip",
+      "command": "python3 scripts/validate_multimodal_plugin_enforcement.py --catalog ... --identity-id base-repo-audit-expert-v3 --operation readiness --run-id identity-upgrade-exec-base-repo-audit-expert-v3-1773251121 --report-selected-path ...1773251121.json --json-only",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-MM-RUN-003",
+      "expected_strict_fail": true,
+      "key": {
+        "multimodal_strict_skip_policy_status": "FAIL_REQUIRED",
+        "stale_reasons": [
+          "runtime_stage_missing_input_gate_deferred_from_report",
+          "strict_runtime_evidence_skip_not_allowed"
+        ]
+      }
+    },
+    {
+      "seq": 4,
+      "name": "reasoning_update_explicit_report_strict_bind",
+      "command": "python3 scripts/validate_reasoning_loop_failclose.py --catalog ... --identity-id base-repo-audit-expert-v3 --operation update --run-id identity-upgrade-exec-base-repo-audit-expert-v3-1773251121 --report-selected-path ...1773251121.json --json-only",
+      "rc": 1,
+      "status": "FAIL_REQUIRED",
+      "error_code": "IP-RL-RUN-006",
+      "expected_strict_fail": true,
+      "key": {
+        "runtime_report_source": "learning_sample_fallback",
+        "stale_reasons": [
+          "run_id_mismatch_blocked:source=learning_sample_fallback,report=bootstrap-base-repo-audit-expert-v3,expected=identity-upgrade-exec-base-repo-audit-expert-v3-1773251121"
+        ]
+      }
+    },
+    {
+      "seq": 5,
+      "name": "multimodal_update_default",
+      "command": "python3 scripts/validate_multimodal_plugin_enforcement.py --catalog ... --identity-id base-repo-audit-expert-v3 --operation update --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED",
+      "key": {
+        "multimodal_runtime_evidence_status": "SKIPPED_NOT_REQUIRED",
+        "multimodal_strict_skip_policy_status": "SKIPPED_NOT_REQUIRED"
+      }
+    }
+  ],
+  "deep_scans": [
+    {
+      "seq": 1,
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 2,
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 3,
+      "command": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 4,
+      "command": "python3 scripts/validate_control_plane_budget.py --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "seq": 5,
+      "command": "python3 scripts/docs_command_contract_check.py",
+      "rc": 0,
+      "status": "PASS"
+    },
+    {
+      "seq": 6,
+      "command": "python3 scripts/sync_plugin_join_wiring.py --check --json-only",
+      "rc": 0,
+      "status": "PASS_REQUIRED"
+    }
+  ],
+  "summary": {
+    "self_test_count": 5,
+    "deep_scan_count": 6,
+    "self_test_pass_count": 3,
+    "self_test_expected_strict_fail_count": 2,
+    "deep_scan_pass_count": 6,
+    "blocking_regression_detected": false,
+    "notes": [
+      "Round3 maintained serial-only execution.",
+      "Observed fails are strict-policy boundaries, not unintended regressions."
+    ]
+  }
+}
