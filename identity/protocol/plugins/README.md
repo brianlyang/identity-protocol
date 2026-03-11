@@ -18,6 +18,13 @@ This directory is the canonical plugin governance root for protocol-level plugin
 6. `schemas/*.schema.json` (strict schema validation)
 7. `templates/provider-bindings.local.template.yaml` (instance-side minimal binding template: profile pointer + credential_ref only)
 
+## Control-plane pointers (integration boundary)
+
+1. `identity/protocol/mappings/contract-binding.current.yaml` is the requirement-level contract mapping source.
+2. `identity/protocol/mappings/layer-targeted-gate-profile.current.yaml` controls strict vs targeted gate-profile trimming behavior.
+3. `identity/protocol/mappings/stream-doc-registry.current.yaml` is the machine SSOT for active governance/review streams.
+4. Plugin docs are onboarding guides only; runtime enforcement comes from validators + control-plane pointers above.
+
 ## Security
 
 1. Secret values must come from env/vault at runtime.
