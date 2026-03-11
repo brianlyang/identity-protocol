@@ -10,6 +10,8 @@ Purpose: Central place for architect + audit-expert planning, implementation rep
 2. Current-state stream routing must follow:
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 3. Current-state control-plane metrics/status must follow current pointers:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
    - `identity/protocol/mappings/control-plane-budget.current.yaml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
    - `identity/protocol/mappings/github-control-plane-offload.current.yaml`
@@ -18,6 +20,7 @@ Purpose: Central place for architect + audit-expert planning, implementation rep
    - `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
    - `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
 5. Historical evidence rows in this file may contain transient paths/threshold snapshots; they cannot override current-pointer SSOT.
+6. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
 
 ## 0) Boundary and usage rules
 
