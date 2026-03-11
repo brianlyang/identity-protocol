@@ -489,6 +489,20 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
         ],
         "scope": "all_identity_instance_actions",
         "fail_action": "block_execution_when_not_entered_via_required_gate_bundle_runner",
+        "require_strict_operation_receipt": True,
+        "entry_receipt_state_file": "runtime/state/required_gate_bundle_entry.latest.json",
+        "entry_receipt_history_pattern": "runtime/reports/required-gate-bundle-entry/required-gate-bundle-entry-*.json",
+        "entry_receipt_required_fields": [
+            "bundle_key",
+            "bundle_contract_id",
+            "identity_id",
+            "operation",
+            "run_id_binding",
+            "bundle_status",
+            "error_code",
+        ],
+        "onboarding_single_entry_command": "python3 scripts/identity_creator.py validate --catalog <catalog> --identity-id <identity> --actor-id <actor> --session-id <session>",
+        "extension_attach_entrypoint": "identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml",
     }
 
 
