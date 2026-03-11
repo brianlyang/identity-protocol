@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from response_stamp_common import resolve_layer_intent
 from tool_vendor_governance_common import (
     contract_required,
@@ -148,6 +150,23 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_semantic_convergence.py",
     "scripts/validate_prompt_kernel_executable_coupling.py",
 }
+
+
+def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
+    try:
+        doc = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return False
+    if not isinstance(doc, dict):
+        return False
+    rows = [row for row in (doc.get("identities") or []) if isinstance(row, dict)]
+    identity = str(identity_id or "").strip()
+    target = next((row for row in rows if str(row.get("id", "")).strip() == identity), None)
+    if not isinstance(target, dict):
+        return False
+    profile = str(target.get("profile", "")).strip().lower()
+    runtime_mode = str(target.get("runtime_mode", "")).strip().lower()
+    return profile == "fixture" or runtime_mode == "demo_only"
 
 
 @dataclass
@@ -788,6 +807,8 @@ def main() -> int:
         default_work_layer="instance",
         default_source_layer="project",
     )
+    fixture_identity = _is_fixture_identity(catalog_path, args.identity_id)
+    fixture_ci_floor_exempt = args.operation == "ci" and fixture_identity
     coverage_lane = str(layer_intent.get("resolved_work_layer", "instance")).strip().lower() or "instance"
     if coverage_lane not in {"protocol", "instance", "dual"}:
         coverage_lane = "instance"
@@ -799,7 +820,7 @@ def main() -> int:
         coverage_target_set = "instance_targets"
 
     strict_operation = args.operation in STRICT_OPERATIONS
-    strict_instance_floor_enabled = strict_operation and coverage_lane == "instance"
+    strict_instance_floor_enabled = strict_operation and coverage_lane == "instance" and not fixture_ci_floor_exempt
 
     for target in TARGETS:
         contract, contract_key_used = _resolve_contract_for_target(task, target)
@@ -955,6 +976,8 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_path),
         "operation": args.operation,
+        "fixture_identity": fixture_identity,
+        "strict_instance_floor_fixture_ci_exempt": fixture_ci_floor_exempt,
         "coverage_lane": coverage_lane,
         "coverage_target_set": coverage_target_set,
         "resolved_work_layer": str(layer_intent.get("resolved_work_layer", "")),
