@@ -21,6 +21,7 @@ profiles:
       - "*"
     require_work_layers:
       - protocol
+      - instance
 
   inspection_targeted:
     mode: targeted
