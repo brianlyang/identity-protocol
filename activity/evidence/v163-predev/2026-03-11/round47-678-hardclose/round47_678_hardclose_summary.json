@@ -1,0 +1,32 @@
+{
+  "round": "round47-678-hardclose",
+  "generated_at": "2026-03-11T05:39:47Z",
+  "focus": [
+    "6-kernel_ssot_source",
+    "7-required_contract_coverage_skipped",
+    "8-prompt_kernel_lane_boundary"
+  ],
+  "kernel_ssot_source": {
+    "status": "PASS_REQUIRED",
+    "required_contract": true,
+    "error_code": ""
+  },
+  "required_contract_coverage": {
+    "required_contract_total": 13,
+    "required_contract_passed": 13,
+    "failed_required_contract_count": 0,
+    "skipped_contract_count": 25,
+    "skipped_actionable_contract_count": 0,
+    "skipped_lane_excluded_contract_count": 25,
+    "skipped_actionable_contracts": []
+  },
+  "prompt_kernel_default": {
+    "status": "PASS_REQUIRED",
+    "error_code": "",
+    "routing_tail_contains_session_lane_lock_protocol": true
+  },
+  "prompt_kernel_instance_probe": {
+    "status": "FAIL_REQUIRED",
+    "error_code": "IP-PKX-002"
+  }
+}
