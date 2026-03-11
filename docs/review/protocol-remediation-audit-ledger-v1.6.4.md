@@ -95,6 +95,37 @@ Code-sync confirmation:
 4. Operational playbook wording is aligned to implemented behavior:
    - `identity/protocol/plugins/README.md`
 
+## 0.4 Second-item monotonic no-downgrade closure (2026-03-11)
+
+Verdict: `Policy PASS / Implementation PASS (strict no-skip + floor enforcement)`.
+
+Cross-verified hardening landed:
+
+1. Central monotonic policy is now profile-configured:
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.v1.6.2.yaml`
+   - per-plugin `monotonic_policy` includes floor + downgrade + strict-skip policy.
+2. Bundle strict no-skip is machine-enforced:
+   - `scripts/required_gate_bundle_runner.py`
+   - strict required rows with `SKIPPED_NOT_REQUIRED` now fail-close unless stale reasons are
+     explicitly allowlisted in policy.
+3. Reasoning floor and receipt semantics are strengthened:
+   - `scripts/validate_reasoning_loop_failclose.py`
+   - governance-backed monotonic policy read-path + receipt fields for configured/effective/minimum levels
+     and downgrade policy flags.
+4. Multimodal defer semantics are tightened on terminal strict lanes:
+   - `scripts/validate_multimodal_plugin_enforcement.py`
+   - terminal strict operations cannot pass with runtime evidence `SKIPPED_NOT_REQUIRED`.
+5. Mapping/projection parity updated for new monotonic receipt fields:
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+
+Acceptance notes:
+
+1. This closure removes the implicit downgrade channel for strict required gates.
+2. Remaining extensibility work stays in v1.6.4 backlog (single-intake generation and full map-seed retirement),
+   not in monotonic semantics.
+3. Hardening keeps control-plane budget convergence stable by reusing existing error-code families
+   (`IP-RL-CONF-001`, `IP-MM-RUN-003`) instead of introducing new literal codes.
+
 ## 1) Four-track + context verification summary
 
 ### T1 Roundtable/internal replay
