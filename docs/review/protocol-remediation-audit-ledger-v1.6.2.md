@@ -361,11 +361,11 @@ Canonical root:
 
 Primary artifacts:
 
-1. `m2m_closure_status.afterfix_v6.json`
-2. `m2m_deep_scan_summary.afterfix_v6.json`
-3. `release_readiness_blockers.afterfix_v6.json`
-4. `evidence_manifest.ipmmrun002_closure_v2.json`
-5. `m2m_post_commit_quickcheck.423c0e0.json`
+1. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/mn_closure_final_summary.ipmmrun002_v2.json`
+2. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/three_plane.matrix.summary.ipmmrun002_v2.json`
+3. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json`
+4. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/evidence_manifest.ipmmrun002_closure_v2.json`
+5. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/surface_drift.after_fix.json`
 
 ### 12.4 Cross-verified findings (four tracks)
 
@@ -408,8 +408,8 @@ Primary artifacts:
 
 Evidence:
 
-1. `release_readiness_blockers.afterfix_v6.json`
-2. `m2m_closure_status.afterfix_v6.json`
+1. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json`
+2. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/mn_closure_final_summary.ipmmrun002_v2.json`
 
 ### 12.6 Audit-grade statement (frozen wording)
 
@@ -471,12 +471,12 @@ Canonical root:
 
 Primary artifacts:
 
-1. `mn_closure_final_summary.ipmmrun002_v2.json`
-2. `evidence_manifest.ipmmrun002_closure_v2.json`
-3. `full_scan.target3.codex.r2.json`
-4. `full_scan.target3.yangxi.r3.json`
-5. `three_plane.bound_sessions.summary.ipmmrun002_v2.json`
-6. `release_readiness.bound.summary.ipmmrun002_v2.json`
+1. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/mn_closure_final_summary.ipmmrun002_v2.json`
+2. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/evidence_manifest.ipmmrun002_closure_v2.json`
+3. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.codex.r2.json`
+4. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.yangxi.r3.json`
+5. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/three_plane.bound_sessions.summary.ipmmrun002_v2.json`
+6. `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json`
 
 ### 14.4 Cross-verification conclusion
 
@@ -758,9 +758,9 @@ Root:
 
 Files:
 
-1. `candidate_validator_matrix.json`
-2. `bundle_validate_matrix_after_reduce2_final.json`
-3. `EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
+1. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/candidate_validator_matrix.json`
+2. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/bundle_validate_matrix_after_reduce2_final.json`
+3. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
 
 ### 19.4 Replay summary
 
