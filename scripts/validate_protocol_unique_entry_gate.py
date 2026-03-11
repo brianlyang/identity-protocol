@@ -198,7 +198,7 @@ def main() -> int:
     payload["protocol_unique_entry_scope"] = scope
     payload["protocol_unique_entry_required_operations"] = sorted(required_ops)
     payload["protocol_unique_entry_error_family"] = sorted(error_family)
-    payload["protocol_unique_entry_receipt_required"] = receipt_required_by_contract
+    payload["protocol_unique_entry_receipt_required"] = bool(args.require_entry_receipt)
     payload["protocol_unique_entry_receipt_state_file"] = entry_receipt_state_file
     payload["protocol_unique_entry_receipt_history_pattern"] = entry_receipt_history_pattern
     payload["protocol_unique_entry_receipt_required_fields"] = sorted(entry_receipt_required_fields)
@@ -233,7 +233,7 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    receipt_required = bool(args.require_entry_receipt or (strict_operation and receipt_required_by_contract))
+    receipt_required = bool(args.require_entry_receipt)
     if receipt_required:
         receipt_path = _resolve_entry_receipt_path(
             pack_path=pack_path,
