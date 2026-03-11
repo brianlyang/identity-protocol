@@ -103,6 +103,12 @@ multimodal_contract = {
                     "provider_profile_id": "glm46v_vision_prod",
                     "credential_ref": "vault:dummy/credential",
                     "enabled": True,
+                },
+                {
+                    "plugin_id": "multimodal-vision-enforcement",
+                    "provider_profile_id": "openai_vision_prod",
+                    "credential_ref": "vault:dummy/openai_credential",
+                    "enabled": True,
                 }
             ]
         },
