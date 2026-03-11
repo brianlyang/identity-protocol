@@ -22,6 +22,7 @@ docs:
     - contract-binding.current.yaml
     - layer-targeted-gate-profile.current.yaml
     - stream-doc-registry.current.yaml
+    - Plugin Join Flow (config-first, fail-close)
 
 plugin_docs:
   - plugin_id: multimodal-vision-enforcement
