@@ -990,3 +990,40 @@ All three iterations are green:
    - `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/EVIDENCE_MANIFEST.round48-threepass-legacy-semantic-parity.json`
 3. summary:
    - `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/round48_threepass_summary.json`
+
+## 21) Round-49 three-pass serial replay (current-turn confirmation, local catalog bound) (2026-03-11)
+
+### 21.1 Objective
+
+Re-run the three-pass deep-scan packet in the current turn using project-local runtime catalog binding to confirm that legacy semantic classification closure is stable under local catalog execution semantics.
+
+### 21.2 Three-pass packet
+
+Per iteration:
+
+1. `docs_command_contract_check`
+2. `validate_control_plane_invariants --json-only`
+3. `validate_required_gate_surface_drift --json-only`
+4. `validate_protocol_ssot_source`
+5. `validate_required_contract_coverage` (`identity_id=base-repo-architect`, `catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`)
+
+### 21.3 Outcome
+
+All three serial iterations stayed green:
+
+1. docs contract => `PASS`
+2. control-plane invariants => `PASS_REQUIRED`
+3. required-gate surface drift => `PASS_REQUIRED`
+4. protocol SSOT source => `OK`
+5. required coverage => `required_contract_total=13`, `required_contract_passed=13`, `failed_required_contract_count=0`, `skipped_actionable_contract_count=0`
+
+### 21.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/EVIDENCE_MANIFEST.round49-threepass-current-turn.json`
+3. summary:
+   - `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/round49_threepass_summary.json`
+4. tuple contract:
+   - every manifest entry includes `sha256`, `command`, `rc`, `timestamp_utc`.
