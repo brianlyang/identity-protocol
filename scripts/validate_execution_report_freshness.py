@@ -27,6 +27,7 @@ class CandidateEval:
     prompt_sha_match: bool
     report_newer_than_key_inputs: bool
     score: int
+    report_mtime: float
     stale_reasons: list[str]
     report_data: dict[str, Any]
 
@@ -53,6 +54,8 @@ def _safe_json(path: Path) -> dict[str, Any]:
 
 def _collect_from_roots(identity_id: str, roots: list[Path]) -> list[Path]:
     rows: list[Path] = []
+    generic_rows: list[Path] = []
+    generic_seen: set[Path] = set()
     for root in roots:
         if not root.exists():
             continue
@@ -60,7 +63,22 @@ def _collect_from_roots(identity_id: str, roots: list[Path]) -> list[Path]:
             if p.name.endswith("-patch-plan.json"):
                 continue
             rows.append(p.resolve())
-    return sorted(set(rows), key=lambda p: p.stat().st_mtime, reverse=True)
+        # Accept additional upgrade report naming styles and defer strict tuple
+        # checks (identity/catalog/prompt/freshness) to candidate scoring.
+        for p in root.glob("**/*.json"):
+            name = p.name.lower()
+            if not name.endswith(".json") or name.endswith("-patch-plan.json"):
+                continue
+            if "upgrade" not in name:
+                continue
+            resolved = p.resolve()
+            if resolved in generic_seen:
+                continue
+            generic_seen.add(resolved)
+            generic_rows.append(resolved)
+    merged = set(rows)
+    merged.update(generic_rows)
+    return sorted(merged, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 def _collect_candidates(identity_id: str, preferred_pack: Path | None, report: str) -> list[Path]:
@@ -141,7 +159,7 @@ def _eval_candidate(
     score += 4 if prompt_path_match else 0
     score += 2 if catalog_path_match else 0
     score += 1 if report_newer_than_key_inputs else 0
-    score += int(path.stat().st_mtime / 1_000_000_000)  # tie-break by recency
+    report_mtime = path.stat().st_mtime
 
     return CandidateEval(
         path=path,
@@ -152,6 +170,7 @@ def _eval_candidate(
         prompt_sha_match=prompt_sha_match,
         report_newer_than_key_inputs=report_newer_than_key_inputs,
         score=score,
+        report_mtime=report_mtime,
         stale_reasons=reasons,
         report_data=data,
     )
@@ -160,7 +179,7 @@ def _eval_candidate(
 def _select_best(candidates: list[CandidateEval]) -> CandidateEval:
     if not candidates:
         raise RuntimeError("no_execution_report_candidates")
-    return sorted(candidates, key=lambda c: c.score, reverse=True)[0]
+    return sorted(candidates, key=lambda c: (c.score, c.report_mtime), reverse=True)[0]
 
 
 def main() -> int:
