@@ -21,6 +21,7 @@ HEADSTAMP_ACTOR_ID="${HEADSTAMP_ACTOR_ID:-${CODEX_ACTOR_ID:-assistant:codex}}"
 HEADSTAMP_SESSION_ID="${HEADSTAMP_SESSION_ID:-run:${GITHUB_RUN_ID:-ci-local}}"
 
 python3 scripts/validate_required_gate_surface_drift.py --json-only
+python3 scripts/sync_plugin_join_wiring.py --check --json-only
 
 echo "target identities: ${IDS}"
 for ID in ${IDS}; do
