@@ -20,12 +20,30 @@ REQUIRED_ENTRY_FIELDS = [
     "bundle_target_name",
     "gate_mode",
     "ssot_mapping_ref",
+    "integration_kind",
+    "protocol_contract_root",
+    "instance_runtime_root",
     "contract_file",
     "validator_script",
     "status",
     "required_gate_surfaces",
     "required_report_fields",
 ]
+
+INTEGRATION_KIND_RULES = {
+    "skill": {
+        "protocol_contract_root": "identity/protocol/plugins/skill",
+        "instance_runtime_root": ".identity/{identity_id}/runtime/plugins/skills",
+    },
+    "mcp": {
+        "protocol_contract_root": "identity/protocol/plugins/mcp",
+        "instance_runtime_root": ".identity/{identity_id}/runtime/plugins/mcp",
+    },
+    "api": {
+        "protocol_contract_root": "identity/protocol/plugins",
+        "instance_runtime_root": ".identity/{identity_id}/runtime/plugins/api",
+    },
+}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -70,6 +88,14 @@ def _as_text_list(value: Any) -> list[str]:
 
 def _as_set(value: Any) -> set[str]:
     return set(_as_text_list(value))
+
+
+def _path_within_root(path_value: str, root_value: str) -> bool:
+    norm_path = path_value.strip().strip("/")
+    norm_root = root_value.strip().strip("/")
+    if not norm_path or not norm_root:
+        return False
+    return norm_path == norm_root or norm_path.startswith(f"{norm_root}/")
 
 
 def _index_by(rows: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
@@ -184,6 +210,51 @@ def main() -> int:
             requirement_key = _as_text(entry.get("requirement_key"))
             bundle_target = _as_text(entry.get("bundle_target_name"))
             validator_script = _as_text(entry.get("validator_script"))
+            integration_kind = _as_text(entry.get("integration_kind")).lower()
+            protocol_contract_root = _as_text(entry.get("protocol_contract_root"))
+            instance_runtime_root = _as_text(entry.get("instance_runtime_root"))
+            contract_file = _as_text(entry.get("contract_file"))
+
+            rule = INTEGRATION_KIND_RULES.get(integration_kind)
+            if rule is None:
+                _append_violation(
+                    violations,
+                    field="intake.plugins",
+                    reason="integration_kind_invalid",
+                    plugin_id=plugin_id,
+                    integration_kind=integration_kind,
+                    allowed=sorted(INTEGRATION_KIND_RULES.keys()),
+                )
+            else:
+                expected_protocol_root = rule["protocol_contract_root"]
+                expected_runtime_root = rule["instance_runtime_root"]
+                if protocol_contract_root != expected_protocol_root:
+                    _append_violation(
+                        violations,
+                        field="intake.plugins",
+                        reason="protocol_contract_root_mismatch",
+                        plugin_id=plugin_id,
+                        expected=expected_protocol_root,
+                        observed=protocol_contract_root,
+                    )
+                if instance_runtime_root != expected_runtime_root:
+                    _append_violation(
+                        violations,
+                        field="intake.plugins",
+                        reason="instance_runtime_root_mismatch",
+                        plugin_id=plugin_id,
+                        expected=expected_runtime_root,
+                        observed=instance_runtime_root,
+                    )
+            if contract_file and protocol_contract_root and not _path_within_root(contract_file, protocol_contract_root):
+                _append_violation(
+                    violations,
+                    field="intake.plugins",
+                    reason="contract_file_out_of_protocol_root",
+                    plugin_id=plugin_id,
+                    contract_file=contract_file,
+                    protocol_contract_root=protocol_contract_root,
+                )
 
             mapping_ref_expected = f"{mapping_active_file or args.mapping_current}#{requirement_key}"
             mapping_ref_observed = _as_text(entry.get("ssot_mapping_ref"))
@@ -202,6 +273,9 @@ def main() -> int:
                 _append_violation(violations, field="registry.plugins", reason="plugin_missing", plugin_id=plugin_id)
             else:
                 for key in [
+                    "integration_kind",
+                    "protocol_contract_root",
+                    "instance_runtime_root",
                     "requirement_key",
                     "bundle_target_name",
                     "gate_mode",
