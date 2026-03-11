@@ -1,0 +1,334 @@
+{
+  "status": "PASS",
+  "selftests": [
+    {
+      "round": 1,
+      "steps": [
+        {
+          "step": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_1/step_01.json"
+        },
+        {
+          "step": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_1/step_02.json"
+        },
+        {
+          "step": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_1/step_03.json"
+        },
+        {
+          "step": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_1/step_04.json"
+        },
+        {
+          "step": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_1/step_05.json"
+        },
+        {
+          "step": 6,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_1/step_06.json"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "steps": [
+        {
+          "step": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_2/step_01.json"
+        },
+        {
+          "step": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_2/step_02.json"
+        },
+        {
+          "step": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_2/step_03.json"
+        },
+        {
+          "step": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_2/step_04.json"
+        },
+        {
+          "step": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_2/step_05.json"
+        },
+        {
+          "step": 6,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_2/step_06.json"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "steps": [
+        {
+          "step": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_3/step_01.json"
+        },
+        {
+          "step": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_3/step_02.json"
+        },
+        {
+          "step": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_3/step_03.json"
+        },
+        {
+          "step": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_3/step_04.json"
+        },
+        {
+          "step": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_3/step_05.json"
+        },
+        {
+          "step": 6,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_3/step_06.json"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "steps": [
+        {
+          "step": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_4/step_01.json"
+        },
+        {
+          "step": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_4/step_02.json"
+        },
+        {
+          "step": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_4/step_03.json"
+        },
+        {
+          "step": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_4/step_04.json"
+        },
+        {
+          "step": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_4/step_05.json"
+        },
+        {
+          "step": 6,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_4/step_06.json"
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "steps": [
+        {
+          "step": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_5/step_01.json"
+        },
+        {
+          "step": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_5/step_02.json"
+        },
+        {
+          "step": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_5/step_03.json"
+        },
+        {
+          "step": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_5/step_04.json"
+        },
+        {
+          "step": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_5/step_05.json"
+        },
+        {
+          "step": 6,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/selftests/round_5/step_06.json"
+        }
+      ]
+    }
+  ],
+  "deepscans": [
+    {
+      "round": 1,
+      "checks": [
+        {
+          "check": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_1_check_1.json"
+        },
+        {
+          "check": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_1_check_2.json"
+        },
+        {
+          "check": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_1_check_3.json"
+        },
+        {
+          "check": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_1_check_4.json"
+        },
+        {
+          "check": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_1_check_5.json"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "checks": [
+        {
+          "check": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_2_check_1.json"
+        },
+        {
+          "check": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_2_check_2.json"
+        },
+        {
+          "check": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_2_check_3.json"
+        },
+        {
+          "check": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_2_check_4.json"
+        },
+        {
+          "check": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_2_check_5.json"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "checks": [
+        {
+          "check": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_3_check_1.json"
+        },
+        {
+          "check": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_3_check_2.json"
+        },
+        {
+          "check": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_3_check_3.json"
+        },
+        {
+          "check": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_3_check_4.json"
+        },
+        {
+          "check": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_3_check_5.json"
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "checks": [
+        {
+          "check": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_4_check_1.json"
+        },
+        {
+          "check": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_4_check_2.json"
+        },
+        {
+          "check": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_4_check_3.json"
+        },
+        {
+          "check": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_4_check_4.json"
+        },
+        {
+          "check": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_4_check_5.json"
+        }
+      ]
+    },
+    {
+      "round": 5,
+      "checks": [
+        {
+          "check": 1,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_5_check_1.json"
+        },
+        {
+          "check": 2,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_5_check_2.json"
+        },
+        {
+          "check": 3,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_5_check_3.json"
+        },
+        {
+          "check": 4,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_5_check_4.json"
+        },
+        {
+          "check": 5,
+          "rc": 0,
+          "path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2/deepscans/round_5_check_5.json"
+        }
+      ]
+    }
+  ],
+  "out_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-serial-selfdrive/2026-03-12/unique-ingress-rerun-v2",
+  "generated_at_utc": "2026-03-11T20:16:01Z"
+}

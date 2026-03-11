@@ -1,0 +1,11 @@
+{
+  "command": [
+    "python3",
+    "scripts/validate_control_plane_status_sync.py",
+    "--json-only"
+  ],
+  "rc": 0,
+  "stdout": "{\"control_plane_status_sync_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"status_entry_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml\", \"status_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json\", \"status_active_file\": \"identity/protocol/mappings/control-plane-status.v1.6.json\", \"status_file_alias_error\": \"\", \"mismatch_count\": 0, \"mismatches\": [], \"stale_reasons\": [], \"live_control_plane_status\": \"FAIL_REQUIRED\", \"file_control_plane_status\": \"FAIL_REQUIRED\"}",
+  "stderr": "",
+  "finished_at_utc": "2026-03-11T20:06:02Z"
+}

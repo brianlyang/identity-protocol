@@ -1,0 +1,27 @@
+{
+  "run_id": "v164-mm-report-pass-r4",
+  "multimodal_preflight_status": "PASS_REQUIRED",
+  "multimodal_runtime_evidence_status": "PASS_REQUIRED",
+  "multimodal_calls": 2,
+  "multimodal_resolved": 2,
+  "multimodal_unresolved": 0,
+  "multimodal_errors": 0,
+  "multimodal_retry_calls": 0,
+  "runtime_gate_mode": "required",
+  "runtime_gate_required_confidence": 0.6,
+  "check_results": [
+    {
+      "cmd": "python3 scripts/validate_multimodal_plugin_enforcement.py",
+      "stdout": "{\"multimodal_plugin_enforcement_status\":\"PASS_REQUIRED\"}"
+    }
+  ],
+  "multimodal_summary": {
+    "calls": 2,
+    "resolved": 2,
+    "unresolved": 0,
+    "errors": 0,
+    "retry_calls": 0,
+    "mode": "required",
+    "required_confidence": 0.6
+  }
+}
