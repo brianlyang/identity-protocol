@@ -19,6 +19,9 @@ docs:
     - FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml
     - PLUGIN_REGISTRY.current.yaml
     - PROVIDER_PROFILES.current.yaml
+    - contract-binding.current.yaml
+    - layer-targeted-gate-profile.current.yaml
+    - stream-doc-registry.current.yaml
 
 plugin_docs:
   - plugin_id: multimodal-vision-enforcement
