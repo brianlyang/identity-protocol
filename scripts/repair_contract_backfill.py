@@ -66,6 +66,57 @@ ERR_MM_WIRE_MISSING = "IP-MM-WIRE-001"
 ERR_MM_WIRE_INVALID = "IP-MM-WIRE-002"
 ERR_RL_WIRE_MISSING = "IP-RL-WIRE-001"
 ERR_RL_WIRE_INVALID = "IP-RL-WIRE-002"
+REASONING_LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
+REASONING_MIN_LEVEL = "L3"
+FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
+
+
+def _norm_level(value: Any) -> str:
+    token = str(value or "").strip().upper()
+    return token if token in REASONING_LEVEL_RANK else ""
+
+
+def _ensure_reasoning_floor(node: dict[str, Any]) -> bool:
+    changed = False
+    current_level = _norm_level(node.get("reasoning_enforcement_level"))
+    if not current_level or REASONING_LEVEL_RANK[current_level] < REASONING_LEVEL_RANK[REASONING_MIN_LEVEL]:
+        node["reasoning_enforcement_level"] = REASONING_MIN_LEVEL
+        changed = True
+
+    current_min_level = _norm_level(node.get("minimum_enforcement_level"))
+    if not current_min_level or REASONING_LEVEL_RANK[current_min_level] < REASONING_LEVEL_RANK[REASONING_MIN_LEVEL]:
+        node["minimum_enforcement_level"] = REASONING_MIN_LEVEL
+        changed = True
+
+    enforcement = node.get("reasoning_enforcement")
+    if not isinstance(enforcement, dict):
+        enforcement = {}
+        node["reasoning_enforcement"] = enforcement
+        changed = True
+
+    default_level = _norm_level(enforcement.get("default_level"))
+    if not default_level or REASONING_LEVEL_RANK[default_level] < REASONING_LEVEL_RANK[REASONING_MIN_LEVEL]:
+        enforcement["default_level"] = REASONING_MIN_LEVEL
+        changed = True
+
+    minimum_level = _norm_level(enforcement.get("minimum_level"))
+    if not minimum_level or REASONING_LEVEL_RANK[minimum_level] < REASONING_LEVEL_RANK[REASONING_MIN_LEVEL]:
+        enforcement["minimum_level"] = REASONING_MIN_LEVEL
+        changed = True
+    return changed
+
+
+def _merge_required_skills(node: dict[str, Any], required_skill_id: str) -> bool:
+    existing = node.get("required_skills")
+    if isinstance(existing, list):
+        values = [str(x).strip() for x in existing if str(x).strip()]
+    else:
+        values = []
+    if required_skill_id in values:
+        return False
+    values.append(required_skill_id)
+    node["required_skills"] = values
+    return True
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -133,6 +184,24 @@ def _normalize_multimodal_contracts(task: dict[str, Any]) -> tuple[list[str], li
             restored_validator_keys.append(key)
         if not str(node.get("contract_id", "")).strip():
             node["contract_id"] = str(default.get("contract_id", "")).strip()
+        requirements = node.get("provider_binding_requirements")
+        if not isinstance(requirements, dict):
+            requirements = {}
+            node["provider_binding_requirements"] = requirements
+        req_profiles = requirements.get("required_profiles")
+        if not isinstance(req_profiles, list) or not req_profiles:
+            requirements["required_profiles"] = ["glm46v_vision_prod", "openai_vision_prod"]
+        else:
+            merged_profiles = [str(x).strip() for x in req_profiles if str(x).strip()]
+            for profile_id in ("glm46v_vision_prod", "openai_vision_prod"):
+                if profile_id not in merged_profiles:
+                    merged_profiles.append(profile_id)
+            requirements["required_profiles"] = merged_profiles
+        min_bindings = requirements.get("minimum_enabled_bindings")
+        if not isinstance(min_bindings, int) or min_bindings < 2:
+            requirements["minimum_enabled_bindings"] = 2
+        if requirements.get("require_all_required_profiles") is not True:
+            requirements["require_all_required_profiles"] = True
 
     arbitration = task.get("capability_arbitration_contract")
     if isinstance(arbitration, dict):
@@ -177,8 +246,7 @@ def _normalize_reasoning_contracts(task: dict[str, Any]) -> tuple[list[str], lis
             restored_validator_keys.append(key)
         if not str(node.get("contract_id", "")).strip():
             node["contract_id"] = str(default.get("contract_id", "")).strip()
-        if not str(node.get("reasoning_enforcement_level", "")).strip():
-            node["reasoning_enforcement_level"] = str(default.get("reasoning_enforcement_level", "L1"))
+        _ensure_reasoning_floor(node)
 
     arbitration = task.get("capability_arbitration_contract")
     if isinstance(arbitration, dict):
@@ -232,6 +300,9 @@ def main() -> int:
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
+    skill_contract = updated.get("skill_path_integrity_contract_v1")
+    if isinstance(skill_contract, dict):
+        _merge_required_skills(skill_contract, FILE_GOVERNANCE_SKILL_ID)
     forced_required_keys, restored_validator_keys = _normalize_prompt_contracts(updated)
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
     forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
