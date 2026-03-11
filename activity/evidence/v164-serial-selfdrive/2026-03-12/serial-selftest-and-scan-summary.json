@@ -1,0 +1,112 @@
+{
+  "date": "2026-03-12",
+  "actor_id": "assistant:codex",
+  "identity_id": "base-repo-audit-expert-v3",
+  "catalog": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+  "mode": "serial_only",
+  "code_fixes": [
+    {
+      "commit": "2f3ede8",
+      "file": "scripts/validate_execution_report_freshness.py",
+      "title": "widen execution report freshness candidate selection",
+      "effect": "protocol version alignment no longer locked to identity-upgrade-exec naming only"
+    },
+    {
+      "commit": "9ed0fbb",
+      "file": "scripts/execute_identity_upgrade.py",
+      "title": "autowire safe-auto arbitration log allowlist",
+      "effect": "safe-auto path policy no longer blocks runtime/logs/arbitration writeback by default"
+    }
+  ],
+  "self_tests": [
+    {
+      "id": "ST1",
+      "command": "identity_creator activate (with switch_intent_receipt)",
+      "result": "PASS",
+      "rc": 0,
+      "error_code": "",
+      "note": "fixed prior IP-ASB-MB-008 by explicit switch intent receipt"
+    },
+    {
+      "id": "ST2",
+      "command": "identity_creator validate --run-id v164-selftest-1",
+      "result": "FAIL_EXPECTED",
+      "rc": 1,
+      "error_code": "IP-MM-RUN-003",
+      "note": "validate/readiness strict multimodal runtime evidence gate blocks deferred report path"
+    },
+    {
+      "id": "ST3",
+      "command": "identity_creator update --mode safe-auto --run-id v164-selftest-1-rerun",
+      "result": "PASS",
+      "rc": 0,
+      "error_code": "",
+      "note": "next_action=safe_auto_applied_and_validated"
+    },
+    {
+      "id": "ST4",
+      "command": "validate_reasoning_loop_failclose.py --operation update",
+      "result": "PASS",
+      "rc": 0,
+      "error_code": "",
+      "note": "L3 enforcement active; no-downgrade policy intact"
+    },
+    {
+      "id": "ST5",
+      "command": "validate_multimodal_plugin_enforcement.py --operation update --run-id identity-upgrade-exec-...",
+      "result": "PASS",
+      "rc": 0,
+      "error_code": "",
+      "note": "update phase defer remains allowed under governance allowlist"
+    },
+    {
+      "id": "ST6",
+      "command": "validate_multimodal_plugin_enforcement.py --operation readiness --run-id identity-upgrade-exec-...",
+      "result": "FAIL_EXPECTED",
+      "rc": 1,
+      "error_code": "IP-MM-RUN-003",
+      "note": "terminal strict surface no-skip remains enforced"
+    }
+  ],
+  "deep_scans": [
+    {
+      "id": "DS1",
+      "command": "validate_control_plane_invariants.py --json-only",
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "id": "DS2",
+      "command": "validate_required_gate_surface_drift.py --json-only",
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "id": "DS3",
+      "command": "validate_control_plane_status_sync.py --json-only",
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "id": "DS4",
+      "command": "validate_control_plane_budget.py --json-only",
+      "status": "PASS_REQUIRED"
+    },
+    {
+      "id": "DS5",
+      "command": "docs_command_contract_check.py",
+      "status": "PASS",
+      "docs_checked": 50,
+      "snippets_checked": 1319
+    },
+    {
+      "id": "DS6",
+      "command": "sync_plugin_join_wiring.py --check --json-only",
+      "status": "PASS_REQUIRED"
+    }
+  ],
+  "final_assessment": {
+    "v164_base_repo_integration": "PASS_WITH_STRICT_EXPECTED_BLOCKERS",
+    "residual_blockers": [
+      "validate/readiness multimodal strict evidence gate requires real runtime pre-execution evidence"
+    ],
+    "regression_introduced": false
+  }
+}
