@@ -139,6 +139,44 @@ Posture: `CONDITIONAL_GO` for v1.6.5 implementation.
 
 Reason:
 
-1. governance/review baseline and boundaries are now explicit.
-2. dual-layer target is clear and machine-verifiable.
-3. code + platform activation steps remain to be executed and receipt-closed.
+1. governance/review baseline and boundaries are explicit and machine-checkable.
+2. repository-side v1.6.5 code landing is complete and integrated into control-plane gates.
+3. final closure still depends on platform activation receipts (ruleset file-governance controls + required-check activation confirmation).
+
+## 7) Integration closure round (2026-03-12, base-repo-architect self-drive)
+
+### 7.1 Code landing and immediate commits
+
+This round finished the repository-side v1.6.5 integration with immediate-per-file commits:
+
+1. `2f314ed` — add `.github/workflows/super-linter.yml` with `pull_request` + `push(main)` + `merge_group(checks_requested)` triggers.
+2. `81c7856` — add `identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml`.
+3. `3605915` — switch `github-control-plane-offload.current.yaml` to v1.6.5.
+4. `8aed679` — extend `validate_required_gate_surface_drift.py` with super-linter workflow/token contract.
+5. `205b02b` — require `cp-gh-006` in `control-plane-invariants.v1.6.yaml`.
+6. `2c85d37` — fix `validate_control_plane_budget.py` to resolve versioned acceptance target keys (`acceptance_targets_v165/v164/v163` + generic fallback).
+7. `e27c267` — refresh `control-plane-status.v1.6.json` after budget resolver fix.
+
+### 7.2 Self-test rounds (>=5 required; 5 executed)
+
+All rounds passed:
+
+1. Round-1: `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`.
+2. Round-2: `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`.
+3. Round-3: `python3 scripts/validate_control_plane_budget.py --json-only` => `PASS_REQUIRED`.
+4. Round-4: `python3 scripts/validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`.
+5. Round-5: `python3 scripts/docs_command_contract_check.py` => `PASS`.
+
+### 7.3 Deep-scan rounds (>=5 required; 5 executed)
+
+All rounds passed under strict actor/session binding:
+
+1. Round-1: `full_identity_protocol_scan --scan-mode target` (`base-repo-architect`, project) => `summary.p0=0`, `summary_m2m.fail=0`.
+2. Round-2: `full_identity_protocol_scan --scan-mode target` (`base-repo-audit-expert-v3`, project) => `summary.p0=0`, `summary_m2m.fail=0`.
+3. Round-3: `validate_full_scan_target_regression --identity-id base-repo-architect --enforce-m2m-pass` => `PASS_REQUIRED`.
+4. Round-4: `validate_full_scan_target_regression --identity-id base-repo-audit-expert-v3 --enforce-m2m-pass` => `PASS_REQUIRED`.
+5. Round-5: `full_identity_protocol_scan --scan-mode target --with-docs-contract` (`base-repo-architect`, project) => `summary.p0=0`, `summary_m2m.fail=0`.
+
+Cross-check note:
+
+1. A deliberate negative probe (reusing one session id across multiple identities) produced expected strict failure (`summary_m2m.fail>0`), confirming actor-session isolation hardening still blocks silent cross-identity drift.
