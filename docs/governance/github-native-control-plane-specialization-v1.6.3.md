@@ -694,3 +694,36 @@ For each iteration (`1..5`):
    - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/EVIDENCE_MANIFEST.round39-five-pass-green.json`
 3. iteration summary:
    - `activity/evidence/v163-predev/2026-03-11/round39-five-pass-green/round39_iteration_summary.json`
+
+## 14) Round-42 three-pass post-repair deep-scan closure (2026-03-11)
+
+### 14.1 Why this pass exists
+
+1. After extending static authority boundaries to include v1.5 review lane and collapsing doc-evidence error code inflation, a fresh serial replay was required to confirm stability under repaired control-plane budgets.
+2. Goal: verify no regression on file-level unified semantics while preserving strict fail-close gates.
+
+### 14.2 Three-pass serial replay outcome
+
+For each iteration (`1..3`):
+
+1. `validate_control_plane_invariants` -> `PASS_REQUIRED`
+2. `validate_required_gate_surface_drift` -> `PASS_REQUIRED`
+3. `docs_command_contract_check` -> `PASS`
+4. `validate_protocol_ssot_source` -> `OK`
+5. `validate_doc_evidence_persistence` -> `PASS_REQUIRED`
+6. `validate_control_plane_status_sync` -> `PASS_REQUIRED`
+
+### 14.3 Legacy coverage telemetry
+
+1. legacy docs discovered by version pattern (`<= v1.6.*`): `54`
+2. covered by authoritative set (`stream_docs + mandatory_static_docs`): `10`
+3. uncovered legacy docs: `44` (explicit archive/context default unless promoted into stream registry authority set).
+
+### 14.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/EVIDENCE_MANIFEST.round42-three-pass-post-repair.json`
+3. summary:
+   - `activity/evidence/v163-predev/2026-03-11/round42-three-pass-post-repair/round42_iteration_summary.json`
