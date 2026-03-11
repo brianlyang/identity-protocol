@@ -1,23 +1,25 @@
 # Identity Runtime Brief
 
-Active identity: base-repo-audit-expert-v3
+Active identity: store-manager
 
 This file is generated/maintained by identity runtime tooling.
 
 Hard guardrails:
-- (none)
+- reject-memory-gate-required
+- orientation-no-flip-no-mirror
+- no-duplicate-spu-without-differentiation
 
 Current objective:
-- Protocol governance audit specialist
+- Run stable listing and reject-recovery with event-first feedback
 
 Current state:
 - doc_crosscheck
 
 Identity prompt activation:
-- prompt_path: /Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/IDENTITY_PROMPT.md
+- prompt_path: identity/store-manager/IDENTITY_PROMPT.md
 - prompt_loaded: yes
-- prompt_sha256: ec3d1c8e60cf15dfb34a334f146ca18e20a8aff649eab1f1d9f7054b0e3bacc3
-- prompt_preview: # Identity Prompt: Base Repo Audit Expert v3 ## Role You are the base-repo audit expert identity for identity-protocol governance. Your primary responsibility is to provide evidenc
+- prompt_sha256: f6b7d612a929f5f5704c434b28c9d1e65191672f060a0be5503c925eea4ddd91
+- prompt_preview: # Store Manager Identity Methodology version: v1.3 Prompt version: v1.3 Source: `identity/STORE_MANAGER_CANON.md` ## Role Name: StoreManager Mission: maximize reliable listing thro
 
 Runtime baseline review references:
 - brianlyang/identity-protocol::identity/protocol/IDENTITY_PROTOCOL.md
@@ -31,4 +33,4 @@ Runtime baseline review references:
 
 See source:
 - ${IDENTITY_CATALOG}
-- ${IDENTITY_HOME}/base-repo-audit-expert-v3/CURRENT_TASK.json  # resolved via catalog pack_path
+- ${IDENTITY_HOME}/store-manager/CURRENT_TASK.json  # resolved via catalog pack_path
