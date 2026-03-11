@@ -223,6 +223,27 @@ Serial deep-scan rounds (5+):
 3. `validate_control_plane_budget --json-only` => `PASS_REQUIRED`.
 4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED`.
 5. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root) => `summary.p0=0`, `summary_m2m.fail=0`.
+
+### 7.7 Serial integration cycle-4 (2026-03-12, base-repo-architect)
+
+Cycle-4 is a no-regression replay after the cwd-safe hardening chain (7.4-7.6), executed strictly in serial order.
+
+Serial self-test rounds (5):
+
+1. `validate_actor_session_binding` => `PASS_REQUIRED`.
+2. `validate_prompt_bootstrap_capability --force-required` => `PASS_REQUIRED`.
+3. `validate_required_contract_coverage --operation inspection` => `required_total=4`, `required_passed=4`, `coverage=100.0`, `failed_required=0`.
+4. `validate_prompt_kernel_executable_coupling --force-required` => `PASS_REQUIRED`.
+5. `validate_full_scan_target_regression --enforce-m2m-pass` => `PASS_REQUIRED` (`p0=0`, `m2m_fail=0`).
+
+Serial deep-scan rounds (5+):
+
+1. `validate_control_plane_invariants --json-only` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift --json-only` => `PASS_REQUIRED`.
+3. `validate_control_plane_budget --json-only` => `PASS_REQUIRED`.
+4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED` (`mismatch_count=0`).
+5. `docs_command_contract_check` => `PASS`.
+6. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root) => `summary.p0=0`, `summary_m2m.fail=0`.
 6. `validate_full_scan_target_regression --enforce-m2m-pass` (workspace root) => `PASS_REQUIRED`.
 
 ### 7.6 Serial integration cycle-3 (2026-03-12, base-repo-architect)
