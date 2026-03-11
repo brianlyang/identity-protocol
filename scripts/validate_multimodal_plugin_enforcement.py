@@ -67,8 +67,15 @@ RUNTIME_STAGE_DEFER_OPERATIONS = {
 }
 RUNTIME_STAGE_LEGACY_REPORT_DEFER_OPERATIONS = {
     "update",
+}
+STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS = {
     "readiness",
+    "ci",
     "three-plane",
+    "e2e",
+    "validate",
+    "activate",
+    "mutation",
 }
 
 PLUGIN_ID_RE = re.compile(r"^[a-z][a-z0-9-]{2,63}$")
@@ -346,6 +353,7 @@ def main() -> int:
         "runtime_gate_mode": "",
         "runtime_gate_required_confidence": None,
         "multimodal_runtime_evidence_refs": [],
+        "multimodal_strict_skip_policy_status": STATUS_SKIPPED_NOT_REQUIRED,
         "error_code": "",
         "stale_reasons": [],
         "evidence_ref": "",
@@ -938,6 +946,20 @@ def main() -> int:
         stale_reasons.append("runtime_report_missing")
         error_code = error_code or ERR_RUNTIME_REPORT_MISSING
 
+    strict_no_skip_required = (
+        args.operation in RUNTIME_PROOF_REQUIRED_OPERATIONS and required and not fixture_identity
+    )
+    if strict_no_skip_required:
+        if payload["multimodal_runtime_evidence_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+            payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+            payload["multimodal_strict_skip_policy_status"] = STATUS_FAIL_REQUIRED
+            stale_reasons.append("strict_runtime_evidence_skip_not_allowed")
+            error_code = error_code or ERR_RUNTIME_GATE_SKIPPED
+        else:
+            payload["multimodal_strict_skip_policy_status"] = STATUS_PASS_REQUIRED
+    else:
+        payload["multimodal_strict_skip_policy_status"] = STATUS_SKIPPED_NOT_REQUIRED
+
     payload["evidence_ref"] = ";".join(
         [
             str(registry_path),
@@ -946,6 +968,19 @@ def main() -> int:
             str(payload.get("runtime_report_path", "") or ""),
         ]
     )
+
+    operation_name = str(args.operation or "").strip().lower()
+    if (
+        runtime_required
+        and required
+        and operation_name in STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS
+        and str(payload.get("multimodal_runtime_evidence_status", "")).strip().upper() == STATUS_SKIPPED_NOT_REQUIRED
+    ):
+        payload["multimodal_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+        payload["runtime_stage_deferred"] = False
+        payload["runtime_stage_deferred_reason"] = ""
+        stale_reasons.append("strict_runtime_skip_forbidden")
+        error_code = error_code or ERR_RUNTIME_STAGE_MISSING
 
     failed_statuses = [
         payload["plugin_registry_status"],
