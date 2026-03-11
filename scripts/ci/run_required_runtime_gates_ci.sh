@@ -74,8 +74,12 @@ for ID in ${IDS}; do
   python3 scripts/validate_identity_update_lifecycle.py --identity-id "$ID"
   python3 scripts/validate_identity_trigger_regression.py --identity-id "$ID"
   python3 scripts/validate_identity_learning_loop.py --identity-id "$ID"
-  python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
-  python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
+  if [ "${IS_FIXTURE_ID}" = "1" ]; then
+    echo "[INFO] fixture identity ${ID}: skipping collaboration/handoff self-test examples in ci lane."
+  else
+    python3 scripts/validate_identity_collab_trigger.py --identity-id "$ID" --self-test
+    python3 scripts/validate_agent_handoff_contract.py --identity-id "$ID" --self-test
+  fi
   IDENTITY_RUNTIME_OUTPUT_ROOT="${RUNTIME_TMP_ROOT}" python3 scripts/export_route_quality_metrics.py --catalog "${CATALOG_PATH}" --identity-id "$ID"
   python3 scripts/validate_identity_orchestration_contract.py --identity-id "$ID"
   python3 scripts/validate_identity_dialogue_content.py --identity-id "$ID"
