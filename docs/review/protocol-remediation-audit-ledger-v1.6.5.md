@@ -224,3 +224,30 @@ Serial deep-scan rounds (5+):
 4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED`.
 5. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root) => `summary.p0=0`, `summary_m2m.fail=0`.
 6. `validate_full_scan_target_regression --enforce-m2m-pass` (workspace root) => `PASS_REQUIRED`.
+
+### 7.6 Serial integration cycle-3 (2026-03-12, base-repo-architect)
+
+This cycle continues strict serial replay and extends cross-cwd hardening to required-contract coverage chain.
+
+New positive hardening:
+
+1. `7103fb5` — make `validate_required_contract_coverage.py` cwd-safe:
+   - validator script invocations now resolve against protocol repo root;
+   - delegated validator subprocesses run with protocol repo root as cwd;
+   - repo-catalog arguments passed as resolved canonical paths.
+
+Serial self-test rounds (5):
+
+1. `resolve_identity_context` (project lane) => source layer/canonical catalog/pack all matched.
+2. `validate_actor_session_binding` (`operation=validate`) => `PASS_REQUIRED`.
+3. `validate_required_contract_coverage` (`operation=inspection`, workspace root) => `required_total=4`, `required_passed=4`, `coverage=100.0`, `failed_required=0`, `path_open_errors=0`.
+4. `validate_prompt_kernel_executable_coupling --force-required` => `PASS_REQUIRED`.
+5. `validate_full_scan_target_regression --enforce-m2m-pass` => `PASS_REQUIRED` (`p0=0`, `m2m_fail=0`).
+
+Serial deep-scan rounds (5):
+
+1. `validate_control_plane_invariants --json-only` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift --json-only` => `PASS_REQUIRED`.
+3. `validate_control_plane_budget --json-only` => `PASS_REQUIRED` (phase_1 threshold resolved as 95).
+4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED` (`mismatch_count=0`).
+5. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root) => `summary.p0=0`, `summary_m2m.fail=0`.
