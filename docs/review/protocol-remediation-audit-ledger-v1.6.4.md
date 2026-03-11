@@ -77,6 +77,24 @@ Action freeze for this item:
 1. Promote tuple parity to schema+validator fail-close.
 2. Move plugin onboarding path away from static map additions to mapping-driven derivation.
 
+## 0.3 First-contract code-sync closure (2026-03-11)
+
+Verdict: `Policy PASS / Implementation PASS (plugin-failclose scope)`.
+
+Code-sync confirmation:
+
+1. Schema-contract parity is machine-closed:
+   - `identity/protocol/plugins/schemas/plugin-registry.schema.json`
+   - fail-close rows now require minimum tuple and active status.
+2. Validator fail-close is wired:
+   - `scripts/validate_control_plane_invariants.py`
+   - plugin registry now runs schema validation and tuple-missing hard fail.
+3. Bundle runner plugin onboarding decoupling is in place:
+   - `scripts/required_gate_bundle_runner.py`
+   - fail-close plugin requirement/target/status mapping can be derived from registry + contract-binding without adding plugin-specific static maps.
+4. Operational playbook wording is aligned to implemented behavior:
+   - `identity/protocol/plugins/README.md`
+
 ## 1) Four-track + context verification summary
 
 ### T1 Roundtable/internal replay
