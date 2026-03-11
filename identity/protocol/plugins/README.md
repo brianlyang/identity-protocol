@@ -42,10 +42,22 @@ This directory is the canonical plugin governance root for protocol-level plugin
 
 ## Plugin Join Flow (config-first, fail-close)
 
-1. Define plugin contract bundle under `identity/protocol/plugins/<plugin-id>/`:
+0. Choose one integration kind and fixed roots first (no ad-hoc paths):
+   - `skill`
+     - `protocol_contract_root=identity/protocol/plugins/skill`
+     - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/skills`
+   - `mcp`
+     - `protocol_contract_root=identity/protocol/plugins/mcp`
+     - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/mcp`
+   - `api`
+     - `protocol_contract_root=identity/protocol/plugins`
+     - `instance_runtime_root=.identity/{identity_id}/runtime/plugins/api`
+1. Define plugin contract bundle under `<protocol_contract_root>/<plugin-id>/`:
    `plugin.contract.yaml`, input/output schemas, error-code map, and per-plugin README.
 2. Author plugin join through the canonical minimum tuple:
    `plugin_id`, `requirement_key`, `bundle_target_name`, `gate_mode`, `ssot_mapping_ref`.
+   Mandatory extension fields:
+   `integration_kind`, `protocol_contract_root`, `instance_runtime_root`.
 3. Keep wiring configuration-driven across control-plane sources:
    `PLUGIN_REGISTRY.current.yaml`, `FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`,
    `identity/protocol/mappings/contract-binding.current.yaml`,

@@ -23,6 +23,14 @@ docs:
     - layer-targeted-gate-profile.current.yaml
     - stream-doc-registry.current.yaml
     - Plugin Join Flow (config-first, fail-close)
+    - integration_kind
+    - protocol_contract_root
+    - instance_runtime_root
+    - identity/protocol/plugins/skill
+    - identity/protocol/plugins/mcp
+    - .identity/{identity_id}/runtime/plugins/skills
+    - .identity/{identity_id}/runtime/plugins/mcp
+    - .identity/{identity_id}/runtime/plugins/api
 
 plugin_docs:
   - plugin_id: multimodal-vision-enforcement
