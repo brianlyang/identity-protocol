@@ -1,0 +1,102 @@
+{
+  "round": "v1.6.5-serial-rerun-01",
+  "generated_at_utc": "2026-03-11T19:27:25Z",
+  "identity_context": {
+    "identity_id": "base-repo-architect",
+    "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+    "source_layer": "project",
+    "actor_id": "assistant:codex",
+    "session_id": "run:V165-RECHECK-20260312"
+  },
+  "self_tests": [
+    {
+      "round": 1,
+      "name": "validate_actor_session_binding",
+      "evidence": "/tmp/v165_selftest_r1_actor_binding.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 2,
+      "name": "validate_prompt_bootstrap_capability",
+      "evidence": "/tmp/v165_selftest_r2_prompt_bootstrap.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 3,
+      "name": "validate_prompt_capability_matrix",
+      "evidence": "/tmp/v165_selftest_r3_prompt_capability_matrix.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 4,
+      "name": "validate_prompt_derivation_conformance",
+      "evidence": "/tmp/v165_selftest_r4_prompt_derivation.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 5,
+      "name": "validate_prompt_kernel_executable_coupling",
+      "evidence": "/tmp/v165_selftest_r5_prompt_kernel_coupling.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 6,
+      "name": "validate_full_scan_target_regression",
+      "evidence": "/tmp/v165_selftest_r6_fullscan_gate.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    }
+  ],
+  "deep_scans": [
+    {
+      "round": 1,
+      "name": "validate_control_plane_invariants",
+      "evidence": "/tmp/v165_deepscan_r1_control_plane_invariants.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 2,
+      "name": "validate_required_gate_surface_drift",
+      "evidence": "/tmp/v165_deepscan_r2_surface_drift.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 3,
+      "name": "validate_control_plane_budget",
+      "evidence": "/tmp/v165_deepscan_r3_control_plane_budget.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 4,
+      "name": "validate_control_plane_status_sync",
+      "evidence": "/tmp/v165_deepscan_r4_status_sync.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 5,
+      "name": "docs_command_contract_check",
+      "evidence": "/tmp/v165_deepscan_r5_docs_contract.log",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    },
+    {
+      "round": 6,
+      "name": "full_identity_protocol_scan_target",
+      "evidence": "/tmp/v165_deepscan_r6_full_identity_target.json",
+      "status": "PASS_REQUIRED",
+      "error_code": ""
+    }
+  ],
+  "self_tests_passed": true,
+  "deep_scans_passed": true,
+  "overall_status": "PASS_REQUIRED"
+}
