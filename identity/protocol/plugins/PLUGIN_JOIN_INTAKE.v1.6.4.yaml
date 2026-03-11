@@ -2,6 +2,45 @@ schema_version: 1
 governance_version: v1.6.4
 last_updated_utc: "2026-03-11T00:00:00Z"
 plugins:
+  - plugin_id: ai-folder-governance-enforcement
+    integration_kind: skill
+    protocol_contract_root: identity/protocol/plugins/skill
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/skills
+    requirement_key: asb16-rq-020
+    bundle_target_name: skill_path_integrity
+    gate_mode: fail_close_strict
+    ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-020
+    contract_file: identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_v16_skill_path_integrity.py
+    provider_profiles: []
+    status: active
+    strict_surfaces:
+      - scripts/identity_creator.py
+      - scripts/release_readiness_check.py
+      - scripts/report_three_plane_status.py
+      - scripts/full_identity_protocol_scan.py
+      - scripts/e2e_smoke_test.sh
+      - .github/workflows/_identity-required-gates.yml
+    required_gate_surfaces:
+      - creator
+      - readiness
+      - e2e
+      - full-scan
+      - three-plane
+      - ci
+    required_report_fields:
+      - active_repo_root
+      - active_runtime_root
+      - layout_mode
+      - path_integrity_status
+      - path_integrity_error_code
+    error_code_refs: []
+    monotonic_policy:
+      strict_skip_policy: fail_close
+      strict_skip_allowed_reasons:
+        - fixture_profile_scope
+        - contract_not_required
+        - scan_probe_profile_filtered_not_required
   - plugin_id: multimodal-vision-enforcement
     integration_kind: api
     protocol_contract_root: identity/protocol/plugins
@@ -145,7 +184,7 @@ plugins:
       - IP-RL-RUN-007
       - IP-RL-RUN-008
     monotonic_policy:
-      minimum_enforcement_level: L1
+      minimum_enforcement_level: L3
       allow_self_upgrade: true
       allow_downgrade: false
       strict_skip_policy: fail_close
