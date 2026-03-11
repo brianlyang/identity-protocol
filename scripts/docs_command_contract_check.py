@@ -40,6 +40,11 @@ V160_REQUIRED_MARKERS = (
     "Current-state contract resolution must follow active stream registry first",
     "historical replay context only and must not be treated as current wiring contract input",
     "stream-doc-registry.current.yaml",
+    "contract-binding.current.yaml",
+    "control-plane-invariants.current.yaml",
+    "control-plane-budget.current.yaml",
+    "control-plane-status.current.yaml",
+    "github-control-plane-offload.current.yaml",
 )
 V160_FORBIDDEN_MARKERS = (
     "This document is the only normative execution entrypoint for actor-session-binding governance in v1.6.",
@@ -49,6 +54,11 @@ V150_GOV_HISTORICAL_DOC = "docs/governance/identity-actor-session-binding-govern
 V150_GOV_REQUIRED_MARKERS = (
     "historical baseline for v1.5 actor-session-binding closure",
     "stream-doc-registry.current.yaml",
+    "contract-binding.current.yaml",
+    "control-plane-invariants.current.yaml",
+    "control-plane-budget.current.yaml",
+    "control-plane-status.current.yaml",
+    "github-control-plane-offload.current.yaml",
     "not the active normative execution entrypoint",
     "historical replay context only and must not be treated as current wiring contract input",
 )
