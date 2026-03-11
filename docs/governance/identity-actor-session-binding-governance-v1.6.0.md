@@ -21,6 +21,8 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
    - `docs/governance/identity-multimodal-plugin-enforcement-governance-v1.6.2.md`
    - `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
 5. Any numeric thresholds/status snapshots in this document (for example historical budget baselines such as `142/375`) are historical records only and cannot override current-pointer SSOT.
+6. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
+7. New replay evidence for active streams must use persistent receipts under `activity/evidence/<stream>/<date>/...` with matching manifest tuples.
 
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
