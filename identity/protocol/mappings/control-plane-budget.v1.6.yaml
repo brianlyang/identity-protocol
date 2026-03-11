@@ -1,11 +1,11 @@
 schema_version: 1
 budget_version: "v1.6"
-last_updated_utc: "2026-03-11T04:10:00Z"
+last_updated_utc: "2026-03-12T00:00:00Z"
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 148
-    fail: 152
+    warn: 149
+    fail: 153
   error_codes:
     warn: 411
     fail: 430
@@ -40,7 +40,7 @@ convergence_guard:
   enforce_mode: fail_required
   baseline_snapshot_utc: "2026-03-11T00:00:00Z"
   ceilings:
-    validator_scripts: 148
+    validator_scripts: 149
     error_codes: 411
     error_code_families: 138
     mapping_rows_missing_in_bundle: 0
