@@ -734,7 +734,7 @@ def main() -> int:
     task_enforcement = task_enforcement if isinstance(task_enforcement, dict) else {}
 
     configured_level_token = _normalize_level_token(
-        contract.get("reasoning_enforcement_level", task_enforcement.get("default_level", "L1"))
+        contract.get("reasoning_enforcement_level", task_enforcement.get("default_level", "L3"))
     )
     if configured_level_token == "__INVALID__":
         payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
@@ -746,7 +746,7 @@ def main() -> int:
         payload["evidence_ref"] = str(task_path)
         _emit_with_status(payload, json_only=args.json_only)
         return 1
-    level = configured_level_token or "L1"
+    level = configured_level_token or "L3"
     payload["reasoning_enforcement_level"] = level
     payload["reasoning_configured_level"] = level
 
@@ -763,7 +763,7 @@ def main() -> int:
         payload["evidence_ref"] = str(canonical_contract_path)
         _emit_with_status(payload, json_only=args.json_only)
         return 1
-    canonical_min_level = canonical_min_token or "L1"
+    canonical_min_level = canonical_min_token or "L3"
 
     governance_min_token = _normalize_level_token(monotonic_policy.get("minimum_enforcement_level"))
     if governance_min_token == "__INVALID__":
