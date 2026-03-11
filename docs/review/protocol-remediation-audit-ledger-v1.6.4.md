@@ -177,6 +177,36 @@ Roundtable replay (repo-local):
    - `intake_row_count=2` on `PLUGIN_JOIN_INTAKE.v1.6.4.yaml` (strict plugin rows materialized).
    - no parity violations across intake, registry, governance, and contract-binding.
 
+## 0.8 Unique Protocol Ingress Core Closure (2026-03-12)
+
+Verdict: `Policy PASS / Implementation PASS (machine-enforced unique ingress contract)`.
+
+Closure details:
+
+1. Unique-ingress contract validator is added:
+   - `scripts/validate_protocol_unique_entry_gate.py`
+   - validates one frozen ingress script/key pair:
+     - `scripts/required_gate_bundle_runner.py`
+     - `required_gate_bundle_runner`
+2. Required-contract coverage gate now includes unique-ingress target:
+   - `scripts/validate_required_contract_coverage.py`
+   - strict lanes fail-close when unique-ingress contract is missing/invalid.
+3. Legacy instance upgrade path now auto-backfills unique-ingress contract:
+   - `scripts/repair_contract_backfill.py --apply --json-only`
+   - adds `protocol_unique_entry_gate_contract_v1` to `CURRENT_TASK.json`.
+4. New identity scaffold defaults now include unique-ingress contract:
+   - `scripts/create_identity_pack.py`
+5. Governance SSOT is updated with explicit unique-ingress freeze:
+   - `docs/governance/identity-failclose-monotonic-governance-v1.6.4.md`
+
+Acceptance probes (repo-local):
+
+1. Backfill before/after proves closure:
+   - before: `validate_protocol_unique_entry_gate` -> `FAIL_REQUIRED` (`unique_entry_contract_missing`)
+   - after: `repair_contract_backfill --apply` + validator -> `PASS_REQUIRED`.
+2. This closure is protocol-core only:
+   - no business-repo specific script is normative ingress.
+
 Cross-track interpretation:
 
 1. T1 Roundtable:
