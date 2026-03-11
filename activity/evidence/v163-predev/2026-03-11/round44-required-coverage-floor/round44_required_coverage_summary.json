@@ -1,0 +1,35 @@
+{
+  "summary_id": "round44-required-coverage-floor-summary",
+  "generated_from_manifest": "activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/EVIDENCE_MANIFEST.round44-required-coverage-floor.json",
+  "coverage_default_lane": {
+    "rc": 0,
+    "required_contract_total": 5,
+    "required_contract_passed": 5,
+    "failed_required_contract_count": 0,
+    "failed_optional_contract_count": 0,
+    "skipped_contract_count": 33,
+    "skipped_lane_excluded_contract_count": 24,
+    "skipped_actionable_contract_count": 9,
+    "kernel_ssot_source_status": "PASS_REQUIRED",
+    "prompt_kernel_executable_coupling_status": "PASS_REQUIRED",
+    "prompt_lane_lock_influence_count": 1
+  },
+  "coverage_explicit_instance_lane": {
+    "rc": 1,
+    "failed_required_contract_count": 1,
+    "prompt_kernel_executable_coupling_status": "FAIL_REQUIRED",
+    "prompt_kernel_executable_coupling_reason": "IP-PKX-002",
+    "prompt_routing_protocol_context_reasons": [
+      "session_lane_lock_protocol"
+    ]
+  },
+  "tuple_contract": {
+    "required_fields": [
+      "sha256",
+      "command",
+      "rc",
+      "timestamp_utc"
+    ],
+    "manifest_entry_count": 6
+  }
+}

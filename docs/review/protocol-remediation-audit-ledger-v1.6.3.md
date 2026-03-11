@@ -676,3 +676,44 @@ Observed:
      - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary.json`
 5. Tuple completeness contract:
    - every manifest entry includes `sha256`, `command`, `rc`, `timestamp`.
+
+### 11.19 Round-44 required-coverage floor + lane telemetry hardening (2026-03-11)
+
+1. Triggered by instance replay points 6/7/8:
+   - `kernel_ssot_source` observed as `SKIPPED_NOT_REQUIRED`,
+   - high skipped volume lacked lane partition semantics,
+   - prompt-kernel coupling pass lacked structured lane-lock influence telemetry.
+2. Protocol patch:
+   - file: `scripts/validate_required_contract_coverage.py`
+   - changes:
+     1) strict instance required floor for five core contracts
+        (`prompt_bootstrap_capability`, `prompt_capability_matrix`, `kernel_ssot_source`,
+        `prompt_derivation_conformance`, `prompt_kernel_executable_coupling`);
+     2) validator-level `--force-required` passthrough for force-capable validators;
+     3) run-id validator passthrough fix (remove unsupported expected-layer flags);
+     4) prompt routing telemetry fields in coverage rows;
+     5) skipped partition metrics (`skipped_lane_excluded_contract_count`, `skipped_actionable_contract_count`).
+3. Replay results:
+   - default strict validate probe (system-requirements-analyst):
+     - `required_contract_total=5`
+     - `required_contract_passed=5`
+     - `failed_required_contract_count=0`
+     - `kernel_ssot_source=PASS_REQUIRED`
+   - skip partition:
+     - `skipped_contract_count=33`
+     - `skipped_lane_excluded_contract_count=24`
+     - `skipped_actionable_contract_count=9`
+   - explicit instance lane override probe under active protocol lane-lock:
+     - `prompt_kernel_executable_coupling=FAIL_REQUIRED`
+     - reason code: `IP-PKX-002` (deterministic boundary fail-close).
+4. Control-plane regression checks remain green:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
+   - `validate_protocol_ssot_source` => `OK`
+5. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/EVIDENCE_MANIFEST.round44-required-coverage-floor.json`
+   - summary: `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/round44_required_coverage_summary.json`
+6. Tuple completeness:
+   - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.

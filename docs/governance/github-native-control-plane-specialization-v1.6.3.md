@@ -777,3 +777,64 @@ For each iteration (`1..3`):
    - `activity/evidence/v163-predev/2026-03-11/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary.json`
 4. Manifest tuple fields (hard requirement):
    - `sha256`, `command`, `rc`, `timestamp`.
+
+## 16) Round-44 required-coverage lane-floor hardening addendum (points 6/7/8 closure) (2026-03-11)
+
+### 16.1 Trigger
+
+Instance replay highlighted three remaining closure gaps in strict coverage semantics:
+
+1. `kernel_ssot_source` could remain `SKIPPED_NOT_REQUIRED` in instance-lane strict replay.
+2. High `SKIPPED_NOT_REQUIRED` volume lacked lane-partition observability (lane-excluded vs actionable skips mixed together).
+3. `prompt_kernel_executable_coupling` could pass while routing tail showed `session_lane_lock_protocol` influence, but coverage output had no structured lane-lock telemetry.
+
+### 16.2 Protocol hardening package
+
+1. `scripts/validate_required_contract_coverage.py` now enforces an **instance strict required floor** for core prompt/kernel contracts:
+   - `prompt_bootstrap_capability`
+   - `prompt_capability_matrix`
+   - `kernel_ssot_source`
+   - `prompt_derivation_conformance`
+   - `prompt_kernel_executable_coupling`
+2. Coverage runner now supports validator-level `--force-required` passthrough for validators that expose that contract-safe switch, allowing protocol-floor promotion without mutating instance task files.
+3. Removed invalid CLI passthrough to run-id validator:
+   - `validate_run_id_report_selection` no longer receives unsupported `--expected-work-layer/--expected-source-layer` flags.
+4. Added structured lane-boundary telemetry in coverage rows for prompt-kernel coupling:
+   - `prompt_routing_work_layer`
+   - `prompt_routing_intent_source`
+   - `prompt_routing_protocol_context_reasons`
+   - `prompt_lane_lock_influence_observed`
+5. Added skip partition metrics:
+   - `skipped_lane_excluded_contract_count`
+   - `skipped_actionable_contract_count`
+   so strict replay can distinguish policy-deferred contracts from actionable skips.
+
+### 16.3 Replay outcome
+
+1. `validate_required_contract_coverage` (system-requirements-analyst, strict validate, default lane args):
+   - `required_contract_total=5`
+   - `required_contract_passed=5`
+   - `failed_required_contract_count=0`
+   - `kernel_ssot_source=PASS_REQUIRED`
+2. Skip telemetry is now partitioned and auditable:
+   - `skipped_contract_count=33`
+   - `skipped_lane_excluded_contract_count=24`
+   - `skipped_actionable_contract_count=9`
+3. Explicit instance-lane boundary probe remains deterministic fail-close when protocol lane lock context is present:
+   - prompt-kernel coupling transitions to `FAIL_REQUIRED` (`IP-PKX-002`) under explicit instance-lane override.
+4. Control-plane gates remain green after patch:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+   - `docs_command_contract_check` => `PASS`
+   - `validate_protocol_ssot_source` => `OK`
+
+### 16.4 Evidence (persistent + tuple complete)
+
+1. Root:
+   - `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/`
+2. Manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/EVIDENCE_MANIFEST.round44-required-coverage-floor.json`
+3. Summary:
+   - `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/round44_required_coverage_summary.json`
+4. Manifest tuple contract:
+   - every entry carries `sha256`, `command`, `rc`, `timestamp_utc`.
