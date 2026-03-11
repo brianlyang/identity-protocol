@@ -19,6 +19,9 @@ ERR_SCAN_CMD_FAILED = "IP-SCAN-REG-002"
 ERR_REPORT_INVALID = "IP-SCAN-REG-003"
 ERR_M2M_REGRESSION = "IP-SCAN-REG-004"
 
+SCRIPT_PATH = Path(__file__).resolve()
+REPO_ROOT = SCRIPT_PATH.parent.parent
+
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -109,6 +112,13 @@ def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
     return profile == "fixture" or runtime_mode == "demo_only"
 
 
+def _resolve_repo_path(path_like: str) -> Path:
+    candidate = Path(str(path_like)).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (REPO_ROOT / candidate).resolve()
+
+
 def _only_requested_session_binding_p0(report_doc: dict[str, Any]) -> bool:
     catalogs = report_doc.get("catalogs") or []
     if not isinstance(catalogs, list):
@@ -197,9 +207,13 @@ def main() -> int:
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    project_catalog_path = _resolve_repo_path(str(args.project_catalog))
+    repo_catalog_path = _resolve_repo_path(str(args.repo_catalog))
+    full_scan_script_path = (REPO_ROOT / "scripts/full_identity_protocol_scan.py").resolve()
+
     cmd = [
         "python3",
-        "scripts/full_identity_protocol_scan.py",
+        str(full_scan_script_path),
         "--scan-mode",
         "target",
         "--identity-ids",
@@ -207,9 +221,9 @@ def main() -> int:
         "--target-source-layer",
         str(args.target_source_layer).strip(),
         "--project-catalog",
-        str(Path(args.project_catalog).expanduser().resolve()),
+        str(project_catalog_path),
         "--repo-catalog",
-        str(Path(args.repo_catalog).expanduser().resolve()),
+        str(repo_catalog_path),
         "--actor-id",
         str(args.actor_id).strip(),
         "--session-id",
@@ -229,8 +243,8 @@ def main() -> int:
         "error_code": "",
         "identity_id": str(args.identity_id).strip(),
         "target_source_layer": str(args.target_source_layer).strip(),
-        "project_catalog": str(Path(args.project_catalog).expanduser().resolve()),
-        "repo_catalog": str(Path(args.repo_catalog).expanduser().resolve()),
+        "project_catalog": str(project_catalog_path),
+        "repo_catalog": str(repo_catalog_path),
         "actor_id": str(args.actor_id).strip(),
         "session_id": session_id,
         "expected_work_layer": str(args.expected_work_layer).strip(),
@@ -251,7 +265,7 @@ def main() -> int:
         "m2m_fail_rows": [],
         "enforce_m2m_pass": bool(args.enforce_m2m_pass),
         "allow_fixture_session_skip": bool(args.allow_fixture_session_skip),
-        "fixture_identity": _is_fixture_identity(Path(args.project_catalog).expanduser().resolve(), str(args.identity_id).strip()),
+        "fixture_identity": _is_fixture_identity(project_catalog_path, str(args.identity_id).strip()),
         "fixture_session_skip_applied": False,
         "stale_reasons": [],
     }
