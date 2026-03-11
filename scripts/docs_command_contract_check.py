@@ -34,6 +34,7 @@ REQUIRED_CURRENT_DOC_PATTERNS = [
     r"^docs/governance/identity-token-efficiency-and-skill-parity-governance-v\d+\.\d+\.\d+\.md$",
     r"^docs/governance/identity-token-governance-audit-checklist-v\d+\.\d+\.\d+\.md$",
 ]
+LEGACY_DOC_VERSION_RE = re.compile(r"-v(?P<major>\d+)\.(?P<minor>\d+)(?:\.\d+)?\.md$")
 V160_HISTORICAL_DOC = "docs/governance/identity-actor-session-binding-governance-v1.6.0.md"
 V160_REQUIRED_MARKERS = (
     "historical baseline + traceability ledger",
@@ -169,6 +170,23 @@ def _as_str_list(value: object) -> List[str]:
     return out
 
 
+def _is_legacy_v16_or_earlier_doc(rel: str) -> bool:
+    normalized = _norm_path(rel)
+    if not normalized.endswith(".md"):
+        return False
+    if not (
+        normalized.startswith("docs/governance/")
+        or normalized.startswith("docs/review/")
+    ):
+        return False
+    m = LEGACY_DOC_VERSION_RE.search(normalized)
+    if not m:
+        return False
+    major = int(m.group("major"))
+    minor = int(m.group("minor"))
+    return major < 1 or (major == 1 and minor <= 6)
+
+
 def _load_yaml(path: Path) -> dict:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -259,7 +277,9 @@ def _dedup(seq: List[str]) -> List[str]:
     return out
 
 
-def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], dict[str, List[str]], List[str]]:
+def _load_stream_doc_registry(
+    repo_root: Path,
+) -> tuple[List[str], List[str], dict[str, List[str]], List[str], List[str]]:
     """
     Returns:
       stream_docs (governance/review docs per active stream),
@@ -270,9 +290,9 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
     registry_entry_path = (repo_root / STREAM_DOC_REGISTRY_PATH).resolve()
     registry_path, alias_error = _resolve_current_yaml_alias(repo_root, STREAM_DOC_REGISTRY_PATH)
     if alias_error:
-        return [], [], {}, [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
+        return [], [], {}, [], [f"[INVALID_STREAM_DOC_REGISTRY] alias resolution failed: {STREAM_DOC_REGISTRY_PATH}:{alias_error}"]
     if not registry_path.exists():
-        return [], [], {}, [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {registry_entry_path}"]
+        return [], [], {}, [], [f"[MISSING_STREAM_DOC_REGISTRY] required file not found: {registry_entry_path}"]
 
     data = _load_yaml(registry_path)
     errors: List[str] = []
@@ -281,7 +301,7 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
         errors.append(
             f"[INVALID_STREAM_DOC_REGISTRY] stream_docs must be a non-empty list: {STREAM_DOC_REGISTRY_PATH}"
         )
-        return [], [], {}, errors
+        return [], [], {}, [], errors
 
     stream_docs: List[str] = []
     stream_versions_seen: set[str] = set()
@@ -441,7 +461,42 @@ def _load_stream_doc_registry(repo_root: Path) -> tuple[List[str], List[str], di
             f"[INVALID_STREAM_DOC_REGISTRY] mandatory static doc missing static_doc_required_alias_refs row: {doc}"
         )
 
-    return _dedup(stream_docs), _dedup(mandatory_static_docs), doc_alias_requirements, errors
+    legacy_archival_docs = _as_str_list(data.get("legacy_archival_docs"))
+    legacy_seen: set[str] = set()
+    for doc in legacy_archival_docs:
+        if doc in legacy_seen:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] duplicate legacy_archival_docs entry: {doc}"
+            )
+            continue
+        legacy_seen.add(doc)
+        if not _is_legacy_v16_or_earlier_doc(doc):
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] legacy_archival_docs entry must be v1.6-or-earlier governance/review doc: {doc}"
+            )
+            continue
+        if not (repo_root / doc).exists():
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] legacy_archival_docs entry not found: {doc}"
+            )
+            continue
+        if doc in stream_docs:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] legacy_archival_docs entry conflicts with stream_docs authoritative row: {doc}"
+            )
+            continue
+        if doc in mandatory_static_docs:
+            errors.append(
+                f"[INVALID_STREAM_DOC_REGISTRY] legacy_archival_docs entry conflicts with mandatory_static_docs authoritative row: {doc}"
+            )
+
+    return (
+        _dedup(stream_docs),
+        _dedup(mandatory_static_docs),
+        doc_alias_requirements,
+        _dedup(legacy_archival_docs),
+        errors,
+    )
 
 
 def _enforce_required_current_docs(index_docs: List[str]) -> tuple[List[str], List[str]]:
@@ -538,9 +593,17 @@ def main() -> int:
     docs = args.docs if args.docs else _docs_from_index(repo_root)
     bootstrap_failures: List[str] = []
     stream_doc_alias_requirements: dict[str, List[str]] = {}
+    legacy_archival_docs: List[str] = []
+    required_current_docs: List[str] = []
     playbook_path: Path | None = None
     playbook_required_tokens: List[str] = []
-    stream_docs, mandatory_static_docs, stream_doc_alias_requirements, registry_errors = _load_stream_doc_registry(repo_root)
+    (
+        stream_docs,
+        mandatory_static_docs,
+        stream_doc_alias_requirements,
+        legacy_archival_docs,
+        registry_errors,
+    ) = _load_stream_doc_registry(repo_root)
     bootstrap_failures.extend(registry_errors)
     playbook_path, playbook_required_tokens, playbook_errors = _load_playbook_requirements(repo_root)
     bootstrap_failures.extend(playbook_errors)
@@ -560,6 +623,7 @@ def main() -> int:
 
         # enforce current-version docs by pattern (version-agnostic).
         required_docs, missing_required = _enforce_required_current_docs(docs)
+        required_current_docs = list(required_docs)
         bootstrap_failures.extend(missing_required)
         for req in required_docs:
             if req not in docs:
@@ -574,6 +638,42 @@ def main() -> int:
         if len(docs) < 4:
             bootstrap_failures.append(
                 f"[INSUFFICIENT_COVERAGE] dynamic docs coverage too small: {len(docs)} (<4). check {INDEX_PATH}"
+            )
+    else:
+        required_current_docs = [d for d in docs if any(re.match(pat, d) for pat in REQUIRED_CURRENT_DOC_PATTERNS)]
+
+    legacy_docs: List[str] = []
+    for sub in ("docs/governance", "docs/review"):
+        root = repo_root / sub
+        if not root.exists():
+            continue
+        for p in sorted(root.glob("*.md")):
+            rel = p.relative_to(repo_root).as_posix()
+            if _is_legacy_v16_or_earlier_doc(rel):
+                legacy_docs.append(rel)
+    legacy_docs = _dedup(legacy_docs)
+
+    authoritative_semantic_docs: set[str] = set(stream_docs)
+    authoritative_semantic_docs.update(
+        d
+        for d in mandatory_static_docs
+        if d.startswith("docs/governance/") or d.startswith("docs/review/")
+    )
+    authoritative_semantic_docs.update(required_current_docs)
+    legacy_archival_docs_set = set(legacy_archival_docs)
+
+    for doc in legacy_docs:
+        if doc in authoritative_semantic_docs:
+            continue
+        if doc in legacy_archival_docs_set:
+            continue
+        bootstrap_failures.append(
+            f"[MISSING_LEGACY_DOC_SEMANTIC_CLASS] missing legacy_archival_docs classification: {doc}"
+        )
+    for doc in sorted(legacy_archival_docs_set):
+        if doc in authoritative_semantic_docs:
+            bootstrap_failures.append(
+                f"[AMBIGUOUS_LEGACY_DOC_SEMANTIC_CLASS] doc listed as both authoritative and archival: {doc}"
             )
     if bootstrap_failures:
         print(f"[INFO] docs checked: {len(docs)}")
