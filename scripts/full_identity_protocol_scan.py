@@ -672,10 +672,28 @@ def main() -> int:
     if effective_target_source_layer in {"project", "global"}:
         runtime_catalogs = [(layer, path) for layer, path in runtime_catalogs if layer == effective_target_source_layer]
 
-    catalog_list: list[tuple[str, Path]] = []
+    raw_catalog_list: list[tuple[str, Path]] = []
     if args.include_repo_catalog:
-        catalog_list.append(("repo_metadata", repo_catalog))
-    catalog_list.extend(runtime_catalogs)
+        raw_catalog_list.append(("repo_metadata", repo_catalog))
+    raw_catalog_list.extend(runtime_catalogs)
+    catalog_list: list[tuple[str, Path]] = []
+    catalog_layer_by_resolved_path: dict[Path, str] = {}
+    catalog_dedup_skips: list[dict[str, str]] = []
+    for layer, catalog in raw_catalog_list:
+        resolved_catalog = catalog.resolve()
+        primary_layer = catalog_layer_by_resolved_path.get(resolved_catalog)
+        if primary_layer is not None:
+            catalog_dedup_skips.append(
+                {
+                    "skipped_layer": layer,
+                    "skipped_catalog": str(catalog),
+                    "primary_layer": primary_layer,
+                    "primary_catalog": str(resolved_catalog),
+                }
+            )
+            continue
+        catalog_layer_by_resolved_path[resolved_catalog] = layer
+        catalog_list.append((layer, resolved_catalog))
 
     payload: dict[str, Any] = {
         "repo_root": str(repo_root),
@@ -686,6 +704,7 @@ def main() -> int:
         "target_source_layer_effective": effective_target_source_layer,
         "gate_profile": gate_profile,
         "gate_profile_file": gate_profile_file,
+        "catalog_dedup_skips": catalog_dedup_skips,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
