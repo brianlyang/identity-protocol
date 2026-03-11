@@ -272,3 +272,47 @@ Serial deep-scan rounds (5):
 3. `validate_control_plane_budget --json-only` => `PASS_REQUIRED` (phase_1 threshold resolved as 95).
 4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED` (`mismatch_count=0`).
 5. `full_identity_protocol_scan --scan-mode target --with-docs-contract` (workspace root) => `summary.p0=0`, `summary_m2m.fail=0`.
+
+### 7.8 Serial integration cycle-5 (2026-03-12, base-repo-architect)
+
+This cycle is a strict rerun after real P0 regression reproduction (not synthetic green replay).
+
+Root cause that blocked previous “all green” claim:
+
+1. `validate_full_scan_target_regression` on `base-repo-architect` failed with `IP-SCAN-REG-001` because bundle target checks failed in `scan` lane:
+   - multimodal credential env unresolved (`IP-MM-CONF-003`);
+   - reasoning runtime-proof checks over-enforced in non-runtime-proof operation (`IP-RL-RUN-002` path).
+
+Positive hardening landed in this cycle (commits):
+
+1. `2b77282` — `validate_multimodal_plugin_enforcement.py`
+   - `scan/inspection` lanes now defer unresolved `env:*` credential references as non-blocking evidence debt (`binding_credential_env_unresolved_deferred`);
+   - strict runtime/release lanes remain fail-close unchanged.
+2. `0be0bf4` — `validate_reasoning_loop_failclose.py`
+   - operations outside `RUNTIME_PROOF_REQUIRED_OPERATIONS` no longer hard-fail on runtime proof absence/shape;
+   - monotonic floor checks remain enforced before runtime-proof short-circuit.
+3. `7b9a6ed` — refreshed `control-plane-status.v1.6.json` after hardening to eliminate payload drift in status-sync.
+4. `f4a1722` — recorded machine evidence manifest:
+   - `activity/evidence/v165-serial-selfdrive/2026-03-12/round01-serial-selftest-deepscan-summary.json`.
+
+Serial self-test rounds (>=5, actually 6):
+
+1. `validate_actor_session_binding` (`scan`, explicit actor/session) => `PASS_REQUIRED`.
+2. `validate_prompt_bootstrap_capability` => `PASS_REQUIRED`.
+3. `validate_prompt_capability_matrix` => `PASS_REQUIRED`.
+4. `validate_prompt_derivation_conformance` => `PASS_REQUIRED`.
+5. `validate_prompt_kernel_executable_coupling --force-required` => `PASS_REQUIRED`.
+6. `validate_full_scan_target_regression --enforce-m2m-pass` => `PASS_REQUIRED` (`p0=0`, `m2m_fail=0`).
+
+Serial deep-scan rounds (>=5, actually 6):
+
+1. `validate_control_plane_invariants --json-only` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift --json-only` => `PASS_REQUIRED`.
+3. `validate_control_plane_budget --json-only` => `PASS_REQUIRED`.
+4. `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED`.
+5. `docs_command_contract_check` => `PASS`.
+6. `full_identity_protocol_scan --scan-mode target` (project lane, explicit actor/session/work-layer/source-layer) => `summary.p0=0`, `summary_m2m.fail=0`.
+
+Closure statement:
+
+- Cycle-5 re-established truthful green status with reproducible evidence and removed the two concrete scan-lane false-blockers that caused earlier integration drift.
