@@ -916,6 +916,8 @@ def main() -> int:
         else list(DEFAULT_LEVEL_EXTERNAL_FIELDS[level])
     )
 
+    runtime_proof_required = args.operation in RUNTIME_PROOF_REQUIRED_OPERATIONS
+
     runtime_candidates, learning_candidates = _resolve_report_candidates(
         identity_id=args.identity_id,
         pack_path=pack_path,
@@ -952,6 +954,31 @@ def main() -> int:
                 report_source = "learning_sample_fallback"
                 break
 
+    if not runtime_proof_required:
+        if report_path is not None:
+            payload["runtime_report_path"] = str(report_path)
+            payload["runtime_report_source"] = report_source
+            payload["runtime_report_run_id"] = str(report_doc.get("run_id", "")).strip()
+            payload["reasoning_runtime_evidence_refs"] = [str(report_path)]
+            payload["evidence_ref"] = str(report_path)
+        else:
+            payload["reasoning_runtime_evidence_refs"] = [str(p) for p in runtime_candidates[:2] + learning_candidates[:2]]
+            payload["evidence_ref"] = str(task_path)
+        payload["reasoning_attempt_trace_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["no_target_done_block_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["reasoning_next_action_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["reasoning_escalation_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["reasoning_four_track_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["external_source_freshness_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["reasoning_runtime_evidence_status"] = STATUS_SKIPPED_NOT_REQUIRED
+        payload["reasoning_loop_failclose_status"] = STATUS_PASS_REQUIRED
+        payload["stale_reasons"].append(
+            f"runtime_proof_not_required_for_operation:{args.operation}"
+        )
+        payload["error_code"] = ""
+        _emit_with_status(payload, json_only=args.json_only)
+        return 0
+
     if report_path is None:
         payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
         payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
@@ -970,7 +997,6 @@ def main() -> int:
     payload["evidence_ref"] = str(report_path)
 
     run_id_binding = str(args.run_id or "").strip()
-    runtime_proof_required = args.operation in RUNTIME_PROOF_REQUIRED_OPERATIONS
     runtime_report_run_id = str(payload.get("runtime_report_run_id", "")).strip()
     if run_id_binding and strict_run_id_binding and runtime_proof_required and not runtime_report_run_id:
         payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
