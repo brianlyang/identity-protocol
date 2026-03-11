@@ -838,3 +838,42 @@ Instance replay highlighted three remaining closure gaps in strict coverage sema
    - `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/round44_required_coverage_summary.json`
 4. Manifest tuple contract:
    - every entry carries `sha256`, `command`, `rc`, `timestamp_utc`.
+
+## 17) Round-45 coverage skipped-partition materialization addendum (2026-03-11)
+
+### 17.1 Why this pass
+
+Round-44 introduced skipped partition counters; Round-45 hardens machine readability by publishing direct contract lists in coverage payload, so audits can consume exact contract IDs without secondary parsing.
+
+### 17.2 Patch scope
+
+1. `scripts/validate_required_contract_coverage.py` now emits:
+   - `skipped_lane_excluded_contracts`
+   - `skipped_actionable_contracts`
+   - `failed_optional_contracts`
+2. Existing count fields remain unchanged for backward compatibility:
+   - `skipped_lane_excluded_contract_count`
+   - `skipped_actionable_contract_count`
+   - `failed_optional_contract_count`
+
+### 17.3 Replay result
+
+1. strict default lane replay (system-requirements-analyst):
+   - required floor remains stable (`required_contract_total=5`, `required_contract_passed=5`, `failed_required_contract_count=0`);
+   - skipped partition lists are now directly available in payload.
+2. explicit instance-lane boundary probe remains deterministic fail-close under protocol lane-lock context
+   (`strict_instance_floor_blocking` includes prompt-kernel coupling target).
+3. Control-plane guards stay green:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+
+### 17.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/EVIDENCE_MANIFEST.round45-coverage-actionable-lists.json`
+3. summary:
+   - `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary.json`
+4. tuple contract:
+   - `sha256`, `command`, `rc`, `timestamp_utc` present for each manifest entry.

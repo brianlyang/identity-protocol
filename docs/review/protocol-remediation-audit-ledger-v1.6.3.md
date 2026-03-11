@@ -717,3 +717,26 @@ Observed:
    - summary: `activity/evidence/v163-predev/2026-03-11/round44-required-coverage-floor/round44_required_coverage_summary.json`
 6. Tuple completeness:
    - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
+
+### 11.20 Round-45 actionable skip-list materialization (2026-03-11)
+
+1. Objective:
+   - remove residual ambiguity in skipped partition replay by emitting exact contract lists directly from coverage payload.
+2. Patch:
+   - `scripts/validate_required_contract_coverage.py` adds:
+     - `skipped_lane_excluded_contracts`
+     - `skipped_actionable_contracts`
+     - `failed_optional_contracts`
+3. Replay:
+   - default strict validate replay keeps floor closure stable (`required_contract_total=5`, `required_contract_passed=5`, `failed_required_contract_count=0`);
+   - partition list output now directly names all skipped contracts by category;
+   - explicit instance-lane probe remains deterministic boundary fail-close (prompt-kernel coupling under protocol lane lock context).
+4. Control-plane regressions:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+5. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/EVIDENCE_MANIFEST.round45-coverage-actionable-lists.json`
+   - summary: `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary.json`
+6. Tuple completeness:
+   - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.

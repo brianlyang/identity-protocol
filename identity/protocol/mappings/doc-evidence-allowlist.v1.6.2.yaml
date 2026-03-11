@@ -65,6 +65,8 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round44-required-coverage-floor/EVIDENCE_MANIFEST\.round44-required-coverage-floor\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round44-required-coverage-floor/round44_required_coverage_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/EVIDENCE_MANIFEST\.round45-coverage-actionable-lists\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary\.json$'
 
   docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
     max_activity_refs: 40
@@ -93,3 +95,5 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round43-three-pass-file-semantic-unification/round43_protocol_hardening_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round44-required-coverage-floor/EVIDENCE_MANIFEST\.round44-required-coverage-floor\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round44-required-coverage-floor/round44_required_coverage_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/EVIDENCE_MANIFEST\.round45-coverage-actionable-lists\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary\.json$'
