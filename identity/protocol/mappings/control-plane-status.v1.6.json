@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-11T04:02:07Z",
-  "git_head_short": "38b5d44",
+  "generated_at_utc": "2026-03-11T07:14:34Z",
+  "git_head_short": "0b3e195",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -524,7 +524,7 @@
       "error_code": "",
       "stdout_tail": [
         "[INFO] docs checked: 46",
-        "[INFO] command snippets checked: 1221",
+        "[INFO] command snippets checked: 1235",
         "[PASS] docs command contract check passed."
       ],
       "stderr_tail": [],
