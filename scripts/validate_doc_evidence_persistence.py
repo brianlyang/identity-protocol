@@ -153,17 +153,22 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def _collect_paths(text: str) -> tuple[list[str], list[str]]:
+def _collect_paths(text: str) -> tuple[list[str], list[str], list[str]]:
     tmp_refs: list[str] = []
     persistent_refs: list[str] = []
+    persistent_dir_refs: list[str] = []
     for m in PATH_TOKEN_RE.finditer(text or ""):
         raw = _norm_path(m.group("path"))
         if not raw:
             continue
         if raw in {"/tmp/", "/private/tmp/", "activity/evidence/", ".identity/"}:
             continue
-        # ignore placeholders / globs / directory roots
-        if "..." in raw or "*" in raw or "<" in raw or ">" in raw or raw.endswith("/"):
+        # ignore placeholders / globs
+        if "..." in raw or "*" in raw or "<" in raw or ">":
+            continue
+        if raw.endswith("/"):
+            if raw.startswith(ALLOWED_PERSISTENT_PREFIXES):
+                persistent_dir_refs.append(raw)
             continue
         if raw.startswith(TMP_PREFIXES):
             tmp_refs.append(raw)
@@ -173,7 +178,7 @@ def _collect_paths(text: str) -> tuple[list[str], list[str]]:
                 # .identity path may be config/reference; only runtime/reports is evidence mirror contract.
                 continue
             persistent_refs.append(raw)
-    return sorted(set(tmp_refs)), sorted(set(persistent_refs))
+    return sorted(set(tmp_refs)), sorted(set(persistent_refs)), sorted(set(persistent_dir_refs))
 
 
 def _allowed_persistent_path(path: str) -> bool:
@@ -520,7 +525,7 @@ def main() -> int:
             )
             continue
         text = p.read_text(encoding="utf-8")
-        tmp_refs, persistent_refs = _collect_paths(text)
+        tmp_refs, persistent_refs, _ = _collect_paths(text)
         all_persistent_refs.update(persistent_refs)
         _validate_strict_doc_evidence_allowlist(
             doc_rel=rel,
@@ -561,12 +566,12 @@ def main() -> int:
                 continue
             docs_checked.add(rel)
             added_text = "\n".join(added_lines)
-            added_tmp_refs, added_persistent_refs = _collect_paths(added_text)
+            added_tmp_refs, added_persistent_refs, added_persistent_dir_refs = _collect_paths(added_text)
 
             doc_path = repo_root / rel
             full_persistent_refs: set[str] = set()
             if doc_path.exists():
-                _, full_persistent = _collect_paths(doc_path.read_text(encoding="utf-8"))
+                _, full_persistent, _ = _collect_paths(doc_path.read_text(encoding="utf-8"))
                 full_persistent_refs = set(full_persistent)
 
             if scope == "governance":
@@ -601,6 +606,16 @@ def main() -> int:
                             "error_code": "IP-DOC-EVID-005",
                         }
                     )
+            for ref in added_persistent_dir_refs:
+                violations.append(
+                    {
+                        "type": "persistent_directory_ref_added_forbidden",
+                        "doc": rel,
+                        "path": ref,
+                        "reason": "directory_refs_are_not_replayable;use_manifest_or_concrete_file_path",
+                        "error_code": "IP-DOC-EVID-014",
+                    }
+                )
 
     # Validate all collected persistent refs used by strict/delta docs.
     for ref in sorted(all_persistent_refs):
