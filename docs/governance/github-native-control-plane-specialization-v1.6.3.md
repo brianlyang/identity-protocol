@@ -877,3 +877,49 @@ Round-44 introduced skipped partition counters; Round-45 hardens machine readabi
    - `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary.json`
 4. tuple contract:
    - `sha256`, `command`, `rc`, `timestamp_utc` present for each manifest entry.
+
+## 18) Round-46 strict-floor full closure addendum (6/7/8 hard-close) (2026-03-11)
+
+### 18.1 Objective
+
+Perform the final strict close for points 6/7/8 by eliminating instance-lane actionable skips in strict replay, while keeping explicit lane-boundary fail-close behavior unchanged.
+
+### 18.2 Protocol hardening
+
+1. `scripts/validate_required_contract_coverage.py` strict instance required-floor expanded to include:
+   - `unlock_formula_automation`
+   - `run_id_report_selection`
+   - `phase_bootstrap_before_strict`
+   - `tmp_collision_safety`
+   - `tool_installation`
+   - `vendor_api_discovery`
+   - `vendor_api_solution`
+   - `gated_switch_guard`
+2. `protocol_lane_headstamp_continuity` moved into protocol-governance target partition for instance-lane semantics, preventing false “actionable skip” classification when protocol-lane linkage is absent.
+
+### 18.3 Replay result
+
+1. strict default replay (system-requirements-analyst):
+   - `required_contract_total=13`
+   - `required_contract_passed=13`
+   - `failed_required_contract_count=0`
+   - `skipped_actionable_contract_count=0` (**zero actionable skips**)
+2. explicit instance-lane boundary probe still fail-closes:
+   - `prompt_kernel_executable_coupling=FAIL_REQUIRED`
+   - reason chain remains lane-lock aware (`session_lane_lock_protocol`).
+3. regression safety:
+   - base-repo-architect default strict replay stays non-regressive (`required_contract_total=13`, `required_contract_passed=13`, `failed_required_contract_count=0`).
+4. control-plane gates remain green:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+
+### 18.4 Evidence
+
+1. root:
+   - `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/`
+2. manifest:
+   - `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/EVIDENCE_MANIFEST.round46-strict-floor-actionable-zero.json`
+3. summary:
+   - `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary.json`
+4. tuple contract:
+   - every manifest entry includes `sha256`, `command`, `rc`, `timestamp_utc`.

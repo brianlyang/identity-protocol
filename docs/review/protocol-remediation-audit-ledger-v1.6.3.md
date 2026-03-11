@@ -740,3 +740,35 @@ Observed:
    - summary: `activity/evidence/v163-predev/2026-03-11/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary.json`
 6. Tuple completeness:
    - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
+
+### 11.21 Round-46 strict-floor actionable-zero closure (2026-03-11)
+
+1. Objective:
+   - finalize points 6/7/8 by driving strict instance replay actionable skips to zero, without weakening lane-boundary fail-close.
+2. Patch:
+   - `scripts/validate_required_contract_coverage.py`
+     - strict instance required-floor expanded with 8 actionable contracts
+       (`unlock_formula_automation`, `run_id_report_selection`, `phase_bootstrap_before_strict`,
+       `tmp_collision_safety`, `tool_installation`, `vendor_api_discovery`, `vendor_api_solution`, `gated_switch_guard`);
+     - `protocol_lane_headstamp_continuity` moved into protocol-governance partition for instance-lane classification.
+3. Replay outcome (system-requirements-analyst strict default lane):
+   - `required_contract_total=13`
+   - `required_contract_passed=13`
+   - `failed_required_contract_count=0`
+   - `skipped_actionable_contract_count=0` (hard close)
+4. Boundary probe (explicit instance lane under protocol lane-lock):
+   - `prompt_kernel_executable_coupling=FAIL_REQUIRED`
+   - reason code `IP-PKX-002`, routing reasons include `session_lane_lock_protocol`.
+5. Regression check (base-repo-architect strict default lane):
+   - `required_contract_total=13`
+   - `required_contract_passed=13`
+   - `failed_required_contract_count=0`
+6. Control-plane checks:
+   - `validate_control_plane_invariants` => `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift` => `PASS_REQUIRED`
+7. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/EVIDENCE_MANIFEST.round46-strict-floor-actionable-zero.json`
+   - summary: `activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary.json`
+8. Tuple completeness:
+   - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.

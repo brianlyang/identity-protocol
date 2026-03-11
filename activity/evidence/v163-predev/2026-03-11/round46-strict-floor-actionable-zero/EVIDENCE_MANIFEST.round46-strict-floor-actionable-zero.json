@@ -1,0 +1,59 @@
+{
+  "manifest_id": "round46-strict-floor-actionable-zero",
+  "generated_at": "2026-03-11T05:20:30Z",
+  "stream": "v163-predev",
+  "summary": {
+    "objective": "Drive strict instance actionable skipped contracts to zero while preserving explicit lane-boundary fail-close.",
+    "repo": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local"
+  },
+  "entries": [
+    {
+      "case_id": "coverage_sra_validate_default_lane_round46",
+      "path": "activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_coverage_sra_validate_default_lane.json",
+      "sha256": "db1502147aa1899d4f66f6c93a4352ad36437002e798d1e45418571b219e5412",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round46-coverage-default --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:20:30Z"
+    },
+    {
+      "case_id": "coverage_sra_validate_explicit_instance_lane_round46",
+      "path": "activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_coverage_sra_validate_explicit_instance_lane.json",
+      "sha256": "9febb7a0bd2ef53ce028c4021fc9face81fd8a3fa71f7854c6b74de11d21f537",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id system-requirements-analyst --catalog /Users/yangxi/.codex/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --expected-work-layer instance --expected-source-layer global --actor-id assistant:codex --session-id run:round46-coverage-explicit-instance --json-only",
+      "rc": 1,
+      "timestamp_utc": "2026-03-11T05:20:36Z"
+    },
+    {
+      "case_id": "coverage_bra_validate_default_lane_round46",
+      "path": "activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_coverage_bra_validate_default_lane.json",
+      "sha256": "edfeb489a5f86e6e2cfbaa078598546aced485fca337b288b6877791cb8076c7",
+      "command": "python3 scripts/validate_required_contract_coverage.py --identity-id base-repo-architect --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --operation validate --actor-id assistant:codex --session-id run:round46-coverage-bra --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:20:42Z"
+    },
+    {
+      "case_id": "control_plane_invariants_round46",
+      "path": "activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_validate_control_plane_invariants.json",
+      "sha256": "bc57a20845617c9134c04a58248852cd289e5c0eb46bae75eee7ec089d627d25",
+      "command": "python3 scripts/validate_control_plane_invariants.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:20:47Z"
+    },
+    {
+      "case_id": "required_gate_surface_drift_round46",
+      "path": "activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_validate_required_gate_surface_drift.json",
+      "sha256": "26a2009f8b4469d959f75b92d2d39d03fc9b572d7bd1c6d65d2e7affd7e14c87",
+      "command": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:20:48Z"
+    },
+    {
+      "case_id": "round46_strict_floor_actionable_zero_summary",
+      "path": "activity/evidence/v163-predev/2026-03-11/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary.json",
+      "sha256": "4ba5d41306d6e01feebea71fc921d967233911baa5c306dbd92efb2e73c2f479",
+      "command": "python3 <round46 summary aggregator>",
+      "rc": 0,
+      "timestamp_utc": "2026-03-11T05:20:48Z"
+    }
+  ]
+}

@@ -67,6 +67,8 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round44-required-coverage-floor/round44_required_coverage_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/EVIDENCE_MANIFEST\.round45-coverage-actionable-lists\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round46-strict-floor-actionable-zero/EVIDENCE_MANIFEST\.round46-strict-floor-actionable-zero\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary\.json$'
 
   docs/review/protocol-remediation-audit-ledger-v1.6.3.md:
     max_activity_refs: 40
@@ -97,3 +99,5 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round44-required-coverage-floor/round44_required_coverage_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/EVIDENCE_MANIFEST\.round45-coverage-actionable-lists\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round45-coverage-actionable-lists/round45_coverage_actionable_lists_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round46-strict-floor-actionable-zero/EVIDENCE_MANIFEST\.round46-strict-floor-actionable-zero\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round46-strict-floor-actionable-zero/round46_strict_floor_actionable_zero_summary\.json$'
