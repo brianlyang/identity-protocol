@@ -31,6 +31,8 @@ REASON_FAIL = "IP-COV-999"
 REASON_LANE_REQUIRED = "IP-COV-LANE-001"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+SCRIPT_PATH = Path(__file__).resolve()
+REPO_ROOT = SCRIPT_PATH.parent.parent
 
 ERR_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 DISCOVERY_TARGET_NAMES = {
@@ -167,6 +169,13 @@ def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
     profile = str(target.get("profile", "")).strip().lower()
     runtime_mode = str(target.get("runtime_mode", "")).strip().lower()
     return profile == "fixture" or runtime_mode == "demo_only"
+
+
+def _resolve_repo_path(path_like: str) -> Path:
+    candidate = Path(str(path_like)).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (REPO_ROOT / candidate).resolve()
 
 
 @dataclass
@@ -628,7 +637,9 @@ def _run_validator(
     force_required: bool,
     extra_args: tuple[str, ...],
 ) -> tuple[int, str, str]:
-    cmd = ["python3", script, "--catalog", catalog, "--identity-id", identity_id]
+    script_path = _resolve_repo_path(script)
+    repo_catalog_path = _resolve_repo_path(repo_catalog)
+    cmd = ["python3", str(script_path), "--catalog", catalog, "--identity-id", identity_id]
     if script in {
         "scripts/validate_unlock_formula.py",
         "scripts/validate_release_plane_cloud_evidence.py",
@@ -666,13 +677,13 @@ def _run_validator(
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
-        cmd += ["--operation", operation, "--repo-catalog", repo_catalog]
+        cmd += ["--operation", operation, "--repo-catalog", str(repo_catalog_path)]
     if script == "scripts/validate_protocol_feedback_sidecar_contract.py":
-        cmd += ["--repo-catalog", repo_catalog, "--operation", operation]
+        cmd += ["--repo-catalog", str(repo_catalog_path), "--operation", operation]
     if script == "scripts/validate_cross_cwd_absolute_input.py":
-        cmd += ["--repo-catalog", repo_catalog]
+        cmd += ["--repo-catalog", str(repo_catalog_path)]
     if script == "scripts/validate_prompt_kernel_executable_coupling.py":
-        cmd += ["--repo-catalog", repo_catalog]
+        cmd += ["--repo-catalog", str(repo_catalog_path)]
         if actor_id:
             cmd += ["--actor-id", actor_id]
         if session_id:
@@ -702,6 +713,7 @@ def _run_validator(
         cmd,
         capture_output=True,
         text=True,
+        cwd=str(REPO_ROOT),
     )
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
