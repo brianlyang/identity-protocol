@@ -818,3 +818,27 @@ Observed:
    - summary: `activity/evidence/v163-predev/2026-03-11/round48-threepass-legacy-semantic-parity/round48_threepass_summary.json`
 6. Tuple completeness:
    - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
+
+### 11.24 Round-49 three-pass serial replay (current-turn local-catalog confirmation) (2026-03-11)
+
+1. Objective:
+   - execute one more serial three-pass deep-scan in the current turn with project-local catalog binding to verify that v1.6-and-earlier semantic classification closure remains stable under local runtime source-of-truth constraints.
+2. Replay packet (per iteration):
+   - `docs_command_contract_check`
+   - `validate_control_plane_invariants --json-only`
+   - `validate_required_gate_surface_drift --json-only`
+   - `validate_protocol_ssot_source`
+   - `validate_required_contract_coverage` (`identity_id=base-repo-architect`, project catalog)
+3. Outcome:
+   - all 3/3 iterations green:
+     - docs contract `PASS`;
+     - control-plane invariants `PASS_REQUIRED`;
+     - required-gate surface drift `PASS_REQUIRED`;
+     - protocol SSOT source `OK`;
+     - required coverage stable (`required_contract_total=13`, `required_contract_passed=13`, `failed_required_contract_count=0`, `skipped_actionable_contract_count=0`).
+4. Evidence:
+   - root: `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/`
+   - manifest: `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/EVIDENCE_MANIFEST.round49-threepass-current-turn.json`
+   - summary: `activity/evidence/v163-predev/2026-03-11/round49-threepass-current-turn/round49_threepass_summary.json`
+5. Tuple completeness:
+   - manifest entries include `sha256`, `command`, `rc`, `timestamp_utc`.
