@@ -33,6 +33,12 @@ docs:
     - .identity/{identity_id}/runtime/plugins/api
 
 plugin_docs:
+  - plugin_id: ai-folder-governance-enforcement
+    readme: identity/protocol/plugins/skill/ai-folder-governance-enforcement/README.md
+    required_tokens:
+      - asb16-rq-020
+      - skill_path_integrity
+      - scripts/validate_v16_skill_path_integrity.py
   - plugin_id: multimodal-vision-enforcement
     readme: identity/protocol/plugins/multimodal-vision-enforcement/README.md
     required_tokens:
