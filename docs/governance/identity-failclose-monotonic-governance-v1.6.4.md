@@ -118,6 +118,42 @@ Rationale:
    - top-level required contracts must not resolve to silent downgrade semantics.
    - `SKIPPED_NOT_REQUIRED` is only valid for declared non-applicable contexts (for example fixture/demo profiles), and must carry explicit reason.
 
+#### 3.2.1 Machine wiring contract (second-item hard-close)
+
+Monotonic no-downgrade is not documentation-only. It is now wired through plugin governance + runtime validators:
+
+1. Canonical policy source:
+   - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
+   - per plugin profile fields:
+     - `monotonic_policy.minimum_enforcement_level`
+     - `monotonic_policy.allow_self_upgrade`
+     - `monotonic_policy.allow_downgrade`
+     - `monotonic_policy.strict_skip_policy`
+     - `monotonic_policy.strict_skip_allowed_reasons`
+2. Bundle strict no-skip gate:
+   - `scripts/required_gate_bundle_runner.py` must fail-close strict required rows when
+     `status=SKIPPED_NOT_REQUIRED` and skip policy is `fail_close/strict_no_skip/forbid_skip`,
+     unless stale reasons are explicitly allowlisted.
+3. Reasoning floor enforcement:
+   - `scripts/validate_reasoning_loop_failclose.py` must fail-close when strict operation effective
+     level is below floor and downgrade is not allowed.
+   - receipt fields must include:
+     - `reasoning_configured_level`
+     - `reasoning_effective_level`
+     - `reasoning_minimum_enforcement_level`
+     - `reasoning_allow_self_upgrade`
+     - `reasoning_allow_downgrade`
+     - `reasoning_downgrade_block_status`
+4. Multimodal strict defer boundary:
+   - `scripts/validate_multimodal_plugin_enforcement.py` may defer only for declared pre-mutation
+     operations.
+   - terminal strict surfaces (`readiness/ci/three-plane/e2e/validate/activate/mutation`) must not
+     pass with `multimodal_runtime_evidence_status=SKIPPED_NOT_REQUIRED`.
+5. Error-code convergence boundary:
+   - monotonic/no-skip hardening must reuse existing error-code families when semantics fit.
+   - introducing new literal error codes for equivalent failure families is disallowed when it
+     causes control-plane budget rebound.
+
 ### 3.3 Newcomer/memory-loss safety contract
 
 Protocol control must be understandable and executable without relying on personal memory:
