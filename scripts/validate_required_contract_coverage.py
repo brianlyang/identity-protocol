@@ -106,14 +106,23 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "dedup_monotonicity",
     "cross_workflow_schema",
     "skill_path_integrity",
+    "protocol_lane_headstamp_continuity",
 }
 
 INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
+    "unlock_formula_automation",
+    "run_id_report_selection",
+    "phase_bootstrap_before_strict",
+    "tmp_collision_safety",
     "prompt_bootstrap_capability",
     "prompt_capability_matrix",
     "kernel_ssot_source",
     "prompt_derivation_conformance",
     "prompt_kernel_executable_coupling",
+    "tool_installation",
+    "vendor_api_discovery",
+    "vendor_api_solution",
+    "gated_switch_guard",
 }
 
 FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
