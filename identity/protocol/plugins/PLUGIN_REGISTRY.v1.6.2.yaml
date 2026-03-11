@@ -3,6 +3,18 @@ contract_id: plugin_registry_contract_v1
 description: Central registry for protocol-governed plugins.
 
 plugins:
+  - plugin_id: ai-folder-governance-enforcement
+    integration_kind: skill
+    protocol_contract_root: identity/protocol/plugins/skill
+    instance_runtime_root: .identity/{identity_id}/runtime/plugins/skills
+    requirement_key: asb16-rq-020
+    bundle_target_name: skill_path_integrity
+    gate_mode: fail_close_strict
+    ssot_mapping_ref: identity/protocol/mappings/contract-binding.v1.6.yaml#asb16-rq-020
+    contract_file: identity/protocol/plugins/skill/ai-folder-governance-enforcement/plugin.contract.yaml
+    validator_script: scripts/validate_v16_skill_path_integrity.py
+    provider_profiles: []
+    status: active
   - plugin_id: multimodal-vision-enforcement
     integration_kind: api
     protocol_contract_root: identity/protocol/plugins
