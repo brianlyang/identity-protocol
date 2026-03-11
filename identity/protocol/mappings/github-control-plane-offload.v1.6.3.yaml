@@ -1,8 +1,37 @@
 schema_version: 1
 offload_plan_version: "v1.6.3"
-last_updated_utc: "2026-03-10T06:10:00Z"
-status: implementation_code_completed_platform_activation_pending
+last_updated_utc: "2026-03-11T06:35:00Z"
+status: platform_activation_completed_with_merge_queue_rule_unavailable
 owner: protocol_control_plane
+
+platform_activation_receipts:
+  activated_at_utc: "2026-03-11T06:35:00Z"
+  repository: "brianlyang/identity-protocol"
+  ruleset:
+    id: 13763460
+    name: "identity-protocol-control-plane-v1.6.3"
+    enforcement: active
+    required_status_checks:
+      - "required-gates / validate-identity"
+    require_code_owner_review: true
+    required_approving_review_count: 1
+    required_review_thread_resolution: true
+  branch_protection:
+    required_status_checks:
+      - "required-gates / validate-identity"
+    require_code_owner_reviews: true
+    required_approving_review_count: 1
+    enforce_admins: true
+    required_conversation_resolution: true
+  actions_policy:
+    allowed_actions: selected
+    github_owned_allowed: true
+    verified_allowed: true
+    sha_pinning_required: false
+  merge_queue:
+    ruleset_rule_supported: false
+    activation_status: pending_platform_capability
+    api_error: "HTTP 422 Invalid rule 'merge_queue'"
 
 principles:
   - id: cp-pr-001
