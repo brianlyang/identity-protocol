@@ -4153,9 +4153,12 @@ def main() -> int:
                     "overall": tp.get("overall_release_decision"),
                 }
                 if isinstance(tp.get("m2m_projection"), dict):
-                    item["m2m_projection"] = tp.get("m2m_projection")
-            if "m2m_projection" not in item:
-                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                    item["three_plane_m2m_projection"] = tp.get("m2m_projection")
+            # Keep full-scan m2m projection strictly derived from full-scan checks.
+            # Three-plane projection is retained separately for observability only,
+            # avoiding cross-surface aggregation noise where nested three-plane
+            # failures appear despite this scan row having no failed checks.
+            item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
             payload["summary_m2m"]["total_identities"] += 1
             current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
             if current_m2m == "PASS":
