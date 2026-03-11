@@ -9,6 +9,11 @@ from typing import Any
 
 import yaml
 
+try:
+    from jsonschema import Draft202012Validator
+except Exception:  # pragma: no cover - runtime dependency guard
+    Draft202012Validator = None  # type: ignore[assignment]
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_INVARIANT = "IP-CP-INV-001"
@@ -26,6 +31,11 @@ CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-p
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return data if isinstance(data, dict) else {}
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    data = json.loads(path.read_text(encoding="utf-8"))
     return data if isinstance(data, dict) else {}
 
 
@@ -1502,6 +1512,36 @@ def main() -> int:
             registry_source_files.update(_as_str_list(plugin_doc.get("plugin_registry_files")))
             if not registry_source_files:
                 registry_source_files.add("identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml")
+            registry_schema_path = (repo_root / "identity/protocol/plugins/schemas/plugin-registry.schema.json").resolve()
+            registry_schema_validator = None
+            if Draft202012Validator is None:
+                plugin_wiring_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="plugin_registry_schema",
+                    reason="jsonschema_dependency_missing",
+                    schema_file=str(registry_schema_path),
+                )
+            elif not registry_schema_path.exists() or not registry_schema_path.is_file():
+                plugin_wiring_violation_count += 1
+                _append_violation(
+                    violations,
+                    field="plugin_registry_schema",
+                    reason="schema_file_missing",
+                    schema_file=str(registry_schema_path),
+                )
+            else:
+                try:
+                    registry_schema_validator = Draft202012Validator(_load_json(registry_schema_path))
+                except Exception as exc:
+                    plugin_wiring_violation_count += 1
+                    _append_violation(
+                        violations,
+                        field="plugin_registry_schema",
+                        reason="schema_parse_failed",
+                        schema_file=str(registry_schema_path),
+                        detail=str(exc),
+                    )
 
             for profile in profiles:
                 if not isinstance(profile, dict):
@@ -1538,6 +1578,21 @@ def main() -> int:
                 if cache_key not in registry_cache:
                     registry_cache[cache_key] = _load_yaml(registry_path)
                 registry_doc = registry_cache.get(cache_key) or {}
+                if registry_schema_validator is not None:
+                    schema_errors = list(registry_schema_validator.iter_errors(registry_doc))
+                    if schema_errors:
+                        plugin_wiring_violation_count += len(schema_errors)
+                        for err in schema_errors:
+                            error_path = ".".join(str(token) for token in list(getattr(err, "path", [])))
+                            _append_violation(
+                                violations,
+                                field="plugin_registry_schema",
+                                reason="registry_schema_validation_failed",
+                                registry_file=registry_file,
+                                schema_file=str(registry_schema_path),
+                                error_path=error_path or "<root>",
+                                detail=str(err.message),
+                            )
                 plugins = _as_list(registry_doc.get("plugins"))
                 for row in plugins:
                     if not isinstance(row, dict):
@@ -1546,6 +1601,21 @@ def main() -> int:
                     reg_gate_mode = str(row.get("gate_mode", "")).strip().lower()
                     if reg_plugin_id and reg_gate_mode == "fail_close_strict":
                         registry_fail_close_plugin_ids.add(reg_plugin_id)
+                        missing_tuple_fields = [
+                            field
+                            for field in ("requirement_key", "bundle_target_name", "ssot_mapping_ref")
+                            if not str(row.get(field, "")).strip()
+                        ]
+                        if missing_tuple_fields:
+                            plugin_wiring_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_registry",
+                                reason="fail_close_tuple_fields_missing",
+                                plugin_id=reg_plugin_id,
+                                registry_file=registry_file,
+                                missing_fields=missing_tuple_fields,
+                            )
 
             for profile in profiles:
                 if not isinstance(profile, dict):
@@ -1657,7 +1727,16 @@ def main() -> int:
                                 expected_validator_script=validator_script,
                                 observed_validator_script=registry_validator,
                             )
-                        if registry_requirement and registry_requirement != requirement_key:
+                        if not registry_requirement:
+                            plugin_wiring_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_registry",
+                                reason="registry_requirement_key_missing",
+                                plugin_id=plugin_id,
+                                expected_requirement_key=requirement_key,
+                            )
+                        elif registry_requirement != requirement_key:
                             plugin_wiring_violation_count += 1
                             _append_violation(
                                 violations,
@@ -1667,7 +1746,16 @@ def main() -> int:
                                 expected_requirement_key=requirement_key,
                                 observed_requirement_key=registry_requirement,
                             )
-                        if registry_target and registry_target != target_name:
+                        if not registry_target:
+                            plugin_wiring_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_registry",
+                                reason="registry_bundle_target_missing",
+                                plugin_id=plugin_id,
+                                expected_target_name=target_name,
+                            )
+                        elif registry_target != target_name:
                             plugin_wiring_violation_count += 1
                             _append_violation(
                                 violations,
@@ -1677,7 +1765,16 @@ def main() -> int:
                                 expected_target_name=target_name,
                                 observed_target_name=registry_target,
                             )
-                        if registry_mode and registry_mode != "fail_close_strict":
+                        if not registry_mode:
+                            plugin_wiring_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_registry",
+                                reason="registry_gate_mode_missing",
+                                plugin_id=plugin_id,
+                                expected_gate_mode="fail_close_strict",
+                            )
+                        elif registry_mode != "fail_close_strict":
                             plugin_wiring_violation_count += 1
                             _append_violation(
                                 violations,
