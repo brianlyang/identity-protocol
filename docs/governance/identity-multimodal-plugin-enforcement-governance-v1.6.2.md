@@ -349,7 +349,7 @@ Closure replay set to retain:
 2. Capability arbitration contract replay passes after backfill:
    - anchor in manifest stream (`rq034_capability_arbitration_validate_braev3_20260309.log`)
 3. Provider binding replay passes with minimal non-secret binding file:
-   - anchor in manifest stream (`rq034_validator_braev3_after_binding_20260309.json`)
+   - anchor in manifest stream (`activity/evidence/rq034/2026-03-09/rq034_validator_braev3_after_binding_20260309.json`)
 
 ### 11.3 Cross-check evidence set (current round)
 
@@ -594,7 +594,7 @@ When evaluating closure, enforce this order:
 1. Check `m2m_projection.m2m_binding_closure_status` first.
 2. If M:N is `PASS` but overall plane is non-green, classify as non-M:N and read:
    - `m2m_projection.non_m2m_failure_scope`
-   - `release_readiness_blockers.afterfix_v6.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json`
 3. Do not reopen M:N root-cause tickets for non-M:N blockers (`instance_plane/release_plane/repo_plane` scope) unless M:N projection turns FAIL.
 
 ### 14.5 Residual blockers (explicitly non-M:N)
@@ -700,20 +700,20 @@ Canonical evidence root:
 
 Replay snapshots:
 
-1. Final summary: `mn_closure_final_summary.ipmmrun002_v2.json`
+1. Final summary: `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/mn_closure_final_summary.ipmmrun002_v2.json`
 2. Evidence tuple manifest (command/rc/sha256/timestamp):
-   - `evidence_manifest.ipmmrun002_closure_v2.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/evidence_manifest.ipmmrun002_closure_v2.json`
 3. M:N deep scan (target3, project layer):
-   - `full_scan.target3.codex.r2.json`
-   - `full_scan.target3.yangxi.r3.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.codex.r2.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/full_scan.target3.yangxi.r3.json`
 4. Bound-session three-plane matrix:
-   - `three_plane.bound_sessions.summary.ipmmrun002_v2.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/three_plane.bound_sessions.summary.ipmmrun002_v2.json`
 5. Release-readiness bound summary:
-   - `release_readiness.bound.summary.ipmmrun002_v2.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/release_readiness.bound.summary.ipmmrun002_v2.json`
 6. Gate sanity:
-   - `surface_drift.json`
-   - `docs_contract.log`
-   - `protocol_ssot.log`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/surface_drift.json`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/docs_contract.log`
+   - `activity/evidence/m2m-full-scan/2026-03-09-ipmmrun002-closure-v2/protocol_ssot.log`
 
 ### 15.6.4 Frozen decision update
 
@@ -1013,9 +1013,9 @@ Canonical root:
 
 Machine evidence:
 
-1. `candidate_validator_matrix.json`
-2. `bundle_validate_matrix_after_reduce2_final.json`
-3. `EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
+1. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/candidate_validator_matrix.json`
+2. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/bundle_validate_matrix_after_reduce2_final.json`
+3. `activity/evidence/v162-cross-verify/2026-03-10/bundle-parity-round2/EVIDENCE_MANIFEST.bundle-parity-round2.v1.json`
 
 Observed replay summary:
 
