@@ -1,6 +1,6 @@
 schema_version: 1
 invariants_version: "v1.6"
-last_updated_utc: "2026-03-10T16:02:00Z"
+last_updated_utc: "2026-03-12T00:45:00Z"
 invariants:
   bundle_mapping_parity:
     mode: freeze
@@ -33,6 +33,7 @@ invariants:
       - cp-gh-003
       - cp-gh-004
       - cp-gh-005
+      - cp-gh-006
     required_retained_requirement_keys:
       - asb16-rq-019
       - asb16-rq-034
