@@ -484,6 +484,14 @@ def _multimodal_plugin_enforcement_contract_skeleton() -> dict:
             "provider_config_status",
         ],
         "provider_binding_path_pattern": "runtime/plugins/provider-bindings.local.yaml",
+        "provider_binding_requirements": {
+            "required_profiles": [
+                "glm46v_vision_prod",
+                "openai_vision_prod",
+            ],
+            "minimum_enabled_bindings": 2,
+            "require_all_required_profiles": True,
+        },
         "capability_requirements": {
             "vision": True,
             "tool_calling": True,
@@ -505,7 +513,12 @@ def _reasoning_loop_failclose_contract_skeleton() -> dict:
         "validator": "scripts/validate_reasoning_loop_failclose.py",
         "plugin_registry_path": "identity/protocol/plugins/PLUGIN_REGISTRY.current.yaml",
         "contract_file": "identity/protocol/plugins/reasoning-loop-enforcement/plugin.contract.yaml",
-        "reasoning_enforcement_level": "L1",
+        "reasoning_enforcement_level": "L3",
+        "minimum_enforcement_level": "L3",
+        "reasoning_enforcement": {
+            "default_level": "L3",
+            "minimum_level": "L3",
+        },
         "level_required_attempt_fields": {
             "L0": [],
             "L1": ["attempt", "hypothesis", "patch", "expected_effect", "result"],
@@ -1558,6 +1571,9 @@ def _neutral_full_contract_current_task(identity_id: str, title: str, descriptio
         "required": True,
         "validator": "scripts/validate_skill_path_integrity.py",
         "layout_mode": "active_repo_runtime",
+        "required_skills": [
+            "ai-folder-governance",
+        ],
         "allowed_skill_roots": [
             "{active_repo_root}/skills",
             "{active_repo_root}/.codex/skills",
