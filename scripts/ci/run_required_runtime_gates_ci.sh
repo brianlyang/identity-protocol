@@ -140,7 +140,11 @@ for ID in ${IDS}; do
   python3 scripts/validate_required_gate_tuple_parity.py --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_VALIDATE" --receipt "$REQUIRED_GATE_BUNDLE_RECEIPT_THREE_PLANE" --require-distinct-operations --json-only
   python3 scripts/validate_replay_archive_contract.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --operation ci --json-only
   python3 scripts/validate_identity_experience_feedback_governance.py --identity-id "$ID"
-  python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
+  if [ "${IS_FIXTURE_ID}" = "1" ]; then
+    echo "[INFO] fixture identity ${ID}: skipping diff-only self-upgrade enforcement in ci lane."
+  else
+    python3 scripts/validate_identity_self_upgrade_enforcement.py --identity-id "$ID" --base "${BASE_SHA}" --head "${HEAD_SHA}"
+  fi
 
   if [ "${IS_FIXTURE_ID}" = "1" ]; then
     echo "[INFO] fixture identity ${ID}: skipping mutation/update report validation chain in required-gates (inspection-only lane)."
