@@ -1,0 +1,18 @@
+contract_id: rq_020_skill_path_integrity_contract_v1
+plugin_id: ai-folder-governance-enforcement
+version: v1.6.4
+owner: protocol_base_repo
+validator_script: scripts/validate_v16_skill_path_integrity.py
+integration_kind: skill
+skill_binding:
+  required: true
+  required_skill_ids:
+    - ai-folder-governance
+  protocol_contract_root: identity/protocol/plugins/skill
+  instance_runtime_root: .identity/{identity_id}/runtime/plugins/skills
+path_integrity:
+  required: true
+  required_status_field: path_integrity_status
+  required_error_field: path_integrity_error_code
+error_family:
+  - IP-SPATH-*
