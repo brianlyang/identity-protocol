@@ -67,10 +67,16 @@ def _as_str_set(value: Any) -> set[str]:
     return {str(item).strip() for item in value if str(item).strip()}
 
 
-def _resolve_entry_receipt_path(*, pack_path: Path, explicit_path: str) -> Path | None:
+def _resolve_entry_receipt_path(*, pack_path: Path, explicit_path: str, operation: str) -> Path | None:
     if str(explicit_path or "").strip():
         p = Path(explicit_path).expanduser().resolve()
         return p if p.exists() and p.is_file() else None
+
+    operation_token = str(operation or "").strip().lower()
+    if operation_token:
+        by_operation = (pack_path / "runtime" / "state" / f"required_gate_bundle_entry.{operation_token}.json").resolve()
+        if by_operation.exists() and by_operation.is_file():
+            return by_operation
 
     latest = (pack_path / "runtime" / "state" / ENTRY_RECEIPT_STATE_FILE).resolve()
     if latest.exists() and latest.is_file():
@@ -229,7 +235,11 @@ def main() -> int:
 
     receipt_required = bool(args.require_entry_receipt or (strict_operation and receipt_required_by_contract))
     if receipt_required:
-        receipt_path = _resolve_entry_receipt_path(pack_path=pack_path, explicit_path=str(args.entry_receipt or ""))
+        receipt_path = _resolve_entry_receipt_path(
+            pack_path=pack_path,
+            explicit_path=str(args.entry_receipt or ""),
+            operation=str(args.operation),
+        )
         if receipt_path is None:
             payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
             payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
