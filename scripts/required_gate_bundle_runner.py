@@ -5,11 +5,14 @@ import argparse
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from tool_vendor_governance_common import resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -213,6 +216,8 @@ STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "multimodal_plugin_enforcement": "multimodal_runtime_evidence_status",
     "reasoning_loop_failclose_enforcement": "reasoning_runtime_evidence_status",
 }
+ENTRY_RECEIPT_STATE_FILE = "required_gate_bundle_entry.latest.json"
+ENTRY_RECEIPT_HISTORY_DIR = "required-gate-bundle-entry"
 
 
 @dataclass(frozen=True)
@@ -690,6 +695,71 @@ def _write_payload_out(out_path: str, payload: dict[str, Any]) -> None:
     target = Path(out_path).expanduser().resolve()
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _persist_unique_entry_receipt(
+    *,
+    catalog_path: str,
+    identity_id: str,
+    operation: str,
+    run_id_binding: str,
+    surface_label: str,
+    payload: dict[str, Any],
+) -> tuple[str, str, str]:
+    try:
+        pack_path, _task_path = resolve_pack_and_task(
+            Path(catalog_path).expanduser().resolve(),
+            identity_id,
+        )
+    except Exception as exc:
+        return "", "", f"resolve_pack_failed:{exc}"
+
+    ts = _utc_now_iso()
+    operation_token = str(operation or "").strip().lower() or "unknown"
+    run_token = str(run_id_binding or "").strip() or f"ts-{int(datetime.now(timezone.utc).timestamp())}"
+    state_dir = (pack_path / "runtime" / "state").resolve()
+    history_dir = (pack_path / "runtime" / "reports" / ENTRY_RECEIPT_HISTORY_DIR).resolve()
+    latest_path = (state_dir / ENTRY_RECEIPT_STATE_FILE).resolve()
+    operation_path = (state_dir / f"required_gate_bundle_entry.{operation_token}.json").resolve()
+    history_path = (
+        history_dir / f"required-gate-bundle-entry-{identity_id}-{operation_token}-{run_token}.json"
+    ).resolve()
+
+    receipt = {
+        "receipt_version": "v1",
+        "receipt_id": f"{BUNDLE_KEY}:{identity_id}:{operation_token}:{run_token}",
+        "created_at_utc": ts,
+        "bundle_contract_id": BUNDLE_CONTRACT_ID,
+        "bundle_key": BUNDLE_KEY,
+        "identity_id": str(identity_id),
+        "catalog_path": str(Path(catalog_path).expanduser().resolve()),
+        "operation": operation_token,
+        "surface_label": str(surface_label or "").strip(),
+        "run_id_binding": str(run_id_binding or "").strip(),
+        "report_selected_path": str(payload.get("report_selected_path", "")).strip(),
+        "bundle_status": str(payload.get("bundle_status", "")).strip(),
+        "error_code": str(payload.get("error_code", "")).strip(),
+        "required_contract": bool(payload.get("required_contract", False)),
+        "failed_required_contract_count": int(payload.get("failed_required_contract_count", 0) or 0),
+        "row_contract_error_count": int(payload.get("row_contract_error_count", 0) or 0),
+        "gate_profile": str(payload.get("gate_profile", "")).strip(),
+        "gate_profile_mode": str(payload.get("gate_profile_mode", "")).strip(),
+        "mapping_errors": list(payload.get("mapping_errors") or []),
+    }
+    try:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        history_dir.mkdir(parents=True, exist_ok=True)
+        _write_payload_out(str(latest_path), receipt)
+        _write_payload_out(str(operation_path), receipt)
+        _write_payload_out(str(history_path), receipt)
+    except Exception as exc:
+        return "", "", f"persist_failed:{exc}"
+
+    return str(latest_path), str(history_path), ""
 
 
 def _parse_bool_token(raw: Any) -> bool:
@@ -1174,7 +1244,40 @@ def main() -> int:
         "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
         "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
         "row_contract_error_count": row_contract_error_count,
+        "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_path": "",
+        "protocol_unique_entry_receipt_history_path": "",
     }
+
+    receipt_path = ""
+    receipt_history_path = ""
+    receipt_error = ""
+    receipt_required = _is_strict_no_trim_operation(operation_normalized)
+    if receipt_required:
+        receipt_path, receipt_history_path, receipt_error = _persist_unique_entry_receipt(
+            catalog_path=str(args.catalog),
+            identity_id=str(args.identity_id),
+            operation=str(args.operation),
+            run_id_binding=run_id_binding,
+            surface_label=surface_label,
+            payload=payload,
+        )
+        if receipt_error:
+            payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+            payload["protocol_unique_entry_receipt_path"] = ""
+            payload["protocol_unique_entry_receipt_history_path"] = ""
+            entry_issue = f"entry_receipt_persist_failed:{receipt_error}"
+            if entry_issue not in mapping_errors:
+                mapping_errors.append(entry_issue)
+            payload["mapping_errors"] = mapping_errors
+            payload["bundle_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = "IP-GATE-ENTRY-002"
+            bundle_status = STATUS_FAIL_REQUIRED
+            error_code = "IP-GATE-ENTRY-002"
+        else:
+            payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
+            payload["protocol_unique_entry_receipt_path"] = receipt_path
+            payload["protocol_unique_entry_receipt_history_path"] = receipt_history_path
 
     if target_name:
         if not result_rows and not mapping_errors:
@@ -1214,6 +1317,11 @@ def main() -> int:
                 "final_emit_contract_status": str(args.final_emit_contract_status or "").strip().upper(),
                 "final_emit_policy_mode": str(args.final_emit_policy_mode or "").strip(),
                 "final_emit_schema_status": str(args.final_emit_schema_status or "").strip().upper(),
+                "protocol_unique_entry_receipt_status": payload.get("protocol_unique_entry_receipt_status", ""),
+                "protocol_unique_entry_receipt_path": payload.get("protocol_unique_entry_receipt_path", ""),
+                "protocol_unique_entry_receipt_history_path": payload.get(
+                    "protocol_unique_entry_receipt_history_path", ""
+                ),
             }
             if str(args.out or "").strip():
                 _write_payload_out(str(args.out), target_payload)
@@ -1253,6 +1361,11 @@ def main() -> int:
                 "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
                 "resolved_source_layer": str(args.resolved_source_layer or "").strip(),
                 "lock_state": str(args.lock_state or "").strip(),
+                "protocol_unique_entry_receipt_status": payload.get("protocol_unique_entry_receipt_status", ""),
+                "protocol_unique_entry_receipt_path": payload.get("protocol_unique_entry_receipt_path", ""),
+                "protocol_unique_entry_receipt_history_path": payload.get(
+                    "protocol_unique_entry_receipt_history_path", ""
+                ),
             }
             if args.json_only:
                 print(json.dumps(target_payload, ensure_ascii=False))
@@ -1308,6 +1421,12 @@ def main() -> int:
         target_payload.setdefault("final_emit_contract_status", str(args.final_emit_contract_status or "").strip().upper())
         target_payload.setdefault("final_emit_policy_mode", str(args.final_emit_policy_mode or "").strip())
         target_payload.setdefault("final_emit_schema_status", str(args.final_emit_schema_status or "").strip().upper())
+        target_payload.setdefault("protocol_unique_entry_receipt_status", payload.get("protocol_unique_entry_receipt_status", ""))
+        target_payload.setdefault("protocol_unique_entry_receipt_path", payload.get("protocol_unique_entry_receipt_path", ""))
+        target_payload.setdefault(
+            "protocol_unique_entry_receipt_history_path",
+            payload.get("protocol_unique_entry_receipt_history_path", ""),
+        )
         if bundle_status == STATUS_FAIL_REQUIRED:
             target_payload[target_status_field] = STATUS_FAIL_REQUIRED
             if not str(target_payload.get("error_code", "")).strip():
