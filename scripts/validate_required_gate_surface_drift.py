@@ -61,6 +61,15 @@ SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "VALIDATE_MARKDOWN: true",
     "VALIDATE_YAML: true",
 )
+REQUIRED_GATES_SUPER_LINTER_TOKENS: tuple[str, ...] = (
+    "Super-linter (governance required lane)",
+    "super-linter/super-linter/slim@v8.2.1",
+    "VALIDATE_ALL_CODEBASE: false",
+    "VALIDATE_GITHUB_ACTIONS: true",
+    "VALIDATE_JSON: true",
+    "VALIDATE_MARKDOWN: true",
+    "VALIDATE_YAML: true",
+)
 DIALOGUE_FEEDBACK_BUNDLE_SCRIPT = "scripts/run_identity_dialogue_feedback_bundle.py"
 DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/identity_creator.py",
@@ -778,6 +787,14 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(SUPER_LINTER_WORKFLOW_SURFACE, []))
             missing_execution_tokens[SUPER_LINTER_WORKFLOW_SURFACE] = sorted(set(existing_tokens + missing_tokens))
 
+    required_gates_workflow_path = repo_root / WORKFLOW_REQUIRED_GATE_SURFACE
+    if required_gates_workflow_path.exists():
+        text = _read_text(required_gates_workflow_path)
+        missing_tokens = [token for token in REQUIRED_GATES_SUPER_LINTER_TOKENS if token not in text]
+        if missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(WORKFLOW_REQUIRED_GATE_SURFACE, []))
+            missing_execution_tokens[WORKFLOW_REQUIRED_GATE_SURFACE] = sorted(set(existing_tokens + missing_tokens))
+
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
@@ -825,6 +842,7 @@ def main() -> int:
         "dialogue_feedback_bundle_required_args": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_ARGS),
         "super_linter_workflow_surface": SUPER_LINTER_WORKFLOW_SURFACE,
         "super_linter_required_tokens": list(SUPER_LINTER_REQUIRED_TOKENS),
+        "required_gates_super_linter_tokens": list(REQUIRED_GATES_SUPER_LINTER_TOKENS),
         "forbidden_direct_validators": forbidden_direct_validators,
         "missing_surface_files": missing_surface_files,
         "missing_lineage_refs": missing_lineage_refs,
