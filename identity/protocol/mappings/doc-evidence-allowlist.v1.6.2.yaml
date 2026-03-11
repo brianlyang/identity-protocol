@@ -113,3 +113,25 @@ strict_docs:
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round48-threepass-legacy-semantic-parity/round48_threepass_summary\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round49-threepass-current-turn/EVIDENCE_MANIFEST\.round49-threepass-current-turn\.json$'
       - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round49-threepass-current-turn/round49_threepass_summary\.json$'
+
+  docs/governance/identity-failclose-monotonic-governance-v1.6.4.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v164-monotonic/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v164-monotonic/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/PREDEV_MIN_ANCHOR\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/v163_state_gap_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/github_vendor_reference_snapshot\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round[0-9]+-[a-z0-9-]+/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round[0-9]+-[a-z0-9-]+/.+_summary\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.4.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v164-monotonic/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v164-monotonic/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/PREDEV_MIN_ANCHOR\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/v163_state_gap_summary\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/github_vendor_reference_snapshot\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round[0-9]+-[a-z0-9-]+/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v163-predev/\d{4}-\d{2}-\d{2}/round[0-9]+-[a-z0-9-]+/.+_summary\.json$'

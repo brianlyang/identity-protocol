@@ -41,6 +41,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical GitHub-native control-plane specialization (v1.6.3 planning track):
   - `docs/governance/github-native-control-plane-specialization-v1.6.3.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
+- Canonical fail-close monotonic hardening governance (v1.6.4 stream):
+  - `docs/governance/identity-failclose-monotonic-governance-v1.6.4.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.4.md`
 
 ## Snapshots
 
@@ -68,3 +71,4 @@ Quick entrypoint for audit history and remediation closure records.
 
 - `docs/governance/p1-human-collab-trigger-upgrade-plan-2026-02-21.md` — protocol-level standardization plan for mandatory human-collaboration notification triggers (taxonomy + contract + validator + CI gate), **implemented in v1.3.0**
 - `docs/governance/github-native-control-plane-specialization-v1.6.3.md` — v1.6.3 dedicated migration stream for GitHub-native control-plane offload (rulesets/merge-queue/codeowners/actions-policy) with semantic fail-close retention in protocol validators.
+- `docs/governance/identity-failclose-monotonic-governance-v1.6.4.md` — v1.6.4 dedicated semantic hardening stream for config-first plugin flow, upgrade-only (no-downgrade) enforcement, and newcomer-safe continuity.
