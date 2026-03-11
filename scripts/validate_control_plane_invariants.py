@@ -27,6 +27,20 @@ CONTRACT_BINDING_CURRENT_DEFAULT_REL = "identity/protocol/mappings/contract-bind
 CONTROL_PLANE_INVARIANTS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-invariants.current.yaml"
 CONTROL_PLANE_BUDGET_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-budget.current.yaml"
 CONTROL_PLANE_STATUS_CURRENT_DEFAULT_REL = "identity/protocol/mappings/control-plane-status.current.yaml"
+INTEGRATION_KIND_RULES = {
+    "skill": {
+        "protocol_contract_root": "identity/protocol/plugins/skill",
+        "instance_runtime_root": ".identity/{identity_id}/runtime/plugins/skills",
+    },
+    "mcp": {
+        "protocol_contract_root": "identity/protocol/plugins/mcp",
+        "instance_runtime_root": ".identity/{identity_id}/runtime/plugins/mcp",
+    },
+    "api": {
+        "protocol_contract_root": "identity/protocol/plugins",
+        "instance_runtime_root": ".identity/{identity_id}/runtime/plugins/api",
+    },
+}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -87,6 +101,14 @@ def _append_violation(violations: list[dict[str, Any]], *, field: str, reason: s
     row = {"field": field, "reason": reason}
     row.update(extra)
     violations.append(row)
+
+
+def _path_within_root(path_value: str, root_value: str) -> bool:
+    norm_path = str(path_value or "").strip().strip("/")
+    norm_root = str(root_value or "").strip().strip("/")
+    if not norm_path or not norm_root:
+        return False
+    return norm_path == norm_root or norm_path.startswith(f"{norm_root}/")
 
 
 def _surface_token_present(repo_root: Path, rel_path: str, token: str) -> tuple[bool, str]:
@@ -1603,7 +1625,14 @@ def main() -> int:
                         registry_fail_close_plugin_ids.add(reg_plugin_id)
                         missing_tuple_fields = [
                             field
-                            for field in ("requirement_key", "bundle_target_name", "ssot_mapping_ref")
+                            for field in (
+                                "requirement_key",
+                                "bundle_target_name",
+                                "ssot_mapping_ref",
+                                "integration_kind",
+                                "protocol_contract_root",
+                                "instance_runtime_root",
+                            )
                             if not str(row.get(field, "")).strip()
                         ]
                         if missing_tuple_fields:
@@ -1707,6 +1736,9 @@ def main() -> int:
                         registry_target = str(reg_row.get("bundle_target_name", "")).strip()
                         registry_mode = str(reg_row.get("gate_mode", "")).strip().lower()
                         registry_status = str(reg_row.get("status", "")).strip().lower()
+                        registry_integration_kind = str(reg_row.get("integration_kind", "")).strip().lower()
+                        registry_protocol_root = str(reg_row.get("protocol_contract_root", "")).strip()
+                        registry_runtime_root = str(reg_row.get("instance_runtime_root", "")).strip()
                         if contract_file and registry_contract != contract_file:
                             plugin_wiring_violation_count += 1
                             _append_violation(
@@ -1794,6 +1826,61 @@ def main() -> int:
                                 expected_status="active",
                                 observed_status=registry_status or "MISSING",
                             )
+                        if not registry_integration_kind:
+                            plugin_wiring_violation_count += 1
+                            _append_violation(
+                                violations,
+                                field="plugin_registry",
+                                reason="registry_integration_kind_missing",
+                                plugin_id=plugin_id,
+                            )
+                        else:
+                            integration_rule = INTEGRATION_KIND_RULES.get(registry_integration_kind)
+                            if integration_rule is None:
+                                plugin_wiring_violation_count += 1
+                                _append_violation(
+                                    violations,
+                                    field="plugin_registry",
+                                    reason="registry_integration_kind_invalid",
+                                    plugin_id=plugin_id,
+                                    integration_kind=registry_integration_kind,
+                                    allowed=sorted(INTEGRATION_KIND_RULES.keys()),
+                                )
+                            else:
+                                expected_protocol_root = integration_rule["protocol_contract_root"]
+                                expected_runtime_root = integration_rule["instance_runtime_root"]
+                                if registry_protocol_root != expected_protocol_root:
+                                    plugin_wiring_violation_count += 1
+                                    _append_violation(
+                                        violations,
+                                        field="plugin_registry",
+                                        reason="registry_protocol_contract_root_mismatch",
+                                        plugin_id=plugin_id,
+                                        expected_protocol_contract_root=expected_protocol_root,
+                                        observed_protocol_contract_root=registry_protocol_root,
+                                    )
+                                if registry_runtime_root != expected_runtime_root:
+                                    plugin_wiring_violation_count += 1
+                                    _append_violation(
+                                        violations,
+                                        field="plugin_registry",
+                                        reason="registry_instance_runtime_root_mismatch",
+                                        plugin_id=plugin_id,
+                                        expected_instance_runtime_root=expected_runtime_root,
+                                        observed_instance_runtime_root=registry_runtime_root,
+                                    )
+                                if registry_contract and registry_protocol_root and not _path_within_root(
+                                    registry_contract, registry_protocol_root
+                                ):
+                                    plugin_wiring_violation_count += 1
+                                    _append_violation(
+                                        violations,
+                                        field="plugin_registry",
+                                        reason="registry_contract_file_out_of_protocol_root",
+                                        plugin_id=plugin_id,
+                                        contract_file=registry_contract,
+                                        protocol_contract_root=registry_protocol_root,
+                                    )
 
                 # Contract file canonical path check.
                 contract_path = (repo_root / contract_file).resolve() if contract_file else None
