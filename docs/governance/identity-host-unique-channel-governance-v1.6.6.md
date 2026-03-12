@@ -2,7 +2,7 @@
 
 Status: Active (pre-development governance freeze)  
 Layer: protocol  
-Scope: host-session unique ingress/egress enforcement + per-instance wrapper contract
+Scope: project-side identity runtime unique ingress/egress enforcement + per-instance wrapper contract
 
 Execution mode: topic-level canonical SSOT for v1.6.6 host-channel closure.
 
@@ -22,6 +22,15 @@ Execution mode: topic-level canonical SSOT for v1.6.6 host-channel closure.
    - `identity/protocol/mappings/contract-binding.current.yaml`
    - `identity/protocol/mappings/control-plane-invariants.current.yaml`
 
+## 0.1) Terminology lock (anti-drift, mandatory)
+
+To avoid repeated execution drift:
+
+1. In v1.6.6, `host-channel` is a stream identifier only.
+2. Operationally, all mandatory routing refers to the **project-side identity runtime adapter + instance pack wrappers**.
+3. `Host` in this document does **not** imply modifying unrelated external repositories.
+4. The hard requirement is wrapper downsink and wrapper-only invocation under `.identity/{identity_id}/runtime/gate/*`.
+
 ## 1) Why v1.6.6 exists
 
 v1.6.1 closed protocol strict-surface headstamp/egress contracts.  
@@ -30,26 +39,26 @@ v1.6.5 hardened platform governance and required-check surfaces.
 
 Remaining closure gap:
 
-1. Host conversation dispatch can still bypass protocol ingress/egress contracts if runtime entrypoints call session-control directly.
-2. Instance packs can declare unique-entry contract in `CURRENT_TASK.json`, but runtime routing may still skip enforcement when wrappers are absent or not consumed by host.
+1. Project-side conversation dispatch can still bypass protocol ingress/egress contracts if runtime entrypoints call session-control directly.
+2. Instance packs can declare unique-entry contract in `CURRENT_TASK.json`, but runtime routing may still skip enforcement when wrappers are absent or not consumed by project-side adapter routing.
 3. Result: configuration may be correct while user-visible output path is still weakly coupled.
 
 v1.6.6 closes this by freezing one host-channel contract:
 
 1. Instance-side wrappers are mandatory and generated.
-2. Host dispatch must call wrappers only.
+2. Project-side runtime dispatch must call wrappers only.
 3. Protocol ingress/egress scripts remain single canonical authority.
 
 ## 2) Non-negotiable contracts (no ambiguity)
 
-### 2.0 Host conversation mandatory wrapper contract (global, no bypass)
+### 2.0 Project conversation mandatory wrapper contract (global, no bypass)
 
 This rule is stronger than strict-operation gate coverage:
 
-1. Every host inbound conversation message must pass instance ingress wrapper first.
-2. Every host user-visible outbound message must pass instance egress wrapper first.
+1. Every project-side inbound conversation message must pass instance ingress wrapper first.
+2. Every project-side user-visible outbound message must pass instance egress wrapper first.
 3. This applies even when operation is non-mutation/non-release.
-4. Any host route that can emit user-visible content without wrapper path is invalid.
+4. Any project-side route that can emit user-visible content without wrapper path is invalid.
 
 ### 2.1 Canonical protocol scripts (fixed)
 
@@ -123,29 +132,29 @@ Egress minimum input envelope:
 7. `candidate_output`
 8. `ingress_receipt`
 
-Any host adapter format is allowed only if it losslessly maps to the same envelope before wrapper invocation.
+Any project adapter format is allowed only if it losslessly maps to the same envelope before wrapper invocation.
 
-### 2.3 Host dispatch contract (mandatory)
+### 2.3 Project dispatch contract (mandatory)
 
-Host session entrypoints must not dispatch user messages directly to instance business scripts.
+Project-side session entrypoints must not dispatch user messages directly to instance business scripts.
 
 Required model:
 
-1. Host receives inbound message.
-2. Host invokes per-instance ingress wrapper.
+1. Project-side runtime receives inbound message.
+2. Project-side runtime invokes per-instance ingress wrapper.
 3. Ingress wrapper invokes `scripts/required_gate_bundle_runner.py`.
 4. Execution is blocked unless unique-entry receipt is `PASS_REQUIRED`.
 
-### 2.3.1 Host wrapper discovery order (mandatory)
+### 2.3.1 Project wrapper discovery order (mandatory)
 
 To support protocol/instance split repositories without path ambiguity:
 
-1. Host must first resolve wrapper contract from instance runtime declaration (from generated `CURRENT_TASK.json` field).
-2. Host may fallback to `.identity/{identity_id}/runtime/gate/protocol_gateway_contract.json` only when declaration points to the same file.
-3. Host must reject any implicit mono-repo relative-path fallback.
+1. Project-side runtime must first resolve wrapper contract from instance runtime declaration (from generated `CURRENT_TASK.json` field).
+2. Project-side runtime may fallback to `.identity/{identity_id}/runtime/gate/protocol_gateway_contract.json` only when declaration points to the same file.
+3. Project-side runtime must reject any implicit mono-repo relative-path fallback.
 4. Unresolved wrapper contract path is `FAIL_REQUIRED`.
 
-### 2.4 Host release contract (mandatory)
+### 2.4 Project release contract (mandatory)
 
 Any user-visible output must pass egress wrapper before release.
 
@@ -184,7 +193,7 @@ To keep audit replay stable across streams:
 
 ### 2.6 Performance boundary contract
 
-1. Host gateway must be lightweight and deterministic.
+1. Project gateway must be lightweight and deterministic.
 2. Latency budget applies to gateway stage itself, not approval waiting time:
    - local gateway target: `P95 <= 300ms`.
 3. Any new check added to ingress/egress must include budget impact evidence before promotion.
@@ -194,9 +203,9 @@ To keep audit replay stable across streams:
 To prevent repeated ambiguity:
 
 1. Mandatory wrapper path and gate strictness are different dimensions.
-2. `Must pass wrapper` means ingress/egress wrappers always run for host I/O.
+2. `Must pass wrapper` means ingress/egress wrappers always run for project-side I/O.
 3. `strict_full` means required-gate profile for strict operations (`activate/update/mutation/readiness/e2e/ci/validate/three-plane`).
-4. Non-mutation host rounds may use non-strict profile where policy allows, but cannot bypass wrappers and cannot bypass egress headstamp/send-time checks.
+4. Non-mutation project rounds may use non-strict profile where policy allows, but cannot bypass wrappers and cannot bypass egress headstamp/send-time checks.
 5. Any implementation that interprets non-strict profile as wrapper bypass is invalid.
 
 ### 2.7 Stream numbering and GitHub PR binding contract (mandatory)
@@ -260,7 +269,7 @@ The first three are required payload artifacts, and manifest is the required tup
 ### T3 Network/platform governance
 
 1. GitHub required checks + merge-group model validates centralized policy gates in CI.
-2. Rulesets model supports centralized enforcement layering compatible with protocol/host split.
+2. Rulesets model supports centralized enforcement layering compatible with protocol/project split.
 
 ### T4 Protocol references
 
@@ -279,12 +288,12 @@ The first three are required payload artifacts, and manifest is the required tup
 
 1. `scripts/identity_creator.py` init/update path must generate wrapper files + contract JSON.
 2. `scripts/validate_protocol_unique_entry_gate.py` must validate wrapper declaration parity when strict operation requires receipt.
-3. `scripts/validate_required_gate_surface_drift.py` must detect host-side bypass surfaces where applicable.
+3. `scripts/validate_required_gate_surface_drift.py` must detect project-side bypass surfaces where applicable.
 
-### 4.2 Host-repo target
+### 4.2 Project runtime target
 
-1. Host dispatch entrypoints must call ingress wrapper only.
-2. Host user-visible output release must call egress wrapper only.
+1. Project runtime dispatch entrypoints must call ingress wrapper only.
+2. Project runtime user-visible output release must call egress wrapper only.
 3. Any direct session-control dispatch without wrapper contract must be blocked.
 
 ### 4.3 Cross-repo interoperability target
@@ -306,9 +315,9 @@ The first three are required payload artifacts, and manifest is the required tup
 2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
 3. `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation validate --require-entry-receipt --json-only`
 4. `python3 scripts/docs_command_contract_check.py`
-5. Host replay proves no direct-bypass outbound path under target entrypoints.
+5. Project replay proves no direct-bypass outbound path under target entrypoints.
 6. Stream PR binding receipt exists under persistent evidence path and matches current head SHA.
-7. Host non-mutation replay still produces:
+7. Project non-mutation replay still produces:
    - ingress wrapper receipt present
    - egress wrapper receipt present
    - headstamp/send-time status `PASS_REQUIRED`
@@ -320,7 +329,7 @@ Release decision:
 
 1. Any failure in items above blocks v1.6.6 closure claim.
 
-### 5.1 Implementation landing snapshot (2026-03-12, protocol repo)
+### 5.1 Implementation landing snapshot (2026-03-12, protocol repo + instance pack runtime)
 
 The v1.6.6 host-channel contract is now code-backed in protocol repo runtime tooling.
 
@@ -363,7 +372,7 @@ Interpretation:
 
 1. v1.6.6 no longer relies on docs-only declaration for host unique-channel wrappers.
 2. Init/update paths now emit and validate wrapper contracts as executable artifacts.
-3. Closure posture remains implementation-progressive until host repository dispatch/release entrypoints are fully wrapper-only.
+3. Closure posture remains implementation-progressive until project-side runtime dispatch/release entrypoints are fully wrapper-only.
 
 ## 6) External references
 
