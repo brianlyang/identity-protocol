@@ -57,7 +57,9 @@ HOST_GATEWAY_ALLOWED_FIELDS = {
     "identity_tuple_fields",
     "operation_profile_policy",
     "entry_receipt_policy",
+    "ingress_proof_policy",
     "egress_receipt_policy",
+    "egress_grant_policy",
     "headstamp_policy",
 }
 HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS = {
@@ -73,7 +75,15 @@ HOST_GATEWAY_ENTRY_POLICY_ALLOWED_FIELDS = {
     "required_wrapper_surface_status",
     "required_wrapper_dispatch_token_status",
 }
+HOST_GATEWAY_INGRESS_PROOF_POLICY_ALLOWED_FIELDS = {
+    "required",
+    "max_age_seconds",
+}
 HOST_GATEWAY_EGRESS_POLICY_ALLOWED_FIELDS = {"required"}
+HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS = {
+    "required",
+    "max_age_seconds",
+}
 HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS = {"required"}
 RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "schema_version",
@@ -153,6 +163,13 @@ def _as_bool(value: Any) -> bool:
         return value
     token = str(value or "").strip().lower()
     return token in {"1", "true", "yes", "y", "on"}
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
 
 
 def _unknown_keys(node: Any, allowed: set[str]) -> list[str]:
@@ -303,6 +320,8 @@ def main() -> int:
         "protocol_unique_entry_receipt_wrapper_surface_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_token_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_required": False,
+        "protocol_unique_entry_receipt_wrapper_proof_status": "",
+        "protocol_unique_entry_receipt_wrapper_proof_required": False,
         "protocol_unique_entry_receipt_provenance_required": False,
         "protocol_host_gateway_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_contract_key": "",
@@ -537,6 +556,21 @@ def main() -> int:
                 receipt_required_wrapper_surface_status = entry_policy_wrapper_surface_status
             if entry_policy_wrapper_dispatch_status:
                 receipt_required_wrapper_dispatch_status = entry_policy_wrapper_dispatch_status
+        ingress_proof_policy = host_gateway_contract.get("ingress_proof_policy")
+        if not isinstance(ingress_proof_policy, dict) or ingress_proof_policy.get("required") is not True:
+            host_gateway_issues.append("host_gateway_ingress_proof_policy_missing")
+        else:
+            unknown_ingress_proof_fields = _unknown_keys(
+                ingress_proof_policy,
+                HOST_GATEWAY_INGRESS_PROOF_POLICY_ALLOWED_FIELDS,
+            )
+            if unknown_ingress_proof_fields:
+                host_gateway_issues.append(
+                    "host_gateway_ingress_proof_policy_additional_properties:"
+                    + ",".join(unknown_ingress_proof_fields)
+                )
+            if _safe_int(ingress_proof_policy.get("max_age_seconds"), default=0) <= 0:
+                host_gateway_issues.append("host_gateway_ingress_proof_policy_max_age_invalid")
         egress_policy = host_gateway_contract.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict) or egress_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_egress_receipt_policy_missing")
@@ -550,6 +584,21 @@ def main() -> int:
                     "host_gateway_egress_receipt_policy_additional_properties:"
                     + ",".join(unknown_egress_policy_fields)
                 )
+        egress_grant_policy = host_gateway_contract.get("egress_grant_policy")
+        if not isinstance(egress_grant_policy, dict) or egress_grant_policy.get("required") is not True:
+            host_gateway_issues.append("host_gateway_egress_grant_policy_missing")
+        else:
+            unknown_egress_grant_fields = _unknown_keys(
+                egress_grant_policy,
+                HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS,
+            )
+            if unknown_egress_grant_fields:
+                host_gateway_issues.append(
+                    "host_gateway_egress_grant_policy_additional_properties:"
+                    + ",".join(unknown_egress_grant_fields)
+                )
+            if _safe_int(egress_grant_policy.get("max_age_seconds"), default=0) <= 0:
+                host_gateway_issues.append("host_gateway_egress_grant_policy_max_age_invalid")
         headstamp_policy = host_gateway_contract.get("headstamp_policy")
         if not isinstance(headstamp_policy, dict) or headstamp_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_headstamp_policy_missing")
@@ -682,6 +731,23 @@ def main() -> int:
                         host_gateway_issues.append(
                             "host_gateway_runtime_contract_entry_wrapper_dispatch_status_mismatch"
                         )
+                runtime_ingress_proof_policy = runtime_gateway_contract.get("ingress_proof_policy")
+                if not isinstance(runtime_ingress_proof_policy, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_ingress_proof_policy_missing")
+                else:
+                    unknown_runtime_ingress_proof_fields = _unknown_keys(
+                        runtime_ingress_proof_policy,
+                        HOST_GATEWAY_INGRESS_PROOF_POLICY_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_ingress_proof_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_ingress_proof_policy_additional_properties:"
+                            + ",".join(unknown_runtime_ingress_proof_fields)
+                        )
+                    if _safe_int(runtime_ingress_proof_policy.get("max_age_seconds"), default=0) <= 0:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_ingress_proof_policy_max_age_invalid"
+                        )
                 runtime_egress_policy = runtime_gateway_contract.get("egress_receipt_policy")
                 if not isinstance(runtime_egress_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_egress_receipt_policy_missing")
@@ -694,6 +760,23 @@ def main() -> int:
                         host_gateway_issues.append(
                             "host_gateway_runtime_contract_egress_receipt_policy_additional_properties:"
                             + ",".join(unknown_runtime_egress_fields)
+                        )
+                runtime_egress_grant_policy = runtime_gateway_contract.get("egress_grant_policy")
+                if not isinstance(runtime_egress_grant_policy, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_egress_grant_policy_missing")
+                else:
+                    unknown_runtime_egress_grant_fields = _unknown_keys(
+                        runtime_egress_grant_policy,
+                        HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_egress_grant_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_egress_grant_policy_additional_properties:"
+                            + ",".join(unknown_runtime_egress_grant_fields)
+                        )
+                    if _safe_int(runtime_egress_grant_policy.get("max_age_seconds"), default=0) <= 0:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_egress_grant_policy_max_age_invalid"
                         )
                 runtime_headstamp_policy = runtime_gateway_contract.get("headstamp_policy")
                 if not isinstance(runtime_headstamp_policy, dict):
@@ -771,6 +854,8 @@ def main() -> int:
         receipt_wrapper_surface_status = str(receipt.get("wrapper_surface_status", "")).strip().upper()
         receipt_wrapper_dispatch_status = str(receipt.get("wrapper_dispatch_token_status", "")).strip().upper()
         receipt_wrapper_dispatch_required = _as_bool(receipt.get("wrapper_dispatch_required"))
+        receipt_wrapper_proof_required = _as_bool(receipt.get("wrapper_dispatch_proof_required"))
+        receipt_wrapper_proof_status = str(receipt.get("wrapper_dispatch_proof_status", "")).strip().upper()
         payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
         payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
         payload["protocol_unique_entry_receipt_actor_id"] = receipt_actor_id
@@ -780,6 +865,8 @@ def main() -> int:
         payload["protocol_unique_entry_receipt_wrapper_surface_status"] = receipt_wrapper_surface_status
         payload["protocol_unique_entry_receipt_wrapper_dispatch_token_status"] = receipt_wrapper_dispatch_status
         payload["protocol_unique_entry_receipt_wrapper_dispatch_required"] = receipt_wrapper_dispatch_required
+        payload["protocol_unique_entry_receipt_wrapper_proof_status"] = receipt_wrapper_proof_status
+        payload["protocol_unique_entry_receipt_wrapper_proof_required"] = receipt_wrapper_proof_required
 
         receipt_issues: list[str] = []
         if receipt_bundle_key != EXPECTED_BUNDLE_KEY:
@@ -807,6 +894,10 @@ def main() -> int:
             receipt_issues.append("entry_receipt_wrapper_dispatch_status_not_pass_required")
         if provenance_required and receipt_wrapper_dispatch_required is not True:
             receipt_issues.append("entry_receipt_wrapper_dispatch_required_not_true")
+        if provenance_required and receipt_wrapper_proof_required is not True:
+            receipt_issues.append("entry_receipt_wrapper_proof_required_not_true")
+        if provenance_required and receipt_wrapper_proof_status != STATUS_PASS_REQUIRED:
+            receipt_issues.append("entry_receipt_wrapper_proof_status_not_pass_required")
         missing_fields = sorted(
             field for field in entry_receipt_required_fields if field not in receipt
         )
