@@ -243,6 +243,11 @@ def main() -> int:
         "protocol_host_gateway_entry_receipt_required_surface_label": "",
         "protocol_host_gateway_entry_receipt_required_wrapper_surface_status": "",
         "protocol_host_gateway_entry_receipt_required_wrapper_dispatch_token_status": "",
+        "protocol_host_gateway_strict_operations": [],
+        "protocol_host_gateway_light_operations": [],
+        "protocol_host_gateway_strict_gate_profile": "",
+        "protocol_host_gateway_light_gate_profile": "",
+        "protocol_host_gateway_allow_upgrade_only": True,
         "error_code": "",
         "stale_reasons": [],
     }
@@ -329,6 +334,7 @@ def main() -> int:
         release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
         ingress_dispatch_token = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
         tuple_fields = _as_str_set(host_gateway_contract.get("identity_tuple_fields"))
+        operation_profile_policy = host_gateway_contract.get("operation_profile_policy")
         payload["protocol_host_gateway_ingress_script"] = ingress_script
         payload["protocol_host_gateway_egress_script"] = egress_script
         payload["protocol_host_gateway_dispatch_mode"] = dispatch_mode
@@ -371,6 +377,29 @@ def main() -> int:
             host_gateway_issues.append("host_gateway_ingress_dispatch_token_mismatch")
         if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(tuple_fields):
             host_gateway_issues.append("host_gateway_tuple_fields_missing")
+        if not isinstance(operation_profile_policy, dict):
+            host_gateway_issues.append("host_gateway_operation_profile_policy_missing")
+        else:
+            strict_operations = _as_str_set(operation_profile_policy.get("strict_operations"))
+            light_operations = _as_str_set(operation_profile_policy.get("light_operations"))
+            strict_gate_profile = str(operation_profile_policy.get("strict_gate_profile", "")).strip()
+            light_gate_profile = str(operation_profile_policy.get("light_gate_profile", "")).strip()
+            allow_upgrade_only = bool(operation_profile_policy.get("allow_upgrade_only", True))
+            payload["protocol_host_gateway_strict_operations"] = sorted(strict_operations)
+            payload["protocol_host_gateway_light_operations"] = sorted(light_operations)
+            payload["protocol_host_gateway_strict_gate_profile"] = strict_gate_profile
+            payload["protocol_host_gateway_light_gate_profile"] = light_gate_profile
+            payload["protocol_host_gateway_allow_upgrade_only"] = allow_upgrade_only
+            if not strict_operations:
+                host_gateway_issues.append("host_gateway_operation_profile_strict_operations_missing")
+            if not STRICT_OPERATIONS.issubset(strict_operations):
+                host_gateway_issues.append("host_gateway_operation_profile_strict_operations_not_covered")
+            if not light_operations:
+                host_gateway_issues.append("host_gateway_operation_profile_light_operations_missing")
+            if not strict_gate_profile:
+                host_gateway_issues.append("host_gateway_operation_profile_strict_gate_profile_missing")
+            if not light_gate_profile:
+                host_gateway_issues.append("host_gateway_operation_profile_light_gate_profile_missing")
         entry_policy = host_gateway_contract.get("entry_receipt_policy")
         if not isinstance(entry_policy, dict) or entry_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_entry_receipt_policy_missing")
@@ -448,6 +477,7 @@ def main() -> int:
                     "host_dispatch_mode",
                     "host_release_mode",
                     "ingress_wrapper_dispatch_token",
+                    "operation_profile_policy",
                 }
                 missing_runtime_fields = sorted(
                     field for field in required_runtime_fields if field not in runtime_gateway_contract
@@ -471,6 +501,30 @@ def main() -> int:
                 runtime_tuple_fields = _as_str_set(runtime_gateway_contract.get("identity_tuple_fields"))
                 if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(runtime_tuple_fields):
                     host_gateway_issues.append("host_gateway_runtime_contract_tuple_fields_missing")
+                runtime_operation_profile = runtime_gateway_contract.get("operation_profile_policy")
+                if not isinstance(runtime_operation_profile, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_operation_profile_policy_missing")
+                elif isinstance(operation_profile_policy, dict):
+                    runtime_strict_operations = _as_str_set(runtime_operation_profile.get("strict_operations"))
+                    runtime_light_operations = _as_str_set(runtime_operation_profile.get("light_operations"))
+                    runtime_strict_gate_profile = str(runtime_operation_profile.get("strict_gate_profile", "")).strip()
+                    runtime_light_gate_profile = str(runtime_operation_profile.get("light_gate_profile", "")).strip()
+                    runtime_allow_upgrade_only = bool(runtime_operation_profile.get("allow_upgrade_only", True))
+                    contract_strict_operations = _as_str_set(operation_profile_policy.get("strict_operations"))
+                    contract_light_operations = _as_str_set(operation_profile_policy.get("light_operations"))
+                    contract_strict_gate_profile = str(operation_profile_policy.get("strict_gate_profile", "")).strip()
+                    contract_light_gate_profile = str(operation_profile_policy.get("light_gate_profile", "")).strip()
+                    contract_allow_upgrade_only = bool(operation_profile_policy.get("allow_upgrade_only", True))
+                    if runtime_strict_operations != contract_strict_operations:
+                        host_gateway_issues.append("host_gateway_runtime_contract_strict_operations_mismatch")
+                    if runtime_light_operations != contract_light_operations:
+                        host_gateway_issues.append("host_gateway_runtime_contract_light_operations_mismatch")
+                    if runtime_strict_gate_profile != contract_strict_gate_profile:
+                        host_gateway_issues.append("host_gateway_runtime_contract_strict_gate_profile_mismatch")
+                    if runtime_light_gate_profile != contract_light_gate_profile:
+                        host_gateway_issues.append("host_gateway_runtime_contract_light_gate_profile_mismatch")
+                    if runtime_allow_upgrade_only != contract_allow_upgrade_only:
+                        host_gateway_issues.append("host_gateway_runtime_contract_allow_upgrade_only_mismatch")
                 runtime_entry_policy = runtime_gateway_contract.get("entry_receipt_policy")
                 if not isinstance(runtime_entry_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_entry_receipt_policy_missing")
