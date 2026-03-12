@@ -42,6 +42,15 @@ v1.6.6 closes this by freezing one host-channel contract:
 
 ## 2) Non-negotiable contracts (no ambiguity)
 
+### 2.0 Host conversation mandatory wrapper contract (global, no bypass)
+
+This rule is stronger than strict-operation gate coverage:
+
+1. Every host inbound conversation message must pass instance ingress wrapper first.
+2. Every host user-visible outbound message must pass instance egress wrapper first.
+3. This applies even when operation is non-mutation/non-release.
+4. Any host route that can emit user-visible content without wrapper path is invalid.
+
 ### 2.1 Canonical protocol scripts (fixed)
 
 1. Unique ingress (can-do gate): `scripts/required_gate_bundle_runner.py`
@@ -83,7 +92,17 @@ Required model:
 1. Candidate output enters per-instance egress wrapper.
 2. Egress wrapper invokes `scripts/final_emit_governed.py`.
 3. Send-time/headstamp contracts must pass for current turn.
-4. Missing/mismatched receipt or headstamp is `FAIL_REQUIRED`.
+4. Egress must validate ingress receipt parity for current turn:
+   - `run_id` must match
+   - `session_id` must match
+   - `actor_id` must match
+5. Missing/mismatched receipt or headstamp is `FAIL_REQUIRED`.
+
+### 2.4.1 Headstamp continuity contract (mandatory)
+
+1. Egress wrapper must treat first-line identity tuple and layer tuple as send-time hard gate input.
+2. If first-line identity/layer tuple is missing or mismatched, outbound release is blocked.
+3. Headstamp errors must use canonical family from v1.6.1 boundary (`IP-HDSTAMP-*`), not ad-hoc aliases.
 
 ### 2.5 Layer boundary contract (protocol vs instance)
 
@@ -98,6 +117,16 @@ Required model:
 2. Latency budget applies to gateway stage itself, not approval waiting time:
    - local gateway target: `P95 <= 300ms`.
 3. Any new check added to ingress/egress must include budget impact evidence before promotion.
+
+### 2.6.1 Wrapper vs gate-profile semantics (anti-confusion)
+
+To prevent repeated ambiguity:
+
+1. Mandatory wrapper path and gate strictness are different dimensions.
+2. `Must pass wrapper` means ingress/egress wrappers always run for host I/O.
+3. `strict_full` means required-gate profile for strict operations (`activate/update/mutation/readiness/e2e/ci/validate/three-plane`).
+4. Non-mutation host rounds may use non-strict profile where policy allows, but cannot bypass wrappers and cannot bypass egress headstamp/send-time checks.
+5. Any implementation that interprets non-strict profile as wrapper bypass is invalid.
 
 ### 2.7 Stream numbering and GitHub PR binding contract (mandatory)
 
@@ -122,6 +151,16 @@ To keep governance/review/implementation lifecycle deterministic, every stream n
 4. Closure boundary:
    - no PR binding receipt => stream status cannot move to `implementation_code_completed`.
    - governance/review docs without SSOT registry row are treated as draft only.
+
+### 2.8 YAML sprawl control contract (mandatory)
+
+To prevent control-plane file sprawl in v1.6.x streams:
+
+1. New stream registration must reuse existing mapping files:
+   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
+2. Stream-level doc onboarding must be append-only row updates in existing mappings.
+3. Creating new mapping YAML files for stream registration is forbidden unless schema/version boundary requires it and governance explicitly approves it.
 
 ## 3) Four-track cross verification (frozen consensus)
 
@@ -187,6 +226,11 @@ To keep governance/review/implementation lifecycle deterministic, every stream n
 4. `python3 scripts/docs_command_contract_check.py`
 5. Host replay proves no direct-bypass outbound path under target entrypoints.
 6. Stream PR binding receipt exists under persistent evidence path and matches current head SHA.
+7. Host non-mutation replay still produces:
+   - ingress wrapper receipt present
+   - egress wrapper receipt present
+   - headstamp/send-time status `PASS_REQUIRED`
+8. Negative probe `direct dispatch -> direct release` is `FAIL_REQUIRED`.
 
 Release decision:
 

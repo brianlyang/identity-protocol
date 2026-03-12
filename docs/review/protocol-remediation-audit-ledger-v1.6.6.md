@@ -44,6 +44,7 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
 2. Ensure per-instance wrapper generation is mandatory, deterministic, and replayable.
 3. Ensure host dispatch/release paths are wrapper-only in strict operations.
 4. Preserve protocol-instance layer split while closing runtime bypasses.
+5. Ensure host non-mutation conversation rounds are also wrapper-enforced.
 
 ## 2) Four-track cross-verification summary
 
@@ -85,7 +86,12 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
 
 1. Inbound dispatch goes through ingress wrapper before execution handoff.
 2. User-visible outbound release goes through egress wrapper before send.
-3. Direct dispatch/release paths without wrapper/receipt are blocked with fail-close status.
+3. Egress release verifies ingress receipt parity for current turn:
+   - same `run_id`
+   - same `session_id`
+   - same `actor_id`
+4. Direct dispatch/release paths without wrapper/receipt are blocked with fail-close status.
+5. Host non-mutation rounds still require wrapper traversal and egress headstamp/send-time pass.
 
 ### 3.3 Cross-repo interoperability
 
@@ -111,6 +117,14 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
    - `opened_at_utc`
 5. If PR binding receipt is missing or stale to current head SHA, posture remains `CONDITIONAL_GO`.
 
+### 3.5 YAML sprawl control check
+
+1. v1.6.6 stream registration must reuse existing mapping YAML files.
+2. Review must fail if stream onboarding introduces unnecessary new mapping YAML files for registry/allowlist scope.
+3. Current accepted files:
+   - `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
+
 ## 4) Acceptance criteria
 
 Implementation is not accepted unless all items pass:
@@ -121,6 +135,8 @@ Implementation is not accepted unless all items pass:
 4. `python3 scripts/docs_command_contract_check.py`
 5. Host replay confirms wrapper-only dispatch and wrapper-only release for strict operations.
 6. Stream PR binding receipt exists and matches stream version + head SHA.
+7. Host replay confirms wrapper-only dispatch and wrapper-only release for non-mutation conversation rounds.
+8. Negative probe (`direct dispatch -> direct release`) is `FAIL_REQUIRED`.
 
 ## 5) Residual risk register (initial)
 
@@ -132,6 +148,8 @@ Implementation is not accepted unless all items pass:
    - mitigation: explicit protocol path mapping in wrapper contract + strict validation on init/update.
 4. **P2**: stream docs can drift from implementation lifecycle when PR binding is not recorded.
    - mitigation: required `stream_pr_binding.json` receipt and SSOT registry parity checks.
+5. **P2**: implementation may incorrectly map non-strict profile to wrapper bypass.
+   - mitigation: explicit wrapper-vs-profile acceptance checks in replay matrix.
 
 ## 6) Current posture
 
