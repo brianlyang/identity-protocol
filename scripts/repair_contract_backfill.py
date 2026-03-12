@@ -9,9 +9,12 @@ from typing import Any
 from create_identity_pack import (
     HOST_GATEWAY_CONTRACT_ID,
     HOST_GATEWAY_CONTRACT_KEY,
+    HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
     HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
     HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
     HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
+    HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
+    HOST_GATEWAY_REQUIRED_RELEASE_MODE,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
@@ -404,6 +407,12 @@ def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], 
             if field not in merged:
                 merged.append(field)
         node["identity_tuple_fields"] = merged
+        if str(node.get("host_dispatch_mode", "")).strip().lower() != HOST_GATEWAY_REQUIRED_DISPATCH_MODE:
+            node["host_dispatch_mode"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
+        if str(node.get("host_release_mode", "")).strip().lower() != HOST_GATEWAY_REQUIRED_RELEASE_MODE:
+            node["host_release_mode"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
+        if str(node.get("ingress_wrapper_dispatch_token", "")).strip() != HOST_GATEWAY_INGRESS_DISPATCH_TOKEN:
+            node["ingress_wrapper_dispatch_token"] = HOST_GATEWAY_INGRESS_DISPATCH_TOKEN
     return forced_required_keys, restored_validator_keys
 
 
