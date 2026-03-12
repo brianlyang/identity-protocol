@@ -22,6 +22,8 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 
 BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
 BUNDLE_KEY = "required_gate_bundle_runner"
+HOST_WRAPPER_SURFACE_LABEL = "host_ingress_wrapper"
+REQUIRED_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
 DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 DEFAULT_PLUGIN_GOVERNANCE_FILE = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
@@ -897,6 +899,11 @@ def main() -> int:
         help="explicit outlet bypass flag (true/false). bare flag implies true.",
     )
     parser.add_argument("--surface-label", default="")
+    parser.add_argument(
+        "--wrapper-dispatch-token",
+        default="",
+        help="required wrapper dispatch token for host_ingress_wrapper strict operations",
+    )
     parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
     parser.add_argument("--gate-profile", default="", help="optional gate profile key for requirement selection")
     parser.add_argument(
@@ -995,6 +1002,7 @@ def main() -> int:
     failure_count = 0
     row_contract_error_count = 0
     surface_label = str(args.surface_label or "").strip() or str(args.operation or "").strip().replace("-", "_") or "unknown_surface"
+    wrapper_dispatch_token = str(args.wrapper_dispatch_token or "").strip()
     run_id_binding = str(args.run_id or "").strip()
     report_selected_path = str(args.report_selected_path or "").strip()
     actor_id = str(args.actor_id or "").strip()
@@ -1012,6 +1020,22 @@ def main() -> int:
         failure_count += len(mapping_errors)
     if not run_id_binding:
         mapping_errors.append("run_id_binding_missing")
+        failure_count += 1
+    wrapper_dispatch_required = (
+        _is_strict_no_trim_operation(operation_normalized)
+        and surface_label == HOST_WRAPPER_SURFACE_LABEL
+    )
+    wrapper_dispatch_ok = (
+        not wrapper_dispatch_required
+        or wrapper_dispatch_token == REQUIRED_WRAPPER_DISPATCH_TOKEN
+    )
+    wrapper_dispatch_token_status = (
+        STATUS_SKIPPED_NOT_REQUIRED
+        if not wrapper_dispatch_required
+        else (STATUS_PASS_REQUIRED if wrapper_dispatch_ok else STATUS_FAIL_REQUIRED)
+    )
+    if wrapper_dispatch_required and not wrapper_dispatch_ok:
+        mapping_errors.append("wrapper_dispatch_token_missing_or_invalid")
         failure_count += 1
 
     for spec in specs:
@@ -1232,6 +1256,9 @@ def main() -> int:
         "missing_targets": missing_targets,
         "results": result_rows,
         "surface_label": surface_label,
+        "wrapper_dispatch_required": wrapper_dispatch_required,
+        "wrapper_dispatch_token_status": wrapper_dispatch_token_status,
+        "wrapper_dispatch_token_expected": REQUIRED_WRAPPER_DISPATCH_TOKEN,
         "run_id_binding": run_id_binding,
         "session_id": session_id,
         "report_selected_path": report_selected_path,
