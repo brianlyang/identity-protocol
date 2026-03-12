@@ -31,9 +31,9 @@ EXPECTED_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
 EXPECTED_HOST_DISPATCH_MODE = "wrapper_only"
 EXPECTED_HOST_RELEASE_MODE = "wrapper_only"
 EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
-EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL = "host_ingress_wrapper"
-EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS = STATUS_PASS_REQUIRED
-EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS = STATUS_PASS_REQUIRED
+DEFAULT_ENTRY_RECEIPT_SURFACE_LABEL = "host_ingress_wrapper"
+DEFAULT_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS = STATUS_PASS_REQUIRED
+DEFAULT_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS = STATUS_PASS_REQUIRED
 EXPECTED_BUNDLE_KEY = "required_gate_bundle_runner"
 EXPECTED_SCOPE = "all_identity_instance_actions"
 EXPECTED_ENTRY_ERROR_FAMILY = {"IP-GATE-ENTRY-001", "IP-GATE-ENTRY-002"}
@@ -313,9 +313,9 @@ def main() -> int:
 
     host_gateway_contract, host_gateway_contract_key = _resolve_host_gateway_contract(task)
     payload["protocol_host_gateway_contract_key"] = host_gateway_contract_key
-    receipt_required_surface_label = EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL
-    receipt_required_wrapper_surface_status = EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS
-    receipt_required_wrapper_dispatch_status = EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS
+    receipt_required_surface_label = DEFAULT_ENTRY_RECEIPT_SURFACE_LABEL
+    receipt_required_wrapper_surface_status = DEFAULT_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS
+    receipt_required_wrapper_dispatch_status = DEFAULT_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS
     host_gateway_issues: list[str] = []
     if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
         host_gateway_issues.append("host_gateway_contract_missing")
@@ -389,12 +389,12 @@ def main() -> int:
             payload["protocol_host_gateway_entry_receipt_required_wrapper_dispatch_token_status"] = (
                 entry_policy_wrapper_dispatch_status
             )
-            if entry_policy_surface_label != EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL:
-                host_gateway_issues.append("host_gateway_entry_receipt_policy_surface_label_invalid")
-            if entry_policy_wrapper_surface_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS:
-                host_gateway_issues.append("host_gateway_entry_receipt_policy_wrapper_surface_status_invalid")
-            if entry_policy_wrapper_dispatch_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS:
-                host_gateway_issues.append("host_gateway_entry_receipt_policy_wrapper_dispatch_status_invalid")
+            if not entry_policy_surface_label:
+                host_gateway_issues.append("host_gateway_entry_receipt_policy_surface_label_missing")
+            if not entry_policy_wrapper_surface_status:
+                host_gateway_issues.append("host_gateway_entry_receipt_policy_wrapper_surface_status_missing")
+            if not entry_policy_wrapper_dispatch_status:
+                host_gateway_issues.append("host_gateway_entry_receipt_policy_wrapper_dispatch_status_missing")
             if entry_policy_surface_label:
                 receipt_required_surface_label = entry_policy_surface_label
             if entry_policy_wrapper_surface_status:
@@ -482,15 +482,15 @@ def main() -> int:
                     runtime_entry_wrapper_dispatch_status = str(
                         runtime_entry_policy.get("required_wrapper_dispatch_token_status", "")
                     ).strip().upper()
-                    if runtime_entry_surface != EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL:
-                        host_gateway_issues.append("host_gateway_runtime_contract_entry_surface_label_invalid")
-                    if runtime_entry_wrapper_surface_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS:
+                    if runtime_entry_surface != receipt_required_surface_label:
+                        host_gateway_issues.append("host_gateway_runtime_contract_entry_surface_label_mismatch")
+                    if runtime_entry_wrapper_surface_status != receipt_required_wrapper_surface_status:
                         host_gateway_issues.append(
-                            "host_gateway_runtime_contract_entry_wrapper_surface_status_invalid"
+                            "host_gateway_runtime_contract_entry_wrapper_surface_status_mismatch"
                         )
-                    if runtime_entry_wrapper_dispatch_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS:
+                    if runtime_entry_wrapper_dispatch_status != receipt_required_wrapper_dispatch_status:
                         host_gateway_issues.append(
-                            "host_gateway_runtime_contract_entry_wrapper_dispatch_status_invalid"
+                            "host_gateway_runtime_contract_entry_wrapper_dispatch_status_mismatch"
                         )
                 if not missing_runtime_fields and not host_gateway_issues:
                     payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
