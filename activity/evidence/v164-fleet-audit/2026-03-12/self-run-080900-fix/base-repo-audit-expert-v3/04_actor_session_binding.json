@@ -1,0 +1,21 @@
+{
+  "command": [
+    "python3",
+    "scripts/validate_actor_session_binding.py",
+    "--catalog",
+    "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+    "--identity-id",
+    "base-repo-audit-expert-v3",
+    "--actor-id",
+    "assistant:codex",
+    "--session-id",
+    "v164-fleet-fix-1-1773274140-session",
+    "--operation",
+    "validate",
+    "--json-only"
+  ],
+  "rc": 0,
+  "stdout": "{\"identity_id\": \"base-repo-audit-expert-v3\", \"catalog_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml\", \"actor_id\": \"assistant:codex\", \"operation\": \"validate\", \"actor_session_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json\", \"bound_identity_id\": \"base-repo-audit-expert-v3\", \"bound_session_id\": \"v164-fleet-fix-1-1773274140-session\", \"binding_key_mode\": \"actor_id+identity_id+session_id\", \"session_entry_count\": 56, \"catalog_identity_status\": \"active\", \"actor_binding_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"stale_reasons\": []}\n",
+  "stderr": "",
+  "finished_at_utc": "2026-03-12T00:09:02Z"
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "python3",
+    "scripts/validate_actor_session_binding.py",
+    "--catalog",
+    "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+    "--identity-id",
+    "base-repo-architect",
+    "--actor-id",
+    "assistant:codex",
+    "--session-id",
+    "v164-fleet-fix-3-1773274150-session",
+    "--operation",
+    "validate",
+    "--json-only"
+  ],
+  "rc": 1,
+  "stdout": "{\"identity_id\": \"base-repo-architect\", \"catalog_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml\", \"actor_id\": \"assistant:codex\", \"operation\": \"validate\", \"actor_session_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/session/actors/assistant_codex.json\", \"bound_identity_id\": \"\", \"bound_session_id\": \"\", \"binding_key_mode\": \"actor_id+identity_id+session_id\", \"session_entry_count\": 57, \"catalog_identity_status\": \"active\", \"actor_binding_status\": \"FAIL_REQUIRED\", \"error_code\": \"IP-ASB-201\", \"stale_reasons\": [\"target_identity_binding_missing_for_actor\"]}\n",
+  "stderr": "",
+  "finished_at_utc": "2026-03-12T00:09:12Z"
+}

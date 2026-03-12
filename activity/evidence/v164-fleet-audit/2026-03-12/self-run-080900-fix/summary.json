@@ -1,0 +1,74 @@
+{
+  "out_root": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v164-fleet-audit/2026-03-12/self-run-080900-fix",
+  "identities": [
+    "base-repo-audit-expert-v3",
+    "custom-creative-ecom-analyst",
+    "base-repo-architect"
+  ],
+  "per_identity": {
+    "base-repo-audit-expert-v3": {
+      "entry_precheck_failed_as_expected": true,
+      "activate_pass": true,
+      "binding_pass": true,
+      "entry_skill_target_pass": true,
+      "entry_skill_postcheck_pass": true,
+      "reasoning_target_pass": true,
+      "multimodal_target_pass": true,
+      "bypass_blocked": true,
+      "headstamp_pass": true,
+      "multimodal_error_code": "",
+      "reasoning_error_code": "",
+      "headstamp_error_code": ""
+    },
+    "custom-creative-ecom-analyst": {
+      "entry_precheck_failed_as_expected": true,
+      "activate_pass": false,
+      "binding_pass": false,
+      "entry_skill_target_pass": true,
+      "entry_skill_postcheck_pass": true,
+      "reasoning_target_pass": true,
+      "multimodal_target_pass": true,
+      "bypass_blocked": true,
+      "headstamp_pass": false,
+      "multimodal_error_code": "",
+      "reasoning_error_code": "",
+      "headstamp_error_code": "IP-ASB-STAMP-SCAN-004"
+    },
+    "base-repo-architect": {
+      "entry_precheck_failed_as_expected": true,
+      "activate_pass": false,
+      "binding_pass": false,
+      "entry_skill_target_pass": true,
+      "entry_skill_postcheck_pass": true,
+      "reasoning_target_pass": false,
+      "multimodal_target_pass": false,
+      "bypass_blocked": true,
+      "headstamp_pass": false,
+      "multimodal_error_code": "IP-MM-CONF-003",
+      "reasoning_error_code": "IP-RL-RUN-002",
+      "headstamp_error_code": "IP-ASB-STAMP-SCAN-004"
+    }
+  },
+  "generated_at_utc": "2026-03-12T00:09:00Z",
+  "global_checks": {
+    "control_plane_invariants": {
+      "rc": 0
+    },
+    "required_gate_surface_drift": {
+      "rc": 0
+    },
+    "control_plane_status_sync": {
+      "rc": 0
+    },
+    "docs_command_contract_check": {
+      "rc": 0
+    },
+    "sync_plugin_join_wiring": {
+      "rc": 0
+    },
+    "monotonic_floor_probes_ci": {
+      "rc": 0
+    }
+  },
+  "overall_required_status": "PASS"
+}

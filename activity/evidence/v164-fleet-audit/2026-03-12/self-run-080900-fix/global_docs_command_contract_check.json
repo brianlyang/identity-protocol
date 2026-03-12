@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python3",
+    "scripts/docs_command_contract_check.py"
+  ],
+  "rc": 0,
+  "stdout": "[INFO] docs checked: 50\n[INFO] command snippets checked: 1333\n[PASS] docs command contract check passed.\n",
+  "stderr": "",
+  "finished_at_utc": "2026-03-12T00:11:28Z"
+}
