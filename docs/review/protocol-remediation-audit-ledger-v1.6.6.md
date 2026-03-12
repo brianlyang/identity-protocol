@@ -358,6 +358,50 @@ Persistent runtime scoreboard:
 
 1. `.identity/base-repo-architect/runtime/reports/v166-wrapper-multidim-serial5/scoreboard-hardening-rerun-*.json`
 
+### 7.7 No-hardcode closure + strict provenance anti-bypass (2026-03-12, continuation)
+
+This round closes the remaining “hardcoded policy constant” risk by converting strict wrapper checks to contract-derived policy.
+
+Code hardening landed (same v1.6.6 stream, incremental commits):
+
+1. `scripts/required_gate_bundle_runner.py`
+   - strict wrapper surface/token expectations now resolve from instance contract (`protocol_host_unique_channel_contract_v1`) instead of fixed constants.
+   - strict operations now mark non-wrapper surface as contract violation and fail-close.
+   - unique-entry receipt persists wrapper provenance fields:
+     - `surface_label`
+     - `wrapper_dispatch_required`
+     - `wrapper_surface_status`
+     - `wrapper_dispatch_token_status`
+2. `scripts/create_identity_pack.py`
+   - `protocol_unique_entry_gate_contract_v1.entry_receipt_required_fields` adds wrapper provenance fields.
+   - `protocol_host_unique_channel_contract_v1.entry_receipt_policy` now carries required provenance constraints:
+     - `required_surface_label`
+     - `required_wrapper_surface_status`
+     - `required_wrapper_dispatch_token_status`
+   - generated runtime gateway contract writes the same policy fields.
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - strict receipt validation now enforces provenance from contract policy (not hardcoded constants).
+   - receipt without wrapper provenance parity is `FAIL_REQUIRED`.
+4. `scripts/repair_contract_backfill.py`
+   - backfill normalizes existing instance contracts to include the new entry receipt provenance policy fields.
+
+Serial verification outcome (base-repo-architect identity):
+
+1. 5 rounds, strictly serial, each round includes:
+   - precheck without same-run receipt -> blocked
+   - ingress wrapper positive path -> pass + receipt emitted
+   - postcheck tuple parity (`run_id/actor_id/session_id`) -> pass
+   - actor mismatch negative probe -> blocked
+   - direct runner bypass (`surface_label=bypass_probe`) -> blocked with entry-family fail-close
+   - bypass receipt re-validation -> blocked
+2. overall serial focused scoreboard: all rounds passed.
+
+Interpretation:
+
+1. v1.6.6 now enforces wrapper provenance as a contract policy, not script hardcode.
+2. direct strict script invocation no longer masquerades as wrapper flow in receipt validation.
+3. “配置即规则、执行即校验、绕行即失败” is now machine-closed for the unique-entry chain.
+
 ## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
