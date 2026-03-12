@@ -785,3 +785,70 @@ This checkpoint upgrades the signer source from static dispatch token to runtime
 1. Static dispatch token no longer serves as signer secret.
 2. Signer now binds to runtime key-file policy path and replay protections remain active.
 3. Stream remains `CONDITIONAL_GO` pending project dispatcher physical wrapper-only exposure proof across runtime entrypoints.
+
+## 15) Six-item audit closure mapping (2026-03-12, serial hardening)
+
+This section maps one-to-one against the six missing items raised in the latest audit.
+
+### 15.1 Item-by-item mapping
+
+1. **P0 signer trust boundary not truly lifted (same-domain key-file forge)**  
+   - status: **PARTIAL_CLOSED** (code hardening done, physical boundary still conditional).  
+   - implemented in:
+     - `scripts/create_identity_pack.py` (host gateway policy defaults now support signer mode/env)
+     - `scripts/repair_contract_backfill.py` (backfill upgrades legacy instances to env signer mode)
+     - `scripts/required_gate_bundle_runner.py` (ingress verifier supports `runtime_env_secret`)
+     - `scripts/final_emit_governed.py` (egress verifier supports `runtime_env_secret`)
+     - `scripts/validate_protocol_unique_entry_gate.py` (policy/runtime parity validates signer mode/env)
+   - result:
+     - direct local-key forge probes are blocked in CI probe suite.
+   - caveat:
+     - if same trust domain can read signer env directly, full “physical不可伪造” still needs external signer boundary.
+
+2. **P0 host runtime per-turn wrapper-only physical enforcement missing**  
+   - status: **OPEN_CONDITIONAL** (not closed inside protocol base repo only).  
+   - rationale:
+     - protocol side now enforces stronger provenance contracts, but project runtime dispatcher must still expose wrapper-only entrypoints physically.
+   - no overclaim:
+     - this item remains blocker for `Implementation PASS`.
+
+3. **P1 egress positive path not stably reproducible**  
+   - status: **CLOSED_FOR_REPLAY_BASELINE** (serial replay stabilized with explicit actor/session binding + wrapper chain).  
+   - replay baseline:
+     - activate same actor+session
+     - ingress wrapper pass
+     - egress wrapper pass
+     - repeated serially (5 rounds) with consistent pass.
+
+4. **P1 reverse probes not in required CI**  
+   - status: **CLOSED**.  
+   - implemented in:
+     - new script `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+     - workflow required lane `.github/workflows/_identity-required-gates.yml`
+     - drift contract check `scripts/validate_required_gate_surface_drift.py`
+   - required probes:
+     - forged local-key ingress proof direct runner -> blocked
+     - forged local-key egress grant direct final emit -> blocked
+
+5. **P1 identity context source-layer drift (`unknown` intermittency)**  
+   - status: **CLOSED_FOR_CURRENT_BASELINE**.  
+   - implemented in:
+     - `scripts/resolve_identity_context.py` fallback classification for repo-adjacent project local catalog.  
+   - replay result:
+     - local catalog resolve now consistently returns project source-layer under canonical project runtime layout.
+
+6. **P2 doc/commit trace inconsistency noise**  
+   - status: **CLOSED_FOR_THIS_STREAM**.  
+   - action:
+     - this section records only existing commits in this closure phase:
+       - `14d118b` (signer mode/env + parity hardening)
+       - `9fd3533` (required CI trust-boundary probes + workflow/drift wiring)
+   - rule:
+     - no non-existent commit ids are used in v1.6.6 ledger closure notes.
+
+### 15.2 Stream posture after six-item mapping
+
+1. policy posture: `PASS_REQUIRED`
+2. implementation posture: `CONDITIONAL_PASS`
+3. remaining hard blocker:
+   - project runtime dispatcher physical wrapper-only exposure proof (item 2).

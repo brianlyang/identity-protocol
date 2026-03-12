@@ -438,6 +438,29 @@ Interpretation:
 2. Init/update paths now emit and validate wrapper contracts as executable artifacts.
 3. Closure posture remains implementation-progressive until project-side runtime dispatch/release entrypoints are fully wrapper-only.
 
+### 5.2 Audit-delta hardening addendum (2026-03-12)
+
+To close the latest audit deltas, this stream adds:
+
+1. **Signer policy uplift (file-secret -> env-secret capable policy)**
+   - `ingress_proof_policy` / `egress_grant_policy` now support:
+     - `signer_mode`
+     - `signer_secret_env`
+   - `runtime_env_secret` mode is accepted by ingress/egress verifiers and parity validators.
+2. **Required CI reverse probes**
+   - new required CI delegate: `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - validates both fail-close cases:
+     - forged local-key ingress proof direct runner
+     - forged local-key egress grant direct final emit
+3. **Source-layer resolve fallback hardening**
+   - `resolve_identity_context` adds repo-adjacent `.identity/catalog.local.yaml` fallback classification to avoid intermittent `source_layer=unknown` under project runtime layout.
+
+Posture remains:
+
+1. policy: `PASS_REQUIRED`
+2. implementation: `CONDITIONAL_PASS`
+3. remaining blocker: project runtime dispatcher physical wrapper-only exposure proof.
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:
