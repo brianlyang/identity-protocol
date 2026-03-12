@@ -289,6 +289,42 @@ Interpretation:
 2. Wrapper artifacts are instance-local, and contract pointers remain protocol-canonical.
 3. This closes the previous “declared but not materialized” gap for v1.6.6 host unique channel baseline.
 
+### 7.5 Receipt tuple hardening + base-repo-architect serial chain proof (2026-03-12)
+
+This round closes the remaining weak edge where entry receipts lacked full actor/session tuple data.
+
+Code hardening landed:
+
+1. `scripts/required_gate_bundle_runner.py`
+   - unique-entry receipt now persists `actor_id` and `session_id` with `run_id_binding`.
+2. `scripts/create_identity_pack.py`
+   - `protocol_unique_entry_gate_contract_v1.entry_receipt_required_fields` now includes `actor_id` and `session_id`.
+   - generated egress wrapper now fail-closes when ingress receipt tuple is incomplete.
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - adds optional `--actor-id/--session-id` checks.
+   - validator now enforces receipt actor/session parity when those tuple fields are provided.
+
+Real serial proof (base-repo-architect identity):
+
+1. Contract backfill apply updated instance runtime contract and wrappers in-place.
+2. Serial rounds executed: 5 (no parallel substitution).
+3. Each round covered:
+   - precheck without same-run receipt -> expected `FAIL_REQUIRED`
+   - ingress wrapper -> `PASS_REQUIRED` receipt emission
+   - postcheck same run/actor/session -> `PASS_REQUIRED`
+   - egress wrapper same run/actor/session -> `PASS_REQUIRED`
+   - negative probe (egress run_id mismatch) -> fail-close
+4. Deep checks after rounds remained green:
+   - `validate_control_plane_invariants.py --json-only`
+   - `validate_required_gate_surface_drift.py --json-only`
+   - `validate_control_plane_status_sync.py --json-only`
+   - `docs_command_contract_check.py`
+   - `validate_doc_evidence_persistence.py --json-only`
+
+Persistent runtime scoreboard:
+
+1. `.identity/base-repo-architect/runtime/reports/v166-wrapper-chain-selftest/scoreboard-*.json`
+
 ## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
