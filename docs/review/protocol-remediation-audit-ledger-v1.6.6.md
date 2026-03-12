@@ -747,3 +747,41 @@ This checkpoint further tightens the proof chain by removing direct dependence o
 
 1. Static token knowledge alone no longer forges ingress/egress proof signatures.
 2. Stream remains `Policy PASS / Implementation CONDITIONAL PASS` until project runtime dispatcher-only exposure and higher-trust signer-boundary proof are closed end-to-end.
+
+## 14) Runtime key-file signer boundary increment (2026-03-12, continuation-2)
+
+This checkpoint upgrades the signer source from static dispatch token to runtime key-file policy binding.
+
+### 14.1 Code hardening landed
+
+1. `scripts/create_identity_pack.py`
+   - introduces canonical runtime signer path:
+     - `identity/runtime/state/protocol_gateway_signing_key.txt`
+   - materialization ensures key file exists (generated if absent, preserved if present).
+   - `ingress_proof_policy` and `egress_grant_policy` now both carry:
+     - `signing_key_path`
+   - wrapper templates resolve signer from policy key path.
+2. `scripts/required_gate_bundle_runner.py`
+   - ingress proof verifier now resolves signing secret from `ingress_proof_policy.signing_key_path`.
+   - static dispatch token is no longer accepted as proof-signing secret.
+3. `scripts/final_emit_governed.py`
+   - egress grant verifier now resolves signing secret from `egress_grant_policy.signing_key_path`.
+4. `scripts/repair_contract_backfill.py`
+   - backfills signing-key-path fields into existing host gateway policies.
+5. `scripts/validate_protocol_unique_entry_gate.py`
+   - policy and runtime parity checks now require non-empty `signing_key_path` for both proof and grant policies.
+
+### 14.2 Serial replay outcomes
+
+1. Forged ingress proof using static token secret -> blocked (`FAIL_REQUIRED`).
+2. Forged egress grant using static token secret -> blocked (`egress_grant_signature_invalid`).
+3. Wrapper positive flow with runtime key-file signer:
+   - ingress wrapper pass
+   - egress wrapper pass
+4. Direct canonical egress without grant remains blocked (`egress_grant_missing`).
+
+### 14.3 Posture
+
+1. Static dispatch token no longer serves as signer secret.
+2. Signer now binds to runtime key-file policy path and replay protections remain active.
+3. Stream remains `CONDITIONAL_GO` pending project dispatcher physical wrapper-only exposure proof across runtime entrypoints.
