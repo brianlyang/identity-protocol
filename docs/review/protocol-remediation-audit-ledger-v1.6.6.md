@@ -24,8 +24,15 @@ Companion governance SSOT:
 ## State boundary lock (anti-misread)
 
 1. `host-channel` in v1.6.6 is a stream label, not a requirement to modify unrelated external repositories.
-2. This stream validates **project-side runtime adapter + instance pack wrapper** closure.
-3. Wrapper materialization scope is `.identity/{identity_id}/runtime/gate/*` with declaration in `CURRENT_TASK.json`.
+2. Canonical layer naming for this stream is fixed:
+   - protocol base repository: `identity-protocol-local`
+   - business project repository: `<project>` (for example `weixinstore`)
+   - identity instance pack: `<project>/.identity/<identity_id>/`
+3. Instance source layers include both project and global roots, and review must accept both:
+   - project-layer pack under `<project>/.identity/<identity_id>/...`
+   - global-layer pack under `${CODEX_HOME}/identity/<identity_id>/...`
+4. This stream validates **project-side runtime adapter + instance pack wrapper** closure.
+5. Wrapper materialization scope is `.identity/{identity_id}/runtime/gate/*` with declaration in `CURRENT_TASK.json`.
 
 ## 0) Baseline posture at stream opening (2026-03-12)
 
