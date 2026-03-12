@@ -81,6 +81,21 @@ DOMAIN_NEUTRALITY_BLOCKLIST = [
     "10000514174106",
 ]
 
+UNIQUE_INGRESS_SCRIPT = "scripts/required_gate_bundle_runner.py"
+UNIQUE_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
+HOST_GATEWAY_CONTRACT_KEY = "protocol_host_unique_channel_contract_v1"
+HOST_GATEWAY_CONTRACT_ID = "protocol_host_unique_channel_contract_v1"
+HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
+HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
+HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_egress_wrapper.py"
+HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = [
+    "actor_id",
+    "session_id",
+    "run_id",
+    "work_layer",
+    "source_layer",
+]
+
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -503,6 +518,31 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
         ],
         "onboarding_single_entry_command": "python3 scripts/identity_creator.py validate --catalog <catalog> --identity-id <identity> --actor-id <actor> --session-id <session>",
         "extension_attach_entrypoint": "identity/protocol/plugins/PLUGIN_JOIN_INTAKE.v1.6.4.yaml",
+    }
+
+
+def _protocol_host_unique_channel_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": HOST_GATEWAY_CONTRACT_ID,
+        "validator": "scripts/validate_protocol_unique_entry_gate.py",
+        "protocol_ingress_script": UNIQUE_INGRESS_SCRIPT,
+        "protocol_egress_script": UNIQUE_EGRESS_SCRIPT,
+        "ingress_wrapper_path": HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
+        "egress_wrapper_path": HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
+        "gateway_contract_path": HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
+        "entry_receipt_policy": {
+            "required": True,
+        },
+        "egress_receipt_policy": {
+            "required": True,
+        },
+        "headstamp_policy": {
+            "required": True,
+        },
+        "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
+        "host_dispatch_mode": "wrapper_only",
+        "host_release_mode": "wrapper_only",
     }
 
 
@@ -1186,6 +1226,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
         "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
+        HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton(),
         "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
         "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
     }
@@ -1302,6 +1343,555 @@ def _rewrite_runtime_root(value, runtime_root: Path):
     if isinstance(value, dict):
         return {k: _rewrite_runtime_root(v, runtime_root) for k, v in value.items()}
     return value
+
+
+def _resolve_pack_runtime_path(pack_dir: Path, raw_path: str, *, fallback: str) -> Path:
+    value = str(raw_path or "").strip() or str(fallback or "").strip()
+    if not value:
+        raise ValueError("runtime_path_missing")
+    candidate = Path(value).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    if value.startswith("identity/runtime/"):
+        tail = value[len("identity/runtime/") :]
+        return (pack_dir / "runtime" / tail).resolve()
+    if value.startswith("runtime/"):
+        return (pack_dir / value).resolve()
+    return (pack_dir / value).resolve()
+
+
+def _protocol_ingress_wrapper_template() -> str:
+    return """#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+CANONICAL_INGRESS_SCRIPT = "scripts/required_gate_bundle_runner.py"
+REQUIRED_FIELDS = (
+    "actor_id",
+    "session_id",
+    "run_id",
+    "identity_id",
+    "work_layer",
+    "source_layer",
+    "operation",
+    "payload",
+)
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _load_json(raw: str) -> dict[str, Any]:
+    data = json.loads(str(raw or "").strip())
+    if not isinstance(data, dict):
+        raise ValueError("json_payload_not_object")
+    return data
+
+
+def _parse_envelope(args: argparse.Namespace) -> dict[str, Any]:
+    if str(args.envelope_json or "").strip():
+        return _load_json(args.envelope_json)
+    if args.stdin_json:
+        return _load_json(sys.stdin.read())
+    return {}
+
+
+def _to_bool_text(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    token = str(value or "").strip().lower()
+    return "true" if token in {"1", "true", "yes", "y", "on"} else "false"
+
+
+def _fail(*, error_code: str, stale_reason: str, json_only: bool) -> int:
+    _emit(
+        {
+            "protocol_ingress_wrapper_status": STATUS_FAIL_REQUIRED,
+            "error_code": error_code,
+            "stale_reasons": [stale_reason],
+        },
+        json_only=json_only,
+    )
+    return 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Per-instance ingress wrapper for protocol unique entry.")
+    ap.add_argument("--envelope-json", default="")
+    ap.add_argument("--stdin-json", action="store_true")
+    ap.add_argument("--catalog", default="")
+    ap.add_argument("--repo-catalog", default="")
+    ap.add_argument("--identity-id", default="")
+    ap.add_argument("--operation", default="")
+    ap.add_argument("--run-id", default="")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
+    ap.add_argument("--work-layer", default="")
+    ap.add_argument("--source-layer", default="")
+    ap.add_argument("--surface-label", default="host_ingress_wrapper")
+    ap.add_argument("--target-name", default="")
+    ap.add_argument("--out", default="")
+    ap.add_argument("--contract-path", default="")
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    envelope = _parse_envelope(args)
+    contract_path = (
+        Path(args.contract_path).expanduser().resolve()
+        if str(args.contract_path or "").strip()
+        else Path(__file__).resolve().with_name("protocol_gateway_contract.json")
+    )
+    if not contract_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-001",
+            stale_reason="gateway_contract_file_missing",
+            json_only=args.json_only,
+        )
+    try:
+        contract = _load_json(contract_path.read_text(encoding="utf-8"))
+    except Exception:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="gateway_contract_file_invalid",
+            json_only=args.json_only,
+        )
+
+    merged: dict[str, Any] = dict(envelope)
+    for key in ("catalog", "repo_catalog", "identity_id", "operation", "run_id", "actor_id", "session_id"):
+        value = getattr(args, key, "")
+        if str(value or "").strip():
+            merged[key] = value
+    if str(args.work_layer or "").strip():
+        merged["work_layer"] = args.work_layer
+    if str(args.source_layer or "").strip():
+        merged["source_layer"] = args.source_layer
+    if "payload" not in merged:
+        merged["payload"] = {}
+
+    missing = [key for key in REQUIRED_FIELDS if not str(merged.get(key, "")).strip()]
+    if missing:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_envelope_fields_missing:" + ",".join(sorted(missing)),
+            json_only=args.json_only,
+        )
+
+    catalog_path = str(merged.get("catalog_path") or merged.get("catalog") or contract.get("catalog_path", "")).strip()
+    if not catalog_path:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="catalog_path_missing",
+            json_only=args.json_only,
+        )
+
+    repo_root = Path(str(contract.get("protocol_repo_root", "")).strip()).expanduser()
+    script_rel = str(contract.get("protocol_ingress_script", "")).strip() or CANONICAL_INGRESS_SCRIPT
+    script_path = (repo_root / script_rel).resolve() if script_rel else Path("")
+    if not script_rel or not script_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_canonical_script_unavailable",
+            json_only=args.json_only,
+        )
+
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--catalog",
+        catalog_path,
+        "--identity-id",
+        str(merged.get("identity_id", "")).strip(),
+        "--operation",
+        str(merged.get("operation", "")).strip(),
+        "--run-id",
+        str(merged.get("run_id", "")).strip(),
+        "--actor-id",
+        str(merged.get("actor_id", "")).strip(),
+        "--session-id",
+        str(merged.get("session_id", "")).strip(),
+        "--resolved-work-layer",
+        str(merged.get("work_layer", "")).strip(),
+        "--resolved-source-layer",
+        str(merged.get("source_layer", "")).strip(),
+        "--lock-state",
+        str(merged.get("lock_state", "LOCK_MATCH")).strip() or "LOCK_MATCH",
+        "--send-time-gate-status",
+        str(merged.get("send_time_gate_status", "NOT_APPLICABLE")).strip() or "NOT_APPLICABLE",
+        "--outlet-bypass-detected",
+        _to_bool_text(merged.get("outlet_bypass_detected", False)),
+        "--final-emit-contract-status",
+        str(merged.get("final_emit_contract_status", "NOT_APPLICABLE")).strip() or "NOT_APPLICABLE",
+        "--final-emit-policy-mode",
+        str(merged.get("final_emit_policy_mode", "tool_choice_required")).strip() or "tool_choice_required",
+        "--final-emit-schema-status",
+        str(merged.get("final_emit_schema_status", "NOT_APPLICABLE")).strip() or "NOT_APPLICABLE",
+        "--surface-label",
+        str(merged.get("surface_label", args.surface_label)).strip() or "host_ingress_wrapper",
+        "--json-only",
+    ]
+    report_selected_path = str(merged.get("report_selected_path", "")).strip()
+    if report_selected_path:
+        cmd.extend(["--report-selected-path", report_selected_path])
+    target_name = str(merged.get("target_name", "")).strip() or str(args.target_name or "").strip()
+    if target_name:
+        cmd.extend(["--target-name", target_name])
+    repo_catalog = str(merged.get("repo_catalog") or args.repo_catalog or "").strip()
+    if repo_catalog:
+        cmd.extend(["--repo-catalog", repo_catalog])
+    if str(args.out or "").strip():
+        cmd.extend(["--out", str(args.out).strip()])
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.stdout.strip():
+        print(proc.stdout.strip())
+    if proc.stderr.strip():
+        print(proc.stderr.strip(), file=sys.stderr)
+    return proc.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+
+
+def _protocol_egress_wrapper_template() -> str:
+    return """#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+CANONICAL_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
+REQUIRED_FIELDS = (
+    "actor_id",
+    "session_id",
+    "run_id",
+    "identity_id",
+    "work_layer",
+    "source_layer",
+    "candidate_output",
+    "ingress_receipt",
+)
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _load_json(raw: str) -> dict[str, Any]:
+    data = json.loads(str(raw or "").strip())
+    if not isinstance(data, dict):
+        raise ValueError("json_payload_not_object")
+    return data
+
+
+def _parse_envelope(args: argparse.Namespace) -> dict[str, Any]:
+    if str(args.envelope_json or "").strip():
+        return _load_json(args.envelope_json)
+    if args.stdin_json:
+        return _load_json(sys.stdin.read())
+    return {}
+
+
+def _parse_stdout_json(text: str) -> dict[str, Any]:
+    body = str(text or "").strip()
+    if not body:
+        return {}
+    try:
+        data = json.loads(body)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        pass
+    start = body.find("{")
+    end = body.rfind("}")
+    if start < 0 or end <= start:
+        return {}
+    try:
+        data = json.loads(body[start : end + 1])
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _fail(*, error_code: str, stale_reason: str, json_only: bool) -> int:
+    _emit(
+        {
+            "protocol_egress_wrapper_status": STATUS_FAIL_REQUIRED,
+            "error_code": error_code,
+            "stale_reasons": [stale_reason],
+        },
+        json_only=json_only,
+    )
+    return 1
+
+
+def _load_ingress_receipt(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return raw
+    token = str(raw or "").strip()
+    if not token:
+        raise ValueError("ingress_receipt_missing")
+    p = Path(token).expanduser().resolve()
+    if not p.exists():
+        raise ValueError("ingress_receipt_file_missing")
+    return _load_json(p.read_text(encoding="utf-8"))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Per-instance egress wrapper for governed final emit.")
+    ap.add_argument("--envelope-json", default="")
+    ap.add_argument("--stdin-json", action="store_true")
+    ap.add_argument("--catalog", default="")
+    ap.add_argument("--repo-catalog", default="")
+    ap.add_argument("--identity-id", default="")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
+    ap.add_argument("--run-id", default="")
+    ap.add_argument("--work-layer", default="")
+    ap.add_argument("--source-layer", default="")
+    ap.add_argument("--candidate-output", default="")
+    ap.add_argument("--ingress-receipt", default="")
+    ap.add_argument("--out-reply-file", default="")
+    ap.add_argument("--out-json", default="")
+    ap.add_argument("--contract-path", default="")
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    envelope = _parse_envelope(args)
+    contract_path = (
+        Path(args.contract_path).expanduser().resolve()
+        if str(args.contract_path or "").strip()
+        else Path(__file__).resolve().with_name("protocol_gateway_contract.json")
+    )
+    if not contract_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-001",
+            stale_reason="gateway_contract_file_missing",
+            json_only=args.json_only,
+        )
+    try:
+        contract = _load_json(contract_path.read_text(encoding="utf-8"))
+    except Exception:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="gateway_contract_file_invalid",
+            json_only=args.json_only,
+        )
+
+    merged: dict[str, Any] = dict(envelope)
+    for key in ("catalog", "repo_catalog", "identity_id", "actor_id", "session_id", "run_id"):
+        value = getattr(args, key, "")
+        if str(value or "").strip():
+            merged[key] = value
+    if str(args.work_layer or "").strip():
+        merged["work_layer"] = args.work_layer
+    if str(args.source_layer or "").strip():
+        merged["source_layer"] = args.source_layer
+    if str(args.candidate_output or "").strip():
+        merged["candidate_output"] = args.candidate_output
+    if str(args.ingress_receipt or "").strip():
+        merged["ingress_receipt"] = args.ingress_receipt
+
+    missing = [key for key in REQUIRED_FIELDS if not str(merged.get(key, "")).strip()]
+    if missing:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="egress_envelope_fields_missing:" + ",".join(sorted(missing)),
+            json_only=args.json_only,
+        )
+
+    try:
+        ingress_receipt = _load_ingress_receipt(merged.get("ingress_receipt"))
+    except Exception as exc:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason=f"ingress_receipt_invalid:{exc}",
+            json_only=args.json_only,
+        )
+
+    receipt_run_id = str(ingress_receipt.get("run_id_binding", "")).strip()
+    receipt_session_id = str(ingress_receipt.get("session_id", "")).strip()
+    receipt_actor_id = str(ingress_receipt.get("actor_id", "")).strip()
+    if receipt_run_id and receipt_run_id != str(merged.get("run_id", "")).strip():
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_receipt_run_id_mismatch",
+            json_only=args.json_only,
+        )
+    if receipt_session_id and receipt_session_id != str(merged.get("session_id", "")).strip():
+        return _fail(
+            error_code="IP-ASB-201",
+            stale_reason="ingress_receipt_session_id_mismatch",
+            json_only=args.json_only,
+        )
+    if receipt_actor_id and receipt_actor_id != str(merged.get("actor_id", "")).strip():
+        return _fail(
+            error_code="IP-ASB-201",
+            stale_reason="ingress_receipt_actor_id_mismatch",
+            json_only=args.json_only,
+        )
+
+    catalog_path = str(merged.get("catalog_path") or merged.get("catalog") or contract.get("catalog_path", "")).strip()
+    if not catalog_path:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="catalog_path_missing",
+            json_only=args.json_only,
+        )
+
+    repo_root = Path(str(contract.get("protocol_repo_root", "")).strip()).expanduser()
+    script_rel = str(contract.get("protocol_egress_script", "")).strip() or CANONICAL_EGRESS_SCRIPT
+    script_path = (repo_root / script_rel).resolve() if script_rel else Path("")
+    if not script_rel or not script_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="egress_canonical_script_unavailable",
+            json_only=args.json_only,
+        )
+
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--catalog",
+        catalog_path,
+        "--identity-id",
+        str(merged.get("identity_id", "")).strip(),
+        "--actor-id",
+        str(merged.get("actor_id", "")).strip(),
+        "--session-id",
+        str(merged.get("session_id", "")).strip(),
+        "--body-text",
+        str(merged.get("candidate_output", "")).strip(),
+        "--work-layer",
+        str(merged.get("work_layer", "")).strip(),
+        "--source-layer",
+        str(merged.get("source_layer", "")).strip(),
+        "--outlet-channel-id",
+        "protocol_egress_wrapper",
+        "--json-only",
+    ]
+    repo_catalog = str(merged.get("repo_catalog") or args.repo_catalog or "").strip()
+    if repo_catalog:
+        cmd.extend(["--repo-catalog", repo_catalog])
+    if str(args.out_reply_file or "").strip():
+        cmd.extend(["--out-reply-file", str(args.out_reply_file).strip()])
+    if str(args.out_json or "").strip():
+        cmd.extend(["--out-json", str(args.out_json).strip()])
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.stdout.strip():
+        print(proc.stdout.strip())
+    if proc.stderr.strip():
+        print(proc.stderr.strip(), file=sys.stderr)
+    if proc.returncode != 0:
+        return proc.returncode
+
+    payload = _parse_stdout_json(proc.stdout)
+    send_time_status = str(payload.get("send_time_gate_status", "")).strip().upper()
+    if send_time_status and send_time_status != STATUS_PASS_REQUIRED:
+        return _fail(
+            error_code="IP-HDSTAMP-002",
+            stale_reason="send_time_gate_not_pass_required",
+            json_only=args.json_only,
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+
+
+def materialize_protocol_host_gateway_artifacts(
+    *,
+    task: dict,
+    identity_id: str,
+    pack_dir: Path,
+    catalog_path: Path,
+    protocol_root: Path,
+) -> dict:
+    contract = task.get(HOST_GATEWAY_CONTRACT_KEY)
+    if not isinstance(contract, dict):
+        contract = _protocol_host_unique_channel_contract_skeleton()
+        task[HOST_GATEWAY_CONTRACT_KEY] = contract
+
+    ingress_wrapper_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(contract.get("ingress_wrapper_path", "")),
+        fallback=HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
+    )
+    egress_wrapper_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(contract.get("egress_wrapper_path", "")),
+        fallback=HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
+    )
+    gateway_contract_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(contract.get("gateway_contract_path", "")),
+        fallback=HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
+    )
+
+    contract["required"] = True
+    contract["contract_id"] = HOST_GATEWAY_CONTRACT_ID
+    contract["validator"] = "scripts/validate_protocol_unique_entry_gate.py"
+    contract["protocol_ingress_script"] = UNIQUE_INGRESS_SCRIPT
+    contract["protocol_egress_script"] = UNIQUE_EGRESS_SCRIPT
+    contract["ingress_wrapper_path"] = ingress_wrapper_path.as_posix()
+    contract["egress_wrapper_path"] = egress_wrapper_path.as_posix()
+    contract["gateway_contract_path"] = gateway_contract_path.as_posix()
+    contract["entry_receipt_policy"] = {"required": True}
+    contract["egress_receipt_policy"] = {"required": True}
+    contract["headstamp_policy"] = {"required": True}
+    contract["identity_tuple_fields"] = list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
+    contract["host_dispatch_mode"] = "wrapper_only"
+    contract["host_release_mode"] = "wrapper_only"
+
+    gateway_contract_payload = {
+        "schema_version": "v1",
+        "identity_id": identity_id,
+        "protocol_repo_root": str(protocol_root.expanduser().resolve()),
+        "protocol_ingress_script": UNIQUE_INGRESS_SCRIPT,
+        "protocol_egress_script": UNIQUE_EGRESS_SCRIPT,
+        "ingress_wrapper_path": ingress_wrapper_path.as_posix(),
+        "egress_wrapper_path": egress_wrapper_path.as_posix(),
+        "catalog_path": str(catalog_path.expanduser().resolve()),
+        "entry_receipt_policy": {"required": True},
+        "egress_receipt_policy": {"required": True},
+        "headstamp_policy": {"required": True},
+        "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
+    }
+
+    write_json(gateway_contract_path, gateway_contract_payload)
+    write(ingress_wrapper_path, _protocol_ingress_wrapper_template())
+    write(egress_wrapper_path, _protocol_egress_wrapper_template())
+
+    return {
+        "gateway_contract_path": gateway_contract_path.as_posix(),
+        "ingress_wrapper_path": ingress_wrapper_path.as_posix(),
+        "egress_wrapper_path": egress_wrapper_path.as_posix(),
+    }
 
 
 def _normalize_bootstrap_task_ids(value, identity_id: str):
@@ -2722,6 +3312,13 @@ def main() -> int:
     current_task = _inject_scaffold_metadata(current_task, args.profile)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
+    gateway_artifacts = materialize_protocol_host_gateway_artifacts(
+        task=current_task,
+        identity_id=identity_id,
+        pack_dir=pack_dir,
+        catalog_path=catalog_path,
+        protocol_root=repo_root,
+    )
     write_json(pack_dir / "CURRENT_TASK.json", current_task)
 
     write(pack_dir / "TASK_HISTORY.md", "# Task History\n\n## Entries\n")
@@ -2806,6 +3403,12 @@ def main() -> int:
     print(f"[OK] created protocol review sample: {protocol_review_sample_path}")
     print(f"[OK] created role-binding samples: {role_binding_sample_path}, {negative_role_binding_sample_path}")
     print(f"[OK] created replay sample: {replay_sample_path}")
+    print(
+        "[OK] created host unique-channel gateway artifacts: "
+        f"{gateway_artifacts.get('gateway_contract_path')}, "
+        f"{gateway_artifacts.get('ingress_wrapper_path')}, "
+        f"{gateway_artifacts.get('egress_wrapper_path')}"
+    )
 
     catalog_original_text: str | None = None
     catalog_path.parent.mkdir(parents=True, exist_ok=True)

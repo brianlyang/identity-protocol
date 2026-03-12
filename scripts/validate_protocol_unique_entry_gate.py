@@ -27,16 +27,27 @@ STRICT_OPERATIONS = {
 }
 
 EXPECTED_ENTRY_SCRIPT = "scripts/required_gate_bundle_runner.py"
+EXPECTED_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
 EXPECTED_BUNDLE_KEY = "required_gate_bundle_runner"
 EXPECTED_SCOPE = "all_identity_instance_actions"
 EXPECTED_ENTRY_ERROR_FAMILY = {"IP-GATE-ENTRY-001", "IP-GATE-ENTRY-002"}
 ENTRY_RECEIPT_STATE_FILE = "required_gate_bundle_entry.latest.json"
 ENTRY_RECEIPT_HISTORY_GLOB = "required-gate-bundle-entry-*.json"
+HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = {"actor_id", "session_id", "run_id", "work_layer", "source_layer"}
+HOST_GATEWAY_EXPECTED_INGRESS_REL = "runtime/gate/protocol_ingress_wrapper.py"
+HOST_GATEWAY_EXPECTED_EGRESS_REL = "runtime/gate/protocol_egress_wrapper.py"
+HOST_GATEWAY_EXPECTED_CONTRACT_REL = "runtime/gate/protocol_gateway_contract.json"
 
 CONTRACT_KEYS = (
     "protocol_unique_entry_gate_contract_v1",
     "protocol_unique_entry_gate_contract",
     "rq_036_protocol_unique_entry_gate_contract_v1",
+)
+
+HOST_GATEWAY_CONTRACT_KEYS = (
+    "protocol_host_unique_channel_contract_v1",
+    "protocol_gateway_wrapper_contract_v1",
+    "protocol_gateway_contract_v1",
 )
 
 
@@ -61,10 +72,38 @@ def _resolve_contract(task: dict[str, Any]) -> tuple[dict[str, Any], str]:
     return {}, CONTRACT_KEYS[0]
 
 
+def _resolve_host_gateway_contract(task: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    for key in HOST_GATEWAY_CONTRACT_KEYS:
+        raw = task.get(key)
+        if isinstance(raw, dict):
+            return raw, key
+    for key, raw in task.items():
+        if not isinstance(raw, dict):
+            continue
+        token = str(key or "").strip().lower()
+        if "gateway" in token and "contract" in token:
+            return raw, str(key)
+    return {}, HOST_GATEWAY_CONTRACT_KEYS[0]
+
+
 def _as_str_set(value: Any) -> set[str]:
     if not isinstance(value, list):
         return set()
     return {str(item).strip() for item in value if str(item).strip()}
+
+
+def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return (pack_path / fallback_rel).resolve()
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (pack_path / token).resolve()
+    return (pack_path / token).resolve()
 
 
 def _resolve_entry_receipt_path(*, pack_path: Path, explicit_path: str, operation: str) -> Path | None:
@@ -165,6 +204,16 @@ def main() -> int:
         "protocol_unique_entry_receipt_bundle_key": "",
         "protocol_unique_entry_receipt_run_id": "",
         "protocol_unique_entry_receipt_operation": "",
+        "protocol_host_gateway_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_contract_key": "",
+        "protocol_host_gateway_ingress_script": "",
+        "protocol_host_gateway_egress_script": "",
+        "protocol_host_gateway_ingress_wrapper_path": "",
+        "protocol_host_gateway_egress_wrapper_path": "",
+        "protocol_host_gateway_contract_path": "",
+        "protocol_host_gateway_runtime_files_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_runtime_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_identity_tuple_fields": [],
         "error_code": "",
         "stale_reasons": [],
     }
@@ -232,6 +281,133 @@ def main() -> int:
         payload["stale_reasons"] = issues
         _emit(payload, json_only=args.json_only)
         return 1
+
+    host_gateway_contract, host_gateway_contract_key = _resolve_host_gateway_contract(task)
+    payload["protocol_host_gateway_contract_key"] = host_gateway_contract_key
+    host_gateway_issues: list[str] = []
+    if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
+        host_gateway_issues.append("host_gateway_contract_missing")
+    else:
+        ingress_script = str(host_gateway_contract.get("protocol_ingress_script", "")).strip()
+        egress_script = str(host_gateway_contract.get("protocol_egress_script", "")).strip()
+        ingress_wrapper_raw = str(host_gateway_contract.get("ingress_wrapper_path", "")).strip()
+        egress_wrapper_raw = str(host_gateway_contract.get("egress_wrapper_path", "")).strip()
+        gateway_contract_raw = str(host_gateway_contract.get("gateway_contract_path", "")).strip()
+        tuple_fields = _as_str_set(host_gateway_contract.get("identity_tuple_fields"))
+        payload["protocol_host_gateway_ingress_script"] = ingress_script
+        payload["protocol_host_gateway_egress_script"] = egress_script
+        payload["protocol_host_gateway_identity_tuple_fields"] = sorted(tuple_fields)
+
+        ingress_wrapper_path = _resolve_pack_relative_path(
+            pack_path,
+            ingress_wrapper_raw,
+            HOST_GATEWAY_EXPECTED_INGRESS_REL,
+        )
+        egress_wrapper_path = _resolve_pack_relative_path(
+            pack_path,
+            egress_wrapper_raw,
+            HOST_GATEWAY_EXPECTED_EGRESS_REL,
+        )
+        gateway_contract_path = _resolve_pack_relative_path(
+            pack_path,
+            gateway_contract_raw,
+            HOST_GATEWAY_EXPECTED_CONTRACT_REL,
+        )
+        payload["protocol_host_gateway_ingress_wrapper_path"] = str(ingress_wrapper_path)
+        payload["protocol_host_gateway_egress_wrapper_path"] = str(egress_wrapper_path)
+        payload["protocol_host_gateway_contract_path"] = str(gateway_contract_path)
+
+        if host_gateway_contract.get("required") is not True:
+            host_gateway_issues.append("host_gateway_required_flag_not_true")
+        if str(host_gateway_contract.get("validator", "")).strip() != "scripts/validate_protocol_unique_entry_gate.py":
+            host_gateway_issues.append("host_gateway_validator_mismatch")
+        if ingress_script != EXPECTED_ENTRY_SCRIPT:
+            host_gateway_issues.append("host_gateway_ingress_script_mismatch")
+        if egress_script != EXPECTED_EGRESS_SCRIPT:
+            host_gateway_issues.append("host_gateway_egress_script_mismatch")
+        if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(tuple_fields):
+            host_gateway_issues.append("host_gateway_tuple_fields_missing")
+        entry_policy = host_gateway_contract.get("entry_receipt_policy")
+        if not isinstance(entry_policy, dict) or entry_policy.get("required") is not True:
+            host_gateway_issues.append("host_gateway_entry_receipt_policy_missing")
+        egress_policy = host_gateway_contract.get("egress_receipt_policy")
+        if not isinstance(egress_policy, dict) or egress_policy.get("required") is not True:
+            host_gateway_issues.append("host_gateway_egress_receipt_policy_missing")
+        headstamp_policy = host_gateway_contract.get("headstamp_policy")
+        if not isinstance(headstamp_policy, dict) or headstamp_policy.get("required") is not True:
+            host_gateway_issues.append("host_gateway_headstamp_policy_missing")
+
+        missing_runtime_files: list[str] = []
+        if not ingress_wrapper_path.exists():
+            missing_runtime_files.append("ingress_wrapper_missing")
+        if not egress_wrapper_path.exists():
+            missing_runtime_files.append("egress_wrapper_missing")
+        if not gateway_contract_path.exists():
+            missing_runtime_files.append("gateway_contract_missing")
+        if missing_runtime_files:
+            host_gateway_issues.extend([f"host_gateway_runtime:{item}" for item in missing_runtime_files])
+            payload["protocol_host_gateway_runtime_files_status"] = STATUS_FAIL_REQUIRED
+        else:
+            payload["protocol_host_gateway_runtime_files_status"] = STATUS_PASS_REQUIRED
+            ingress_text = ingress_wrapper_path.read_text(encoding="utf-8", errors="ignore")
+            egress_text = egress_wrapper_path.read_text(encoding="utf-8", errors="ignore")
+            if EXPECTED_ENTRY_SCRIPT not in ingress_text:
+                host_gateway_issues.append("host_gateway_ingress_wrapper_not_bound_to_canonical_script")
+            if EXPECTED_EGRESS_SCRIPT not in egress_text:
+                host_gateway_issues.append("host_gateway_egress_wrapper_not_bound_to_canonical_script")
+            try:
+                runtime_gateway_contract = _load_receipt(gateway_contract_path)
+            except Exception as exc:
+                host_gateway_issues.append(f"host_gateway_runtime_contract_invalid:{exc}")
+                payload["protocol_host_gateway_runtime_contract_status"] = STATUS_FAIL_REQUIRED
+            else:
+                required_runtime_fields = {
+                    "schema_version",
+                    "identity_id",
+                    "protocol_repo_root",
+                    "protocol_ingress_script",
+                    "protocol_egress_script",
+                    "ingress_wrapper_path",
+                    "egress_wrapper_path",
+                    "catalog_path",
+                    "entry_receipt_policy",
+                    "egress_receipt_policy",
+                    "headstamp_policy",
+                    "identity_tuple_fields",
+                }
+                missing_runtime_fields = sorted(
+                    field for field in required_runtime_fields if field not in runtime_gateway_contract
+                )
+                if missing_runtime_fields:
+                    host_gateway_issues.append(
+                        "host_gateway_runtime_contract_fields_missing:" + ",".join(missing_runtime_fields)
+                    )
+                if str(runtime_gateway_contract.get("identity_id", "")).strip() != str(args.identity_id).strip():
+                    host_gateway_issues.append("host_gateway_runtime_contract_identity_mismatch")
+                if str(runtime_gateway_contract.get("protocol_ingress_script", "")).strip() != EXPECTED_ENTRY_SCRIPT:
+                    host_gateway_issues.append("host_gateway_runtime_contract_ingress_script_mismatch")
+                if str(runtime_gateway_contract.get("protocol_egress_script", "")).strip() != EXPECTED_EGRESS_SCRIPT:
+                    host_gateway_issues.append("host_gateway_runtime_contract_egress_script_mismatch")
+                runtime_tuple_fields = _as_str_set(runtime_gateway_contract.get("identity_tuple_fields"))
+                if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(runtime_tuple_fields):
+                    host_gateway_issues.append("host_gateway_runtime_contract_tuple_fields_missing")
+                if not missing_runtime_fields and not host_gateway_issues:
+                    payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
+                elif payload["protocol_host_gateway_runtime_contract_status"] != STATUS_FAIL_REQUIRED:
+                    payload["protocol_host_gateway_runtime_contract_status"] = STATUS_FAIL_REQUIRED
+
+    if host_gateway_issues:
+        payload["protocol_host_gateway_contract_status"] = STATUS_FAIL_REQUIRED
+        payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONTRACT_INVALID
+        payload["stale_reasons"] = host_gateway_issues
+        _emit(payload, json_only=args.json_only)
+        return 1
+    payload["protocol_host_gateway_contract_status"] = STATUS_PASS_REQUIRED
+    if payload["protocol_host_gateway_runtime_files_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_gateway_runtime_files_status"] = STATUS_PASS_REQUIRED
+    if payload["protocol_host_gateway_runtime_contract_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
 
     receipt_required = bool(args.require_entry_receipt)
     if receipt_required:
