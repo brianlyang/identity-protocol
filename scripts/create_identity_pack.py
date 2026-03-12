@@ -88,6 +88,9 @@ HOST_GATEWAY_CONTRACT_ID = "protocol_host_unique_channel_contract_v1"
 HOST_GATEWAY_REQUIRED_DISPATCH_MODE = "wrapper_only"
 HOST_GATEWAY_REQUIRED_RELEASE_MODE = "wrapper_only"
 HOST_GATEWAY_INGRESS_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
+HOST_GATEWAY_REQUIRED_SURFACE_LABEL = "host_ingress_wrapper"
+HOST_GATEWAY_REQUIRED_SURFACE_STATUS = "PASS_REQUIRED"
+HOST_GATEWAY_REQUIRED_DISPATCH_STATUS = "PASS_REQUIRED"
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_egress_wrapper.py"
@@ -542,9 +545,9 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
         "gateway_contract_path": HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
         "entry_receipt_policy": {
             "required": True,
-            "required_surface_label": "host_ingress_wrapper",
-            "required_wrapper_surface_status": "PASS_REQUIRED",
-            "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
+            "required_surface_label": HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            "required_wrapper_surface_status": HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
+            "required_wrapper_dispatch_token_status": HOST_GATEWAY_REQUIRED_DISPATCH_STATUS,
         },
         "egress_receipt_policy": {
             "required": True,
@@ -1898,9 +1901,9 @@ def materialize_protocol_host_gateway_artifacts(
     contract["gateway_contract_path"] = gateway_contract_path.as_posix()
     contract["entry_receipt_policy"] = {
         "required": True,
-        "required_surface_label": "host_ingress_wrapper",
-        "required_wrapper_surface_status": "PASS_REQUIRED",
-        "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
+        "required_surface_label": HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+        "required_wrapper_surface_status": HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
+        "required_wrapper_dispatch_token_status": HOST_GATEWAY_REQUIRED_DISPATCH_STATUS,
     }
     contract["egress_receipt_policy"] = {"required": True}
     contract["headstamp_policy"] = {"required": True}
@@ -1920,9 +1923,9 @@ def materialize_protocol_host_gateway_artifacts(
         "catalog_path": str(catalog_path.expanduser().resolve()),
         "entry_receipt_policy": {
             "required": True,
-            "required_surface_label": "host_ingress_wrapper",
-            "required_wrapper_surface_status": "PASS_REQUIRED",
-            "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
+            "required_surface_label": HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
+            "required_wrapper_surface_status": HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
+            "required_wrapper_dispatch_token_status": HOST_GATEWAY_REQUIRED_DISPATCH_STATUS,
         },
         "egress_receipt_policy": {"required": True},
         "headstamp_policy": {"required": True},
