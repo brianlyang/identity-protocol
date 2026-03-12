@@ -1,8 +1,0 @@
-{
-  "case_id": "docs_command_contract_check",
-  "command": "python3 scripts/docs_command_contract_check.py",
-  "rc": 0,
-  "timestamp_utc": "2026-03-11T03:59:16Z",
-  "stdout": "[INFO] docs checked: 46\n[INFO] command snippets checked: 1221\n[PASS] docs command contract check passed.\n",
-  "stderr": ""
-}

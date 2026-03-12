@@ -1,1 +1,0 @@
-{"final_emit_guard_status": "FAIL_REQUIRED", "error_code": "IP-HDSTAMP-003", "stale_reasons": ["non_canonical_outlet_channel:direct_text_channel"], "outlet_channel_id": "direct_text_channel", "final_emit_channel_id": "final_emit_governed"}

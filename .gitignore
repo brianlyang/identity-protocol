@@ -33,6 +33,9 @@ identity/packs/*/runtime/protocol-feedback/
 # Local replay probe leftovers (non-canonical evidence mirrors)
 activity/evidence/v163-predev/*/round34-hardclose/v163_target_regression_base_repo_architect*.json
 
+# Activity evidence/logs are local runtime artifacts (do not version-control)
+activity/
+
 # Local runtime scratch under repo fixture packs
 identity/store-manager/runtime/
 

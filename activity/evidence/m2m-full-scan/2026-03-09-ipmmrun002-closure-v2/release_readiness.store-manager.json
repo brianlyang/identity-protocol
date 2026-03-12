@@ -1,6 +1,0 @@
-[FAIL] IP-ENV-002 resolve failed: scope mismatch for identity=store-manager: requested=USER, available=['SYSTEM']
-       fix: source ./scripts/identity_runtime_select.sh project
-[INFO] actor session selector: source=explicit_session_id session_id=run:ipmmrun002-final-store-manager
-[INFO] lane routing: work_layer=protocol source_layer=project applied_gate_set=protocol_required_checks
-[RUN] python3 scripts/validate_identity_runtime_mode_guard.py --identity-id store-manager --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation readiness --scope USER
-[FAIL] command failed (2): python3 scripts/validate_identity_runtime_mode_guard.py --identity-id store-manager --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation readiness --scope USER

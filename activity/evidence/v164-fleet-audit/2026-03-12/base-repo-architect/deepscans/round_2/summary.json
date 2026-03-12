@@ -1,9 +1,0 @@
-{
-  "round": 2,
-  "check_1_status": "PASS_REQUIRED",
-  "check_2_status": "PASS_REQUIRED",
-  "check_3_status": "PASS_REQUIRED",
-  "check_4_rc": 0,
-  "check_5_status": "PASS_REQUIRED",
-  "round_pass": true
-}
