@@ -78,11 +78,13 @@ HOST_GATEWAY_ENTRY_POLICY_ALLOWED_FIELDS = {
 HOST_GATEWAY_INGRESS_PROOF_POLICY_ALLOWED_FIELDS = {
     "required",
     "max_age_seconds",
+    "signing_key_path",
 }
 HOST_GATEWAY_EGRESS_POLICY_ALLOWED_FIELDS = {"required"}
 HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS = {
     "required",
     "max_age_seconds",
+    "signing_key_path",
 }
 HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS = {"required"}
 RUNTIME_GATEWAY_ALLOWED_FIELDS = {
@@ -573,6 +575,8 @@ def main() -> int:
                 )
             if _safe_int(ingress_proof_policy.get("max_age_seconds"), default=0) <= 0:
                 host_gateway_issues.append("host_gateway_ingress_proof_policy_max_age_invalid")
+            if not str(ingress_proof_policy.get("signing_key_path", "")).strip():
+                host_gateway_issues.append("host_gateway_ingress_proof_policy_signing_key_path_missing")
         egress_policy = host_gateway_contract.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict) or egress_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_egress_receipt_policy_missing")
@@ -601,6 +605,8 @@ def main() -> int:
                 )
             if _safe_int(egress_grant_policy.get("max_age_seconds"), default=0) <= 0:
                 host_gateway_issues.append("host_gateway_egress_grant_policy_max_age_invalid")
+            if not str(egress_grant_policy.get("signing_key_path", "")).strip():
+                host_gateway_issues.append("host_gateway_egress_grant_policy_signing_key_path_missing")
         headstamp_policy = host_gateway_contract.get("headstamp_policy")
         if not isinstance(headstamp_policy, dict) or headstamp_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_headstamp_policy_missing")
@@ -750,6 +756,10 @@ def main() -> int:
                         host_gateway_issues.append(
                             "host_gateway_runtime_contract_ingress_proof_policy_max_age_invalid"
                         )
+                    if not str(runtime_ingress_proof_policy.get("signing_key_path", "")).strip():
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_ingress_proof_policy_signing_key_path_missing"
+                        )
                 runtime_egress_policy = runtime_gateway_contract.get("egress_receipt_policy")
                 if not isinstance(runtime_egress_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_egress_receipt_policy_missing")
@@ -779,6 +789,10 @@ def main() -> int:
                     if _safe_int(runtime_egress_grant_policy.get("max_age_seconds"), default=0) <= 0:
                         host_gateway_issues.append(
                             "host_gateway_runtime_contract_egress_grant_policy_max_age_invalid"
+                        )
+                    if not str(runtime_egress_grant_policy.get("signing_key_path", "")).strip():
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_egress_grant_policy_signing_key_path_missing"
                         )
                 runtime_headstamp_policy = runtime_gateway_contract.get("headstamp_policy")
                 if not isinstance(runtime_headstamp_policy, dict):
