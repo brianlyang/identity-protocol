@@ -131,6 +131,20 @@ def _resolve_host_gateway_contract(task: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
+def _resolve_pack_relative_path(pack_path: Path, raw_path: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return Path("")
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (pack_path / token).resolve()
+    return (pack_path / token).resolve()
+
+
 def _canonical_json(data: dict[str, Any]) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
@@ -516,6 +530,7 @@ def main() -> int:
     host_gateway_contract = _resolve_host_gateway_contract(task if isinstance(task, dict) else {})
     host_release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
     egress_grant_required = False
+    egress_grant_signing_key_path = ""
     if host_release_mode == "wrapper_only":
         egress_grant_policy = host_gateway_contract.get("egress_grant_policy")
         egress_grant_required = True
@@ -526,7 +541,42 @@ def main() -> int:
                 _safe_int(egress_grant_policy.get("max_age_seconds"), default=300),
                 1,
             )
-        dispatch_secret = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
+            egress_grant_signing_key_path = str(egress_grant_policy.get("signing_key_path", "")).strip()
+        if not egress_grant_signing_key_path:
+            payload = {
+                "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                "error_code": ERR_EGRESS_CONTRACT_FAILED,
+                "stale_reasons": ["egress_grant_signing_key_path_missing"],
+                "identity_id": identity_id,
+                "catalog_path": str(catalog_path),
+                "egress_grant_required": bool(egress_grant_required),
+            }
+            _emit(payload, json_only=args.json_only)
+            return 1
+        signing_key_path = _resolve_pack_relative_path(pack_path, egress_grant_signing_key_path)
+        if not signing_key_path.exists():
+            payload = {
+                "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                "error_code": ERR_EGRESS_CONTRACT_FAILED,
+                "stale_reasons": ["egress_grant_signing_key_missing"],
+                "identity_id": identity_id,
+                "catalog_path": str(catalog_path),
+                "egress_grant_required": bool(egress_grant_required),
+            }
+            _emit(payload, json_only=args.json_only)
+            return 1
+        dispatch_secret = signing_key_path.read_text(encoding="utf-8", errors="ignore").strip()
+        if not dispatch_secret:
+            payload = {
+                "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                "error_code": ERR_EGRESS_CONTRACT_FAILED,
+                "stale_reasons": ["egress_grant_signing_key_empty"],
+                "identity_id": identity_id,
+                "catalog_path": str(catalog_path),
+                "egress_grant_required": bool(egress_grant_required),
+            }
+            _emit(payload, json_only=args.json_only)
+            return 1
         if egress_grant_required:
             if not run_id:
                 payload = {
