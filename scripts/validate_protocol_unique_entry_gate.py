@@ -42,6 +42,57 @@ HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = {"actor_id", "session_id", "run_id", "work_
 HOST_GATEWAY_EXPECTED_INGRESS_REL = "runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_EXPECTED_EGRESS_REL = "runtime/gate/protocol_egress_wrapper.py"
 HOST_GATEWAY_EXPECTED_CONTRACT_REL = "runtime/gate/protocol_gateway_contract.json"
+HOST_GATEWAY_ALLOWED_FIELDS = {
+    "contract_id",
+    "required",
+    "validator",
+    "protocol_ingress_script",
+    "protocol_egress_script",
+    "ingress_wrapper_path",
+    "egress_wrapper_path",
+    "gateway_contract_path",
+    "host_dispatch_mode",
+    "host_release_mode",
+    "ingress_wrapper_dispatch_token",
+    "identity_tuple_fields",
+    "operation_profile_policy",
+    "entry_receipt_policy",
+    "egress_receipt_policy",
+    "headstamp_policy",
+}
+HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS = {
+    "strict_operations",
+    "light_operations",
+    "strict_gate_profile",
+    "light_gate_profile",
+    "allow_upgrade_only",
+}
+HOST_GATEWAY_ENTRY_POLICY_ALLOWED_FIELDS = {
+    "required",
+    "required_surface_label",
+    "required_wrapper_surface_status",
+    "required_wrapper_dispatch_token_status",
+}
+HOST_GATEWAY_EGRESS_POLICY_ALLOWED_FIELDS = {"required"}
+HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS = {"required"}
+RUNTIME_GATEWAY_ALLOWED_FIELDS = {
+    "schema_version",
+    "identity_id",
+    "protocol_repo_root",
+    "protocol_ingress_script",
+    "protocol_egress_script",
+    "ingress_wrapper_path",
+    "egress_wrapper_path",
+    "catalog_path",
+    "entry_receipt_policy",
+    "egress_receipt_policy",
+    "headstamp_policy",
+    "identity_tuple_fields",
+    "host_dispatch_mode",
+    "host_release_mode",
+    "ingress_wrapper_dispatch_token",
+    "operation_profile_policy",
+}
 
 CONTRACT_KEYS = (
     "protocol_unique_entry_gate_contract_v1",
@@ -102,6 +153,32 @@ def _as_bool(value: Any) -> bool:
         return value
     token = str(value or "").strip().lower()
     return token in {"1", "true", "yes", "y", "on"}
+
+
+def _unknown_keys(node: Any, allowed: set[str]) -> list[str]:
+    if not isinstance(node, dict):
+        return []
+    return sorted(str(k) for k in node.keys() if str(k) not in allowed)
+
+
+def _operation_requires_provenance(
+    *,
+    operation: str,
+    dispatch_mode: str,
+    strict_operations: set[str],
+    light_operations: set[str],
+    allow_upgrade_only: bool,
+) -> bool:
+    if str(dispatch_mode or "").strip().lower() != EXPECTED_HOST_DISPATCH_MODE:
+        return False
+    op = str(operation or "").strip().lower()
+    if op in strict_operations or op in light_operations:
+        return True
+    if op and allow_upgrade_only:
+        return True
+    if not op:
+        return True
+    return False
 
 
 def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: str) -> Path:
@@ -226,6 +303,7 @@ def main() -> int:
         "protocol_unique_entry_receipt_wrapper_surface_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_token_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_required": False,
+        "protocol_unique_entry_receipt_provenance_required": False,
         "protocol_host_gateway_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_contract_key": "",
         "protocol_host_gateway_ingress_script": "",
@@ -320,10 +398,19 @@ def main() -> int:
     receipt_required_surface_label = DEFAULT_ENTRY_RECEIPT_SURFACE_LABEL
     receipt_required_wrapper_surface_status = DEFAULT_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS
     receipt_required_wrapper_dispatch_status = DEFAULT_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS
+    host_gateway_dispatch_mode = ""
+    host_gateway_strict_operations: set[str] = set()
+    host_gateway_light_operations: set[str] = set()
+    host_gateway_allow_upgrade_only = True
     host_gateway_issues: list[str] = []
     if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
         host_gateway_issues.append("host_gateway_contract_missing")
     else:
+        unknown_host_fields = _unknown_keys(host_gateway_contract, HOST_GATEWAY_ALLOWED_FIELDS)
+        if unknown_host_fields:
+            host_gateway_issues.append(
+                "host_gateway_contract_additional_properties:" + ",".join(unknown_host_fields)
+            )
         ingress_script = str(host_gateway_contract.get("protocol_ingress_script", "")).strip()
         egress_script = str(host_gateway_contract.get("protocol_egress_script", "")).strip()
         ingress_wrapper_raw = str(host_gateway_contract.get("ingress_wrapper_path", "")).strip()
@@ -331,6 +418,7 @@ def main() -> int:
         gateway_contract_raw = str(host_gateway_contract.get("gateway_contract_path", "")).strip()
         dispatch_mode = str(host_gateway_contract.get("host_dispatch_mode", "")).strip().lower()
         release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
+        host_gateway_dispatch_mode = dispatch_mode
         ingress_dispatch_token = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
         tuple_fields = _as_str_set(host_gateway_contract.get("identity_tuple_fields"))
         operation_profile_policy = host_gateway_contract.get("operation_profile_policy")
@@ -379,11 +467,22 @@ def main() -> int:
         if not isinstance(operation_profile_policy, dict):
             host_gateway_issues.append("host_gateway_operation_profile_policy_missing")
         else:
+            unknown_profile_fields = _unknown_keys(
+                operation_profile_policy,
+                HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS,
+            )
+            if unknown_profile_fields:
+                host_gateway_issues.append(
+                    "host_gateway_operation_profile_additional_properties:" + ",".join(unknown_profile_fields)
+                )
             strict_operations = _as_str_set(operation_profile_policy.get("strict_operations"))
             light_operations = _as_str_set(operation_profile_policy.get("light_operations"))
             strict_gate_profile = str(operation_profile_policy.get("strict_gate_profile", "")).strip()
             light_gate_profile = str(operation_profile_policy.get("light_gate_profile", "")).strip()
             allow_upgrade_only = bool(operation_profile_policy.get("allow_upgrade_only", True))
+            host_gateway_strict_operations = set(strict_operations)
+            host_gateway_light_operations = set(light_operations)
+            host_gateway_allow_upgrade_only = allow_upgrade_only
             payload["protocol_host_gateway_strict_operations"] = sorted(strict_operations)
             payload["protocol_host_gateway_light_operations"] = sorted(light_operations)
             payload["protocol_host_gateway_strict_gate_profile"] = strict_gate_profile
@@ -403,6 +502,15 @@ def main() -> int:
         if not isinstance(entry_policy, dict) or entry_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_entry_receipt_policy_missing")
         else:
+            unknown_entry_policy_fields = _unknown_keys(
+                entry_policy,
+                HOST_GATEWAY_ENTRY_POLICY_ALLOWED_FIELDS,
+            )
+            if unknown_entry_policy_fields:
+                host_gateway_issues.append(
+                    "host_gateway_entry_receipt_policy_additional_properties:"
+                    + ",".join(unknown_entry_policy_fields)
+                )
             entry_policy_surface_label = str(entry_policy.get("required_surface_label", "")).strip()
             entry_policy_wrapper_surface_status = str(
                 entry_policy.get("required_wrapper_surface_status", "")
@@ -432,9 +540,29 @@ def main() -> int:
         egress_policy = host_gateway_contract.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict) or egress_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_egress_receipt_policy_missing")
+        else:
+            unknown_egress_policy_fields = _unknown_keys(
+                egress_policy,
+                HOST_GATEWAY_EGRESS_POLICY_ALLOWED_FIELDS,
+            )
+            if unknown_egress_policy_fields:
+                host_gateway_issues.append(
+                    "host_gateway_egress_receipt_policy_additional_properties:"
+                    + ",".join(unknown_egress_policy_fields)
+                )
         headstamp_policy = host_gateway_contract.get("headstamp_policy")
         if not isinstance(headstamp_policy, dict) or headstamp_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_headstamp_policy_missing")
+        else:
+            unknown_headstamp_fields = _unknown_keys(
+                headstamp_policy,
+                HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS,
+            )
+            if unknown_headstamp_fields:
+                host_gateway_issues.append(
+                    "host_gateway_headstamp_policy_additional_properties:"
+                    + ",".join(unknown_headstamp_fields)
+                )
 
         missing_runtime_files: list[str] = []
         if not ingress_wrapper_path.exists():
@@ -460,30 +588,21 @@ def main() -> int:
                 host_gateway_issues.append(f"host_gateway_runtime_contract_invalid:{exc}")
                 payload["protocol_host_gateway_runtime_contract_status"] = STATUS_FAIL_REQUIRED
             else:
-                required_runtime_fields = {
-                    "schema_version",
-                    "identity_id",
-                    "protocol_repo_root",
-                    "protocol_ingress_script",
-                    "protocol_egress_script",
-                    "ingress_wrapper_path",
-                    "egress_wrapper_path",
-                    "catalog_path",
-                    "entry_receipt_policy",
-                    "egress_receipt_policy",
-                    "headstamp_policy",
-                    "identity_tuple_fields",
-                    "host_dispatch_mode",
-                    "host_release_mode",
-                    "ingress_wrapper_dispatch_token",
-                    "operation_profile_policy",
-                }
+                required_runtime_fields = set(RUNTIME_GATEWAY_ALLOWED_FIELDS)
                 missing_runtime_fields = sorted(
                     field for field in required_runtime_fields if field not in runtime_gateway_contract
+                )
+                unknown_runtime_fields = _unknown_keys(
+                    runtime_gateway_contract,
+                    RUNTIME_GATEWAY_ALLOWED_FIELDS,
                 )
                 if missing_runtime_fields:
                     host_gateway_issues.append(
                         "host_gateway_runtime_contract_fields_missing:" + ",".join(missing_runtime_fields)
+                    )
+                if unknown_runtime_fields:
+                    host_gateway_issues.append(
+                        "host_gateway_runtime_contract_additional_properties:" + ",".join(unknown_runtime_fields)
                     )
                 if str(runtime_gateway_contract.get("identity_id", "")).strip() != str(args.identity_id).strip():
                     host_gateway_issues.append("host_gateway_runtime_contract_identity_mismatch")
@@ -504,6 +623,15 @@ def main() -> int:
                 if not isinstance(runtime_operation_profile, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_operation_profile_policy_missing")
                 elif isinstance(operation_profile_policy, dict):
+                    unknown_runtime_profile_fields = _unknown_keys(
+                        runtime_operation_profile,
+                        HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_profile_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_operation_profile_additional_properties:"
+                            + ",".join(unknown_runtime_profile_fields)
+                        )
                     runtime_strict_operations = _as_str_set(runtime_operation_profile.get("strict_operations"))
                     runtime_light_operations = _as_str_set(runtime_operation_profile.get("light_operations"))
                     runtime_strict_gate_profile = str(runtime_operation_profile.get("strict_gate_profile", "")).strip()
@@ -528,6 +656,15 @@ def main() -> int:
                 if not isinstance(runtime_entry_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_entry_receipt_policy_missing")
                 else:
+                    unknown_runtime_entry_fields = _unknown_keys(
+                        runtime_entry_policy,
+                        HOST_GATEWAY_ENTRY_POLICY_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_entry_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_entry_receipt_policy_additional_properties:"
+                            + ",".join(unknown_runtime_entry_fields)
+                        )
                     runtime_entry_surface = str(runtime_entry_policy.get("required_surface_label", "")).strip()
                     runtime_entry_wrapper_surface_status = str(
                         runtime_entry_policy.get("required_wrapper_surface_status", "")
@@ -544,6 +681,32 @@ def main() -> int:
                     if runtime_entry_wrapper_dispatch_status != receipt_required_wrapper_dispatch_status:
                         host_gateway_issues.append(
                             "host_gateway_runtime_contract_entry_wrapper_dispatch_status_mismatch"
+                        )
+                runtime_egress_policy = runtime_gateway_contract.get("egress_receipt_policy")
+                if not isinstance(runtime_egress_policy, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_egress_receipt_policy_missing")
+                else:
+                    unknown_runtime_egress_fields = _unknown_keys(
+                        runtime_egress_policy,
+                        HOST_GATEWAY_EGRESS_POLICY_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_egress_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_egress_receipt_policy_additional_properties:"
+                            + ",".join(unknown_runtime_egress_fields)
+                        )
+                runtime_headstamp_policy = runtime_gateway_contract.get("headstamp_policy")
+                if not isinstance(runtime_headstamp_policy, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_headstamp_policy_missing")
+                else:
+                    unknown_runtime_headstamp_fields = _unknown_keys(
+                        runtime_headstamp_policy,
+                        HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_headstamp_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_headstamp_policy_additional_properties:"
+                            + ",".join(unknown_runtime_headstamp_fields)
                         )
                 if not missing_runtime_fields and not host_gateway_issues:
                     payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
@@ -562,6 +725,15 @@ def main() -> int:
         payload["protocol_host_gateway_runtime_files_status"] = STATUS_PASS_REQUIRED
     if payload["protocol_host_gateway_runtime_contract_status"] == STATUS_SKIPPED_NOT_REQUIRED:
         payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
+
+    provenance_required = _operation_requires_provenance(
+        operation=str(args.operation),
+        dispatch_mode=host_gateway_dispatch_mode,
+        strict_operations=host_gateway_strict_operations,
+        light_operations=host_gateway_light_operations,
+        allow_upgrade_only=host_gateway_allow_upgrade_only,
+    )
+    payload["protocol_unique_entry_receipt_provenance_required"] = provenance_required
 
     receipt_required = bool(args.require_entry_receipt)
     if receipt_required:
@@ -624,16 +796,16 @@ def main() -> int:
             receipt_issues.append("entry_receipt_actor_id_mismatch")
         if session_id and receipt_session_id != session_id:
             receipt_issues.append("entry_receipt_session_id_mismatch")
-        if strict_operation and receipt_surface_label != receipt_required_surface_label:
+        if provenance_required and receipt_surface_label != receipt_required_surface_label:
             receipt_issues.append(
                 "entry_receipt_surface_label_mismatch:"
                 f"{receipt_surface_label}:expected={receipt_required_surface_label}"
             )
-        if strict_operation and receipt_wrapper_surface_status != receipt_required_wrapper_surface_status:
+        if provenance_required and receipt_wrapper_surface_status != receipt_required_wrapper_surface_status:
             receipt_issues.append("entry_receipt_wrapper_surface_status_not_pass_required")
-        if strict_operation and receipt_wrapper_dispatch_status != receipt_required_wrapper_dispatch_status:
+        if provenance_required and receipt_wrapper_dispatch_status != receipt_required_wrapper_dispatch_status:
             receipt_issues.append("entry_receipt_wrapper_dispatch_status_not_pass_required")
-        if strict_operation and receipt_wrapper_dispatch_required is not True:
+        if provenance_required and receipt_wrapper_dispatch_required is not True:
             receipt_issues.append("entry_receipt_wrapper_dispatch_required_not_true")
         missing_fields = sorted(
             field for field in entry_receipt_required_fields if field not in receipt
