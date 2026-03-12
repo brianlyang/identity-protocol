@@ -567,3 +567,50 @@ and converts them into deterministic audit checks to prevent “policy green, ru
 1. Only when all checklist items in 9.3 pass and all negative probes in 9.4 fail-close,
    and no non-closure indicator in 9.5 is present, can the stream move to `Implementation PASS`.
 2. Otherwise posture remains `CONDITIONAL_GO`, even if control-plane static validators are green.
+
+## 10) P1 audit remediation checkpoint (2026-03-12, anti-spoof enforcement pass)
+
+This checkpoint addresses the explicit audit finding that wrapper enforcement could be bypassed
+by spoofing caller parameters (for example `--resolved-work-layer protocol`) during direct runner calls.
+
+### 10.1 Code-level closure applied
+
+1. `scripts/required_gate_bundle_runner.py`
+   - wrapper provenance requirement is now derived from host gateway contract policy (`host_dispatch_mode` + `operation_profile_policy`), not from caller-reported `--resolved-work-layer`.
+   - strict/light operation sets from contract are consumed to decide wrapper provenance requirement.
+   - unknown operations under `wrapper_only` are fail-close wrapped as strict-equivalent provenance required.
+2. `scripts/validate_protocol_unique_entry_gate.py`
+   - receipt provenance checks are now gated by wrapper policy (`provenance_required`) rather than `strict_operation` only.
+   - host gateway contract and runtime gateway contract now reject unexpected additional fields (additionalProperties fail-close).
+   - nested policy objects (`operation_profile_policy`, `entry_receipt_policy`, `egress_receipt_policy`, `headstamp_policy`) also reject unexpected fields.
+
+### 10.2 Replay result (serial, local, no tmp evidence references)
+
+1. Negative bypass replay (direct runner with forged work-layer):
+   - command: direct `required_gate_bundle_runner.py` call using `--resolved-work-layer protocol --surface-label bypass_probe`.
+   - result: `rc=1`, `bundle_status=FAIL_REQUIRED`,
+     `mapping_errors` includes:
+     - `wrapper_surface_not_configured_wrapper:bypass_probe:expected=host_ingress_wrapper`
+     - `wrapper_dispatch_token_missing_or_invalid`
+2. Receipt validator replay on same run-id:
+   - command: `validate_protocol_unique_entry_gate.py --require-entry-receipt --run-id <same>`
+   - result: `FAIL_REQUIRED` with provenance failures:
+     - `entry_receipt_surface_label_mismatch`
+     - `entry_receipt_wrapper_surface_status_not_pass_required`
+     - `entry_receipt_wrapper_dispatch_status_not_pass_required`
+3. Control-plane regression gates after patch:
+   - `validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+   - `validate_control_plane_status_sync.py --json-only` -> `PASS_REQUIRED`
+   - `sync_plugin_join_wiring.py --check --json-only` -> `PASS_REQUIRED`
+   - `docs_command_contract_check.py` -> `PASS`
+
+### 10.3 Updated review interpretation
+
+1. Closed in this checkpoint:
+   - caller-parameter spoof path (`resolved_work_layer` gating) no longer controls wrapper enforcement.
+   - contract/runtime additionalProperties drift now has machine fail-close protection.
+2. Still tracked for full stream closure:
+   - per-turn dynamic wrapper proof (`nonce + time-window + replay block`) for anti-replay hardening.
+   - project session dispatcher must expose wrapper-only execution APIs (conversation-layer physical routing proof).
+3. Posture remains: `Policy PASS / Implementation CONDITIONAL PASS`.
