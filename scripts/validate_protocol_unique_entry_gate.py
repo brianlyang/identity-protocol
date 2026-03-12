@@ -31,6 +31,9 @@ EXPECTED_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
 EXPECTED_HOST_DISPATCH_MODE = "wrapper_only"
 EXPECTED_HOST_RELEASE_MODE = "wrapper_only"
 EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
+EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL = "host_ingress_wrapper"
+EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS = STATUS_PASS_REQUIRED
+EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS = STATUS_PASS_REQUIRED
 EXPECTED_BUNDLE_KEY = "required_gate_bundle_runner"
 EXPECTED_SCOPE = "all_identity_instance_actions"
 EXPECTED_ENTRY_ERROR_FAMILY = {"IP-GATE-ENTRY-001", "IP-GATE-ENTRY-002"}
@@ -93,6 +96,13 @@ def _as_str_set(value: Any) -> set[str]:
     if not isinstance(value, list):
         return set()
     return {str(item).strip() for item in value if str(item).strip()}
+
+
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    token = str(value or "").strip().lower()
+    return token in {"1", "true", "yes", "y", "on"}
 
 
 def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: str) -> Path:
@@ -213,6 +223,10 @@ def main() -> int:
         "protocol_unique_entry_receipt_actor_id": "",
         "protocol_unique_entry_receipt_session_id": "",
         "protocol_unique_entry_receipt_operation": "",
+        "protocol_unique_entry_receipt_surface_label": "",
+        "protocol_unique_entry_receipt_wrapper_surface_status": "",
+        "protocol_unique_entry_receipt_wrapper_dispatch_token_status": "",
+        "protocol_unique_entry_receipt_wrapper_dispatch_required": False,
         "protocol_host_gateway_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_contract_key": "",
         "protocol_host_gateway_ingress_script": "",
@@ -226,6 +240,9 @@ def main() -> int:
         "protocol_host_gateway_runtime_files_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_runtime_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_identity_tuple_fields": [],
+        "protocol_host_gateway_entry_receipt_required_surface_label": "",
+        "protocol_host_gateway_entry_receipt_required_wrapper_surface_status": "",
+        "protocol_host_gateway_entry_receipt_required_wrapper_dispatch_token_status": "",
         "error_code": "",
         "stale_reasons": [],
     }
@@ -296,6 +313,9 @@ def main() -> int:
 
     host_gateway_contract, host_gateway_contract_key = _resolve_host_gateway_contract(task)
     payload["protocol_host_gateway_contract_key"] = host_gateway_contract_key
+    receipt_required_surface_label = EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL
+    receipt_required_wrapper_surface_status = EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS
+    receipt_required_wrapper_dispatch_status = EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS
     host_gateway_issues: list[str] = []
     if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
         host_gateway_issues.append("host_gateway_contract_missing")
@@ -354,6 +374,33 @@ def main() -> int:
         entry_policy = host_gateway_contract.get("entry_receipt_policy")
         if not isinstance(entry_policy, dict) or entry_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_entry_receipt_policy_missing")
+        else:
+            entry_policy_surface_label = str(entry_policy.get("required_surface_label", "")).strip()
+            entry_policy_wrapper_surface_status = str(
+                entry_policy.get("required_wrapper_surface_status", "")
+            ).strip().upper()
+            entry_policy_wrapper_dispatch_status = str(
+                entry_policy.get("required_wrapper_dispatch_token_status", "")
+            ).strip().upper()
+            payload["protocol_host_gateway_entry_receipt_required_surface_label"] = entry_policy_surface_label
+            payload["protocol_host_gateway_entry_receipt_required_wrapper_surface_status"] = (
+                entry_policy_wrapper_surface_status
+            )
+            payload["protocol_host_gateway_entry_receipt_required_wrapper_dispatch_token_status"] = (
+                entry_policy_wrapper_dispatch_status
+            )
+            if entry_policy_surface_label != EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL:
+                host_gateway_issues.append("host_gateway_entry_receipt_policy_surface_label_invalid")
+            if entry_policy_wrapper_surface_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS:
+                host_gateway_issues.append("host_gateway_entry_receipt_policy_wrapper_surface_status_invalid")
+            if entry_policy_wrapper_dispatch_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS:
+                host_gateway_issues.append("host_gateway_entry_receipt_policy_wrapper_dispatch_status_invalid")
+            if entry_policy_surface_label:
+                receipt_required_surface_label = entry_policy_surface_label
+            if entry_policy_wrapper_surface_status:
+                receipt_required_wrapper_surface_status = entry_policy_wrapper_surface_status
+            if entry_policy_wrapper_dispatch_status:
+                receipt_required_wrapper_dispatch_status = entry_policy_wrapper_dispatch_status
         egress_policy = host_gateway_contract.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict) or egress_policy.get("required") is not True:
             host_gateway_issues.append("host_gateway_egress_receipt_policy_missing")
@@ -424,6 +471,27 @@ def main() -> int:
                 runtime_tuple_fields = _as_str_set(runtime_gateway_contract.get("identity_tuple_fields"))
                 if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(runtime_tuple_fields):
                     host_gateway_issues.append("host_gateway_runtime_contract_tuple_fields_missing")
+                runtime_entry_policy = runtime_gateway_contract.get("entry_receipt_policy")
+                if not isinstance(runtime_entry_policy, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_entry_receipt_policy_missing")
+                else:
+                    runtime_entry_surface = str(runtime_entry_policy.get("required_surface_label", "")).strip()
+                    runtime_entry_wrapper_surface_status = str(
+                        runtime_entry_policy.get("required_wrapper_surface_status", "")
+                    ).strip().upper()
+                    runtime_entry_wrapper_dispatch_status = str(
+                        runtime_entry_policy.get("required_wrapper_dispatch_token_status", "")
+                    ).strip().upper()
+                    if runtime_entry_surface != EXPECTED_ENTRY_RECEIPT_SURFACE_LABEL:
+                        host_gateway_issues.append("host_gateway_runtime_contract_entry_surface_label_invalid")
+                    if runtime_entry_wrapper_surface_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_entry_wrapper_surface_status_invalid"
+                        )
+                    if runtime_entry_wrapper_dispatch_status != EXPECTED_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_entry_wrapper_dispatch_status_invalid"
+                        )
                 if not missing_runtime_fields and not host_gateway_issues:
                     payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
                 elif payload["protocol_host_gateway_runtime_contract_status"] != STATUS_FAIL_REQUIRED:
@@ -474,11 +542,19 @@ def main() -> int:
         receipt_actor_id = str(receipt.get("actor_id", "")).strip()
         receipt_session_id = str(receipt.get("session_id", "")).strip()
         receipt_bundle_status = str(receipt.get("bundle_status", "")).strip().upper()
+        receipt_surface_label = str(receipt.get("surface_label", "")).strip()
+        receipt_wrapper_surface_status = str(receipt.get("wrapper_surface_status", "")).strip().upper()
+        receipt_wrapper_dispatch_status = str(receipt.get("wrapper_dispatch_token_status", "")).strip().upper()
+        receipt_wrapper_dispatch_required = _as_bool(receipt.get("wrapper_dispatch_required"))
         payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
         payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
         payload["protocol_unique_entry_receipt_actor_id"] = receipt_actor_id
         payload["protocol_unique_entry_receipt_session_id"] = receipt_session_id
         payload["protocol_unique_entry_receipt_operation"] = receipt_operation
+        payload["protocol_unique_entry_receipt_surface_label"] = receipt_surface_label
+        payload["protocol_unique_entry_receipt_wrapper_surface_status"] = receipt_wrapper_surface_status
+        payload["protocol_unique_entry_receipt_wrapper_dispatch_token_status"] = receipt_wrapper_dispatch_status
+        payload["protocol_unique_entry_receipt_wrapper_dispatch_required"] = receipt_wrapper_dispatch_required
 
         receipt_issues: list[str] = []
         if receipt_bundle_key != EXPECTED_BUNDLE_KEY:
@@ -495,6 +571,14 @@ def main() -> int:
             receipt_issues.append("entry_receipt_actor_id_mismatch")
         if session_id and receipt_session_id != session_id:
             receipt_issues.append("entry_receipt_session_id_mismatch")
+        if strict_operation and receipt_surface_label != receipt_required_surface_label:
+            receipt_issues.append("entry_receipt_surface_label_not_host_wrapper")
+        if strict_operation and receipt_wrapper_surface_status != receipt_required_wrapper_surface_status:
+            receipt_issues.append("entry_receipt_wrapper_surface_status_not_pass_required")
+        if strict_operation and receipt_wrapper_dispatch_status != receipt_required_wrapper_dispatch_status:
+            receipt_issues.append("entry_receipt_wrapper_dispatch_status_not_pass_required")
+        if strict_operation and receipt_wrapper_dispatch_required is not True:
+            receipt_issues.append("entry_receipt_wrapper_dispatch_required_not_true")
         missing_fields = sorted(
             field for field in entry_receipt_required_fields if field not in receipt
         )
