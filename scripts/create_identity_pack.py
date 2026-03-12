@@ -85,6 +85,9 @@ UNIQUE_INGRESS_SCRIPT = "scripts/required_gate_bundle_runner.py"
 UNIQUE_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
 HOST_GATEWAY_CONTRACT_KEY = "protocol_host_unique_channel_contract_v1"
 HOST_GATEWAY_CONTRACT_ID = "protocol_host_unique_channel_contract_v1"
+HOST_GATEWAY_REQUIRED_DISPATCH_MODE = "wrapper_only"
+HOST_GATEWAY_REQUIRED_RELEASE_MODE = "wrapper_only"
+HOST_GATEWAY_INGRESS_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_egress_wrapper.py"
@@ -543,8 +546,9 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
             "required": True,
         },
         "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
-        "host_dispatch_mode": "wrapper_only",
-        "host_release_mode": "wrapper_only",
+        "host_dispatch_mode": HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
+        "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
+        "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
     }
 
 
@@ -1376,6 +1380,7 @@ from typing import Any
 
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 CANONICAL_INGRESS_SCRIPT = "scripts/required_gate_bundle_runner.py"
+WRAPPER_DISPATCH_TOKEN_FALLBACK = "instance_wrapper_ingress_v1"
 REQUIRED_FIELDS = (
     "actor_id",
     "session_id",
@@ -1500,6 +1505,10 @@ def main() -> int:
 
     repo_root = Path(str(contract.get("protocol_repo_root", "")).strip()).expanduser()
     script_rel = str(contract.get("protocol_ingress_script", "")).strip() or CANONICAL_INGRESS_SCRIPT
+    wrapper_dispatch_token = (
+        str(contract.get("ingress_wrapper_dispatch_token", "")).strip()
+        or WRAPPER_DISPATCH_TOKEN_FALLBACK
+    )
     script_path = (repo_root / script_rel).resolve() if script_rel else Path("")
     if not script_rel or not script_path.exists():
         return _fail(
@@ -1541,6 +1550,8 @@ def main() -> int:
         str(merged.get("final_emit_schema_status", "NOT_APPLICABLE")).strip() or "NOT_APPLICABLE",
         "--surface-label",
         str(merged.get("surface_label", args.surface_label)).strip() or "host_ingress_wrapper",
+        "--wrapper-dispatch-token",
+        wrapper_dispatch_token,
         "--json-only",
     ]
     report_selected_path = str(merged.get("report_selected_path", "")).strip()
@@ -1882,8 +1893,9 @@ def materialize_protocol_host_gateway_artifacts(
     contract["egress_receipt_policy"] = {"required": True}
     contract["headstamp_policy"] = {"required": True}
     contract["identity_tuple_fields"] = list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
-    contract["host_dispatch_mode"] = "wrapper_only"
-    contract["host_release_mode"] = "wrapper_only"
+    contract["host_dispatch_mode"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
+    contract["host_release_mode"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
+    contract["ingress_wrapper_dispatch_token"] = HOST_GATEWAY_INGRESS_DISPATCH_TOKEN
 
     gateway_contract_payload = {
         "schema_version": "v1",
@@ -1898,6 +1910,9 @@ def materialize_protocol_host_gateway_artifacts(
         "egress_receipt_policy": {"required": True},
         "headstamp_policy": {"required": True},
         "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
+        "host_dispatch_mode": HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
+        "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
+        "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
     }
 
     write_json(gateway_contract_path, gateway_contract_payload)
