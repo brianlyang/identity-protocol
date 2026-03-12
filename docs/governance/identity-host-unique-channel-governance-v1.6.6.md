@@ -15,7 +15,7 @@ Execution mode: topic-level canonical SSOT for v1.6.6 host-channel closure.
    - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
    - `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation validate --require-entry-receipt --json-only`
    - `python3 scripts/docs_command_contract_check.py`
-4. `/tmp/*` and ad-hoc logs are replay artifacts only and are never normative contract input.
+4. Temporary runtime directories and ad-hoc logs are replay artifacts only and are never normative contract input.
 5. Normative mapping entrypoints are current-pointer files only:
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
    - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
