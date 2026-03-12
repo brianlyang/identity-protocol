@@ -388,6 +388,21 @@ def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], 
         if not isinstance(entry_policy, dict):
             entry_policy = {}
         entry_policy["required"] = True
+        default_entry_policy = default.get("entry_receipt_policy")
+        if isinstance(default_entry_policy, dict):
+            required_surface_label = str(default_entry_policy.get("required_surface_label", "")).strip()
+            required_wrapper_surface_status = str(
+                default_entry_policy.get("required_wrapper_surface_status", "")
+            ).strip().upper()
+            required_wrapper_dispatch_status = str(
+                default_entry_policy.get("required_wrapper_dispatch_token_status", "")
+            ).strip().upper()
+            if required_surface_label:
+                entry_policy["required_surface_label"] = required_surface_label
+            if required_wrapper_surface_status:
+                entry_policy["required_wrapper_surface_status"] = required_wrapper_surface_status
+            if required_wrapper_dispatch_status:
+                entry_policy["required_wrapper_dispatch_token_status"] = required_wrapper_dispatch_status
         node["entry_receipt_policy"] = entry_policy
         egress_policy = node.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict):
