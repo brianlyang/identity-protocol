@@ -449,6 +449,32 @@ Result:
 1. v1.6.6 now satisfies “轻重分流 + 只升不降 + 每轮入口收据” on instance wrapper path.
 2. no-hardcode policy for wrapper routing is contract-derived and backfillable.
 
+### 7.9 Session-scoped egress continuity replay (2026-03-12, 5-round serial)
+
+To close the acceptance clause “ingress/egress both mandatory per round”, session-scoped actor binding was refreshed for `base-repo-architect` and replayed with full I/O chain.
+
+Replay setup:
+
+1. activate binding refresh:
+   - `python3 scripts/identity_creator.py activate --catalog <project>/.identity/catalog.local.yaml --identity-id base-repo-architect --actor-id assistant:codex --session-id sid-egress-fix --run-id <...>`
+2. serial rounds use fixed session binding `sid-egress-fix`.
+
+Per-round checks (5 rounds, serial):
+
+1. ingress wrapper pass (`inspection_targeted`) + receipt pass
+2. egress wrapper pass (`send_time_gate_status=PASS_REQUIRED`, `final_emit_guard_status=PASS_REQUIRED`)
+3. egress run-id mismatch negative probe -> blocked
+4. direct ingress bypass probe -> blocked (`IP-GATE-ENTRY-001`)
+5. bypass receipt postcheck -> blocked
+
+Scoreboard:
+
+1. `.identity/base-repo-architect/runtime/reports/v166-wrapper-multidim-serial5/scoreboard-v166-io-serial5-1773300763.json`
+
+Result:
+
+1. v1.6.6 now has replay evidence for per-round inbound+outbound mandatory wrapper path under session-scoped actor binding.
+
 ## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
