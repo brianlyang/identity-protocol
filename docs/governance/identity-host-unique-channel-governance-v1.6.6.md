@@ -98,6 +98,20 @@ To prevent direct protocol-script invocation from masquerading as wrapper flow:
 3. token drift between instance wrapper contract and protocol runner is `FAIL_REQUIRED`.
 4. this check is governance anti-bypass control; it does not replace receipt tuple parity checks.
 
+### 2.2.4 No-hardcode routing policy contract (mandatory)
+
+To avoid script/workflow “偷接线” drift, wrapper-routing policy is contract-derived, not hardcoded:
+
+1. strict wrapper surface label must be read from instance contract policy:
+   - `protocol_host_unique_channel_contract_v1.entry_receipt_policy.required_surface_label`
+2. strict wrapper token expectation must be read from instance contract:
+   - `protocol_host_unique_channel_contract_v1.ingress_wrapper_dispatch_token`
+3. strict wrapper provenance status expectations must be read from:
+   - `entry_receipt_policy.required_wrapper_surface_status`
+   - `entry_receipt_policy.required_wrapper_dispatch_token_status`
+4. protocol scripts may keep backward-compatible defaults only as migration fallback; strict runs fail-close when contract fields are missing/drifted.
+5. direct script or workflow hardcoded policy values are non-compliant with v1.6.6 closure.
+
 ### 2.2.1 `protocol_gateway_contract.json` minimum schema contract (mandatory)
 
 To make v1.6.6 directly implementable without per-team interpretation drift, the generated
