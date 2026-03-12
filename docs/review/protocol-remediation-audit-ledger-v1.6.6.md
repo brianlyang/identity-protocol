@@ -325,6 +325,39 @@ Persistent runtime scoreboard:
 
 1. `.identity/base-repo-architect/runtime/reports/v166-wrapper-chain-selftest/scoreboard-*.json`
 
+### 7.6 Wrapper-only hard enforcement closure (2026-03-12, follow-up)
+
+This follow-up closes the audit delta: “configurable and runnable, but not fully forced.”
+
+Hardening landed:
+
+1. `scripts/validate_protocol_unique_entry_gate.py`
+   - now hard-fails when `host_dispatch_mode != wrapper_only` or `host_release_mode != wrapper_only`.
+   - now hard-fails when ingress wrapper dispatch token drifts.
+2. `scripts/required_gate_bundle_runner.py`
+   - strict `host_ingress_wrapper` entry now requires wrapper dispatch token.
+   - direct protocol entry without wrapper token returns `FAIL_REQUIRED`.
+3. `scripts/create_identity_pack.py` + `scripts/repair_contract_backfill.py`
+   - instance contracts/runtime gateway artifacts now carry required wrapper-only modes and ingress dispatch token.
+   - backfill normalizes legacy packs to same hard baseline.
+
+Serial multidimensional probe replay (base-repo-architect):
+
+1. Rounds: 5, strictly serial.
+2. Per-round probes include:
+   - direct protocol bypass probe (no wrapper token) -> fail-close
+   - wrapper ingress pass -> receipt emission pass
+   - receipt tuple integrity (`run_id`/`actor_id`/`session_id`) -> pass
+   - entry postcheck parity pass
+   - actor/session mismatch probes -> fail-close
+   - egress pass
+   - egress run/session mismatch probes -> fail-close
+3. Deep checks after rounds: all green.
+
+Persistent runtime scoreboard:
+
+1. `.identity/base-repo-architect/runtime/reports/v166-wrapper-multidim-serial5/scoreboard-hardening-rerun-*.json`
+
 ## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
