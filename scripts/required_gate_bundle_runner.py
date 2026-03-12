@@ -42,6 +42,10 @@ STRICT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
     "validate",
     "three-plane",
 )
+LIGHT_NO_TRIM_OPERATIONS_DEFAULT: tuple[str, ...] = (
+    "inspection",
+    "scan",
+)
 
 # Order is deterministic for replay and log comparison.
 BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
@@ -254,6 +258,17 @@ def _as_str_list(value: Any) -> list[str]:
     return out
 
 
+def _as_lower_str_set(value: Any) -> set[str]:
+    out: set[str] = set()
+    if not isinstance(value, list):
+        return out
+    for item in value:
+        token = str(item or "").strip().lower()
+        if token:
+            out.add(token)
+    return out
+
+
 def _resolve_host_gateway_contract(task: dict[str, Any]) -> dict[str, Any]:
     for key in HOST_GATEWAY_CONTRACT_KEYS:
         raw = task.get(key)
@@ -272,13 +287,16 @@ def _resolve_wrapper_enforcement_policy(
     *,
     catalog_path: str,
     identity_id: str,
-) -> tuple[dict[str, str], list[str]]:
-    policy: dict[str, str] = {
+) -> tuple[dict[str, Any], list[str]]:
+    policy: dict[str, Any] = {
         "required_surface_label": DEFAULT_HOST_WRAPPER_SURFACE_LABEL,
         "required_dispatch_token": DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN,
         "required_wrapper_surface_status": STATUS_PASS_REQUIRED,
         "required_wrapper_dispatch_status": STATUS_PASS_REQUIRED,
         "host_dispatch_mode": "wrapper_only",
+        "strict_operations": list(STRICT_NO_TRIM_OPERATIONS_DEFAULT),
+        "light_operations": list(LIGHT_NO_TRIM_OPERATIONS_DEFAULT),
+        "allow_upgrade_only": True,
     }
     errors: list[str] = []
     try:
@@ -309,27 +327,43 @@ def _resolve_wrapper_enforcement_policy(
     entry_policy = host_gateway_contract.get("entry_receipt_policy")
     if not isinstance(entry_policy, dict):
         errors.append("host_gateway_contract_entry_receipt_policy_missing")
-        return policy, errors
-
-    required_surface_label = str(entry_policy.get("required_surface_label", "")).strip()
-    if required_surface_label:
-        policy["required_surface_label"] = required_surface_label
     else:
-        errors.append("host_gateway_contract_required_surface_label_missing")
+        required_surface_label = str(entry_policy.get("required_surface_label", "")).strip()
+        if required_surface_label:
+            policy["required_surface_label"] = required_surface_label
+        else:
+            errors.append("host_gateway_contract_required_surface_label_missing")
 
-    required_wrapper_surface_status = str(entry_policy.get("required_wrapper_surface_status", "")).strip().upper()
-    if required_wrapper_surface_status:
-        policy["required_wrapper_surface_status"] = required_wrapper_surface_status
-    else:
-        errors.append("host_gateway_contract_required_wrapper_surface_status_missing")
+        required_wrapper_surface_status = str(entry_policy.get("required_wrapper_surface_status", "")).strip().upper()
+        if required_wrapper_surface_status:
+            policy["required_wrapper_surface_status"] = required_wrapper_surface_status
+        else:
+            errors.append("host_gateway_contract_required_wrapper_surface_status_missing")
 
-    required_wrapper_dispatch_status = str(
-        entry_policy.get("required_wrapper_dispatch_token_status", "")
-    ).strip().upper()
-    if required_wrapper_dispatch_status:
-        policy["required_wrapper_dispatch_status"] = required_wrapper_dispatch_status
+        required_wrapper_dispatch_status = str(
+            entry_policy.get("required_wrapper_dispatch_token_status", "")
+        ).strip().upper()
+        if required_wrapper_dispatch_status:
+            policy["required_wrapper_dispatch_status"] = required_wrapper_dispatch_status
+        else:
+            errors.append("host_gateway_contract_required_wrapper_dispatch_status_missing")
+
+    operation_profile_policy = host_gateway_contract.get("operation_profile_policy")
+    if not isinstance(operation_profile_policy, dict):
+        errors.append("host_gateway_contract_operation_profile_policy_missing")
     else:
-        errors.append("host_gateway_contract_required_wrapper_dispatch_status_missing")
+        strict_operations = _as_lower_str_set(operation_profile_policy.get("strict_operations"))
+        light_operations = _as_lower_str_set(operation_profile_policy.get("light_operations"))
+        allow_upgrade_only = bool(operation_profile_policy.get("allow_upgrade_only", True))
+        if strict_operations:
+            policy["strict_operations"] = sorted(strict_operations)
+        else:
+            errors.append("host_gateway_contract_operation_profile_strict_operations_missing")
+        if light_operations:
+            policy["light_operations"] = sorted(light_operations)
+        else:
+            errors.append("host_gateway_contract_operation_profile_light_operations_missing")
+        policy["allow_upgrade_only"] = allow_upgrade_only
 
     if not str(policy.get("required_dispatch_token", "")).strip():
         errors.append("host_gateway_contract_required_dispatch_token_empty")
@@ -338,6 +372,30 @@ def _resolve_wrapper_enforcement_policy(
         errors.append("host_gateway_contract_required_surface_label_empty")
 
     return policy, errors
+
+
+def _operation_requires_wrapper_provenance(
+    *,
+    operation: str,
+    host_dispatch_mode: str,
+    wrapper_policy: dict[str, Any],
+) -> bool:
+    if str(host_dispatch_mode or "").strip().lower() != "wrapper_only":
+        return False
+    op = str(operation or "").strip().lower()
+    strict_operations = _as_lower_str_set(wrapper_policy.get("strict_operations"))
+    light_operations = _as_lower_str_set(wrapper_policy.get("light_operations"))
+    allow_upgrade_only = bool(wrapper_policy.get("allow_upgrade_only", True))
+
+    if op and (op in strict_operations or op in light_operations):
+        return True
+    if op and allow_upgrade_only:
+        # Unknown operations under wrapper_only are treated as strict by default.
+        return True
+    # Empty operation token is invalid input and must not bypass wrapper provenance.
+    if not op:
+        return True
+    return False
 
 
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
@@ -1132,10 +1190,10 @@ def main() -> int:
         wrapper_policy.get("required_dispatch_token", DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN)
     ).strip()
     host_dispatch_mode = str(wrapper_policy.get("host_dispatch_mode", "wrapper_only")).strip().lower()
-    resolved_work_layer_normalized = str(args.resolved_work_layer or "").strip().lower()
-    wrapper_surface_required = (
-        host_dispatch_mode == "wrapper_only"
-        and resolved_work_layer_normalized == "instance"
+    wrapper_surface_required = _operation_requires_wrapper_provenance(
+        operation=operation_normalized,
+        host_dispatch_mode=host_dispatch_mode,
+        wrapper_policy=wrapper_policy,
     )
     wrapper_dispatch_required = wrapper_surface_required
     wrapper_surface_ok = (not wrapper_surface_required) or surface_label == wrapper_required_surface_label
@@ -1392,6 +1450,13 @@ def main() -> int:
             wrapper_policy.get("required_wrapper_dispatch_status", STATUS_PASS_REQUIRED)
         ).strip().upper(),
         "wrapper_host_dispatch_mode": host_dispatch_mode,
+        "wrapper_policy_strict_operations": sorted(
+            _as_lower_str_set(wrapper_policy.get("strict_operations"))
+        ),
+        "wrapper_policy_light_operations": sorted(
+            _as_lower_str_set(wrapper_policy.get("light_operations"))
+        ),
+        "wrapper_policy_allow_upgrade_only": bool(wrapper_policy.get("allow_upgrade_only", True)),
         "wrapper_dispatch_required": wrapper_dispatch_required,
         "wrapper_surface_status": wrapper_surface_status,
         "wrapper_dispatch_token_status": wrapper_dispatch_token_status,
