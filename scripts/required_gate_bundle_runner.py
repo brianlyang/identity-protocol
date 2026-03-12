@@ -1442,7 +1442,10 @@ def main() -> int:
             bundle_status = STATUS_FAIL_REQUIRED
             error_code = "IP-GATE-ENTRY-002"
         else:
-            payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
+            if str(payload.get("bundle_status", "")).strip().upper() == STATUS_PASS_REQUIRED:
+                payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
+            else:
+                payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
             payload["protocol_unique_entry_receipt_path"] = receipt_path
             payload["protocol_unique_entry_receipt_history_path"] = receipt_history_path
 
