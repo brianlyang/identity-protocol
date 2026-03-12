@@ -181,7 +181,47 @@ Reason:
 1. Governance contract is now explicit and non-ambiguous.
 2. Review closure still depends on host runtime entrypoint wiring completion and replay evidence.
 
-## 7) External references
+## 7) Code landing checkpoint (2026-03-12, protocol repo)
+
+### 7.1 Landed files
+
+1. `scripts/create_identity_pack.py`
+   - scaffold now writes `protocol_host_unique_channel_contract_v1`.
+   - init emits deterministic runtime gate artifacts (`ingress_wrapper`, `egress_wrapper`, `gateway_contract`).
+2. `scripts/repair_contract_backfill.py`
+   - update/backfill now auto-wires host gateway contract for existing instances.
+   - `--apply` now materializes/refreshes wrapper files and `protocol_gateway_contract.json`.
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - strict validation extended from unique-entry only to unique-entry + host wrapper parity.
+   - runtime file presence, canonical script binding, tuple fields, and gateway JSON schema-required fields are now machine-checked.
+
+### 7.2 Serial run evidence summary (this round)
+
+1. Backfill apply (`base-repo-audit-expert-v3`) passed:
+   - `contract_backfill_status=PASS_REQUIRED`
+   - `host_gateway_contract_auto_wire_status=PASS_REQUIRED`
+2. Bundle entry + receipt binding passed:
+   - `required_gate_bundle_runner` returned `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+   - `run_id_binding` matched validator `--run-id`
+3. Unique-entry validator with receipt requirement passed:
+   - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+   - `protocol_host_gateway_contract_status=PASS_REQUIRED`
+   - `protocol_host_gateway_runtime_files_status=PASS_REQUIRED`
+   - `protocol_host_gateway_runtime_contract_status=PASS_REQUIRED`
+4. Control-plane/doc gates remained green in the same serial run:
+   - `validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+   - `validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`
+   - `validate_control_plane_status_sync.py --json-only` -> `PASS_REQUIRED`
+   - `docs_command_contract_check.py` -> `PASS`
+   - `validate_doc_evidence_persistence.py --json-only` -> `PASS_REQUIRED`
+
+### 7.3 Review interpretation
+
+1. v1.6.6 host-channel stream has moved from docs-only contract to executable protocol tooling.
+2. Protocol-side init/update/validate closure is materially strengthened.
+3. Final stream closure remains `CONDITIONAL_GO` until host repo entrypoints are proven wrapper-only in replay/CI lanes.
+
+## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
    - [Agent approvals & security](https://developers.openai.com/codex/agent-approvals-security/#sandbox-and-approvals)

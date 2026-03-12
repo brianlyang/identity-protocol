@@ -320,6 +320,51 @@ Release decision:
 
 1. Any failure in items above blocks v1.6.6 closure claim.
 
+### 5.1 Implementation landing snapshot (2026-03-12, protocol repo)
+
+The v1.6.6 host-channel contract is now code-backed in protocol repo runtime tooling.
+
+Code landing set:
+
+1. `scripts/create_identity_pack.py`
+   - adds `protocol_host_unique_channel_contract_v1` into scaffold defaults.
+   - generates per-instance artifacts on init:
+     - `runtime/gate/protocol_ingress_wrapper.py`
+     - `runtime/gate/protocol_egress_wrapper.py`
+     - `runtime/gate/protocol_gateway_contract.json`
+2. `scripts/repair_contract_backfill.py`
+   - auto-wires `protocol_host_unique_channel_contract_v1` for existing instances.
+   - materializes wrapper/contract artifacts during `--apply` update flow.
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - extends unique-entry validation to include host gateway wrapper contract parity.
+   - enforces runtime file existence + canonical script binding + tuple field coverage.
+   - validates generated `protocol_gateway_contract.json` required fields and canonical script refs.
+
+Serial verification snapshot:
+
+1. `python3 scripts/repair_contract_backfill.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only`
+   - `contract_backfill_status=PASS_REQUIRED`
+   - `host_gateway_contract_auto_wire_status=PASS_REQUIRED`
+2. `python3 scripts/required_gate_bundle_runner.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --operation validate --run-id v166-host-wrap-1773284273 --target-name skill_path_integrity --actor-id assistant:codex --resolved-work-layer instance --resolved-source-layer project --lock-state LOCK_MATCH --send-time-gate-status PASS_REQUIRED --outlet-bypass-detected false --final-emit-contract-status PASS_REQUIRED --final-emit-policy-mode tool_choice_required --final-emit-schema-status PASS_REQUIRED --json-only`
+   - `bundle_status=PASS_REQUIRED`
+   - `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+3. `python3 scripts/validate_protocol_unique_entry_gate.py ... --force-check --require-entry-receipt --json-only`
+   - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+   - `protocol_host_gateway_contract_status=PASS_REQUIRED`
+   - `protocol_host_gateway_runtime_files_status=PASS_REQUIRED`
+   - `protocol_host_gateway_runtime_contract_status=PASS_REQUIRED`
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+5. `python3 scripts/validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`
+6. `python3 scripts/validate_control_plane_status_sync.py --json-only` -> `PASS_REQUIRED`
+7. `python3 scripts/docs_command_contract_check.py` -> `PASS`
+8. `python3 scripts/validate_doc_evidence_persistence.py --json-only` -> `PASS_REQUIRED`
+
+Interpretation:
+
+1. v1.6.6 no longer relies on docs-only declaration for host unique-channel wrappers.
+2. Init/update paths now emit and validate wrapper contracts as executable artifacts.
+3. Closure posture remains implementation-progressive until host repository dispatch/release entrypoints are fully wrapper-only.
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:
