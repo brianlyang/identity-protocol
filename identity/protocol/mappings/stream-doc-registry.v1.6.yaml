@@ -20,6 +20,12 @@ stream_docs:
   - stream_version: v1.6.5
     governance_doc: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md
     review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.5.md
+  - stream_version: v1.6.6
+    governance_doc: docs/governance/identity-host-unique-channel-governance-v1.6.6.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
+  - stream_version: v1.6.6
+    governance_doc: docs/governance/identity-host-unique-channel-governance-v1.6.6.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
 
 mandatory_static_docs:
   - docs/governance/AUDIT_SNAPSHOT_INDEX.md
@@ -99,6 +105,33 @@ stream_doc_required_alias_refs:
       - identity/protocol/mappings/control-plane-invariants.current.yaml
       - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
       - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.6
+    governance_doc: docs/governance/identity-host-unique-channel-governance-v1.6.6.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.6
+    governance_doc: docs/governance/identity-host-unique-channel-governance-v1.6.6.md
+    governance_alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.6.md
+    review_alias_refs:
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
 
 static_doc_required_alias_refs:
   - doc: docs/governance/AUDIT_SNAPSHOT_INDEX.md
