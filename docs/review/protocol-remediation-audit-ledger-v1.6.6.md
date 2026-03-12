@@ -489,3 +489,81 @@ Result:
    - [Troubleshooting required status checks](https://docs.github.com/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks)
 6. MCP lifecycle contract:
    - [Model Context Protocol lifecycle](https://modelcontextprotocol.io/specification/draft/basic/lifecycle)
+
+## 9) Dialogue-derived audit baseline (2026-03-12, frozen for item-by-item review)
+
+This section records the multi-round alignment points from the latest review dialogue,
+and converts them into deterministic audit checks to prevent “policy green, runtime bypass”.
+
+### 9.1 Frozen problem statement (from dialogue consensus)
+
+1. v1.6.6 core target is not “wrapper declaration exists”; it is “instance runtime I/O must be wrapper-bound”.
+2. The most critical failure mode is not only `runner` bypass, but conversation-layer bypass:
+   - instance replies directly without ingress/egress wrapper traversal.
+3. Wrapper-only must apply to both project and global source layers:
+   - `<project>/.identity/<identity_id>/...`
+   - `${CODEX_HOME}/.identity/<identity_id>/...`
+4. `full strict bundle` is not required for every round, but wrapper traversal is required for every round.
+5. Heavy operations must remain strict; light rounds may be lightweight but cannot bypass wrapper or egress hard gates.
+
+### 9.2 Frozen boundary semantics (must not drift)
+
+1. Layer boundaries:
+   - protocol base repo: `identity-protocol-local`
+   - business project repo: `<project>`
+   - instance runtime pack: `<global>|<project>/.identity/<identity_id>/`
+2. Canonical protocol scripts:
+   - ingress authority: `scripts/required_gate_bundle_runner.py`
+   - egress authority: `scripts/final_emit_governed.py`
+3. Mandatory per-instance downsink artifacts (same governance tier as `CURRENT_TASK.json`/`IDENTITY_PROMPT.md`):
+   - `runtime/gate/protocol_ingress_wrapper.py`
+   - `runtime/gate/protocol_egress_wrapper.py`
+   - `runtime/gate/protocol_gateway_contract.json`
+4. Controller split (must stay separated):
+   - `identity_creator`: contract semantics generation/update
+   - `identity_installer`: runtime artifact downsink/repair
+5. Global runtime root is fixed:
+   - `${CODEX_HOME}/.identity/`
+   - legacy `${CODEX_HOME}/identity/` is non-canonical.
+
+### 9.3 Dialogue-frozen acceptance checklist (audit must check item by item)
+
+1. `host_dispatch_mode=wrapper_only` and `host_release_mode=wrapper_only` are present in CURRENT_TASK contract and runtime gateway contract.
+2. Inbound conversation execution path resolves to ingress wrapper, not direct business script dispatch.
+3. User-visible outbound release path resolves to egress wrapper, not direct emit path.
+4. Non-mutation rounds are still wrapper-traversed.
+5. Heavy rounds (`validate/update/activate/mutation/readiness/e2e/ci/three-plane`) use strict profile.
+6. Light rounds (`inspection/scan`) use lightweight profile unless self-upgraded to strict.
+7. Heavy-to-light downgrade is blocked; light-to-strict self-upgrade is allowed.
+8. Ingress receipt includes tuple and provenance fields:
+   - `run_id_binding`, `actor_id`, `session_id`, `surface_label`,
+   - `wrapper_dispatch_required`, `wrapper_surface_status`, `wrapper_dispatch_token_status`.
+9. Egress verifies same-turn ingress receipt tuple parity (`run_id/session_id/actor_id`).
+10. `identity_creator` init/update and `identity_installer` install/update both materialize wrapper artifacts.
+11. Protocol/instance split-repo path mapping remains explicit (no hidden mono-repo fallback).
+12. Global and project source-layer instances both pass the same wrapper contract checks.
+
+### 9.4 Anti-false-green checks (must be executed as negative probes)
+
+1. Direct ingress script call without wrapper proof must fail-close.
+2. Direct egress script call without wrapper flow proof must fail-close.
+3. Actor mismatch receipt replay must fail-close.
+4. Session mismatch receipt replay must fail-close.
+5. Run-id mismatch receipt replay must fail-close.
+6. Stale receipt reuse (previous run) must fail-close.
+7. Strict operation with non-wrapper provenance must fail-close.
+8. Any route that can output user-visible content without egress wrapper must fail-close.
+
+### 9.5 Known non-closure indicators (if any hit, v1.6.6 remains CONDITIONAL_GO)
+
+1. Wrapper enforcement depends on caller-self-reported tuple/layer flags that can be spoofed.
+2. Runtime has wrapper files, but project session entrypoints do not consume them.
+3. Egress can emit without same-turn ingress receipt parity.
+4. Global source-layer path is unresolved or drifts from `${CODEX_HOME}/.identity/`.
+5. Replay evidence covers strict-only path but misses non-mutation wrapper-mandatory path.
+
+### 9.6 Audit verdict rule (dialogue-frozen)
+
+1. Only when all checklist items in 9.3 pass and all negative probes in 9.4 fail-close,
+   and no non-closure indicator in 9.5 is present, can the stream move to `Implementation PASS`.
+2. Otherwise posture remains `CONDITIONAL_GO`, even if control-plane static validators are green.
