@@ -81,6 +81,10 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
    - `.identity/{identity_id}/runtime/gate/protocol_egress_wrapper.py`
    - `.identity/{identity_id}/runtime/gate/protocol_gateway_contract.json`
 3. Unique-entry validator scope includes strict-operation receipt parity.
+4. Generated `protocol_gateway_contract.json` must satisfy governance required fields:
+   - canonical ingress/egress script references
+   - tuple propagation keys (`actor_id`, `session_id`, `run_id`, `work_layer`, `source_layer`)
+   - explicit receipt policies for ingress and egress
 
 ### 3.2 Host side
 
@@ -92,6 +96,7 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
    - same `actor_id`
 4. Direct dispatch/release paths without wrapper/receipt are blocked with fail-close status.
 5. Host non-mutation rounds still require wrapper traversal and egress headstamp/send-time pass.
+6. Host wrapper discovery order must follow governance (runtime declaration first, then deterministic runtime file; no implicit mono-repo fallback).
 
 ### 3.3 Cross-repo interoperability
 
@@ -117,7 +122,17 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
    - `opened_at_utc`
 5. If PR binding receipt is missing or stale to current head SHA, posture remains `CONDITIONAL_GO`.
 
-### 3.5 YAML sprawl control check
+### 3.5 Serial replay matrix (minimum, no parallel substitution)
+
+To avoid "policy green but runtime bypass" false confidence, review requires serial replay of at least:
+
+1. Strict `validate` operation replay with wrapper-only dispatch/release.
+2. Strict mutation-class replay (`update` or equivalent) with entry receipt parity.
+3. Non-mutation conversation replay proving wrappers still mandatory.
+4. Negative probe: direct dispatch bypass attempt must fail-close.
+5. Negative probe: direct release bypass attempt must fail-close.
+
+### 3.6 YAML sprawl control check
 
 1. v1.6.6 stream registration must reuse existing mapping YAML files.
 2. Review must fail if stream onboarding introduces unnecessary new mapping YAML files for registry/allowlist scope.
@@ -137,6 +152,12 @@ Implementation is not accepted unless all items pass:
 6. Stream PR binding receipt exists and matches stream version + head SHA.
 7. Host replay confirms wrapper-only dispatch and wrapper-only release for non-mutation conversation rounds.
 8. Negative probe (`direct dispatch -> direct release`) is `FAIL_REQUIRED`.
+9. Serial replay matrix in 3.5 is fully executed and recorded in persistent evidence.
+10. Evidence package contains:
+    - `stream_pr_binding.json`
+    - `wrapper_contract_snapshot.<identity_id>.json`
+    - `host_channel_replay.<scenario>.json`
+    - `EVIDENCE_MANIFEST.<tag>.json`
 
 ## 5) Residual risk register (initial)
 

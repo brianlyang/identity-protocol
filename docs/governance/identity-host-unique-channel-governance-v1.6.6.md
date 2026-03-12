@@ -72,6 +72,59 @@ Hard rules:
 3. Wrapper path and policy must be declared in `CURRENT_TASK.json`.
 4. Missing wrapper files in strict operations are `FAIL_REQUIRED`.
 
+### 2.2.1 `protocol_gateway_contract.json` minimum schema contract (mandatory)
+
+To make v1.6.6 directly implementable without per-team interpretation drift, the generated
+`.identity/{identity_id}/runtime/gate/protocol_gateway_contract.json` must include at least:
+
+1. `schema_version`
+2. `identity_id`
+3. `protocol_repo_root`
+4. `protocol_ingress_script` (must resolve to `scripts/required_gate_bundle_runner.py`)
+5. `protocol_egress_script` (must resolve to `scripts/final_emit_governed.py`)
+6. `ingress_wrapper_path`
+7. `egress_wrapper_path`
+8. `catalog_path`
+9. `entry_receipt_policy` (`required: true`)
+10. `egress_receipt_policy` (`required: true`)
+11. `headstamp_policy` (`required: true`)
+12. `identity_tuple_fields` (must contain `actor_id`, `session_id`, `run_id`, `work_layer`, `source_layer`)
+
+Schema/fail-close rules:
+
+1. `additionalProperties` must be rejected by validator in strict mode.
+2. `protocol_ingress_script` and `protocol_egress_script` must be explicit paths, not inferred defaults.
+3. Any missing required field above is `FAIL_REQUIRED` during init/update validation.
+4. Any canonical script mismatch is `FAIL_REQUIRED` (no alias authority).
+
+### 2.2.2 Wrapper invocation envelope contract (mandatory)
+
+Both wrappers must support one deterministic envelope with explicit tuple propagation.
+
+Ingress minimum input envelope:
+
+1. `actor_id`
+2. `session_id`
+3. `run_id`
+4. `identity_id`
+5. `work_layer`
+6. `source_layer`
+7. `operation`
+8. `payload`
+
+Egress minimum input envelope:
+
+1. `actor_id`
+2. `session_id`
+3. `run_id`
+4. `identity_id`
+5. `work_layer`
+6. `source_layer`
+7. `candidate_output`
+8. `ingress_receipt`
+
+Any host adapter format is allowed only if it losslessly maps to the same envelope before wrapper invocation.
+
 ### 2.3 Host dispatch contract (mandatory)
 
 Host session entrypoints must not dispatch user messages directly to instance business scripts.
@@ -82,6 +135,15 @@ Required model:
 2. Host invokes per-instance ingress wrapper.
 3. Ingress wrapper invokes `scripts/required_gate_bundle_runner.py`.
 4. Execution is blocked unless unique-entry receipt is `PASS_REQUIRED`.
+
+### 2.3.1 Host wrapper discovery order (mandatory)
+
+To support protocol/instance split repositories without path ambiguity:
+
+1. Host must first resolve wrapper contract from instance runtime declaration (from generated `CURRENT_TASK.json` field).
+2. Host may fallback to `.identity/{identity_id}/runtime/gate/protocol_gateway_contract.json` only when declaration points to the same file.
+3. Host must reject any implicit mono-repo relative-path fallback.
+4. Unresolved wrapper contract path is `FAIL_REQUIRED`.
 
 ### 2.4 Host release contract (mandatory)
 
@@ -97,6 +159,15 @@ Required model:
    - `session_id` must match
    - `actor_id` must match
 5. Missing/mismatched receipt or headstamp is `FAIL_REQUIRED`.
+
+### 2.4.2 Failure-code family preservation contract (mandatory)
+
+To keep audit replay stable across streams:
+
+1. Missing/invalid unique-entry receipt must preserve bundle-entry family (`IP-GATE-ENTRY-*`).
+2. Headstamp tuple failures must preserve headstamp family (`IP-HDSTAMP-*`).
+3. Actor/session tuple failures must preserve actor-session family (`IP-ASB-*`) where applicable.
+4. New wrappers must not replace canonical families with ad-hoc aliases.
 
 ### 2.4.1 Headstamp continuity contract (mandatory)
 
@@ -161,6 +232,17 @@ To prevent control-plane file sprawl in v1.6.x streams:
    - `identity/protocol/mappings/doc-evidence-allowlist.v1.6.2.yaml`
 2. Stream-level doc onboarding must be append-only row updates in existing mappings.
 3. Creating new mapping YAML files for stream registration is forbidden unless schema/version boundary requires it and governance explicitly approves it.
+
+### 2.9 Required evidence package contract (mandatory)
+
+For each v1.6.6 implementation round, evidence must include:
+
+1. `activity/evidence/v166-host-channel/<date>/stream_pr_binding.json`
+2. `activity/evidence/v166-host-channel/<date>/wrapper_contract_snapshot.<identity_id>.json`
+3. `activity/evidence/v166-host-channel/<date>/host_channel_replay.<scenario>.json`
+4. `activity/evidence/v166-host-channel/<date>/EVIDENCE_MANIFEST.<tag>.json`
+
+The first three are required payload artifacts, and manifest is the required tuple index (`command`, `rc`, `sha256`, `timestamp`).
 
 ## 3) Four-track cross verification (frozen consensus)
 
@@ -231,6 +313,8 @@ To prevent control-plane file sprawl in v1.6.x streams:
    - egress wrapper receipt present
    - headstamp/send-time status `PASS_REQUIRED`
 8. Negative probe `direct dispatch -> direct release` is `FAIL_REQUIRED`.
+9. `protocol_gateway_contract.json` passes required-field schema checks from 2.2.1.
+10. Evidence package in 2.9 is present and allowed by `doc-evidence-allowlist.current.yaml`.
 
 Release decision:
 

@@ -157,6 +157,7 @@ strict_docs:
     allowed_activity_patterns:
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/stream_pr_binding\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/host_channel_replay\..+\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/wrapper_contract_snapshot\..+\.json$'
 
@@ -165,5 +166,6 @@ strict_docs:
     allowed_activity_patterns:
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/stream_pr_binding\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/host_channel_replay\..+\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/wrapper_contract_snapshot\..+\.json$'
