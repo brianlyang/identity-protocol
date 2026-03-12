@@ -1,0 +1,27 @@
+{
+  "ts_utc": "2026-03-12T00:41:58Z",
+  "cmd": [
+    "python3",
+    "scripts/validate_control_plane_status_sync.py",
+    "--json-only"
+  ],
+  "cmd_str": "python3 scripts/validate_control_plane_status_sync.py --json-only",
+  "cwd": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+  "rc": 0,
+  "duration_sec": 66.54,
+  "stdout": "{\"control_plane_status_sync_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"status_entry_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml\", \"status_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json\", \"status_active_file\": \"identity/protocol/mappings/control-plane-status.v1.6.json\", \"status_file_alias_error\": \"\", \"mismatch_count\": 0, \"mismatches\": [], \"stale_reasons\": [], \"live_control_plane_status\": \"FAIL_REQUIRED\", \"file_control_plane_status\": \"FAIL_REQUIRED\"}\n",
+  "stderr": "",
+  "parsed": {
+    "control_plane_status_sync_status": "PASS_REQUIRED",
+    "error_code": "",
+    "status_entry_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.current.yaml",
+    "status_file": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-status.v1.6.json",
+    "status_active_file": "identity/protocol/mappings/control-plane-status.v1.6.json",
+    "status_file_alias_error": "",
+    "mismatch_count": 0,
+    "mismatches": [],
+    "stale_reasons": [],
+    "live_control_plane_status": "FAIL_REQUIRED",
+    "file_control_plane_status": "FAIL_REQUIRED"
+  }
+}

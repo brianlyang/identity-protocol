@@ -6,7 +6,7 @@
     "pos_bundle_status": "PASS_REQUIRED",
     "pos_postcheck_status": "PASS_REQUIRED",
     "ctrl_invariants_status": "PASS_REQUIRED",
-    "ctrl_join_wiring_status": "",
+    "ctrl_join_wiring_status": "PASS_REQUIRED",
     "unique_entry_conditions": {
       "cond_1_bundle_runner_executed": true,
       "cond_2_receipt_status_pass": true,
@@ -26,7 +26,7 @@
       "expected_run_id": "v164-fleet-base-repo-audit-expert-v3-r3-p1-pos",
       "all_pass": true
     },
-    "pass": false
+    "pass": true
   },
   "part2": {
     "reasoning_status": "PASS_REQUIRED",
@@ -44,7 +44,9 @@
     "coverage_required_total": 12,
     "coverage_required_passed": 6,
     "coverage_failed_required": 0,
-    "pass": false
+    "pass": true,
+    "neg_unbound_has_ip_asb_201": true,
+    "validate_bound_has_ip_asb_201": false
   },
   "part4": {
     "skill_bundle_status": "PASS_REQUIRED",
@@ -55,5 +57,5 @@
     "bypass_receipt_check_status": "FAIL_REQUIRED",
     "pass": true
   },
-  "round_pass": false
+  "round_pass": true
 }

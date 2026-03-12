@@ -1,0 +1,131 @@
+{
+  "identity_id": "base-repo-audit-expert-v3",
+  "generated_at_utc": "2026-03-12T00:48:50Z",
+  "rounds": [
+    {
+      "round": 1,
+      "identity_id": "base-repo-audit-expert-v3",
+      "run_ids": {
+        "p1": "base-repo-audit-expert-v3-r01-p1-1773275855",
+        "p2_rl": "base-repo-audit-expert-v3-r01-p2-rl-1773275857",
+        "p2_mm": "base-repo-audit-expert-v3-r01-p2-mm-1773275858",
+        "p4_skill": "base-repo-audit-expert-v3-r01-p4-skill-1773275867",
+        "p4_bypass": "base-repo-audit-expert-v3-r01-p4-bypass-1773275868"
+      },
+      "part1_unique_entry_6": "FAIL_REQUIRED",
+      "part2_reasoning_l3": "FAIL_REQUIRED",
+      "part2_mm_strict": "FAIL_REQUIRED",
+      "part2_monotonic_floor": "PASS_REQUIRED",
+      "part2_monotonic_manifest": "/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json",
+      "part2_monotonic_probe_rc": {
+        "multimodal_readiness_skip_blocked": 1,
+        "multimodal_update_defer_allowed": 0,
+        "reasoning_floor_l0_fail": 1
+      },
+      "part3_onboarding_memoryloss": "FAIL_REQUIRED",
+      "part4_skill": "FAIL_REQUIRED",
+      "part4_websearch": "FAIL_REQUIRED",
+      "part4_bypass_block": "FAIL_REQUIRED"
+    },
+    {
+      "round": 2,
+      "identity_id": "base-repo-audit-expert-v3",
+      "run_ids": {
+        "p1": "base-repo-audit-expert-v3-r02-p1-1773275869",
+        "p2_rl": "base-repo-audit-expert-v3-r02-p2-rl-1773275871",
+        "p2_mm": "base-repo-audit-expert-v3-r02-p2-mm-1773275871",
+        "p4_skill": "base-repo-audit-expert-v3-r02-p4-skill-1773275879",
+        "p4_bypass": "base-repo-audit-expert-v3-r02-p4-bypass-1773275880"
+      },
+      "part1_unique_entry_6": "FAIL_REQUIRED",
+      "part2_reasoning_l3": "FAIL_REQUIRED",
+      "part2_mm_strict": "FAIL_REQUIRED",
+      "part2_monotonic_floor": "PASS_REQUIRED",
+      "part2_monotonic_manifest": "/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json",
+      "part2_monotonic_probe_rc": {
+        "multimodal_readiness_skip_blocked": 1,
+        "multimodal_update_defer_allowed": 0,
+        "reasoning_floor_l0_fail": 1
+      },
+      "part3_onboarding_memoryloss": "FAIL_REQUIRED",
+      "part4_skill": "FAIL_REQUIRED",
+      "part4_websearch": "FAIL_REQUIRED",
+      "part4_bypass_block": "FAIL_REQUIRED"
+    },
+    {
+      "round": 3,
+      "identity_id": "base-repo-audit-expert-v3",
+      "run_ids": {
+        "p1": "base-repo-audit-expert-v3-r03-p1-1773275880",
+        "p2_rl": "base-repo-audit-expert-v3-r03-p2-rl-1773275882",
+        "p2_mm": "base-repo-audit-expert-v3-r03-p2-mm-1773275882",
+        "p4_skill": "base-repo-audit-expert-v3-r03-p4-skill-1773275891",
+        "p4_bypass": "base-repo-audit-expert-v3-r03-p4-bypass-1773275892"
+      },
+      "part1_unique_entry_6": "FAIL_REQUIRED",
+      "part2_reasoning_l3": "FAIL_REQUIRED",
+      "part2_mm_strict": "FAIL_REQUIRED",
+      "part2_monotonic_floor": "PASS_REQUIRED",
+      "part2_monotonic_manifest": "/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json",
+      "part2_monotonic_probe_rc": {
+        "multimodal_readiness_skip_blocked": 1,
+        "multimodal_update_defer_allowed": 0,
+        "reasoning_floor_l0_fail": 1
+      },
+      "part3_onboarding_memoryloss": "FAIL_REQUIRED",
+      "part4_skill": "FAIL_REQUIRED",
+      "part4_websearch": "FAIL_REQUIRED",
+      "part4_bypass_block": "FAIL_REQUIRED"
+    },
+    {
+      "round": 4,
+      "identity_id": "base-repo-audit-expert-v3",
+      "run_ids": {
+        "p1": "base-repo-audit-expert-v3-r04-p1-1773275893",
+        "p2_rl": "base-repo-audit-expert-v3-r04-p2-rl-1773275894",
+        "p2_mm": "base-repo-audit-expert-v3-r04-p2-mm-1773275895",
+        "p4_skill": "base-repo-audit-expert-v3-r04-p4-skill-1773275903",
+        "p4_bypass": "base-repo-audit-expert-v3-r04-p4-bypass-1773275904"
+      },
+      "part1_unique_entry_6": "FAIL_REQUIRED",
+      "part2_reasoning_l3": "FAIL_REQUIRED",
+      "part2_mm_strict": "FAIL_REQUIRED",
+      "part2_monotonic_floor": "PASS_REQUIRED",
+      "part2_monotonic_manifest": "/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json",
+      "part2_monotonic_probe_rc": {
+        "multimodal_readiness_skip_blocked": 1,
+        "multimodal_update_defer_allowed": 0,
+        "reasoning_floor_l0_fail": 1
+      },
+      "part3_onboarding_memoryloss": "FAIL_REQUIRED",
+      "part4_skill": "FAIL_REQUIRED",
+      "part4_websearch": "FAIL_REQUIRED",
+      "part4_bypass_block": "FAIL_REQUIRED"
+    },
+    {
+      "round": 5,
+      "identity_id": "base-repo-audit-expert-v3",
+      "run_ids": {
+        "p1": "base-repo-audit-expert-v3-r05-p1-1773275904",
+        "p2_rl": "base-repo-audit-expert-v3-r05-p2-rl-1773275907",
+        "p2_mm": "base-repo-audit-expert-v3-r05-p2-mm-1773275907",
+        "p4_skill": "base-repo-audit-expert-v3-r05-p4-skill-1773275916",
+        "p4_bypass": "base-repo-audit-expert-v3-r05-p4-bypass-1773275916"
+      },
+      "part1_unique_entry_6": "FAIL_REQUIRED",
+      "part2_reasoning_l3": "FAIL_REQUIRED",
+      "part2_mm_strict": "FAIL_REQUIRED",
+      "part2_monotonic_floor": "PASS_REQUIRED",
+      "part2_monotonic_manifest": "/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json",
+      "part2_monotonic_probe_rc": {
+        "multimodal_readiness_skip_blocked": 1,
+        "multimodal_update_defer_allowed": 0,
+        "reasoning_floor_l0_fail": 1
+      },
+      "part3_onboarding_memoryloss": "FAIL_REQUIRED",
+      "part4_skill": "FAIL_REQUIRED",
+      "part4_websearch": "FAIL_REQUIRED",
+      "part4_bypass_block": "FAIL_REQUIRED"
+    }
+  ]
+}

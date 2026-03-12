@@ -1,0 +1,50 @@
+{
+  "generated_at_utc": "2026-03-12T00:47:14Z",
+  "target_ids": [
+    "base-repo-architect",
+    "base-repo-audit-expert-v3",
+    "custom-creative-ecom-analyst"
+  ],
+  "summaries": [
+    {
+      "identity_id": "base-repo-architect",
+      "generated_at_utc": "2026-03-12T00:47:14Z",
+      "unique_entry_mandatory_pass_rate": 100.0,
+      "unique_entry_bypass_block_rate": 100.0,
+      "monotonic_floor_pass_rate": 100.0,
+      "onboarding_memoryloss_pass_rate": 100.0,
+      "plugin_skill_pass_rate": 100.0,
+      "plugin_websearch_pass_rate": 100.0,
+      "selftest_round_pass_rate": 100.0,
+      "deepscan_round_pass_rate": 100.0,
+      "overall_status": "PASS_REQUIRED"
+    },
+    {
+      "identity_id": "base-repo-audit-expert-v3",
+      "generated_at_utc": "2026-03-12T00:47:14Z",
+      "unique_entry_mandatory_pass_rate": 100.0,
+      "unique_entry_bypass_block_rate": 100.0,
+      "monotonic_floor_pass_rate": 100.0,
+      "onboarding_memoryloss_pass_rate": 100.0,
+      "plugin_skill_pass_rate": 100.0,
+      "plugin_websearch_pass_rate": 100.0,
+      "selftest_round_pass_rate": 100.0,
+      "deepscan_round_pass_rate": 100.0,
+      "overall_status": "PASS_REQUIRED"
+    },
+    {
+      "identity_id": "custom-creative-ecom-analyst",
+      "generated_at_utc": "2026-03-12T00:47:14Z",
+      "unique_entry_mandatory_pass_rate": 100.0,
+      "unique_entry_bypass_block_rate": 100.0,
+      "monotonic_floor_pass_rate": 100.0,
+      "onboarding_memoryloss_pass_rate": 100.0,
+      "plugin_skill_pass_rate": 100.0,
+      "plugin_websearch_pass_rate": 100.0,
+      "selftest_round_pass_rate": 100.0,
+      "deepscan_round_pass_rate": 100.0,
+      "overall_status": "PASS_REQUIRED"
+    }
+  ],
+  "overall_status": "PASS_REQUIRED"
+}

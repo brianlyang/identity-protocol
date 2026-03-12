@@ -1,0 +1,179 @@
+{
+  "ts_utc": "2026-03-12T00:43:05Z",
+  "cmd": [
+    "python3",
+    "scripts/validate_required_gate_surface_drift.py",
+    "--json-only"
+  ],
+  "cmd_str": "python3 scripts/validate_required_gate_surface_drift.py --json-only",
+  "cwd": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+  "rc": 0,
+  "duration_sec": 0.302,
+  "stdout": "{\"required_gate_surface_drift_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"bundle_runner_script\": \"scripts/required_gate_bundle_runner.py\", \"recurrence_escalator_script\": \"scripts/validate_required_gate_recurrence_escalator.py\", \"tuple_parity_script\": \"scripts/validate_required_gate_tuple_parity.py\", \"mandatory_lineage_scripts\": [\"scripts/required_gate_bundle_runner.py\", \"scripts/validate_required_gate_recurrence_escalator.py\", \"scripts/validate_required_gate_tuple_parity.py\"], \"contract_mapping_entry\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml\", \"contract_mapping\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml\", \"mapping_errors\": [], \"strict_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\", \".github/workflows/_identity-required-gates.yml\"], \"full_scan_delegate_required_python_scripts\": [\"scripts/validate_full_scan_target_regression.py\"], \"full_scan_delegate_required_tokens\": [\"--target-source-layer\", \"--expected-work-layer\", \"--expected-source-layer\", \"--actor-id\", \"--session-id\", \"--enforce-m2m-pass\"], \"monotonic_floor_probe_ci_delegate_script\": \"scripts/ci/run_monotonic_floor_probes_ci.sh\", \"monotonic_probe_delegate_required_python_scripts\": [\"scripts/validate_reasoning_loop_failclose.py\", \"scripts/required_gate_bundle_runner.py\"], \"monotonic_probe_required_target\": \"multimodal_plugin_enforcement\", \"dialogue_feedback_bundle_script\": \"scripts/run_identity_dialogue_feedback_bundle.py\", \"dialogue_feedback_bundle_required_surfaces\": [\"scripts/identity_creator.py\"], \"dialogue_feedback_bundle_required_validators\": [\"scripts/validate_identity_experience_feedback_governance.py\", \"scripts/validate_identity_capability_arbitration.py\", \"scripts/validate_identity_dialogue_content.py\", \"scripts/validate_identity_dialogue_cross_validation.py\", \"scripts/validate_identity_dialogue_result_support.py\", \"scripts/validate_identity_ci_enforcement.py\"], \"dialogue_feedback_bundle_required_args\": [\"--catalog\", \"--identity-id\"], \"super_linter_workflow_surface\": \".github/workflows/super-linter.yml\", \"super_linter_required_tokens\": [\"name: super-linter\", \"merge_group:\", \"checks_requested\", \"super-linter/super-linter/slim@\", \"VALIDATE_ALL_CODEBASE: false\", \"VALIDATE_GITHUB_ACTIONS: true\", \"VALIDATE_JSON: true\", \"VALIDATE_MARKDOWN: true\", \"VALIDATE_YAML: true\"], \"required_gates_super_linter_tokens\": [\"Super-linter (governance required lane)\", \"super-linter/super-linter/slim@v8.2.1\", \"VALIDATE_ALL_CODEBASE: false\", \"VALIDATE_GITHUB_ACTIONS: true\", \"VALIDATE_JSON: true\", \"VALIDATE_MARKDOWN: true\", \"VALIDATE_YAML: true\"], \"forbidden_direct_validators\": [\"scripts/emit_route_version_pin_receipt.py\", \"scripts/normalize_cross_workflow_evidence.py\", \"scripts/normalize_v16_cross_workflow_evidence.py\", \"scripts/validate_cross_verification_tracks.py\", \"scripts/validate_cross_workflow_schema.py\", \"scripts/validate_dedup_monotonicity.py\", \"scripts/validate_execution_target_tuple_isolation.py\", \"scripts/validate_fallback_taxonomy_normalization.py\", \"scripts/validate_intake_evidence_core.py\", \"scripts/validate_intake_evidence_quorum.py\", \"scripts/validate_multimodal_plugin_enforcement.py\", \"scripts/validate_reasoning_loop_failclose.py\", \"scripts/validate_route_version_pinning.py\", \"scripts/validate_skill_path_integrity.py\", \"scripts/validate_v16_cross_verification_tracks.py\", \"scripts/validate_v16_cross_workflow_schema.py\", \"scripts/validate_v16_dedup_monotonicity.py\", \"scripts/validate_v16_intake_evidence_core.py\", \"scripts/validate_v16_intake_evidence_quorum.py\", \"scripts/validate_v16_skill_path_integrity.py\"], \"missing_surface_files\": [], \"missing_lineage_refs\": {}, \"missing_execution_tokens\": {}, \"dialogue_bundle_missing\": {}, \"forbidden_hits\": {}, \"final_egress_wrapper_script\": \"scripts/final_emit_governed.py\", \"final_egress_required_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\"], \"missing_final_egress_wrapper\": [], \"forbidden_direct_egress_scripts\": [\"scripts/compose_and_validate_governed_reply.py\"], \"forbidden_direct_egress_hits\": {}, \"actor_id_required_scripts\": [\"scripts/render_identity_response_stamp.py\", \"scripts/final_emit_governed.py\", \"scripts/validate_reply_identity_context_first_line.py\", \"scripts/validate_send_time_reply_gate.py\", \"scripts/validate_execution_reply_identity_coherence.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\"], \"actor_id_passthrough_missing\": {}, \"session_id_required_scripts\": [\"scripts/validate_required_contract_coverage.py\", \"scripts/render_identity_response_stamp.py\", \"scripts/validate_identity_response_stamp.py\", \"scripts/final_emit_governed.py\", \"scripts/validate_headstamp_recurrence_closure.py\", \"scripts/validate_reply_identity_context_first_line.py\", \"scripts/validate_send_time_reply_gate.py\", \"scripts/validate_execution_reply_identity_coherence.py\", \"scripts/validate_actor_session_binding.py\", \"scripts/validate_actor_session_multibinding_concurrency.py\", \"scripts/validate_prompt_kernel_executable_coupling.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\"], \"session_id_passthrough_missing\": {}, \"bundle_runner_required_args\": [\"--run-id\", \"--send-time-gate-status\", \"--outlet-bypass-detected\", \"--final-emit-contract-status\", \"--final-emit-policy-mode\", \"--final-emit-schema-status\", \"--actor-id\", \"--resolved-work-layer\", \"--resolved-source-layer\", \"--lock-state\"], \"bundle_arg_contract_missing\": {}, \"bundle_args_forbid_unknown\": [\"--send-time-gate-status\", \"--final-emit-contract-status\", \"--final-emit-schema-status\"], \"bundle_args_forbid_noncanonical\": {\"--gate-profile-file\": \"identity/protocol/mappings/layer-targeted-gate-profile.current.yaml\"}, \"bundle_arg_value_invalid\": {}}\n",
+  "stderr": "",
+  "parsed": {
+    "required_gate_surface_drift_status": "PASS_REQUIRED",
+    "error_code": "",
+    "bundle_runner_script": "scripts/required_gate_bundle_runner.py",
+    "recurrence_escalator_script": "scripts/validate_required_gate_recurrence_escalator.py",
+    "tuple_parity_script": "scripts/validate_required_gate_tuple_parity.py",
+    "mandatory_lineage_scripts": [
+      "scripts/required_gate_bundle_runner.py",
+      "scripts/validate_required_gate_recurrence_escalator.py",
+      "scripts/validate_required_gate_tuple_parity.py"
+    ],
+    "contract_mapping_entry": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.current.yaml",
+    "contract_mapping": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/contract-binding.v1.6.yaml",
+    "mapping_errors": [],
+    "strict_surfaces": [
+      "scripts/identity_creator.py",
+      "scripts/release_readiness_check.py",
+      "scripts/report_three_plane_status.py",
+      "scripts/full_identity_protocol_scan.py",
+      "scripts/e2e_smoke_test.sh",
+      ".github/workflows/_identity-required-gates.yml"
+    ],
+    "full_scan_delegate_required_python_scripts": [
+      "scripts/validate_full_scan_target_regression.py"
+    ],
+    "full_scan_delegate_required_tokens": [
+      "--target-source-layer",
+      "--expected-work-layer",
+      "--expected-source-layer",
+      "--actor-id",
+      "--session-id",
+      "--enforce-m2m-pass"
+    ],
+    "monotonic_floor_probe_ci_delegate_script": "scripts/ci/run_monotonic_floor_probes_ci.sh",
+    "monotonic_probe_delegate_required_python_scripts": [
+      "scripts/validate_reasoning_loop_failclose.py",
+      "scripts/required_gate_bundle_runner.py"
+    ],
+    "monotonic_probe_required_target": "multimodal_plugin_enforcement",
+    "dialogue_feedback_bundle_script": "scripts/run_identity_dialogue_feedback_bundle.py",
+    "dialogue_feedback_bundle_required_surfaces": [
+      "scripts/identity_creator.py"
+    ],
+    "dialogue_feedback_bundle_required_validators": [
+      "scripts/validate_identity_experience_feedback_governance.py",
+      "scripts/validate_identity_capability_arbitration.py",
+      "scripts/validate_identity_dialogue_content.py",
+      "scripts/validate_identity_dialogue_cross_validation.py",
+      "scripts/validate_identity_dialogue_result_support.py",
+      "scripts/validate_identity_ci_enforcement.py"
+    ],
+    "dialogue_feedback_bundle_required_args": [
+      "--catalog",
+      "--identity-id"
+    ],
+    "super_linter_workflow_surface": ".github/workflows/super-linter.yml",
+    "super_linter_required_tokens": [
+      "name: super-linter",
+      "merge_group:",
+      "checks_requested",
+      "super-linter/super-linter/slim@",
+      "VALIDATE_ALL_CODEBASE: false",
+      "VALIDATE_GITHUB_ACTIONS: true",
+      "VALIDATE_JSON: true",
+      "VALIDATE_MARKDOWN: true",
+      "VALIDATE_YAML: true"
+    ],
+    "required_gates_super_linter_tokens": [
+      "Super-linter (governance required lane)",
+      "super-linter/super-linter/slim@v8.2.1",
+      "VALIDATE_ALL_CODEBASE: false",
+      "VALIDATE_GITHUB_ACTIONS: true",
+      "VALIDATE_JSON: true",
+      "VALIDATE_MARKDOWN: true",
+      "VALIDATE_YAML: true"
+    ],
+    "forbidden_direct_validators": [
+      "scripts/emit_route_version_pin_receipt.py",
+      "scripts/normalize_cross_workflow_evidence.py",
+      "scripts/normalize_v16_cross_workflow_evidence.py",
+      "scripts/validate_cross_verification_tracks.py",
+      "scripts/validate_cross_workflow_schema.py",
+      "scripts/validate_dedup_monotonicity.py",
+      "scripts/validate_execution_target_tuple_isolation.py",
+      "scripts/validate_fallback_taxonomy_normalization.py",
+      "scripts/validate_intake_evidence_core.py",
+      "scripts/validate_intake_evidence_quorum.py",
+      "scripts/validate_multimodal_plugin_enforcement.py",
+      "scripts/validate_reasoning_loop_failclose.py",
+      "scripts/validate_route_version_pinning.py",
+      "scripts/validate_skill_path_integrity.py",
+      "scripts/validate_v16_cross_verification_tracks.py",
+      "scripts/validate_v16_cross_workflow_schema.py",
+      "scripts/validate_v16_dedup_monotonicity.py",
+      "scripts/validate_v16_intake_evidence_core.py",
+      "scripts/validate_v16_intake_evidence_quorum.py",
+      "scripts/validate_v16_skill_path_integrity.py"
+    ],
+    "missing_surface_files": [],
+    "missing_lineage_refs": {},
+    "missing_execution_tokens": {},
+    "dialogue_bundle_missing": {},
+    "forbidden_hits": {},
+    "final_egress_wrapper_script": "scripts/final_emit_governed.py",
+    "final_egress_required_surfaces": [
+      "scripts/identity_creator.py",
+      "scripts/release_readiness_check.py",
+      "scripts/report_three_plane_status.py",
+      "scripts/full_identity_protocol_scan.py",
+      "scripts/e2e_smoke_test.sh"
+    ],
+    "missing_final_egress_wrapper": [],
+    "forbidden_direct_egress_scripts": [
+      "scripts/compose_and_validate_governed_reply.py"
+    ],
+    "forbidden_direct_egress_hits": {},
+    "actor_id_required_scripts": [
+      "scripts/render_identity_response_stamp.py",
+      "scripts/final_emit_governed.py",
+      "scripts/validate_reply_identity_context_first_line.py",
+      "scripts/validate_send_time_reply_gate.py",
+      "scripts/validate_execution_reply_identity_coherence.py",
+      "scripts/report_three_plane_status.py",
+      "scripts/full_identity_protocol_scan.py"
+    ],
+    "actor_id_passthrough_missing": {},
+    "session_id_required_scripts": [
+      "scripts/validate_required_contract_coverage.py",
+      "scripts/render_identity_response_stamp.py",
+      "scripts/validate_identity_response_stamp.py",
+      "scripts/final_emit_governed.py",
+      "scripts/validate_headstamp_recurrence_closure.py",
+      "scripts/validate_reply_identity_context_first_line.py",
+      "scripts/validate_send_time_reply_gate.py",
+      "scripts/validate_execution_reply_identity_coherence.py",
+      "scripts/validate_actor_session_binding.py",
+      "scripts/validate_actor_session_multibinding_concurrency.py",
+      "scripts/validate_prompt_kernel_executable_coupling.py",
+      "scripts/report_three_plane_status.py",
+      "scripts/full_identity_protocol_scan.py"
+    ],
+    "session_id_passthrough_missing": {},
+    "bundle_runner_required_args": [
+      "--run-id",
+      "--send-time-gate-status",
+      "--outlet-bypass-detected",
+      "--final-emit-contract-status",
+      "--final-emit-policy-mode",
+      "--final-emit-schema-status",
+      "--actor-id",
+      "--resolved-work-layer",
+      "--resolved-source-layer",
+      "--lock-state"
+    ],
+    "bundle_arg_contract_missing": {},
+    "bundle_args_forbid_unknown": [
+      "--send-time-gate-status",
+      "--final-emit-contract-status",
+      "--final-emit-schema-status"
+    ],
+    "bundle_args_forbid_noncanonical": {
+      "--gate-profile-file": "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
+    },
+    "bundle_arg_value_invalid": {}
+  }
+}

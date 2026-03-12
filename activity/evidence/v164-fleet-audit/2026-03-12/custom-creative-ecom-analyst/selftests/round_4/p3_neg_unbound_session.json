@@ -1,0 +1,31 @@
+{
+  "ts_utc": "2026-03-12T00:40:26Z",
+  "cmd": [
+    "python3",
+    "scripts/identity_creator.py",
+    "validate",
+    "--identity-id",
+    "custom-creative-ecom-analyst",
+    "--repo-catalog",
+    "identity/catalog/identities.yaml",
+    "--catalog",
+    "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+    "--run-id",
+    "custom-creative-ecom-analyst-r04-p3-neg",
+    "--session-id",
+    "session-custom-creative-ecom-analyst-r4-1773276026",
+    "--actor-id",
+    "assistant:codex:audit:custom-creative-ecom-analyst:r4",
+    "--expected-work-layer",
+    "instance",
+    "--expected-source-layer",
+    "project"
+  ],
+  "cmd_str": "python3 scripts/identity_creator.py validate --identity-id custom-creative-ecom-analyst --repo-catalog identity/catalog/identities.yaml --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --run-id custom-creative-ecom-analyst-r04-p3-neg --session-id session-custom-creative-ecom-analyst-r4-1773276026 --actor-id assistant:codex:audit:custom-creative-ecom-analyst:r4 --expected-work-layer instance --expected-source-layer project",
+  "cwd": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+  "rc": 2,
+  "duration_sec": 0.321,
+  "stdout": "[FAIL] IP-ENV-003 strict runtime mode guard blocked env/catalog drift\n       IDENTITY_CATALOG env differs from requested catalog without authorized override receipt (env=/Users/yangxi/claude/codex_project/weixinstore/.agents/identity/catalog.local.yaml, catalog=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml, operation=validate)\n       fix: source ./scripts/identity_runtime_select.sh project\n       or pass --env-catalog-mismatch-override-receipt <json> with allow_env_catalog_mismatch=true for audited emergency bypass\n$ python3 scripts/validate_identity_runtime_mode_guard.py --identity-id custom-creative-ecom-analyst --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --expect-mode auto --operation validate\n[FAIL] runtime mode/catalog binding guard failed; aborting identity operation.\n",
+  "stderr": "",
+  "parsed": null
+}

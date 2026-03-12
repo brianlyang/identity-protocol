@@ -1,0 +1,158 @@
+{
+  "ts_utc": "2026-03-12T00:38:31Z",
+  "cmd": [
+    "python3",
+    "scripts/validate_headstamp_recurrence_closure.py",
+    "--identity-id",
+    "base-repo-audit-expert-v3",
+    "--catalog",
+    "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+    "--repo-catalog",
+    "identity/catalog/identities.yaml",
+    "--actor-id",
+    "assistant:codex:audit:base-repo-audit-expert-v3:r5",
+    "--session-id",
+    "session-base-repo-audit-expert-v3-r5-1773275909",
+    "--operation",
+    "validate",
+    "--json-only"
+  ],
+  "cmd_str": "python3 scripts/validate_headstamp_recurrence_closure.py --identity-id base-repo-audit-expert-v3 --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --repo-catalog identity/catalog/identities.yaml --actor-id assistant:codex:audit:base-repo-audit-expert-v3:r5 --session-id session-base-repo-audit-expert-v3-r5-1773275909 --operation validate --json-only",
+  "cwd": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local",
+  "rc": 1,
+  "duration_sec": 0.745,
+  "stdout": "{\"identity_id\": \"base-repo-audit-expert-v3\", \"catalog_path\": \"/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml\", \"repo_catalog_path\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml\", \"operation\": \"validate\", \"required_contract\": true, \"actor_id\": \"assistant:codex:audit:base-repo-audit-expert-v3:r5\", \"actor_explicit\": true, \"actor_explicit_required\": true, \"actor_semantic_role\": \"assistant_runtime\", \"emitter_actor_id\": \"assistant:codex:audit:base-repo-audit-expert-v3:r5\", \"executor_actor_id\": \"assistant:codex:audit:base-repo-audit-expert-v3:r5\", \"runtime_identity_id\": \"base-repo-audit-expert-v3\", \"headstamp_recurrence_closure_status\": \"FAIL_REQUIRED\", \"error_code\": \"IP-ASB-STAMP-SCAN-004\", \"static_wiring_status\": \"PASS_REQUIRED\", \"dynamic_replay_status\": \"FAIL_REQUIRED\", \"coverage_normalization_status\": \"FAIL_REQUIRED\", \"actor_explicitness_status\": \"PASS_REQUIRED\", \"mandatory_entrypoints\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/report_three_plane_status.py\", \"scripts/execute_identity_upgrade.py\", \"scripts/e2e_smoke_test.sh\"], \"entrypoint_coverage\": [{\"path\": \"scripts/identity_creator.py\", \"entrypoint_exists\": true, \"has_compose_wrapper\": false, \"has_direct_send_time\": true, \"coverage_mode\": \"direct_send_time_only\", \"coverage_normalized\": true}, {\"path\": \"scripts/release_readiness_check.py\", \"entrypoint_exists\": true, \"has_compose_wrapper\": false, \"has_direct_send_time\": true, \"coverage_mode\": \"direct_send_time_only\", \"coverage_normalized\": true}, {\"path\": \"scripts/full_identity_protocol_scan.py\", \"entrypoint_exists\": true, \"has_compose_wrapper\": false, \"has_direct_send_time\": true, \"coverage_mode\": \"direct_send_time_only\", \"coverage_normalized\": true}, {\"path\": \"scripts/report_three_plane_status.py\", \"entrypoint_exists\": true, \"has_compose_wrapper\": false, \"has_direct_send_time\": true, \"coverage_mode\": \"direct_send_time_only\", \"coverage_normalized\": true}, {\"path\": \"scripts/execute_identity_upgrade.py\", \"entrypoint_exists\": true, \"has_compose_wrapper\": true, \"has_direct_send_time\": false, \"coverage_mode\": \"compose_wrapper_only\", \"coverage_normalized\": true}, {\"path\": \"scripts/e2e_smoke_test.sh\", \"entrypoint_exists\": true, \"has_compose_wrapper\": false, \"has_direct_send_time\": true, \"coverage_mode\": \"direct_send_time_only\", \"coverage_normalized\": true}], \"missing_wiring_items\": [], \"dynamic_cases\": {\"negative_missing_header\": {\"rc\": 1, \"error_code\": \"IP-HDSTAMP-001\", \"send_time_gate_status\": \"FAIL_REQUIRED\", \"reply_first_line_status\": \"FAIL_REQUIRED\", \"blocker_receipt_path\": \"/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-runtime/headstamp-closure/validate/base-repo-audit-expert-v3/headstamp-closure-missing-receipt-base-repo-audit-expert-v3.json\"}, \"negative_inline_synthetic\": {\"rc\": 1, \"error_code\": \"IP-HDSTAMP-003\", \"send_time_gate_status\": \"FAIL_REQUIRED\", \"reply_evidence_mode\": \"reply_text\"}, \"negative_non_governed_outlet\": {\"rc\": 1, \"error_code\": \"IP-HDSTAMP-003\", \"send_time_gate_status\": \"FAIL_REQUIRED\", \"governed_outlet_enforced\": false, \"outlet_channel_id\": \"direct_text_channel\"}, \"positive_governed_compose\": {\"rc\": 1, \"error_code\": \"IP-HDSTAMP-002\", \"send_time_gate_status\": \"FAIL_REQUIRED\", \"reply_first_line_status\": \"FAIL_REQUIRED\", \"reply_outlet_guard_applied\": true, \"first_line_prefix_ok\": true, \"out_reply_file\": \"\"}, \"coverage_equivalence_direct_vs_wrapper\": {\"rc\": 2, \"error\": \"compose_positive_not_available\"}, \"negative_actor_bound_mismatch\": {\"rc\": 1, \"status\": \"FAIL_SESSION_SCOPED_BINDING_MISSING\", \"probe_actor_id\": \"assistant:codex:audit:base-repo-audit-expert-v3:r5\", \"probe_session_id\": \"session-base-repo-audit-expert-v3-r5-1773275909\", \"actor_bound_identity_id\": \"\", \"mismatch_identity_id\": \"\", \"binding_selection_mode\": \"identity_scoped_missing\", \"binding_key_mode\": \"actor_id+identity_id+session_id\", \"binding_compare_token\": \"0\", \"binding_session_id\": \"\", \"binding_entry_count\": 0}}, \"stale_reasons\": [\"actor_mismatch_probe_failed_session_scoped_binding_missing\", \"coverage_equivalence_not_closed\", \"governed_compose_positive_not_pass\"]}\n",
+  "stderr": "",
+  "parsed": {
+    "identity_id": "base-repo-audit-expert-v3",
+    "catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml",
+    "repo_catalog_path": "/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/catalog/identities.yaml",
+    "operation": "validate",
+    "required_contract": true,
+    "actor_id": "assistant:codex:audit:base-repo-audit-expert-v3:r5",
+    "actor_explicit": true,
+    "actor_explicit_required": true,
+    "actor_semantic_role": "assistant_runtime",
+    "emitter_actor_id": "assistant:codex:audit:base-repo-audit-expert-v3:r5",
+    "executor_actor_id": "assistant:codex:audit:base-repo-audit-expert-v3:r5",
+    "runtime_identity_id": "base-repo-audit-expert-v3",
+    "headstamp_recurrence_closure_status": "FAIL_REQUIRED",
+    "error_code": "IP-ASB-STAMP-SCAN-004",
+    "static_wiring_status": "PASS_REQUIRED",
+    "dynamic_replay_status": "FAIL_REQUIRED",
+    "coverage_normalization_status": "FAIL_REQUIRED",
+    "actor_explicitness_status": "PASS_REQUIRED",
+    "mandatory_entrypoints": [
+      "scripts/identity_creator.py",
+      "scripts/release_readiness_check.py",
+      "scripts/full_identity_protocol_scan.py",
+      "scripts/report_three_plane_status.py",
+      "scripts/execute_identity_upgrade.py",
+      "scripts/e2e_smoke_test.sh"
+    ],
+    "entrypoint_coverage": [
+      {
+        "path": "scripts/identity_creator.py",
+        "entrypoint_exists": true,
+        "has_compose_wrapper": false,
+        "has_direct_send_time": true,
+        "coverage_mode": "direct_send_time_only",
+        "coverage_normalized": true
+      },
+      {
+        "path": "scripts/release_readiness_check.py",
+        "entrypoint_exists": true,
+        "has_compose_wrapper": false,
+        "has_direct_send_time": true,
+        "coverage_mode": "direct_send_time_only",
+        "coverage_normalized": true
+      },
+      {
+        "path": "scripts/full_identity_protocol_scan.py",
+        "entrypoint_exists": true,
+        "has_compose_wrapper": false,
+        "has_direct_send_time": true,
+        "coverage_mode": "direct_send_time_only",
+        "coverage_normalized": true
+      },
+      {
+        "path": "scripts/report_three_plane_status.py",
+        "entrypoint_exists": true,
+        "has_compose_wrapper": false,
+        "has_direct_send_time": true,
+        "coverage_mode": "direct_send_time_only",
+        "coverage_normalized": true
+      },
+      {
+        "path": "scripts/execute_identity_upgrade.py",
+        "entrypoint_exists": true,
+        "has_compose_wrapper": true,
+        "has_direct_send_time": false,
+        "coverage_mode": "compose_wrapper_only",
+        "coverage_normalized": true
+      },
+      {
+        "path": "scripts/e2e_smoke_test.sh",
+        "entrypoint_exists": true,
+        "has_compose_wrapper": false,
+        "has_direct_send_time": true,
+        "coverage_mode": "direct_send_time_only",
+        "coverage_normalized": true
+      }
+    ],
+    "missing_wiring_items": [],
+    "dynamic_cases": {
+      "negative_missing_header": {
+        "rc": 1,
+        "error_code": "IP-HDSTAMP-001",
+        "send_time_gate_status": "FAIL_REQUIRED",
+        "reply_first_line_status": "FAIL_REQUIRED",
+        "blocker_receipt_path": "/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-runtime/headstamp-closure/validate/base-repo-audit-expert-v3/headstamp-closure-missing-receipt-base-repo-audit-expert-v3.json"
+      },
+      "negative_inline_synthetic": {
+        "rc": 1,
+        "error_code": "IP-HDSTAMP-003",
+        "send_time_gate_status": "FAIL_REQUIRED",
+        "reply_evidence_mode": "reply_text"
+      },
+      "negative_non_governed_outlet": {
+        "rc": 1,
+        "error_code": "IP-HDSTAMP-003",
+        "send_time_gate_status": "FAIL_REQUIRED",
+        "governed_outlet_enforced": false,
+        "outlet_channel_id": "direct_text_channel"
+      },
+      "positive_governed_compose": {
+        "rc": 1,
+        "error_code": "IP-HDSTAMP-002",
+        "send_time_gate_status": "FAIL_REQUIRED",
+        "reply_first_line_status": "FAIL_REQUIRED",
+        "reply_outlet_guard_applied": true,
+        "first_line_prefix_ok": true,
+        "out_reply_file": ""
+      },
+      "coverage_equivalence_direct_vs_wrapper": {
+        "rc": 2,
+        "error": "compose_positive_not_available"
+      },
+      "negative_actor_bound_mismatch": {
+        "rc": 1,
+        "status": "FAIL_SESSION_SCOPED_BINDING_MISSING",
+        "probe_actor_id": "assistant:codex:audit:base-repo-audit-expert-v3:r5",
+        "probe_session_id": "session-base-repo-audit-expert-v3-r5-1773275909",
+        "actor_bound_identity_id": "",
+        "mismatch_identity_id": "",
+        "binding_selection_mode": "identity_scoped_missing",
+        "binding_key_mode": "actor_id+identity_id+session_id",
+        "binding_compare_token": "0",
+        "binding_session_id": "",
+        "binding_entry_count": 0
+      }
+    },
+    "stale_reasons": [
+      "actor_mismatch_probe_failed_session_scoped_binding_missing",
+      "coverage_equivalence_not_closed",
+      "governed_compose_positive_not_pass"
+    ]
+  }
+}
