@@ -541,6 +541,8 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
             "wrapper_dispatch_required",
             "wrapper_surface_status",
             "wrapper_dispatch_token_status",
+            "wrapper_dispatch_proof_required",
+            "wrapper_dispatch_proof_status",
             "run_id_binding",
             "actor_id",
             "session_id",
