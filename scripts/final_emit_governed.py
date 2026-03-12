@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +26,7 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
+from tool_vendor_governance_common import resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -37,6 +41,12 @@ ERR_IDENTITY_RESOLVE = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
+HOST_GATEWAY_CONTRACT_KEYS = (
+    "protocol_host_unique_channel_contract_v1",
+    "protocol_gateway_wrapper_contract_v1",
+    "protocol_gateway_contract_v1",
+)
+EGRESS_GRANT_NONCE_STATE_FILE = "egress_grant_nonce_state.json"
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -105,6 +115,165 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"json root must be object: {path}")
     return data
+
+
+def _resolve_host_gateway_contract(task: dict[str, Any]) -> dict[str, Any]:
+    for key in HOST_GATEWAY_CONTRACT_KEYS:
+        raw = task.get(key)
+        if isinstance(raw, dict):
+            return raw
+    for key, raw in task.items():
+        if not isinstance(raw, dict):
+            continue
+        token = str(key or "").strip().lower()
+        if "gateway" in token and "contract" in token:
+            return raw
+    return {}
+
+
+def _canonical_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def _consume_egress_nonce(
+    *,
+    pack_path: Path,
+    nonce: str,
+    issued_at_epoch: int,
+    max_age_seconds: int,
+) -> tuple[bool, str]:
+    state_path = (pack_path / "runtime" / "state" / EGRESS_GRANT_NONCE_STATE_FILE).resolve()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_doc: dict[str, Any] = {"used": {}}
+    if state_path.exists():
+        try:
+            loaded = json.loads(state_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                state_doc = loaded
+        except Exception:
+            state_doc = {"used": {}}
+    used = state_doc.get("used")
+    if not isinstance(used, dict):
+        used = {}
+
+    now_epoch = int(time.time())
+    ttl = max(_safe_int(max_age_seconds, default=300), 1) * 4
+    stale = [k for k, v in used.items() if now_epoch - _safe_int(v, default=0) > ttl]
+    for k in stale:
+        used.pop(k, None)
+
+    nonce_key = str(nonce or "").strip()
+    if nonce_key in used:
+        return False, "egress_grant_nonce_replay_detected"
+
+    used[nonce_key] = int(issued_at_epoch)
+    state_doc["used"] = used
+    try:
+        state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        return False, f"egress_grant_nonce_state_write_failed:{exc}"
+    return True, ""
+
+
+def _validate_egress_grant(
+    *,
+    grant_json: str,
+    grant_signature: str,
+    dispatch_secret: str,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+    outlet_channel_id: str,
+    body: str,
+    max_age_seconds: int,
+    pack_path: Path,
+) -> tuple[bool, list[str]]:
+    errors: list[str] = []
+    if not str(grant_json or "").strip():
+        return False, ["egress_grant_missing"]
+    if not str(grant_signature or "").strip():
+        return False, ["egress_grant_signature_missing"]
+    if not str(dispatch_secret or "").strip():
+        return False, ["egress_grant_secret_missing"]
+    try:
+        grant = json.loads(str(grant_json).strip())
+    except Exception:
+        return False, ["egress_grant_invalid_json"]
+    if not isinstance(grant, dict):
+        return False, ["egress_grant_payload_not_object"]
+
+    required_fields = (
+        "schema_version",
+        "identity_id",
+        "actor_id",
+        "session_id",
+        "run_id",
+        "outlet_channel_id",
+        "body_sha256",
+        "issued_at_epoch",
+        "nonce",
+    )
+    missing = [field for field in required_fields if field not in grant]
+    if missing:
+        return False, ["egress_grant_fields_missing:" + ",".join(sorted(missing))]
+
+    canonical = _canonical_json(grant)
+    expected_signature = hmac.new(
+        str(dispatch_secret).encode("utf-8"),
+        canonical.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(str(grant_signature).strip(), expected_signature):
+        errors.append("egress_grant_signature_invalid")
+
+    if str(grant.get("schema_version", "")).strip() != "v1":
+        errors.append("egress_grant_schema_version_invalid")
+    if str(grant.get("identity_id", "")).strip() != str(identity_id or "").strip():
+        errors.append("egress_grant_identity_mismatch")
+    if str(grant.get("actor_id", "")).strip() != str(actor_id or "").strip():
+        errors.append("egress_grant_actor_mismatch")
+    if str(grant.get("session_id", "")).strip() != str(session_id or "").strip():
+        errors.append("egress_grant_session_mismatch")
+    if str(grant.get("run_id", "")).strip() != str(run_id or "").strip():
+        errors.append("egress_grant_run_id_mismatch")
+    if str(grant.get("outlet_channel_id", "")).strip() != str(outlet_channel_id or "").strip():
+        errors.append("egress_grant_outlet_channel_mismatch")
+    body_sha256 = hashlib.sha256(str(body or "").encode("utf-8")).hexdigest()
+    if str(grant.get("body_sha256", "")).strip() != body_sha256:
+        errors.append("egress_grant_body_sha256_mismatch")
+
+    issued_at_epoch = _safe_int(grant.get("issued_at_epoch"), default=0)
+    now_epoch = int(time.time())
+    max_age = max(_safe_int(max_age_seconds, default=300), 1)
+    if issued_at_epoch <= 0:
+        errors.append("egress_grant_issued_at_invalid")
+    else:
+        if issued_at_epoch > now_epoch + 30:
+            errors.append("egress_grant_issued_at_in_future")
+        if now_epoch - issued_at_epoch > max_age:
+            errors.append("egress_grant_expired")
+
+    nonce = str(grant.get("nonce", "")).strip()
+    if len(nonce) < 16:
+        errors.append("egress_grant_nonce_too_short")
+    if not errors:
+        consumed, consume_error = _consume_egress_nonce(
+            pack_path=pack_path,
+            nonce=nonce,
+            issued_at_epoch=issued_at_epoch,
+            max_age_seconds=max_age,
+        )
+        if not consumed:
+            errors.append(str(consume_error or "egress_grant_nonce_consume_failed"))
+    return len(errors) == 0, errors
 
 
 def _resolve_catalog(args: argparse.Namespace) -> tuple[Path, str]:
@@ -233,6 +402,7 @@ def main() -> int:
         help="required actor context; no implicit default fallback is allowed",
     )
     ap.add_argument("--session-id", default="", help="optional actor session selector for multibinding disambiguation")
+    ap.add_argument("--run-id", default="")
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
     ap.add_argument("--stdin-body", action="store_true")
@@ -243,6 +413,8 @@ def main() -> int:
     ap.add_argument("--out-reply-file", default="")
     ap.add_argument("--out-json", default="")
     ap.add_argument("--blocker-receipt-out", default="")
+    ap.add_argument("--egress-grant-json", default="")
+    ap.add_argument("--egress-grant-signature", default="")
     ap.add_argument("--json-only", action="store_true")
     ap.add_argument(
         "--strict-explicit-context",
@@ -326,6 +498,72 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
+    run_id = str(args.run_id or "").strip()
+    try:
+        pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
+        task = _load_json(task_path)
+    except Exception as exc:
+        payload = {
+            "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_IDENTITY_RESOLVE,
+            "stale_reasons": [f"host_gateway_contract_resolve_failed:{exc}"],
+            "identity_id": identity_id,
+            "catalog_path": str(catalog_path),
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    host_gateway_contract = _resolve_host_gateway_contract(task if isinstance(task, dict) else {})
+    host_release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
+    egress_grant_required = False
+    if host_release_mode == "wrapper_only":
+        egress_grant_policy = host_gateway_contract.get("egress_grant_policy")
+        egress_grant_required = True
+        egress_grant_max_age_seconds = 300
+        if isinstance(egress_grant_policy, dict):
+            egress_grant_required = bool(egress_grant_policy.get("required", True))
+            egress_grant_max_age_seconds = max(
+                _safe_int(egress_grant_policy.get("max_age_seconds"), default=300),
+                1,
+            )
+        dispatch_secret = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
+        if egress_grant_required:
+            if not run_id:
+                payload = {
+                    "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                    "error_code": ERR_EGRESS_CONTRACT_FAILED,
+                    "stale_reasons": ["egress_grant_run_id_missing"],
+                    "identity_id": identity_id,
+                    "catalog_path": str(catalog_path),
+                    "egress_grant_required": True,
+                }
+                _emit(payload, json_only=args.json_only)
+                return 1
+            grant_ok, grant_errors = _validate_egress_grant(
+                grant_json=str(args.egress_grant_json or "").strip(),
+                grant_signature=str(args.egress_grant_signature or "").strip(),
+                dispatch_secret=dispatch_secret,
+                identity_id=identity_id,
+                actor_id=actor_id,
+                session_id=str(args.session_id or "").strip(),
+                run_id=run_id,
+                outlet_channel_id=outlet_channel_id,
+                body=body,
+                max_age_seconds=egress_grant_max_age_seconds,
+                pack_path=pack_path,
+            )
+            if not grant_ok:
+                payload = {
+                    "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                    "error_code": ERR_EGRESS_CONTRACT_FAILED,
+                    "stale_reasons": grant_errors,
+                    "identity_id": identity_id,
+                    "catalog_path": str(catalog_path),
+                    "egress_grant_required": True,
+                }
+                _emit(payload, json_only=args.json_only)
+                return 1
+
     compose_cmd = [
         sys.executable,
         str((SCRIPT_DIR / "compose_and_validate_governed_reply.py").resolve()),
@@ -397,6 +635,7 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
         "resolved_actor_id": actor_id,
+        "run_id": run_id,
         "catalog_resolution_mode": catalog_resolution_mode,
         "repo_catalog_resolution_mode": repo_catalog_resolution_mode,
         "identity_resolution_mode": identity_resolution_mode,
@@ -414,6 +653,7 @@ def main() -> int:
         "final_emit_policy_mode": str(compose_payload.get("final_emit_policy_mode", FINAL_EMIT_POLICY_MODE)),
         "final_emit_schema_id": str(compose_payload.get("final_emit_schema_id", FINAL_EMIT_SCHEMA_ID)),
         "final_emit_schema_status": str(compose_payload.get("final_emit_schema_status", "")).strip().upper(),
+        "egress_grant_required": bool(egress_grant_required),
     }
     if not pass_contract:
         payload["stale_reasons"] = ["egress_contract_not_pass"]
