@@ -97,6 +97,14 @@ V16_REVIEW_FORBIDDEN_MARKERS = (
     "it is **the** standalone source for current-state protocol judgments",
     "This document is the only normative execution entrypoint for actor-session-binding governance in v1.6.",
 )
+V166_TEMP_PATH_GUARDED_DOCS = {
+    "docs/governance/identity-host-unique-channel-governance-v1.6.6.md",
+    "docs/review/protocol-remediation-audit-ledger-v1.6.6.md",
+}
+V166_FORBIDDEN_EPHEMERAL_PATH_MARKERS = (
+    "/tmp/",
+    "/private/var/folders/",
+)
 
 def extract_backtick_commands(text: str) -> List[str]:
     return re.findall(r"`([^`]+)`", text)
@@ -734,6 +742,12 @@ def main() -> int:
                 if marker in content:
                     failures.append(
                         f"[V16_REVIEW_HISTORICAL_BOUNDARY_CONFLICT] {doc}: contains forbidden legacy marker `{marker}`"
+                    )
+        if _norm_path(doc) in V166_TEMP_PATH_GUARDED_DOCS:
+            for marker in V166_FORBIDDEN_EPHEMERAL_PATH_MARKERS:
+                if marker in content:
+                    failures.append(
+                        f"[V166_EPHEMERAL_PATH_FORBIDDEN] {doc}: contains ephemeral path marker `{marker}`"
                     )
         required_alias_refs = stream_doc_alias_requirements.get(doc, [])
         for ref in required_alias_refs:
