@@ -428,6 +428,21 @@ def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], 
             node["host_release_mode"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
         if str(node.get("ingress_wrapper_dispatch_token", "")).strip() != HOST_GATEWAY_INGRESS_DISPATCH_TOKEN:
             node["ingress_wrapper_dispatch_token"] = HOST_GATEWAY_INGRESS_DISPATCH_TOKEN
+        default_profile_policy = default.get("operation_profile_policy")
+        profile_policy = node.get("operation_profile_policy")
+        if not isinstance(profile_policy, dict):
+            profile_policy = {}
+        if isinstance(default_profile_policy, dict):
+            for policy_key in (
+                "strict_operations",
+                "light_operations",
+                "strict_gate_profile",
+                "light_gate_profile",
+                "allow_upgrade_only",
+            ):
+                if policy_key not in profile_policy or profile_policy.get(policy_key) in (None, "", []):
+                    profile_policy[policy_key] = json.loads(json.dumps(default_profile_policy.get(policy_key)))
+        node["operation_profile_policy"] = profile_policy
     return forced_required_keys, restored_validator_keys
 
 
