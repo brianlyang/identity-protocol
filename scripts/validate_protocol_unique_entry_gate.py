@@ -158,6 +158,8 @@ def main() -> int:
     ap.add_argument("--force-check", action="store_true")
     ap.add_argument("--force-required", action="store_true")
     ap.add_argument("--run-id", default="")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--entry-receipt", default="")
     ap.add_argument("--require-entry-receipt", action="store_true")
     ap.add_argument("--json-only", action="store_true")
@@ -180,6 +182,8 @@ def main() -> int:
     strict_operation = str(args.operation).strip().lower() in STRICT_OPERATIONS
     required = bool(args.force_check or args.force_required or declared_required or strict_operation)
     run_id = str(args.run_id or "").strip()
+    actor_id = str(args.actor_id or "").strip()
+    session_id = str(args.session_id or "").strip()
 
     payload: dict[str, Any] = {
         "identity_id": args.identity_id,
@@ -203,6 +207,8 @@ def main() -> int:
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_bundle_key": "",
         "protocol_unique_entry_receipt_run_id": "",
+        "protocol_unique_entry_receipt_actor_id": "",
+        "protocol_unique_entry_receipt_session_id": "",
         "protocol_unique_entry_receipt_operation": "",
         "protocol_host_gateway_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_contract_key": "",
@@ -438,9 +444,13 @@ def main() -> int:
         receipt_identity_id = str(receipt.get("identity_id", "")).strip()
         receipt_operation = str(receipt.get("operation", "")).strip().lower()
         receipt_run_id = str(receipt.get("run_id_binding", "")).strip()
+        receipt_actor_id = str(receipt.get("actor_id", "")).strip()
+        receipt_session_id = str(receipt.get("session_id", "")).strip()
         receipt_bundle_status = str(receipt.get("bundle_status", "")).strip().upper()
         payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
         payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
+        payload["protocol_unique_entry_receipt_actor_id"] = receipt_actor_id
+        payload["protocol_unique_entry_receipt_session_id"] = receipt_session_id
         payload["protocol_unique_entry_receipt_operation"] = receipt_operation
 
         receipt_issues: list[str] = []
@@ -454,6 +464,10 @@ def main() -> int:
             receipt_issues.append("entry_receipt_bundle_status_not_pass")
         if run_id and receipt_run_id != run_id:
             receipt_issues.append("entry_receipt_run_id_mismatch")
+        if actor_id and receipt_actor_id != actor_id:
+            receipt_issues.append("entry_receipt_actor_id_mismatch")
+        if session_id and receipt_session_id != session_id:
+            receipt_issues.append("entry_receipt_session_id_mismatch")
         missing_fields = sorted(
             field for field in entry_receipt_required_fields if field not in receipt
         )
