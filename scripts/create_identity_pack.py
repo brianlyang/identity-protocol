@@ -88,6 +88,8 @@ HOST_GATEWAY_CONTRACT_ID = "protocol_host_unique_channel_contract_v1"
 HOST_GATEWAY_REQUIRED_DISPATCH_MODE = "wrapper_only"
 HOST_GATEWAY_REQUIRED_RELEASE_MODE = "wrapper_only"
 HOST_GATEWAY_INGRESS_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
+HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS = 300
+HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS = 300
 HOST_GATEWAY_REQUIRED_SURFACE_LABEL = "host_ingress_wrapper"
 HOST_GATEWAY_REQUIRED_SURFACE_STATUS = "PASS_REQUIRED"
 HOST_GATEWAY_REQUIRED_DISPATCH_STATUS = "PASS_REQUIRED"
@@ -576,8 +578,16 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
             "required_wrapper_surface_status": HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
             "required_wrapper_dispatch_token_status": HOST_GATEWAY_REQUIRED_DISPATCH_STATUS,
         },
+        "ingress_proof_policy": {
+            "required": True,
+            "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
+        },
         "egress_receipt_policy": {
             "required": True,
+        },
+        "egress_grant_policy": {
+            "required": True,
+            "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
         },
         "headstamp_policy": {
             "required": True,
@@ -1409,9 +1419,13 @@ def _protocol_ingress_wrapper_template() -> str:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
+import secrets
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -1469,6 +1483,38 @@ def _as_str_set(value: Any) -> set[str]:
         if token:
             out.add(token)
     return out
+
+
+def _canonical_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _build_wrapper_dispatch_proof(
+    *,
+    merged: dict[str, Any],
+    surface_label: str,
+    dispatch_token: str,
+) -> tuple[str, str]:
+    proof = {
+        "schema_version": "v1",
+        "identity_id": str(merged.get("identity_id", "")).strip(),
+        "operation": str(merged.get("operation", "")).strip().lower(),
+        "run_id": str(merged.get("run_id", "")).strip(),
+        "actor_id": str(merged.get("actor_id", "")).strip(),
+        "session_id": str(merged.get("session_id", "")).strip(),
+        "work_layer": str(merged.get("work_layer", "")).strip(),
+        "source_layer": str(merged.get("source_layer", "")).strip(),
+        "surface_label": str(surface_label or "").strip(),
+        "issued_at_epoch": int(time.time()),
+        "nonce": secrets.token_hex(16),
+    }
+    canonical = _canonical_json(proof)
+    signature = hmac.new(
+        str(dispatch_token or "").encode("utf-8"),
+        canonical.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return canonical, signature
 
 
 def _resolve_gate_profile(*, contract: dict[str, Any], operation: str, requested_profile: str) -> tuple[str, str]:
@@ -1659,6 +1705,14 @@ def main() -> int:
         resolved_gate_profile,
         "--json-only",
     ]
+    surface_label = str(merged.get("surface_label", args.surface_label)).strip() or "host_ingress_wrapper"
+    wrapper_proof_json, wrapper_proof_signature = _build_wrapper_dispatch_proof(
+        merged=merged,
+        surface_label=surface_label,
+        dispatch_token=wrapper_dispatch_token,
+    )
+    cmd.extend(["--wrapper-proof-json", wrapper_proof_json])
+    cmd.extend(["--wrapper-proof-signature", wrapper_proof_signature])
     report_selected_path = str(merged.get("report_selected_path", "")).strip()
     if report_selected_path:
         cmd.extend(["--report-selected-path", report_selected_path])
@@ -1689,9 +1743,13 @@ def _protocol_egress_wrapper_template() -> str:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
+import secrets
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -1775,6 +1833,39 @@ def _load_ingress_receipt(raw: Any) -> dict[str, Any]:
     if not p.exists():
         raise ValueError("ingress_receipt_file_missing")
     return _load_json(p.read_text(encoding="utf-8"))
+
+
+def _canonical_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _build_egress_grant(
+    *,
+    merged: dict[str, Any],
+    ingress_receipt: dict[str, Any],
+    dispatch_token: str,
+    outlet_channel_id: str,
+) -> tuple[str, str]:
+    candidate_output = str(merged.get("candidate_output", "")).strip()
+    grant = {
+        "schema_version": "v1",
+        "identity_id": str(merged.get("identity_id", "")).strip(),
+        "actor_id": str(merged.get("actor_id", "")).strip(),
+        "session_id": str(merged.get("session_id", "")).strip(),
+        "run_id": str(merged.get("run_id", "")).strip(),
+        "outlet_channel_id": str(outlet_channel_id or "").strip(),
+        "body_sha256": hashlib.sha256(candidate_output.encode("utf-8")).hexdigest(),
+        "ingress_receipt_id": str(ingress_receipt.get("receipt_id", "")).strip(),
+        "issued_at_epoch": int(time.time()),
+        "nonce": secrets.token_hex(16),
+    }
+    canonical = _canonical_json(grant)
+    signature = hmac.new(
+        str(dispatch_token or "").encode("utf-8"),
+        canonical.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return canonical, signature
 
 
 def main() -> int:
@@ -1915,6 +2006,8 @@ def main() -> int:
         str(merged.get("actor_id", "")).strip(),
         "--session-id",
         str(merged.get("session_id", "")).strip(),
+        "--run-id",
+        str(merged.get("run_id", "")).strip(),
         "--body-text",
         str(merged.get("candidate_output", "")).strip(),
         "--work-layer",
@@ -1925,6 +2018,15 @@ def main() -> int:
         "final_emit_governed",
         "--json-only",
     ]
+    dispatch_token = str(contract.get("ingress_wrapper_dispatch_token", "")).strip()
+    grant_json, grant_signature = _build_egress_grant(
+        merged=merged,
+        ingress_receipt=ingress_receipt,
+        dispatch_token=dispatch_token,
+        outlet_channel_id="final_emit_governed",
+    )
+    cmd.extend(["--egress-grant-json", grant_json])
+    cmd.extend(["--egress-grant-signature", grant_signature])
     repo_catalog = str(merged.get("repo_catalog") or args.repo_catalog or "").strip()
     if repo_catalog:
         cmd.extend(["--repo-catalog", repo_catalog])
@@ -2000,7 +2102,15 @@ def materialize_protocol_host_gateway_artifacts(
         "required_wrapper_surface_status": HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
         "required_wrapper_dispatch_token_status": HOST_GATEWAY_REQUIRED_DISPATCH_STATUS,
     }
+    contract["ingress_proof_policy"] = {
+        "required": True,
+        "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
+    }
     contract["egress_receipt_policy"] = {"required": True}
+    contract["egress_grant_policy"] = {
+        "required": True,
+        "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
+    }
     contract["headstamp_policy"] = {"required": True}
     contract["identity_tuple_fields"] = list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
     contract["host_dispatch_mode"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
@@ -2023,7 +2133,15 @@ def materialize_protocol_host_gateway_artifacts(
             "required_wrapper_surface_status": HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
             "required_wrapper_dispatch_token_status": HOST_GATEWAY_REQUIRED_DISPATCH_STATUS,
         },
+        "ingress_proof_policy": {
+            "required": True,
+            "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
+        },
         "egress_receipt_policy": {"required": True},
+        "egress_grant_policy": {
+            "required": True,
+            "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
+        },
         "headstamp_policy": {"required": True},
         "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
         "host_dispatch_mode": HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
