@@ -1132,8 +1132,12 @@ def main() -> int:
         wrapper_policy.get("required_dispatch_token", DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN)
     ).strip()
     host_dispatch_mode = str(wrapper_policy.get("host_dispatch_mode", "wrapper_only")).strip().lower()
-    wrapper_dispatch_required = strict_operation and host_dispatch_mode == "wrapper_only"
-    wrapper_surface_required = strict_operation and host_dispatch_mode == "wrapper_only"
+    resolved_work_layer_normalized = str(args.resolved_work_layer or "").strip().lower()
+    wrapper_surface_required = (
+        host_dispatch_mode == "wrapper_only"
+        and resolved_work_layer_normalized == "instance"
+    )
+    wrapper_dispatch_required = wrapper_surface_required
     wrapper_surface_ok = (not wrapper_surface_required) or surface_label == wrapper_required_surface_label
     wrapper_surface_status = (
         STATUS_SKIPPED_NOT_REQUIRED
@@ -1142,7 +1146,7 @@ def main() -> int:
     )
     if wrapper_surface_required and not wrapper_surface_ok:
         mapping_errors.append(
-            "strict_operation_surface_not_configured_wrapper:"
+            "wrapper_surface_not_configured_wrapper:"
             f"{surface_label}:expected={wrapper_required_surface_label}"
         )
         failure_count += 1
@@ -1417,7 +1421,10 @@ def main() -> int:
     receipt_path = ""
     receipt_history_path = ""
     receipt_error = ""
-    receipt_required = _is_strict_no_trim_operation(operation_normalized)
+    receipt_required = (
+        _is_strict_no_trim_operation(operation_normalized)
+        or wrapper_surface_required
+    )
     if receipt_required:
         receipt_path, receipt_history_path, receipt_error = _persist_unique_entry_receipt(
             catalog_path=str(args.catalog),
