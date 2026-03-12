@@ -252,6 +252,38 @@ To keep governance/review/implementation lifecycle deterministic, every stream n
 3. `stream_pr_binding.json` required fields:
    - `stream_version`
    - `repository`
+
+### 2.8 v1.6.6 closure freeze clauses (execution-facing)
+
+The following clauses are frozen for v1.6.6 implementation acceptance:
+
+1. Terminology/boundary freeze
+   - protocol base repo: `identity-protocol-local`
+   - business project repo: `<project>`
+   - identity runtime pack: `<global>|<project>/.identity/<identity_id>/`
+   - all unique ingress/egress + wrapper + receipt/headstamp rules must work for both `source_layer=global` and `source_layer=project`.
+2. Dual-layer unique channel
+   - protocol ingress script: `scripts/required_gate_bundle_runner.py`
+   - protocol egress script: `scripts/final_emit_governed.py`
+   - instance ingress wrapper: `runtime/gate/protocol_ingress_wrapper.py`
+   - instance egress wrapper: `runtime/gate/protocol_egress_wrapper.py`
+3. Per-round mandatory path
+   - inbound must go ingress wrapper first
+   - user-visible outbound must go egress wrapper first
+   - any non-wrapper path is fail-close by contract
+4. Light/heavy split (upgrade-only)
+   - light rounds: `operation=inspection|scan` with `gate_profile=inspection_targeted`
+   - heavy rounds: `validate/update/activate/mutation/readiness/e2e/ci/three-plane` with `gate_profile=strict_full`
+   - downgrade from heavy to targeted is forbidden; light rounds can upgrade to strict.
+5. Anti-bypass hard constraints
+   - `host_dispatch_mode=wrapper_only`, `host_release_mode=wrapper_only`
+   - runtime three-piece gateway artifacts mandatory
+   - ingress receipt tuple must include `actor_id/session_id/run_id/work_layer/source_layer`
+   - strict receipt provenance must pass wrapper surface + dispatch token parity
+6. Controller separation
+   - `identity_creator`: generate/update protocol contracts and wrapper bindings
+   - `identity_installer`: materialize/repair runtime gateway files and path bindings
+   - neither controller may weaken wrapper-only semantics.
    - `pull_request_number`
    - `pull_request_url`
    - `head_branch`
