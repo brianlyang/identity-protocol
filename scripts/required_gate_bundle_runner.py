@@ -479,6 +479,8 @@ def _resolve_wrapper_enforcement_policy(
         "allow_upgrade_only": True,
         "proof_required": True,
         "proof_max_age_seconds": WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT,
+        "proof_signing_key_path": "",
+        "proof_signing_secret": "",
     }
     errors: list[str] = []
     try:
@@ -556,6 +558,27 @@ def _resolve_wrapper_enforcement_policy(
         )
         policy["proof_required"] = proof_required
         policy["proof_max_age_seconds"] = max(proof_max_age_seconds, 1)
+        proof_signing_key_path = str(ingress_proof_policy.get("signing_key_path", "")).strip()
+        if proof_signing_key_path:
+            key_path = Path(proof_signing_key_path).expanduser()
+            if not key_path.is_absolute():
+                if proof_signing_key_path.startswith("identity/runtime/"):
+                    key_path = (pack_path / "runtime" / proof_signing_key_path[len("identity/runtime/") :]).resolve()
+                elif proof_signing_key_path.startswith("runtime/"):
+                    key_path = (pack_path / proof_signing_key_path).resolve()
+                else:
+                    key_path = (pack_path / proof_signing_key_path).resolve()
+            policy["proof_signing_key_path"] = str(key_path)
+            if key_path.exists():
+                secret = key_path.read_text(encoding="utf-8", errors="ignore").strip()
+                if secret:
+                    policy["proof_signing_secret"] = secret
+                else:
+                    errors.append("host_gateway_contract_ingress_proof_signing_key_empty")
+            else:
+                errors.append("host_gateway_contract_ingress_proof_signing_key_missing")
+        else:
+            errors.append("host_gateway_contract_ingress_proof_signing_key_path_missing")
 
     if not str(policy.get("required_dispatch_token", "")).strip():
         errors.append("host_gateway_contract_required_dispatch_token_empty")
@@ -1440,7 +1463,7 @@ def main() -> int:
         proof_ok, proof_errors, proof_details = _validate_wrapper_dispatch_proof(
             proof_json=wrapper_proof_json,
             proof_signature=wrapper_proof_signature,
-            dispatch_secret=wrapper_required_dispatch_token,
+            dispatch_secret=str(wrapper_policy.get("proof_signing_secret", "")).strip(),
             catalog_path=str(args.catalog),
             identity_id=str(args.identity_id),
             operation=operation_normalized,
@@ -1696,6 +1719,7 @@ def main() -> int:
             _as_lower_str_set(wrapper_policy.get("light_operations"))
         ),
         "wrapper_policy_allow_upgrade_only": bool(wrapper_policy.get("allow_upgrade_only", True)),
+        "wrapper_proof_signing_key_path": str(wrapper_policy.get("proof_signing_key_path", "")).strip(),
         "wrapper_dispatch_required": wrapper_dispatch_required,
         "wrapper_surface_status": wrapper_surface_status,
         "wrapper_dispatch_token_status": wrapper_dispatch_token_status,
