@@ -663,3 +663,52 @@ This section performs an explicit item-by-item replay against section 9 (`9.3 + 
 2. P1 spoofed-layer ingress bypass is now closed in code.
 3. Full closure is not yet achieved because egress physical bypass and anti-replay hardening are still pending.
 4. Stream posture remains: `Policy PASS / Implementation CONDITIONAL PASS`.
+
+## 12) Anti-static-token bypass hardening checkpoint (2026-03-12, serial replay)
+
+This checkpoint addresses the updated audit finding:
+“surface_label + static dispatch token can still pass direct runner calls”.
+
+### 12.1 Code hardening landed
+
+1. `scripts/required_gate_bundle_runner.py`
+   - wrapper enforcement now requires dynamic signed wrapper proof on wrapper-required rounds:
+     - `wrapper_dispatch_proof_required`
+     - `wrapper_dispatch_proof_status`
+     - nonce/time-window validation + replay block
+   - direct static-token call without proof is fail-close.
+2. `scripts/final_emit_governed.py`
+   - wrapper-only release mode now requires signed egress grant:
+     - `--egress-grant-json`
+     - `--egress-grant-signature`
+     - run-id + actor/session/body hash + nonce/time-window + replay block
+   - direct canonical egress without grant is fail-close.
+3. `scripts/create_identity_pack.py` + `scripts/repair_contract_backfill.py`
+   - host gateway contract/runtime contract now include:
+     - `ingress_proof_policy` (`required`, `max_age_seconds`)
+     - `egress_grant_policy` (`required`, `max_age_seconds`)
+   - ingress/egress wrapper templates emit signed proof/grant automatically.
+4. `scripts/validate_protocol_unique_entry_gate.py`
+   - validates policy presence/parity for ingress proof + egress grant.
+   - receipt provenance now also enforces `wrapper_dispatch_proof_status=PASS_REQUIRED` when provenance is required.
+
+### 12.2 Serial replay outcomes (base-repo-architect)
+
+1. Direct runner with static token only:
+   - probe: `required_gate_bundle_runner.py ... --surface-label host_ingress_wrapper --wrapper-dispatch-token instance_wrapper_ingress_v1`
+   - result: `FAIL_REQUIRED` (blocked; proof missing).
+2. Direct canonical egress without grant:
+   - probe: `final_emit_governed.py --strict-explicit-context ...` without grant args.
+   - result: `FAIL_REQUIRED` (`egress_grant_missing`).
+3. Positive wrapper chain:
+   - ingress wrapper emits signed proof -> pass.
+   - egress wrapper emits signed grant -> pass.
+4. Egress grant replay probe:
+   - first emit with fixed nonce -> pass.
+   - second emit with same signed grant -> fail-close (`egress_grant_nonce_replay_detected`).
+
+### 12.3 Posture update
+
+1. The specific audit gap (“static token + surface_label direct bypass”) is closed.
+2. Dynamic proof/grant + replay guards are now executable in protocol tooling and instance wrapper templates.
+3. Remaining boundary caveat: signing secret still comes from instance contract runtime context, so this stream remains `CONDITIONAL_GO` until higher-trust signer boundary / dispatcher-only API closure is proven across project runtime entrypoints.
