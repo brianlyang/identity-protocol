@@ -79,7 +79,7 @@ def _normalize_role_type(identity_id: str, role_type: str, known_identity_tokens
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repair/generate baseline protocol and role-binding evidence for an identity.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default=str((Path.home() / ".codex" / "identity" / "catalog.local.yaml").resolve()))
+    ap.add_argument("--catalog", default=str((Path.home() / ".codex" / ".identity" / "catalog.local.yaml").resolve()))
     ap.add_argument("--repair-protocol", action="store_true")
     ap.add_argument("--repair-role-binding", action="store_true")
     ap.add_argument("--apply", action="store_true")

@@ -12,7 +12,7 @@ import yaml
 
 
 def _repo_runtime_metrics_path(repo_root: Path, identity_id: str) -> Path:
-    return repo_root / ".codex" / "identity" / "runtime" / identity_id / "metrics" / f"{identity_id}-route-quality.json"
+    return repo_root / ".codex" / ".identity" / "runtime" / identity_id / "metrics" / f"{identity_id}-route-quality.json"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

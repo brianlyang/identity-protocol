@@ -28,7 +28,7 @@ Documented policy exists and is coherent:
 - `docs/governance/identity-runtime-path-selection-governance-v1.4.12.md`
 - Two allowed modes only:
   - Mode P: project-local runtime (`<repo>/.agents/identity`)
-  - Mode G: global runtime (`~/.codex/identity`)
+  - Mode G: global runtime (`~/.codex/.identity`)
 - Forbidden: implicit mode execution.
 
 ### 1.2 Selector entrypoints exist (skills-style operator flow)

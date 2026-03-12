@@ -70,7 +70,7 @@ def _write(path: Path, payload: dict[str, Any], apply: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repair/generate experience feedback governance evidence.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default=str((Path.home()/".codex"/"identity"/"catalog.local.yaml").resolve()))
+    ap.add_argument("--catalog", default=str((Path.home()/".codex" / ".identity"/"catalog.local.yaml").resolve()))
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 

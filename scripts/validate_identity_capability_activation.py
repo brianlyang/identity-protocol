@@ -193,6 +193,7 @@ def _derive_activation_mode(catalog: Path) -> str:
         return "project"
     if "/.agents/identity/" in p:
         return "legacy_project"
+    # Legacy forbidden root kept for migration detection.
     if "/.codex/identity/" in p:
         return "legacy_global"
     return "unknown"

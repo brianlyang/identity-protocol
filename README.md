@@ -200,7 +200,7 @@ All creator/installer/runtime context resolution follows canonical two-layer pat
 
 Fail-close rule:
 
-- no implicit runtime fallback to `./.codex/identity` or `/tmp`.
+- no implicit runtime fallback to `./.codex/.identity` or `/tmp`.
 - non-canonical runtime roots are migration-only signals and must not drive strict runtime decisions.
 
 This behavior is implemented in `scripts/resolve_identity_context.py::default_identity_home()`

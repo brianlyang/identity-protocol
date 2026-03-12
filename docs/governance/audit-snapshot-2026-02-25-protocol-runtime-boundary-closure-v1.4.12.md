@@ -15,7 +15,7 @@ This snapshot closes the residual P0 raised by roundtable audit feedback:
 - `scripts/execute_identity_upgrade.py`
   - added protocol/runtime separation gate (`IP-PATH-001`)
   - default behavior now **blocks** upgrade execution when `pack_path` resolves under `protocol_root`
-  - repo fallback `<protocol_root>/.codex/identity/runtime/...` removed from runtime output root resolver
+  - repo fallback `<protocol_root>/.codex/.identity/runtime/...` removed from runtime output root resolver
   - explicit fixture/debug override remains available:
     - `--allow-protocol-root-pack`
 
@@ -72,13 +72,13 @@ This closes common runtime drift files observed in audit runs.
      - `python3 scripts/identity_creator.py update --identity-id office-ops-expert --scope USER ...`
    - observed report root:
      - `/tmp/identity-runtime/office-ops-expert/...`
-   - no runtime output written to `<protocol_root>/.codex/identity/runtime/...`
+   - no runtime output written to `<protocol_root>/.codex/.identity/runtime/...`
 
 4. **role-binding repair uses identity runtime root**
    - command:
-     - `python3 scripts/repair_identity_baseline_evidence.py --identity-id base-repo-audit-expert-v3 --catalog ~/.codex/identity/catalog.local.yaml --repair-role-binding --apply`
+     - `python3 scripts/repair_identity_baseline_evidence.py --identity-id base-repo-audit-expert-v3 --catalog ~/.codex/.identity/catalog.local.yaml --repair-role-binding --apply`
    - observed output:
-     - `/Users/yangxi/.codex/identity/base-repo-audit-expert-v3/runtime/examples/identity-role-binding-...json`
+     - `/Users/yangxi/.codex/.identity/base-repo-audit-expert-v3/runtime/examples/identity-role-binding-...json`
    - follow-up validator:
      - `python3 scripts/validate_identity_role_binding.py ...` -> `PASSED`
 

@@ -2232,7 +2232,7 @@ Scope lock:
 Replay commands executed (non-hardcoded runtime paths):
 
 1. `source ./scripts/use_local_identity_env.sh`
-2. `GLOBAL_CATALOG="${HOME}/.codex/identity/catalog.local.yaml"`
+2. `GLOBAL_CATALOG="${HOME}/.codex/.identity/catalog.local.yaml"`
 3. `python3 scripts/release_readiness_check.py --identity-id base-repo-architect --catalog "${IDENTITY_CATALOG}" --scope USER --actor-id assistant:codex`
 4. `python3 scripts/identity_creator.py validate --identity-id base-repo-architect --catalog "${IDENTITY_CATALOG}" --scope USER --actor-id assistant:codex`
 5. `IDENTITY_CATALOG="${GLOBAL_CATALOG}" python3 scripts/release_readiness_check.py --identity-id office-ops-expert --catalog "${GLOBAL_CATALOG}" --scope USER --actor-id assistant:codex`
@@ -3387,7 +3387,7 @@ State boundary:
 
 1. project 模式：`<project>/.identity/<identity_id>/`
 2. global 模式：`${CODEX_HOME:-~/.codex}/.identity/<identity_id>/`
-3. 非 canonical 路径（如 `.agents/identity`、`~/.codex/identity`）在 strict operation 中必须 fail-close。
+3. 非 canonical 路径（如 `.agents/identity`、legacy global root without `.identity`）在 strict operation 中必须 fail-close。
 
 ### Mandatory Controls (Round-24)
 

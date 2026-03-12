@@ -87,7 +87,7 @@ Identity resolution must be deterministic and auditable across layered scopes:
 3. Project runtime scope (`<project>/.identity`)
 4. Global runtime scope (`${CODEX_HOME:-~/.codex}/.identity`)
 
-Legacy labels/paths (`local`, `repo`, `env`, `auto`, `.agents/identity`, `~/.codex/identity`) are migration metadata only and must not enter strict runtime gate semantics.
+Legacy labels/paths (`local`, `repo`, `env`, `auto`, `.agents/identity`, `~/.codex/.identity`) are migration metadata only and must not enter strict runtime gate semantics.
 
 If one `identity_id` resolves to multiple pack paths across scopes, tooling MUST fail unless explicit arbitration (`--scope`) is provided.
 

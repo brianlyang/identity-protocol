@@ -13,7 +13,7 @@ def _probe_existing_instance_dirs(identity_id: str) -> list[Path]:
         if (p / ".git").exists():
             repo = p
             break
-    user_home = Path.home() / ".codex" / "identity"
+    user_home = Path.home() / ".codex" / ".identity"
     roots = [
         user_home,
         user_home / "instances",
@@ -42,7 +42,7 @@ def main() -> int:
     ap.add_argument("--scope", default="")
     args = ap.parse_args()
 
-    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else (Path.home() / ".codex" / "identity" / "catalog.local.yaml")
+    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else (Path.home() / ".codex" / ".identity" / "catalog.local.yaml")
     repo_catalog = Path(args.repo_catalog).expanduser().resolve()
 
     try:

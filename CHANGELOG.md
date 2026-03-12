@@ -691,8 +691,8 @@
     - added release closure snapshot: `docs/governance/audit-snapshot-2026-02-23-release-closure-v1.4.7.md`
     - updated `docs/governance/AUDIT_SNAPSHOT_INDEX.md`
   - canonicalized skills-style runtime home resolution in README + governance record:
-    `IDENTITY_HOME` env override -> `${CODEX_HOME}/identity` -> `~/.codex/identity` default
-    -> `./.codex/identity` fallback when home path creation fails
+    `IDENTITY_HOME` env override -> `${CODEX_HOME}/.identity` -> `~/.codex/.identity` default
+    -> `./.codex/.identity` fallback when home path creation fails
     (removed implicit `~/.identity` auto-branch; legacy migration is explicit)
   - aligned runtime directory naming with skills-style root convention:
     canonical runtime pack root is now `${IDENTITY_HOME}`
@@ -705,7 +705,7 @@
       and added explicit empty-target fail-fast + explicit compile target resolution
   - fixed `create_identity_pack.py` absolute path rewrite bug for local runtime roots:
     - prevents duplicated absolute prefixes during scaffold bootstrap
-    - ensures generated CURRENT_TASK paths remain valid under `$CODEX_HOME/identity`
+    - ensures generated CURRENT_TASK paths remain valid under `$CODEX_HOME/.identity`
   - installer default source alignment hardening:
     - `identity_installer.py` now resolves source pack from local catalog `pack_path` first
     - default `--pack-root` now follows local runtime root instead of repo `identity/packs`

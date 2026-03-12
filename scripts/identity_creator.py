@@ -1236,7 +1236,7 @@ def _cleanup_duplicate_instance_dirs(identity_id: str, canonical_pack_path: str)
     moved: list[str] = []
     skipped: list[str] = []
     canonical = Path(canonical_pack_path).expanduser().resolve()
-    home = (Path.home() / ".codex" / "identity").resolve()
+    home = (Path.home() / ".codex" / ".identity").resolve()
     candidates = [
         home / identity_id,
         home / "instances" / identity_id,

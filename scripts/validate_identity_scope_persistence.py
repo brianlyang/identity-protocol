@@ -18,7 +18,7 @@ def main() -> int:
     ap.add_argument("--scope", default="")
     args = ap.parse_args()
 
-    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else (Path.home() / ".codex" / "identity" / "catalog.local.yaml")
+    local_catalog = Path(args.catalog).expanduser().resolve() if args.catalog else (Path.home() / ".codex" / ".identity" / "catalog.local.yaml")
     repo_catalog = Path(args.repo_catalog).expanduser().resolve()
 
     try:

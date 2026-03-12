@@ -2336,13 +2336,13 @@ Round-3 replay sweep (`HEAD=a0c191e`, 2026-03-07):
 Round-4 closure replay (2026-03-07):
 
 1. replay-archive expectation drift is closed:
-   - `python3 scripts/validate_replay_archive_contract.py --identity-id office-ops-expert --catalog "${HOME}/.codex/identity/catalog.local.yaml" --operation scan --json-only`
+   - `python3 scripts/validate_replay_archive_contract.py --identity-id office-ops-expert --catalog "${HOME}/.codex/.identity/catalog.local.yaml" --operation scan --json-only`
    - result: `replay_archive_contract_status=PASS_REQUIRED`, `error_code=""`.
 2. `rq019_negative_missing_field` regression case now remains negative under applicability-aware extraction:
    - fixture carries explicit dedup signal + missing `run_id`,
    - observed: `cross_workflow_schema_status=FAIL_REQUIRED`, `error_code=IP-XWF-002`, `stale_reasons=[\"missing_run_id\"]`.
 3. full-scan sample confirms `IP-RARCH-002` is no longer emitted for this case:
-   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --project-catalog "${HOME}/.codex/identity/catalog.local.yaml" --actor-id assistant:codex --out /tmp/full_scan_office_fix_round3b.json`
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target --identity-ids office-ops-expert --project-catalog "${HOME}/.codex/.identity/catalog.local.yaml" --actor-id assistant:codex --out /tmp/full_scan_office_fix_round3b.json`
    - replay archive lane emits `replay_archive_contract_status=PASS_REQUIRED`.
 
 Round-5 freeze replay (`HEAD=6a2ef0b`, project catalog lineage, 2026-03-07):
@@ -2794,7 +2794,7 @@ Evidence:
 1. `python3 scripts/validate_required_gate_surface_drift.py --json-only` → `PASS_REQUIRED` with `actor_id_passthrough_missing={}`.
 2. `python3 scripts/docs_command_contract_check.py` → `PASS`.
 3. `python3 scripts/validate_protocol_ssot_source.py` → `OK`.
-4. `rg -n '\\.agents/identity|/\\.codex/identity|~/.codex/identity' .identity/{config,session} .identity/*/{CURRENT_TASK.json,META.yaml,TASK_HISTORY.md} .identity/*/runtime/{state,metrics}` → no hits.
+4. `rg -n '\\.agents/identity|/\\.codex/\\.identity|~/.codex/.identity' .identity/{config,session} .identity/*/{CURRENT_TASK.json,META.yaml,TASK_HISTORY.md} .identity/*/runtime/{state,metrics}` → no hits.
 
 Decision:
 

@@ -87,6 +87,7 @@ def _detect_layout_mode(catalog_path: Path) -> str:
         return "global_codex"
     if "/.identity/" in p:
         return "project_local"
+    # Legacy forbidden roots kept for migration detection.
     if "/.agents/identity/" in p or "/.codex/identity/" in p:
         return "legacy_compat"
     return "custom"

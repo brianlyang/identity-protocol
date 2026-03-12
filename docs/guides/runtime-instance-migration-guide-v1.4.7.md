@@ -43,7 +43,7 @@ git pull --ff-only
 
 ```bash
 export CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
-export IDENTITY_HOME="${IDENTITY_HOME:-$CODEX_HOME/identity}"
+export IDENTITY_HOME="${IDENTITY_HOME:-$CODEX_HOME/.identity}"
 ```
 
 3. Optional backup (strongly recommended):

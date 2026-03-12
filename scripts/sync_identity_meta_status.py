@@ -21,7 +21,7 @@ def _dump_yaml(path: Path, data: dict[str, Any]) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Sync pack META.yaml status from catalog identities status.")
-    ap.add_argument("--catalog", default=str(Path.home() / ".codex" / "identity" / "catalog.local.yaml"))
+    ap.add_argument("--catalog", default=str(Path.home() / ".codex" / ".identity" / "catalog.local.yaml"))
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()

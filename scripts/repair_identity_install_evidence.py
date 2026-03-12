@@ -64,7 +64,7 @@ def _materialize(pattern: str, identity_id: str, ts: int, pack_root: Path | None
 def main() -> int:
     ap = argparse.ArgumentParser(description="Repair/generate install safety evidence report.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default=str((Path.home()/".codex"/"identity"/"catalog.local.yaml").resolve()))
+    ap.add_argument("--catalog", default=str((Path.home()/".codex" / ".identity"/"catalog.local.yaml").resolve()))
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
 
