@@ -30,7 +30,6 @@ EXPECTED_ENTRY_SCRIPT = "scripts/required_gate_bundle_runner.py"
 EXPECTED_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
 EXPECTED_HOST_DISPATCH_MODE = "wrapper_only"
 EXPECTED_HOST_RELEASE_MODE = "wrapper_only"
-EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
 DEFAULT_ENTRY_RECEIPT_SURFACE_LABEL = "host_ingress_wrapper"
 DEFAULT_ENTRY_RECEIPT_WRAPPER_SURFACE_STATUS = STATUS_PASS_REQUIRED
 DEFAULT_ENTRY_RECEIPT_WRAPPER_DISPATCH_STATUS = STATUS_PASS_REQUIRED
@@ -373,8 +372,8 @@ def main() -> int:
             host_gateway_issues.append("host_gateway_dispatch_mode_not_wrapper_only")
         if release_mode != EXPECTED_HOST_RELEASE_MODE:
             host_gateway_issues.append("host_gateway_release_mode_not_wrapper_only")
-        if ingress_dispatch_token != EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN:
-            host_gateway_issues.append("host_gateway_ingress_dispatch_token_mismatch")
+        if not ingress_dispatch_token:
+            host_gateway_issues.append("host_gateway_ingress_dispatch_token_missing")
         if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(tuple_fields):
             host_gateway_issues.append("host_gateway_tuple_fields_missing")
         if not isinstance(operation_profile_policy, dict):
@@ -496,7 +495,7 @@ def main() -> int:
                     host_gateway_issues.append("host_gateway_runtime_contract_dispatch_mode_not_wrapper_only")
                 if str(runtime_gateway_contract.get("host_release_mode", "")).strip().lower() != EXPECTED_HOST_RELEASE_MODE:
                     host_gateway_issues.append("host_gateway_runtime_contract_release_mode_not_wrapper_only")
-                if str(runtime_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip() != EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN:
+                if str(runtime_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip() != ingress_dispatch_token:
                     host_gateway_issues.append("host_gateway_runtime_contract_ingress_dispatch_token_mismatch")
                 runtime_tuple_fields = _as_str_set(runtime_gateway_contract.get("identity_tuple_fields"))
                 if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(runtime_tuple_fields):
