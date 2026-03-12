@@ -372,6 +372,7 @@ Code hardening landed (same v1.6.6 stream, incremental commits):
      - `wrapper_dispatch_required`
      - `wrapper_surface_status`
      - `wrapper_dispatch_token_status`
+   - strict flow now marks `protocol_unique_entry_receipt_status=FAIL_REQUIRED` whenever bundle result is non-pass (no more “receipt persisted but status pass” ambiguity on bypass/error paths).
 2. `scripts/create_identity_pack.py`
    - `protocol_unique_entry_gate_contract_v1.entry_receipt_required_fields` adds wrapper provenance fields.
    - `protocol_host_unique_channel_contract_v1.entry_receipt_policy` now carries required provenance constraints:
