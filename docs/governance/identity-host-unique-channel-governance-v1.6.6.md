@@ -27,9 +27,16 @@ Execution mode: topic-level canonical SSOT for v1.6.6 host-channel closure.
 To avoid repeated execution drift:
 
 1. In v1.6.6, `host-channel` is a stream identifier only.
-2. Operationally, all mandatory routing refers to the **project-side identity runtime adapter + instance pack wrappers**.
-3. `Host` in this document does **not** imply modifying unrelated external repositories.
-4. The hard requirement is wrapper downsink and wrapper-only invocation under `.identity/{identity_id}/runtime/gate/*`.
+2. Canonical three-layer terminology is fixed:
+   - protocol base repository: `identity-protocol-local`
+   - business project repository: `<project>` (for example `weixinstore`)
+   - identity instance pack: `<project>/.identity/<identity_id>/`
+3. Identity instance packs include two source layers and both are in scope:
+   - project layer instance: `<project>/.identity/<identity_id>/...`
+   - global layer instance: `${CODEX_HOME}/identity/<identity_id>/...`
+4. Operationally, all mandatory routing refers to the **project-side identity runtime adapter + instance pack wrappers**.
+5. `Host` in this document does **not** imply modifying unrelated external repositories.
+6. The hard requirement is wrapper downsink and wrapper-only invocation under `.identity/{identity_id}/runtime/gate/*` (or equivalent global-layer runtime root when source layer is global).
 
 ## 1) Why v1.6.6 exists
 
