@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import hmac
 import json
 import subprocess
 import sys
@@ -229,6 +231,8 @@ STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET: dict[str, str] = {
 }
 ENTRY_RECEIPT_STATE_FILE = "required_gate_bundle_entry.latest.json"
 ENTRY_RECEIPT_HISTORY_DIR = "required-gate-bundle-entry"
+WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT = 300
+WRAPPER_PROOF_NONCE_STATE_FILE = "required_gate_wrapper_nonce_state.json"
 
 
 @dataclass(frozen=True)
@@ -269,6 +273,182 @@ def _as_lower_str_set(value: Any) -> set[str]:
     return out
 
 
+def _canonical_json(data: dict[str, Any]) -> str:
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def _consume_wrapper_nonce(
+    *,
+    catalog_path: str,
+    identity_id: str,
+    nonce: str,
+    issued_at_epoch: int,
+    max_age_seconds: int,
+) -> tuple[bool, str]:
+    try:
+        pack_path, _task_path = resolve_pack_and_task(
+            Path(catalog_path).expanduser().resolve(),
+            identity_id,
+        )
+    except Exception as exc:
+        return False, f"wrapper_dispatch_proof_nonce_pack_resolve_failed:{exc}"
+
+    now_epoch = int(datetime.now(timezone.utc).timestamp())
+    state_path = (pack_path / "runtime" / "state" / WRAPPER_PROOF_NONCE_STATE_FILE).resolve()
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_doc: dict[str, Any] = {"used": {}}
+    if state_path.exists():
+        try:
+            loaded = json.loads(state_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                state_doc = loaded
+        except Exception:
+            state_doc = {"used": {}}
+    used = state_doc.get("used")
+    if not isinstance(used, dict):
+        used = {}
+
+    ttl = max(int(max_age_seconds or 0), 1) * 4
+    stale = [
+        key
+        for key, value in used.items()
+        if now_epoch - _safe_int(value, default=0) > ttl
+    ]
+    for key in stale:
+        used.pop(key, None)
+
+    nonce_key = str(nonce or "").strip()
+    if nonce_key in used:
+        return False, "wrapper_dispatch_proof_nonce_replay_detected"
+
+    used[nonce_key] = int(issued_at_epoch)
+    state_doc["used"] = used
+    try:
+        state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        return False, f"wrapper_dispatch_proof_nonce_state_write_failed:{exc}"
+    return True, ""
+
+
+def _validate_wrapper_dispatch_proof(
+    *,
+    proof_json: str,
+    proof_signature: str,
+    dispatch_secret: str,
+    catalog_path: str,
+    identity_id: str,
+    operation: str,
+    run_id_binding: str,
+    actor_id: str,
+    session_id: str,
+    resolved_work_layer: str,
+    resolved_source_layer: str,
+    surface_label: str,
+    max_age_seconds: int,
+) -> tuple[bool, list[str], dict[str, Any]]:
+    errors: list[str] = []
+    details: dict[str, Any] = {
+        "wrapper_dispatch_proof_nonce": "",
+        "wrapper_dispatch_proof_issued_at_epoch": 0,
+        "wrapper_dispatch_proof_sha256": "",
+    }
+    if not str(proof_json or "").strip():
+        return False, ["wrapper_dispatch_proof_missing"], details
+    if not str(proof_signature or "").strip():
+        return False, ["wrapper_dispatch_proof_signature_missing"], details
+    if not str(dispatch_secret or "").strip():
+        return False, ["wrapper_dispatch_proof_secret_missing"], details
+
+    try:
+        doc = json.loads(str(proof_json).strip())
+    except Exception:
+        return False, ["wrapper_dispatch_proof_invalid_json"], details
+    if not isinstance(doc, dict):
+        return False, ["wrapper_dispatch_proof_payload_not_object"], details
+
+    required_fields = (
+        "schema_version",
+        "identity_id",
+        "operation",
+        "run_id",
+        "actor_id",
+        "session_id",
+        "work_layer",
+        "source_layer",
+        "surface_label",
+        "issued_at_epoch",
+        "nonce",
+    )
+    missing = [field for field in required_fields if field not in doc]
+    if missing:
+        return False, ["wrapper_dispatch_proof_fields_missing:" + ",".join(sorted(missing))], details
+
+    details["wrapper_dispatch_proof_nonce"] = str(doc.get("nonce", "")).strip()
+    details["wrapper_dispatch_proof_issued_at_epoch"] = _safe_int(doc.get("issued_at_epoch"), default=0)
+    canonical = _canonical_json(doc)
+    details["wrapper_dispatch_proof_sha256"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    expected_signature = hmac.new(
+        str(dispatch_secret).encode("utf-8"),
+        canonical.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(str(proof_signature).strip(), expected_signature):
+        errors.append("wrapper_dispatch_proof_signature_invalid")
+
+    if str(doc.get("schema_version", "")).strip() != "v1":
+        errors.append("wrapper_dispatch_proof_schema_version_invalid")
+    if str(doc.get("identity_id", "")).strip() != str(identity_id or "").strip():
+        errors.append("wrapper_dispatch_proof_identity_mismatch")
+    if str(doc.get("operation", "")).strip().lower() != str(operation or "").strip().lower():
+        errors.append("wrapper_dispatch_proof_operation_mismatch")
+    if str(doc.get("run_id", "")).strip() != str(run_id_binding or "").strip():
+        errors.append("wrapper_dispatch_proof_run_id_mismatch")
+    if str(doc.get("actor_id", "")).strip() != str(actor_id or "").strip():
+        errors.append("wrapper_dispatch_proof_actor_id_mismatch")
+    if str(doc.get("session_id", "")).strip() != str(session_id or "").strip():
+        errors.append("wrapper_dispatch_proof_session_id_mismatch")
+    if str(doc.get("work_layer", "")).strip().lower() != str(resolved_work_layer or "").strip().lower():
+        errors.append("wrapper_dispatch_proof_work_layer_mismatch")
+    if str(doc.get("source_layer", "")).strip().lower() != str(resolved_source_layer or "").strip().lower():
+        errors.append("wrapper_dispatch_proof_source_layer_mismatch")
+    if str(doc.get("surface_label", "")).strip() != str(surface_label or "").strip():
+        errors.append("wrapper_dispatch_proof_surface_label_mismatch")
+
+    issued_at_epoch = _safe_int(doc.get("issued_at_epoch"), default=0)
+    now_epoch = int(datetime.now(timezone.utc).timestamp())
+    max_age = max(_safe_int(max_age_seconds, default=WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT), 1)
+    if issued_at_epoch <= 0:
+        errors.append("wrapper_dispatch_proof_issued_at_invalid")
+    else:
+        if issued_at_epoch > now_epoch + 30:
+            errors.append("wrapper_dispatch_proof_issued_at_in_future")
+        if now_epoch - issued_at_epoch > max_age:
+            errors.append("wrapper_dispatch_proof_expired")
+
+    nonce = str(doc.get("nonce", "")).strip()
+    if len(nonce) < 16:
+        errors.append("wrapper_dispatch_proof_nonce_too_short")
+    if not errors:
+        consumed, consume_error = _consume_wrapper_nonce(
+            catalog_path=catalog_path,
+            identity_id=identity_id,
+            nonce=nonce,
+            issued_at_epoch=issued_at_epoch,
+            max_age_seconds=max_age,
+        )
+        if not consumed:
+            errors.append(str(consume_error or "wrapper_dispatch_proof_nonce_consume_failed"))
+
+    return len(errors) == 0, errors, details
+
+
 def _resolve_host_gateway_contract(task: dict[str, Any]) -> dict[str, Any]:
     for key in HOST_GATEWAY_CONTRACT_KEYS:
         raw = task.get(key)
@@ -297,6 +477,8 @@ def _resolve_wrapper_enforcement_policy(
         "strict_operations": list(STRICT_NO_TRIM_OPERATIONS_DEFAULT),
         "light_operations": list(LIGHT_NO_TRIM_OPERATIONS_DEFAULT),
         "allow_upgrade_only": True,
+        "proof_required": True,
+        "proof_max_age_seconds": WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT,
     }
     errors: list[str] = []
     try:
@@ -364,6 +546,16 @@ def _resolve_wrapper_enforcement_policy(
         else:
             errors.append("host_gateway_contract_operation_profile_light_operations_missing")
         policy["allow_upgrade_only"] = allow_upgrade_only
+
+    ingress_proof_policy = host_gateway_contract.get("ingress_proof_policy")
+    if isinstance(ingress_proof_policy, dict):
+        proof_required = bool(ingress_proof_policy.get("required", True))
+        proof_max_age_seconds = _safe_int(
+            ingress_proof_policy.get("max_age_seconds"),
+            default=WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT,
+        )
+        policy["proof_required"] = proof_required
+        policy["proof_max_age_seconds"] = max(proof_max_age_seconds, 1)
 
     if not str(policy.get("required_dispatch_token", "")).strip():
         errors.append("host_gateway_contract_required_dispatch_token_empty")
@@ -895,6 +1087,13 @@ def _persist_unique_entry_receipt(
         "wrapper_dispatch_required": bool(payload.get("wrapper_dispatch_required", False)),
         "wrapper_surface_status": str(payload.get("wrapper_surface_status", "")).strip(),
         "wrapper_dispatch_token_status": str(payload.get("wrapper_dispatch_token_status", "")).strip(),
+        "wrapper_dispatch_proof_required": bool(payload.get("wrapper_dispatch_proof_required", False)),
+        "wrapper_dispatch_proof_status": str(payload.get("wrapper_dispatch_proof_status", "")).strip(),
+        "wrapper_dispatch_proof_nonce": str(payload.get("wrapper_dispatch_proof_nonce", "")).strip(),
+        "wrapper_dispatch_proof_issued_at_epoch": int(
+            _safe_int(payload.get("wrapper_dispatch_proof_issued_at_epoch"), default=0)
+        ),
+        "wrapper_dispatch_proof_sha256": str(payload.get("wrapper_dispatch_proof_sha256", "")).strip(),
         "wrapper_dispatch_token_expected": str(payload.get("wrapper_dispatch_token_expected", "")).strip(),
         "run_id_binding": str(run_id_binding or "").strip(),
         "actor_id": str(actor_id or "").strip(),
@@ -1057,6 +1256,8 @@ def main() -> int:
         default="",
         help="required wrapper dispatch token for host_ingress_wrapper strict operations",
     )
+    parser.add_argument("--wrapper-proof-json", default="", help="signed dynamic wrapper proof payload (json)")
+    parser.add_argument("--wrapper-proof-signature", default="", help="HMAC signature for wrapper proof payload")
     parser.add_argument("--target-name", default="", help="optional single target probe via bundle registry lineage")
     parser.add_argument("--gate-profile", default="", help="optional gate profile key for requirement selection")
     parser.add_argument(
@@ -1156,6 +1357,8 @@ def main() -> int:
     row_contract_error_count = 0
     surface_label = str(args.surface_label or "").strip() or str(args.operation or "").strip().replace("-", "_") or "unknown_surface"
     wrapper_dispatch_token = str(args.wrapper_dispatch_token or "").strip()
+    wrapper_proof_json = str(args.wrapper_proof_json or "").strip()
+    wrapper_proof_signature = str(args.wrapper_proof_signature or "").strip()
     run_id_binding = str(args.run_id or "").strip()
     report_selected_path = str(args.report_selected_path or "").strip()
     actor_id = str(args.actor_id or "").strip()
@@ -1189,6 +1392,11 @@ def main() -> int:
     wrapper_required_dispatch_token = str(
         wrapper_policy.get("required_dispatch_token", DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN)
     ).strip()
+    wrapper_proof_required = bool(wrapper_policy.get("proof_required", True))
+    wrapper_proof_max_age_seconds = max(
+        _safe_int(wrapper_policy.get("proof_max_age_seconds"), default=WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT),
+        1,
+    )
     host_dispatch_mode = str(wrapper_policy.get("host_dispatch_mode", "wrapper_only")).strip().lower()
     wrapper_surface_required = _operation_requires_wrapper_provenance(
         operation=operation_normalized,
@@ -1223,6 +1431,37 @@ def main() -> int:
     if wrapper_dispatch_required and not wrapper_dispatch_ok:
         mapping_errors.append("wrapper_dispatch_token_missing_or_invalid")
         failure_count += 1
+    wrapper_dispatch_proof_status = STATUS_SKIPPED_NOT_REQUIRED
+    wrapper_dispatch_proof_nonce = ""
+    wrapper_dispatch_proof_issued_at_epoch = 0
+    wrapper_dispatch_proof_sha256 = ""
+    wrapper_dispatch_proof_required = bool(wrapper_dispatch_required and wrapper_proof_required)
+    if wrapper_dispatch_proof_required:
+        proof_ok, proof_errors, proof_details = _validate_wrapper_dispatch_proof(
+            proof_json=wrapper_proof_json,
+            proof_signature=wrapper_proof_signature,
+            dispatch_secret=wrapper_required_dispatch_token,
+            catalog_path=str(args.catalog),
+            identity_id=str(args.identity_id),
+            operation=operation_normalized,
+            run_id_binding=run_id_binding,
+            actor_id=actor_id,
+            session_id=session_id,
+            resolved_work_layer=str(args.resolved_work_layer or "").strip(),
+            resolved_source_layer=str(args.resolved_source_layer or "").strip(),
+            surface_label=surface_label,
+            max_age_seconds=wrapper_proof_max_age_seconds,
+        )
+        wrapper_dispatch_proof_nonce = str(proof_details.get("wrapper_dispatch_proof_nonce", "")).strip()
+        wrapper_dispatch_proof_issued_at_epoch = _safe_int(
+            proof_details.get("wrapper_dispatch_proof_issued_at_epoch"),
+            default=0,
+        )
+        wrapper_dispatch_proof_sha256 = str(proof_details.get("wrapper_dispatch_proof_sha256", "")).strip()
+        wrapper_dispatch_proof_status = STATUS_PASS_REQUIRED if proof_ok else STATUS_FAIL_REQUIRED
+        if not proof_ok:
+            mapping_errors.extend(proof_errors)
+            failure_count += len(proof_errors)
 
     for spec in specs:
         validator_path = Path(spec.script_path)
@@ -1461,6 +1700,11 @@ def main() -> int:
         "wrapper_surface_status": wrapper_surface_status,
         "wrapper_dispatch_token_status": wrapper_dispatch_token_status,
         "wrapper_dispatch_token_expected": wrapper_required_dispatch_token,
+        "wrapper_dispatch_proof_required": wrapper_dispatch_proof_required,
+        "wrapper_dispatch_proof_status": wrapper_dispatch_proof_status,
+        "wrapper_dispatch_proof_nonce": wrapper_dispatch_proof_nonce,
+        "wrapper_dispatch_proof_issued_at_epoch": wrapper_dispatch_proof_issued_at_epoch,
+        "wrapper_dispatch_proof_sha256": wrapper_dispatch_proof_sha256,
         "run_id_binding": run_id_binding,
         "session_id": session_id,
         "report_selected_path": report_selected_path,
