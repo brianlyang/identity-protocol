@@ -423,6 +423,7 @@ Implementation closure:
 3. `scripts/validate_protocol_unique_entry_gate.py`
    - validates host gateway `operation_profile_policy` presence/completeness.
    - validates runtime gateway contract parity against CURRENT_TASK policy.
+   - ingress dispatch token check is contract-derived (runtime token must match CURRENT_TASK contract token), not fixed constant matching.
 4. `scripts/repair_contract_backfill.py`
    - backfills legacy packs with `operation_profile_policy` defaults.
 5. `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
