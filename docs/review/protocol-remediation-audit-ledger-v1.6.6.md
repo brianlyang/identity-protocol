@@ -614,3 +614,52 @@ by spoofing caller parameters (for example `--resolved-work-layer protocol`) dur
    - per-turn dynamic wrapper proof (`nonce + time-window + replay block`) for anti-replay hardening.
    - project session dispatcher must expose wrapper-only execution APIs (conversation-layer physical routing proof).
 3. Posture remains: `Policy PASS / Implementation CONDITIONAL PASS`.
+
+## 11) Deep self-check against frozen dialogue baseline (2026-03-12)
+
+This section performs an explicit item-by-item replay against section 9 (`9.3 + 9.4 + 9.5`) and records current machine-observed status.
+
+### 11.1 Scope and method
+
+1. Identity under replay: `base-repo-architect` (project layer runtime pack).
+2. Catalog source: `/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`.
+3. Replay mode: serial command execution, no parallel substitution for decision probes.
+4. Evidence form: command outputs only (no temporary-path references added to strict docs).
+
+### 11.2 9.4 negative-probe replay status
+
+1. `9.4-1` direct ingress call without wrapper proof -> **PASS (blocked as expected)**.
+   - probe: direct `required_gate_bundle_runner.py` call, no wrapper token.
+   - observed: `bundle_status=FAIL_REQUIRED`, `wrapper_dispatch_token_status=FAIL_REQUIRED`.
+2. `9.4-2` direct egress script call without wrapper flow proof -> **FAIL (not yet blocked)**.
+   - probe: direct `scripts/final_emit_governed.py` call with explicit context.
+   - observed: `final_emit_guard_status=PASS_REQUIRED`.
+3. `9.4-3` actor mismatch replay -> **PASS (blocked as expected)**.
+   - observed: `protocol_egress_wrapper_status=FAIL_REQUIRED`, `error_code=IP-ASB-201`.
+4. `9.4-4` session mismatch replay -> **PASS (blocked as expected)**.
+   - observed: `protocol_egress_wrapper_status=FAIL_REQUIRED`, `error_code=IP-ASB-201`.
+5. `9.4-5` run-id mismatch replay -> **PASS (blocked as expected)**.
+   - observed: `protocol_egress_wrapper_status=FAIL_REQUIRED`, `error_code=IP-GATE-ENTRY-002`.
+6. `9.4-6` stale receipt reuse -> **FAIL (anti-replay hardening pending)**.
+   - observed: receipt tuple-parity passes when reused with matching tuple context; no nonce/time-window replay blocker yet.
+7. `9.4-7` strict non-wrapper provenance -> **PASS (blocked as expected)**.
+   - probe: direct runner call with forged `--resolved-work-layer protocol --surface-label bypass_probe`.
+   - observed: `rc=1`, `bundle_status=FAIL_REQUIRED`.
+8. `9.4-8` any user-visible output path without egress wrapper -> **FAIL (not yet physically sealed)**.
+   - observed: direct canonical egress script can emit pass without wrapper envelope.
+
+### 11.3 9.5 non-closure indicator check
+
+1. `9.5-1` caller-self-reported layer spoof bypass -> **cleared in this round**.
+   - wrapper enforcement no longer keyed by caller `resolved_work_layer`.
+2. `9.5-2` runtime has wrapper files but project entrypoints might not consume them -> **still open (project-runtime proof required)**.
+3. `9.5-3` egress emit without same-turn ingress parity -> **open via direct canonical egress path**.
+4. `9.5-4` global source-layer canonical path drift -> **not reopened in this replay**.
+5. `9.5-5` strict-only replay coverage bias -> **partially mitigated** (light/strict replays exist), but full closure still depends on item 2/3 above.
+
+### 11.4 Verdict after deep self-check
+
+1. Section-9 baseline is correctly materialized and useful as an audit checklist.
+2. P1 spoofed-layer ingress bypass is now closed in code.
+3. Full closure is not yet achieved because egress physical bypass and anti-replay hardening are still pending.
+4. Stream posture remains: `Policy PASS / Implementation CONDITIONAL PASS`.
