@@ -572,7 +572,10 @@ def main() -> int:
         if session_id and receipt_session_id != session_id:
             receipt_issues.append("entry_receipt_session_id_mismatch")
         if strict_operation and receipt_surface_label != receipt_required_surface_label:
-            receipt_issues.append("entry_receipt_surface_label_not_host_wrapper")
+            receipt_issues.append(
+                "entry_receipt_surface_label_mismatch:"
+                f"{receipt_surface_label}:expected={receipt_required_surface_label}"
+            )
         if strict_operation and receipt_wrapper_surface_status != receipt_required_wrapper_surface_status:
             receipt_issues.append("entry_receipt_wrapper_surface_status_not_pass_required")
         if strict_operation and receipt_wrapper_dispatch_status != receipt_required_wrapper_dispatch_status:
