@@ -30,7 +30,7 @@ Companion governance SSOT:
    - identity instance pack: `<project>/.identity/<identity_id>/`
 3. Instance source layers include both project and global roots, and review must accept both:
    - project-layer pack under `<project>/.identity/<identity_id>/...`
-   - global-layer pack under `${CODEX_HOME}/identity/<identity_id>/...`
+   - global-layer pack under `${CODEX_HOME}/.identity/<identity_id>/...`
 4. This stream validates **project-side runtime adapter + instance pack wrapper** closure.
 5. Wrapper materialization scope is `.identity/{identity_id}/runtime/gate/*` with declaration in `CURRENT_TASK.json`.
 

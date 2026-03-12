@@ -33,7 +33,7 @@ To avoid repeated execution drift:
    - identity instance pack: `<project>/.identity/<identity_id>/`
 3. Identity instance packs include two source layers and both are in scope:
    - project layer instance: `<project>/.identity/<identity_id>/...`
-   - global layer instance: `${CODEX_HOME}/identity/<identity_id>/...`
+   - global layer instance: `${CODEX_HOME}/.identity/<identity_id>/...`
 4. Operationally, all mandatory routing refers to the **project-side identity runtime adapter + instance pack wrappers**.
 5. `Host` in this document does **not** imply modifying unrelated external repositories.
 6. The hard requirement is wrapper downsink and wrapper-only invocation under `.identity/{identity_id}/runtime/gate/*` (or equivalent global-layer runtime root when source layer is global).
