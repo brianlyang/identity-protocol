@@ -28,6 +28,9 @@ STRICT_OPERATIONS = {
 
 EXPECTED_ENTRY_SCRIPT = "scripts/required_gate_bundle_runner.py"
 EXPECTED_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
+EXPECTED_HOST_DISPATCH_MODE = "wrapper_only"
+EXPECTED_HOST_RELEASE_MODE = "wrapper_only"
+EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
 EXPECTED_BUNDLE_KEY = "required_gate_bundle_runner"
 EXPECTED_SCOPE = "all_identity_instance_actions"
 EXPECTED_ENTRY_ERROR_FAMILY = {"IP-GATE-ENTRY-001", "IP-GATE-ENTRY-002"}
@@ -214,6 +217,9 @@ def main() -> int:
         "protocol_host_gateway_contract_key": "",
         "protocol_host_gateway_ingress_script": "",
         "protocol_host_gateway_egress_script": "",
+        "protocol_host_gateway_dispatch_mode": "",
+        "protocol_host_gateway_release_mode": "",
+        "protocol_host_gateway_ingress_dispatch_token": "",
         "protocol_host_gateway_ingress_wrapper_path": "",
         "protocol_host_gateway_egress_wrapper_path": "",
         "protocol_host_gateway_contract_path": "",
@@ -299,9 +305,15 @@ def main() -> int:
         ingress_wrapper_raw = str(host_gateway_contract.get("ingress_wrapper_path", "")).strip()
         egress_wrapper_raw = str(host_gateway_contract.get("egress_wrapper_path", "")).strip()
         gateway_contract_raw = str(host_gateway_contract.get("gateway_contract_path", "")).strip()
+        dispatch_mode = str(host_gateway_contract.get("host_dispatch_mode", "")).strip().lower()
+        release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
+        ingress_dispatch_token = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
         tuple_fields = _as_str_set(host_gateway_contract.get("identity_tuple_fields"))
         payload["protocol_host_gateway_ingress_script"] = ingress_script
         payload["protocol_host_gateway_egress_script"] = egress_script
+        payload["protocol_host_gateway_dispatch_mode"] = dispatch_mode
+        payload["protocol_host_gateway_release_mode"] = release_mode
+        payload["protocol_host_gateway_ingress_dispatch_token"] = ingress_dispatch_token
         payload["protocol_host_gateway_identity_tuple_fields"] = sorted(tuple_fields)
 
         ingress_wrapper_path = _resolve_pack_relative_path(
@@ -331,6 +343,12 @@ def main() -> int:
             host_gateway_issues.append("host_gateway_ingress_script_mismatch")
         if egress_script != EXPECTED_EGRESS_SCRIPT:
             host_gateway_issues.append("host_gateway_egress_script_mismatch")
+        if dispatch_mode != EXPECTED_HOST_DISPATCH_MODE:
+            host_gateway_issues.append("host_gateway_dispatch_mode_not_wrapper_only")
+        if release_mode != EXPECTED_HOST_RELEASE_MODE:
+            host_gateway_issues.append("host_gateway_release_mode_not_wrapper_only")
+        if ingress_dispatch_token != EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN:
+            host_gateway_issues.append("host_gateway_ingress_dispatch_token_mismatch")
         if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(tuple_fields):
             host_gateway_issues.append("host_gateway_tuple_fields_missing")
         entry_policy = host_gateway_contract.get("entry_receipt_policy")
@@ -380,6 +398,9 @@ def main() -> int:
                     "egress_receipt_policy",
                     "headstamp_policy",
                     "identity_tuple_fields",
+                    "host_dispatch_mode",
+                    "host_release_mode",
+                    "ingress_wrapper_dispatch_token",
                 }
                 missing_runtime_fields = sorted(
                     field for field in required_runtime_fields if field not in runtime_gateway_contract
@@ -394,6 +415,12 @@ def main() -> int:
                     host_gateway_issues.append("host_gateway_runtime_contract_ingress_script_mismatch")
                 if str(runtime_gateway_contract.get("protocol_egress_script", "")).strip() != EXPECTED_EGRESS_SCRIPT:
                     host_gateway_issues.append("host_gateway_runtime_contract_egress_script_mismatch")
+                if str(runtime_gateway_contract.get("host_dispatch_mode", "")).strip().lower() != EXPECTED_HOST_DISPATCH_MODE:
+                    host_gateway_issues.append("host_gateway_runtime_contract_dispatch_mode_not_wrapper_only")
+                if str(runtime_gateway_contract.get("host_release_mode", "")).strip().lower() != EXPECTED_HOST_RELEASE_MODE:
+                    host_gateway_issues.append("host_gateway_runtime_contract_release_mode_not_wrapper_only")
+                if str(runtime_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip() != EXPECTED_INGRESS_WRAPPER_DISPATCH_TOKEN:
+                    host_gateway_issues.append("host_gateway_runtime_contract_ingress_dispatch_token_mismatch")
                 runtime_tuple_fields = _as_str_set(runtime_gateway_contract.get("identity_tuple_fields"))
                 if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(runtime_tuple_fields):
                     host_gateway_issues.append("host_gateway_runtime_contract_tuple_fields_missing")
