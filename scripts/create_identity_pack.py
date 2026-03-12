@@ -91,6 +91,23 @@ HOST_GATEWAY_INGRESS_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
 HOST_GATEWAY_REQUIRED_SURFACE_LABEL = "host_ingress_wrapper"
 HOST_GATEWAY_REQUIRED_SURFACE_STATUS = "PASS_REQUIRED"
 HOST_GATEWAY_REQUIRED_DISPATCH_STATUS = "PASS_REQUIRED"
+HOST_GATEWAY_STRICT_OPERATIONS = [
+    "activate",
+    "update",
+    "mutation",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "three-plane",
+]
+HOST_GATEWAY_LIGHT_OPERATIONS = [
+    "inspection",
+    "scan",
+]
+HOST_GATEWAY_STRICT_GATE_PROFILE = "strict_full"
+HOST_GATEWAY_LIGHT_GATE_PROFILE = "inspection_targeted"
+HOST_GATEWAY_ALLOW_UPGRADE_ONLY = True
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_egress_wrapper.py"
@@ -533,6 +550,16 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
     }
 
 
+def _host_gateway_operation_profile_policy() -> dict:
+    return {
+        "strict_operations": list(HOST_GATEWAY_STRICT_OPERATIONS),
+        "light_operations": list(HOST_GATEWAY_LIGHT_OPERATIONS),
+        "strict_gate_profile": HOST_GATEWAY_STRICT_GATE_PROFILE,
+        "light_gate_profile": HOST_GATEWAY_LIGHT_GATE_PROFILE,
+        "allow_upgrade_only": bool(HOST_GATEWAY_ALLOW_UPGRADE_ONLY),
+    }
+
+
 def _protocol_host_unique_channel_contract_skeleton() -> dict:
     return {
         "required": True,
@@ -559,6 +586,7 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
         "host_dispatch_mode": HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
         "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
+        "operation_profile_policy": _host_gateway_operation_profile_policy(),
     }
 
 
@@ -1432,6 +1460,59 @@ def _to_bool_text(value: Any) -> str:
     return "true" if token in {"1", "true", "yes", "y", "on"} else "false"
 
 
+def _as_str_set(value: Any) -> set[str]:
+    if not isinstance(value, list):
+        return set()
+    out: set[str] = set()
+    for item in value:
+        token = str(item or "").strip().lower()
+        if token:
+            out.add(token)
+    return out
+
+
+def _resolve_gate_profile(*, contract: dict[str, Any], operation: str, requested_profile: str) -> tuple[str, str]:
+    policy = contract.get("operation_profile_policy")
+    if not isinstance(policy, dict):
+        policy = {}
+    strict_operations = _as_str_set(policy.get("strict_operations")) or {
+        "activate",
+        "update",
+        "mutation",
+        "readiness",
+        "e2e",
+        "ci",
+        "validate",
+        "three-plane",
+    }
+    light_operations = _as_str_set(policy.get("light_operations")) or {"inspection", "scan"}
+    strict_profile = str(policy.get("strict_gate_profile", "")).strip() or "strict_full"
+    light_profile = str(policy.get("light_gate_profile", "")).strip() or "inspection_targeted"
+    allow_upgrade_only = bool(policy.get("allow_upgrade_only", True))
+    operation_token = str(operation or "").strip().lower()
+    requested = str(requested_profile or "").strip()
+
+    if operation_token in strict_operations:
+        if requested and requested != strict_profile:
+            return "", f"strict_operation_gate_profile_mismatch:{requested}:expected={strict_profile}"
+        return strict_profile, ""
+
+    if operation_token in light_operations:
+        if not requested:
+            return light_profile, ""
+        if requested == light_profile:
+            return light_profile, ""
+        if requested == strict_profile:
+            return strict_profile, ""
+        return "", f"light_operation_gate_profile_invalid:{requested}:allowed={light_profile}|{strict_profile}"
+
+    if requested:
+        if allow_upgrade_only and requested != strict_profile:
+            return "", f"unknown_operation_gate_profile_not_allowed:{requested}:expected={strict_profile}"
+        return requested, ""
+    return strict_profile, ""
+
+
 def _fail(*, error_code: str, stale_reason: str, json_only: bool) -> int:
     _emit(
         {
@@ -1458,6 +1539,7 @@ def main() -> int:
     ap.add_argument("--work-layer", default="")
     ap.add_argument("--source-layer", default="")
     ap.add_argument("--surface-label", default="host_ingress_wrapper")
+    ap.add_argument("--gate-profile", default="")
     ap.add_argument("--target-name", default="")
     ap.add_argument("--out", default="")
     ap.add_argument("--contract-path", default="")
@@ -1486,7 +1568,7 @@ def main() -> int:
         )
 
     merged: dict[str, Any] = dict(envelope)
-    for key in ("catalog", "repo_catalog", "identity_id", "operation", "run_id", "actor_id", "session_id"):
+    for key in ("catalog", "repo_catalog", "identity_id", "operation", "run_id", "actor_id", "session_id", "gate_profile"):
         value = getattr(args, key, "")
         if str(value or "").strip():
             merged[key] = value
@@ -1519,6 +1601,17 @@ def main() -> int:
         str(contract.get("ingress_wrapper_dispatch_token", "")).strip()
         or WRAPPER_DISPATCH_TOKEN_FALLBACK
     )
+    resolved_gate_profile, gate_profile_error = _resolve_gate_profile(
+        contract=contract,
+        operation=str(merged.get("operation", "")).strip(),
+        requested_profile=str(merged.get("gate_profile", "")).strip(),
+    )
+    if gate_profile_error:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason=gate_profile_error,
+            json_only=args.json_only,
+        )
     script_path = (repo_root / script_rel).resolve() if script_rel else Path("")
     if not script_rel or not script_path.exists():
         return _fail(
@@ -1562,6 +1655,8 @@ def main() -> int:
         str(merged.get("surface_label", args.surface_label)).strip() or "host_ingress_wrapper",
         "--wrapper-dispatch-token",
         wrapper_dispatch_token,
+        "--gate-profile",
+        resolved_gate_profile,
         "--json-only",
     ]
     report_selected_path = str(merged.get("report_selected_path", "")).strip()
@@ -1911,6 +2006,7 @@ def materialize_protocol_host_gateway_artifacts(
     contract["host_dispatch_mode"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
     contract["host_release_mode"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
     contract["ingress_wrapper_dispatch_token"] = HOST_GATEWAY_INGRESS_DISPATCH_TOKEN
+    contract["operation_profile_policy"] = _host_gateway_operation_profile_policy()
 
     gateway_contract_payload = {
         "schema_version": "v1",
@@ -1933,6 +2029,7 @@ def materialize_protocol_host_gateway_artifacts(
         "host_dispatch_mode": HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
         "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
+        "operation_profile_policy": _host_gateway_operation_profile_policy(),
     }
 
     write_json(gateway_contract_path, gateway_contract_payload)
