@@ -404,11 +404,31 @@ def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], 
             if required_wrapper_dispatch_status:
                 entry_policy["required_wrapper_dispatch_token_status"] = required_wrapper_dispatch_status
         node["entry_receipt_policy"] = entry_policy
+        ingress_proof_policy = node.get("ingress_proof_policy")
+        if not isinstance(ingress_proof_policy, dict):
+            ingress_proof_policy = {}
+        ingress_proof_policy["required"] = True
+        default_ingress_proof_policy = default.get("ingress_proof_policy")
+        if isinstance(default_ingress_proof_policy, dict):
+            max_age_seconds = int(default_ingress_proof_policy.get("max_age_seconds", 300) or 300)
+            if int(ingress_proof_policy.get("max_age_seconds", 0) or 0) <= 0:
+                ingress_proof_policy["max_age_seconds"] = max_age_seconds
+        node["ingress_proof_policy"] = ingress_proof_policy
         egress_policy = node.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict):
             egress_policy = {}
         egress_policy["required"] = True
         node["egress_receipt_policy"] = egress_policy
+        egress_grant_policy = node.get("egress_grant_policy")
+        if not isinstance(egress_grant_policy, dict):
+            egress_grant_policy = {}
+        egress_grant_policy["required"] = True
+        default_egress_grant_policy = default.get("egress_grant_policy")
+        if isinstance(default_egress_grant_policy, dict):
+            max_age_seconds = int(default_egress_grant_policy.get("max_age_seconds", 300) or 300)
+            if int(egress_grant_policy.get("max_age_seconds", 0) or 0) <= 0:
+                egress_grant_policy["max_age_seconds"] = max_age_seconds
+        node["egress_grant_policy"] = egress_grant_policy
         headstamp_policy = node.get("headstamp_policy")
         if not isinstance(headstamp_policy, dict):
             headstamp_policy = {}
@@ -550,8 +570,14 @@ def main() -> int:
             or not str((updated.get(k) or {}).get("gateway_contract_path", "")).strip()
             or not isinstance((updated.get(k) or {}).get("entry_receipt_policy"), dict)
             or bool(((updated.get(k) or {}).get("entry_receipt_policy") or {}).get("required")) is not True
+            or not isinstance((updated.get(k) or {}).get("ingress_proof_policy"), dict)
+            or bool(((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("required")) is not True
+            or int((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("max_age_seconds") or 0)) <= 0
             or not isinstance((updated.get(k) or {}).get("egress_receipt_policy"), dict)
             or bool(((updated.get(k) or {}).get("egress_receipt_policy") or {}).get("required")) is not True
+            or not isinstance((updated.get(k) or {}).get("egress_grant_policy"), dict)
+            or bool(((updated.get(k) or {}).get("egress_grant_policy") or {}).get("required")) is not True
+            or int((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("max_age_seconds") or 0)) <= 0
             or not isinstance((updated.get(k) or {}).get("headstamp_policy"), dict)
             or bool(((updated.get(k) or {}).get("headstamp_policy") or {}).get("required")) is not True
             or not isinstance((updated.get(k) or {}).get("identity_tuple_fields"), list)
