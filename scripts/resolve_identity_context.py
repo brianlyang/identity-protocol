@@ -116,6 +116,14 @@ def _classify_catalog_source_layer(
     project_root = _project_identity_home_from_repo_catalog(repo_root, repo_catalog_path)
     if _within(c, project_root):
         return "project"
+    # Fallback: in some launch contexts repo_catalog path is non-canonical, but
+    # runtime local catalog still lives under repo-adjacent ".identity".
+    repo_adjacent_project_roots = {
+        (repo_root / ".identity").resolve(),
+        (repo_root.parent / ".identity").resolve(),
+    }
+    if c.name == "catalog.local.yaml" and any(_within(c, r) for r in repo_adjacent_project_roots):
+        return "project"
     if _within(c, user_root):
         return "global"
     if c == repo_catalog_path.expanduser().resolve():

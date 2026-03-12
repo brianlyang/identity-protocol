@@ -22,6 +22,7 @@ from create_identity_pack import (
     _derived_prompt_conformance_contract_skeleton,
     _ensure_intake_p1_contracts,
     _multimodal_plugin_enforcement_contract_skeleton,
+    _host_gateway_signer_secret_env,
     _protocol_host_unique_channel_contract_skeleton,
     _protocol_unique_entry_gate_contract_skeleton,
     _prompt_bootstrap_capability_contract_skeleton,
@@ -84,7 +85,7 @@ ENTRY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
 }
 HOST_GATEWAY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
-    HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton(),
+    HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton("default"),
 }
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
@@ -356,9 +357,10 @@ def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], 
     return forced_required_keys, restored_validator_keys
 
 
-def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str = "") -> tuple[list[str], list[str]]:
     forced_required_keys: list[str] = []
     restored_validator_keys: list[str] = []
+    signer_secret_env = _host_gateway_signer_secret_env(identity_id or "default")
     for key in REQUIRED_HOST_GATEWAY_KEYS:
         default = HOST_GATEWAY_CONTRACT_DEFAULTS.get(key, {})
         node = task.get(key)
@@ -409,14 +411,14 @@ def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], 
         if not isinstance(ingress_proof_policy, dict):
             ingress_proof_policy = {}
         ingress_proof_policy["required"] = True
+        ingress_proof_policy["signer_mode"] = "runtime_env_secret"
+        ingress_proof_policy["signer_secret_env"] = signer_secret_env
+        ingress_proof_policy.pop("signing_key_path", None)
         default_ingress_proof_policy = default.get("ingress_proof_policy")
         if isinstance(default_ingress_proof_policy, dict):
             max_age_seconds = int(default_ingress_proof_policy.get("max_age_seconds", 300) or 300)
             if int(ingress_proof_policy.get("max_age_seconds", 0) or 0) <= 0:
                 ingress_proof_policy["max_age_seconds"] = max_age_seconds
-            signing_key_path = str(default_ingress_proof_policy.get("signing_key_path", "")).strip()
-            if not str(ingress_proof_policy.get("signing_key_path", "")).strip() and signing_key_path:
-                ingress_proof_policy["signing_key_path"] = signing_key_path
         node["ingress_proof_policy"] = ingress_proof_policy
         egress_policy = node.get("egress_receipt_policy")
         if not isinstance(egress_policy, dict):
@@ -427,14 +429,14 @@ def _normalize_host_gateway_contracts(task: dict[str, Any]) -> tuple[list[str], 
         if not isinstance(egress_grant_policy, dict):
             egress_grant_policy = {}
         egress_grant_policy["required"] = True
+        egress_grant_policy["signer_mode"] = "runtime_env_secret"
+        egress_grant_policy["signer_secret_env"] = signer_secret_env
+        egress_grant_policy.pop("signing_key_path", None)
         default_egress_grant_policy = default.get("egress_grant_policy")
         if isinstance(default_egress_grant_policy, dict):
             max_age_seconds = int(default_egress_grant_policy.get("max_age_seconds", 300) or 300)
             if int(egress_grant_policy.get("max_age_seconds", 0) or 0) <= 0:
                 egress_grant_policy["max_age_seconds"] = max_age_seconds
-            signing_key_path = str(default_egress_grant_policy.get("signing_key_path", "")).strip()
-            if not str(egress_grant_policy.get("signing_key_path", "")).strip() and signing_key_path:
-                egress_grant_policy["signing_key_path"] = signing_key_path
         node["egress_grant_policy"] = egress_grant_policy
         headstamp_policy = node.get("headstamp_policy")
         if not isinstance(headstamp_policy, dict):
@@ -510,7 +512,10 @@ def main() -> int:
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
     forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
     forced_entry_required_keys, restored_entry_validator_keys = _normalize_unique_entry_contracts(updated)
-    forced_host_gateway_required_keys, restored_host_gateway_validator_keys = _normalize_host_gateway_contracts(updated)
+    forced_host_gateway_required_keys, restored_host_gateway_validator_keys = _normalize_host_gateway_contracts(
+        updated,
+        identity_id=str(args.identity_id or "").strip(),
+    )
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     prompt_missing_after = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(updated.get(k), dict)]
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
@@ -580,13 +585,43 @@ def main() -> int:
             or not isinstance((updated.get(k) or {}).get("ingress_proof_policy"), dict)
             or bool(((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("required")) is not True
             or int((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("max_age_seconds") or 0)) <= 0
-            or not str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signing_key_path") or "")).strip()
+            or (
+                (
+                    str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_mode") or "")).strip()
+                    == "runtime_env_secret"
+                    and not str(
+                        (((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_secret_env") or "")
+                    ).strip()
+                )
+                or (
+                    str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_mode") or "")).strip()
+                    != "runtime_env_secret"
+                    and not str(
+                        (((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signing_key_path") or "")
+                    ).strip()
+                )
+            )
             or not isinstance((updated.get(k) or {}).get("egress_receipt_policy"), dict)
             or bool(((updated.get(k) or {}).get("egress_receipt_policy") or {}).get("required")) is not True
             or not isinstance((updated.get(k) or {}).get("egress_grant_policy"), dict)
             or bool(((updated.get(k) or {}).get("egress_grant_policy") or {}).get("required")) is not True
             or int((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("max_age_seconds") or 0)) <= 0
-            or not str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signing_key_path") or "")).strip()
+            or (
+                (
+                    str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_mode") or "")).strip()
+                    == "runtime_env_secret"
+                    and not str(
+                        (((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_secret_env") or "")
+                    ).strip()
+                )
+                or (
+                    str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_mode") or "")).strip()
+                    != "runtime_env_secret"
+                    and not str(
+                        (((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signing_key_path") or "")
+                    ).strip()
+                )
+            )
             or not isinstance((updated.get(k) or {}).get("headstamp_policy"), dict)
             or bool(((updated.get(k) or {}).get("headstamp_policy") or {}).get("required")) is not True
             or not isinstance((updated.get(k) or {}).get("identity_tuple_fields"), list)

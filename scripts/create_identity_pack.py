@@ -111,6 +111,8 @@ HOST_GATEWAY_LIGHT_OPERATIONS = [
 HOST_GATEWAY_STRICT_GATE_PROFILE = "strict_full"
 HOST_GATEWAY_LIGHT_GATE_PROFILE = "inspection_targeted"
 HOST_GATEWAY_ALLOW_UPGRADE_ONLY = True
+HOST_GATEWAY_SIGNER_MODE = "runtime_env_secret"
+HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX = "IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_"
 HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH = "identity/runtime/state/protocol_gateway_signing_key.txt"
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
@@ -126,6 +128,14 @@ HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = [
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _host_gateway_signer_secret_env(identity_id: str) -> str:
+    token = "".join(ch if str(ch).isalnum() else "_" for ch in str(identity_id or "").strip()).upper()
+    token = "_".join([segment for segment in token.split("_") if segment])
+    if not token:
+        token = "UNSPECIFIED_IDENTITY"
+    return f"{HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX}{token}"
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -577,7 +587,8 @@ def _host_gateway_operation_profile_policy() -> dict:
     }
 
 
-def _protocol_host_unique_channel_contract_skeleton() -> dict:
+def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
+    signer_secret_env = _host_gateway_signer_secret_env(identity_id)
     return {
         "required": True,
         "contract_id": HOST_GATEWAY_CONTRACT_ID,
@@ -596,7 +607,8 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
         "ingress_proof_policy": {
             "required": True,
             "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
-            "signing_key_path": HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
+            "signer_mode": HOST_GATEWAY_SIGNER_MODE,
+            "signer_secret_env": signer_secret_env,
         },
         "egress_receipt_policy": {
             "required": True,
@@ -604,7 +616,8 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
         "egress_grant_policy": {
             "required": True,
             "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
-            "signing_key_path": HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
+            "signer_mode": HOST_GATEWAY_SIGNER_MODE,
+            "signer_secret_env": signer_secret_env,
         },
         "headstamp_policy": {
             "required": True,
@@ -1297,7 +1310,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
         "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
-        HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton(),
+        HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton(identity_id),
         "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
         "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
     }
@@ -1439,6 +1452,7 @@ import argparse
 import hashlib
 import hmac
 import json
+import os
 import secrets
 import subprocess
 import sys
@@ -1538,7 +1552,20 @@ def _load_signing_secret(*, contract: dict[str, Any], contract_path: Path) -> tu
     ingress_proof_policy = contract.get("ingress_proof_policy")
     if not isinstance(ingress_proof_policy, dict):
         return "", "ingress_proof_policy_missing"
+    signer_mode = str(ingress_proof_policy.get("signer_mode", "")).strip().lower()
+    signer_secret_env = str(ingress_proof_policy.get("signer_secret_env", "")).strip()
     raw_path = str(ingress_proof_policy.get("signing_key_path", "")).strip()
+    if not signer_mode:
+        signer_mode = "runtime_file_secret" if raw_path else ""
+    if signer_mode == "runtime_env_secret":
+        if not signer_secret_env:
+            return "", "ingress_proof_signer_secret_env_missing"
+        secret = str(os.environ.get(signer_secret_env, "")).strip()
+        if not secret:
+            return "", "ingress_proof_signer_secret_env_unset"
+        return secret, ""
+    if signer_mode not in {"runtime_file_secret", ""}:
+        return "", "ingress_proof_signer_mode_unsupported"
     if not raw_path:
         return "", "ingress_proof_signing_key_path_missing"
     p = Path(raw_path).expanduser()
@@ -1793,6 +1820,7 @@ import argparse
 import hashlib
 import hmac
 import json
+import os
 import secrets
 import subprocess
 import sys
@@ -1919,7 +1947,20 @@ def _load_signing_secret(*, contract: dict[str, Any], contract_path: Path) -> tu
     egress_grant_policy = contract.get("egress_grant_policy")
     if not isinstance(egress_grant_policy, dict):
         return "", "egress_grant_policy_missing"
+    signer_mode = str(egress_grant_policy.get("signer_mode", "")).strip().lower()
+    signer_secret_env = str(egress_grant_policy.get("signer_secret_env", "")).strip()
     raw_path = str(egress_grant_policy.get("signing_key_path", "")).strip()
+    if not signer_mode:
+        signer_mode = "runtime_file_secret" if raw_path else ""
+    if signer_mode == "runtime_env_secret":
+        if not signer_secret_env:
+            return "", "egress_grant_signer_secret_env_missing"
+        secret = str(os.environ.get(signer_secret_env, "")).strip()
+        if not secret:
+            return "", "egress_grant_signer_secret_env_unset"
+        return secret, ""
+    if signer_mode not in {"runtime_file_secret", ""}:
+        return "", "egress_grant_signer_mode_unsupported"
     if not raw_path:
         return "", "egress_grant_signing_key_path_missing"
     p = Path(raw_path).expanduser()
@@ -2145,8 +2186,9 @@ def materialize_protocol_host_gateway_artifacts(
 ) -> dict:
     contract = task.get(HOST_GATEWAY_CONTRACT_KEY)
     if not isinstance(contract, dict):
-        contract = _protocol_host_unique_channel_contract_skeleton()
+        contract = _protocol_host_unique_channel_contract_skeleton(identity_id)
         task[HOST_GATEWAY_CONTRACT_KEY] = contract
+    signer_secret_env = _host_gateway_signer_secret_env(identity_id)
 
     ingress_wrapper_path = _resolve_pack_runtime_path(
         pack_dir,
@@ -2166,12 +2208,14 @@ def materialize_protocol_host_gateway_artifacts(
     ingress_proof_policy = contract.get("ingress_proof_policy")
     if not isinstance(ingress_proof_policy, dict):
         ingress_proof_policy = {}
+    ingress_signer_mode = str(ingress_proof_policy.get("signer_mode", "")).strip().lower() or HOST_GATEWAY_SIGNER_MODE
     ingress_signing_key_path = _resolve_pack_runtime_path(
         pack_dir,
         str(ingress_proof_policy.get("signing_key_path", "")),
         fallback=HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
     )
-    ensure_signing_key(ingress_signing_key_path)
+    if ingress_signer_mode == "runtime_file_secret":
+        ensure_signing_key(ingress_signing_key_path)
 
     contract["required"] = True
     contract["contract_id"] = HOST_GATEWAY_CONTRACT_ID
@@ -2190,14 +2234,20 @@ def materialize_protocol_host_gateway_artifacts(
     contract["ingress_proof_policy"] = {
         "required": True,
         "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
-        "signing_key_path": ingress_signing_key_path.as_posix(),
+        "signer_mode": ingress_signer_mode,
+        "signer_secret_env": signer_secret_env,
     }
+    if ingress_signer_mode == "runtime_file_secret":
+        contract["ingress_proof_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
     contract["egress_receipt_policy"] = {"required": True}
     contract["egress_grant_policy"] = {
         "required": True,
         "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
-        "signing_key_path": ingress_signing_key_path.as_posix(),
+        "signer_mode": ingress_signer_mode,
+        "signer_secret_env": signer_secret_env,
     }
+    if ingress_signer_mode == "runtime_file_secret":
+        contract["egress_grant_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
     contract["headstamp_policy"] = {"required": True}
     contract["identity_tuple_fields"] = list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
     contract["host_dispatch_mode"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
@@ -2223,13 +2273,15 @@ def materialize_protocol_host_gateway_artifacts(
         "ingress_proof_policy": {
             "required": True,
             "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
-            "signing_key_path": ingress_signing_key_path.as_posix(),
+            "signer_mode": ingress_signer_mode,
+            "signer_secret_env": signer_secret_env,
         },
         "egress_receipt_policy": {"required": True},
         "egress_grant_policy": {
             "required": True,
             "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
-            "signing_key_path": ingress_signing_key_path.as_posix(),
+            "signer_mode": ingress_signer_mode,
+            "signer_secret_env": signer_secret_env,
         },
         "headstamp_policy": {"required": True},
         "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
@@ -2238,6 +2290,9 @@ def materialize_protocol_host_gateway_artifacts(
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
         "operation_profile_policy": _host_gateway_operation_profile_policy(),
     }
+    if ingress_signer_mode == "runtime_file_secret":
+        gateway_contract_payload["ingress_proof_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
+        gateway_contract_payload["egress_grant_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
 
     write_json(gateway_contract_path, gateway_contract_payload)
     write(ingress_wrapper_path, _protocol_ingress_wrapper_template())
