@@ -5,8 +5,6 @@ import argparse
 import hashlib
 import json
 import shutil
-import subprocess
-import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -69,44 +67,77 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _parse_json_payload(raw: str) -> dict[str, Any]:
-    text = str(raw or "").strip()
-    if not text:
-        return {}
+def _ensure_host_gateway_downsink(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    pack_path: Path,
+    protocol_root: Path,
+) -> tuple[bool, dict[str, Any], str]:
+    pack = pack_path.expanduser().resolve()
+    if not pack.exists():
+        return False, {}, f"pack_path_missing:{pack}"
+    task_path = (pack / "CURRENT_TASK.json").resolve()
+    if not task_path.exists():
+        return False, {}, f"current_task_missing:{task_path}"
     try:
-        payload = json.loads(text)
-    except Exception:
-        return {}
-    return payload if isinstance(payload, dict) else {}
+        task_doc = _load_json(task_path)
+    except Exception as exc:
+        return False, {}, f"current_task_invalid_json:{exc}"
+    if not isinstance(task_doc, dict):
+        return False, {}, "current_task_not_object"
 
-
-def _ensure_host_gateway_downsink(catalog_path: Path, identity_id: str) -> tuple[bool, dict[str, Any], str]:
-    backfill_script = Path(__file__).resolve().with_name("repair_contract_backfill.py")
-    if not backfill_script.exists():
-        return False, {}, f"backfill_script_missing:{backfill_script}"
-    cmd = [
-        sys.executable,
-        str(backfill_script),
-        "--catalog",
-        str(catalog_path.expanduser().resolve()),
-        "--identity-id",
-        str(identity_id).strip(),
-        "--apply",
-        "--json-only",
-    ]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    payload = _parse_json_payload(proc.stdout)
-    if proc.returncode != 0:
-        tail = " ".join(str(proc.stderr or "").strip().split())[:240]
-        return False, payload, f"backfill_rc_nonzero:{proc.returncode}:{tail}"
-    contract_status = str(payload.get("contract_backfill_status", "")).strip().upper()
-    host_status = str(payload.get("host_gateway_contract_auto_wire_status", "")).strip().upper()
-    if contract_status != STATUS_PASS_REQUIRED or host_status != STATUS_PASS_REQUIRED:
-        return False, payload, (
-            "backfill_status_not_pass_required:"
-            f"contract_backfill_status={contract_status or '<empty>'},"
-            f"host_gateway_contract_auto_wire_status={host_status or '<empty>'}"
+    try:
+        from create_identity_pack import (
+            HOST_GATEWAY_CONTRACT_KEY,
+            materialize_protocol_host_gateway_artifacts,
         )
+    except Exception as exc:
+        return False, {}, f"host_gateway_materializer_import_failed:{exc}"
+
+    try:
+        artifacts = materialize_protocol_host_gateway_artifacts(
+            task=task_doc,
+            identity_id=str(identity_id).strip(),
+            pack_dir=pack,
+            catalog_path=catalog_path.expanduser().resolve(),
+            protocol_root=protocol_root.expanduser().resolve(),
+        )
+    except Exception as exc:
+        return False, {}, f"host_gateway_materializer_failed:{exc}"
+
+    _write_json(task_path, task_doc)
+    contract = task_doc.get(HOST_GATEWAY_CONTRACT_KEY)
+    if not isinstance(contract, dict):
+        return False, {"gateway_artifacts": artifacts}, "host_gateway_contract_missing_after_materialize"
+    required_flag = bool(contract.get("required") is True)
+    ingress_script = str(contract.get("protocol_ingress_script", "")).strip()
+    egress_script = str(contract.get("protocol_egress_script", "")).strip()
+    ingress_wrapper = Path(str(artifacts.get("ingress_wrapper_path", "")).strip()).expanduser()
+    egress_wrapper = Path(str(artifacts.get("egress_wrapper_path", "")).strip()).expanduser()
+    gateway_contract = Path(str(artifacts.get("gateway_contract_path", "")).strip()).expanduser()
+    missing_runtime_files = [
+        str(path)
+        for path in (ingress_wrapper, egress_wrapper, gateway_contract)
+        if not str(path) or not path.exists()
+    ]
+    payload = {
+        "host_gateway_contract_status": STATUS_PASS_REQUIRED if required_flag else "FAIL_REQUIRED",
+        "host_gateway_ingress_script": ingress_script,
+        "host_gateway_egress_script": egress_script,
+        "host_gateway_artifacts": artifacts,
+        "host_gateway_runtime_files_status": STATUS_PASS_REQUIRED if not missing_runtime_files else "FAIL_REQUIRED",
+        "host_gateway_runtime_files_missing": missing_runtime_files,
+        "task_path": str(task_path),
+    }
+    if not required_flag:
+        return False, payload, "host_gateway_required_flag_not_true"
+    if ingress_script != "scripts/required_gate_bundle_runner.py":
+        return False, payload, "host_gateway_ingress_script_mismatch"
+    if egress_script != "scripts/final_emit_governed.py":
+        return False, payload, "host_gateway_egress_script_mismatch"
+    if missing_runtime_files:
+        return False, payload, "host_gateway_runtime_files_missing"
     return True, payload, ""
 
 
@@ -589,7 +620,12 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
 
-    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(catalog_path, args.identity_id)
+    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=dst,
+        protocol_root=_repo_root(),
+    )
     if not downsink_ok:
         print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
         if downsink_payload:
@@ -645,7 +681,12 @@ def cmd_repair_paths(args: argparse.Namespace) -> int:
         print(f"[FAIL] pack path not found: {pack}")
         return 1
     rewritten_files, rewritten_fields = _rewrite_identity_contract_paths(pack, old_root=None)
-    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(catalog_path, args.identity_id)
+    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
+        catalog_path=catalog_path,
+        identity_id=args.identity_id,
+        pack_path=pack,
+        protocol_root=_repo_root(),
+    )
     if not downsink_ok:
         print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
         if downsink_payload:
@@ -762,7 +803,7 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
     changed: list[str] = []
     rewritten_files_count = 0
     rewritten_fields_count = 0
-    downsink_status = "SKIPPED_NOT_REQUIRED" if dry_run else STATUS_PASS_REQUIRED
+    downsink_status = "SKIPPED_NOT_REQUIRED"
     downsink_reason = ""
     downsink_payload: dict[str, Any] = {}
     if not dry_run and action == "guarded_apply":
@@ -789,10 +830,12 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             runtime_mode=identity_runtime_mode,
         )
 
-    if not dry_run:
+    if not dry_run and dst.exists():
         downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
-            Path(args.catalog).expanduser().resolve(),
-            args.identity_id,
+            catalog_path=Path(args.catalog).expanduser().resolve(),
+            identity_id=args.identity_id,
+            pack_path=dst,
+            protocol_root=_repo_root(),
         )
         if not downsink_ok:
             downsink_status = "FAIL_REQUIRED"
@@ -801,6 +844,8 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
                 print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
         else:
             downsink_status = STATUS_PASS_REQUIRED
+    elif not dry_run:
+        downsink_reason = "host_gateway_downsink_skipped_target_missing"
 
     op = "dry-run" if dry_run else "install"
     report, report_path = _build_report(
