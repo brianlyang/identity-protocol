@@ -221,6 +221,61 @@ Reason:
 2. Protocol-side init/update/validate closure is materially strengthened.
 3. Final stream closure remains `CONDITIONAL_GO` until host repo entrypoints are proven wrapper-only in replay/CI lanes.
 
+### 7.4 Creator/Installer downsink real-run verification (self-driven, serial)
+
+This round explicitly validates your requirement that wrapper files are down-sunk into instance packs
+(`CURRENT_TASK.json`/`IDENTITY_PROMPT.md` style artifact placement), and that wrappers point back to protocol canonical scripts.
+
+#### A) identity-creator init downsink (real runtime pack)
+
+Evidence contract (non-temp, machine-observable fields):
+
+1. `host_gateway_downsink_status=PASS_REQUIRED`
+2. `protocol_host_gateway_runtime_files_status=PASS_REQUIRED`
+3. `protocol_host_gateway_runtime_contract_status=PASS_REQUIRED`
+
+Observed:
+
+1. creator init generated instance-side files under pack runtime gate root:
+   - `runtime/gate/protocol_ingress_wrapper.py`
+   - `runtime/gate/protocol_egress_wrapper.py`
+   - `runtime/gate/protocol_gateway_contract.json`
+2. `CURRENT_TASK.json` includes `protocol_host_unique_channel_contract_v1` with required=true.
+
+#### B) identity-installer install downsink (real load path)
+
+Observed via install report:
+
+1. `host_gateway_downsink_status=PASS_REQUIRED`
+2. down-sunk target pack contains same three runtime gate artifacts and passes unique-entry host-gateway validation.
+3. Runtime temporary paths generated during execution are treated as non-canonical scratch and are intentionally excluded from governance docs.
+
+#### C) Canonical pointer closure (wrapper -> protocol scripts)
+
+Observed in generated `protocol_gateway_contract.json`:
+
+1. `protocol_ingress_script = scripts/required_gate_bundle_runner.py`
+2. `protocol_egress_script = scripts/final_emit_governed.py`
+3. wrappers and gateway contract paths are explicit, not implicit defaults.
+
+#### D) Self identity serial 5-round deep replay (non-fixed-path)
+
+Evidence contract (serial run scoreboard fields):
+
+1. `round_count=5`
+2. `all_rounds_passed=true`
+3. `unexpected_failures=0`
+
+Result:
+
+1. each round covers positive + negative probes (precheck fail, bypass fail, wrapper ingress pass, wrapper egress pass, mismatch fail, surface/invariants/status sync pass).
+
+Interpretation:
+
+1. Wrapper downsink capability is now executable in both creation and installation lifecycle.
+2. Wrapper artifacts are instance-local, and contract pointers remain protocol-canonical.
+3. This closes the previous “declared but not materialized” gap for v1.6.6 host unique channel baseline.
+
 ## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
