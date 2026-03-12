@@ -30,9 +30,7 @@ profiles:
       - inspection
     require_work_layers:
       - protocol
+      - instance
     requirement_keys:
-      - asb16-rq-031
-      - asb16-rq-032
+      - asb16-rq-020
       - asb16-rq-033
-      - asb16-rq-034
-      - asb16-rq-035
