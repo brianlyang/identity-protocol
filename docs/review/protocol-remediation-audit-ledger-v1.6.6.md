@@ -4,7 +4,7 @@ Status: Active
 
 Layer: protocol control-plane review ledger (non-governance SSOT)
 
-Scope: implementation review ledger for host-session unique ingress/egress closure and per-instance wrapper enforcement.
+Scope: implementation review ledger for project-side identity runtime ingress/egress closure and per-instance wrapper enforcement.
 
 Companion governance SSOT:
 
@@ -21,6 +21,12 @@ Companion governance SSOT:
 2. Normative contract semantics remain in companion governance SSOT.
 3. If this ledger conflicts with governance SSOT or current-pointer mappings, this ledger is stale.
 
+## State boundary lock (anti-misread)
+
+1. `host-channel` in v1.6.6 is a stream label, not a requirement to modify unrelated external repositories.
+2. This stream validates **project-side runtime adapter + instance pack wrapper** closure.
+3. Wrapper materialization scope is `.identity/{identity_id}/runtime/gate/*` with declaration in `CURRENT_TASK.json`.
+
 ## 0) Baseline posture at stream opening (2026-03-12)
 
 Machine baseline retained from active control-plane checks:
@@ -34,7 +40,7 @@ Semantic baseline confirmed at opening:
 
 1. Protocol strict-surface ingress/egress contracts exist and are machine-checkable.
 2. Unique-entry contract is declared in instance `CURRENT_TASK.json` and validator chain exists.
-3. Residual risk remains at host session entrypoints if dispatch bypasses wrapper contract.
+3. Residual risk remains at project runtime session entrypoints if dispatch bypasses wrapper contract.
 
 Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
 
@@ -42,9 +48,9 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
 
 1. Freeze one host-channel contract with no ambiguous alternates.
 2. Ensure per-instance wrapper generation is mandatory, deterministic, and replayable.
-3. Ensure host dispatch/release paths are wrapper-only in strict operations.
+3. Ensure project runtime dispatch/release paths are wrapper-only in strict operations.
 4. Preserve protocol-instance layer split while closing runtime bypasses.
-5. Ensure host non-mutation conversation rounds are also wrapper-enforced.
+5. Ensure project non-mutation conversation rounds are also wrapper-enforced.
 
 ## 2) Four-track cross-verification summary
 
@@ -86,7 +92,7 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
    - tuple propagation keys (`actor_id`, `session_id`, `run_id`, `work_layer`, `source_layer`)
    - explicit receipt policies for ingress and egress
 
-### 3.2 Host side
+### 3.2 Project runtime side
 
 1. Inbound dispatch goes through ingress wrapper before execution handoff.
 2. User-visible outbound release goes through egress wrapper before send.
@@ -95,8 +101,8 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
    - same `session_id`
    - same `actor_id`
 4. Direct dispatch/release paths without wrapper/receipt are blocked with fail-close status.
-5. Host non-mutation rounds still require wrapper traversal and egress headstamp/send-time pass.
-6. Host wrapper discovery order must follow governance (runtime declaration first, then deterministic runtime file; no implicit mono-repo fallback).
+5. Project non-mutation rounds still require wrapper traversal and egress headstamp/send-time pass.
+6. Project wrapper discovery order must follow governance (runtime declaration first, then deterministic runtime file; no implicit mono-repo fallback).
 
 ### 3.3 Cross-repo interoperability
 
@@ -148,9 +154,9 @@ Implementation is not accepted unless all items pass:
 2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
 3. `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation validate --require-entry-receipt --json-only`
 4. `python3 scripts/docs_command_contract_check.py`
-5. Host replay confirms wrapper-only dispatch and wrapper-only release for strict operations.
+5. Project replay confirms wrapper-only dispatch and wrapper-only release for strict operations.
 6. Stream PR binding receipt exists and matches stream version + head SHA.
-7. Host replay confirms wrapper-only dispatch and wrapper-only release for non-mutation conversation rounds.
+7. Project replay confirms wrapper-only dispatch and wrapper-only release for non-mutation conversation rounds.
 8. Negative probe (`direct dispatch -> direct release`) is `FAIL_REQUIRED`.
 9. Serial replay matrix in 3.5 is fully executed and recorded in persistent evidence.
 10. Evidence package contains:
@@ -161,10 +167,10 @@ Implementation is not accepted unless all items pass:
 
 ## 5) Residual risk register (initial)
 
-1. **P1**: host runtime may still include legacy direct dispatch callsites.
-   - mitigation: explicit host-side fail-close branch + negative probe in CI/replay.
-2. **P1**: wrapper files may exist but not be consumed by host routing.
-   - mitigation: routing assertions and dispatch receipts at host entrypoints.
+1. **P1**: project runtime may still include legacy direct dispatch callsites.
+   - mitigation: explicit project-runtime fail-close branch + negative probe in CI/replay.
+2. **P1**: wrapper files may exist but not be consumed by project routing.
+   - mitigation: routing assertions and dispatch receipts at project-runtime entrypoints.
 3. **P2**: cross-repo path mapping drift can break wrapper invocation consistency.
    - mitigation: explicit protocol path mapping in wrapper contract + strict validation on init/update.
 4. **P2**: stream docs can drift from implementation lifecycle when PR binding is not recorded.
@@ -179,7 +185,7 @@ Posture: `CONDITIONAL_GO` for v1.6.6 implementation.
 Reason:
 
 1. Governance contract is now explicit and non-ambiguous.
-2. Review closure still depends on host runtime entrypoint wiring completion and replay evidence.
+2. Review closure still depends on project runtime entrypoint wiring completion and replay evidence.
 
 ## 7) Code landing checkpoint (2026-03-12, protocol repo)
 
@@ -192,7 +198,7 @@ Reason:
    - update/backfill now auto-wires host gateway contract for existing instances.
    - `--apply` now materializes/refreshes wrapper files and `protocol_gateway_contract.json`.
 3. `scripts/validate_protocol_unique_entry_gate.py`
-   - strict validation extended from unique-entry only to unique-entry + host wrapper parity.
+   - strict validation extended from unique-entry only to unique-entry + project-wrapper parity.
    - runtime file presence, canonical script binding, tuple fields, and gateway JSON schema-required fields are now machine-checked.
 
 ### 7.2 Serial run evidence summary (this round)
@@ -219,7 +225,7 @@ Reason:
 
 1. v1.6.6 host-channel stream has moved from docs-only contract to executable protocol tooling.
 2. Protocol-side init/update/validate closure is materially strengthened.
-3. Final stream closure remains `CONDITIONAL_GO` until host repo entrypoints are proven wrapper-only in replay/CI lanes.
+3. Final stream closure remains `CONDITIONAL_GO` until project runtime entrypoints are proven wrapper-only in replay/CI lanes.
 
 ### 7.4 Creator/Installer downsink real-run verification (self-driven, serial)
 
