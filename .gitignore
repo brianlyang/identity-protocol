@@ -30,9 +30,6 @@ identity/runtime/examples/*-update-replay-*.json
 # Pack runtime protocol-feedback artifacts (generated during local replays)
 identity/packs/*/runtime/protocol-feedback/
 
-# Local replay probe leftovers (non-canonical evidence mirrors)
-activity/evidence/v163-predev/*/round34-hardclose/v163_target_regression_base_repo_architect*.json
-
 # Activity evidence/logs are local runtime artifacts (do not version-control)
 activity/
 
