@@ -403,6 +403,51 @@ Interpretation:
 2. direct strict script invocation no longer masquerades as wrapper flow in receipt validation.
 3. “配置即规则、执行即校验、绕行即失败” is now machine-closed for the unique-entry chain.
 
+### 7.8 Light/heavy upgrade-only routing + per-round receipt closure (2026-03-12, freeze alignment)
+
+This round aligns implementation with the frozen v1.6.6 acceptance clauses for “every round must pass wrapper path” while keeping normal rounds lightweight.
+
+Implementation closure:
+
+1. `scripts/create_identity_pack.py`
+   - host gateway contract now embeds `operation_profile_policy`:
+     - `strict_operations`
+     - `light_operations`
+     - `strict_gate_profile`
+     - `light_gate_profile`
+     - `allow_upgrade_only`
+   - ingress wrapper template now resolves gate profile from contract policy (contract-driven routing), then forwards `--gate-profile` to canonical ingress script.
+2. `scripts/required_gate_bundle_runner.py`
+   - instance work-layer rounds now enforce wrapper provenance (`surface + dispatch token`) for both strict and light rounds under `wrapper_only`.
+   - ingress receipt now persists on all instance wrapper rounds (not strict-only).
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - validates host gateway `operation_profile_policy` presence/completeness.
+   - validates runtime gateway contract parity against CURRENT_TASK policy.
+4. `scripts/repair_contract_backfill.py`
+   - backfills legacy packs with `operation_profile_policy` defaults.
+5. `identity/protocol/mappings/layer-targeted-gate-profile.v1.6.yaml`
+   - `inspection_targeted` now supports `work_layer=instance`.
+   - lightweight requirement set trimmed to low-overhead safety probes.
+
+Serial replay proof (base-repo-architect):
+
+1. 5 rounds, strict serial.
+2. each round includes:
+   - strict precheck without same-run receipt -> blocked
+   - light ingress (`inspection`) -> `inspection_targeted` pass + receipt
+   - light postcheck with receipt -> pass
+   - strict ingress (`validate`) -> `strict_full` pass + receipt
+   - strict postcheck with receipt -> pass
+   - actor mismatch negative probe -> blocked
+   - light/strict direct bypass probes -> both blocked
+3. scoreboard:
+   - `.identity/base-repo-architect/runtime/reports/v166-wrapper-multidim-serial5/scoreboard-v166-light-strict-serial5-1773299699.json`
+
+Result:
+
+1. v1.6.6 now satisfies “轻重分流 + 只升不降 + 每轮入口收据” on instance wrapper path.
+2. no-hardcode policy for wrapper routing is contract-derived and backfillable.
+
 ## 8) External references
 
 1. OpenAI Codex approvals and sandbox:
