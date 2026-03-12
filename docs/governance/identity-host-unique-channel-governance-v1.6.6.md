@@ -86,7 +86,17 @@ Hard rules:
 1. Wrappers must call only canonical protocol scripts (2.1).
 2. Wrappers must propagate `run_id`, `session_id`, `actor_id`.
 3. Wrapper path and policy must be declared in `CURRENT_TASK.json`.
-4. Missing wrapper files in strict operations are `FAIL_REQUIRED`.
+4. `host_dispatch_mode` and `host_release_mode` must both be `wrapper_only`.
+5. Missing wrapper files in strict operations are `FAIL_REQUIRED`.
+
+### 2.2.3 Wrapper dispatch token contract (mandatory, anti-bypass)
+
+To prevent direct protocol-script invocation from masquerading as wrapper flow:
+
+1. ingress wrapper must pass a fixed dispatch token when invoking `required_gate_bundle_runner.py`.
+2. strict `host_ingress_wrapper` surface calls without valid token are `FAIL_REQUIRED`.
+3. token drift between instance wrapper contract and protocol runner is `FAIL_REQUIRED`.
+4. this check is governance anti-bypass control; it does not replace receipt tuple parity checks.
 
 ### 2.2.1 `protocol_gateway_contract.json` minimum schema contract (mandatory)
 
@@ -331,6 +341,7 @@ The first three are required payload artifacts, and manifest is the required tup
 8. Negative probe `direct dispatch -> direct release` is `FAIL_REQUIRED`.
 9. `protocol_gateway_contract.json` passes required-field schema checks from 2.2.1.
 10. Evidence package in 2.9 is present and allowed by `doc-evidence-allowlist.current.yaml`.
+11. Negative probe `direct required_gate_bundle_runner host_ingress_wrapper call without wrapper token` is `FAIL_REQUIRED`.
 
 Release decision:
 
