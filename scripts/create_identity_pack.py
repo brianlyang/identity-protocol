@@ -513,6 +513,8 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
             "identity_id",
             "operation",
             "run_id_binding",
+            "actor_id",
+            "session_id",
             "bundle_status",
             "error_code",
         ],
@@ -1734,19 +1736,34 @@ def main() -> int:
     receipt_run_id = str(ingress_receipt.get("run_id_binding", "")).strip()
     receipt_session_id = str(ingress_receipt.get("session_id", "")).strip()
     receipt_actor_id = str(ingress_receipt.get("actor_id", "")).strip()
-    if receipt_run_id and receipt_run_id != str(merged.get("run_id", "")).strip():
+    missing_receipt_tuple = [
+        key
+        for key, value in (
+            ("run_id_binding", receipt_run_id),
+            ("session_id", receipt_session_id),
+            ("actor_id", receipt_actor_id),
+        )
+        if not str(value or "").strip()
+    ]
+    if missing_receipt_tuple:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_receipt_tuple_missing:" + ",".join(sorted(missing_receipt_tuple)),
+            json_only=args.json_only,
+        )
+    if receipt_run_id != str(merged.get("run_id", "")).strip():
         return _fail(
             error_code="IP-GATE-ENTRY-002",
             stale_reason="ingress_receipt_run_id_mismatch",
             json_only=args.json_only,
         )
-    if receipt_session_id and receipt_session_id != str(merged.get("session_id", "")).strip():
+    if receipt_session_id != str(merged.get("session_id", "")).strip():
         return _fail(
             error_code="IP-ASB-201",
             stale_reason="ingress_receipt_session_id_mismatch",
             json_only=args.json_only,
         )
-    if receipt_actor_id and receipt_actor_id != str(merged.get("actor_id", "")).strip():
+    if receipt_actor_id != str(merged.get("actor_id", "")).strip():
         return _fail(
             error_code="IP-ASB-201",
             stale_reason="ingress_receipt_actor_id_mismatch",
