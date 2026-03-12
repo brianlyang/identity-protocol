@@ -144,9 +144,15 @@ Reason:
 
 ## 7) External references
 
-1. `https://developers.openai.com/codex/agent-approvals-security/#sandbox-and-approvals`
-2. `https://developers.openai.com/codex/github-action/#security-checklist`
-3. `https://platform.openai.com/docs/guides/function-calling#strict-mode`
-4. `https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#merge_group`
-5. `https://docs.github.com/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks`
-6. `https://modelcontextprotocol.io/specification/draft/basic/lifecycle`
+1. OpenAI Codex approvals and sandbox:
+   - [Agent approvals & security](https://developers.openai.com/codex/agent-approvals-security/#sandbox-and-approvals)
+2. OpenAI Codex action safety baseline:
+   - [GitHub Action security checklist](https://developers.openai.com/codex/github-action/#security-checklist)
+3. OpenAI schema strictness baseline:
+   - [Function calling strict mode](https://platform.openai.com/docs/guides/function-calling#strict-mode)
+4. GitHub merge queue trigger compatibility:
+   - [Actions event `merge_group`](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#merge_group)
+5. GitHub required-check troubleshooting:
+   - [Troubleshooting required status checks](https://docs.github.com/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks)
+6. MCP lifecycle contract:
+   - [Model Context Protocol lifecycle](https://modelcontextprotocol.io/specification/draft/basic/lifecycle)
