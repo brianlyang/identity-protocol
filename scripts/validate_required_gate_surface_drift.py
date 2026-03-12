@@ -26,9 +26,11 @@ SUPER_LINTER_WORKFLOW_SURFACE = ".github/workflows/super-linter.yml"
 REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
 FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
 MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
+GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
+    GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
@@ -50,6 +52,10 @@ MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/required_gate_bundle_runner.py",
 )
 MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
+GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/required_gate_bundle_runner.py",
+    "scripts/final_emit_governed.py",
+)
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
     "merge_group:",
@@ -746,6 +752,49 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + monotonic_missing_tokens))
 
+    gateway_probe_delegate_path = repo_root / GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT
+    if not gateway_probe_delegate_path.exists():
+        missing_surface_files.append(GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(gateway_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_runner_forge_probe = all(
+            token in text
+            for token in (
+                "run_probe runner_local_key_forge_blocked",
+                "scripts/required_gate_bundle_runner.py",
+                "--wrapper-proof-json",
+                "--wrapper-proof-signature",
+            )
+        )
+        has_egress_forge_probe = all(
+            token in text
+            for token in (
+                "run_probe final_emit_local_key_forge_blocked",
+                "scripts/final_emit_governed.py",
+                "--egress-grant-json",
+                "--egress-grant-signature",
+            )
+        )
+        gateway_missing_tokens: list[str] = []
+        if not has_runner_forge_probe:
+            gateway_missing_tokens.append("gateway_runner_forge_probe_invocation_missing")
+        if not has_egress_forge_probe:
+            gateway_missing_tokens.append("gateway_egress_forge_probe_invocation_missing")
+        if gateway_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + gateway_missing_tokens))
+
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():
         missing_surface_files.append(DIALOGUE_FEEDBACK_BUNDLE_SCRIPT)
@@ -836,6 +885,10 @@ def main() -> int:
         "monotonic_floor_probe_ci_delegate_script": MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
         "monotonic_probe_delegate_required_python_scripts": list(MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS),
         "monotonic_probe_required_target": MONOTONIC_PROBE_REQUIRED_TARGET,
+        "gateway_trust_boundary_probe_ci_delegate_script": GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
+        "gateway_trust_boundary_delegate_required_python_scripts": list(
+            GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
         "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),
         "dialogue_feedback_bundle_required_validators": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_VALIDATORS),
