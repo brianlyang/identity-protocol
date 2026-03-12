@@ -515,6 +515,10 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
             "bundle_contract_id",
             "identity_id",
             "operation",
+            "surface_label",
+            "wrapper_dispatch_required",
+            "wrapper_surface_status",
+            "wrapper_dispatch_token_status",
             "run_id_binding",
             "actor_id",
             "session_id",
@@ -538,6 +542,9 @@ def _protocol_host_unique_channel_contract_skeleton() -> dict:
         "gateway_contract_path": HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
         "entry_receipt_policy": {
             "required": True,
+            "required_surface_label": "host_ingress_wrapper",
+            "required_wrapper_surface_status": "PASS_REQUIRED",
+            "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
         },
         "egress_receipt_policy": {
             "required": True,
@@ -1889,7 +1896,12 @@ def materialize_protocol_host_gateway_artifacts(
     contract["ingress_wrapper_path"] = ingress_wrapper_path.as_posix()
     contract["egress_wrapper_path"] = egress_wrapper_path.as_posix()
     contract["gateway_contract_path"] = gateway_contract_path.as_posix()
-    contract["entry_receipt_policy"] = {"required": True}
+    contract["entry_receipt_policy"] = {
+        "required": True,
+        "required_surface_label": "host_ingress_wrapper",
+        "required_wrapper_surface_status": "PASS_REQUIRED",
+        "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
+    }
     contract["egress_receipt_policy"] = {"required": True}
     contract["headstamp_policy"] = {"required": True}
     contract["identity_tuple_fields"] = list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
@@ -1906,7 +1918,12 @@ def materialize_protocol_host_gateway_artifacts(
         "ingress_wrapper_path": ingress_wrapper_path.as_posix(),
         "egress_wrapper_path": egress_wrapper_path.as_posix(),
         "catalog_path": str(catalog_path.expanduser().resolve()),
-        "entry_receipt_policy": {"required": True},
+        "entry_receipt_policy": {
+            "required": True,
+            "required_surface_label": "host_ingress_wrapper",
+            "required_wrapper_surface_status": "PASS_REQUIRED",
+            "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
+        },
         "egress_receipt_policy": {"required": True},
         "headstamp_policy": {"required": True},
         "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
