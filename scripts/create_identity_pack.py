@@ -1789,7 +1789,7 @@ def main() -> int:
         "--source-layer",
         str(merged.get("source_layer", "")).strip(),
         "--outlet-channel-id",
-        "protocol_egress_wrapper",
+        "final_emit_governed",
         "--json-only",
     ]
     repo_catalog = str(merged.get("repo_catalog") or args.repo_catalog or "").strip()
