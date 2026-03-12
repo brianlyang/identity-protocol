@@ -743,6 +743,10 @@ def _persist_unique_entry_receipt(
         "catalog_path": str(Path(catalog_path).expanduser().resolve()),
         "operation": operation_token,
         "surface_label": str(surface_label or "").strip(),
+        "wrapper_dispatch_required": bool(payload.get("wrapper_dispatch_required", False)),
+        "wrapper_surface_status": str(payload.get("wrapper_surface_status", "")).strip(),
+        "wrapper_dispatch_token_status": str(payload.get("wrapper_dispatch_token_status", "")).strip(),
+        "wrapper_dispatch_token_expected": str(payload.get("wrapper_dispatch_token_expected", "")).strip(),
         "run_id_binding": str(run_id_binding or "").strip(),
         "actor_id": str(actor_id or "").strip(),
         "session_id": str(session_id or "").strip(),
@@ -1021,10 +1025,17 @@ def main() -> int:
     if not run_id_binding:
         mapping_errors.append("run_id_binding_missing")
         failure_count += 1
-    wrapper_dispatch_required = (
-        _is_strict_no_trim_operation(operation_normalized)
-        and surface_label == HOST_WRAPPER_SURFACE_LABEL
+    strict_operation = _is_strict_no_trim_operation(operation_normalized)
+    wrapper_dispatch_required = strict_operation
+    wrapper_surface_ok = (not strict_operation) or surface_label == HOST_WRAPPER_SURFACE_LABEL
+    wrapper_surface_status = (
+        STATUS_SKIPPED_NOT_REQUIRED
+        if not strict_operation
+        else (STATUS_PASS_REQUIRED if wrapper_surface_ok else STATUS_FAIL_REQUIRED)
     )
+    if strict_operation and not wrapper_surface_ok:
+        mapping_errors.append("strict_operation_surface_not_host_ingress_wrapper")
+        failure_count += 1
     wrapper_dispatch_ok = (
         not wrapper_dispatch_required
         or wrapper_dispatch_token == REQUIRED_WRAPPER_DISPATCH_TOKEN
@@ -1257,6 +1268,7 @@ def main() -> int:
         "results": result_rows,
         "surface_label": surface_label,
         "wrapper_dispatch_required": wrapper_dispatch_required,
+        "wrapper_surface_status": wrapper_surface_status,
         "wrapper_dispatch_token_status": wrapper_dispatch_token_status,
         "wrapper_dispatch_token_expected": REQUIRED_WRAPPER_DISPATCH_TOKEN,
         "run_id_binding": run_id_binding,
