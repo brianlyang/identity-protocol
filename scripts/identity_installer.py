@@ -5,6 +5,8 @@ import argparse
 import hashlib
 import json
 import shutil
+import subprocess
+import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +24,7 @@ from resolve_identity_context import (
 )
 
 REPO_TARGET_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_TARGET_WRITE"
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 
 
 def _now_iso() -> str:
@@ -64,6 +67,47 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _parse_json_payload(raw: str) -> dict[str, Any]:
+    text = str(raw or "").strip()
+    if not text:
+        return {}
+    try:
+        payload = json.loads(text)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _ensure_host_gateway_downsink(catalog_path: Path, identity_id: str) -> tuple[bool, dict[str, Any], str]:
+    backfill_script = Path(__file__).resolve().with_name("repair_contract_backfill.py")
+    if not backfill_script.exists():
+        return False, {}, f"backfill_script_missing:{backfill_script}"
+    cmd = [
+        sys.executable,
+        str(backfill_script),
+        "--catalog",
+        str(catalog_path.expanduser().resolve()),
+        "--identity-id",
+        str(identity_id).strip(),
+        "--apply",
+        "--json-only",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    payload = _parse_json_payload(proc.stdout)
+    if proc.returncode != 0:
+        tail = " ".join(str(proc.stderr or "").strip().split())[:240]
+        return False, payload, f"backfill_rc_nonzero:{proc.returncode}:{tail}"
+    contract_status = str(payload.get("contract_backfill_status", "")).strip().upper()
+    host_status = str(payload.get("host_gateway_contract_auto_wire_status", "")).strip().upper()
+    if contract_status != STATUS_PASS_REQUIRED or host_status != STATUS_PASS_REQUIRED:
+        return False, payload, (
+            "backfill_status_not_pass_required:"
+            f"contract_backfill_status={contract_status or '<empty>'},"
+            f"host_gateway_contract_auto_wire_status={host_status or '<empty>'}"
+        )
+    return True, payload, ""
 
 
 def _resolve_source_pack(args: argparse.Namespace) -> Path:
@@ -545,6 +589,13 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
 
+    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(catalog_path, args.identity_id)
+    if not downsink_ok:
+        print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
+        if downsink_payload:
+            print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
+        return 1
+
     print(f"[OK] adopted identity={args.identity_id} canonical={dst}")
     print(
         "contract_paths_rewritten="
@@ -594,6 +645,12 @@ def cmd_repair_paths(args: argparse.Namespace) -> int:
         print(f"[FAIL] pack path not found: {pack}")
         return 1
     rewritten_files, rewritten_fields = _rewrite_identity_contract_paths(pack, old_root=None)
+    downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(catalog_path, args.identity_id)
+    if not downsink_ok:
+        print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
+        if downsink_payload:
+            print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
+        return 1
     print(
         f"[OK] repaired contract paths for {args.identity_id}: "
         f"changed={bool(rewritten_files)} files={rewritten_files} fields={rewritten_fields}"
@@ -616,6 +673,7 @@ def _build_report(
     changed_files: list[str] | None = None,
     rewritten_files_count: int = 0,
     rewritten_fields_count: int = 0,
+    extras: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], Path]:
     ts = datetime.now(timezone.utc)
     report_id = f"identity-install-{args.identity_id}-{operation}-{int(ts.timestamp())}-{int(ts.microsecond/1000):03d}"
@@ -654,6 +712,8 @@ def _build_report(
         report["backup_ref"] = backup_ref
     if rollback_ref:
         report["rollback_ref"] = rollback_ref
+    if isinstance(extras, dict) and extras:
+        report.update(extras)
     report_path = Path(args.report_dir) / f"{report_id}.json"
     return report, report_path
 
@@ -702,6 +762,9 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
     changed: list[str] = []
     rewritten_files_count = 0
     rewritten_fields_count = 0
+    downsink_status = "SKIPPED_NOT_REQUIRED" if dry_run else STATUS_PASS_REQUIRED
+    downsink_reason = ""
+    downsink_payload: dict[str, Any] = {}
     if not dry_run and action == "guarded_apply":
         if dst.exists():
             backup_dir = Path(args.backup_dir) / f"{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
@@ -726,6 +789,19 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             runtime_mode=identity_runtime_mode,
         )
 
+    if not dry_run:
+        downsink_ok, downsink_payload, downsink_reason = _ensure_host_gateway_downsink(
+            Path(args.catalog).expanduser().resolve(),
+            args.identity_id,
+        )
+        if not downsink_ok:
+            downsink_status = "FAIL_REQUIRED"
+            print(f"[FAIL] host gateway downsink failed: {downsink_reason}")
+            if downsink_payload:
+                print(json.dumps(downsink_payload, ensure_ascii=False, indent=2))
+        else:
+            downsink_status = STATUS_PASS_REQUIRED
+
     op = "dry-run" if dry_run else "install"
     report, report_path = _build_report(
         args,
@@ -741,6 +817,11 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         changed_files=changed,
         rewritten_files_count=rewritten_files_count,
         rewritten_fields_count=rewritten_fields_count,
+        extras={
+            "host_gateway_downsink_status": downsink_status,
+            "host_gateway_downsink_reason": downsink_reason,
+            "host_gateway_downsink_payload": downsink_payload,
+        },
     )
     _write_json(report_path, report)
 
@@ -762,7 +843,7 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
         )
     if action == "abort_and_explain":
         print("next_action=abort_and_explain_conflict")
-    return 0
+    return 0 if downsink_status != "FAIL_REQUIRED" else 1
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
