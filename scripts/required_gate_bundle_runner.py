@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 
-from tool_vendor_governance_common import resolve_pack_and_task
+from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -22,8 +22,13 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 
 BUNDLE_CONTRACT_ID = "hotfix_p0_007_ucg_control_plane_freeze_contract_v1"
 BUNDLE_KEY = "required_gate_bundle_runner"
-HOST_WRAPPER_SURFACE_LABEL = "host_ingress_wrapper"
-REQUIRED_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
+DEFAULT_HOST_WRAPPER_SURFACE_LABEL = "host_ingress_wrapper"
+DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN = "instance_wrapper_ingress_v1"
+HOST_GATEWAY_CONTRACT_KEYS: tuple[str, ...] = (
+    "protocol_host_unique_channel_contract_v1",
+    "protocol_gateway_wrapper_contract_v1",
+    "protocol_gateway_contract_v1",
+)
 DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 DEFAULT_PLUGIN_GOVERNANCE_FILE = "identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml"
@@ -247,6 +252,92 @@ def _as_str_list(value: Any) -> list[str]:
         if token:
             out.append(token)
     return out
+
+
+def _resolve_host_gateway_contract(task: dict[str, Any]) -> dict[str, Any]:
+    for key in HOST_GATEWAY_CONTRACT_KEYS:
+        raw = task.get(key)
+        if isinstance(raw, dict):
+            return raw
+    for key, raw in task.items():
+        if not isinstance(raw, dict):
+            continue
+        token = str(key or "").strip().lower()
+        if "gateway" in token and "contract" in token:
+            return raw
+    return {}
+
+
+def _resolve_wrapper_enforcement_policy(
+    *,
+    catalog_path: str,
+    identity_id: str,
+) -> tuple[dict[str, str], list[str]]:
+    policy: dict[str, str] = {
+        "required_surface_label": DEFAULT_HOST_WRAPPER_SURFACE_LABEL,
+        "required_dispatch_token": DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN,
+        "required_wrapper_surface_status": STATUS_PASS_REQUIRED,
+        "required_wrapper_dispatch_status": STATUS_PASS_REQUIRED,
+        "host_dispatch_mode": "wrapper_only",
+    }
+    errors: list[str] = []
+    try:
+        pack_path, task_path = resolve_pack_and_task(
+            Path(catalog_path).expanduser().resolve(),
+            identity_id,
+        )
+        task = load_json(task_path)
+    except Exception as exc:
+        return policy, [f"host_gateway_contract_resolve_failed:{exc}"]
+
+    host_gateway_contract = _resolve_host_gateway_contract(task if isinstance(task, dict) else {})
+    if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
+        return policy, ["host_gateway_contract_missing"]
+
+    host_dispatch_mode = str(host_gateway_contract.get("host_dispatch_mode", "")).strip().lower()
+    if host_dispatch_mode:
+        policy["host_dispatch_mode"] = host_dispatch_mode
+    else:
+        errors.append("host_gateway_contract_dispatch_mode_missing")
+
+    dispatch_token = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
+    if dispatch_token:
+        policy["required_dispatch_token"] = dispatch_token
+    else:
+        errors.append("host_gateway_contract_ingress_dispatch_token_missing")
+
+    entry_policy = host_gateway_contract.get("entry_receipt_policy")
+    if not isinstance(entry_policy, dict):
+        errors.append("host_gateway_contract_entry_receipt_policy_missing")
+        return policy, errors
+
+    required_surface_label = str(entry_policy.get("required_surface_label", "")).strip()
+    if required_surface_label:
+        policy["required_surface_label"] = required_surface_label
+    else:
+        errors.append("host_gateway_contract_required_surface_label_missing")
+
+    required_wrapper_surface_status = str(entry_policy.get("required_wrapper_surface_status", "")).strip().upper()
+    if required_wrapper_surface_status:
+        policy["required_wrapper_surface_status"] = required_wrapper_surface_status
+    else:
+        errors.append("host_gateway_contract_required_wrapper_surface_status_missing")
+
+    required_wrapper_dispatch_status = str(
+        entry_policy.get("required_wrapper_dispatch_token_status", "")
+    ).strip().upper()
+    if required_wrapper_dispatch_status:
+        policy["required_wrapper_dispatch_status"] = required_wrapper_dispatch_status
+    else:
+        errors.append("host_gateway_contract_required_wrapper_dispatch_status_missing")
+
+    if not str(policy.get("required_dispatch_token", "")).strip():
+        errors.append("host_gateway_contract_required_dispatch_token_empty")
+
+    if not str(policy.get("required_surface_label", "")).strip():
+        errors.append("host_gateway_contract_required_surface_label_empty")
+
+    return policy, errors
 
 
 def _resolve_default_contract_mapping(repo_root: Path) -> Path:
@@ -1025,26 +1116,48 @@ def main() -> int:
     if not run_id_binding:
         mapping_errors.append("run_id_binding_missing")
         failure_count += 1
+    wrapper_policy, wrapper_policy_errors = _resolve_wrapper_enforcement_policy(
+        catalog_path=str(args.catalog),
+        identity_id=str(args.identity_id),
+    )
+    mapping_errors.extend(wrapper_policy_errors)
+    if wrapper_policy_errors:
+        failure_count += len(wrapper_policy_errors)
+
     strict_operation = _is_strict_no_trim_operation(operation_normalized)
-    wrapper_dispatch_required = strict_operation
-    wrapper_surface_ok = (not strict_operation) or surface_label == HOST_WRAPPER_SURFACE_LABEL
+    wrapper_required_surface_label = str(
+        wrapper_policy.get("required_surface_label", DEFAULT_HOST_WRAPPER_SURFACE_LABEL)
+    ).strip()
+    wrapper_required_dispatch_token = str(
+        wrapper_policy.get("required_dispatch_token", DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN)
+    ).strip()
+    host_dispatch_mode = str(wrapper_policy.get("host_dispatch_mode", "wrapper_only")).strip().lower()
+    wrapper_dispatch_required = strict_operation and host_dispatch_mode == "wrapper_only"
+    wrapper_surface_required = strict_operation and host_dispatch_mode == "wrapper_only"
+    wrapper_surface_ok = (not wrapper_surface_required) or surface_label == wrapper_required_surface_label
     wrapper_surface_status = (
         STATUS_SKIPPED_NOT_REQUIRED
-        if not strict_operation
+        if not wrapper_surface_required
         else (STATUS_PASS_REQUIRED if wrapper_surface_ok else STATUS_FAIL_REQUIRED)
     )
-    if strict_operation and not wrapper_surface_ok:
-        mapping_errors.append("strict_operation_surface_not_host_ingress_wrapper")
+    if wrapper_surface_required and not wrapper_surface_ok:
+        mapping_errors.append(
+            "strict_operation_surface_not_configured_wrapper:"
+            f"{surface_label}:expected={wrapper_required_surface_label}"
+        )
         failure_count += 1
     wrapper_dispatch_ok = (
         not wrapper_dispatch_required
-        or wrapper_dispatch_token == REQUIRED_WRAPPER_DISPATCH_TOKEN
+        or wrapper_dispatch_token == wrapper_required_dispatch_token
     )
     wrapper_dispatch_token_status = (
         STATUS_SKIPPED_NOT_REQUIRED
         if not wrapper_dispatch_required
         else (STATUS_PASS_REQUIRED if wrapper_dispatch_ok else STATUS_FAIL_REQUIRED)
     )
+    if wrapper_dispatch_required and not wrapper_required_dispatch_token:
+        mapping_errors.append("wrapper_dispatch_token_expected_missing_from_contract")
+        failure_count += 1
     if wrapper_dispatch_required and not wrapper_dispatch_ok:
         mapping_errors.append("wrapper_dispatch_token_missing_or_invalid")
         failure_count += 1
@@ -1267,10 +1380,18 @@ def main() -> int:
         "missing_targets": missing_targets,
         "results": result_rows,
         "surface_label": surface_label,
+        "wrapper_surface_required_label": wrapper_required_surface_label,
+        "wrapper_required_surface_status": str(
+            wrapper_policy.get("required_wrapper_surface_status", STATUS_PASS_REQUIRED)
+        ).strip().upper(),
+        "wrapper_required_dispatch_status": str(
+            wrapper_policy.get("required_wrapper_dispatch_status", STATUS_PASS_REQUIRED)
+        ).strip().upper(),
+        "wrapper_host_dispatch_mode": host_dispatch_mode,
         "wrapper_dispatch_required": wrapper_dispatch_required,
         "wrapper_surface_status": wrapper_surface_status,
         "wrapper_dispatch_token_status": wrapper_dispatch_token_status,
-        "wrapper_dispatch_token_expected": REQUIRED_WRAPPER_DISPATCH_TOKEN,
+        "wrapper_dispatch_token_expected": wrapper_required_dispatch_token,
         "run_id_binding": run_id_binding,
         "session_id": session_id,
         "report_selected_path": report_selected_path,
