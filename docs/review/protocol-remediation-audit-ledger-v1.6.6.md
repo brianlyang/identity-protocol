@@ -712,3 +712,38 @@ This checkpoint addresses the updated audit finding:
 1. The specific audit gap (“static token + surface_label direct bypass”) is closed.
 2. Dynamic proof/grant + replay guards are now executable in protocol tooling and instance wrapper templates.
 3. Remaining boundary caveat: signing secret still comes from instance contract runtime context, so this stream remains `CONDITIONAL_GO` until higher-trust signer boundary / dispatcher-only API closure is proven across project runtime entrypoints.
+
+## 13) Signing-key path hardening checkpoint (2026-03-12, continuation)
+
+This checkpoint further tightens the proof chain by removing direct dependence on static dispatch token as a signing secret.
+
+### 13.1 Code hardening landed
+
+1. `scripts/create_identity_pack.py`
+   - host gateway contract now carries signing-key path in both proof policies:
+     - `ingress_proof_policy.signing_key_path`
+     - `egress_grant_policy.signing_key_path`
+   - materialization now creates/retains runtime signing key file under instance runtime state.
+   - ingress/egress wrapper templates now load signing secret from policy key path, not from static dispatch token.
+2. `scripts/repair_contract_backfill.py`
+   - legacy instances are backfilled with signing-key-path policy fields.
+   - post-backfill validity now requires non-empty signing-key-path in both proof policies.
+3. `scripts/required_gate_bundle_runner.py`
+   - ingress proof signature validation now uses runtime key-file secret resolved from policy path.
+4. `scripts/final_emit_governed.py`
+   - egress grant validation now uses runtime key-file secret resolved from policy path.
+5. `scripts/validate_protocol_unique_entry_gate.py`
+   - policy schema checks now require `signing_key_path` for ingress proof and egress grant policies.
+
+### 13.2 Serial replay outcomes
+
+1. Forged ingress proof with static token secret -> blocked (`FAIL_REQUIRED`).
+2. Forged egress grant with static token secret -> blocked (`egress_grant_signature_invalid`).
+3. Wrapper positive chain (ingress+egress) still passes with policy key-path signer.
+4. Core control-plane gates remain green after hardening replay:
+   - control-plane invariants / surface drift / status sync / plugin wiring check.
+
+### 13.3 Posture
+
+1. Static token knowledge alone no longer forges ingress/egress proof signatures.
+2. Stream remains `Policy PASS / Implementation CONDITIONAL PASS` until project runtime dispatcher-only exposure and higher-trust signer-boundary proof are closed end-to-end.
