@@ -130,6 +130,37 @@ Action taken:
    - `scripts/validate_required_gate_surface_drift.py`
 3. This bridge does not replace v1.6.6 runtime closure tests; it guarantees upstream governance state is reliable and consumable.
 
+### 3.5 One-to-one implementation matrix (requested freeze)
+
+| User concern (frozen) | Config anchor | Execution anchor | Verification anchor | Current posture |
+|---|---|---|---|---|
+| 唯一出入口挂接必须固定 | `protocol_host_unique_channel_contract_v1.protocol_ingress_script/protocol_egress_script`, `host_dispatch_mode`, `host_release_mode` | ingress/egress wrappers -> canonical scripts | `validate_protocol_unique_entry_gate` | `PASS_REQUIRED` on protocol checks; runtime closure tracked in v1.6.6 |
+| 健康检查必须分层 | `entry_receipt_policy`, `ingress_proof_policy`, `egress_grant_policy`, `headstamp_policy` | static + dynamic + session-layer checks | `validate_protocol_unique_entry_gate` + `run_gateway_wrapper_trust_boundary_probes_ci.sh` + drift/status gates | `PASS_REQUIRED` for check surfaces; keep fail-close on any layer |
+| 接线必须合同驱动 | `operation_profile_policy`, current-pointer mappings | required-gates workflow + delegated lanes | `validate_required_gate_surface_drift` + `validate_control_plane_invariants` | `PASS_REQUIRED`; missing wiring token is fail-close |
+| 广播能力要挂总线而非业务脚本 | canonical status/error families in required-gate outputs | required-gates + control-plane status sync as upstream broadcast source | `validate_control_plane_status_sync` + docs contract check | upstream readiness closed; runtime broadcast injection remains v1.6.6 attach step |
+| 验收指标机器可判 | stream docs + allowlist + evidence tuple fields | governance/review/evidence package | docs contract + evidence policy checks | `CONDITIONAL_GO` unless all release gates and activation receipts are complete |
+
+### 3.6 Explicit configuration checklist (operator quick apply)
+
+1. Verify identity contract has:
+   - `host_dispatch_mode=wrapper_only`
+   - `host_release_mode=wrapper_only`
+   - `operation_profile_policy` with strict/light + upgrade-only fields
+2. Verify runtime gateway contract has canonical script pointers and required policies:
+   - `entry_receipt_policy.required=true`
+   - `ingress_proof_policy.required=true`
+   - `egress_grant_policy.required=true`
+   - `headstamp_policy.required=true`
+3. Verify required-gates workflow wiring contains:
+   - super-linter required lane
+   - required runtime gate delegate
+   - gateway trust-boundary probe delegate
+4. Run closure checks in order:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+
 ## 4) Acceptance criteria
 
 No implementation closure is accepted unless all checks pass:

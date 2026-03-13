@@ -130,6 +130,109 @@ Section-3 completion requires both health and wiring proofs:
 2. Required-gate outcomes must publish canonical statuses/error families (not ad-hoc log text) for deterministic downstream broadcast and recovery guidance.
 3. If Section-3 status is stale or pointer-drifted, downstream runtime broadcast is treated as non-authoritative and release posture remains `CONDITIONAL_GO`.
 
+### 3.5 Canonical configuration scheme (explicit, one-to-one)
+
+Section-3 execution must use contract-driven config, not ad-hoc script parameters.
+
+Minimal `CURRENT_TASK.json` fragment (identity pack):
+
+```json
+{
+  "protocol_host_unique_channel_contract_v1": {
+    "protocol_ingress_script": "scripts/required_gate_bundle_runner.py",
+    "protocol_egress_script": "scripts/final_emit_governed.py",
+    "ingress_wrapper_path": "identity/runtime/gate/protocol_ingress_wrapper.py",
+    "egress_wrapper_path": "identity/runtime/gate/protocol_egress_wrapper.py",
+    "gateway_contract_path": "identity/runtime/gate/protocol_gateway_contract.json",
+    "host_dispatch_mode": "wrapper_only",
+    "host_release_mode": "wrapper_only",
+    "entry_receipt_policy": {
+      "required": true,
+      "required_surface_label": "host_ingress_wrapper",
+      "required_wrapper_surface_status": "PASS_REQUIRED",
+      "required_wrapper_dispatch_token_status": "PASS_REQUIRED"
+    },
+    "ingress_proof_policy": {
+      "required": true,
+      "max_age_seconds": 300,
+      "signer_mode": "runtime_env_secret",
+      "signer_secret_env": "IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_<IDENTITY>"
+    },
+    "egress_grant_policy": {
+      "required": true,
+      "max_age_seconds": 300,
+      "signer_mode": "runtime_env_secret",
+      "signer_secret_env": "IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_<IDENTITY>"
+    },
+    "headstamp_policy": {
+      "required": true
+    },
+    "operation_profile_policy": {
+      "strict_operations": ["activate", "update", "mutation", "readiness", "e2e", "ci", "validate", "three-plane"],
+      "light_operations": ["inspection", "scan"],
+      "strict_gate_profile": "strict_full",
+      "light_gate_profile": "inspection_targeted",
+      "allow_upgrade_only": true
+    }
+  }
+}
+```
+
+Minimal `.identity/<id>/runtime/gate/protocol_gateway_contract.json` fragment:
+
+```json
+{
+  "protocol_ingress_script": "scripts/required_gate_bundle_runner.py",
+  "protocol_egress_script": "scripts/final_emit_governed.py",
+  "host_dispatch_mode": "wrapper_only",
+  "host_release_mode": "wrapper_only",
+  "entry_receipt_policy": {
+    "required": true
+  },
+  "ingress_proof_policy": {
+    "required": true,
+    "max_age_seconds": 300
+  },
+  "egress_grant_policy": {
+    "required": true,
+    "max_age_seconds": 300
+  },
+  "headstamp_policy": {
+    "required": true
+  },
+  "operation_profile_policy": {
+    "strict_gate_profile": "strict_full",
+    "light_gate_profile": "inspection_targeted",
+    "allow_upgrade_only": true
+  }
+}
+```
+
+### 3.6 Three-layer health-check recipe (command-level)
+
+1. Contract/static layer (schema + parity):
+   - `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation validate --require-entry-receipt --json-only`
+2. Routing/dynamic layer (positive + negative probes):
+   - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+3. Session layer (tuple + headstamp/send-time continuity on required surfaces):
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+
+Interpretation lock:
+
+1. Any layer fails => Section-3 execution pack is not closed.
+2. Layer-1 only green is not accepted as runtime attach-readiness closure.
+
+### 3.7 One-to-one traceability matrix (frozen)
+
+| Governance intent | Required config keys | Canonical scripts/surfaces | Machine verdict source | Closure condition |
+|---|---|---|---|---|
+| Unique ingress/egress ownership | `protocol_ingress_script`, `protocol_egress_script`, `host_dispatch_mode`, `host_release_mode` | `scripts/required_gate_bundle_runner.py`, `scripts/final_emit_governed.py` | `validate_protocol_unique_entry_gate` | both modes are `wrapper_only` and scripts match canonical |
+| Health checks (3-layer) | `entry_receipt_policy`, `ingress_proof_policy`, `egress_grant_policy`, `headstamp_policy` | `validate_protocol_unique_entry_gate`, `run_gateway_wrapper_trust_boundary_probes_ci.sh`, required-gates workflow | `PASS_REQUIRED` + negative probes blocked | static+dynamic+session all pass |
+| Wiring (no hardcode) | `operation_profile_policy`, current-pointer mappings | `.github/workflows/_identity-required-gates.yml`, `validate_required_gate_surface_drift.py` | drift/invariant/status checks | missing tokens/renames fail-close |
+| Broadcast attach readiness | canonical status/error fields only (no ad-hoc logs) | required-gates + status sync surfaces | `control-plane-status` + required-gate JSON payloads | statuses are machine-parseable and pointer-synchronized |
+| Acceptance metrics | same as above + evidence tuples | stream docs + allowlist + status mappings | command + rc + sha256 + timestamp | any metric below threshold => `CONDITIONAL_GO` |
+
 ## 4) GitHub rulesets hardening contract
 
 ### 4.1 Required control set for v1.6.5
