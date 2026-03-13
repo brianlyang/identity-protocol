@@ -122,16 +122,31 @@ def main() -> int:
     )
     repo_catalog = Path(args.repo_catalog).expanduser().resolve()
 
-    try:
-        ctx = resolve_identity(
-            args.identity_id,
-            repo_catalog,
-            local_catalog,
-            preferred_scope=args.scope,
-            allow_conflict=False,
-        )
-    except Exception as exc:
-        print(f"[FAIL] resolve failed: {exc}")
+    resolve_errors: list[str] = []
+    resolve_catalog_candidates: list[Path] = [local_catalog]
+    global_catalog = _resolve_global_catalog()
+    if global_catalog not in resolve_catalog_candidates:
+        resolve_catalog_candidates.append(global_catalog)
+
+    ctx: dict | None = None
+    effective_catalog = local_catalog
+    for candidate_catalog in resolve_catalog_candidates:
+        try:
+            ctx = resolve_identity(
+                args.identity_id,
+                repo_catalog,
+                candidate_catalog,
+                preferred_scope=args.scope,
+                allow_conflict=False,
+            )
+            effective_catalog = candidate_catalog
+            break
+        except Exception as exc:
+            resolve_errors.append(f"{candidate_catalog}:{exc}")
+
+    if ctx is None:
+        tail = resolve_errors[-1] if resolve_errors else "unknown_resolve_error"
+        print(f"[FAIL] resolve failed: {tail}")
         return 1
 
     explicit_scope = bool(str(args.scope or "").strip())
@@ -156,7 +171,7 @@ def main() -> int:
         return 1
 
     # no other identity may point to exact same pack path
-    catalog = _load_yaml(local_catalog if local_catalog.exists() else repo_catalog)
+    catalog = _load_yaml(effective_catalog if effective_catalog.exists() else repo_catalog)
     collisions = []
     for row in catalog.get("identities", []) or []:
         if not isinstance(row, dict):
@@ -171,7 +186,7 @@ def main() -> int:
         print(f"[FAIL] pack-path collision detected with identities: {sorted(collisions)}")
         return 1
 
-    duplicate_rows = _cross_layer_duplicate_details(args.identity_id, local_catalog, repo_catalog)
+    duplicate_rows = _cross_layer_duplicate_details(args.identity_id, effective_catalog, repo_catalog)
     if duplicate_rows and not args.allow_cross_layer_runtime_duplicate:
         blocking_rows = [
             row

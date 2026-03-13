@@ -102,3 +102,7 @@ This section records cross-check against three additional protocol-side suggesti
    - new machine-readable fields:
      - `next_action`, `hint`
    - if key inputs are newer than report, guidance now explicitly points to “update first, then validate”.
+4. Scope isolation false-fail guard for global-only runtime owner:
+   - `scripts/validate_identity_scope_isolation.py` now falls back to global runtime catalog resolution
+     when the identity is absent from the provided project catalog.
+   - policy remains unchanged: only **simultaneous active runtime ownership in both layers** blocks.
