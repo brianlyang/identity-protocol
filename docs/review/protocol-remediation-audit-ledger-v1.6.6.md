@@ -1180,3 +1180,41 @@ Deep scan (5 serial rounds, same identity):
 2. `Implementation PASS`
 3. scope statement:
    - verdict applies to v1.6.6 frozen closure gates and serialized replay contract in this stream.
+
+## 23) Broadcast rollout for downstream instances (2026-03-13, section-3 aligned)
+
+### 23.1 Published broadcast payload
+
+1. item file:
+   - `identity/protocol/broadcast/items/v166-closure-upgrade-serial-5x5-20260313.json`
+2. index file:
+   - `identity/protocol/broadcast/index.json` includes the item row.
+3. payload properties:
+   - `severity=critical`
+   - `requires_ack=true`
+   - scope `all`
+   - command-oriented serial runbook for downstream identities.
+
+### 23.2 Local attach verification (base-repo-architect)
+
+1. ingress replay before ack:
+   - `broadcast_visible_count=1`
+   - `broadcast_unread_count=1`
+   - `broadcast_pending_ack_count=1`
+   - `broadcast_critical_unacked_count=1`
+2. ack replay:
+   - `python3 scripts/identity_broadcast_ack.py --catalog <runtime_catalog> --identity-id base-repo-architect --ack-all-pending --actor-id assistant:codex --session-id session-wrapper-chain --json-only`
+   - result: `identity_broadcast_ack_status=PASS_REQUIRED`
+3. ingress replay after ack:
+   - `broadcast_unread_count=0`
+   - `broadcast_pending_ack_count=0`
+   - `broadcast_critical_unacked_count=0`
+
+### 23.3 Office-instance feedback absorption note
+
+From downstream replay feedback (`office-ops-expert`), the broadcast runbook explicitly includes:
+
+1. wrapper signer env setup before strict update replay
+   - to avoid pre-mutation `IP-GATE-ENTRY-002`.
+2. serial strict replay + deep-scan loop
+   - to expose residual non-m2m blockers as machine-classified tail items (instead of wrapper path drift).

@@ -665,6 +665,39 @@ v1.6.6 acceptance posture (this stream, frozen):
 1. `Policy PASS`
 2. `Implementation PASS`
 
+### 5.10 Downstream upgrade broadcast pack (aligned to v1.6.5 Section-3 model)
+
+To make v1.6.6 closure retrievable and executable by downstream runtime identities without
+manual coordination, this stream publishes a canonical broadcast item:
+
+1. `identity/protocol/broadcast/items/v166-closure-upgrade-serial-5x5-20260313.json`
+2. `identity/protocol/broadcast/index.json` contains the corresponding index row.
+
+Broadcast contract intent:
+
+1. requires ack (`requires_ack=true`) and is marked critical (`severity=critical`).
+2. freezes one operator runbook:
+   - contract backfill
+   - wrapper signer env set
+   - strict update replay
+   - serial self-test (`>=5`)
+   - serial deep-scan (`>=5`)
+   - `identity_broadcast_ack.py --ack-all-pending`
+3. pass criteria are machine-readable in message body:
+   - self-test: all rounds `PASS_REQUIRED`
+   - deep-scan: all rounds `rc=0`, `p0=0`, `m2m_fail=0`
+
+Serialized attach check (base-repo-architect):
+
+1. first ingress after publish:
+   - `broadcast_pending_ack_count=1`
+   - `broadcast_critical_unacked_count=1`
+2. ack replay:
+   - `identity_broadcast_ack_status=PASS_REQUIRED`
+3. second ingress after ack:
+   - `broadcast_pending_ack_count=0`
+   - `broadcast_critical_unacked_count=0`
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:
