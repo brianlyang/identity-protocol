@@ -852,3 +852,44 @@ This section maps one-to-one against the six missing items raised in the latest 
 2. implementation posture: `CONDITIONAL_PASS`
 3. remaining hard blocker:
    - project runtime dispatcher physical wrapper-only exposure proof (item 2).
+
+## 16) 2026-03-13 audit replay delta (item-by-item correction, frozen)
+
+This delta corrects over-closure risk and records latest serialized replay outcomes.
+
+### 16.1 New hardening landed in this round
+
+1. `scripts/required_gate_bundle_runner.py`
+   - adds ingress parent-attestation fields into receipt and wrapper provenance checks.
+2. `scripts/final_emit_governed.py`
+   - adds egress parent-attestation check for `host_release_mode=wrapper_only`.
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - validates parent-attestation receipt parity on provenance-required rounds.
+4. `scripts/create_identity_pack.py` + runtime wrapper templates
+   - canonicalizes wrapper `catalog` path to absolute path before protocol script dispatch.
+
+### 16.2 Serialized replay facts (base-repo-architect)
+
+1. Positive chain under actor/session-bound context is reproducible:
+   - ingress wrapper: `PASS_REQUIRED`
+   - egress wrapper: `PASS_REQUIRED`
+2. Direct runner/final-emit calls without wrapper attestation fail-close.
+3. `validate_protocol_unique_entry_gate --require-entry-receipt` passes on bound positive run with parent-attestation parity.
+
+### 16.3 Open items after this delta (no overclaim)
+
+At least the following remain open, therefore stream posture stays conditional:
+
+1. **Signer trust boundary is still same-domain conditional**
+   - when signer env + wrapper-attestation inputs are controllable in the same trust domain, physical non-forgeability is not fully guaranteed.
+2. **Egress positive replay has prerequisite**
+   - requires actor/session binding (`session_scoped_actor_binding`) to satisfy send-time/final-emit contracts.
+3. **`source_layer` cross-cwd drift**
+   - status: **PARTIAL_CLOSED**.
+   - this round adds catalog-root fallback in `resolve_identity_context.py`; replay from both project cwd and parent cwd now returns `source_layer=project` for project-local catalog.
+   - residual caveat: non-canonical layouts (no `<project>/identity-protocol-local`) still require explicit runtime env alignment.
+
+### 16.4 Correct posture
+
+1. `Policy PASS`
+2. `Implementation CONDITIONAL PASS`

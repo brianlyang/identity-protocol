@@ -1520,6 +1520,20 @@ def _canonical_json(data: dict[str, Any]) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
+def _resolve_runtime_path(raw_path: str) -> str:
+    token = str(raw_path or "").strip()
+    if not token:
+        return ""
+    return str(Path(token).expanduser().resolve())
+
+
+def _resolve_runtime_path(raw_path: str) -> str:
+    token = str(raw_path or "").strip()
+    if not token:
+        return ""
+    return str(Path(token).expanduser().resolve())
+
+
 def _build_wrapper_dispatch_proof(
     *,
     merged: dict[str, Any],
@@ -1700,7 +1714,9 @@ def main() -> int:
             json_only=args.json_only,
         )
 
-    catalog_path = str(merged.get("catalog_path") or merged.get("catalog") or contract.get("catalog_path", "")).strip()
+    catalog_path = _resolve_runtime_path(
+        str(merged.get("catalog_path") or merged.get("catalog") or contract.get("catalog_path", "")).strip()
+    )
     if not catalog_path:
         return _fail(
             error_code="IP-GATE-ENTRY-002",
@@ -1799,7 +1815,9 @@ def main() -> int:
     if str(args.out or "").strip():
         cmd.extend(["--out", str(args.out).strip()])
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    child_env = dict(os.environ)
+    child_env["IDENTITY_PROTOCOL_INGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
     if proc.stdout.strip():
         print(proc.stdout.strip())
     if proc.stderr.strip():
@@ -2088,7 +2106,9 @@ def main() -> int:
             json_only=args.json_only,
         )
 
-    catalog_path = str(merged.get("catalog_path") or merged.get("catalog") or contract.get("catalog_path", "")).strip()
+    catalog_path = _resolve_runtime_path(
+        str(merged.get("catalog_path") or merged.get("catalog") or contract.get("catalog_path", "")).strip()
+    )
     if not catalog_path:
         return _fail(
             error_code="IP-GATE-ENTRY-002",
@@ -2152,7 +2172,9 @@ def main() -> int:
     if str(args.out_json or "").strip():
         cmd.extend(["--out-json", str(args.out_json).strip()])
 
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    child_env = dict(os.environ)
+    child_env["IDENTITY_PROTOCOL_EGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
     if proc.stdout.strip():
         print(proc.stdout.strip())
     if proc.stderr.strip():

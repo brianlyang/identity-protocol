@@ -30,6 +30,7 @@ from tool_vendor_governance_common import resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 
 ERR_BODY_EMPTY = ERR_HDSTAMP_MISSING_OR_MALFORMED
 ERR_COMPOSE_RUNTIME = ERR_HDSTAMP_RECEIPT_MISSING
@@ -154,6 +155,65 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def _read_process_commandline(pid: int) -> str:
+    if pid <= 0:
+        return ""
+    proc_cmdline = Path(f"/proc/{pid}/cmdline")
+    if proc_cmdline.exists():
+        try:
+            raw = proc_cmdline.read_bytes()
+            tokens = [chunk.decode("utf-8", errors="ignore").strip() for chunk in raw.split(b"\x00")]
+            return " ".join(token for token in tokens if token).strip()
+        except Exception:
+            pass
+    try:
+        proc = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return str(proc.stdout or "").strip()
+
+
+def _validate_wrapper_parent_attestation(
+    *,
+    expected_wrapper_path: str,
+) -> tuple[bool, list[str], dict[str, Any]]:
+    errors: list[str] = []
+    expected_path = Path(str(expected_wrapper_path or "").strip()).expanduser().resolve()
+    parent_pid = int(os.getppid())
+    parent_cmdline = _read_process_commandline(parent_pid)
+    env_wrapper_path = str(os.environ.get("IDENTITY_PROTOCOL_EGRESS_WRAPPER_PATH", "")).strip()
+    details: dict[str, Any] = {
+        "egress_wrapper_parent_attestation_ppid": parent_pid,
+        "egress_wrapper_parent_attestation_expected_path": str(expected_path)
+        if str(expected_wrapper_path or "").strip()
+        else "",
+        "egress_wrapper_parent_attestation_command_sha256": (
+            hashlib.sha256(parent_cmdline.encode("utf-8")).hexdigest() if parent_cmdline else ""
+        ),
+        "egress_wrapper_parent_attestation_env_path": env_wrapper_path,
+    }
+    if not str(expected_wrapper_path or "").strip():
+        errors.append("egress_wrapper_parent_attestation_expected_path_missing")
+    if parent_cmdline:
+        if str(expected_path) not in parent_cmdline:
+            errors.append("egress_wrapper_parent_attestation_parent_command_mismatch")
+    else:
+        if not env_wrapper_path:
+            errors.append("egress_wrapper_parent_attestation_parent_command_missing")
+        else:
+            env_path = Path(env_wrapper_path).expanduser().resolve()
+            if env_path != expected_path:
+                errors.append("egress_wrapper_parent_attestation_env_path_mismatch")
+    return len(errors) == 0, errors, details
 
 
 def _consume_egress_nonce(
@@ -533,7 +593,51 @@ def main() -> int:
     egress_grant_signer_mode = ""
     egress_grant_signer_secret_env = ""
     egress_grant_signing_key_path = ""
+    egress_wrapper_parent_attestation_required = False
+    egress_wrapper_parent_attestation_status = STATUS_SKIPPED_NOT_REQUIRED
+    egress_wrapper_parent_attestation_ppid = int(os.getppid())
+    egress_wrapper_parent_attestation_expected_path = ""
+    egress_wrapper_parent_attestation_command_sha256 = ""
     if host_release_mode == "wrapper_only":
+        egress_wrapper_parent_attestation_required = True
+        egress_wrapper_path = _resolve_pack_relative_path(
+            pack_path,
+            str(host_gateway_contract.get("egress_wrapper_path", "")).strip(),
+        )
+        egress_wrapper_parent_attestation_expected_path = str(egress_wrapper_path) if egress_wrapper_path else ""
+        (
+            parent_ok,
+            parent_errors,
+            parent_details,
+        ) = _validate_wrapper_parent_attestation(
+            expected_wrapper_path=egress_wrapper_parent_attestation_expected_path,
+        )
+        egress_wrapper_parent_attestation_ppid = _safe_int(
+            parent_details.get("egress_wrapper_parent_attestation_ppid"),
+            default=egress_wrapper_parent_attestation_ppid,
+        )
+        egress_wrapper_parent_attestation_command_sha256 = str(
+            parent_details.get("egress_wrapper_parent_attestation_command_sha256", "")
+        ).strip()
+        egress_wrapper_parent_attestation_status = (
+            STATUS_PASS_REQUIRED if parent_ok else STATUS_FAIL_REQUIRED
+        )
+        if not parent_ok:
+            payload = {
+                "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                "error_code": ERR_EGRESS_CONTRACT_FAILED,
+                "stale_reasons": parent_errors,
+                "identity_id": identity_id,
+                "catalog_path": str(catalog_path),
+                "egress_grant_required": True,
+                "egress_wrapper_parent_attestation_required": True,
+                "egress_wrapper_parent_attestation_status": egress_wrapper_parent_attestation_status,
+                "egress_wrapper_parent_attestation_ppid": egress_wrapper_parent_attestation_ppid,
+                "egress_wrapper_parent_attestation_expected_path": egress_wrapper_parent_attestation_expected_path,
+                "egress_wrapper_parent_attestation_command_sha256": egress_wrapper_parent_attestation_command_sha256,
+            }
+            _emit(payload, json_only=args.json_only)
+            return 1
         egress_grant_policy = host_gateway_contract.get("egress_grant_policy")
         egress_grant_required = True
         egress_grant_max_age_seconds = 300
@@ -749,6 +853,11 @@ def main() -> int:
         "egress_grant_required": bool(egress_grant_required),
         "egress_grant_signer_mode": egress_grant_signer_mode,
         "egress_grant_signer_secret_env": egress_grant_signer_secret_env,
+        "egress_wrapper_parent_attestation_required": bool(egress_wrapper_parent_attestation_required),
+        "egress_wrapper_parent_attestation_status": egress_wrapper_parent_attestation_status,
+        "egress_wrapper_parent_attestation_ppid": egress_wrapper_parent_attestation_ppid,
+        "egress_wrapper_parent_attestation_expected_path": egress_wrapper_parent_attestation_expected_path,
+        "egress_wrapper_parent_attestation_command_sha256": egress_wrapper_parent_attestation_command_sha256,
     }
     if not pass_contract:
         payload["stale_reasons"] = ["egress_contract_not_pass"]

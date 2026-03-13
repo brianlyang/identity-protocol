@@ -461,6 +461,38 @@ Posture remains:
 2. implementation: `CONDITIONAL_PASS`
 3. remaining blocker: project runtime dispatcher physical wrapper-only exposure proof.
 
+### 5.3 Audit delta follow-up (2026-03-13, serialized replay)
+
+This round applies additional hardening and freezes current risk boundary explicitly (no over-closure claim):
+
+Implemented:
+
+1. `required_gate_bundle_runner.py`
+   - adds wrapper-parent attestation fields into receipt:
+     - `wrapper_parent_attestation_required`
+     - `wrapper_parent_attestation_status`
+     - `wrapper_parent_attestation_expected_path`
+     - `wrapper_parent_attestation_ppid`
+   - enforces parent attestation under wrapper-provenance-required operations.
+2. `final_emit_governed.py`
+   - adds egress wrapper-parent attestation check when `host_release_mode=wrapper_only`.
+   - emits attestation status fields in final-emit payload.
+3. `validate_protocol_unique_entry_gate.py`
+   - validates ingress receipt parent-attestation parity on provenance-required rounds.
+4. `create_identity_pack.py` + instance wrapper runtime
+   - wrapper runtime now canonicalizes catalog path to absolute path before protocol script handoff.
+5. `resolve_identity_context.py`
+   - adds cross-cwd catalog-root fallback so project-local catalog resolution remains `source_layer=project` when launched outside project cwd.
+
+Serialized replay conclusion for this delta:
+
+1. Positive chain can pass under actor/session-bound context:
+   - ingress wrapper `PASS_REQUIRED`
+   - egress wrapper `PASS_REQUIRED`
+2. Direct runner/final-emit calls without wrapper attestation fail-close.
+3. Closure state remains `CONDITIONAL_PASS` because same trust-domain self-injection is still not physically eliminated:
+   - if attacker controls signer secret and wrapper attestation inputs in the same runtime trust domain, full physical non-forgeability is not yet guaranteed.
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:

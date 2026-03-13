@@ -929,6 +929,11 @@ def main() -> int:
         receipt_wrapper_dispatch_required = _as_bool(receipt.get("wrapper_dispatch_required"))
         receipt_wrapper_proof_required = _as_bool(receipt.get("wrapper_dispatch_proof_required"))
         receipt_wrapper_proof_status = str(receipt.get("wrapper_dispatch_proof_status", "")).strip().upper()
+        receipt_wrapper_parent_required = _as_bool(receipt.get("wrapper_parent_attestation_required"))
+        receipt_wrapper_parent_status = str(receipt.get("wrapper_parent_attestation_status", "")).strip().upper()
+        receipt_wrapper_parent_expected_path = str(
+            receipt.get("wrapper_parent_attestation_expected_path", "")
+        ).strip()
         payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
         payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
         payload["protocol_unique_entry_receipt_actor_id"] = receipt_actor_id
@@ -940,6 +945,15 @@ def main() -> int:
         payload["protocol_unique_entry_receipt_wrapper_dispatch_required"] = receipt_wrapper_dispatch_required
         payload["protocol_unique_entry_receipt_wrapper_proof_status"] = receipt_wrapper_proof_status
         payload["protocol_unique_entry_receipt_wrapper_proof_required"] = receipt_wrapper_proof_required
+        payload["protocol_unique_entry_receipt_wrapper_parent_attestation_status"] = (
+            receipt_wrapper_parent_status
+        )
+        payload["protocol_unique_entry_receipt_wrapper_parent_attestation_required"] = (
+            receipt_wrapper_parent_required
+        )
+        payload["protocol_unique_entry_receipt_wrapper_parent_attestation_expected_path"] = (
+            receipt_wrapper_parent_expected_path
+        )
 
         receipt_issues: list[str] = []
         if receipt_bundle_key != EXPECTED_BUNDLE_KEY:
@@ -971,6 +985,21 @@ def main() -> int:
             receipt_issues.append("entry_receipt_wrapper_proof_required_not_true")
         if provenance_required and receipt_wrapper_proof_status != STATUS_PASS_REQUIRED:
             receipt_issues.append("entry_receipt_wrapper_proof_status_not_pass_required")
+        if provenance_required and receipt_wrapper_parent_required is not True:
+            receipt_issues.append("entry_receipt_wrapper_parent_attestation_required_not_true")
+        if provenance_required and receipt_wrapper_parent_status != STATUS_PASS_REQUIRED:
+            receipt_issues.append("entry_receipt_wrapper_parent_attestation_status_not_pass_required")
+        if provenance_required and not receipt_wrapper_parent_expected_path:
+            receipt_issues.append("entry_receipt_wrapper_parent_attestation_expected_path_missing")
+        expected_ingress_wrapper_path = str(payload.get("protocol_host_gateway_ingress_wrapper_path", "")).strip()
+        if (
+            provenance_required
+            and expected_ingress_wrapper_path
+            and receipt_wrapper_parent_expected_path
+            and Path(receipt_wrapper_parent_expected_path).expanduser().resolve()
+            != Path(expected_ingress_wrapper_path).expanduser().resolve()
+        ):
+            receipt_issues.append("entry_receipt_wrapper_parent_attestation_expected_path_mismatch")
         missing_fields = sorted(
             field for field in entry_receipt_required_fields if field not in receipt
         )

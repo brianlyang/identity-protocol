@@ -285,6 +285,20 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(default)
 
 
+def _resolve_pack_relative_path(pack_path: Path, raw_path: str, default_rel: str = "") -> Path:
+    token = str(raw_path or "").strip() or str(default_rel or "").strip()
+    if not token:
+        return Path("")
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (pack_path / token).resolve()
+    return (pack_path / token).resolve()
+
+
 def _consume_wrapper_nonce(
     *,
     catalog_path: str,
@@ -450,6 +464,63 @@ def _validate_wrapper_dispatch_proof(
     return len(errors) == 0, errors, details
 
 
+def _read_process_commandline(pid: int) -> str:
+    if pid <= 0:
+        return ""
+    proc_cmdline = Path(f"/proc/{pid}/cmdline")
+    if proc_cmdline.exists():
+        try:
+            raw = proc_cmdline.read_bytes()
+            tokens = [chunk.decode("utf-8", errors="ignore").strip() for chunk in raw.split(b"\x00")]
+            return " ".join(token for token in tokens if token).strip()
+        except Exception:
+            pass
+    try:
+        proc = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return str(proc.stdout or "").strip()
+
+
+def _validate_wrapper_parent_attestation(
+    *,
+    expected_wrapper_path: str,
+) -> tuple[bool, list[str], dict[str, Any]]:
+    errors: list[str] = []
+    expected_path = Path(str(expected_wrapper_path or "").strip()).expanduser().resolve()
+    parent_pid = int(os.getppid())
+    parent_cmdline = _read_process_commandline(parent_pid)
+    env_wrapper_path = str(os.environ.get("IDENTITY_PROTOCOL_INGRESS_WRAPPER_PATH", "")).strip()
+    details: dict[str, Any] = {
+        "wrapper_parent_attestation_ppid": parent_pid,
+        "wrapper_parent_attestation_expected_path": str(expected_path) if str(expected_wrapper_path or "").strip() else "",
+        "wrapper_parent_attestation_command_sha256": (
+            hashlib.sha256(parent_cmdline.encode("utf-8")).hexdigest() if parent_cmdline else ""
+        ),
+        "wrapper_parent_attestation_env_path": env_wrapper_path,
+    }
+    if not str(expected_wrapper_path or "").strip():
+        errors.append("wrapper_parent_attestation_expected_path_missing")
+    if parent_cmdline:
+        if str(expected_path) not in parent_cmdline:
+            errors.append("wrapper_parent_attestation_parent_command_mismatch")
+    else:
+        if not env_wrapper_path:
+            errors.append("wrapper_parent_attestation_parent_command_missing")
+        else:
+            env_path = Path(env_wrapper_path).expanduser().resolve()
+            if env_path != expected_path:
+                errors.append("wrapper_parent_attestation_env_path_mismatch")
+    return len(errors) == 0, errors, details
+
+
 def _resolve_host_gateway_contract(task: dict[str, Any]) -> dict[str, Any]:
     for key in HOST_GATEWAY_CONTRACT_KEYS:
         raw = task.get(key)
@@ -474,6 +545,7 @@ def _resolve_wrapper_enforcement_policy(
         "required_dispatch_token": DEFAULT_REQUIRED_WRAPPER_DISPATCH_TOKEN,
         "required_wrapper_surface_status": STATUS_PASS_REQUIRED,
         "required_wrapper_dispatch_status": STATUS_PASS_REQUIRED,
+        "expected_ingress_wrapper_path": "",
         "host_dispatch_mode": "wrapper_only",
         "strict_operations": list(STRICT_NO_TRIM_OPERATIONS_DEFAULT),
         "light_operations": list(LIGHT_NO_TRIM_OPERATIONS_DEFAULT),
@@ -495,6 +567,14 @@ def _resolve_wrapper_enforcement_policy(
     except Exception as exc:
         return policy, [f"host_gateway_contract_resolve_failed:{exc}"]
 
+    policy["expected_ingress_wrapper_path"] = str(
+        _resolve_pack_relative_path(
+            pack_path,
+            "",
+            default_rel="runtime/gate/protocol_ingress_wrapper.py",
+        )
+    )
+
     host_gateway_contract = _resolve_host_gateway_contract(task if isinstance(task, dict) else {})
     if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
         return policy, ["host_gateway_contract_missing"]
@@ -510,6 +590,17 @@ def _resolve_wrapper_enforcement_policy(
         policy["required_dispatch_token"] = dispatch_token
     else:
         errors.append("host_gateway_contract_ingress_dispatch_token_missing")
+
+    ingress_wrapper_raw = str(host_gateway_contract.get("ingress_wrapper_path", "")).strip()
+    resolved_ingress_wrapper_path = _resolve_pack_relative_path(
+        pack_path,
+        ingress_wrapper_raw,
+        default_rel="runtime/gate/protocol_ingress_wrapper.py",
+    )
+    if resolved_ingress_wrapper_path:
+        policy["expected_ingress_wrapper_path"] = str(resolved_ingress_wrapper_path)
+    if not str(policy.get("expected_ingress_wrapper_path", "")).strip():
+        errors.append("host_gateway_contract_ingress_wrapper_path_missing")
 
     entry_policy = host_gateway_contract.get("entry_receipt_policy")
     if not isinstance(entry_policy, dict):
@@ -1139,6 +1230,17 @@ def _persist_unique_entry_receipt(
             _safe_int(payload.get("wrapper_dispatch_proof_issued_at_epoch"), default=0)
         ),
         "wrapper_dispatch_proof_sha256": str(payload.get("wrapper_dispatch_proof_sha256", "")).strip(),
+        "wrapper_parent_attestation_required": bool(payload.get("wrapper_parent_attestation_required", False)),
+        "wrapper_parent_attestation_status": str(payload.get("wrapper_parent_attestation_status", "")).strip(),
+        "wrapper_parent_attestation_ppid": int(
+            _safe_int(payload.get("wrapper_parent_attestation_ppid"), default=0)
+        ),
+        "wrapper_parent_attestation_expected_path": str(
+            payload.get("wrapper_parent_attestation_expected_path", "")
+        ).strip(),
+        "wrapper_parent_attestation_command_sha256": str(
+            payload.get("wrapper_parent_attestation_command_sha256", "")
+        ).strip(),
         "wrapper_dispatch_token_expected": str(payload.get("wrapper_dispatch_token_expected", "")).strip(),
         "run_id_binding": str(run_id_binding or "").strip(),
         "actor_id": str(actor_id or "").strip(),
@@ -1481,6 +1583,13 @@ def main() -> int:
     wrapper_dispatch_proof_issued_at_epoch = 0
     wrapper_dispatch_proof_sha256 = ""
     wrapper_dispatch_proof_required = bool(wrapper_dispatch_required and wrapper_proof_required)
+    wrapper_parent_attestation_required = bool(wrapper_dispatch_required)
+    wrapper_parent_attestation_status = STATUS_SKIPPED_NOT_REQUIRED
+    wrapper_parent_attestation_ppid = int(os.getppid())
+    wrapper_parent_attestation_expected_path = str(
+        wrapper_policy.get("expected_ingress_wrapper_path", "")
+    ).strip()
+    wrapper_parent_attestation_command_sha256 = ""
     if wrapper_dispatch_proof_required:
         proof_ok, proof_errors, proof_details = _validate_wrapper_dispatch_proof(
             proof_json=wrapper_proof_json,
@@ -1507,6 +1616,27 @@ def main() -> int:
         if not proof_ok:
             mapping_errors.extend(proof_errors)
             failure_count += len(proof_errors)
+    if wrapper_parent_attestation_required:
+        (
+            wrapper_parent_ok,
+            wrapper_parent_errors,
+            wrapper_parent_details,
+        ) = _validate_wrapper_parent_attestation(
+            expected_wrapper_path=wrapper_parent_attestation_expected_path,
+        )
+        wrapper_parent_attestation_ppid = _safe_int(
+            wrapper_parent_details.get("wrapper_parent_attestation_ppid"),
+            default=wrapper_parent_attestation_ppid,
+        )
+        wrapper_parent_attestation_command_sha256 = str(
+            wrapper_parent_details.get("wrapper_parent_attestation_command_sha256", "")
+        ).strip()
+        wrapper_parent_attestation_status = (
+            STATUS_PASS_REQUIRED if wrapper_parent_ok else STATUS_FAIL_REQUIRED
+        )
+        if not wrapper_parent_ok:
+            mapping_errors.extend(wrapper_parent_errors)
+            failure_count += len(wrapper_parent_errors)
 
     for spec in specs:
         validator_path = Path(spec.script_path)
@@ -1733,6 +1863,9 @@ def main() -> int:
         "wrapper_required_dispatch_status": str(
             wrapper_policy.get("required_wrapper_dispatch_status", STATUS_PASS_REQUIRED)
         ).strip().upper(),
+        "wrapper_expected_ingress_wrapper_path": str(
+            wrapper_policy.get("expected_ingress_wrapper_path", "")
+        ).strip(),
         "wrapper_host_dispatch_mode": host_dispatch_mode,
         "wrapper_policy_strict_operations": sorted(
             _as_lower_str_set(wrapper_policy.get("strict_operations"))
@@ -1753,6 +1886,11 @@ def main() -> int:
         "wrapper_dispatch_proof_nonce": wrapper_dispatch_proof_nonce,
         "wrapper_dispatch_proof_issued_at_epoch": wrapper_dispatch_proof_issued_at_epoch,
         "wrapper_dispatch_proof_sha256": wrapper_dispatch_proof_sha256,
+        "wrapper_parent_attestation_required": wrapper_parent_attestation_required,
+        "wrapper_parent_attestation_status": wrapper_parent_attestation_status,
+        "wrapper_parent_attestation_ppid": wrapper_parent_attestation_ppid,
+        "wrapper_parent_attestation_expected_path": wrapper_parent_attestation_expected_path,
+        "wrapper_parent_attestation_command_sha256": wrapper_parent_attestation_command_sha256,
         "run_id_binding": run_id_binding,
         "session_id": session_id,
         "report_selected_path": report_selected_path,

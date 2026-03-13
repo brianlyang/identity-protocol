@@ -124,6 +124,13 @@ def _classify_catalog_source_layer(
     }
     if c.name == "catalog.local.yaml" and any(_within(c, r) for r in repo_adjacent_project_roots):
         return "project"
+    # Cross-cwd fallback: allow deterministic project classification when the
+    # resolved local catalog itself is under "<project>/.identity" and that
+    # project contains an identity-protocol-local checkout.
+    if c.name == "catalog.local.yaml" and c.parent.name == ".identity":
+        project_root_from_catalog = c.parent.parent.resolve()
+        if (project_root_from_catalog / "identity-protocol-local").exists():
+            return "project"
     if _within(c, user_root):
         return "global"
     if c == repo_catalog_path.expanduser().resolve():
