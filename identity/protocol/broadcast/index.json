@@ -1,4 +1,9 @@
 {
   "schema_version": "v1",
-  "items": []
+  "items": [
+    {
+      "file": "v166-closure-upgrade-serial-5x5-20260313.json",
+      "broadcast_id": "v166-closure-upgrade-serial-5x5-20260313"
+    }
+  ]
 }
