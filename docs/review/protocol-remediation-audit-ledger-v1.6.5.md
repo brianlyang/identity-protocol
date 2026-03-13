@@ -137,7 +137,7 @@ Action taken:
 | 唯一出入口挂接必须固定 | `protocol_host_unique_channel_contract_v1.protocol_ingress_script/protocol_egress_script`, `host_dispatch_mode`, `host_release_mode` | ingress/egress wrappers -> canonical scripts | `validate_protocol_unique_entry_gate` | `PASS_REQUIRED` on protocol checks; runtime closure tracked in v1.6.6 |
 | 健康检查必须分层 | `entry_receipt_policy`, `ingress_proof_policy`, `egress_grant_policy`, `headstamp_policy` | static + dynamic + session-layer checks | `validate_protocol_unique_entry_gate` + `run_gateway_wrapper_trust_boundary_probes_ci.sh` + drift/status gates | `PASS_REQUIRED` for check surfaces; keep fail-close on any layer |
 | 接线必须合同驱动 | `operation_profile_policy`, current-pointer mappings | required-gates workflow + delegated lanes | `validate_required_gate_surface_drift` + `validate_control_plane_invariants` | `PASS_REQUIRED`; missing wiring token is fail-close |
-| 广播能力要挂总线而非业务脚本 | canonical status/error families in required-gate outputs | required-gates + control-plane status sync as upstream broadcast source | `validate_control_plane_status_sync` + docs contract check | upstream readiness closed; runtime broadcast injection remains v1.6.6 attach step |
+| 广播能力要挂总线而非业务脚本 | `broadcast_policy` fixed protocol paths + instance state/receipt/ack patterns | ingress wrapper snapshot + `identity_broadcast_ack.py` + egress release state | `validate_protocol_unique_entry_gate` + ingress/ack receipts | unread/pending/critical + ack receipt machine closure must hold |
 | 验收指标机器可判 | stream docs + allowlist + evidence tuple fields | governance/review/evidence package | docs contract + evidence policy checks | `CONDITIONAL_GO` unless all release gates and activation receipts are complete |
 
 ### 3.6 Explicit configuration checklist (operator quick apply)
@@ -146,19 +146,32 @@ Action taken:
    - `host_dispatch_mode=wrapper_only`
    - `host_release_mode=wrapper_only`
    - `operation_profile_policy` with strict/light + upgrade-only fields
+   - `broadcast_policy` with fixed protocol paths (`items/index/schema`) + instance state/receipt/ack patterns
 2. Verify runtime gateway contract has canonical script pointers and required policies:
    - `entry_receipt_policy.required=true`
    - `ingress_proof_policy.required=true`
    - `egress_grant_policy.required=true`
    - `headstamp_policy.required=true`
+   - `broadcast_policy.required=true`
 3. Verify required-gates workflow wiring contains:
    - super-linter required lane
    - required runtime gate delegate
    - gateway trust-boundary probe delegate
-4. Run closure checks in order:
+4. Run mandatory serial self-test loop (`>=5` rounds, no parallel):
+   - `python3 scripts/repair_contract_backfill.py --catalog <catalog> --identity-id <id> --apply --json-only`
+   - `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation scan --force-check --json-only`
+   - `python3 <project>/.identity/<id>/runtime/gate/protocol_ingress_wrapper.py --operation scan ... --json-only`
+   - `python3 scripts/identity_broadcast_ack.py --catalog <catalog> --identity-id <id> --ack-all-pending --json-only`
+   - `python3 <project>/.identity/<id>/runtime/gate/protocol_ingress_wrapper.py --operation scan ... --json-only` (verify pending/critical converge)
+5. Run mandatory serial deep-scan loop (`>=5` rounds, no parallel):
    - `python3 scripts/validate_control_plane_invariants.py --json-only`
    - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
    - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_doc_evidence_persistence.py --json-only`
+   - `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation scan --force-check --json-only`
+6. Optional supplemental diagnostic (not a replacement for 5 mandatory deep-scan rounds):
+   - `python3 scripts/full_identity_protocol_scan.py --scan-mode target ...`
+7. Run docs contract guard:
    - `python3 scripts/docs_command_contract_check.py`
 
 ## 4) Acceptance criteria
@@ -173,6 +186,11 @@ No implementation closure is accepted unless all checks pass:
 6. ruleset activation receipt includes path/extension/size outcome (or explicit platform exception)
 7. Section-3 execution pack (3.1-3.3) is runnable from clean operator context without hidden prerequisites.
 8. when host-channel controls are enabled, gateway trust-boundary probe wiring remains present and drift-checked.
+9. serial self-test loop (`>=5`) must complete with expected closure:
+   - first ingress can surface pending/critical broadcast state;
+   - ack pass writes receipt;
+   - second ingress converges pending/critical to expected post-ack values.
+10. serial deep-scan loop (`>=5`) must complete with all mandatory rounds `PASS/PASS_REQUIRED`; supplemental `full_identity_protocol_scan` is recorded separately and cannot replace this loop.
 
 ## 5) Residual risk register (initial)
 
@@ -391,3 +409,37 @@ Final gate recheck (same run set) all pass:
 4. `validate_control_plane_status_sync` => `PASS_REQUIRED`.
 5. `docs_command_contract_check` => `PASS`.
 6. `validate_full_scan_target_regression --enforce-m2m-pass` => `PASS_REQUIRED`.
+
+### 7.10 Serial closure checkpoint for v1.6.5 broadcast wiring (2026-03-13, base-repo-audit-expert-v3)
+
+Code landing referenced in this checkpoint:
+
+1. `4aec951` — `feat(v1.6.5): close unique-entry broadcast wiring with fixed protocol paths and ack flow`
+   - `scripts/create_identity_pack.py`
+   - `scripts/repair_contract_backfill.py`
+   - `scripts/validate_protocol_unique_entry_gate.py`
+   - `scripts/identity_broadcast_ack.py`
+   - `identity/protocol/broadcast/index.json`
+   - `identity/protocol/broadcast/schema/broadcast-item.v1.json`
+   - `identity/protocol/broadcast/items/.gitkeep`
+
+Serial self-test loop (`>=5`) executed in strict order:
+
+1. `repair_contract_backfill --apply` => `contract_backfill_status=PASS_REQUIRED`, `host_gateway_contract_auto_wire_status=PASS_REQUIRED`.
+2. `validate_protocol_unique_entry_gate --operation scan --force-check` => `protocol_unique_entry_gate_status=PASS_REQUIRED`, `protocol_host_gateway_broadcast_policy_status=PASS_REQUIRED`.
+3. ingress wrapper (`run_id=v165-selftest-r3`) with one temporary critical broadcast item => `broadcast_visible_count=1`, `broadcast_unread_count=1`, `broadcast_pending_ack_count=1`, `broadcast_critical_unacked_count=1`.
+4. `identity_broadcast_ack.py --ack-all-pending` (`run_id=v165-selftest-r4`) => `identity_broadcast_ack_status=PASS_REQUIRED`, `acked_ids` contains the test broadcast id.
+5. ingress wrapper (`run_id=v165-selftest-r5`) => `broadcast_unread_count=0`, `broadcast_pending_ack_count=0`, `broadcast_critical_unacked_count=0`.
+
+Serial deep-scan loop (`>=5`) executed in strict order:
+
+1. `validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`.
+3. `validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`.
+4. `validate_doc_evidence_persistence.py --json-only` => `PASS_REQUIRED`.
+5. `validate_protocol_unique_entry_gate.py --operation scan --force-check --json-only` => `PASS_REQUIRED`.
+
+Supplemental diagnostic (recorded, not closure gate replacement):
+
+1. `full_identity_protocol_scan.py --scan-mode target --with-docs-contract` using bound session id ran successfully but returned `summary.p0=1` / `summary_m2m.fail=1` on v1.6.6 strict-runtime checks (`IP-HDSTAMP-003`, `IP-GATE-ENTRY-001` family).
+2. This checkpoint keeps that result as downstream runtime hardening input and does not mark it as a v1.6.5 closure failure by itself.

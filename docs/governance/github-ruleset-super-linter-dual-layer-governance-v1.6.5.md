@@ -128,7 +128,19 @@ Section-3 completion requires both health and wiring proofs:
 
 1. Section 3 must keep stream docs, allowlist, and control-plane status pointers machine-synchronized so runtime wrappers can consume one current governance state.
 2. Required-gate outcomes must publish canonical statuses/error families (not ad-hoc log text) for deterministic downstream broadcast and recovery guidance.
-3. If Section-3 status is stale or pointer-drifted, downstream runtime broadcast is treated as non-authoritative and release posture remains `CONDITIONAL_GO`.
+3. Broadcast source paths are fixed protocol paths and must not drift:
+   - `identity/protocol/broadcast/items`
+   - `identity/protocol/broadcast/index.json`
+   - `identity/protocol/broadcast/schema/broadcast-item.v1.json`
+4. Broadcast runtime state/receipts are fixed instance paths:
+   - `runtime/state/broadcast_state.json`
+   - `runtime/reports/broadcast/broadcast-receipt-*.json`
+   - `runtime/reports/broadcast/broadcast-ack-*.json`
+5. Broadcast state machine must be machine-verifiable:
+   - ingress updates `visible/unread/pending_ack/critical_unacked`
+   - `identity_broadcast_ack.py` consumes pending IDs and writes ack receipt
+   - next ingress reflects ack delta (`pending_ack`/`critical_unacked` converge)
+6. If Section-3 status is stale, pointer-drifted, or broadcast contract breaks, downstream runtime broadcast is non-authoritative and release posture remains `CONDITIONAL_GO`.
 
 ### 3.5 Canonical configuration scheme (explicit, one-to-one)
 
@@ -173,6 +185,16 @@ Minimal `CURRENT_TASK.json` fragment (identity pack):
       "strict_gate_profile": "strict_full",
       "light_gate_profile": "inspection_targeted",
       "allow_upgrade_only": true
+    },
+    "broadcast_policy": {
+      "required": true,
+      "protocol_broadcast_items_dir": "identity/protocol/broadcast/items",
+      "protocol_broadcast_index_file": "identity/protocol/broadcast/index.json",
+      "protocol_broadcast_schema_file": "identity/protocol/broadcast/schema/broadcast-item.v1.json",
+      "instance_state_file": "identity/runtime/state/broadcast_state.json",
+      "instance_receipt_pattern": "runtime/reports/broadcast/broadcast-receipt-*.json",
+      "instance_ack_pattern": "runtime/reports/broadcast/broadcast-ack-*.json",
+      "block_on_critical_unacked": false
     }
   }
 }
@@ -204,11 +226,21 @@ Minimal `.identity/<id>/runtime/gate/protocol_gateway_contract.json` fragment:
     "strict_gate_profile": "strict_full",
     "light_gate_profile": "inspection_targeted",
     "allow_upgrade_only": true
+  },
+  "broadcast_policy": {
+    "required": true,
+    "protocol_broadcast_items_dir": "identity/protocol/broadcast/items",
+    "protocol_broadcast_index_file": "identity/protocol/broadcast/index.json",
+    "protocol_broadcast_schema_file": "identity/protocol/broadcast/schema/broadcast-item.v1.json",
+    "instance_state_file": "runtime/state/broadcast_state.json",
+    "instance_receipt_pattern": "runtime/reports/broadcast/broadcast-receipt-*.json",
+    "instance_ack_pattern": "runtime/reports/broadcast/broadcast-ack-*.json",
+    "block_on_critical_unacked": false
   }
 }
 ```
 
-### 3.6 Three-layer health-check recipe (command-level)
+### 3.6 Three-layer health-check recipe (command-level, serial closure)
 
 1. Contract/static layer (schema + parity):
    - `python3 scripts/validate_protocol_unique_entry_gate.py --catalog <catalog> --identity-id <id> --operation validate --require-entry-receipt --json-only`
@@ -222,6 +254,19 @@ Interpretation lock:
 
 1. Any layer fails => Section-3 execution pack is not closed.
 2. Layer-1 only green is not accepted as runtime attach-readiness closure.
+3. Mandatory serial self-test loop (`>=5` rounds, no parallel):
+   - `repair_contract_backfill --apply`
+   - `validate_protocol_unique_entry_gate --force-check`
+   - `protocol_ingress_wrapper.py` (observe broadcast counters + receipt write)
+   - `identity_broadcast_ack.py --ack-all-pending`
+   - `protocol_ingress_wrapper.py` again (verify pending/critical converge after ack)
+4. Mandatory serial deep-scan loop (`>=5` rounds, no parallel):
+   - `validate_control_plane_invariants.py --json-only`
+   - `validate_required_gate_surface_drift.py --json-only`
+   - `validate_control_plane_status_sync.py --json-only`
+   - `validate_doc_evidence_persistence.py --json-only`
+   - `validate_protocol_unique_entry_gate.py --operation scan --force-check --json-only`
+5. `full_identity_protocol_scan --scan-mode target` is diagnostic for this stream; it is recorded as supplemental evidence and must not replace the five mandatory deep-scan rounds above.
 
 ### 3.7 One-to-one traceability matrix (frozen)
 
@@ -230,7 +275,7 @@ Interpretation lock:
 | Unique ingress/egress ownership | `protocol_ingress_script`, `protocol_egress_script`, `host_dispatch_mode`, `host_release_mode` | `scripts/required_gate_bundle_runner.py`, `scripts/final_emit_governed.py` | `validate_protocol_unique_entry_gate` | both modes are `wrapper_only` and scripts match canonical |
 | Health checks (3-layer) | `entry_receipt_policy`, `ingress_proof_policy`, `egress_grant_policy`, `headstamp_policy` | `validate_protocol_unique_entry_gate`, `run_gateway_wrapper_trust_boundary_probes_ci.sh`, required-gates workflow | `PASS_REQUIRED` + negative probes blocked | static+dynamic+session all pass |
 | Wiring (no hardcode) | `operation_profile_policy`, current-pointer mappings | `.github/workflows/_identity-required-gates.yml`, `validate_required_gate_surface_drift.py` | drift/invariant/status checks | missing tokens/renames fail-close |
-| Broadcast attach readiness | canonical status/error fields only (no ad-hoc logs) | required-gates + status sync surfaces | `control-plane-status` + required-gate JSON payloads | statuses are machine-parseable and pointer-synchronized |
+| Broadcast attach readiness | `broadcast_policy` fixed protocol paths + instance state/receipt/ack patterns | ingress wrapper snapshot + `identity_broadcast_ack.py` + egress release state | `validate_protocol_unique_entry_gate` + ingress/ack receipts | unread/pending/critical counters and ack receipts stay machine-parseable with fixed paths |
 | Acceptance metrics | same as above + evidence tuples | stream docs + allowlist + status mappings | command + rc + sha256 + timestamp | any metric below threshold => `CONDITIONAL_GO` |
 
 ## 4) GitHub rulesets hardening contract
@@ -324,12 +369,14 @@ No “v1.6.5 closed” claim is valid unless all items pass:
 4. `python3 scripts/docs_command_contract_check.py`
 5. super-linter required check green on PR + merge-group compatible surface
 6. ruleset receipts updated for path/extension/size controls (or explicit platform exception recorded)
+7. Section-3 serial self-test loop (`>=5` rounds) completed in strict order with broadcast ack closure evidence.
+8. Section-3 serial deep-scan loop (`>=5` rounds) completed in strict order with all mandatory rounds `PASS/PASS_REQUIRED`.
 
 Interpretation lock:
 
 1. v1.6.5 governance model suitability can be judged `YES` once sections 2-4 are accepted.
-2. v1.6.5 stream closure can be judged `CLOSED` only when all 6 release gates above are green.
-3. If only items 1-4 are green while 5-6 are pending, status must be `CONDITIONAL_GO` (never “fully closed”).
+2. v1.6.5 stream closure can be judged `CLOSED` only when all 8 release gates above are green.
+3. If only items 1-4 are green while 5-8 are pending, status must be `CONDITIONAL_GO` (never “fully closed”).
 
 ## 9) External references
 
