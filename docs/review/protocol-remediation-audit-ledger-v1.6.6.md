@@ -92,6 +92,7 @@ Opening verdict: `Policy PASS / Implementation CONDITIONAL PASS`.
 2. Wrapper generation targets are fixed and auditable:
    - `.identity/{identity_id}/runtime/gate/protocol_ingress_wrapper.py`
    - `.identity/{identity_id}/runtime/gate/protocol_egress_wrapper.py`
+   - `.identity/{identity_id}/runtime/gate/protocol_session_chain_wrapper.py`
    - `.identity/{identity_id}/runtime/gate/protocol_gateway_contract.json`
 3. Unique-entry validator scope includes strict-operation receipt parity.
 4. Generated `protocol_gateway_contract.json` must satisfy governance required fields:
@@ -252,6 +253,7 @@ Observed:
 1. creator init generated instance-side files under pack runtime gate root:
    - `runtime/gate/protocol_ingress_wrapper.py`
    - `runtime/gate/protocol_egress_wrapper.py`
+   - `runtime/gate/protocol_session_chain_wrapper.py`
    - `runtime/gate/protocol_gateway_contract.json`
 2. `CURRENT_TASK.json` includes `protocol_host_unique_channel_contract_v1` with required=true.
 
@@ -518,6 +520,7 @@ and converts them into deterministic audit checks to prevent “policy green, ru
 3. Mandatory per-instance downsink artifacts (same governance tier as `CURRENT_TASK.json`/`IDENTITY_PROMPT.md`):
    - `runtime/gate/protocol_ingress_wrapper.py`
    - `runtime/gate/protocol_egress_wrapper.py`
+   - `runtime/gate/protocol_session_chain_wrapper.py`
    - `runtime/gate/protocol_gateway_contract.json`
 4. Controller split (must stay separated):
    - `identity_creator`: contract semantics generation/update
@@ -529,8 +532,8 @@ and converts them into deterministic audit checks to prevent “policy green, ru
 ### 9.3 Dialogue-frozen acceptance checklist (audit must check item by item)
 
 1. `host_dispatch_mode=wrapper_only` and `host_release_mode=wrapper_only` are present in CURRENT_TASK contract and runtime gateway contract.
-2. Inbound conversation execution path resolves to ingress wrapper, not direct business script dispatch.
-3. User-visible outbound release path resolves to egress wrapper, not direct emit path.
+2. Inbound conversation execution path resolves to session-chain wrapper, then ingress wrapper, not direct business script dispatch.
+3. User-visible outbound release path resolves to session-chain wrapper, then egress wrapper, not direct emit path.
 4. Non-mutation rounds are still wrapper-traversed.
 5. Heavy rounds (`validate/update/activate/mutation/readiness/e2e/ci/three-plane`) use strict profile.
 6. Light rounds (`inspection/scan`) use lightweight profile unless self-upgraded to strict.
@@ -539,7 +542,7 @@ and converts them into deterministic audit checks to prevent “policy green, ru
    - `run_id_binding`, `actor_id`, `session_id`, `surface_label`,
    - `wrapper_dispatch_required`, `wrapper_surface_status`, `wrapper_dispatch_token_status`.
 9. Egress verifies same-turn ingress receipt tuple parity (`run_id/session_id/actor_id`).
-10. `identity_creator` init/update and `identity_installer` install/update both materialize wrapper artifacts.
+10. `identity_creator` init/update and `identity_installer` install/update both materialize wrapper artifacts, including `session_chain_wrapper_path`.
 11. Protocol/instance split-repo path mapping remains explicit (no hidden mono-repo fallback).
 12. Global and project source-layer instances both pass the same wrapper contract checks.
 

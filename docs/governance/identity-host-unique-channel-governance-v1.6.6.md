@@ -124,11 +124,12 @@ To make v1.6.6 directly implementable without per-team interpretation drift, the
 5. `protocol_egress_script` (must resolve to `scripts/final_emit_governed.py`)
 6. `ingress_wrapper_path`
 7. `egress_wrapper_path`
-8. `catalog_path`
-9. `entry_receipt_policy` (`required: true`)
-10. `egress_receipt_policy` (`required: true`)
-11. `headstamp_policy` (`required: true`)
-12. `identity_tuple_fields` (must contain `actor_id`, `session_id`, `run_id`, `work_layer`, `source_layer`)
+8. `session_chain_wrapper_path` (must resolve to `runtime/gate/protocol_session_chain_wrapper.py`)
+9. `catalog_path`
+10. `entry_receipt_policy` (`required: true`)
+11. `egress_receipt_policy` (`required: true`)
+12. `headstamp_policy` (`required: true`)
+13. `identity_tuple_fields` (must contain `actor_id`, `session_id`, `run_id`, `work_layer`, `source_layer`)
 
 Schema/fail-close rules:
 
@@ -172,9 +173,11 @@ Project-side session entrypoints must not dispatch user messages directly to ins
 Required model:
 
 1. Project-side runtime receives inbound message.
-2. Project-side runtime invokes per-instance ingress wrapper.
-3. Ingress wrapper invokes `scripts/required_gate_bundle_runner.py`.
-4. Execution is blocked unless unique-entry receipt is `PASS_REQUIRED`.
+2. Project-side runtime invokes per-instance `protocol_session_chain_wrapper.py` (or equivalent wrapper-chain adapter).
+3. Session-chain wrapper invokes ingress wrapper first.
+4. Ingress wrapper invokes `scripts/required_gate_bundle_runner.py`.
+5. Session-chain wrapper invokes egress wrapper before any user-visible output.
+6. Execution/release is blocked unless unique-entry receipt and egress guard are both `PASS_REQUIRED`.
 
 ### 2.3.1 Project wrapper discovery order (mandatory)
 

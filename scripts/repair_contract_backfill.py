@@ -19,6 +19,7 @@ from create_identity_pack import (
     HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
     HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
     HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
+    HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
     HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
     HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
     HOST_GATEWAY_REQUIRED_RELEASE_MODE,
@@ -391,6 +392,8 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
             node["ingress_wrapper_path"] = HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH
         if not str(node.get("egress_wrapper_path", "")).strip():
             node["egress_wrapper_path"] = HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH
+        if not str(node.get("session_chain_wrapper_path", "")).strip():
+            node["session_chain_wrapper_path"] = HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH
         if not str(node.get("gateway_contract_path", "")).strip():
             node["gateway_contract_path"] = HOST_GATEWAY_RELATIVE_CONTRACT_PATH
         entry_policy = node.get("entry_receipt_policy")
@@ -618,6 +621,7 @@ def main() -> int:
             or str((updated.get(k) or {}).get("protocol_egress_script", "")).strip() != UNIQUE_EGRESS_SCRIPT
             or not str((updated.get(k) or {}).get("ingress_wrapper_path", "")).strip()
             or not str((updated.get(k) or {}).get("egress_wrapper_path", "")).strip()
+            or not str((updated.get(k) or {}).get("session_chain_wrapper_path", "")).strip()
             or not str((updated.get(k) or {}).get("gateway_contract_path", "")).strip()
             or not isinstance((updated.get(k) or {}).get("entry_receipt_policy"), dict)
             or bool(((updated.get(k) or {}).get("entry_receipt_policy") or {}).get("required")) is not True

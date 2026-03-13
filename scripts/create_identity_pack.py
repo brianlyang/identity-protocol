@@ -117,6 +117,7 @@ HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH = "identity/runtime/state/protocol_gatewa
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_egress_wrapper.py"
+HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH = "identity/runtime/gate/protocol_session_chain_wrapper.py"
 HOST_GATEWAY_BROADCAST_ITEMS_DIR = "identity/protocol/broadcast/items"
 HOST_GATEWAY_BROADCAST_INDEX_FILE = "identity/protocol/broadcast/index.json"
 HOST_GATEWAY_BROADCAST_SCHEMA_FILE = "identity/protocol/broadcast/schema/broadcast-item.v1.json"
@@ -629,6 +630,7 @@ def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
         "protocol_egress_script": UNIQUE_EGRESS_SCRIPT,
         "ingress_wrapper_path": HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
         "egress_wrapper_path": HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
+        "session_chain_wrapper_path": HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
         "gateway_contract_path": HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
         "entry_receipt_policy": {
             "required": True,
@@ -2562,6 +2564,294 @@ if __name__ == "__main__":
 """
 
 
+def _protocol_session_chain_wrapper_template() -> str:
+    return """#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+DEFAULT_OPERATION = "inspection"
+DEFAULT_WORK_LAYER = "instance"
+DEFAULT_SOURCE_LAYER = "project"
+
+
+def _load_json(raw: str) -> dict[str, Any]:
+    data = json.loads(str(raw or "").strip())
+    if not isinstance(data, dict):
+        raise ValueError("json_payload_not_object")
+    return data
+
+
+def _parse_stdout_json(text: str) -> dict[str, Any]:
+    body = str(text or "").strip()
+    if not body:
+        return {}
+    try:
+        doc = json.loads(body)
+        return doc if isinstance(doc, dict) else {}
+    except Exception:
+        pass
+    start = body.find("{")
+    end = body.rfind("}")
+    if start < 0 or end <= start:
+        return {}
+    try:
+        doc = json.loads(body[start : end + 1])
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    if json_only:
+        print(json.dumps(payload, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _resolve_contract_path(raw_contract_path: str) -> Path:
+    if str(raw_contract_path or "").strip():
+        return Path(raw_contract_path).expanduser().resolve()
+    return Path(__file__).resolve().with_name("protocol_gateway_contract.json")
+
+
+def _resolve_runtime_path(contract_path: Path, raw_path: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return Path("")
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (contract_path.parent.parent / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (contract_path.parent.parent / token[len("runtime/") :]).resolve()
+    return (contract_path.parent.parent / token).resolve()
+
+
+def _resolve_message(args: argparse.Namespace) -> str:
+    if str(args.message_file or "").strip():
+        p = Path(str(args.message_file).strip()).expanduser().resolve()
+        if not p.exists():
+            raise FileNotFoundError(f"message_file_missing:{p}")
+        return p.read_text(encoding="utf-8")
+    if args.stdin_message:
+        return sys.stdin.read()
+    return str(args.message or "")
+
+
+def _fail(*, error_code: str, stale_reason: str, json_only: bool) -> int:
+    _emit(
+        {
+            "protocol_session_chain_wrapper_status": "FAIL_REQUIRED",
+            "error_code": error_code,
+            "stale_reasons": [stale_reason],
+        },
+        json_only=json_only,
+    )
+    return 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description=(
+            "Per-instance session chain wrapper: force one reply round through "
+            "ingress wrapper then egress wrapper."
+        )
+    )
+    ap.add_argument("--catalog", required=True)
+    ap.add_argument("--identity-id", required=True)
+    ap.add_argument("--actor-id", required=True)
+    ap.add_argument("--session-id", required=True)
+    ap.add_argument("--run-id", default="")
+    ap.add_argument("--operation", default=DEFAULT_OPERATION)
+    ap.add_argument("--work-layer", default=DEFAULT_WORK_LAYER)
+    ap.add_argument("--source-layer", default=DEFAULT_SOURCE_LAYER)
+    ap.add_argument("--message", default="")
+    ap.add_argument("--message-file", default="")
+    ap.add_argument("--stdin-message", action="store_true")
+    ap.add_argument("--out-reply-file", default="")
+    ap.add_argument("--contract-path", default="")
+    ap.add_argument("--json-only", action="store_true")
+    args = ap.parse_args()
+
+    contract_path = _resolve_contract_path(args.contract_path)
+    if not contract_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-001",
+            stale_reason="gateway_contract_file_missing",
+            json_only=args.json_only,
+        )
+    try:
+        contract = _load_json(contract_path.read_text(encoding="utf-8"))
+    except Exception:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="gateway_contract_file_invalid",
+            json_only=args.json_only,
+        )
+
+    ingress_wrapper_raw = str(contract.get("ingress_wrapper_path", "")).strip()
+    egress_wrapper_raw = str(contract.get("egress_wrapper_path", "")).strip()
+    if not ingress_wrapper_raw:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_wrapper_path_missing_in_contract",
+            json_only=args.json_only,
+        )
+    if not egress_wrapper_raw:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="egress_wrapper_path_missing_in_contract",
+            json_only=args.json_only,
+        )
+    ingress_wrapper_path = _resolve_runtime_path(contract_path, ingress_wrapper_raw)
+    egress_wrapper_path = _resolve_runtime_path(contract_path, egress_wrapper_raw)
+    if not str(ingress_wrapper_path).strip() or not ingress_wrapper_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_wrapper_file_missing",
+            json_only=args.json_only,
+        )
+    if not str(egress_wrapper_path).strip() or not egress_wrapper_path.exists():
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="egress_wrapper_file_missing",
+            json_only=args.json_only,
+        )
+
+    run_id = str(args.run_id or "").strip() or f"session-chain-{int(time.time())}"
+    message = str(_resolve_message(args) or "").strip()
+    if not message:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="message_empty",
+            json_only=args.json_only,
+        )
+    state_dir = contract_path.parent.parent / "state"
+    ingress_receipt_path = (state_dir / "required_gate_bundle_entry.latest.json").resolve()
+    out_reply_path = (
+        Path(str(args.out_reply_file).strip()).expanduser().resolve()
+        if str(args.out_reply_file or "").strip()
+        else (Path("/tmp") / f"identity-session-chain-reply-{run_id}.txt").resolve()
+    )
+
+    ingress_cmd = [
+        sys.executable,
+        str(ingress_wrapper_path),
+        "--catalog",
+        str(Path(args.catalog).expanduser().resolve()),
+        "--identity-id",
+        str(args.identity_id).strip(),
+        "--operation",
+        str(args.operation).strip() or DEFAULT_OPERATION,
+        "--run-id",
+        run_id,
+        "--actor-id",
+        str(args.actor_id).strip(),
+        "--session-id",
+        str(args.session_id).strip(),
+        "--work-layer",
+        str(args.work_layer).strip() or DEFAULT_WORK_LAYER,
+        "--source-layer",
+        str(args.source_layer).strip() or DEFAULT_SOURCE_LAYER,
+        "--json-only",
+    ]
+    ingress_proc = subprocess.run(ingress_cmd, capture_output=True, text=True)
+    ingress_payload = _parse_stdout_json(ingress_proc.stdout)
+    if ingress_proc.returncode != 0:
+        if ingress_proc.stdout.strip():
+            print(ingress_proc.stdout.strip())
+        if ingress_proc.stderr.strip():
+            print(ingress_proc.stderr.strip(), file=sys.stderr)
+        return ingress_proc.returncode
+    if str(ingress_payload.get("bundle_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="ingress_bundle_not_pass_required",
+            json_only=args.json_only,
+        )
+
+    egress_cmd = [
+        sys.executable,
+        str(egress_wrapper_path),
+        "--catalog",
+        str(Path(args.catalog).expanduser().resolve()),
+        "--identity-id",
+        str(args.identity_id).strip(),
+        "--run-id",
+        run_id,
+        "--actor-id",
+        str(args.actor_id).strip(),
+        "--session-id",
+        str(args.session_id).strip(),
+        "--work-layer",
+        str(args.work_layer).strip() or DEFAULT_WORK_LAYER,
+        "--source-layer",
+        str(args.source_layer).strip() or DEFAULT_SOURCE_LAYER,
+        "--candidate-output",
+        message,
+        "--ingress-receipt",
+        str(ingress_receipt_path),
+        "--out-reply-file",
+        str(out_reply_path),
+        "--json-only",
+    ]
+    egress_proc = subprocess.run(egress_cmd, capture_output=True, text=True)
+    egress_payload = _parse_stdout_json(egress_proc.stdout)
+    if egress_proc.returncode != 0:
+        if egress_proc.stdout.strip():
+            print(egress_proc.stdout.strip())
+        if egress_proc.stderr.strip():
+            print(egress_proc.stderr.strip(), file=sys.stderr)
+        return egress_proc.returncode
+    if str(egress_payload.get("final_emit_guard_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        return _fail(
+            error_code="IP-HDSTAMP-002",
+            stale_reason="egress_guard_not_pass_required",
+            json_only=args.json_only,
+        )
+    if not out_reply_path.exists():
+        return _fail(
+            error_code="IP-HDSTAMP-002",
+            stale_reason="reply_file_missing_after_egress",
+            json_only=args.json_only,
+        )
+
+    reply_text = out_reply_path.read_text(encoding="utf-8", errors="ignore").strip()
+    _emit(
+        {
+            "protocol_session_chain_wrapper_status": STATUS_PASS_REQUIRED,
+            "identity_id": str(args.identity_id).strip(),
+            "run_id": run_id,
+            "ingress_wrapper_path": str(ingress_wrapper_path),
+            "egress_wrapper_path": str(egress_wrapper_path),
+            "ingress_receipt_path": str(ingress_receipt_path),
+            "out_reply_file": str(out_reply_path),
+            "reply_preview": (reply_text.splitlines()[:2] if reply_text else []),
+            "ingress_bundle_status": ingress_payload.get("bundle_status", ""),
+            "egress_guard_status": egress_payload.get("final_emit_guard_status", ""),
+        },
+        json_only=args.json_only,
+    )
+    if not args.json_only:
+        print(reply_text)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+"""
+
+
 def materialize_protocol_host_gateway_artifacts(
     *,
     task: dict,
@@ -2585,6 +2875,11 @@ def materialize_protocol_host_gateway_artifacts(
         pack_dir,
         str(contract.get("egress_wrapper_path", "")),
         fallback=HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
+    )
+    session_chain_wrapper_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(contract.get("session_chain_wrapper_path", "")),
+        fallback=HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
     )
     gateway_contract_path = _resolve_pack_runtime_path(
         pack_dir,
@@ -2622,6 +2917,7 @@ def materialize_protocol_host_gateway_artifacts(
     contract["protocol_egress_script"] = UNIQUE_EGRESS_SCRIPT
     contract["ingress_wrapper_path"] = ingress_wrapper_path.as_posix()
     contract["egress_wrapper_path"] = egress_wrapper_path.as_posix()
+    contract["session_chain_wrapper_path"] = session_chain_wrapper_path.as_posix()
     contract["gateway_contract_path"] = gateway_contract_path.as_posix()
     contract["entry_receipt_policy"] = {
         "required": True,
@@ -2673,6 +2969,7 @@ def materialize_protocol_host_gateway_artifacts(
         "protocol_egress_script": UNIQUE_EGRESS_SCRIPT,
         "ingress_wrapper_path": ingress_wrapper_path.as_posix(),
         "egress_wrapper_path": egress_wrapper_path.as_posix(),
+        "session_chain_wrapper_path": session_chain_wrapper_path.as_posix(),
         "catalog_path": str(catalog_path.expanduser().resolve()),
         "entry_receipt_policy": {
             "required": True,
@@ -2719,11 +3016,13 @@ def materialize_protocol_host_gateway_artifacts(
         write_json(broadcast_state_path, _default_broadcast_state_doc(identity_id))
     write(ingress_wrapper_path, _protocol_ingress_wrapper_template())
     write(egress_wrapper_path, _protocol_egress_wrapper_template())
+    write(session_chain_wrapper_path, _protocol_session_chain_wrapper_template())
 
     return {
         "gateway_contract_path": gateway_contract_path.as_posix(),
         "ingress_wrapper_path": ingress_wrapper_path.as_posix(),
         "egress_wrapper_path": egress_wrapper_path.as_posix(),
+        "session_chain_wrapper_path": session_chain_wrapper_path.as_posix(),
     }
 
 

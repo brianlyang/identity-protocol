@@ -115,10 +115,11 @@ def _ensure_host_gateway_downsink(
     egress_script = str(contract.get("protocol_egress_script", "")).strip()
     ingress_wrapper = Path(str(artifacts.get("ingress_wrapper_path", "")).strip()).expanduser()
     egress_wrapper = Path(str(artifacts.get("egress_wrapper_path", "")).strip()).expanduser()
+    session_chain_wrapper = Path(str(artifacts.get("session_chain_wrapper_path", "")).strip()).expanduser()
     gateway_contract = Path(str(artifacts.get("gateway_contract_path", "")).strip()).expanduser()
     missing_runtime_files = [
         str(path)
-        for path in (ingress_wrapper, egress_wrapper, gateway_contract)
+        for path in (ingress_wrapper, egress_wrapper, session_chain_wrapper, gateway_contract)
         if not str(path) or not path.exists()
     ]
     payload = {

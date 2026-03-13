@@ -41,6 +41,7 @@ ENTRY_RECEIPT_HISTORY_GLOB = "required-gate-bundle-entry-*.json"
 HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = {"actor_id", "session_id", "run_id", "work_layer", "source_layer"}
 HOST_GATEWAY_EXPECTED_INGRESS_REL = "runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_EXPECTED_EGRESS_REL = "runtime/gate/protocol_egress_wrapper.py"
+HOST_GATEWAY_EXPECTED_SESSION_CHAIN_REL = "runtime/gate/protocol_session_chain_wrapper.py"
 HOST_GATEWAY_EXPECTED_CONTRACT_REL = "runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_BROADCAST_ITEMS_DIR = "identity/protocol/broadcast/items"
 HOST_GATEWAY_BROADCAST_INDEX_FILE = "identity/protocol/broadcast/index.json"
@@ -53,6 +54,7 @@ HOST_GATEWAY_ALLOWED_FIELDS = {
     "protocol_egress_script",
     "ingress_wrapper_path",
     "egress_wrapper_path",
+    "session_chain_wrapper_path",
     "gateway_contract_path",
     "host_dispatch_mode",
     "host_release_mode",
@@ -113,6 +115,7 @@ RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "protocol_egress_script",
     "ingress_wrapper_path",
     "egress_wrapper_path",
+    "session_chain_wrapper_path",
     "catalog_path",
     "entry_receipt_policy",
     "ingress_proof_policy",
@@ -376,6 +379,7 @@ def main() -> int:
         "protocol_host_gateway_ingress_dispatch_token": "",
         "protocol_host_gateway_ingress_wrapper_path": "",
         "protocol_host_gateway_egress_wrapper_path": "",
+        "protocol_host_gateway_session_chain_wrapper_path": "",
         "protocol_host_gateway_contract_path": "",
         "protocol_host_gateway_runtime_files_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_runtime_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -487,6 +491,7 @@ def main() -> int:
         egress_script = str(host_gateway_contract.get("protocol_egress_script", "")).strip()
         ingress_wrapper_raw = str(host_gateway_contract.get("ingress_wrapper_path", "")).strip()
         egress_wrapper_raw = str(host_gateway_contract.get("egress_wrapper_path", "")).strip()
+        session_chain_wrapper_raw = str(host_gateway_contract.get("session_chain_wrapper_path", "")).strip()
         gateway_contract_raw = str(host_gateway_contract.get("gateway_contract_path", "")).strip()
         dispatch_mode = str(host_gateway_contract.get("host_dispatch_mode", "")).strip().lower()
         release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
@@ -511,6 +516,11 @@ def main() -> int:
             egress_wrapper_raw,
             HOST_GATEWAY_EXPECTED_EGRESS_REL,
         )
+        session_chain_wrapper_path = _resolve_pack_relative_path(
+            pack_path,
+            session_chain_wrapper_raw,
+            HOST_GATEWAY_EXPECTED_SESSION_CHAIN_REL,
+        )
         gateway_contract_path = _resolve_pack_relative_path(
             pack_path,
             gateway_contract_raw,
@@ -518,6 +528,7 @@ def main() -> int:
         )
         payload["protocol_host_gateway_ingress_wrapper_path"] = str(ingress_wrapper_path)
         payload["protocol_host_gateway_egress_wrapper_path"] = str(egress_wrapper_path)
+        payload["protocol_host_gateway_session_chain_wrapper_path"] = str(session_chain_wrapper_path)
         payload["protocol_host_gateway_contract_path"] = str(gateway_contract_path)
 
         if host_gateway_contract.get("required") is not True:
@@ -528,6 +539,8 @@ def main() -> int:
             host_gateway_issues.append("host_gateway_ingress_script_mismatch")
         if egress_script != EXPECTED_EGRESS_SCRIPT:
             host_gateway_issues.append("host_gateway_egress_script_mismatch")
+        if not session_chain_wrapper_raw:
+            host_gateway_issues.append("host_gateway_session_chain_wrapper_path_missing")
         if dispatch_mode != EXPECTED_HOST_DISPATCH_MODE:
             host_gateway_issues.append("host_gateway_dispatch_mode_not_wrapper_only")
         if release_mode != EXPECTED_HOST_RELEASE_MODE:
@@ -721,6 +734,8 @@ def main() -> int:
             missing_runtime_files.append("ingress_wrapper_missing")
         if not egress_wrapper_path.exists():
             missing_runtime_files.append("egress_wrapper_missing")
+        if not session_chain_wrapper_path.exists():
+            missing_runtime_files.append("session_chain_wrapper_missing")
         if not gateway_contract_path.exists():
             missing_runtime_files.append("gateway_contract_missing")
         if missing_runtime_files:
@@ -762,6 +777,13 @@ def main() -> int:
                     host_gateway_issues.append("host_gateway_runtime_contract_ingress_script_mismatch")
                 if str(runtime_gateway_contract.get("protocol_egress_script", "")).strip() != EXPECTED_EGRESS_SCRIPT:
                     host_gateway_issues.append("host_gateway_runtime_contract_egress_script_mismatch")
+                runtime_session_chain_wrapper_path = _resolve_pack_relative_path(
+                    pack_path,
+                    str(runtime_gateway_contract.get("session_chain_wrapper_path", "")).strip(),
+                    HOST_GATEWAY_EXPECTED_SESSION_CHAIN_REL,
+                )
+                if runtime_session_chain_wrapper_path != session_chain_wrapper_path:
+                    host_gateway_issues.append("host_gateway_runtime_contract_session_chain_wrapper_path_mismatch")
                 if str(runtime_gateway_contract.get("host_dispatch_mode", "")).strip().lower() != EXPECTED_HOST_DISPATCH_MODE:
                     host_gateway_issues.append("host_gateway_runtime_contract_dispatch_mode_not_wrapper_only")
                 if str(runtime_gateway_contract.get("host_release_mode", "")).strip().lower() != EXPECTED_HOST_RELEASE_MODE:
