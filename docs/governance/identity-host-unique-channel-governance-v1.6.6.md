@@ -559,6 +559,23 @@ deterministic L3 bootstrap enrichment:
    - from "bootstrap sample structurally insufficient for strict reasoning gate"
    - to "instance still owes real runtime evidence/writeback closure" (expected for conditional posture).
 
+### 5.7 Post-execution + prompt-lifecycle auto-repair chain (2026-03-13, serialized)
+
+To close recurring `IP-WRB-003` and prompt lifecycle hash-drift debt without manual instance edits,
+v1.6.6 adds protocol-tool-driven repair steps:
+
+1. New repair tooling:
+   - `scripts/repair_identity_prompt_runtime_state.py`
+     - repairs `runtime/state/prompt_contract.json` hash binding to current `IDENTITY_PROMPT.md`.
+     - patches latest upgrade report prompt lifecycle fields to keep report/runtime hash parity.
+   - `scripts/repair_identity_post_execution_mandatory.py`
+     - repairs latest upgrade report mandatory post-execution fields (`writeback_*`, outlet/final-emit metadata, recovery action).
+     - generates deterministic degraded receipt when outlet preflight receipt is absent.
+2. `scripts/identity_creator.py update` now runs both repairs with `--apply` before strict update gate bundle.
+3. Governance intent:
+   - instance runtime files remain the landing location (`.identity/<id>/runtime/...`);
+   - mutation method remains protocol-controlled tooling (no manual hand-edit requirement).
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:

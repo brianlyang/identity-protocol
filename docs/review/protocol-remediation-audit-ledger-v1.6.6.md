@@ -1037,3 +1037,37 @@ Pass target for this sequence:
 1. `RQ-035` moves from bootstrap-structure failure to runtime evidence closure.
 2. `IP-WRB-003` is evaluated against fresh update run output, not stale pre-fix report.
 3. posture stays `CONDITIONAL PASS` until signer trust boundary + physical conversation transport binding are closed.
+
+## 20) IP-WRB-003 + prompt lifecycle repair-chain closure round (2026-03-13, serialized)
+
+This round lands protocol-driven auto-repair to remove manual instance surgery for the two recurring blockers:
+
+1. `IP-WRB-003` (post-execution mandatory closure debt)
+2. prompt lifecycle/runtime-state hash drift
+
+### 20.1 Landed implementation
+
+1. New tooling:
+   - `scripts/repair_identity_prompt_runtime_state.py`
+   - `scripts/repair_identity_post_execution_mandatory.py`
+2. `scripts/identity_creator.py update`
+   - now invokes both repair scripts (`--apply`) before strict bundle gating.
+   - failure in repair step blocks update (fail-close).
+
+### 20.2 Deterministic behavior
+
+1. Prompt repair:
+   - aligns runtime state `prompt_policy_hash` with current prompt file hash.
+   - aligns latest report prompt lifecycle fields (`identity_prompt_hash_after`, `prompt_policy_hash`, runtime artifact hash/path).
+2. Post-execution repair:
+   - backfills missing outlet/final-emit metadata to canonical values.
+   - derives degraded writeback continuity values when execution is non-closed.
+   - ensures `next_recovery_action` is non-empty in degraded mode.
+
+### 20.3 Review interpretation
+
+1. This is not a closure overclaim:
+   - it removes avoidable stale-report and hash-drift blockers.
+   - it does not claim signer-root physical isolation closure.
+2. Stream posture remains:
+   - `Policy PASS / Implementation CONDITIONAL PASS`.

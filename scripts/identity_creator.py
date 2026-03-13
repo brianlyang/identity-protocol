@@ -3519,6 +3519,36 @@ def main() -> int:
         )
         if rc_boundary != 0:
             return rc_boundary
+        rc = _run(
+            [
+                "python3",
+                "scripts/repair_identity_prompt_runtime_state.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--apply",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] prompt runtime-state auto-repair failed; update blocked")
+            return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/repair_identity_post_execution_mandatory.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--apply",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] post-execution mandatory auto-repair failed; update blocked")
+            return rc
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         update_run_id = str(args.run_id or "").strip() or creator_run_id
         update_target_branch = str(args.target_branch or "").strip() or str(os.environ.get("GITHUB_REF_NAME", "main")).strip() or "main"
