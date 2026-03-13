@@ -83,3 +83,22 @@ Observed:
 3. `identity/protocol/mappings/control-plane-invariants.current.yaml`
 4. `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
 5. `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+## 6) Follow-up from instance feedback batch (2026-03-13)
+
+This section records cross-check against three additional protocol-side suggestions from runtime identities.
+
+1. Host unique channel self-repair (`session_chain_wrapper_path` missing):
+   - already covered by protocol tooling (`create_identity_pack.py` materialization + `repair_contract_backfill.py` normalization/backfill).
+   - decision: no new stream needed; keep as enforced behavior under current v1.6.6/v1.6.7 toolchain.
+2. Update output machine-readable explanation when `all_ok=false` with no failed validator rows:
+   - addressed by adding explicit explanation fields in `scripts/execute_identity_upgrade.py`:
+     - `check_total_count`, `failed_check_count`, `failed_check_ids`
+     - `all_ok_false_reason_code`, `all_ok_false_reason`, `all_ok_false_reason_sources`
+   - intent: remove ambiguity between “validator failure” and “non-closure reasons (writeback/manual review/prompt pending)”.
+3. Validate freshness pre-hint:
+   - addressed by `scripts/validate_execution_report_freshness.py` + propagation in
+     `scripts/validate_identity_protocol_version_alignment.py`.
+   - new machine-readable fields:
+     - `next_action`, `hint`
+   - if key inputs are newer than report, guidance now explicitly points to “update first, then validate”.

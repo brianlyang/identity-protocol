@@ -198,8 +198,12 @@ def main() -> int:
 
     status = STATUS_PASS_REQUIRED
     error_code = ""
+    next_action = ""
+    hint = ""
     if not freshness_ok:
         error_code = ERR_REPORT_ALIGNMENT
+        next_action = str(freshness_payload.get("next_action", "")).strip()
+        hint = str(freshness_payload.get("hint", "")).strip()
     elif not baseline_ok:
         error_code = ERR_BASELINE_ALIGNMENT
     elif not prompt_ok:
@@ -244,6 +248,8 @@ def main() -> int:
             "report_selected_path": freshness_payload.get("report_selected_path", ""),
             "stale_reasons": freshness_payload.get("stale_reasons", []),
             "checks": freshness_payload.get("checks", {}),
+            "next_action": freshness_payload.get("next_action", ""),
+            "hint": freshness_payload.get("hint", ""),
         },
         "protocol_baseline_freshness": {
             "status": baseline_status,
@@ -269,6 +275,8 @@ def main() -> int:
             "tail": _tail(out_binding, err_binding),
         },
         "stale_reasons": dedup_reasons,
+        "next_action": next_action,
+        "hint": hint,
     }
 
     if args.json_only:
@@ -284,6 +292,8 @@ def main() -> int:
                 f"[WARN] {error_code} protocol version alignment drift: "
                 f"identity={args.identity_id} report={payload['report_selected_path']}"
             )
+            if hint:
+                print(f"[HINT] {hint}")
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
     if status == STATUS_FAIL_REQUIRED:

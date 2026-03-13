@@ -6,6 +6,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1305,6 +1306,110 @@ def _derive_writeback_continuity_fields(
     }
 
 
+def _check_id_from_command(command: str, *, fallback_index: int) -> str:
+    text = str(command or "").strip()
+    if not text:
+        return f"check_{fallback_index:02d}"
+    try:
+        tokens = shlex.split(text)
+    except Exception:
+        tokens = text.split()
+    if not tokens:
+        return f"check_{fallback_index:02d}"
+    candidate = ""
+    for token in tokens:
+        value = str(token).strip()
+        if value.endswith(".py"):
+            candidate = Path(value).name
+            break
+    if not candidate:
+        candidate = Path(tokens[0]).name
+    return candidate or f"check_{fallback_index:02d}"
+
+
+def _attach_all_ok_explanation(report: dict[str, Any]) -> dict[str, Any]:
+    checks_raw = report.get("checks")
+    checks = checks_raw if isinstance(checks_raw, list) else []
+    failed_check_ids: list[str] = []
+    for idx, item in enumerate(checks, start=1):
+        if not isinstance(item, dict):
+            continue
+        if bool(item.get("ok", False)):
+            continue
+        cmd = str(item.get("command") or item.get("cmd") or "").strip()
+        failed_check_ids.append(_check_id_from_command(cmd, fallback_index=idx))
+
+    all_ok = bool(report.get("all_ok", False))
+    reason_code = ""
+    reason = ""
+    reason_sources: list[str] = []
+
+    if not all_ok:
+        if failed_check_ids:
+            reason_code = "failed_checks_present"
+            reason = "one_or_more_checks_failed"
+            reason_sources = failed_check_ids[:12]
+        else:
+            pre_mutation_error = str(report.get("pre_mutation_gate_error_code", "")).strip()
+            writeback_status = str(report.get("writeback_status", "")).strip().upper()
+            experience_writeback = report.get("experience_writeback")
+            if not isinstance(experience_writeback, dict):
+                experience_writeback = {}
+            writeback_error = str(experience_writeback.get("error_code", "")).strip()
+            permission_error = str(report.get("permission_error_code", "")).strip()
+            degrade_reason = str(report.get("degrade_reason", "")).strip()
+            next_action = str(report.get("next_action", "")).strip()
+            failure_reason = str(report.get("failure_reason", "")).strip()
+            prompt_change_required = bool(report.get("prompt_change_required", False))
+            prompt_change_applied = bool(report.get("prompt_change_applied", False))
+            upgrade_required = bool(report.get("upgrade_required", False))
+            mode = str(report.get("mode", "")).strip().lower()
+
+            if pre_mutation_error:
+                reason_code = "pre_mutation_gate_failed_without_check_failures"
+                reason = f"pre_mutation_gate_failed:{pre_mutation_error}"
+                reason_sources = [pre_mutation_error]
+            elif writeback_status in {
+                "MISSING",
+                "NOT_EXECUTED",
+                "DEFERRED_PERMISSION_BLOCKED",
+                "DEFERRED_POLICY_BLOCKED",
+                "DEFERRED_VALIDATION_FAILED",
+                "DEFERRED_NOT_EXECUTED",
+            }:
+                reason_code = "writeback_not_closed_without_check_failures"
+                reason = f"writeback_status={writeback_status or 'UNKNOWN'}"
+                reason_sources = [
+                    x
+                    for x in [writeback_status, writeback_error, permission_error, degrade_reason, next_action]
+                    if str(x).strip()
+                ][:12]
+            elif upgrade_required and mode == "review-required":
+                reason_code = "review_required_manual_closure_pending"
+                reason = "review_required_mode_requires_manual_pr_closure"
+                reason_sources = [x for x in [next_action, degrade_reason] if str(x).strip()][:12]
+            elif prompt_change_required and not prompt_change_applied:
+                reason_code = "prompt_contract_update_pending"
+                reason = "prompt_contract_update_required_before_closure"
+                reason_sources = [x for x in [next_action, failure_reason] if str(x).strip()][:12]
+            else:
+                reason_code = "all_ok_false_no_failed_check_reason_unspecified"
+                reason = failure_reason or "all_ok_false_without_failed_checks"
+                reason_sources = [
+                    x
+                    for x in [failure_reason, next_action, degrade_reason, writeback_status, writeback_error, permission_error]
+                    if str(x).strip()
+                ][:12]
+
+    report["check_total_count"] = len(checks)
+    report["failed_check_count"] = len(failed_check_ids)
+    report["failed_check_ids"] = failed_check_ids
+    report["all_ok_false_reason_code"] = reason_code
+    report["all_ok_false_reason"] = reason
+    report["all_ok_false_reason_sources"] = reason_sources
+    return report
+
+
 def _default_capability_contract_payload(
     *,
     identity_id: str,
@@ -1953,6 +2058,7 @@ def main() -> int:
             dict.fromkeys([*list(report.get("actions_taken") or []), f"patch_plan_written:{plan_path}"])
         )
         report["artifacts"] = list(dict.fromkeys([*list(report.get("artifacts") or []), str(plan_path)]))
+        _attach_all_ok_explanation(report)
         _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
@@ -2115,6 +2221,7 @@ def main() -> int:
         )
         report["artifacts"] = list(dict.fromkeys([*list(report.get("artifacts") or []), str(plan_path)]))
         report_path = out_dir / f"{run_id}.json"
+        _attach_all_ok_explanation(report)
         _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
@@ -2267,6 +2374,7 @@ def main() -> int:
             )
         )
         report_path = out_dir / f"{run_id}.json"
+        _attach_all_ok_explanation(report)
         _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
@@ -2389,6 +2497,7 @@ def main() -> int:
             )
         )
         report_path = out_dir / f"{run_id}.json"
+        _attach_all_ok_explanation(report)
         _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
         print(f"report={report_path}")
         print("upgrade_required=False")
@@ -2640,6 +2749,7 @@ def main() -> int:
                     )
                 )
                 report_path = out_dir / f"{run_id}.json"
+                _attach_all_ok_explanation(report)
                 _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
                 print(f"report={report_path}")
                 print("upgrade_required=True")
@@ -3031,6 +3141,7 @@ def main() -> int:
         }
     )
     report_path = out_dir / f"{run_id}.json"
+    _attach_all_ok_explanation(report)
     _write_report_with_pointer(report_path=report_path, data=report, pack_path=pack, run_id=run_id)
 
     print(f"report={report_path}")

@@ -36,6 +36,24 @@ def _iso_from_ts(ts: float) -> str:
     return datetime.fromtimestamp(ts, tz=UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _derive_freshness_hint(stale_reasons: list[str]) -> tuple[str, str]:
+    reasons = {str(x).strip() for x in (stale_reasons or []) if str(x).strip()}
+    if "report_older_than_key_inputs" in reasons:
+        return (
+            "run_identity_creator_update_then_rerun_validate",
+            "key inputs are newer than execution report; run identity_creator.py update before validate",
+        )
+    if "execution_report_not_found" in reasons:
+        return (
+            "run_identity_creator_update_to_generate_report",
+            "execution report is missing; run identity_creator.py update before validate",
+        )
+    return (
+        "inspect_freshness_stale_reasons_and_refresh_report",
+        "execution report freshness drift detected; refresh execution report before strict validate",
+    )
+
+
 def _sha256(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -241,6 +259,8 @@ def main() -> int:
     ]
 
     if not evaluated:
+        stale_reasons = ["execution_report_not_found"]
+        next_action, hint = _derive_freshness_hint(stale_reasons)
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
@@ -251,7 +271,9 @@ def main() -> int:
             "candidate_count": 0,
             "freshness_status": "FAIL" if args.execution_report_policy == "strict" else "WARN",
             "freshness_error_code": ERROR_STALE,
-            "stale_reasons": ["execution_report_not_found"],
+            "stale_reasons": stale_reasons,
+            "next_action": next_action,
+            "hint": hint,
             "checks": {},
             "key_input_paths": [str(p) for p in key_inputs],
             "key_input_latest_mtime_utc": _iso_from_ts(key_input_latest_mtime),
@@ -260,6 +282,7 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False))
         else:
             print(f"[FAIL] {ERROR_STALE} execution report not found for identity={args.identity_id}")
+            print(f"[HINT] {hint}")
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 1 if args.execution_report_policy == "strict" else 0
 
@@ -274,6 +297,10 @@ def main() -> int:
     }
     strict_ok = all(checks.values())
     status = "PASS" if strict_ok else ("FAIL" if args.execution_report_policy == "strict" else "WARN")
+    next_action = ""
+    hint = ""
+    if not strict_ok:
+        next_action, hint = _derive_freshness_hint(selected.stale_reasons)
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
@@ -289,6 +316,8 @@ def main() -> int:
         "freshness_status": status,
         "freshness_error_code": "" if strict_ok else ERROR_STALE,
         "stale_reasons": selected.stale_reasons,
+        "next_action": next_action,
+        "hint": hint,
     }
     if args.json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -303,6 +332,8 @@ def main() -> int:
                 f"[WARN] {ERROR_STALE} execution report freshness drift detected: identity={args.identity_id} "
                 f"report={selected.path}"
             )
+            if hint:
+                print(f"[HINT] {hint}")
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     if strict_ok:
         return 0
