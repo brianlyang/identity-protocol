@@ -1,0 +1,27 @@
+{
+  "broadcast_id": "v167-cross-layer-runtime-uniqueness-20260313",
+  "created_at_utc": "2026-03-13T15:20:00Z",
+  "expire_at_utc": "2026-03-27T15:20:00Z",
+  "title": "[通知标准][v1.6.7] 跨层 runtime identity 唯一性收敛（必须ACK）",
+  "message": "【通知编号】v167-cross-layer-runtime-uniqueness-20260313\\n【适用范围】all runtime identities\\n【执行模式】串行（禁止并行）\\n\\n【目标】\\n- 同一 identity_id 在 project/global 运行层不得双 active。\\n- 统一为单一 active owner，避免 runtime source 漂移。\\n\\n【标准动作（必须经协议工具链执行）】\\n1) 先做重复检测（预期：若双活应 FAIL_REQUIRED）\\n   python3 scripts/validate_identity_scope_isolation.py --catalog <runtime_catalog> --repo-catalog <repo_catalog> --identity-id <identity_id>\\n2) 收敛 dry-run（不改动）\\n   python3 scripts/repair_identity_cross_layer_uniqueness.py --identity-id <identity_id> --repo-catalog <repo_catalog> --prefer-layer <project|global> --json-only\\n3) 收敛 apply（执行改动）\\n   python3 scripts/repair_identity_cross_layer_uniqueness.py --identity-id <identity_id> --repo-catalog <repo_catalog> --prefer-layer <project|global> --apply --json-only\\n4) 收敛后复核（必须 PASS_REQUIRED）\\n   python3 scripts/validate_identity_scope_isolation.py --catalog <runtime_catalog> --repo-catalog <repo_catalog> --identity-id <identity_id>\\n5) 走唯一入口链做实例校验（必须串行）\\n   python3 scripts/identity_creator.py validate --identity-id <identity_id> --catalog <runtime_catalog> --repo-catalog <repo_catalog> --actor-id <actor_id> --session-id <session_id>\\n6) ACK\\n   python3 scripts/identity_broadcast_ack.py --catalog <runtime_catalog> --identity-id <identity_id> --ack-all-pending --actor-id <actor_id> --session-id <session_id> --json-only\\n\\n【验收标准】\\n- cross-layer uniqueness：PASS_REQUIRED\\n- identity_creator validate：全链路 PASS\\n- ACK：identity_broadcast_ack_status=PASS_REQUIRED\\n\\n【禁止事项】\\n- 禁止手改实例接线替代协议工具。\\n- 禁止保持 project/global 双 active。\\n- 禁止绕过唯一入口/出口 wrapper。\\n\\n【补充说明】\\n- 如需迁移窗口，请仅在显式迁移阶段使用 --allow-cross-layer-runtime-duplicate；迁移完成后必须移除该豁免。",
+  "severity": "critical",
+  "requires_ack": true,
+  "scope": "all",
+  "tags": [
+    "v1.6.7",
+    "cross-layer-uniqueness",
+    "runtime-source",
+    "fail-close"
+  ],
+  "metadata": {
+    "stream_version": "v1.6.7",
+    "governance_doc": "docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md",
+    "review_doc": "docs/review/protocol-remediation-audit-ledger-v1.6.7.md",
+    "required_actor_session_binding": true,
+    "notes": [
+      "Use protocol tools only; no manual runtime wiring.",
+      "Keep exactly one active runtime owner per identity_id across layers.",
+      "Validate through identity_creator chain after convergence."
+    ]
+  }
+}
