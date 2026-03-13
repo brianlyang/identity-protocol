@@ -53,6 +53,9 @@ Quick entrypoint for audit history and remediation closure records.
 - Canonical cross-layer runtime uniqueness governance (v1.6.7 stream):
   - `docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md`
   - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.7.md`
+- Canonical downsink path immutability governance (v1.6.8 stream):
+  - `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+  - Companion review ledger: `docs/review/protocol-remediation-audit-ledger-v1.6.8.md`
 
 ## Snapshots
 
@@ -84,3 +87,4 @@ Quick entrypoint for audit history and remediation closure records.
 - `docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md` — v1.6.5 dedicated dual-layer stream for platform-native file governance (rulesets) plus repository lint convergence (super-linter) while retaining protocol semantic fail-close contracts in-repo.
 - `docs/governance/identity-host-unique-channel-governance-v1.6.6.md` — v1.6.6 dedicated host-channel closure stream for mandatory per-instance ingress/egress wrappers, wrapper-only dispatch/release against protocol canonical gates, and required `stream_pr_binding.json` + host replay evidence package.
 - `docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md` — v1.6.7 dedicated runtime-source arbitration stream for single active runtime owner per identity across project/global catalogs, with fail-close duplicate detection and repair tooling.
+- `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md` — v1.6.8 dedicated path-immutability stream for protocol-governed downsink assets (`runtime/gate`, `runtime/state`, `runtime/reports`, `runtime/protocol-feedback`, and protocol broadcast source paths), including core contract registry + required CI negative probes.

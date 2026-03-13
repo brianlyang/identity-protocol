@@ -26,6 +26,9 @@ stream_docs:
   - stream_version: v1.6.7
     governance_doc: docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md
     review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.7.md
+  - stream_version: v1.6.8
+    governance_doc: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.8.md
 
 mandatory_static_docs:
   - docs/governance/AUDIT_SNAPSHOT_INDEX.md
@@ -127,6 +130,20 @@ stream_doc_required_alias_refs:
       - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
       - identity/protocol/mappings/stream-doc-registry.current.yaml
     review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.7.md
+    review_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-status.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+  - stream_version: v1.6.8
+    governance_doc: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md
+    governance_alias_refs:
+      - identity/protocol/mappings/contract-binding.current.yaml
+      - identity/protocol/mappings/control-plane-invariants.current.yaml
+      - identity/protocol/mappings/doc-evidence-allowlist.current.yaml
+      - identity/protocol/mappings/stream-doc-registry.current.yaml
+    review_doc: docs/review/protocol-remediation-audit-ledger-v1.6.8.md
     review_alias_refs:
       - identity/protocol/mappings/contract-binding.current.yaml
       - identity/protocol/mappings/control-plane-status.current.yaml

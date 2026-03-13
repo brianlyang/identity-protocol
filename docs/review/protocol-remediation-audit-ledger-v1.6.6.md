@@ -1258,16 +1258,16 @@ commit: `cb4478e`
 ### 24.3 串行实测（本轮）
 
 1. 5 轮串行自测：
-   - 证据：`/tmp/v166-closure-serial-selftest-5.json`
+   - 证据：`activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-serial-selftest-5.json`
    - 结果：`overall_passed=true`
 2. 5 轮串行深扫（治理相关项）：
-   - 证据：`/tmp/v166-closure-targeted-deep-scan-5.json`
+   - 证据：`activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-targeted-deep-scan-5.json`
    - 结果：`overall_passed=true`
 3. 单轮关键证据：
-   - `/tmp/v166-closure-probe-1.json`：
+   - `activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-probe-1.json`：
      - `session_binding_mode=requested_session_unbound_aligned_to_identity_latest`
      - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
-   - `/tmp/v166-closure-validate-run1.json`：
+   - `activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-validate-run1.json`：
      - `protocol_unique_entry_gate_status=PASS_REQUIRED`
      - receipt provenance required fields 全部通过。
 

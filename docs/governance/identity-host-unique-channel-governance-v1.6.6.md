@@ -743,14 +743,14 @@ Serialized attach check (base-repo-architect):
 串行实测摘要（证据文件）：
 
 1. 5 轮串行自测（正向+负向）：
-   - `/tmp/v166-closure-serial-selftest-5.json`
+   - `activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-serial-selftest-5.json`
    - `overall_passed=true`
 2. 5 轮串行深扫（治理相关项）：
-   - `/tmp/v166-closure-targeted-deep-scan-5.json`
+   - `activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-targeted-deep-scan-5.json`
    - `overall_passed=true`
 3. 单轮闭环证据：
-   - `/tmp/v166-closure-probe-1.json`（session unbound 自动对齐后 PASS）
-   - `/tmp/v166-closure-validate-run1.json`（同 run receipt 校验 PASS）
+   - `activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-probe-1.json`（session unbound 自动对齐后 PASS）
+   - `activity/evidence/v166-host-channel/<YYYY-MM-DD>/v166-closure-validate-run1.json`（同 run receipt 校验 PASS）
 
 边界声明（防止过度宣称）：
 
