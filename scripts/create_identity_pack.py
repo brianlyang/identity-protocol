@@ -113,6 +113,7 @@ HOST_GATEWAY_LIGHT_GATE_PROFILE = "inspection_targeted"
 HOST_GATEWAY_ALLOW_UPGRADE_ONLY = True
 HOST_GATEWAY_SIGNER_MODE = "runtime_env_secret"
 HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX = "IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_"
+HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH = True
 HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH = "identity/runtime/state/protocol_gateway_signing_key.txt"
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
@@ -643,6 +644,8 @@ def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
             "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
             "signer_mode": HOST_GATEWAY_SIGNER_MODE,
             "signer_secret_env": signer_secret_env,
+            "signing_key_path": HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
+            "bootstrap_env_secret_from_signing_key_path": bool(HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH),
         },
         "egress_receipt_policy": {
             "required": True,
@@ -652,6 +655,8 @@ def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
             "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
             "signer_mode": HOST_GATEWAY_SIGNER_MODE,
             "signer_secret_env": signer_secret_env,
+            "signing_key_path": HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
+            "bootstrap_env_secret_from_signing_key_path": bool(HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH),
         },
         "headstamp_policy": {
             "required": True,
@@ -1816,12 +1821,27 @@ def _load_signing_secret(*, contract: dict[str, Any], contract_path: Path) -> tu
     signer_mode = str(ingress_proof_policy.get("signer_mode", "")).strip().lower()
     signer_secret_env = str(ingress_proof_policy.get("signer_secret_env", "")).strip()
     raw_path = str(ingress_proof_policy.get("signing_key_path", "")).strip()
+    bootstrap_from_key = bool(
+        ingress_proof_policy.get("bootstrap_env_secret_from_signing_key_path", True)
+    )
     if not signer_mode:
         signer_mode = "runtime_file_secret" if raw_path else ""
+    p = Path(raw_path).expanduser() if raw_path else Path("")
+    if raw_path and not p.is_absolute():
+        if raw_path.startswith("identity/runtime/"):
+            p = (contract_path.parent.parent / raw_path[len("identity/runtime/") :]).resolve()
+        elif raw_path.startswith("runtime/"):
+            p = (contract_path.parent.parent / raw_path[len("runtime/") :]).resolve()
+        else:
+            p = (contract_path.parent.parent / p).resolve()
     if signer_mode == "runtime_env_secret":
         if not signer_secret_env:
             return "", "ingress_proof_signer_secret_env_missing"
         secret = str(os.environ.get(signer_secret_env, "")).strip()
+        if not secret and bootstrap_from_key and raw_path and p.exists():
+            secret = p.read_text(encoding="utf-8", errors="ignore").strip()
+            if secret:
+                os.environ[signer_secret_env] = secret
         if not secret:
             return "", "ingress_proof_signer_secret_env_unset"
         return secret, ""
@@ -1829,14 +1849,6 @@ def _load_signing_secret(*, contract: dict[str, Any], contract_path: Path) -> tu
         return "", "ingress_proof_signer_mode_unsupported"
     if not raw_path:
         return "", "ingress_proof_signing_key_path_missing"
-    p = Path(raw_path).expanduser()
-    if not p.is_absolute():
-        if raw_path.startswith("identity/runtime/"):
-            p = (contract_path.parent.parent / raw_path[len("identity/runtime/") :]).resolve()
-        elif raw_path.startswith("runtime/"):
-            p = (contract_path.parent.parent / raw_path[len("runtime/") :]).resolve()
-        else:
-            p = (contract_path.parent.parent / p).resolve()
     if not p.exists():
         return "", "ingress_proof_signing_key_missing"
     secret = p.read_text(encoding="utf-8", errors="ignore").strip()
@@ -2308,12 +2320,27 @@ def _load_signing_secret(*, contract: dict[str, Any], contract_path: Path) -> tu
     signer_mode = str(egress_grant_policy.get("signer_mode", "")).strip().lower()
     signer_secret_env = str(egress_grant_policy.get("signer_secret_env", "")).strip()
     raw_path = str(egress_grant_policy.get("signing_key_path", "")).strip()
+    bootstrap_from_key = bool(
+        egress_grant_policy.get("bootstrap_env_secret_from_signing_key_path", True)
+    )
     if not signer_mode:
         signer_mode = "runtime_file_secret" if raw_path else ""
+    p = Path(raw_path).expanduser() if raw_path else Path("")
+    if raw_path and not p.is_absolute():
+        if raw_path.startswith("identity/runtime/"):
+            p = (contract_path.parent.parent / raw_path[len("identity/runtime/") :]).resolve()
+        elif raw_path.startswith("runtime/"):
+            p = (contract_path.parent.parent / raw_path[len("runtime/") :]).resolve()
+        else:
+            p = (contract_path.parent.parent / p).resolve()
     if signer_mode == "runtime_env_secret":
         if not signer_secret_env:
             return "", "egress_grant_signer_secret_env_missing"
         secret = str(os.environ.get(signer_secret_env, "")).strip()
+        if not secret and bootstrap_from_key and raw_path and p.exists():
+            secret = p.read_text(encoding="utf-8", errors="ignore").strip()
+            if secret:
+                os.environ[signer_secret_env] = secret
         if not secret:
             return "", "egress_grant_signer_secret_env_unset"
         return secret, ""
@@ -2321,14 +2348,6 @@ def _load_signing_secret(*, contract: dict[str, Any], contract_path: Path) -> tu
         return "", "egress_grant_signer_mode_unsupported"
     if not raw_path:
         return "", "egress_grant_signing_key_path_missing"
-    p = Path(raw_path).expanduser()
-    if not p.is_absolute():
-        if raw_path.startswith("identity/runtime/"):
-            p = (contract_path.parent.parent / raw_path[len("identity/runtime/") :]).resolve()
-        elif raw_path.startswith("runtime/"):
-            p = (contract_path.parent.parent / raw_path[len("runtime/") :]).resolve()
-        else:
-            p = (contract_path.parent.parent / p).resolve()
     if not p.exists():
         return "", "egress_grant_signing_key_missing"
     secret = p.read_text(encoding="utf-8", errors="ignore").strip()
@@ -2570,9 +2589,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -2648,6 +2670,227 @@ def _resolve_message(args: argparse.Namespace) -> str:
     return str(args.message or "")
 
 
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def _actor_session_filename(actor_id: str) -> str:
+    token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(actor_id or "").strip()).strip("._")
+    if not token:
+        token = "unknown_actor"
+    return f"{token}.json"
+
+
+def _actor_session_path(catalog_path: Path, actor_id: str) -> Path:
+    return (catalog_path.parent / "session" / "actors" / _actor_session_filename(actor_id)).resolve()
+
+
+def _load_json_file(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return dict(default)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return dict(default)
+    return data if isinstance(data, dict) else dict(default)
+
+
+def _write_json_file(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + f".tmp-{os.getpid()}")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def _select_latest_identity_bound_session(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    preferred_session_id: str,
+) -> tuple[str, str, Path]:
+    store_path = _actor_session_path(catalog_path, actor_id)
+    store = _load_json_file(store_path, default={})
+    rows = store.get("bindings")
+    bindings = rows if isinstance(rows, list) else []
+    identity_token = str(identity_id or "").strip()
+    preferred_token = str(preferred_session_id or "").strip()
+    selected_rows: list[dict[str, Any]] = []
+    for row in bindings:
+        if not isinstance(row, dict):
+            continue
+        row_identity = str(row.get("identity_id", "")).strip()
+        row_session = str(row.get("session_id", "")).strip()
+        if not row_identity or not row_session:
+            continue
+        if row_identity != identity_token:
+            continue
+        selected_rows.append(row)
+    if preferred_token:
+        for row in selected_rows:
+            if str(row.get("session_id", "")).strip() == preferred_token:
+                return preferred_token, "preferred_session_bound", store_path
+    if not selected_rows:
+        return "", "identity_binding_missing", store_path
+    selected_rows = sorted(
+        selected_rows,
+        key=lambda row: (
+            _safe_int(row.get("binding_version"), default=0),
+            str(row.get("updated_at", "")).strip() or str(row.get("bound_at", "")).strip(),
+        ),
+    )
+    selected = selected_rows[-1]
+    return str(selected.get("session_id", "")).strip(), "aligned_to_latest_identity_binding", store_path
+
+
+def _upsert_actor_session_binding(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    session_id: str,
+    run_id: str,
+) -> tuple[bool, str, Path]:
+    store_path = _actor_session_path(catalog_path, actor_id)
+    default_store = {
+        "schema_version": "actor_session_multibinding_v1",
+        "actor_id": str(actor_id or "").strip(),
+        "catalog_path": str(catalog_path),
+        "binding_key_mode": "actor_id+identity_id+session_id",
+        "binding_version": 0,
+        "compare_token": "0",
+        "session_entry_count": 0,
+        "bindings": [],
+        "rebind_receipts": [],
+        "last_mutation": {},
+        "updated_at": "",
+        "actor_session_path": str(store_path),
+        "stale_reasons": [],
+    }
+    store = _load_json_file(store_path, default=default_store)
+    rows = store.get("bindings")
+    bindings = rows if isinstance(rows, list) else []
+    max_version = _safe_int(store.get("binding_version"), default=0)
+    for row in bindings:
+        if not isinstance(row, dict):
+            continue
+        max_version = max(max_version, _safe_int(row.get("binding_version"), default=0))
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    identity_token = str(identity_id or "").strip()
+    session_token = str(session_id or "").strip()
+    actor_token = str(actor_id or "").strip()
+    if not actor_token or not identity_token or not session_token:
+        return False, "binding_upsert_fields_missing", store_path
+    existing_index = -1
+    for idx, row in enumerate(bindings):
+        if not isinstance(row, dict):
+            continue
+        if (
+            str(row.get("identity_id", "")).strip() == identity_token
+            and str(row.get("session_id", "")).strip() == session_token
+        ):
+            existing_index = idx
+            break
+    if existing_index >= 0:
+        entry = dict(bindings[existing_index] if isinstance(bindings[existing_index], dict) else {})
+        entry["actor_id"] = actor_token
+        entry["identity_id"] = identity_token
+        entry["session_id"] = session_token
+        entry["catalog_path"] = str(catalog_path)
+        entry["run_id"] = str(run_id or "").strip()
+        entry["status"] = "active"
+        entry["updated_at"] = now
+        if not str(entry.get("bound_at", "")).strip():
+            entry["bound_at"] = now
+        if _safe_int(entry.get("binding_version"), default=0) <= 0:
+            max_version += 1
+            entry["binding_version"] = max_version
+        bindings[existing_index] = entry
+    else:
+        max_version += 1
+        entry = {
+            "actor_id": actor_token,
+            "identity_id": identity_token,
+            "session_id": session_token,
+            "catalog_path": str(catalog_path),
+            "status": "active",
+            "bound_at": now,
+            "updated_at": now,
+            "run_id": str(run_id or "").strip(),
+            "switch_reason": "session_chain_wrapper_auto_bind",
+            "binding_ref": f"{actor_token}:{identity_token}:{session_token}:v{max_version}",
+            "binding_version": max_version,
+            "compare_token": str(max_version),
+            "mutation_lane": "session_chain_wrapper",
+            "approved_by": "system:auto",
+        }
+        bindings.append(entry)
+    store["schema_version"] = "actor_session_multibinding_v1"
+    store["actor_id"] = actor_token
+    store["catalog_path"] = str(catalog_path)
+    store["binding_key_mode"] = "actor_id+identity_id+session_id"
+    store["binding_version"] = max_version
+    store["compare_token"] = str(max_version)
+    store["session_entry_count"] = len([x for x in bindings if isinstance(x, dict)])
+    store["bindings"] = bindings
+    store["updated_at"] = now
+    store["actor_session_path"] = str(store_path)
+    store["identity_id"] = identity_token
+    store["session_id"] = session_token
+    store["run_id"] = str(run_id or "").strip()
+    store["status"] = "active"
+    store["bound_at"] = now
+    store["last_mutation"] = {
+        "mutation_lane": "session_chain_wrapper",
+        "session_id": session_token,
+        "run_id": str(run_id or "").strip(),
+        "switch_reason": "session_chain_wrapper_auto_bind",
+        "approved_by": "system:auto",
+        "compare_token_after": str(max_version),
+        "applied_at": now,
+    }
+    _write_json_file(store_path, store)
+    return True, "", store_path
+
+
+def _resolve_effective_session_id(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str,
+    requested_session_id: str,
+    run_id: str,
+) -> tuple[str, str, bool, str]:
+    requested = str(requested_session_id or "").strip()
+    resolved, mode, store_path = _select_latest_identity_bound_session(
+        catalog_path=catalog_path,
+        actor_id=actor_id,
+        identity_id=identity_id,
+        preferred_session_id=requested,
+    )
+    if requested and mode == "preferred_session_bound":
+        return requested, mode, False, str(store_path)
+    if requested and resolved:
+        return resolved, "requested_session_unbound_aligned_to_identity_latest", False, str(store_path)
+    if resolved:
+        return resolved, mode, False, str(store_path)
+
+    candidate = requested or f"run:{run_id}"
+    upsert_ok, upsert_error, upsert_path = _upsert_actor_session_binding(
+        catalog_path=catalog_path,
+        actor_id=actor_id,
+        identity_id=identity_id,
+        session_id=candidate,
+        run_id=run_id,
+    )
+    if not upsert_ok:
+        return "", f"session_binding_upsert_failed:{upsert_error}", False, str(upsert_path)
+    return candidate, "auto_upsert_session_binding", True, str(upsert_path)
+
+
 def _fail(*, error_code: str, stale_reason: str, json_only: bool) -> int:
     _emit(
         {
@@ -2670,7 +2913,7 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--actor-id", required=True)
-    ap.add_argument("--session-id", required=True)
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--run-id", default="")
     ap.add_argument("--operation", default=DEFAULT_OPERATION)
     ap.add_argument("--work-layer", default=DEFAULT_WORK_LAYER)
@@ -2729,6 +2972,22 @@ def main() -> int:
         )
 
     run_id = str(args.run_id or "").strip() or f"session-chain-{int(time.time())}"
+    catalog_path_resolved = Path(args.catalog).expanduser().resolve()
+    resolved_session_id, session_binding_mode, session_binding_upserted, actor_session_store_path = (
+        _resolve_effective_session_id(
+            catalog_path=catalog_path_resolved,
+            identity_id=str(args.identity_id).strip(),
+            actor_id=str(args.actor_id).strip(),
+            requested_session_id=str(args.session_id).strip(),
+            run_id=run_id,
+        )
+    )
+    if not resolved_session_id:
+        return _fail(
+            error_code="IP-ASB-201",
+            stale_reason="session_binding_resolution_failed",
+            json_only=args.json_only,
+        )
     message = str(_resolve_message(args) or "").strip()
     if not message:
         return _fail(
@@ -2748,7 +3007,7 @@ def main() -> int:
         sys.executable,
         str(ingress_wrapper_path),
         "--catalog",
-        str(Path(args.catalog).expanduser().resolve()),
+        str(catalog_path_resolved),
         "--identity-id",
         str(args.identity_id).strip(),
         "--operation",
@@ -2758,7 +3017,7 @@ def main() -> int:
         "--actor-id",
         str(args.actor_id).strip(),
         "--session-id",
-        str(args.session_id).strip(),
+        resolved_session_id,
         "--work-layer",
         str(args.work_layer).strip() or DEFAULT_WORK_LAYER,
         "--source-layer",
@@ -2784,7 +3043,7 @@ def main() -> int:
         sys.executable,
         str(egress_wrapper_path),
         "--catalog",
-        str(Path(args.catalog).expanduser().resolve()),
+        str(catalog_path_resolved),
         "--identity-id",
         str(args.identity_id).strip(),
         "--run-id",
@@ -2792,7 +3051,7 @@ def main() -> int:
         "--actor-id",
         str(args.actor_id).strip(),
         "--session-id",
-        str(args.session_id).strip(),
+        resolved_session_id,
         "--work-layer",
         str(args.work_layer).strip() or DEFAULT_WORK_LAYER,
         "--source-layer",
@@ -2832,6 +3091,10 @@ def main() -> int:
             "protocol_session_chain_wrapper_status": STATUS_PASS_REQUIRED,
             "identity_id": str(args.identity_id).strip(),
             "run_id": run_id,
+            "session_id": resolved_session_id,
+            "session_binding_mode": session_binding_mode,
+            "session_binding_upserted": bool(session_binding_upserted),
+            "actor_session_store_path": actor_session_store_path,
             "ingress_wrapper_path": str(ingress_wrapper_path),
             "egress_wrapper_path": str(egress_wrapper_path),
             "ingress_receipt_path": str(ingress_receipt_path),
@@ -2895,8 +3158,13 @@ def materialize_protocol_host_gateway_artifacts(
         str(ingress_proof_policy.get("signing_key_path", "")),
         fallback=HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
     )
-    if ingress_signer_mode == "runtime_file_secret":
-        ensure_signing_key(ingress_signing_key_path)
+    ingress_bootstrap_from_key = bool(
+        ingress_proof_policy.get(
+            "bootstrap_env_secret_from_signing_key_path",
+            HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH,
+        )
+    )
+    ensure_signing_key(ingress_signing_key_path)
     broadcast_policy = contract.get("broadcast_policy")
     default_broadcast_policy = _host_gateway_broadcast_policy()
     if not isinstance(broadcast_policy, dict):
@@ -2930,18 +3198,18 @@ def materialize_protocol_host_gateway_artifacts(
         "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
         "signer_mode": ingress_signer_mode,
         "signer_secret_env": signer_secret_env,
+        "signing_key_path": ingress_signing_key_path.as_posix(),
+        "bootstrap_env_secret_from_signing_key_path": bool(ingress_bootstrap_from_key),
     }
-    if ingress_signer_mode == "runtime_file_secret":
-        contract["ingress_proof_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
     contract["egress_receipt_policy"] = {"required": True}
     contract["egress_grant_policy"] = {
         "required": True,
         "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
         "signer_mode": ingress_signer_mode,
         "signer_secret_env": signer_secret_env,
+        "signing_key_path": ingress_signing_key_path.as_posix(),
+        "bootstrap_env_secret_from_signing_key_path": bool(ingress_bootstrap_from_key),
     }
-    if ingress_signer_mode == "runtime_file_secret":
-        contract["egress_grant_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
     contract["headstamp_policy"] = {"required": True}
     contract["identity_tuple_fields"] = list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
     contract["host_dispatch_mode"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
@@ -2982,6 +3250,8 @@ def materialize_protocol_host_gateway_artifacts(
             "max_age_seconds": int(HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS),
             "signer_mode": ingress_signer_mode,
             "signer_secret_env": signer_secret_env,
+            "signing_key_path": ingress_signing_key_path.as_posix(),
+            "bootstrap_env_secret_from_signing_key_path": bool(ingress_bootstrap_from_key),
         },
         "egress_receipt_policy": {"required": True},
         "egress_grant_policy": {
@@ -2989,6 +3259,8 @@ def materialize_protocol_host_gateway_artifacts(
             "max_age_seconds": int(HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS),
             "signer_mode": ingress_signer_mode,
             "signer_secret_env": signer_secret_env,
+            "signing_key_path": ingress_signing_key_path.as_posix(),
+            "bootstrap_env_secret_from_signing_key_path": bool(ingress_bootstrap_from_key),
         },
         "headstamp_policy": {"required": True},
         "identity_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
@@ -3007,10 +3279,6 @@ def materialize_protocol_host_gateway_artifacts(
             "block_on_critical_unacked": bool(contract["broadcast_policy"]["block_on_critical_unacked"]),
         },
     }
-    if ingress_signer_mode == "runtime_file_secret":
-        gateway_contract_payload["ingress_proof_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
-        gateway_contract_payload["egress_grant_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
-
     write_json(gateway_contract_path, gateway_contract_payload)
     if not broadcast_state_path.exists():
         write_json(broadcast_state_path, _default_broadcast_state_doc(identity_id))

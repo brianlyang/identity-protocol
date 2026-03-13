@@ -21,6 +21,7 @@ from create_identity_pack import (
     HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
     HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
     HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH,
+    HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH,
     HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
     HOST_GATEWAY_REQUIRED_RELEASE_MODE,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
@@ -422,7 +423,15 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
         ingress_proof_policy["required"] = True
         ingress_proof_policy["signer_mode"] = "runtime_env_secret"
         ingress_proof_policy["signer_secret_env"] = signer_secret_env
-        ingress_proof_policy.pop("signing_key_path", None)
+        ingress_proof_policy["signing_key_path"] = str(
+            ingress_proof_policy.get("signing_key_path") or HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH
+        ).strip() or HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH
+        ingress_proof_policy["bootstrap_env_secret_from_signing_key_path"] = bool(
+            ingress_proof_policy.get(
+                "bootstrap_env_secret_from_signing_key_path",
+                HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH,
+            )
+        )
         default_ingress_proof_policy = default.get("ingress_proof_policy")
         if isinstance(default_ingress_proof_policy, dict):
             max_age_seconds = int(default_ingress_proof_policy.get("max_age_seconds", 300) or 300)
@@ -440,7 +449,15 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
         egress_grant_policy["required"] = True
         egress_grant_policy["signer_mode"] = "runtime_env_secret"
         egress_grant_policy["signer_secret_env"] = signer_secret_env
-        egress_grant_policy.pop("signing_key_path", None)
+        egress_grant_policy["signing_key_path"] = str(
+            egress_grant_policy.get("signing_key_path") or HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH
+        ).strip() or HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH
+        egress_grant_policy["bootstrap_env_secret_from_signing_key_path"] = bool(
+            egress_grant_policy.get(
+                "bootstrap_env_secret_from_signing_key_path",
+                HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH,
+            )
+        )
         default_egress_grant_policy = default.get("egress_grant_policy")
         if isinstance(default_egress_grant_policy, dict):
             max_age_seconds = int(default_egress_grant_policy.get("max_age_seconds", 300) or 300)
@@ -635,10 +652,27 @@ def main() -> int:
                     and not str(
                         (((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_secret_env") or "")
                     ).strip()
-                )
-                or (
-                    str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_mode") or "")).strip()
-                    != "runtime_env_secret"
+                    )
+                    or (
+                        str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_mode") or "")).strip()
+                        == "runtime_env_secret"
+                        and not str(
+                            (((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signing_key_path") or "")
+                        ).strip()
+                    )
+                    or (
+                        str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_mode") or "")).strip()
+                        == "runtime_env_secret"
+                        and not isinstance(
+                            (((updated.get(k) or {}).get("ingress_proof_policy") or {}).get(
+                                "bootstrap_env_secret_from_signing_key_path"
+                            )),
+                            bool,
+                        )
+                    )
+                    or (
+                        str((((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signer_mode") or "")).strip()
+                        != "runtime_env_secret"
                     and not str(
                         (((updated.get(k) or {}).get("ingress_proof_policy") or {}).get("signing_key_path") or "")
                     ).strip()
@@ -656,10 +690,27 @@ def main() -> int:
                     and not str(
                         (((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_secret_env") or "")
                     ).strip()
-                )
-                or (
-                    str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_mode") or "")).strip()
-                    != "runtime_env_secret"
+                    )
+                    or (
+                        str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_mode") or "")).strip()
+                        == "runtime_env_secret"
+                        and not str(
+                            (((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signing_key_path") or "")
+                        ).strip()
+                    )
+                    or (
+                        str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_mode") or "")).strip()
+                        == "runtime_env_secret"
+                        and not isinstance(
+                            (((updated.get(k) or {}).get("egress_grant_policy") or {}).get(
+                                "bootstrap_env_secret_from_signing_key_path"
+                            )),
+                            bool,
+                        )
+                    )
+                    or (
+                        str((((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signer_mode") or "")).strip()
+                        != "runtime_env_secret"
                     and not str(
                         (((updated.get(k) or {}).get("egress_grant_policy") or {}).get("signing_key_path") or "")
                     ).strip()

@@ -723,11 +723,28 @@ def _resolve_wrapper_enforcement_policy(
 
         if signer_mode == "runtime_env_secret":
             signer_secret_env = str(ingress_proof_policy.get("signer_secret_env", "")).strip()
+            bootstrap_from_key = bool(
+                ingress_proof_policy.get("bootstrap_env_secret_from_signing_key_path", True)
+            )
             policy["proof_signer_secret_env"] = signer_secret_env
             if not signer_secret_env:
                 errors.append("host_gateway_contract_ingress_proof_signer_secret_env_missing")
             else:
                 secret = str(os.environ.get(signer_secret_env, "")).strip()
+                if not secret and bootstrap_from_key and proof_signing_key_path:
+                    key_path = Path(proof_signing_key_path).expanduser()
+                    if not key_path.is_absolute():
+                        if proof_signing_key_path.startswith("identity/runtime/"):
+                            key_path = (pack_path / "runtime" / proof_signing_key_path[len("identity/runtime/") :]).resolve()
+                        elif proof_signing_key_path.startswith("runtime/"):
+                            key_path = (pack_path / proof_signing_key_path).resolve()
+                        else:
+                            key_path = (pack_path / proof_signing_key_path).resolve()
+                    policy["proof_signing_key_path"] = str(key_path)
+                    if key_path.exists():
+                        secret = key_path.read_text(encoding="utf-8", errors="ignore").strip()
+                        if secret:
+                            os.environ[signer_secret_env] = secret
                 if secret:
                     policy["proof_signing_secret"] = secret
                 else:

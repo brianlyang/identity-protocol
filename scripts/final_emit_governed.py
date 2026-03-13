@@ -717,6 +717,9 @@ def main() -> int:
             egress_grant_signer_mode = "runtime_file_secret" if egress_grant_signing_key_path else ""
         dispatch_secret = ""
         if egress_grant_signer_mode == "runtime_env_secret":
+            bootstrap_from_key = bool(
+                (egress_grant_policy or {}).get("bootstrap_env_secret_from_signing_key_path", True)
+            )
             if not egress_grant_signer_secret_env:
                 payload = {
                     "final_emit_guard_status": STATUS_FAIL_REQUIRED,
@@ -729,6 +732,12 @@ def main() -> int:
                 _emit(payload, json_only=args.json_only)
                 return 1
             dispatch_secret = str(os.environ.get(egress_grant_signer_secret_env, "")).strip()
+            if not dispatch_secret and bootstrap_from_key and egress_grant_signing_key_path:
+                signing_key_path = _resolve_pack_relative_path(pack_path, egress_grant_signing_key_path)
+                if signing_key_path.exists():
+                    dispatch_secret = signing_key_path.read_text(encoding="utf-8", errors="ignore").strip()
+                    if dispatch_secret:
+                        os.environ[egress_grant_signer_secret_env] = dispatch_secret
             if not dispatch_secret:
                 payload = {
                     "final_emit_guard_status": STATUS_FAIL_REQUIRED,

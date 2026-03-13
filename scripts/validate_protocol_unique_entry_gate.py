@@ -87,6 +87,7 @@ HOST_GATEWAY_INGRESS_PROOF_POLICY_ALLOWED_FIELDS = {
     "signer_mode",
     "signer_secret_env",
     "signing_key_path",
+    "bootstrap_env_secret_from_signing_key_path",
 }
 HOST_GATEWAY_EGRESS_POLICY_ALLOWED_FIELDS = {"required"}
 HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS = {
@@ -95,6 +96,7 @@ HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS = {
     "signer_mode",
     "signer_secret_env",
     "signing_key_path",
+    "bootstrap_env_secret_from_signing_key_path",
 }
 HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS = {"required"}
 HOST_GATEWAY_BROADCAST_POLICY_ALLOWED_FIELDS = {
@@ -211,11 +213,14 @@ def _validate_signer_policy(node: Any, *, issue_prefix: str, issues: list[str]) 
     signer_mode = str(node.get("signer_mode", "")).strip().lower()
     signer_secret_env = str(node.get("signer_secret_env", "")).strip()
     signing_key_path = str(node.get("signing_key_path", "")).strip()
+    bootstrap_from_key = node.get("bootstrap_env_secret_from_signing_key_path")
     if signer_mode == "runtime_env_secret":
         if not signer_secret_env:
             issues.append(f"{issue_prefix}_signer_secret_env_missing")
-        if signing_key_path:
-            issues.append(f"{issue_prefix}_signing_key_path_forbidden_in_env_mode")
+        if not signing_key_path:
+            issues.append(f"{issue_prefix}_signing_key_path_missing_in_env_mode")
+        if not isinstance(bootstrap_from_key, bool):
+            issues.append(f"{issue_prefix}_bootstrap_env_secret_from_signing_key_path_invalid")
         return signer_mode
     if signer_mode in {"runtime_file_secret", ""}:
         if not signing_key_path:
@@ -890,6 +895,16 @@ def main() -> int:
                     runtime_ingress_signing_key_path = str(runtime_ingress_proof_policy.get("signing_key_path", "")).strip()
                     if contract_ingress_signing_key_path != runtime_ingress_signing_key_path:
                         host_gateway_issues.append("host_gateway_runtime_contract_ingress_signing_key_path_mismatch")
+                    contract_ingress_bootstrap_from_key = (ingress_proof_policy or {}).get(
+                        "bootstrap_env_secret_from_signing_key_path"
+                    )
+                    runtime_ingress_bootstrap_from_key = runtime_ingress_proof_policy.get(
+                        "bootstrap_env_secret_from_signing_key_path"
+                    )
+                    if contract_ingress_bootstrap_from_key != runtime_ingress_bootstrap_from_key:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_ingress_bootstrap_env_secret_from_signing_key_path_mismatch"
+                        )
                 runtime_egress_policy = runtime_gateway_contract.get("egress_receipt_policy")
                 if not isinstance(runtime_egress_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_egress_receipt_policy_missing")
@@ -937,6 +952,16 @@ def main() -> int:
                     runtime_egress_signing_key_path = str(runtime_egress_grant_policy.get("signing_key_path", "")).strip()
                     if contract_egress_signing_key_path != runtime_egress_signing_key_path:
                         host_gateway_issues.append("host_gateway_runtime_contract_egress_signing_key_path_mismatch")
+                    contract_egress_bootstrap_from_key = (egress_grant_policy or {}).get(
+                        "bootstrap_env_secret_from_signing_key_path"
+                    )
+                    runtime_egress_bootstrap_from_key = runtime_egress_grant_policy.get(
+                        "bootstrap_env_secret_from_signing_key_path"
+                    )
+                    if contract_egress_bootstrap_from_key != runtime_egress_bootstrap_from_key:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_egress_bootstrap_env_secret_from_signing_key_path_mismatch"
+                        )
                 runtime_headstamp_policy = runtime_gateway_contract.get("headstamp_policy")
                 if not isinstance(runtime_headstamp_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_headstamp_policy_missing")
