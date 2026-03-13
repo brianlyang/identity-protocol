@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from create_identity_pack import (
+    HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+    HOST_GATEWAY_BROADCAST_INDEX_FILE,
+    HOST_GATEWAY_BROADCAST_ITEMS_DIR,
+    HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+    HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
+    HOST_GATEWAY_BROADCAST_STATE_FILE,
     HOST_GATEWAY_CONTRACT_ID,
     HOST_GATEWAY_CONTRACT_KEY,
     HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
@@ -472,6 +478,39 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
                 if policy_key not in profile_policy or profile_policy.get(policy_key) in (None, "", []):
                     profile_policy[policy_key] = json.loads(json.dumps(default_profile_policy.get(policy_key)))
         node["operation_profile_policy"] = profile_policy
+        default_broadcast_policy = default.get("broadcast_policy")
+        broadcast_policy = node.get("broadcast_policy")
+        if not isinstance(broadcast_policy, dict):
+            broadcast_policy = {}
+        broadcast_policy["required"] = True
+        broadcast_policy["protocol_broadcast_items_dir"] = HOST_GATEWAY_BROADCAST_ITEMS_DIR
+        broadcast_policy["protocol_broadcast_index_file"] = HOST_GATEWAY_BROADCAST_INDEX_FILE
+        broadcast_policy["protocol_broadcast_schema_file"] = HOST_GATEWAY_BROADCAST_SCHEMA_FILE
+        if not str(broadcast_policy.get("instance_state_file", "")).strip():
+            state_fallback = (
+                str((default_broadcast_policy or {}).get("instance_state_file", "")).strip()
+                if isinstance(default_broadcast_policy, dict)
+                else ""
+            )
+            broadcast_policy["instance_state_file"] = state_fallback or HOST_GATEWAY_BROADCAST_STATE_FILE
+        if not str(broadcast_policy.get("instance_receipt_pattern", "")).strip():
+            receipt_fallback = (
+                str((default_broadcast_policy or {}).get("instance_receipt_pattern", "")).strip()
+                if isinstance(default_broadcast_policy, dict)
+                else ""
+            )
+            broadcast_policy["instance_receipt_pattern"] = receipt_fallback or HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN
+        if not str(broadcast_policy.get("instance_ack_pattern", "")).strip():
+            ack_fallback = (
+                str((default_broadcast_policy or {}).get("instance_ack_pattern", "")).strip()
+                if isinstance(default_broadcast_policy, dict)
+                else ""
+            )
+            broadcast_policy["instance_ack_pattern"] = ack_fallback or HOST_GATEWAY_BROADCAST_ACK_PATTERN
+        broadcast_policy["block_on_critical_unacked"] = bool(
+            broadcast_policy.get("block_on_critical_unacked", False)
+        )
+        node["broadcast_policy"] = broadcast_policy
     return forced_required_keys, restored_validator_keys
 
 
@@ -631,6 +670,33 @@ def main() -> int:
                     for item in ((updated.get(k) or {}).get("identity_tuple_fields") or [])
                     if str(item).strip()
                 }
+            )
+            or not isinstance((updated.get(k) or {}).get("broadcast_policy"), dict)
+            or bool(((updated.get(k) or {}).get("broadcast_policy") or {}).get("required")) is not True
+            or str(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("protocol_broadcast_items_dir") or "")
+            ).strip()
+            != HOST_GATEWAY_BROADCAST_ITEMS_DIR
+            or str(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("protocol_broadcast_index_file") or "")
+            ).strip()
+            != HOST_GATEWAY_BROADCAST_INDEX_FILE
+            or str(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("protocol_broadcast_schema_file") or "")
+            ).strip()
+            != HOST_GATEWAY_BROADCAST_SCHEMA_FILE
+            or not str(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("instance_state_file") or "")
+            ).strip()
+            or not str(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("instance_receipt_pattern") or "")
+            ).strip()
+            or not str(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("instance_ack_pattern") or "")
+            ).strip()
+            or not isinstance(
+                (((updated.get(k) or {}).get("broadcast_policy") or {}).get("block_on_critical_unacked")),
+                bool,
             )
         )
     ]

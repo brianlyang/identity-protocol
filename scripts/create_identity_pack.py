@@ -117,6 +117,12 @@ HOST_GATEWAY_RELATIVE_SIGNING_KEY_PATH = "identity/runtime/state/protocol_gatewa
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_egress_wrapper.py"
+HOST_GATEWAY_BROADCAST_ITEMS_DIR = "identity/protocol/broadcast/items"
+HOST_GATEWAY_BROADCAST_INDEX_FILE = "identity/protocol/broadcast/index.json"
+HOST_GATEWAY_BROADCAST_SCHEMA_FILE = "identity/protocol/broadcast/schema/broadcast-item.v1.json"
+HOST_GATEWAY_BROADCAST_STATE_FILE = "runtime/state/broadcast_state.json"
+HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN = "runtime/reports/broadcast/broadcast-receipt-*.json"
+HOST_GATEWAY_BROADCAST_ACK_PATTERN = "runtime/reports/broadcast/broadcast-ack-*.json"
 HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = [
     "actor_id",
     "session_id",
@@ -587,6 +593,32 @@ def _host_gateway_operation_profile_policy() -> dict:
     }
 
 
+def _host_gateway_broadcast_policy() -> dict:
+    return {
+        "required": True,
+        "protocol_broadcast_items_dir": HOST_GATEWAY_BROADCAST_ITEMS_DIR,
+        "protocol_broadcast_index_file": HOST_GATEWAY_BROADCAST_INDEX_FILE,
+        "protocol_broadcast_schema_file": HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
+        "instance_state_file": HOST_GATEWAY_BROADCAST_STATE_FILE,
+        "instance_receipt_pattern": HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+        "instance_ack_pattern": HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+        "block_on_critical_unacked": False,
+    }
+
+
+def _default_broadcast_state_doc(identity_id: str) -> dict:
+    return {
+        "schema_version": "v1",
+        "identity_id": str(identity_id or "").strip(),
+        "last_seen_created_at_utc": "",
+        "read_ids": [],
+        "acked_ids": [],
+        "pending_ack_ids": [],
+        "critical_unacked_ids": [],
+        "updated_at_utc": "",
+    }
+
+
 def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
     signer_secret_env = _host_gateway_signer_secret_env(identity_id)
     return {
@@ -627,6 +659,7 @@ def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
         "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
         "operation_profile_policy": _host_gateway_operation_profile_policy(),
+        "broadcast_policy": _host_gateway_broadcast_policy(),
     }
 
 
@@ -1457,6 +1490,7 @@ import secrets
 import subprocess
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -1525,6 +1559,224 @@ def _resolve_runtime_path(raw_path: str) -> str:
     if not token:
         return ""
     return str(Path(token).expanduser().resolve())
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _parse_iso_utc(raw: Any) -> int:
+    token = str(raw or "").strip()
+    if not token:
+        return 0
+    try:
+        dt = datetime.fromisoformat(token.replace("Z", "+00:00"))
+    except Exception:
+        return 0
+    return int(dt.timestamp())
+
+
+def _parse_stdout_json(text: str) -> dict[str, Any]:
+    body = str(text or "").strip()
+    if not body:
+        return {}
+    try:
+        data = json.loads(body)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        pass
+    start = body.find("{")
+    end = body.rfind("}")
+    if start < 0 or end <= start:
+        return {}
+    try:
+        data = json.loads(body[start : end + 1])
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _resolve_contract_runtime_path(contract_path: Path, raw_path: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return contract_path.parent
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (contract_path.parent.parent / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (contract_path.parent.parent / token[len("runtime/") :]).resolve()
+    return (contract_path.parent.parent / token).resolve()
+
+
+def _resolve_report_path_from_pattern(
+    *,
+    contract_path: Path,
+    pattern: str,
+    run_id: str,
+    fallback_name: str,
+) -> Path:
+    token = str(pattern or "").strip()
+    if not token:
+        return (contract_path.parent.parent / "reports" / "broadcast" / fallback_name).resolve()
+    if "*" not in token:
+        return _resolve_contract_runtime_path(contract_path, token)
+    stamp = int(time.time())
+    run_token = str(run_id or "run").strip() or "run"
+    safe_run = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in run_token)
+    filename = token.replace("*", f"{safe_run}-{stamp}")
+    return _resolve_contract_runtime_path(contract_path, filename)
+
+
+def _load_json_file(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return dict(default)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return dict(default)
+    return data if isinstance(data, dict) else dict(default)
+
+
+def _collect_broadcast_snapshot(
+    *,
+    contract: dict[str, Any],
+    contract_path: Path,
+    merged: dict[str, Any],
+) -> dict[str, Any]:
+    policy = contract.get("broadcast_policy")
+    if not isinstance(policy, dict) or policy.get("required") is not True:
+        return {
+            "broadcast_status": "SKIPPED_NOT_REQUIRED",
+            "broadcast_unread_count": 0,
+            "broadcast_pending_ack_count": 0,
+            "broadcast_critical_unacked_count": 0,
+        }
+
+    repo_root = Path(str(contract.get("protocol_repo_root", "")).strip()).expanduser().resolve()
+    items_dir = (repo_root / str(policy.get("protocol_broadcast_items_dir", "")).strip()).resolve()
+    index_path = (repo_root / str(policy.get("protocol_broadcast_index_file", "")).strip()).resolve()
+    state_path = _resolve_contract_runtime_path(contract_path, str(policy.get("instance_state_file", "")))
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_doc = _load_json_file(
+        state_path,
+        default={
+            "schema_version": "v1",
+            "identity_id": str(merged.get("identity_id", "")).strip(),
+            "last_seen_created_at_utc": "",
+            "read_ids": [],
+            "acked_ids": [],
+        },
+    )
+    read_ids = {
+        str(item).strip()
+        for item in (state_doc.get("read_ids") if isinstance(state_doc.get("read_ids"), list) else [])
+        if str(item).strip()
+    }
+    acked_ids = {
+        str(item).strip()
+        for item in (state_doc.get("acked_ids") if isinstance(state_doc.get("acked_ids"), list) else [])
+        if str(item).strip()
+    }
+
+    candidate_files: list[Path] = []
+    if index_path.exists():
+        index_doc = _load_json_file(index_path, default={"items": []})
+        rows = index_doc.get("items")
+        if isinstance(rows, list):
+            for row in rows:
+                if isinstance(row, dict):
+                    file_token = str(row.get("file", "")).strip()
+                else:
+                    file_token = str(row).strip()
+                if file_token:
+                    candidate_files.append((items_dir / file_token).resolve())
+    if not candidate_files and items_dir.exists():
+        candidate_files = sorted(items_dir.glob("*.json"))
+
+    now_epoch = int(time.time())
+    identity_id = str(merged.get("identity_id", "")).strip()
+    visible_ids: list[str] = []
+    unread_ids: list[str] = []
+    pending_ack_ids: list[str] = []
+    critical_unacked_ids: list[str] = []
+    max_seen_epoch = _parse_iso_utc(state_doc.get("last_seen_created_at_utc"))
+
+    for path in candidate_files:
+        doc = _load_json_file(path, default={})
+        bid = str(doc.get("broadcast_id", "")).strip()
+        if not bid:
+            continue
+        scope = doc.get("scope", "all")
+        visible = False
+        if isinstance(scope, list):
+            scope_tokens = {str(item).strip().lower() for item in scope if str(item).strip()}
+            visible = ("all" in scope_tokens) or (f"identity:{identity_id.lower()}" in scope_tokens)
+        else:
+            scope_token = str(scope or "all").strip().lower()
+            visible = scope_token in {"", "all", "*"} or scope_token == f"identity:{identity_id.lower()}"
+        if not visible:
+            continue
+        expire_epoch = _parse_iso_utc(doc.get("expire_at_utc"))
+        if expire_epoch and expire_epoch < now_epoch:
+            continue
+        created_epoch = _parse_iso_utc(doc.get("created_at_utc"))
+        if created_epoch > max_seen_epoch:
+            max_seen_epoch = created_epoch
+        visible_ids.append(bid)
+        if bid not in read_ids:
+            unread_ids.append(bid)
+            read_ids.add(bid)
+        requires_ack = bool(doc.get("requires_ack", False))
+        if requires_ack and bid not in acked_ids:
+            pending_ack_ids.append(bid)
+            if str(doc.get("severity", "")).strip().lower() == "critical":
+                critical_unacked_ids.append(bid)
+
+    state_doc["last_seen_created_at_utc"] = (
+        datetime.fromtimestamp(max_seen_epoch, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        if max_seen_epoch > 0
+        else str(state_doc.get("last_seen_created_at_utc", "")).strip()
+    )
+    state_doc["read_ids"] = sorted(read_ids)
+    state_doc["acked_ids"] = sorted(acked_ids)
+    state_doc["pending_ack_ids"] = sorted(pending_ack_ids)
+    state_doc["critical_unacked_ids"] = sorted(critical_unacked_ids)
+    state_doc["updated_at_utc"] = _utc_now_iso()
+    state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+
+    receipt_path = _resolve_report_path_from_pattern(
+        contract_path=contract_path,
+        pattern=str(policy.get("instance_receipt_pattern", "")).strip(),
+        run_id=str(merged.get("run_id", "")).strip(),
+        fallback_name="broadcast-receipt-latest.json",
+    )
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_doc = {
+        "schema_version": "v1",
+        "identity_id": identity_id,
+        "run_id": str(merged.get("run_id", "")).strip(),
+        "session_id": str(merged.get("session_id", "")).strip(),
+        "actor_id": str(merged.get("actor_id", "")).strip(),
+        "timestamp_utc": _utc_now_iso(),
+        "visible_ids": visible_ids,
+        "unread_ids": unread_ids,
+        "pending_ack_ids": pending_ack_ids,
+        "critical_unacked_ids": critical_unacked_ids,
+        "state_file": str(state_path),
+    }
+    receipt_path.write_text(json.dumps(receipt_doc, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+
+    return {
+        "broadcast_status": "PASS_REQUIRED",
+        "broadcast_state_file": str(state_path),
+        "broadcast_receipt_path": str(receipt_path),
+        "broadcast_visible_count": len(visible_ids),
+        "broadcast_unread_count": len(unread_ids),
+        "broadcast_pending_ack_count": len(pending_ack_ids),
+        "broadcast_critical_unacked_count": len(critical_unacked_ids),
+    }
 
 
 def _build_wrapper_dispatch_proof(
@@ -1811,11 +2063,27 @@ def main() -> int:
     child_env = dict(os.environ)
     child_env["IDENTITY_PROTOCOL_INGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())
     proc = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
-    if proc.stdout.strip():
-        print(proc.stdout.strip())
     if proc.stderr.strip():
         print(proc.stderr.strip(), file=sys.stderr)
-    return proc.returncode
+    if proc.returncode != 0:
+        if proc.stdout.strip():
+            print(proc.stdout.strip())
+        return proc.returncode
+
+    broadcast_snapshot = _collect_broadcast_snapshot(
+        contract=contract,
+        contract_path=contract_path,
+        merged=merged,
+    )
+    payload = _parse_stdout_json(proc.stdout)
+    if payload:
+        payload.update(broadcast_snapshot)
+        _emit(payload, json_only=args.json_only)
+    elif proc.stdout.strip():
+        print(proc.stdout.strip())
+    else:
+        _emit(broadcast_snapshot, json_only=args.json_only)
+    return 0
 
 
 if __name__ == "__main__":
@@ -1842,6 +2110,7 @@ from typing import Any
 
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 CANONICAL_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
 REQUIRED_FIELDS = (
     "actor_id",
@@ -1930,6 +2199,75 @@ def _resolve_runtime_path(raw_path: str) -> str:
     if not token:
         return ""
     return str(Path(token).expanduser().resolve())
+
+
+def _resolve_contract_runtime_path(contract_path: Path, raw_path: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return contract_path.parent
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (contract_path.parent.parent / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (contract_path.parent.parent / token[len("runtime/") :]).resolve()
+    return (contract_path.parent.parent / token).resolve()
+
+
+def _load_json_file(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return dict(default)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return dict(default)
+    return data if isinstance(data, dict) else dict(default)
+
+
+def _collect_broadcast_release_state(*, contract: dict[str, Any], contract_path: Path) -> dict[str, Any]:
+    policy = contract.get("broadcast_policy")
+    if not isinstance(policy, dict) or policy.get("required") is not True:
+        return {
+            "broadcast_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "broadcast_pending_ack_count": 0,
+            "broadcast_critical_unacked_count": 0,
+            "broadcast_release_blocked": False,
+        }
+
+    state_path = _resolve_contract_runtime_path(contract_path, str(policy.get("instance_state_file", "")))
+    state_doc = _load_json_file(
+        state_path,
+        default={
+            "pending_ack_ids": [],
+            "critical_unacked_ids": [],
+        },
+    )
+    pending_ack_ids = [
+        str(item).strip()
+        for item in (state_doc.get("pending_ack_ids") if isinstance(state_doc.get("pending_ack_ids"), list) else [])
+        if str(item).strip()
+    ]
+    critical_unacked_ids = [
+        str(item).strip()
+        for item in (
+            state_doc.get("critical_unacked_ids")
+            if isinstance(state_doc.get("critical_unacked_ids"), list)
+            else []
+        )
+        if str(item).strip()
+    ]
+    block_on_critical_unacked = bool(policy.get("block_on_critical_unacked", False))
+    release_blocked = bool(block_on_critical_unacked and critical_unacked_ids)
+    return {
+        "broadcast_status": STATUS_PASS_REQUIRED,
+        "broadcast_state_file": str(state_path),
+        "broadcast_pending_ack_count": len(pending_ack_ids),
+        "broadcast_critical_unacked_count": len(critical_unacked_ids),
+        "broadcast_release_blocked": release_blocked,
+        "broadcast_release_block_on_critical_unacked": block_on_critical_unacked,
+        "broadcast_release_critical_unacked_ids": critical_unacked_ids[:20],
+    }
 
 
 def _build_egress_grant(
@@ -2138,6 +2476,13 @@ def main() -> int:
             stale_reason=signing_secret_error,
             json_only=args.json_only,
         )
+    broadcast_release = _collect_broadcast_release_state(contract=contract, contract_path=contract_path)
+    if bool(broadcast_release.get("broadcast_release_blocked")):
+        return _fail(
+            error_code="IP-GATE-BCAST-001",
+            stale_reason="broadcast_critical_unacked_blocked",
+            json_only=args.json_only,
+        )
 
     cmd = [
         sys.executable,
@@ -2187,11 +2532,11 @@ def main() -> int:
     child_env = dict(os.environ)
     child_env["IDENTITY_PROTOCOL_EGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())
     proc = subprocess.run(cmd, capture_output=True, text=True, env=child_env)
-    if proc.stdout.strip():
-        print(proc.stdout.strip())
     if proc.stderr.strip():
         print(proc.stderr.strip(), file=sys.stderr)
     if proc.returncode != 0:
+        if proc.stdout.strip():
+            print(proc.stdout.strip())
         return proc.returncode
 
     payload = _parse_stdout_json(proc.stdout)
@@ -2202,6 +2547,13 @@ def main() -> int:
             stale_reason="send_time_gate_not_pass_required",
             json_only=args.json_only,
         )
+    if payload:
+        payload.update(broadcast_release)
+        _emit(payload, json_only=args.json_only)
+    elif proc.stdout.strip():
+        print(proc.stdout.strip())
+    else:
+        _emit(broadcast_release, json_only=args.json_only)
     return 0
 
 
@@ -2250,6 +2602,18 @@ def materialize_protocol_host_gateway_artifacts(
     )
     if ingress_signer_mode == "runtime_file_secret":
         ensure_signing_key(ingress_signing_key_path)
+    broadcast_policy = contract.get("broadcast_policy")
+    default_broadcast_policy = _host_gateway_broadcast_policy()
+    if not isinstance(broadcast_policy, dict):
+        broadcast_policy = {}
+    for key, value in default_broadcast_policy.items():
+        if key not in broadcast_policy or broadcast_policy.get(key) in (None, "", []):
+            broadcast_policy[key] = json.loads(json.dumps(value))
+    broadcast_state_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(broadcast_policy.get("instance_state_file", "")),
+        fallback=HOST_GATEWAY_BROADCAST_STATE_FILE,
+    )
 
     contract["required"] = True
     contract["contract_id"] = HOST_GATEWAY_CONTRACT_ID
@@ -2288,6 +2652,18 @@ def materialize_protocol_host_gateway_artifacts(
     contract["host_release_mode"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
     contract["ingress_wrapper_dispatch_token"] = HOST_GATEWAY_INGRESS_DISPATCH_TOKEN
     contract["operation_profile_policy"] = _host_gateway_operation_profile_policy()
+    contract["broadcast_policy"] = {
+        "required": True,
+        "protocol_broadcast_items_dir": HOST_GATEWAY_BROADCAST_ITEMS_DIR,
+        "protocol_broadcast_index_file": HOST_GATEWAY_BROADCAST_INDEX_FILE,
+        "protocol_broadcast_schema_file": HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
+        "instance_state_file": broadcast_state_path.as_posix(),
+        "instance_receipt_pattern": str(broadcast_policy.get("instance_receipt_pattern", "")).strip()
+        or HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+        "instance_ack_pattern": str(broadcast_policy.get("instance_ack_pattern", "")).strip()
+        or HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+        "block_on_critical_unacked": bool(broadcast_policy.get("block_on_critical_unacked", False)),
+    }
 
     gateway_contract_payload = {
         "schema_version": "v1",
@@ -2323,12 +2699,24 @@ def materialize_protocol_host_gateway_artifacts(
         "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
         "operation_profile_policy": _host_gateway_operation_profile_policy(),
+        "broadcast_policy": {
+            "required": True,
+            "protocol_broadcast_items_dir": HOST_GATEWAY_BROADCAST_ITEMS_DIR,
+            "protocol_broadcast_index_file": HOST_GATEWAY_BROADCAST_INDEX_FILE,
+            "protocol_broadcast_schema_file": HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
+            "instance_state_file": str(contract["broadcast_policy"]["instance_state_file"]).strip(),
+            "instance_receipt_pattern": str(contract["broadcast_policy"]["instance_receipt_pattern"]).strip(),
+            "instance_ack_pattern": str(contract["broadcast_policy"]["instance_ack_pattern"]).strip(),
+            "block_on_critical_unacked": bool(contract["broadcast_policy"]["block_on_critical_unacked"]),
+        },
     }
     if ingress_signer_mode == "runtime_file_secret":
         gateway_contract_payload["ingress_proof_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
         gateway_contract_payload["egress_grant_policy"]["signing_key_path"] = ingress_signing_key_path.as_posix()
 
     write_json(gateway_contract_path, gateway_contract_payload)
+    if not broadcast_state_path.exists():
+        write_json(broadcast_state_path, _default_broadcast_state_doc(identity_id))
     write(ingress_wrapper_path, _protocol_ingress_wrapper_template())
     write(egress_wrapper_path, _protocol_egress_wrapper_template())
 

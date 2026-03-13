@@ -42,6 +42,9 @@ HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = {"actor_id", "session_id", "run_id", "work_
 HOST_GATEWAY_EXPECTED_INGRESS_REL = "runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_EXPECTED_EGRESS_REL = "runtime/gate/protocol_egress_wrapper.py"
 HOST_GATEWAY_EXPECTED_CONTRACT_REL = "runtime/gate/protocol_gateway_contract.json"
+HOST_GATEWAY_BROADCAST_ITEMS_DIR = "identity/protocol/broadcast/items"
+HOST_GATEWAY_BROADCAST_INDEX_FILE = "identity/protocol/broadcast/index.json"
+HOST_GATEWAY_BROADCAST_SCHEMA_FILE = "identity/protocol/broadcast/schema/broadcast-item.v1.json"
 HOST_GATEWAY_ALLOWED_FIELDS = {
     "contract_id",
     "required",
@@ -61,6 +64,7 @@ HOST_GATEWAY_ALLOWED_FIELDS = {
     "egress_receipt_policy",
     "egress_grant_policy",
     "headstamp_policy",
+    "broadcast_policy",
 }
 HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS = {
     "strict_operations",
@@ -91,6 +95,16 @@ HOST_GATEWAY_EGRESS_GRANT_POLICY_ALLOWED_FIELDS = {
     "signing_key_path",
 }
 HOST_GATEWAY_HEADSTAMP_POLICY_ALLOWED_FIELDS = {"required"}
+HOST_GATEWAY_BROADCAST_POLICY_ALLOWED_FIELDS = {
+    "required",
+    "protocol_broadcast_items_dir",
+    "protocol_broadcast_index_file",
+    "protocol_broadcast_schema_file",
+    "instance_state_file",
+    "instance_receipt_pattern",
+    "instance_ack_pattern",
+    "block_on_critical_unacked",
+}
 RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "schema_version",
     "identity_id",
@@ -110,6 +124,7 @@ RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "host_release_mode",
     "ingress_wrapper_dispatch_token",
     "operation_profile_policy",
+    "broadcast_policy",
 }
 
 CONTRACT_KEYS = (
@@ -373,6 +388,14 @@ def main() -> int:
         "protocol_host_gateway_strict_gate_profile": "",
         "protocol_host_gateway_light_gate_profile": "",
         "protocol_host_gateway_allow_upgrade_only": True,
+        "protocol_host_gateway_broadcast_policy_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_broadcast_items_dir": "",
+        "protocol_host_gateway_broadcast_index_file": "",
+        "protocol_host_gateway_broadcast_schema_file": "",
+        "protocol_host_gateway_broadcast_state_file": "",
+        "protocol_host_gateway_broadcast_receipt_pattern": "",
+        "protocol_host_gateway_broadcast_ack_pattern": "",
+        "protocol_host_gateway_broadcast_block_on_critical_unacked": False,
         "error_code": "",
         "stale_reasons": [],
     }
@@ -450,6 +473,7 @@ def main() -> int:
     host_gateway_strict_operations: set[str] = set()
     host_gateway_light_operations: set[str] = set()
     host_gateway_allow_upgrade_only = True
+    host_gateway_broadcast_policy: dict[str, Any] = {}
     host_gateway_issues: list[str] = []
     if not isinstance(host_gateway_contract, dict) or not host_gateway_contract:
         host_gateway_issues.append("host_gateway_contract_missing")
@@ -651,6 +675,46 @@ def main() -> int:
                     "host_gateway_headstamp_policy_additional_properties:"
                     + ",".join(unknown_headstamp_fields)
                 )
+        broadcast_policy = host_gateway_contract.get("broadcast_policy")
+        if not isinstance(broadcast_policy, dict) or broadcast_policy.get("required") is not True:
+            host_gateway_issues.append("host_gateway_broadcast_policy_missing")
+        else:
+            host_gateway_broadcast_policy = dict(broadcast_policy)
+            unknown_broadcast_fields = _unknown_keys(
+                broadcast_policy,
+                HOST_GATEWAY_BROADCAST_POLICY_ALLOWED_FIELDS,
+            )
+            if unknown_broadcast_fields:
+                host_gateway_issues.append(
+                    "host_gateway_broadcast_policy_additional_properties:" + ",".join(unknown_broadcast_fields)
+                )
+            items_dir = str(broadcast_policy.get("protocol_broadcast_items_dir", "")).strip()
+            index_file = str(broadcast_policy.get("protocol_broadcast_index_file", "")).strip()
+            schema_file = str(broadcast_policy.get("protocol_broadcast_schema_file", "")).strip()
+            state_file = str(broadcast_policy.get("instance_state_file", "")).strip()
+            receipt_pattern = str(broadcast_policy.get("instance_receipt_pattern", "")).strip()
+            ack_pattern = str(broadcast_policy.get("instance_ack_pattern", "")).strip()
+            block_on_critical = bool(broadcast_policy.get("block_on_critical_unacked", False))
+            payload["protocol_host_gateway_broadcast_items_dir"] = items_dir
+            payload["protocol_host_gateway_broadcast_index_file"] = index_file
+            payload["protocol_host_gateway_broadcast_schema_file"] = schema_file
+            payload["protocol_host_gateway_broadcast_state_file"] = state_file
+            payload["protocol_host_gateway_broadcast_receipt_pattern"] = receipt_pattern
+            payload["protocol_host_gateway_broadcast_ack_pattern"] = ack_pattern
+            payload["protocol_host_gateway_broadcast_block_on_critical_unacked"] = block_on_critical
+            if items_dir != HOST_GATEWAY_BROADCAST_ITEMS_DIR:
+                host_gateway_issues.append("host_gateway_broadcast_items_dir_mismatch")
+            if index_file != HOST_GATEWAY_BROADCAST_INDEX_FILE:
+                host_gateway_issues.append("host_gateway_broadcast_index_file_mismatch")
+            if schema_file != HOST_GATEWAY_BROADCAST_SCHEMA_FILE:
+                host_gateway_issues.append("host_gateway_broadcast_schema_file_mismatch")
+            if not state_file:
+                host_gateway_issues.append("host_gateway_broadcast_state_file_missing")
+            if not receipt_pattern:
+                host_gateway_issues.append("host_gateway_broadcast_receipt_pattern_missing")
+            if not ack_pattern:
+                host_gateway_issues.append("host_gateway_broadcast_ack_pattern_missing")
+            payload["protocol_host_gateway_broadcast_policy_status"] = STATUS_PASS_REQUIRED
 
         missing_runtime_files: list[str] = []
         if not ingress_wrapper_path.exists():
@@ -864,10 +928,107 @@ def main() -> int:
                             "host_gateway_runtime_contract_headstamp_policy_additional_properties:"
                             + ",".join(unknown_runtime_headstamp_fields)
                         )
+                runtime_broadcast_policy = runtime_gateway_contract.get("broadcast_policy")
+                if not isinstance(runtime_broadcast_policy, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_broadcast_policy_missing")
+                else:
+                    unknown_runtime_broadcast_fields = _unknown_keys(
+                        runtime_broadcast_policy,
+                        HOST_GATEWAY_BROADCAST_POLICY_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_broadcast_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_broadcast_policy_additional_properties:"
+                            + ",".join(unknown_runtime_broadcast_fields)
+                        )
+                    runtime_items_dir = str(runtime_broadcast_policy.get("protocol_broadcast_items_dir", "")).strip()
+                    runtime_index_file = str(runtime_broadcast_policy.get("protocol_broadcast_index_file", "")).strip()
+                    runtime_schema_file = str(runtime_broadcast_policy.get("protocol_broadcast_schema_file", "")).strip()
+                    runtime_state_file = str(runtime_broadcast_policy.get("instance_state_file", "")).strip()
+                    runtime_receipt_pattern = str(
+                        runtime_broadcast_policy.get("instance_receipt_pattern", "")
+                    ).strip()
+                    runtime_ack_pattern = str(runtime_broadcast_policy.get("instance_ack_pattern", "")).strip()
+                    runtime_block_on_critical = bool(
+                        runtime_broadcast_policy.get("block_on_critical_unacked", False)
+                    )
+                    if runtime_broadcast_policy.get("required") is not True:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_required_not_true")
+                    if runtime_items_dir != HOST_GATEWAY_BROADCAST_ITEMS_DIR:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_items_dir_mismatch")
+                    if runtime_index_file != HOST_GATEWAY_BROADCAST_INDEX_FILE:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_index_file_mismatch")
+                    if runtime_schema_file != HOST_GATEWAY_BROADCAST_SCHEMA_FILE:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_schema_file_mismatch")
+                    if not runtime_state_file:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_state_file_missing")
+                    if not runtime_receipt_pattern:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_receipt_pattern_missing")
+                    if not runtime_ack_pattern:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_ack_pattern_missing")
+                    contract_items_dir = str(
+                        host_gateway_broadcast_policy.get("protocol_broadcast_items_dir", "")
+                    ).strip()
+                    contract_index_file = str(
+                        host_gateway_broadcast_policy.get("protocol_broadcast_index_file", "")
+                    ).strip()
+                    contract_schema_file = str(
+                        host_gateway_broadcast_policy.get("protocol_broadcast_schema_file", "")
+                    ).strip()
+                    contract_state_file = str(host_gateway_broadcast_policy.get("instance_state_file", "")).strip()
+                    contract_receipt_pattern = str(
+                        host_gateway_broadcast_policy.get("instance_receipt_pattern", "")
+                    ).strip()
+                    contract_ack_pattern = str(host_gateway_broadcast_policy.get("instance_ack_pattern", "")).strip()
+                    contract_block_on_critical = bool(
+                        host_gateway_broadcast_policy.get("block_on_critical_unacked", False)
+                    )
+                    if contract_items_dir and runtime_items_dir != contract_items_dir:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_items_dir_parity_mismatch")
+                    if contract_index_file and runtime_index_file != contract_index_file:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_index_file_parity_mismatch")
+                    if contract_schema_file and runtime_schema_file != contract_schema_file:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_schema_file_parity_mismatch")
+                    if contract_state_file and runtime_state_file != contract_state_file:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_state_file_mismatch")
+                    if contract_receipt_pattern and runtime_receipt_pattern != contract_receipt_pattern:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_receipt_pattern_mismatch")
+                    if contract_ack_pattern and runtime_ack_pattern != contract_ack_pattern:
+                        host_gateway_issues.append("host_gateway_runtime_contract_broadcast_ack_pattern_mismatch")
+                    if runtime_block_on_critical != contract_block_on_critical:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_broadcast_block_on_critical_unacked_mismatch"
+                        )
+                    runtime_protocol_root_raw = str(runtime_gateway_contract.get("protocol_repo_root", "")).strip()
+                    if not runtime_protocol_root_raw:
+                        host_gateway_issues.append("host_gateway_runtime_contract_protocol_repo_root_missing")
+                    else:
+                        runtime_protocol_root = Path(runtime_protocol_root_raw).expanduser().resolve()
+                        broadcast_items_dir_path = (runtime_protocol_root / HOST_GATEWAY_BROADCAST_ITEMS_DIR).resolve()
+                        broadcast_index_path = (runtime_protocol_root / HOST_GATEWAY_BROADCAST_INDEX_FILE).resolve()
+                        broadcast_schema_path = (runtime_protocol_root / HOST_GATEWAY_BROADCAST_SCHEMA_FILE).resolve()
+                        if not broadcast_items_dir_path.exists() or not broadcast_items_dir_path.is_dir():
+                            host_gateway_issues.append("host_gateway_runtime_contract_broadcast_items_dir_missing")
+                        if not broadcast_index_path.exists() or not broadcast_index_path.is_file():
+                            host_gateway_issues.append("host_gateway_runtime_contract_broadcast_index_file_missing")
+                        if not broadcast_schema_path.exists() or not broadcast_schema_path.is_file():
+                            host_gateway_issues.append("host_gateway_runtime_contract_broadcast_schema_file_missing")
+                        runtime_state_path = _resolve_pack_relative_path(
+                            pack_path,
+                            runtime_state_file,
+                            "runtime/state/broadcast_state.json",
+                        )
+                        if not runtime_state_path.exists() or not runtime_state_path.is_file():
+                            host_gateway_issues.append("host_gateway_runtime_contract_broadcast_state_file_missing")
                 if not missing_runtime_fields and not host_gateway_issues:
                     payload["protocol_host_gateway_runtime_contract_status"] = STATUS_PASS_REQUIRED
                 elif payload["protocol_host_gateway_runtime_contract_status"] != STATUS_FAIL_REQUIRED:
                     payload["protocol_host_gateway_runtime_contract_status"] = STATUS_FAIL_REQUIRED
+
+    if any("broadcast" in issue for issue in host_gateway_issues):
+        payload["protocol_host_gateway_broadcast_policy_status"] = STATUS_FAIL_REQUIRED
+    elif payload["protocol_host_gateway_broadcast_policy_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_gateway_broadcast_policy_status"] = STATUS_PASS_REQUIRED
 
     if host_gateway_issues:
         payload["protocol_host_gateway_contract_status"] = STATUS_FAIL_REQUIRED
