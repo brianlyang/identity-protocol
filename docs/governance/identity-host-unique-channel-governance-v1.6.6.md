@@ -576,6 +576,49 @@ v1.6.6 adds protocol-tool-driven repair steps:
    - instance runtime files remain the landing location (`.identity/<id>/runtime/...`);
    - mutation method remains protocol-controlled tooling (no manual hand-edit requirement).
 
+### 5.8 Tuple-parity strictness correction + serial replay (2026-03-13, serialized)
+
+This round closes a strict-update false blocker without relaxing wrapper-only governance semantics.
+
+Implemented:
+
+1. `scripts/validate_required_gate_tuple_parity.py`
+   - `--require-distinct-operations` no longer implicitly enforces distinct `surface_label`.
+   - distinct surface labels remain enforceable only when explicitly requested via
+     `--require-distinct-surface-labels`.
+2. Governance intent:
+   - update/validate strict lanes compare operation distinctness without forcing probe/update
+     receipts to invent non-canonical wrapper labels.
+   - full-scan parity still can require distinct surface labels via explicit flag.
+
+Serialized replay facts (base-repo-architect):
+
+1. 5 serial wrapper-chain self-test rounds (ingress -> unique-entry -> egress) all pass:
+   - run ids:
+     - `v166-selftest-r1-1773390943`
+     - `v166-selftest-r2-1773390946`
+     - `v166-selftest-r3-1773390948`
+     - `v166-selftest-r4-1773390951`
+     - `v166-selftest-r5-1773390953`
+   - each round:
+     - `bundle_status=PASS_REQUIRED`
+     - `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+     - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+     - `final_emit_guard_status=PASS_REQUIRED`
+2. 5 serial deep-scan rounds are stable and deterministic:
+   - each round summary remains:
+     - `p0=1`, `p1=0`, `ok=0`, `m2m_fail=1`
+     - three-plane overall `Conditional Go`
+3. Interpretation:
+   - wrapper mandatory chain is stable and reproducible in serial replay.
+   - remaining red items are instance runtime-evidence closure debt (for example multimodal /
+     reasoning runtime evidence), not tuple-parity surface-label false negatives.
+
+Posture after this correction:
+
+1. `Policy PASS`
+2. `Implementation CONDITIONAL PASS`
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:

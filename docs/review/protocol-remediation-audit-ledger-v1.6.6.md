@@ -1071,3 +1071,60 @@ This round lands protocol-driven auto-repair to remove manual instance surgery f
    - it does not claim signer-root physical isolation closure.
 2. Stream posture remains:
    - `Policy PASS / Implementation CONDITIONAL PASS`.
+
+## 21) Tuple-parity false-negative fix + 5x5 serialized replay (2026-03-13)
+
+### 21.1 What changed (code-level)
+
+1. `scripts/validate_required_gate_tuple_parity.py`
+   - corrected parity contract behavior:
+     - `--require-distinct-operations` checks operation distinctness only.
+     - distinct `surface_label` enforcement now requires explicit `--require-distinct-surface-labels`.
+2. Why this is required:
+   - strict update chain uses operation-distinct probe parity, while both receipts are expected to
+     retain canonical wrapper surface `host_ingress_wrapper`.
+   - implicit surface-label uniqueness caused a false blocker (`IP-GATE-ENTRY-003`) in strict update lanes.
+
+### 21.2 Serialized self-test replay (5 rounds, serial, base-repo-architect)
+
+All five rounds passed the mandatory wrapper chain:
+
+1. `v166-selftest-r1-1773390943`
+2. `v166-selftest-r2-1773390946`
+3. `v166-selftest-r3-1773390948`
+4. `v166-selftest-r4-1773390951`
+5. `v166-selftest-r5-1773390953`
+
+Per round status tuple (all rounds identical):
+
+1. `bundle_status=PASS_REQUIRED`
+2. `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+3. `protocol_unique_entry_gate_status=PASS_REQUIRED`
+4. `final_emit_guard_status=PASS_REQUIRED`
+
+Interpretation:
+
+1. session I/O wrapper path is stable under serial replay.
+2. HUD/send-time path can be reproduced continuously when wrapper chain is followed.
+
+### 21.3 Serialized deep-scan replay (5 rounds, serial, base-repo-architect)
+
+All five deep-scan rounds completed with stable summary:
+
+1. `rc=0`
+2. `p0=1`, `p1=0`, `ok=0`
+3. `m2m_fail=1`
+4. three-plane overall `Conditional Go`
+
+Interpretation:
+
+1. deep-scan signal is deterministic across rounds (no oscillation / flaky pass).
+2. residual blocker is runtime evidence closure (instance-side result debt), not wrapper entry/exit drift.
+
+### 21.4 Gate posture after this delta
+
+1. Policy: `PASS_REQUIRED`
+2. Implementation: `CONDITIONAL PASS`
+3. Reason conditional remains:
+   - signer-root trust still not physically separated from same-domain caller control;
+   - deep-scan still reports one stable P0 instance debt item.
