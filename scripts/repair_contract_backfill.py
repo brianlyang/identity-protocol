@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from create_identity_pack import (
+    DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
+    DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
+    DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID,
+    DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID,
+    DOWNSINK_REQUIRED_DOMAINS,
     HOST_GATEWAY_BROADCAST_ACK_PATTERN,
     HOST_GATEWAY_BROADCAST_INDEX_FILE,
     HOST_GATEWAY_BROADCAST_ITEMS_DIR,
@@ -31,6 +36,7 @@ from create_identity_pack import (
     _ensure_intake_p1_contracts,
     _multimodal_plugin_enforcement_contract_skeleton,
     _host_gateway_signer_secret_env,
+    _protocol_downsink_path_immutability_contract_skeleton,
     _protocol_host_unique_channel_contract_skeleton,
     _protocol_unique_entry_gate_contract_skeleton,
     _prompt_bootstrap_capability_contract_skeleton,
@@ -75,6 +81,9 @@ REQUIRED_ENTRY_KEYS = (
 REQUIRED_HOST_GATEWAY_KEYS = (
     HOST_GATEWAY_CONTRACT_KEY,
 )
+REQUIRED_DOWNSINK_KEYS = (
+    DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
+)
 
 PROMPT_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "prompt_bootstrap_capability_contract_v1": _prompt_bootstrap_capability_contract_skeleton(),
@@ -95,6 +104,9 @@ ENTRY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 HOST_GATEWAY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton("default"),
 }
+DOWNSINK_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),
+}
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
@@ -106,6 +118,8 @@ ERR_ENTRY_WIRE_MISSING = "IP-GATE-ENTRY-001"
 ERR_ENTRY_WIRE_INVALID = "IP-GATE-ENTRY-002"
 ERR_HOST_GATEWAY_WIRE_MISSING = "IP-GATE-ENTRY-001"
 ERR_HOST_GATEWAY_WIRE_INVALID = "IP-GATE-ENTRY-002"
+ERR_DOWNSINK_WIRE_MISSING = "IP-DSPATH-001"
+ERR_DOWNSINK_WIRE_INVALID = "IP-DSPATH-002"
 REASONING_LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
 REASONING_MIN_LEVEL = "L3"
 FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
@@ -534,6 +548,94 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
     return forced_required_keys, restored_validator_keys
 
 
+def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], list[str]]:
+    forced_required_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    restored_write_guard_validator_keys: list[str] = []
+    for key in REQUIRED_DOWNSINK_KEYS:
+        default = DOWNSINK_CONTRACT_DEFAULTS.get(key, {})
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            forced_required_keys.append(key)
+            restored_validator_keys.append(key)
+            restored_write_guard_validator_keys.append(key)
+            continue
+        if node.get("required") is not True:
+            node["required"] = True
+            forced_required_keys.append(key)
+        node["contract_id"] = DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID
+        validator_id = str(node.get("validator_id", "")).strip()
+        if validator_id != DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID:
+            node["validator_id"] = DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID
+            restored_validator_keys.append(key)
+        write_guard_validator_id = str(node.get("write_guard_validator_id", "")).strip()
+        if write_guard_validator_id != DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID:
+            node["write_guard_validator_id"] = DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID
+            restored_write_guard_validator_keys.append(key)
+
+        anchor_policy = node.get("anchor_policy")
+        if not isinstance(anchor_policy, dict):
+            anchor_policy = {}
+        default_anchor_policy = default.get("anchor_policy")
+        if isinstance(default_anchor_policy, dict):
+            if not str(anchor_policy.get("protocol_repo_root_ref", "")).strip():
+                anchor_policy["protocol_repo_root_ref"] = str(default_anchor_policy.get("protocol_repo_root_ref", "")).strip()
+            if not str(anchor_policy.get("identity_pack_root_ref", "")).strip():
+                anchor_policy["identity_pack_root_ref"] = str(default_anchor_policy.get("identity_pack_root_ref", "")).strip()
+            anchor_policy["allow_parent_escape"] = False
+            anchor_policy["allow_symlink_escape"] = False
+        node["anchor_policy"] = anchor_policy
+
+        schema_policy = node.get("schema_policy")
+        if not isinstance(schema_policy, dict):
+            schema_policy = {}
+        schema_policy["reject_additional_properties"] = True
+        schema_policy["require_all_declared_paths_present_in_runtime_contract"] = True
+        node["schema_policy"] = schema_policy
+
+        operation_enforcement = node.get("operation_enforcement")
+        if not isinstance(operation_enforcement, dict):
+            operation_enforcement = {}
+        default_operation_enforcement = default.get("operation_enforcement")
+        if isinstance(default_operation_enforcement, dict):
+            strict_operations = operation_enforcement.get("strict_operations")
+            if not isinstance(strict_operations, list) or not strict_operations:
+                operation_enforcement["strict_operations"] = json.loads(
+                    json.dumps(default_operation_enforcement.get("strict_operations", []))
+                )
+            light_operations = operation_enforcement.get("light_operations")
+            if not isinstance(light_operations, list) or not light_operations:
+                operation_enforcement["light_operations"] = json.loads(
+                    json.dumps(default_operation_enforcement.get("light_operations", []))
+                )
+        operation_enforcement["strict_fail_mode"] = "fail_required"
+        operation_enforcement["light_fail_mode"] = "fail_required"
+        node["operation_enforcement"] = operation_enforcement
+
+        path_registry = node.get("path_registry")
+        if not isinstance(path_registry, dict):
+            path_registry = {}
+        default_registry = default.get("path_registry")
+        if isinstance(default_registry, dict):
+            for domain, default_domain_node in default_registry.items():
+                current_domain_node = path_registry.get(domain)
+                if not isinstance(current_domain_node, dict):
+                    path_registry[domain] = json.loads(json.dumps(default_domain_node))
+                    continue
+                current_entries = current_domain_node.get("entries")
+                if not isinstance(current_entries, list) or not current_entries:
+                    current_domain_node["entries"] = json.loads(
+                        json.dumps((default_domain_node or {}).get("entries", []))
+                    )
+                anchor_ref = str(current_domain_node.get("anchor_ref", "")).strip()
+                if not anchor_ref:
+                    current_domain_node["anchor_ref"] = str((default_domain_node or {}).get("anchor_ref", "")).strip()
+                path_registry[domain] = current_domain_node
+        node["path_registry"] = path_registry
+    return forced_required_keys, restored_validator_keys, restored_write_guard_validator_keys
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Backfill intake contract set into CURRENT_TASK.json.")
     ap.add_argument("--catalog", required=True)
@@ -561,6 +663,7 @@ def main() -> int:
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
     entry_missing_before = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(task_doc.get(k), dict)]
     host_gateway_missing_before = [k for k in REQUIRED_HOST_GATEWAY_KEYS if not isinstance(task_doc.get(k), dict)]
+    downsink_missing_before = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(task_doc.get(k), dict)]
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
@@ -575,12 +678,16 @@ def main() -> int:
         updated,
         identity_id=str(args.identity_id or "").strip(),
     )
+    forced_downsink_required_keys, restored_downsink_validator_keys, restored_downsink_write_guard_validator_keys = (
+        _normalize_downsink_path_contracts(updated)
+    )
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     prompt_missing_after = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(updated.get(k), dict)]
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
     reasoning_missing_after = [k for k in REQUIRED_REASONING_KEYS if not isinstance(updated.get(k), dict)]
     entry_missing_after = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(updated.get(k), dict)]
     host_gateway_missing_after = [k for k in REQUIRED_HOST_GATEWAY_KEYS if not isinstance(updated.get(k), dict)]
+    downsink_missing_after = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(updated.get(k), dict)]
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -755,6 +862,29 @@ def main() -> int:
             )
         )
     ]
+    downsink_invalid_after = [
+        k
+        for k in REQUIRED_DOWNSINK_KEYS
+        if isinstance(updated.get(k), dict)
+        and (
+            updated.get(k, {}).get("required") is not True
+            or str((updated.get(k) or {}).get("contract_id", "")).strip() != DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID
+            or str((updated.get(k) or {}).get("validator_id", "")).strip() != DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID
+            or str((updated.get(k) or {}).get("write_guard_validator_id", "")).strip()
+            != DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID
+            or not isinstance((updated.get(k) or {}).get("anchor_policy"), dict)
+            or not isinstance((updated.get(k) or {}).get("schema_policy"), dict)
+            or not isinstance((updated.get(k) or {}).get("operation_enforcement"), dict)
+            or not isinstance((updated.get(k) or {}).get("path_registry"), dict)
+            or not set(DOWNSINK_REQUIRED_DOMAINS).issubset(
+                {
+                    str(domain).strip()
+                    for domain in (((updated.get(k) or {}).get("path_registry")) or {}).keys()
+                    if str(domain).strip()
+                }
+            )
+        )
+    ]
     legacy_drift_after = _legacy_path_drift_fields(updated, args.identity_id)
 
     gateway_artifacts = {}
@@ -817,6 +947,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_HOST_GATEWAY_WIRE_INVALID
         stale_reasons = ["required_host_gateway_contract_invalid_after_backfill"]
+    elif downsink_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_DOWNSINK_WIRE_MISSING
+        stale_reasons = ["required_downsink_contract_keys_missing_after_backfill"]
+    elif downsink_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_DOWNSINK_WIRE_INVALID
+        stale_reasons = ["required_downsink_contract_invalid_after_backfill"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -873,6 +1011,13 @@ def main() -> int:
         "invalid_host_gateway_contract_keys_after": host_gateway_invalid_after,
         "forced_host_gateway_required_keys": forced_host_gateway_required_keys,
         "restored_host_gateway_validator_keys": restored_host_gateway_validator_keys,
+        "required_downsink_contract_keys": list(REQUIRED_DOWNSINK_KEYS),
+        "missing_downsink_contract_keys_before": downsink_missing_before,
+        "missing_downsink_contract_keys_after": downsink_missing_after,
+        "invalid_downsink_contract_keys_after": downsink_invalid_after,
+        "forced_downsink_required_keys": forced_downsink_required_keys,
+        "restored_downsink_validator_keys": restored_downsink_validator_keys,
+        "restored_downsink_write_guard_validator_keys": restored_downsink_write_guard_validator_keys,
         "host_gateway_artifacts": gateway_artifacts,
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED
@@ -893,6 +1038,14 @@ def main() -> int:
                 if host_gateway_missing_after
                 else ERR_HOST_GATEWAY_WIRE_INVALID
             )
+        ),
+        "downsink_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED if not downsink_missing_after and not downsink_invalid_after else STATUS_FAIL_REQUIRED
+        ),
+        "downsink_contract_auto_wire_error_code": (
+            ""
+            if not downsink_missing_after and not downsink_invalid_after
+            else (ERR_DOWNSINK_WIRE_MISSING if downsink_missing_after else ERR_DOWNSINK_WIRE_INVALID)
         ),
         "prompt_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not prompt_missing_after and not prompt_invalid_after else STATUS_FAIL_REQUIRED
@@ -926,6 +1079,7 @@ def main() -> int:
             + list(REQUIRED_REASONING_KEYS)
             + list(REQUIRED_ENTRY_KEYS)
             + list(REQUIRED_HOST_GATEWAY_KEYS)
+            + list(REQUIRED_DOWNSINK_KEYS)
         ),
         "stale_reasons": stale_reasons,
         "evidence_ref": str(task_path),

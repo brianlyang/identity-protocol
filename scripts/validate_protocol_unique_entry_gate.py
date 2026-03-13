@@ -130,6 +130,7 @@ RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "ingress_wrapper_dispatch_token",
     "operation_profile_policy",
     "broadcast_policy",
+    "protocol_downsink_path_immutability_contract_v1",
 }
 
 CONTRACT_KEYS = (

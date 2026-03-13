@@ -133,6 +133,24 @@ HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = [
     "source_layer",
 ]
 
+DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY = "protocol_downsink_path_immutability_contract_v1"
+DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID = "protocol_downsink_path_immutability_contract_v1"
+DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID = "scripts/validate_protocol_downsink_path_immutability.py"
+DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID = "scripts/validate_protocol_downsink_path_write_guard.py"
+DOWNSINK_RUNTIME_MIRROR_PATH_ID = "runtime_gate.gateway_contract"
+DOWNSINK_ANCHOR_PROTOCOL_REPO_ROOT_REF = "{protocol_repo_root}"
+DOWNSINK_ANCHOR_IDENTITY_PACK_ROOT_REF = "{identity_pack_root}"
+DOWNSINK_RUNTIME_GATE_DOMAIN = "runtime_gate"
+DOWNSINK_RUNTIME_BROADCAST_DOMAIN = "runtime_broadcast"
+DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN = "runtime_protocol_feedback"
+DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN = "protocol_broadcast_source"
+DOWNSINK_REQUIRED_DOMAINS: tuple[str, ...] = (
+    DOWNSINK_RUNTIME_GATE_DOMAIN,
+    DOWNSINK_RUNTIME_BROADCAST_DOMAIN,
+    DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN,
+    DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN,
+)
+
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -667,6 +685,122 @@ def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
         "operation_profile_policy": _host_gateway_operation_profile_policy(),
         "broadcast_policy": _host_gateway_broadcast_policy(),
+    }
+
+
+def _protocol_downsink_path_registry_skeleton() -> dict:
+    return {
+        DOWNSINK_RUNTIME_GATE_DOMAIN: {
+            "anchor_ref": "identity_pack_root_ref",
+            "entries": [
+                {
+                    "path_id": "runtime_gate.ingress_wrapper",
+                    "entry_type": "file",
+                    "path": "runtime/gate/protocol_ingress_wrapper.py",
+                },
+                {
+                    "path_id": "runtime_gate.egress_wrapper",
+                    "entry_type": "file",
+                    "path": "runtime/gate/protocol_egress_wrapper.py",
+                },
+                {
+                    "path_id": "runtime_gate.session_chain_wrapper",
+                    "entry_type": "file",
+                    "path": "runtime/gate/protocol_session_chain_wrapper.py",
+                },
+                {
+                    "path_id": DOWNSINK_RUNTIME_MIRROR_PATH_ID,
+                    "entry_type": "file",
+                    "path": "runtime/gate/protocol_gateway_contract.json",
+                },
+            ],
+        },
+        DOWNSINK_RUNTIME_BROADCAST_DOMAIN: {
+            "anchor_ref": "identity_pack_root_ref",
+            "entries": [
+                {
+                    "path_id": "runtime_broadcast.state_file",
+                    "entry_type": "file",
+                    "path": HOST_GATEWAY_BROADCAST_STATE_FILE,
+                },
+                {
+                    "path_id": "runtime_broadcast.receipt_pattern",
+                    "entry_type": "glob",
+                    "path": HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+                },
+                {
+                    "path_id": "runtime_broadcast.ack_pattern",
+                    "entry_type": "glob",
+                    "path": HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+                },
+            ],
+        },
+        DOWNSINK_RUNTIME_PROTOCOL_FEEDBACK_DOMAIN: {
+            "anchor_ref": "identity_pack_root_ref",
+            "entries": [
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_dir",
+                    "entry_type": "dir",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.evidence_index",
+                    "entry_type": "file",
+                    "path": "runtime/protocol-feedback/evidence-index/INDEX.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.upgrade_proposals_dir",
+                    "entry_type": "dir",
+                    "path": "runtime/protocol-feedback/upgrade-proposals",
+                },
+            ],
+        },
+        DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN: {
+            "anchor_ref": "protocol_repo_root_ref",
+            "entries": [
+                {
+                    "path_id": "protocol_broadcast_source.items_dir",
+                    "entry_type": "dir",
+                    "path": HOST_GATEWAY_BROADCAST_ITEMS_DIR,
+                },
+                {
+                    "path_id": "protocol_broadcast_source.index_file",
+                    "entry_type": "file",
+                    "path": HOST_GATEWAY_BROADCAST_INDEX_FILE,
+                },
+                {
+                    "path_id": "protocol_broadcast_source.schema_file",
+                    "entry_type": "file",
+                    "path": HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
+                },
+            ],
+        },
+    }
+
+
+def _protocol_downsink_path_immutability_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
+        "validator_id": DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID,
+        "write_guard_validator_id": DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID,
+        "path_registry": _protocol_downsink_path_registry_skeleton(),
+        "anchor_policy": {
+            "protocol_repo_root_ref": DOWNSINK_ANCHOR_PROTOCOL_REPO_ROOT_REF,
+            "identity_pack_root_ref": DOWNSINK_ANCHOR_IDENTITY_PACK_ROOT_REF,
+            "allow_parent_escape": False,
+            "allow_symlink_escape": False,
+        },
+        "schema_policy": {
+            "reject_additional_properties": True,
+            "require_all_declared_paths_present_in_runtime_contract": True,
+        },
+        "operation_enforcement": {
+            "strict_operations": list(HOST_GATEWAY_STRICT_OPERATIONS),
+            "light_operations": list(HOST_GATEWAY_LIGHT_OPERATIONS),
+            "strict_fail_mode": "fail_required",
+            "light_fail_mode": "fail_required",
+        },
     }
 
 
@@ -1350,6 +1484,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
         "execution_target_tuple_isolation_contract_v1": _execution_target_tuple_isolation_contract_skeleton(),
         "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
+        DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),
         HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton(identity_id),
         "multimodal_plugin_enforcement_contract_v1": _multimodal_plugin_enforcement_contract_skeleton(),
         "reasoning_loop_failclose_contract_v1": _reasoning_loop_failclose_contract_skeleton(),
@@ -1484,6 +1619,19 @@ def _resolve_pack_runtime_path(pack_dir: Path, raw_path: str, *, fallback: str) 
     return (pack_dir / value).resolve()
 
 
+def _pack_relative_path(pack_dir: Path, path: Path, *, fallback: str = "") -> str:
+    try:
+        rel = path.resolve().relative_to(pack_dir.resolve()).as_posix()
+        if rel:
+            return rel
+    except Exception:
+        pass
+    fallback_token = str(fallback or "").strip()
+    if fallback_token:
+        return fallback_token
+    return path.as_posix()
+
+
 def _protocol_ingress_wrapper_template() -> str:
     return """#!/usr/bin/env python3
 from __future__ import annotations
@@ -1493,6 +1641,7 @@ import hashlib
 import hmac
 import json
 import os
+import shlex
 import secrets
 import subprocess
 import sys
@@ -1644,6 +1793,120 @@ def _load_json_file(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         return dict(default)
     return data if isinstance(data, dict) else dict(default)
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def _read_process_commandline(pid: int) -> str:
+    if pid <= 0:
+        return ""
+    proc_cmdline = Path(f"/proc/{pid}/cmdline")
+    if proc_cmdline.exists():
+        try:
+            raw = proc_cmdline.read_bytes()
+            tokens = [chunk.decode("utf-8", errors="ignore").strip() for chunk in raw.split(b"\\x00")]
+            rendered = " ".join(token for token in tokens if token).strip()
+            if rendered:
+                return rendered
+        except Exception:
+            pass
+    try:
+        proc = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return str(proc.stdout or "").strip()
+
+
+def _validate_session_chain_parent_attestation(*, expected_wrapper_path: str) -> tuple[bool, list[str], dict[str, Any]]:
+    def _resolve_cli_path_token(token: str) -> str:
+        raw = str(token or "").strip()
+        if not raw:
+            return ""
+        if "/" not in raw and "\\\\" not in raw:
+            return ""
+        try:
+            return str(Path(raw).expanduser().resolve())
+        except Exception:
+            return ""
+
+    def _parent_command_matches_expected_wrapper(parent_cmdline: str, expected_path: Path) -> bool:
+        line = str(parent_cmdline or "").strip()
+        if not line:
+            return False
+        try:
+            tokens = shlex.split(line)
+        except Exception:
+            tokens = line.split()
+        if not tokens:
+            return False
+
+        expected = str(expected_path)
+        direct_exec_path = _resolve_cli_path_token(tokens[0])
+        if direct_exec_path and direct_exec_path == expected:
+            return True
+
+        exe_name = Path(tokens[0]).name.lower()
+        if "python" not in exe_name:
+            return False
+
+        first_script_token = ""
+        for tok in tokens[1:]:
+            token = str(tok or "").strip()
+            if not token:
+                continue
+            if token in {"-m", "-c"}:
+                return False
+            if token.startswith("-"):
+                continue
+            first_script_token = token
+            break
+        if not first_script_token:
+            return False
+        script_path = _resolve_cli_path_token(first_script_token)
+        return bool(script_path and script_path == expected)
+
+    errors: list[str] = []
+    expected_path = Path(str(expected_wrapper_path or "").strip()).expanduser().resolve()
+    parent_pid = int(os.getppid())
+    parent_cmdline = _read_process_commandline(parent_pid)
+    env_wrapper_path = str(os.environ.get("IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH", "")).strip()
+    details: dict[str, Any] = {
+        "session_chain_parent_attestation_required": True,
+        "session_chain_parent_attestation_ppid": parent_pid,
+        "session_chain_parent_attestation_expected_path": str(expected_path)
+        if str(expected_wrapper_path or "").strip()
+        else "",
+        "session_chain_parent_attestation_command_sha256": (
+            hashlib.sha256(parent_cmdline.encode("utf-8")).hexdigest() if parent_cmdline else ""
+        ),
+        "session_chain_parent_attestation_env_path": env_wrapper_path,
+    }
+    if not str(expected_wrapper_path or "").strip():
+        errors.append("session_chain_parent_attestation_expected_path_missing")
+    if not env_wrapper_path:
+        errors.append("session_chain_parent_attestation_env_path_missing")
+    else:
+        env_path = Path(env_wrapper_path).expanduser().resolve()
+        if env_path != expected_path:
+            errors.append("session_chain_parent_attestation_env_path_mismatch")
+    if not parent_cmdline:
+        if not env_wrapper_path:
+            errors.append("session_chain_parent_attestation_parent_command_missing")
+    elif not _parent_command_matches_expected_wrapper(parent_cmdline, expected_path):
+        errors.append("session_chain_parent_attestation_parent_command_mismatch")
+    return len(errors) == 0, errors, details
 
 
 def _collect_broadcast_snapshot(
@@ -2114,6 +2377,7 @@ import hashlib
 import hmac
 import json
 import os
+import shlex
 import secrets
 import subprocess
 import sys
@@ -2237,6 +2501,120 @@ def _load_json_file(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         return dict(default)
     return data if isinstance(data, dict) else dict(default)
+
+
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
+def _read_process_commandline(pid: int) -> str:
+    if pid <= 0:
+        return ""
+    proc_cmdline = Path(f"/proc/{pid}/cmdline")
+    if proc_cmdline.exists():
+        try:
+            raw = proc_cmdline.read_bytes()
+            tokens = [chunk.decode("utf-8", errors="ignore").strip() for chunk in raw.split(b"\\x00")]
+            rendered = " ".join(token for token in tokens if token).strip()
+            if rendered:
+                return rendered
+        except Exception:
+            pass
+    try:
+        proc = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return ""
+    if proc.returncode != 0:
+        return ""
+    return str(proc.stdout or "").strip()
+
+
+def _validate_session_chain_parent_attestation(*, expected_wrapper_path: str) -> tuple[bool, list[str], dict[str, Any]]:
+    def _resolve_cli_path_token(token: str) -> str:
+        raw = str(token or "").strip()
+        if not raw:
+            return ""
+        if "/" not in raw and "\\\\" not in raw:
+            return ""
+        try:
+            return str(Path(raw).expanduser().resolve())
+        except Exception:
+            return ""
+
+    def _parent_command_matches_expected_wrapper(parent_cmdline: str, expected_path: Path) -> bool:
+        line = str(parent_cmdline or "").strip()
+        if not line:
+            return False
+        try:
+            tokens = shlex.split(line)
+        except Exception:
+            tokens = line.split()
+        if not tokens:
+            return False
+
+        expected = str(expected_path)
+        direct_exec_path = _resolve_cli_path_token(tokens[0])
+        if direct_exec_path and direct_exec_path == expected:
+            return True
+
+        exe_name = Path(tokens[0]).name.lower()
+        if "python" not in exe_name:
+            return False
+
+        first_script_token = ""
+        for tok in tokens[1:]:
+            token = str(tok or "").strip()
+            if not token:
+                continue
+            if token in {"-m", "-c"}:
+                return False
+            if token.startswith("-"):
+                continue
+            first_script_token = token
+            break
+        if not first_script_token:
+            return False
+        script_path = _resolve_cli_path_token(first_script_token)
+        return bool(script_path and script_path == expected)
+
+    errors: list[str] = []
+    expected_path = Path(str(expected_wrapper_path or "").strip()).expanduser().resolve()
+    parent_pid = int(os.getppid())
+    parent_cmdline = _read_process_commandline(parent_pid)
+    env_wrapper_path = str(os.environ.get("IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH", "")).strip()
+    details: dict[str, Any] = {
+        "session_chain_parent_attestation_required": True,
+        "session_chain_parent_attestation_ppid": parent_pid,
+        "session_chain_parent_attestation_expected_path": str(expected_path)
+        if str(expected_wrapper_path or "").strip()
+        else "",
+        "session_chain_parent_attestation_command_sha256": (
+            hashlib.sha256(parent_cmdline.encode("utf-8")).hexdigest() if parent_cmdline else ""
+        ),
+        "session_chain_parent_attestation_env_path": env_wrapper_path,
+    }
+    if not str(expected_wrapper_path or "").strip():
+        errors.append("session_chain_parent_attestation_expected_path_missing")
+    if not env_wrapper_path:
+        errors.append("session_chain_parent_attestation_env_path_missing")
+    else:
+        env_path = Path(env_wrapper_path).expanduser().resolve()
+        if env_path != expected_path:
+            errors.append("session_chain_parent_attestation_env_path_mismatch")
+    if not parent_cmdline:
+        if not env_wrapper_path:
+            errors.append("session_chain_parent_attestation_parent_command_missing")
+    elif not _parent_command_matches_expected_wrapper(parent_cmdline, expected_path):
+        errors.append("session_chain_parent_attestation_parent_command_mismatch")
+    return len(errors) == 0, errors, details
 
 
 def _collect_broadcast_release_state(*, contract: dict[str, Any], contract_path: Path) -> dict[str, Any]:
@@ -2490,6 +2868,51 @@ def main() -> int:
             stale_reason="egress_canonical_script_unavailable",
             json_only=args.json_only,
         )
+    host_release_mode = str(contract.get("host_release_mode", "")).strip().lower()
+    session_chain_parent_attestation_required = host_release_mode == "wrapper_only"
+    session_chain_parent_attestation_status = STATUS_SKIPPED_NOT_REQUIRED
+    session_chain_parent_attestation_ppid = int(os.getppid())
+    session_chain_parent_attestation_expected_path = ""
+    session_chain_parent_attestation_command_sha256 = ""
+    if session_chain_parent_attestation_required:
+        session_chain_wrapper_path = _resolve_contract_runtime_path(
+            contract_path,
+            str(contract.get("session_chain_wrapper_path", "")).strip(),
+        )
+        session_chain_parent_attestation_expected_path = str(session_chain_wrapper_path) if session_chain_wrapper_path else ""
+        (
+            session_chain_parent_ok,
+            session_chain_parent_errors,
+            session_chain_parent_details,
+        ) = _validate_session_chain_parent_attestation(
+            expected_wrapper_path=session_chain_parent_attestation_expected_path,
+        )
+        session_chain_parent_attestation_ppid = _safe_int(
+            session_chain_parent_details.get("session_chain_parent_attestation_ppid"),
+            default=session_chain_parent_attestation_ppid,
+        )
+        session_chain_parent_attestation_command_sha256 = str(
+            session_chain_parent_details.get("session_chain_parent_attestation_command_sha256", "")
+        ).strip()
+        session_chain_parent_attestation_status = (
+            STATUS_PASS_REQUIRED if session_chain_parent_ok else STATUS_FAIL_REQUIRED
+        )
+        if not session_chain_parent_ok:
+            _emit(
+                {
+                    "protocol_egress_wrapper_status": STATUS_FAIL_REQUIRED,
+                    "error_code": "IP-GATE-ENTRY-002",
+                    "stale_reasons": session_chain_parent_errors
+                    or ["session_chain_parent_attestation_failed"],
+                    "session_chain_parent_attestation_required": True,
+                    "session_chain_parent_attestation_status": session_chain_parent_attestation_status,
+                    "session_chain_parent_attestation_ppid": session_chain_parent_attestation_ppid,
+                    "session_chain_parent_attestation_expected_path": session_chain_parent_attestation_expected_path,
+                    "session_chain_parent_attestation_command_sha256": session_chain_parent_attestation_command_sha256,
+                },
+                json_only=args.json_only,
+            )
+            return 1
     signing_secret, signing_secret_error = _load_signing_secret(contract=contract, contract_path=contract_path)
     if signing_secret_error:
         return _fail(
@@ -2570,6 +2993,13 @@ def main() -> int:
         )
     if payload:
         payload.update(broadcast_release)
+        payload["session_chain_parent_attestation_required"] = bool(session_chain_parent_attestation_required)
+        payload["session_chain_parent_attestation_status"] = session_chain_parent_attestation_status
+        payload["session_chain_parent_attestation_ppid"] = session_chain_parent_attestation_ppid
+        payload["session_chain_parent_attestation_expected_path"] = session_chain_parent_attestation_expected_path
+        payload["session_chain_parent_attestation_command_sha256"] = (
+            session_chain_parent_attestation_command_sha256
+        )
         _emit(payload, json_only=args.json_only)
     elif proc.stdout.strip():
         print(proc.stdout.strip())
@@ -3064,7 +3494,9 @@ def main() -> int:
         str(out_reply_path),
         "--json-only",
     ]
-    egress_proc = subprocess.run(egress_cmd, capture_output=True, text=True)
+    egress_env = dict(os.environ)
+    egress_env["IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH"] = str(Path(__file__).resolve())
+    egress_proc = subprocess.run(egress_cmd, capture_output=True, text=True, env=egress_env)
     egress_payload = _parse_stdout_json(egress_proc.stdout)
     if egress_proc.returncode != 0:
         if egress_proc.stdout.strip():
@@ -3076,6 +3508,15 @@ def main() -> int:
         return _fail(
             error_code="IP-HDSTAMP-002",
             stale_reason="egress_guard_not_pass_required",
+            json_only=args.json_only,
+        )
+    session_chain_parent_status = str(
+        egress_payload.get("session_chain_parent_attestation_status", "")
+    ).strip().upper()
+    if session_chain_parent_status and session_chain_parent_status != STATUS_PASS_REQUIRED:
+        return _fail(
+            error_code="IP-GATE-ENTRY-002",
+            stale_reason="session_chain_parent_attestation_not_pass_required",
             json_only=args.json_only,
         )
     if not out_reply_path.exists():
@@ -3102,6 +3543,17 @@ def main() -> int:
             "reply_preview": (reply_text.splitlines()[:2] if reply_text else []),
             "ingress_bundle_status": ingress_payload.get("bundle_status", ""),
             "egress_guard_status": egress_payload.get("final_emit_guard_status", ""),
+            "final_emit_guard_status": egress_payload.get("final_emit_guard_status", ""),
+            "send_time_gate_status": egress_payload.get("send_time_gate_status", ""),
+            "headstamp_status": egress_payload.get("headstamp_status", ""),
+            "session_chain_parent_attestation_required": egress_payload.get(
+                "session_chain_parent_attestation_required",
+                False,
+            ),
+            "session_chain_parent_attestation_status": egress_payload.get(
+                "session_chain_parent_attestation_status",
+                "",
+            ),
         },
         json_only=args.json_only,
     )
@@ -3127,26 +3579,33 @@ def materialize_protocol_host_gateway_artifacts(
     if not isinstance(contract, dict):
         contract = _protocol_host_unique_channel_contract_skeleton(identity_id)
         task[HOST_GATEWAY_CONTRACT_KEY] = contract
+    downsink_contract = task.get(DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY)
+    if not isinstance(downsink_contract, dict):
+        downsink_contract = _protocol_downsink_path_immutability_contract_skeleton()
+        task[DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY] = downsink_contract
+    else:
+        downsink_contract = _deep_merge_defaults(_protocol_downsink_path_immutability_contract_skeleton(), downsink_contract)
+        task[DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY] = downsink_contract
     signer_secret_env = _host_gateway_signer_secret_env(identity_id)
 
     ingress_wrapper_path = _resolve_pack_runtime_path(
         pack_dir,
-        str(contract.get("ingress_wrapper_path", "")),
+        HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
         fallback=HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
     )
     egress_wrapper_path = _resolve_pack_runtime_path(
         pack_dir,
-        str(contract.get("egress_wrapper_path", "")),
+        HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
         fallback=HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
     )
     session_chain_wrapper_path = _resolve_pack_runtime_path(
         pack_dir,
-        str(contract.get("session_chain_wrapper_path", "")),
+        HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
         fallback=HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
     )
     gateway_contract_path = _resolve_pack_runtime_path(
         pack_dir,
-        str(contract.get("gateway_contract_path", "")),
+        HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
         fallback=HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
     )
     ingress_proof_policy = contract.get("ingress_proof_policy")
@@ -3174,7 +3633,7 @@ def materialize_protocol_host_gateway_artifacts(
             broadcast_policy[key] = json.loads(json.dumps(value))
     broadcast_state_path = _resolve_pack_runtime_path(
         pack_dir,
-        str(broadcast_policy.get("instance_state_file", "")),
+        HOST_GATEWAY_BROADCAST_STATE_FILE,
         fallback=HOST_GATEWAY_BROADCAST_STATE_FILE,
     )
 
@@ -3222,12 +3681,131 @@ def materialize_protocol_host_gateway_artifacts(
         "protocol_broadcast_index_file": HOST_GATEWAY_BROADCAST_INDEX_FILE,
         "protocol_broadcast_schema_file": HOST_GATEWAY_BROADCAST_SCHEMA_FILE,
         "instance_state_file": broadcast_state_path.as_posix(),
-        "instance_receipt_pattern": str(broadcast_policy.get("instance_receipt_pattern", "")).strip()
-        or HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
-        "instance_ack_pattern": str(broadcast_policy.get("instance_ack_pattern", "")).strip()
-        or HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+        "instance_receipt_pattern": HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+        "instance_ack_pattern": HOST_GATEWAY_BROADCAST_ACK_PATTERN,
         "block_on_critical_unacked": bool(broadcast_policy.get("block_on_critical_unacked", False)),
     }
+
+    ingress_wrapper_rel = _pack_relative_path(
+        pack_dir,
+        ingress_wrapper_path,
+        fallback="runtime/gate/protocol_ingress_wrapper.py",
+    )
+    egress_wrapper_rel = _pack_relative_path(
+        pack_dir,
+        egress_wrapper_path,
+        fallback="runtime/gate/protocol_egress_wrapper.py",
+    )
+    session_chain_wrapper_rel = _pack_relative_path(
+        pack_dir,
+        session_chain_wrapper_path,
+        fallback="runtime/gate/protocol_session_chain_wrapper.py",
+    )
+    gateway_contract_rel = _pack_relative_path(
+        pack_dir,
+        gateway_contract_path,
+        fallback="runtime/gate/protocol_gateway_contract.json",
+    )
+    broadcast_state_rel = _pack_relative_path(
+        pack_dir,
+        broadcast_state_path,
+        fallback=HOST_GATEWAY_BROADCAST_STATE_FILE,
+    )
+
+    def _replace_registry_entry(
+        *,
+        registry: dict,
+        domain: str,
+        path_id: str,
+        entry_type: str,
+        path_value: str,
+    ) -> None:
+        domain_node = registry.get(domain)
+        if not isinstance(domain_node, dict):
+            return
+        entries = domain_node.get("entries")
+        if not isinstance(entries, list):
+            return
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            if str(entry.get("path_id", "")).strip() != path_id:
+                continue
+            entry["entry_type"] = entry_type
+            entry["path"] = str(path_value).strip()
+            return
+
+    downsink_contract["required"] = True
+    downsink_contract["contract_id"] = DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID
+    downsink_contract["validator_id"] = DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID
+    downsink_contract["write_guard_validator_id"] = DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID
+    downsink_contract["anchor_policy"] = {
+        "protocol_repo_root_ref": DOWNSINK_ANCHOR_PROTOCOL_REPO_ROOT_REF,
+        "identity_pack_root_ref": DOWNSINK_ANCHOR_IDENTITY_PACK_ROOT_REF,
+        "allow_parent_escape": False,
+        "allow_symlink_escape": False,
+    }
+    downsink_contract["schema_policy"] = {
+        "reject_additional_properties": True,
+        "require_all_declared_paths_present_in_runtime_contract": True,
+    }
+    downsink_contract["operation_enforcement"] = {
+        "strict_operations": list(HOST_GATEWAY_STRICT_OPERATIONS),
+        "light_operations": list(HOST_GATEWAY_LIGHT_OPERATIONS),
+        "strict_fail_mode": "fail_required",
+        "light_fail_mode": "fail_required",
+    }
+    downsink_registry = _protocol_downsink_path_registry_skeleton()
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_GATE_DOMAIN,
+        path_id="runtime_gate.ingress_wrapper",
+        entry_type="file",
+        path_value=ingress_wrapper_rel,
+    )
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_GATE_DOMAIN,
+        path_id="runtime_gate.egress_wrapper",
+        entry_type="file",
+        path_value=egress_wrapper_rel,
+    )
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_GATE_DOMAIN,
+        path_id="runtime_gate.session_chain_wrapper",
+        entry_type="file",
+        path_value=session_chain_wrapper_rel,
+    )
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_GATE_DOMAIN,
+        path_id=DOWNSINK_RUNTIME_MIRROR_PATH_ID,
+        entry_type="file",
+        path_value=gateway_contract_rel,
+    )
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_BROADCAST_DOMAIN,
+        path_id="runtime_broadcast.state_file",
+        entry_type="file",
+        path_value=broadcast_state_rel,
+    )
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_BROADCAST_DOMAIN,
+        path_id="runtime_broadcast.receipt_pattern",
+        entry_type="glob",
+        path_value=HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN,
+    )
+    _replace_registry_entry(
+        registry=downsink_registry,
+        domain=DOWNSINK_RUNTIME_BROADCAST_DOMAIN,
+        path_id="runtime_broadcast.ack_pattern",
+        entry_type="glob",
+        path_value=HOST_GATEWAY_BROADCAST_ACK_PATTERN,
+    )
+    downsink_contract["path_registry"] = downsink_registry
 
     gateway_contract_payload = {
         "schema_version": "v1",
@@ -3278,6 +3856,7 @@ def materialize_protocol_host_gateway_artifacts(
             "instance_ack_pattern": str(contract["broadcast_policy"]["instance_ack_pattern"]).strip(),
             "block_on_critical_unacked": bool(contract["broadcast_policy"]["block_on_critical_unacked"]),
         },
+        DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: json.loads(json.dumps(downsink_contract)),
     }
     write_json(gateway_contract_path, gateway_contract_payload)
     if not broadcast_state_path.exists():

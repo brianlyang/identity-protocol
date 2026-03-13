@@ -41,6 +41,7 @@ HOST_GATEWAY_CONTRACT_KEYS = (
 )
 HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER = "runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER = "runtime/gate/protocol_egress_wrapper.py"
+HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = "runtime/gate/protocol_session_chain_wrapper.py"
 HOST_GATEWAY_DEFAULT_SIGNING_KEY = "runtime/state/protocol_gateway_signing_key.txt"
 FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
 REQUIRED_GATE_BUNDLE_SCRIPT = "scripts/required_gate_bundle_runner.py"
@@ -119,18 +120,22 @@ def _has_flag(cmd: list[str], flag: str) -> bool:
 
 
 def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str]:
+    def _emit_fail_payload(stale_reason: str) -> tuple[int, str, str]:
+        payload = {
+            "final_emit_guard_status": "FAIL_REQUIRED",
+            "error_code": "IP-HDSTAMP-003",
+            "stale_reasons": [str(stale_reason or "final_emit_wrapper_route_failed")],
+        }
+        out = json.dumps(payload, ensure_ascii=False)
+        print(out)
+        return 1, out, ""
+
     catalog = _arg_value(cmd, "--catalog")
     identity_id = _arg_value(cmd, "--identity-id")
     actor_id = _arg_value(cmd, "--actor-id")
     body_text = _arg_value(cmd, "--body-text")
     if not catalog or not identity_id or not actor_id or not body_text:
-        print("[WARN] wrapper route skipped: final_emit command missing required args")
-        p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
-        if p.stdout.strip():
-            print(p.stdout.strip())
-        if p.stderr.strip():
-            print(p.stderr.strip())
-        return p.returncode, p.stdout or "", p.stderr or ""
+        return _emit_fail_payload("final_emit_wrapper_required_args_missing")
 
     try:
         pack_path, task_path = resolve_pack_and_task(
@@ -141,14 +146,7 @@ def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str
     except Exception as exc:
         err = f"wrapper_runtime_resolve_failed:{exc}"
         print(f"[FAIL] {err}")
-        payload = {
-            "final_emit_guard_status": "FAIL_REQUIRED",
-            "error_code": "IP-HDSTAMP-003",
-            "stale_reasons": [err],
-        }
-        out = json.dumps(payload, ensure_ascii=False)
-        print(out)
-        return 1, out, ""
+        return _emit_fail_payload(err)
 
     host_gateway_contract = _pick_host_gateway_contract(task if isinstance(task, dict) else {})
     host_release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
@@ -161,32 +159,15 @@ def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str
             print(p.stderr.strip())
         return p.returncode, p.stdout or "", p.stderr or ""
 
-    ingress_wrapper = _resolve_pack_relative_path(
+    session_chain_wrapper = _resolve_pack_relative_path(
         pack_path,
-        str(host_gateway_contract.get("ingress_wrapper_path", "")).strip(),
-        HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
+        str(host_gateway_contract.get("session_chain_wrapper_path", "")).strip(),
+        HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER,
     )
-    egress_wrapper = _resolve_pack_relative_path(
-        pack_path,
-        str(host_gateway_contract.get("egress_wrapper_path", "")).strip(),
-        HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER,
-    )
-    if not ingress_wrapper.exists() or not egress_wrapper.exists():
-        missing = []
-        if not ingress_wrapper.exists():
-            missing.append("ingress_wrapper_missing")
-        if not egress_wrapper.exists():
-            missing.append("egress_wrapper_missing")
-        err = "wrapper_runtime_files_missing:" + ",".join(missing)
+    if not session_chain_wrapper.exists():
+        err = f"session_chain_wrapper_missing:{session_chain_wrapper}"
         print(f"[FAIL] {err}")
-        payload = {
-            "final_emit_guard_status": "FAIL_REQUIRED",
-            "error_code": "IP-HDSTAMP-003",
-            "stale_reasons": [err],
-        }
-        out = json.dumps(payload, ensure_ascii=False)
-        print(out)
-        return 1, out, ""
+        return _emit_fail_payload(err)
 
     signer_secret_env, signer_secret_value = _resolve_gateway_signing_secret(pack_path, host_gateway_contract)
     child_env = dict(os.environ)
@@ -203,105 +184,64 @@ def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str
     source_layer = _arg_value(cmd, "--source-layer", _infer_source_domain_from_catalog(catalog))
     layer_intent_text = _arg_value(cmd, "--layer-intent-text")
     out_reply_file = _arg_value(cmd, "--out-reply-file")
-    out_json = _arg_value(cmd, "--out-json")
-    blocker_receipt_out = _arg_value(cmd, "--blocker-receipt-out")
-
-    ingress_cmd = [
+    session_chain_cmd = [
         "python3",
-        str(ingress_wrapper),
+        str(session_chain_wrapper),
         "--catalog",
         catalog,
         "--identity-id",
         identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id,
+        "--run-id",
+        run_id,
+        "--work-layer",
+        work_layer,
+        "--source-layer",
+        source_layer,
         "--operation",
         "inspection",
-        "--run-id",
-        run_id,
-        "--actor-id",
-        actor_id,
-        "--session-id",
-        session_id,
-        "--work-layer",
-        work_layer,
-        "--source-layer",
-        source_layer,
-        "--json-only",
-    ]
-    print("$", " ".join(ingress_cmd))
-    p_ingress = subprocess.run(
-        ingress_cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(PROTOCOL_ROOT),
-        env=child_env,
-    )
-    if p_ingress.stdout.strip():
-        print(p_ingress.stdout.strip())
-    if p_ingress.stderr.strip():
-        print(p_ingress.stderr.strip())
-    ingress_payload = _parse_json_payload(p_ingress.stdout or "") or {}
-    if p_ingress.returncode != 0:
-        return p_ingress.returncode, p_ingress.stdout or "", p_ingress.stderr or ""
-    ingress_receipt = str(
-        ingress_payload.get("protocol_unique_entry_receipt_history_path", "")
-        or ingress_payload.get("protocol_unique_entry_receipt_path", "")
-    ).strip()
-    if not ingress_receipt:
-        err = "ingress_receipt_missing_from_wrapper_output"
-        payload = {
-            "final_emit_guard_status": "FAIL_REQUIRED",
-            "error_code": "IP-GATE-ENTRY-002",
-            "stale_reasons": [err],
-        }
-        out = json.dumps(payload, ensure_ascii=False)
-        print(out)
-        return 1, out, ""
-
-    egress_cmd = [
-        "python3",
-        str(egress_wrapper),
-        "--catalog",
-        catalog,
-        "--identity-id",
-        identity_id,
-        "--actor-id",
-        actor_id,
-        "--session-id",
-        session_id,
-        "--run-id",
-        run_id,
-        "--work-layer",
-        work_layer,
-        "--source-layer",
-        source_layer,
-        "--candidate-output",
+        "--message",
         body_text,
-        "--ingress-receipt",
-        ingress_receipt,
         "--json-only",
     ]
     if out_reply_file:
-        egress_cmd.extend(["--out-reply-file", out_reply_file])
-    if out_json:
-        egress_cmd.extend(["--out-json", out_json])
-    if layer_intent_text:
-        egress_cmd.extend(["--layer-intent-text", layer_intent_text])
-    if blocker_receipt_out:
-        egress_cmd.extend(["--blocker-receipt-out", blocker_receipt_out])
+        session_chain_cmd.extend(["--out-reply-file", out_reply_file])
 
-    print("$", " ".join(egress_cmd))
-    p_egress = subprocess.run(
-        egress_cmd,
+    print("$", " ".join(session_chain_cmd))
+    p_chain = subprocess.run(
+        session_chain_cmd,
         capture_output=True,
         text=True,
         cwd=str(PROTOCOL_ROOT),
         env=child_env,
     )
-    if p_egress.stdout.strip():
-        print(p_egress.stdout.strip())
-    if p_egress.stderr.strip():
-        print(p_egress.stderr.strip())
-    return p_egress.returncode, p_egress.stdout or "", p_egress.stderr or ""
+    if p_chain.stderr.strip():
+        print(p_chain.stderr.strip())
+    if p_chain.returncode != 0:
+        if p_chain.stdout.strip():
+            print(p_chain.stdout.strip())
+        return p_chain.returncode, p_chain.stdout or "", p_chain.stderr or ""
+
+    chain_payload = _parse_json_payload(p_chain.stdout or "") or {}
+    if chain_payload:
+        final_guard = str(
+            chain_payload.get("final_emit_guard_status")
+            or chain_payload.get("egress_guard_status")
+            or ""
+        ).strip()
+        if final_guard:
+            chain_payload["final_emit_guard_status"] = final_guard
+        if layer_intent_text:
+            chain_payload.setdefault("layer_intent_text", layer_intent_text)
+        normalized = json.dumps(chain_payload, ensure_ascii=False)
+        print(normalized)
+        return 0, normalized, p_chain.stderr or ""
+    if p_chain.stdout.strip():
+        print(p_chain.stdout.strip())
+    return 0, p_chain.stdout or "", p_chain.stderr or ""
 
 
 def _run_required_gate_bundle_via_ingress_wrapper(cmd: list[str]) -> tuple[int, str, str]:
@@ -3207,6 +3147,28 @@ def main() -> int:
             ],
             [
                 "python3",
+                "scripts/validate_protocol_downsink_path_immutability.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_downsink_path_write_guard.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "validate",
+                "--json-only",
+            ],
+            [
+                "python3",
                 "scripts/validate_identity_protocol_baseline_freshness.py",
                 "--catalog",
                 args.catalog,
@@ -4285,6 +4247,28 @@ def main() -> int:
             [
                 "python3",
                 "scripts/validate_contract_mapping_coverage.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_downsink_path_immutability.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--operation",
+                "update",
+                "--json-only",
+            ],
+            [
+                "python3",
+                "scripts/validate_protocol_downsink_path_write_guard.py",
                 "--catalog",
                 args.catalog,
                 "--identity-id",

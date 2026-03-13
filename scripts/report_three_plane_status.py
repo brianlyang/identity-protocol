@@ -67,6 +67,10 @@ PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES: set[str] = {
     "protocol_feedback_reply_channel",
     "protocol_feedback_bootstrap_ready",
 }
+DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES: set[str] = {
+    "downsink_path_immutability",
+    "downsink_path_write_guard",
+}
 VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
     "error_code",
     "sidecar_error_code",
@@ -173,6 +177,8 @@ def _classify_m2m_projection(
         non_m2m_scope.append("baseline_refresh")
     if any(row["validator"] in PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES for row in non_m2m_failed):
         non_m2m_scope.append("protocol_feedback_observability")
+    if any(row["validator"] in DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("downsink_path_immutability")
     if repo_status != "CLOSED":
         non_m2m_scope.append("repo_plane")
     if release_status != "CLOSED":
@@ -3155,6 +3161,58 @@ def _instance_plane_status(
     if rc_archival != 0 or archival_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_downsink_immutability, out_downsink_immutability, err_downsink_immutability = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_downsink_path_immutability.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    downsink_immutability_payload = _parse_json_payload(out_downsink_immutability) or {}
+    validators["downsink_path_immutability"] = {
+        "rc": rc_downsink_immutability,
+        "ok": rc_downsink_immutability == 0,
+        "out": out_downsink_immutability,
+        "err": err_downsink_immutability,
+    }
+    downsink_immutability_status = str(
+        downsink_immutability_payload.get("protocol_downsink_path_immutability_status", "")
+    ).strip().upper()
+    if rc_downsink_immutability != 0 or downsink_immutability_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    rc_downsink_write_guard, out_downsink_write_guard, err_downsink_write_guard = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_downsink_path_write_guard.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    downsink_write_guard_payload = _parse_json_payload(out_downsink_write_guard) or {}
+    validators["downsink_path_write_guard"] = {
+        "rc": rc_downsink_write_guard,
+        "ok": rc_downsink_write_guard == 0,
+        "out": out_downsink_write_guard,
+        "err": err_downsink_write_guard,
+    }
+    downsink_write_guard_status = str(
+        downsink_write_guard_payload.get("protocol_downsink_path_write_guard_status", "")
+    ).strip().upper()
+    if rc_downsink_write_guard != 0 or downsink_write_guard_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_fresh, out_fresh, err_fresh = _run(
         [
             "python3",
@@ -4226,6 +4284,30 @@ def _instance_plane_status(
             "index_unlinked_batches": archival_payload.get("index_unlinked_batches", []),
             "mirror_candidate_refs": archival_payload.get("mirror_candidate_refs", []),
             "stale_reasons": archival_payload.get("stale_reasons", []),
+        },
+        "downsink_path_immutability": {
+            "protocol_downsink_path_immutability_status": downsink_immutability_payload.get(
+                "protocol_downsink_path_immutability_status"
+            ),
+            "error_code": downsink_immutability_payload.get("error_code", ""),
+            "required_contract": downsink_immutability_payload.get("required_contract"),
+            "auto_required_signal": downsink_immutability_payload.get("auto_required_signal"),
+            "contract_key": downsink_immutability_payload.get("contract_key", ""),
+            "runtime_mirror_contract_path": downsink_immutability_payload.get("runtime_mirror_contract_path", ""),
+            "required_domains": downsink_immutability_payload.get("required_domains", []),
+            "stale_reasons": downsink_immutability_payload.get("stale_reasons", []),
+        },
+        "downsink_path_write_guard": {
+            "protocol_downsink_path_write_guard_status": downsink_write_guard_payload.get(
+                "protocol_downsink_path_write_guard_status"
+            ),
+            "error_code": downsink_write_guard_payload.get("error_code", ""),
+            "required_contract": downsink_write_guard_payload.get("required_contract"),
+            "auto_required_signal": downsink_write_guard_payload.get("auto_required_signal"),
+            "checked_candidate_count": downsink_write_guard_payload.get("checked_candidate_count"),
+            "checked_candidates": downsink_write_guard_payload.get("checked_candidates", []),
+            "registry_rule_count": downsink_write_guard_payload.get("registry_rule_count"),
+            "stale_reasons": downsink_write_guard_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),

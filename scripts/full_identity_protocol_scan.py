@@ -65,6 +65,10 @@ PROTOCOL_FEEDBACK_OBS_CHECK_NAMES: set[str] = {
     "protocol_feedback_reply_channel",
     "protocol_feedback_bootstrap_ready",
 }
+DOWNSINK_PATH_GOVERNANCE_CHECK_NAMES: set[str] = {
+    "downsink_path_immutability",
+    "downsink_path_write_guard",
+}
 CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
     "error_code",
     "sidecar_error_code",
@@ -310,6 +314,8 @@ def _classify_m2m_projection(*, checks: dict[str, Any]) -> dict[str, Any]:
         non_m2m_scope.append("baseline_refresh")
     if any(row["check"] in PROTOCOL_FEEDBACK_OBS_CHECK_NAMES for row in non_m2m_failed):
         non_m2m_scope.append("protocol_feedback_observability")
+    if any(row["check"] in DOWNSINK_PATH_GOVERNANCE_CHECK_NAMES for row in non_m2m_failed):
+        non_m2m_scope.append("downsink_path_immutability")
     if non_m2m_failed and not non_m2m_scope:
         non_m2m_scope.append("other")
 
@@ -484,6 +490,8 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_feedback_sidecar",
             "instance_base_repo_write_boundary",
             "protocol_feedback_ssot_archival",
+            "downsink_path_immutability",
+            "downsink_path_write_guard",
             "protocol_version_alignment",
             "required_gate_bundle_runner",
             "required_gate_bundle_runner_shadow",
@@ -1661,6 +1669,28 @@ def main() -> int:
                     str(catalog),
                     "--repo-catalog",
                     str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "downsink_path_immutability": [
+                    "python3",
+                    "scripts/validate_protocol_downsink_path_immutability.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "downsink_path_write_guard": [
+                    "python3",
+                    "scripts/validate_protocol_downsink_path_write_guard.py",
+                    "--catalog",
+                    str(catalog),
                     "--identity-id",
                     iid,
                     "--operation",
@@ -3810,6 +3840,35 @@ def main() -> int:
                     ):
                         if k in archival_doc:
                             check_payload[k] = archival_doc.get(k)
+                if name == "downsink_path_immutability":
+                    downsink_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_downsink_path_immutability_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "contract_key",
+                        "runtime_mirror_contract_path",
+                        "required_domains",
+                        "stale_reasons",
+                    ):
+                        if k in downsink_doc:
+                            check_payload[k] = downsink_doc.get(k)
+                if name == "downsink_path_write_guard":
+                    downsink_guard_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_downsink_path_write_guard_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "checked_candidate_count",
+                        "checked_candidates",
+                        "registry_rule_count",
+                        "probe_write_paths",
+                        "stale_reasons",
+                    ):
+                        if k in downsink_guard_doc:
+                            check_payload[k] = downsink_guard_doc.get(k)
                 if name == "writeback_continuity":
                     writeback_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
