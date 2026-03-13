@@ -513,6 +513,34 @@ Serialized replay outcome (base-repo-architect):
 2. previous mismatch signal (`egress_wrapper_parent_attestation_parent_command_mismatch`) is not reproduced after routing correction.
 3. remaining update blocker shifts to report freshness (`IP-PVA-001` / `IP-REL-001`), not wrapper parent-attestation wiring.
 
+### 5.5 Attestation strictness uplift + env-forge probes (2026-03-13, serialized)
+
+To shrink same-domain bypass surface under wrapper-only policy, this stream further tightens attestation checks and CI probes:
+
+1. `required_gate_bundle_runner.py` ingress parent attestation:
+   - requires both:
+     - `IDENTITY_PROTOCOL_INGRESS_WRAPPER_PATH` exact path match
+     - parent commandline structural match to expected wrapper launcher
+   - removes permissive `env-only` fallback path.
+   - commandline discovery now prefers runtime process API (`psutil`), with `/proc`/`ps` fallback.
+2. `final_emit_governed.py` egress parent attestation:
+   - same strict rule as ingress:
+     - env wrapper path must match
+     - parent commandline must match expected egress wrapper launcher
+   - commandline discovery uses same `psutil`-first strategy.
+3. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` adds two mandatory negative probes:
+   - `runner_env_secret_forge_blocked`
+   - `final_emit_env_secret_forge_blocked`
+   both simulate attacker self-injecting signer env secret + forged proof/grant and must fail-close.
+
+Serialized replay summary for this uplift:
+
+1. new env-self-injection probes are blocked (`rc=1`) in required probe suite.
+2. strict wrapper chain remains reproducible for creator update pre-mutation:
+   - `final_emit_guard_status=PASS_REQUIRED`
+   - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
+3. stream posture remains `CONDITIONAL_PASS` until signer root trust is physically separated from same-domain caller control.
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:

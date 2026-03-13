@@ -153,6 +153,8 @@ CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-gateway"
 ACTOR_ID="assistant:ci-probe"
 SESSION_ID="session-gateway-probe"
+INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
+EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
 export IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_GATEWAY="gateway-env-secret-only"
 
 run_probe() {
@@ -192,10 +194,12 @@ stdout_path = Path(sys.argv[3])
 doc = json.loads(stdout_path.read_text(encoding="utf-8"))
 
 def stale_reasons(d: dict) -> list[str]:
-    rows = d.get("stale_reasons")
-    if isinstance(rows, list):
-        return [str(x).strip() for x in rows if str(x).strip()]
-    return []
+    out: list[str] = []
+    for key in ("stale_reasons", "mapping_errors"):
+        rows = d.get(key)
+        if isinstance(rows, list):
+            out.extend(str(x).strip() for x in rows if str(x).strip())
+    return out
 
 if name == "runner_local_key_forge_blocked":
     if rc == 0:
@@ -204,12 +208,30 @@ if name == "runner_local_key_forge_blocked":
     proof_status = str(doc.get("wrapper_dispatch_proof_status", "")).strip().upper()
     if proof_status != "FAIL_REQUIRED" and "wrapper_dispatch_proof_signature_invalid" not in reasons:
         raise SystemExit("runner_local_key_forge_blocked: expected signature/provenance block")
+elif name == "runner_env_secret_forge_blocked":
+    if rc == 0:
+        raise SystemExit("runner_env_secret_forge_blocked: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if (
+        "wrapper_parent_attestation_parent_command_mismatch" not in reasons
+        and "wrapper_parent_attestation_parent_command_missing" not in reasons
+    ):
+        raise SystemExit("runner_env_secret_forge_blocked: expected parent attestation block")
 elif name == "final_emit_local_key_forge_blocked":
     if rc == 0:
         raise SystemExit("final_emit_local_key_forge_blocked: expected non-zero rc")
     reasons = stale_reasons(doc)
     if "egress_grant_signature_invalid" not in reasons and str(doc.get("error_code", "")).strip() != "IP-HDSTAMP-003":
         raise SystemExit("final_emit_local_key_forge_blocked: expected grant signature block")
+elif name == "final_emit_env_secret_forge_blocked":
+    if rc == 0:
+        raise SystemExit("final_emit_env_secret_forge_blocked: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if (
+        "egress_wrapper_parent_attestation_parent_command_mismatch" not in reasons
+        and "egress_wrapper_parent_attestation_parent_command_missing" not in reasons
+    ):
+        raise SystemExit("final_emit_env_secret_forge_blocked: expected parent attestation block")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -247,8 +269,12 @@ cd "${REPO_ROOT}"
 
 FORGED_RUNNER_PAYLOAD_JSON="${RESULT_ROOT}/runner_forged_proof.json"
 FORGED_RUNNER_PAYLOAD_SIG="${RESULT_ROOT}/runner_forged_proof.sig"
+FORGED_RUNNER_ENV_PAYLOAD_JSON="${RESULT_ROOT}/runner_forged_env_proof.json"
+FORGED_RUNNER_ENV_PAYLOAD_SIG="${RESULT_ROOT}/runner_forged_env_proof.sig"
 FORGED_EGRESS_GRANT_JSON="${RESULT_ROOT}/egress_forged_grant.json"
 FORGED_EGRESS_GRANT_SIG="${RESULT_ROOT}/egress_forged_grant.sig"
+FORGED_EGRESS_ENV_GRANT_JSON="${RESULT_ROOT}/egress_forged_env_grant.json"
+FORGED_EGRESS_ENV_GRANT_SIG="${RESULT_ROOT}/egress_forged_env_grant.sig"
 
 python3 - <<'PY' "${FORGED_RUNNER_PAYLOAD_JSON}" "${FORGED_RUNNER_PAYLOAD_SIG}"
 from __future__ import annotations
@@ -296,6 +322,53 @@ run_probe runner_local_key_forge_blocked \
   --wrapper-proof-signature "$(tr -d '\n' < "${FORGED_RUNNER_PAYLOAD_SIG}")" \
   --json-only
 
+python3 - <<'PY' "${FORGED_RUNNER_ENV_PAYLOAD_JSON}" "${FORGED_RUNNER_ENV_PAYLOAD_SIG}"
+from __future__ import annotations
+import hashlib
+import hmac
+import json
+import secrets
+import time
+import sys
+from pathlib import Path
+
+proof = {
+    "schema_version": "v1",
+    "identity_id": "probe-gateway",
+    "operation": "validate",
+    "run_id": "probe-gateway-forged-runner-env",
+    "actor_id": "assistant:ci-probe",
+    "session_id": "session-gateway-probe",
+    "work_layer": "instance",
+    "source_layer": "project",
+    "surface_label": "host_ingress_wrapper",
+    "issued_at_epoch": int(time.time()),
+    "nonce": secrets.token_hex(16),
+}
+canonical = json.dumps(proof, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+sig = hmac.new(b"gateway-env-secret-only", canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+Path(sys.argv[1]).write_text(canonical, encoding="utf-8")
+Path(sys.argv[2]).write_text(sig + "\n", encoding="utf-8")
+PY
+
+run_probe runner_env_secret_forge_blocked \
+  env IDENTITY_PROTOCOL_INGRESS_WRAPPER_PATH="${INGRESS_WRAPPER_PATH}" \
+  python3 scripts/required_gate_bundle_runner.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --run-id probe-gateway-forged-runner-env \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --resolved-work-layer protocol \
+  --resolved-source-layer project \
+  --lock-state LOCK_MATCH \
+  --surface-label host_ingress_wrapper \
+  --wrapper-dispatch-token instance_wrapper_ingress_v1 \
+  --wrapper-proof-json "$(cat "${FORGED_RUNNER_ENV_PAYLOAD_JSON}")" \
+  --wrapper-proof-signature "$(tr -d '\n' < "${FORGED_RUNNER_ENV_PAYLOAD_SIG}")" \
+  --json-only
+
 python3 - <<'PY' "${FORGED_EGRESS_GRANT_JSON}" "${FORGED_EGRESS_GRANT_SIG}"
 from __future__ import annotations
 import hashlib
@@ -338,6 +411,51 @@ run_probe final_emit_local_key_forge_blocked \
   --strict-explicit-context \
   --egress-grant-json "$(cat "${FORGED_EGRESS_GRANT_JSON}")" \
   --egress-grant-signature "$(tr -d '\n' < "${FORGED_EGRESS_GRANT_SIG}")" \
+  --json-only
+
+python3 - <<'PY' "${FORGED_EGRESS_ENV_GRANT_JSON}" "${FORGED_EGRESS_ENV_GRANT_SIG}"
+from __future__ import annotations
+import hashlib
+import hmac
+import json
+import secrets
+import time
+import sys
+from pathlib import Path
+
+body = "forged env grant direct egress probe"
+grant = {
+    "schema_version": "v1",
+    "identity_id": "probe-gateway",
+    "actor_id": "assistant:ci-probe",
+    "session_id": "session-gateway-probe",
+    "run_id": "probe-gateway-forged-egress-env",
+    "outlet_channel_id": "final_emit_governed",
+    "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+    "ingress_receipt_id": "forged-ingress-receipt-id",
+    "issued_at_epoch": int(time.time()),
+    "nonce": secrets.token_hex(16),
+}
+canonical = json.dumps(grant, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+sig = hmac.new(b"gateway-env-secret-only", canonical.encode("utf-8"), hashlib.sha256).hexdigest()
+Path(sys.argv[1]).write_text(canonical, encoding="utf-8")
+Path(sys.argv[2]).write_text(sig + "\n", encoding="utf-8")
+PY
+
+run_probe final_emit_env_secret_forge_blocked \
+  env IDENTITY_PROTOCOL_EGRESS_WRAPPER_PATH="${EGRESS_WRAPPER_PATH}" \
+  python3 scripts/final_emit_governed.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id probe-gateway-forged-egress-env \
+  --body-text "forged env grant direct egress probe" \
+  --work-layer instance \
+  --source-layer project \
+  --strict-explicit-context \
+  --egress-grant-json "$(cat "${FORGED_EGRESS_ENV_GRANT_JSON}")" \
+  --egress-grant-signature "$(tr -d '\n' < "${FORGED_EGRESS_ENV_GRANT_SIG}")" \
   --json-only
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"

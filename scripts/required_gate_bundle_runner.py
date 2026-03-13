@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import os
+import shlex
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -16,6 +17,11 @@ from typing import Any
 import yaml
 
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
+
+try:
+    import psutil  # type: ignore
+except Exception:  # pragma: no cover - optional runtime dependency
+    psutil = None
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -467,6 +473,15 @@ def _validate_wrapper_dispatch_proof(
 def _read_process_commandline(pid: int) -> str:
     if pid <= 0:
         return ""
+    if psutil is not None:
+        try:
+            proc = psutil.Process(pid)
+            tokens = [str(tok or "").strip() for tok in (proc.cmdline() or [])]
+            rendered = " ".join(token for token in tokens if token).strip()
+            if rendered:
+                return rendered
+        except Exception:
+            pass
     proc_cmdline = Path(f"/proc/{pid}/cmdline")
     if proc_cmdline.exists():
         try:
@@ -493,6 +508,54 @@ def _validate_wrapper_parent_attestation(
     *,
     expected_wrapper_path: str,
 ) -> tuple[bool, list[str], dict[str, Any]]:
+    def _resolve_cli_path_token(token: str) -> str:
+        raw = str(token or "").strip()
+        if not raw:
+            return ""
+        if "/" not in raw and "\\" not in raw:
+            return ""
+        try:
+            return str(Path(raw).expanduser().resolve())
+        except Exception:
+            return ""
+
+    def _parent_command_matches_expected_wrapper(parent_cmdline: str, expected_path: Path) -> bool:
+        line = str(parent_cmdline or "").strip()
+        if not line:
+            return False
+        try:
+            tokens = shlex.split(line)
+        except Exception:
+            tokens = line.split()
+        if not tokens:
+            return False
+
+        expected = str(expected_path)
+
+        direct_exec_path = _resolve_cli_path_token(tokens[0])
+        if direct_exec_path and direct_exec_path == expected:
+            return True
+
+        exe_name = Path(tokens[0]).name.lower()
+        if "python" not in exe_name:
+            return False
+
+        first_script_token = ""
+        for tok in tokens[1:]:
+            token = str(tok or "").strip()
+            if not token:
+                continue
+            if token in {"-m", "-c"}:
+                return False
+            if token.startswith("-"):
+                continue
+            first_script_token = token
+            break
+        if not first_script_token:
+            return False
+        script_path = _resolve_cli_path_token(first_script_token)
+        return bool(script_path and script_path == expected)
+
     errors: list[str] = []
     expected_path = Path(str(expected_wrapper_path or "").strip()).expanduser().resolve()
     parent_pid = int(os.getppid())
@@ -508,16 +571,16 @@ def _validate_wrapper_parent_attestation(
     }
     if not str(expected_wrapper_path or "").strip():
         errors.append("wrapper_parent_attestation_expected_path_missing")
-    if parent_cmdline:
-        if str(expected_path) not in parent_cmdline:
-            errors.append("wrapper_parent_attestation_parent_command_mismatch")
+    if not env_wrapper_path:
+        errors.append("wrapper_parent_attestation_env_path_missing")
     else:
-        if not env_wrapper_path:
-            errors.append("wrapper_parent_attestation_parent_command_missing")
-        else:
-            env_path = Path(env_wrapper_path).expanduser().resolve()
-            if env_path != expected_path:
-                errors.append("wrapper_parent_attestation_env_path_mismatch")
+        env_path = Path(env_wrapper_path).expanduser().resolve()
+        if env_path != expected_path:
+            errors.append("wrapper_parent_attestation_env_path_mismatch")
+    if not parent_cmdline:
+        errors.append("wrapper_parent_attestation_parent_command_missing")
+    elif not _parent_command_matches_expected_wrapper(parent_cmdline, expected_path):
+        errors.append("wrapper_parent_attestation_parent_command_mismatch")
     return len(errors) == 0, errors, details
 
 

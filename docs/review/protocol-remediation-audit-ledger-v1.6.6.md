@@ -945,3 +945,53 @@ during `identity_creator.py update` pre-mutation flow.
    - runtime report freshness debt (`IP-REL-001`) for update chain continuity.
 3. Stream posture remains:
    - `Policy PASS / Implementation CONDITIONAL PASS`.
+
+## 18) 2026-03-13 strict-attestation + env-forge replay (serialized)
+
+This section records the additional closure work requested for v1.6.6 item-by-item hardening.
+
+### 18.1 Code hardening landed
+
+1. `scripts/required_gate_bundle_runner.py`
+   - ingress parent attestation now requires:
+     - wrapper env path exact match
+     - parent commandline structural match to expected ingress wrapper launcher
+   - drops permissive env-only attestation fallback.
+   - process commandline lookup now uses `psutil` first (with `/proc`/`ps` fallback).
+2. `scripts/final_emit_governed.py`
+   - egress parent attestation upgraded to same strict rule (env + parent commandline).
+   - process commandline lookup uses same `psutil`-first strategy.
+3. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - adds env-self-injection negative probes:
+     - `runner_env_secret_forge_blocked`
+     - `final_emit_env_secret_forge_blocked`
+   - assertions now evaluate both `stale_reasons` and `mapping_errors`.
+
+### 18.2 Serialized replay facts
+
+1. Gateway trust-boundary probe suite:
+   - `runner_local_key_forge_blocked` -> blocked
+   - `runner_env_secret_forge_blocked` -> blocked
+   - `final_emit_local_key_forge_blocked` -> blocked
+   - `final_emit_env_secret_forge_blocked` -> blocked
+2. Creator update pre-mutation chain remains valid after strict uplift:
+   - `final_emit_guard_status=PASS_REQUIRED`
+   - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
+   - old mismatch (`egress_wrapper_parent_attestation_parent_command_mismatch`) not reproduced.
+3. Update end-to-end still blocked later by freshness:
+   - `IP-PVA-001` / `IP-REL-001` (`report_older_than_key_inputs`).
+
+### 18.3 Gate posture after replay
+
+1. `validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`
+2. `validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+3. `validate_control_plane_status_sync.py --json-only` -> `PASS_REQUIRED`
+4. `docs_command_contract_check.py` -> `PASS`
+5. `sync_plugin_join_wiring.py --check --json-only` -> `PASS_REQUIRED`
+6. `validate_doc_evidence_persistence.py --json-only` -> `PASS_REQUIRED`
+
+### 18.4 Open items (explicit)
+
+1. same trust-domain signer-root isolation is still not physically complete.
+2. update freshness debt (`IP-REL-001`) remains outside wrapper-chain mismatch scope.
+3. stream posture stays: `Policy PASS / Implementation CONDITIONAL PASS`.
