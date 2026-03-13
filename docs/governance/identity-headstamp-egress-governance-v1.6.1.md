@@ -260,3 +260,40 @@ Reference links:
    - `identity/protocol/mappings/control-plane-invariants.current.yaml`
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 3. Versioned snapshots can still appear as historical evidence, but normative wiring must resolve through these current aliases.
+
+## 11) Post-v1.6.6 deepened interpretation for v1.6.1 (2026-03-13)
+
+This section freezes the lessons learned from the v1.6.6 unique-channel closure and
+reinterprets v1.6.1 with execution-grade semantics.
+
+### 11.1 Core reframing
+
+1. Missing HUD/headstamp is treated as an execution-path contract violation, not a text-formatting issue.
+2. `send-time` validation alone is necessary but not sufficient for recurrence closure.
+3. Headstamp continuity becomes reliable only when inbound and outbound are both wrapper-bound in the same round.
+
+### 11.2 Execution invariants inherited from v1.6.6
+
+1. Every inbound round must pass instance ingress wrapper before business action.
+2. Every user-visible outbound must pass instance egress wrapper before release.
+3. `wrapper_only` dispatch/release modes must be enforced as fail-close, not declaration-only.
+4. Receipt tuple consistency (`run_id/session_id/actor_id`) is mandatory across ingress -> gate -> egress.
+
+### 11.3 v1.6.1 ownership after v1.6.6 closure
+
+1. v1.6.1 remains the canonical semantic owner for headstamp/HUD error family (`IP-HDSTAMP-*`) and send-time gate meaning.
+2. v1.6.6 provides the execution-channel closure that guarantees those semantics are reached on every round.
+3. Therefore, v1.6.1 semantic closure and v1.6.6 channel closure are coupled, not competing streams.
+
+### 11.4 Operational interpretation lock
+
+1. If a user-visible reply appears without HUD/headstamp, the round must be treated as invalid and escalated as contract breach.
+2. Manual workaround outside protocol tooling is non-compliant.
+3. Remediation path must stay tool-driven (`identity_creator` / `identity_installer` / `repair_contract_backfill`) and pointer-resolved.
+
+### 11.5 Status statement (cross-stream)
+
+1. v1.6.1 is the semantic SSOT for headstamp/HUD.
+2. v1.6.6 is the channel-enforcement closure for per-round mandatory entry/egress routing.
+3. Acceptance interpretation for future audits must require both dimensions together:
+   semantic correctness (v1.6.1) + transport non-bypassability (v1.6.6).

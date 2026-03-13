@@ -96,3 +96,39 @@ Cross-surface extension (HS16-104):
    - `identity/protocol/mappings/control-plane-invariants.current.yaml`
    - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 3. Historical versioned files remain replay evidence only; pointer switching is governed by current aliases above.
+
+## 8) v1.6.6-derived audit understanding uplift (2026-03-13)
+
+This section records the review-side understanding upgrade after v1.6.6 channel closure replay.
+
+### 8.1 What changed in audit interpretation
+
+1. Prior interpretation tendency:
+   - “headstamp loss” could be over-attributed to egress formatting or isolated send-time invocation.
+2. Updated interpretation (frozen):
+   - headstamp loss is primarily an execution-path breach unless wrapper-chain receipts prove otherwise.
+   - absence of HUD/headstamp in user-visible output is treated as a hard governance signal, not a cosmetic warning.
+
+### 8.2 Cross-stream coupling rule (v1.6.1 + v1.6.6)
+
+1. v1.6.1 validates headstamp semantics and canonical error-family behavior (`IP-HDSTAMP-*`).
+2. v1.6.6 validates non-bypass channel enforcement (ingress/egress wrapper-only path per round).
+3. Review verdicts claiming “headstamp closed” must include both:
+   - semantic pass evidence (v1.6.1 validators), and
+   - wrapper-bound transport pass evidence (v1.6.6 replay receipts).
+
+### 8.3 Audit checklist hardening for future rounds
+
+1. Required positive tuple:
+   - governed egress pass + recurrence closure pass + wrapper ingress/egress pass in same actor/session scope.
+2. Required negative tuple:
+   - bypass/inline/non-governed send must fail with canonical family (`IP-HDSTAMP-*` or mapped closure code).
+3. Any round with missing HUD/headstamp and no valid wrapper-chain receipt is fail-close by review policy.
+
+### 8.4 Boundary statement
+
+1. This uplift does not rewrite v1.6.1 historical fixes; it upgrades how audits interpret runtime evidence.
+2. Residual instance business debts remain out of v1.6.1 protocol-only closure scope.
+3. Future promotions must avoid over-claim:
+   - semantic green alone is insufficient without channel proof;
+   - channel green alone is insufficient without semantic correctness.
