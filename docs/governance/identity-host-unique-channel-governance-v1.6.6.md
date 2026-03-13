@@ -757,3 +757,50 @@ Serialized attach check (base-repo-architect):
 1. 本轮实现了“wrapper 执行链路”的自引导闭环（signer bootstrap + session binding bootstrap）。
 2. 但“当前聊天渲染通道是否物理只消费 wrapper out_reply_file”仍是发送器层接线问题；
    - 若发送器未绑定 wrapper 产物，仍可出现对话 UI 无头显。
+
+### 5.12 Session-chain 父链路门禁补强（2026-03-14, base-repo-audit-expert-v3）
+
+本轮把“`egress_wrapper` 可被直接调用”的残余收口到 CI 必测面，并以实例实跑确认头显首行稳定出现在 wrapper 产物中。
+
+实现收口点：
+
+1. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - fixture host gateway 合同增加 `session_chain_wrapper_path`。
+   - 在 probe 前执行 `repair_contract_backfill --apply`，确保 runtime gate 三件套一致下沉。
+   - 新增负探针 `egress_wrapper_direct_call_blocked`：
+     - 先走 ingress wrapper 生成 receipt；
+     - 再直调 egress wrapper（不经 session-chain）；
+     - 预期 `FAIL_REQUIRED`，且 `stale_reasons` 命中 `session_chain_parent_attestation_*`。
+2. `scripts/validate_required_gate_surface_drift.py`
+   - 将上述新负探针纳入 required surface token 校验，防止 CI 退化为“只测 ingress/final_emit”。
+
+实机结果（base-repo-audit-expert-v3）：
+
+1. `session_chain_wrapper` 正向：
+   - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `session_chain_parent_attestation_status=PASS_REQUIRED`
+   - `reply_preview[0]` 为 canonical `Identity-Context ... | Layer-Context ...`
+2. `egress_wrapper` 直调负向：
+   - `protocol_egress_wrapper_status=FAIL_REQUIRED`
+   - `error_code=IP-GATE-ENTRY-002`
+   - `stale_reasons` 命中 `session_chain_parent_attestation_env_path_missing`（及父命令缺失/不匹配）
+3. trust-boundary CI：
+   - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` -> `rc=0`
+   - 新增 probe 与既有 forged proof/grant probe 全部按预期拦截。
+
+串行回放证据（本轮本地）：
+
+1. 5 轮串行自测：
+   - `/tmp/v166-closure-serial-selftest-5-v2.json`
+   - `overall_passed=true`
+2. 5 轮串行深扫（轻量治理面）：
+   - `/tmp/v166-closure-targeted-deep-scan-5-light.json`
+   - `overall_passed=true`
+3. trust-boundary CI 日志：
+   - `/tmp/v166-closure-gateway-trust-boundary-ci.log`
+
+口径保持：
+
+1. wrapper 链路与协议唯一入口/出口映射：`PASS_REQUIRED`。
+2. 会话渲染器是否“物理只消费 wrapper out_reply_file”：仍取决于发送器接线实现，属于运行侧集成边界。

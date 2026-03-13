@@ -85,6 +85,7 @@ task = {
         "protocol_egress_script": "scripts/final_emit_governed.py",
         "ingress_wrapper_path": "identity/runtime/gate/protocol_ingress_wrapper.py",
         "egress_wrapper_path": "identity/runtime/gate/protocol_egress_wrapper.py",
+        "session_chain_wrapper_path": "identity/runtime/gate/protocol_session_chain_wrapper.py",
         "gateway_contract_path": "identity/runtime/gate/protocol_gateway_contract.json",
         "entry_receipt_policy": {
             "required": True,
@@ -155,7 +156,14 @@ ACTOR_ID="assistant:ci-probe"
 SESSION_ID="session-gateway-probe"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
 EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
+SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper.py"
 export IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_GATEWAY="gateway-env-secret-only"
+
+python3 scripts/repair_contract_backfill.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --apply \
+  --json-only >/dev/null
 
 run_probe() {
   local name="$1"
@@ -232,6 +240,16 @@ elif name == "final_emit_env_secret_forge_blocked":
         and "egress_wrapper_parent_attestation_parent_command_missing" not in reasons
     ):
         raise SystemExit("final_emit_env_secret_forge_blocked: expected parent attestation block")
+elif name == "egress_wrapper_direct_call_blocked":
+    if rc == 0:
+        raise SystemExit("egress_wrapper_direct_call_blocked: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if (
+        "session_chain_parent_attestation_env_path_missing" not in reasons
+        and "session_chain_parent_attestation_parent_command_mismatch" not in reasons
+        and "session_chain_parent_attestation_parent_command_missing" not in reasons
+    ):
+        raise SystemExit("egress_wrapper_direct_call_blocked: expected session-chain parent attestation block")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -456,6 +474,30 @@ run_probe final_emit_env_secret_forge_blocked \
   --strict-explicit-context \
   --egress-grant-json "$(cat "${FORGED_EGRESS_ENV_GRANT_JSON}")" \
   --egress-grant-signature "$(tr -d '\n' < "${FORGED_EGRESS_ENV_GRANT_SIG}")" \
+  --json-only
+
+python3 "${INGRESS_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation inspection \
+  --run-id probe-gateway-direct-egress \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --work-layer instance \
+  --source-layer project \
+  --json-only >/dev/null
+
+run_probe egress_wrapper_direct_call_blocked \
+  python3 "${EGRESS_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id probe-gateway-direct-egress \
+  --work-layer instance \
+  --source-layer project \
+  --candidate-output "direct egress wrapper bypass probe" \
+  --ingress-receipt "${FIXTURE_ROOT}/identity/probe-gateway/runtime/state/required_gate_bundle_entry.latest.json" \
   --json-only
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"

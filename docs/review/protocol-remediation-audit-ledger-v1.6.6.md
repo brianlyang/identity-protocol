@@ -1278,3 +1278,63 @@ commit: `cb4478e`
 3. 本轮口径：
    - `Policy PASS`
    - `Implementation CONDITIONAL PASS`（残余项：聊天发送通道物理封口）。
+
+## 25) Session-chain 父链路封口复验（2026-03-14, base-repo-audit-expert-v3）
+
+### 25.1 复验目标
+
+1. 证明 `egress_wrapper` 不能被直调放行；
+2. 证明 `session_chain_wrapper` 正向链路能稳定产出头显首行；
+3. 把该负探针提升到 required CI，不允许回退。
+
+### 25.2 本轮变更
+
+提交：待本轮提交（v1.6.6 stream）
+
+文件：
+
+1. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+2. `scripts/validate_required_gate_surface_drift.py`
+3. `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`
+4. `docs/review/protocol-remediation-audit-ledger-v1.6.6.md`
+
+代码要点：
+
+1. trust-boundary fixture host gateway 合同补齐 `session_chain_wrapper_path`；
+2. probe 前强制 `repair_contract_backfill --apply`，避免 runtime gate 文件旧版本漂移；
+3. 新增 `egress_wrapper_direct_call_blocked` 负探针：
+   - receipt 先由 ingress wrapper 正向生成；
+   - 随后直调 egress wrapper；
+   - 预期 `FAIL_REQUIRED` + `session_chain_parent_attestation_*`；
+4. surface drift 校验新增该 probe token，形成 CI required 门禁。
+
+### 25.3 串行实测（本轮）
+
+1. 单点关键复验：
+   - `session_chain_wrapper` 正向：
+     - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
+     - `send_time_gate_status=PASS_REQUIRED`
+     - `session_chain_parent_attestation_status=PASS_REQUIRED`
+     - `reply_preview[0]` 命中 canonical `Identity-Context ... | Layer-Context ...`
+   - `egress_wrapper` 直调负向：
+     - `protocol_egress_wrapper_status=FAIL_REQUIRED`
+     - `error_code=IP-GATE-ENTRY-002`
+     - `stale_reasons` 命中 `session_chain_parent_attestation_env_path_missing`（及父命令缺失/不匹配）
+2. 5 轮串行自测：
+   - `/tmp/v166-closure-serial-selftest-5-v2.json`
+   - `overall_passed=true`
+3. 5 轮串行深扫（轻量治理面）：
+   - `/tmp/v166-closure-targeted-deep-scan-5-light.json`
+   - `overall_passed=true`
+4. trust-boundary CI 全量探针：
+   - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - `rc=0`
+   - 日志：`/tmp/v166-closure-gateway-trust-boundary-ci.log`
+
+### 25.4 审计结论
+
+1. v1.6.6 本轮新增封口已生效：直调 egress wrapper 不再可放行；
+2. 以实例本机链路验证，头显首行在 session-chain 正向路径稳定可见；
+3. 口径保持：
+   - `Policy PASS`
+   - `Implementation CONDITIONAL PASS`（发送器物理路由边界仍需接线层闭环）。
