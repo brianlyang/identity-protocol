@@ -715,3 +715,45 @@ Serialized attach check (base-repo-architect):
    - [Troubleshooting required status checks](https://docs.github.com/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks)
 6. MCP lifecycle contract:
    - [Model Context Protocol lifecycle](https://modelcontextprotocol.io/specification/draft/basic/lifecycle)
+
+### 5.11 Runtime closure补强（2026-03-14, base-repo-audit-expert-v3）
+
+本轮针对“实例 wrapper 链路可用，但聊天会话通道仍可能无头显直出”的残余问题，补强了协议与实例下沉合同的可执行闭环能力。
+
+代码落地（contract-driven，无硬编码路径）：
+
+1. `scripts/create_identity_pack.py`
+   - host gateway 合同在 `runtime_env_secret` 模式下也强制下发：
+     - `signing_key_path`
+     - `bootstrap_env_secret_from_signing_key_path=true`
+   - materialize 阶段始终生成 `runtime/state/protocol_gateway_signing_key.txt`。
+   - session-chain wrapper 模板新增：
+     - session 绑定自动对齐（优先 identity 已绑定 session）
+     - session 绑定缺失时自动 upsert（fail-close on write failure）
+2. `scripts/repair_contract_backfill.py`
+   - 旧实例回填 `signing_key_path` 与 `bootstrap_env_secret_from_signing_key_path`，并刷新 wrapper 三件套。
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - signer policy 校验升级：`runtime_env_secret` 也要求 `signing_key_path` 与 bootstrap 布尔字段；
+   - runtime parity 增补 bootstrap 字段一致性检查。
+4. `scripts/required_gate_bundle_runner.py`
+   - env-secret 未注入时可按合同 `signing_key_path` 补载（仅在 bootstrap=true 时）。
+5. `scripts/final_emit_governed.py`
+   - egress grant 验签同样支持按合同 `signing_key_path` 补载（bootstrap=true）。
+
+串行实测摘要（证据文件）：
+
+1. 5 轮串行自测（正向+负向）：
+   - `/tmp/v166-closure-serial-selftest-5.json`
+   - `overall_passed=true`
+2. 5 轮串行深扫（治理相关项）：
+   - `/tmp/v166-closure-targeted-deep-scan-5.json`
+   - `overall_passed=true`
+3. 单轮闭环证据：
+   - `/tmp/v166-closure-probe-1.json`（session unbound 自动对齐后 PASS）
+   - `/tmp/v166-closure-validate-run1.json`（同 run receipt 校验 PASS）
+
+边界声明（防止过度宣称）：
+
+1. 本轮实现了“wrapper 执行链路”的自引导闭环（signer bootstrap + session binding bootstrap）。
+2. 但“当前聊天渲染通道是否物理只消费 wrapper out_reply_file”仍是发送器层接线问题；
+   - 若发送器未绑定 wrapper 产物，仍可出现对话 UI 无头显。

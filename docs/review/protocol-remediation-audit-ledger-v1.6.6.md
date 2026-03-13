@@ -1221,3 +1221,60 @@ From downstream replay feedback (`office-ops-expert`), the broadcast runbook exp
    - to avoid pre-mutation `IP-GATE-ENTRY-002`.
 2. serial strict replay + deep-scan loop
    - to expose residual non-m2m blockers as machine-classified tail items (instead of wrapper path drift).
+
+## 24) Session-chain hardening checkpoint (2026-03-14)
+
+### 24.1 审计触发点
+
+本轮由实机现象触发：
+
+1. wrapper 内部链路可 PASS，但对话 UI 仍可出现“无头显输出”。
+2. 排查确认两个实例级阻断会导致 wrapper 链路偶发不可达：
+   - `runtime_env_secret` 未注入导致 ingress/egress 签名校验失败；
+   - `session_scoped_actor_binding_missing` 导致 egress fail-close。
+
+### 24.2 代码级修复（已提交）
+
+commit: `cb4478e`
+
+1. `scripts/create_identity_pack.py`
+   - env-secret 模式合同新增并强制下发：
+     - `signing_key_path`
+     - `bootstrap_env_secret_from_signing_key_path`
+   - materialize 恒定生成 `runtime/state/protocol_gateway_signing_key.txt`。
+   - session-chain wrapper 新增：
+     - session 自动对齐 identity 已绑定会话；
+     - 绑定缺失时自动 upsert（失败即 fail-close）。
+2. `scripts/repair_contract_backfill.py`
+   - 回填上述 signer/bootstrap 字段并刷新 runtime gate 文件。
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - env-secret 策略从“仅 env 字段”升级为“env + key_path + bootstrap bool”；
+   - 增加 runtime parity 对 bootstrap 字段比对。
+4. `scripts/required_gate_bundle_runner.py`
+   - env 未注入时，可按合同 key_path 补载 proof secret（bootstrap=true）。
+5. `scripts/final_emit_governed.py`
+   - env 未注入时，可按合同 key_path 补载 grant secret（bootstrap=true）。
+
+### 24.3 串行实测（本轮）
+
+1. 5 轮串行自测：
+   - 证据：`/tmp/v166-closure-serial-selftest-5.json`
+   - 结果：`overall_passed=true`
+2. 5 轮串行深扫（治理相关项）：
+   - 证据：`/tmp/v166-closure-targeted-deep-scan-5.json`
+   - 结果：`overall_passed=true`
+3. 单轮关键证据：
+   - `/tmp/v166-closure-probe-1.json`：
+     - `session_binding_mode=requested_session_unbound_aligned_to_identity_latest`
+     - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
+   - `/tmp/v166-closure-validate-run1.json`：
+     - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+     - receipt provenance required fields 全部通过。
+
+### 24.4 审计结论
+
+1. 协议+实例 wrapper 执行链路：`PASS_REQUIRED`（含 signer/session 自举）。
+2. 会话 UI 输出头显是否“每条必显”：仍取决于发送器是否物理只消费 wrapper `out_reply_file`。
+3. 本轮口径：
+   - `Policy PASS`
+   - `Implementation CONDITIONAL PASS`（残余项：聊天发送通道物理封口）。
