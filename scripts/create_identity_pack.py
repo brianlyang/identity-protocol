@@ -1527,13 +1527,6 @@ def _resolve_runtime_path(raw_path: str) -> str:
     return str(Path(token).expanduser().resolve())
 
 
-def _resolve_runtime_path(raw_path: str) -> str:
-    token = str(raw_path or "").strip()
-    if not token:
-        return ""
-    return str(Path(token).expanduser().resolve())
-
-
 def _build_wrapper_dispatch_proof(
     *,
     merged: dict[str, Any],
@@ -1930,6 +1923,13 @@ def _load_ingress_receipt(raw: Any) -> dict[str, Any]:
 
 def _canonical_json(data: dict[str, Any]) -> str:
     return json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _resolve_runtime_path(raw_path: str) -> str:
+    token = str(raw_path or "").strip()
+    if not token:
+        return ""
+    return str(Path(token).expanduser().resolve())
 
 
 def _build_egress_grant(
