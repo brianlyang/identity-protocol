@@ -3383,6 +3383,22 @@ def main() -> int:
         if rc_home_align != 0:
             print("[FAIL] identity home/catalog alignment validation failed; activate blocked")
             return rc_home_align
+        scope_isolation_cmd = [
+            "python3",
+            "scripts/validate_identity_scope_isolation.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+        ]
+        if str(args.scope or "").strip():
+            scope_isolation_cmd.extend(["--scope", str(args.scope).strip()])
+        rc_scope_isolation = _run(scope_isolation_cmd)
+        if rc_scope_isolation != 0:
+            print("[FAIL] scope isolation / cross-layer uniqueness validation failed; activate blocked")
+            return rc_scope_isolation
         fixture_boundary_cmd = [
             "python3",
             "scripts/validate_fixture_runtime_boundary.py",
@@ -3473,6 +3489,22 @@ def main() -> int:
         if rc_home_align != 0:
             print("[FAIL] identity home/catalog alignment validation failed; update blocked")
             return rc_home_align
+        scope_isolation_cmd = [
+            "python3",
+            "scripts/validate_identity_scope_isolation.py",
+            "--catalog",
+            args.catalog,
+            "--repo-catalog",
+            args.repo_catalog,
+            "--identity-id",
+            args.identity_id,
+        ]
+        if str(args.scope or "").strip():
+            scope_isolation_cmd.extend(["--scope", str(args.scope).strip()])
+        rc_scope_isolation = _run(scope_isolation_cmd)
+        if rc_scope_isolation != 0:
+            print("[FAIL] scope isolation / cross-layer uniqueness validation failed; update blocked")
+            return rc_scope_isolation
         fixture_boundary_cmd = [
             "python3",
             "scripts/validate_fixture_runtime_boundary.py",

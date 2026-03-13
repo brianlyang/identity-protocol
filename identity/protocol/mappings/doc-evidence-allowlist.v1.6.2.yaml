@@ -169,3 +169,19 @@ strict_docs:
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/stream_pr_binding\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/host_channel_replay\..+\.json$'
       - '^activity/evidence/v166-host-channel/\d{4}-\d{2}-\d{2}/wrapper_contract_snapshot\..+\.json$'
+
+  docs/governance/identity-cross-layer-runtime-uniqueness-governance-v1.6.7.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/cross_layer_duplicate_snapshot\..+\.json$'
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/cross_layer_repair_receipt\..+\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.7.md:
+    max_activity_refs: 40
+    allowed_activity_patterns:
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/cross_layer_duplicate_snapshot\..+\.json$'
+      - '^activity/evidence/v167-cross-layer/\d{4}-\d{2}-\d{2}/cross_layer_repair_receipt\..+\.json$'
