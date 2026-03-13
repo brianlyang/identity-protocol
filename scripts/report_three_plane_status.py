@@ -12,6 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_actor_id
+from identity_creator import (
+    _run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
+    _run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -20,6 +24,9 @@ PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
 LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
+REQUIRED_GATE_BUNDLE_SCRIPT = "scripts/required_gate_bundle_runner.py"
+SESSION_ID_FALLBACK = ""
 
 M2M_VALIDATOR_NAMES: set[str] = {
     "actor_session_binding",
@@ -72,8 +79,20 @@ VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
 )
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
+    run_cmd = list(cmd)
+    script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+    if script == REQUIRED_GATE_BUNDLE_SCRIPT:
+        if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(run_cmd)
+        return rc, (out or "").strip(), (err or "").strip()
+    if script == FINAL_EMIT_SCRIPT:
+        if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+        rc, out, err = _run_final_emit_via_instance_wrappers(run_cmd)
+        return rc, (out or "").strip(), (err or "").strip()
     run_cwd = cwd.resolve() if isinstance(cwd, Path) else PROTOCOL_ROOT
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(run_cwd))
+    p = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(run_cwd))
     return p.returncode, (p.stdout or "").strip(), (p.stderr or "").strip()
 
 
@@ -4392,6 +4411,7 @@ def _git_head_sha() -> str:
 
 
 def main() -> int:
+    global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Emit unified three-plane status for identity governance.")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--catalog", default=os.environ.get("IDENTITY_CATALOG", ""))
@@ -4461,6 +4481,7 @@ def main() -> int:
         )
         return 1
     args.session_id = session_id_input
+    SESSION_ID_FALLBACK = session_id_input
 
     mode_guard_cmd = [
         "python3",

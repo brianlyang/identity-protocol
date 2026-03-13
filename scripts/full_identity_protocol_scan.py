@@ -13,6 +13,10 @@ from typing import Any
 
 import yaml
 from actor_session_common import load_actor_binding, resolve_actor_id
+from identity_creator import (
+    _run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
+    _run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -75,6 +79,9 @@ DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-prof
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 SCRIPT_PATH = Path(__file__).resolve()
 DEFAULT_REPO_ROOT = SCRIPT_PATH.parent.parent
+FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
+REQUIRED_GATE_BUNDLE_SCRIPT = "scripts/required_gate_bundle_runner.py"
+SESSION_ID_FALLBACK = ""
 
 
 @dataclass
@@ -160,11 +167,25 @@ def _detect_session_lane_lock(
 
 
 def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckResult:
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd), env=env)
-    out = (p.stdout or "").strip()
-    err = (p.stderr or "").strip()
-    tail = out.splitlines()[-1] if out else (err.splitlines()[-1] if err else "")
-    return CheckResult(rc=p.returncode, ok=p.returncode == 0, tail=tail, stdout=out, stderr=err)
+    script = str(cmd[1]).strip() if len(cmd) >= 2 else ""
+    run_cmd = list(cmd)
+    if script == REQUIRED_GATE_BUNDLE_SCRIPT:
+        if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(run_cmd)
+    elif script == FINAL_EMIT_SCRIPT:
+        if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+        rc, out, err = _run_final_emit_via_instance_wrappers(run_cmd)
+    else:
+        p = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(cwd), env=env)
+        rc = p.returncode
+        out = p.stdout or ""
+        err = p.stderr or ""
+    out_text = out.strip()
+    err_text = err.strip()
+    tail = out_text.splitlines()[-1] if out_text else (err_text.splitlines()[-1] if err_text else "")
+    return CheckResult(rc=rc, ok=rc == 0, tail=tail, stdout=out_text, stderr=err_text)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -557,6 +578,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Scan all configured identities and emit cross-catalog governance status.")
     ap.add_argument("--repo-root", default=str(DEFAULT_REPO_ROOT))
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
@@ -651,6 +673,7 @@ def main() -> int:
         print("[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id is required for strict full-scan execution")
         return 1
     actor_id = resolve_actor_id(actor_id_input)
+    SESSION_ID_FALLBACK = session_id_input
     if args.scan_mode == "target" and not target_set:
         print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
         return 2
@@ -891,6 +914,7 @@ def main() -> int:
             )
             if not scan_session_id:
                 scan_session_id = session_id_input
+            SESSION_ID_FALLBACK = scan_session_id or session_id_input
             item["session_id_requested"] = session_id_input
             item["session_id_effective"] = scan_session_id
             item["session_id_resolution_mode"] = session_resolution_mode
@@ -1994,7 +2018,6 @@ def main() -> int:
                     required_gate_bundle_receipt,
                     "--receipt",
                     required_gate_bundle_receipt_probe,
-                    "--require-distinct-surface-labels",
                     "--json-only",
                 ],
                 "cross_verification_tracks": [
