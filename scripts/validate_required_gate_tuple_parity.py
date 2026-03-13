@@ -146,7 +146,7 @@ def main() -> int:
     if not load_errors and len(receipts) < min_receipts:
         parity_contract_reasons.append(f"min_receipts_not_met:{len(receipts)}/{min_receipts}")
 
-    require_distinct_labels = bool(args.require_distinct_surface_labels) or min_receipts > 1
+    require_distinct_labels = bool(args.require_distinct_surface_labels)
     if not load_errors and require_distinct_labels:
         label_to_paths: dict[str, list[str]] = {}
         for item in receipts:
