@@ -893,3 +893,55 @@ At least the following remain open, therefore stream posture stays conditional:
 
 1. `Policy PASS`
 2. `Implementation CONDITIONAL PASS`
+
+## 17) 2026-03-13 follow-up on office-ops blocker (serialized verification)
+
+This section records targeted closure for the audit-reported blocker:
+`IP-HDSTAMP-003 + egress_wrapper_parent_attestation_parent_command_mismatch`
+during `identity_creator.py update` pre-mutation flow.
+
+### 17.1 Fix landed (protocol-side method, instance-side landing)
+
+1. `scripts/identity_creator.py`
+   - canonical `final_emit_governed.py` invocations are now routed through per-instance
+     `runtime/gate/protocol_ingress_wrapper.py` + `runtime/gate/protocol_egress_wrapper.py`
+     when contract mode is `wrapper_only`.
+   - canonical `required_gate_bundle_runner.py` invocations are routed through instance ingress wrapper.
+   - wrapper route now preserves `session_id` propagation for update/validate strict paths.
+2. wrapper-route envelope conflict fix:
+   - routed ingress envelope no longer injects legacy `surface_label=creator_validate`,
+     preventing wrapper-surface mismatch against required `host_ingress_wrapper`.
+3. compatibility guard:
+   - if host gateway contract explicitly declares non-wrapper mode, command falls back to
+     canonical direct invocation (no hidden hardcode).
+
+### 17.2 Serialized replay facts (base-repo-architect)
+
+1. Runtime identity context (mandatory resolve):
+   - `source_layer=project`
+   - `catalog_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`
+   - `pack_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-architect`
+2. `identity_creator.py update` replay:
+   - pre-mutation egress now returns `final_emit_guard_status=PASS_REQUIRED`
+   - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
+   - no `egress_wrapper_parent_attestation_parent_command_mismatch` observed
+3. update still blocked later by a different gate:
+   - `IP-PVA-001` / `IP-REL-001` (`report_older_than_key_inputs`)
+   - this is execution-report freshness debt, not wrapper parent-attestation mismatch.
+4. control-plane regression checks after patch remain green:
+   - `validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`
+   - `validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+   - `validate_control_plane_status_sync.py --json-only` -> `PASS_REQUIRED`
+   - `docs_command_contract_check.py` -> `PASS`
+   - `sync_plugin_join_wiring.py --check --json-only` -> `PASS_REQUIRED`
+   - `validate_doc_evidence_persistence.py --json-only` -> `PASS_REQUIRED`
+
+### 17.3 Post-fix posture (no overclaim)
+
+1. Closed in this follow-up:
+   - update pre-mutation wrapper-parent-attestation path mismatch.
+2. Still open:
+   - same trust-domain signer secret self-injection risk (physical non-forgeability not closed).
+   - runtime report freshness debt (`IP-REL-001`) for update chain continuity.
+3. Stream posture remains:
+   - `Policy PASS / Implementation CONDITIONAL PASS`.

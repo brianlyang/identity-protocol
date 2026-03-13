@@ -2009,10 +2009,12 @@ def main() -> int:
     ap.add_argument("--run-id", default="")
     ap.add_argument("--work-layer", default="")
     ap.add_argument("--source-layer", default="")
+    ap.add_argument("--layer-intent-text", default="")
     ap.add_argument("--candidate-output", default="")
     ap.add_argument("--ingress-receipt", default="")
     ap.add_argument("--out-reply-file", default="")
     ap.add_argument("--out-json", default="")
+    ap.add_argument("--blocker-receipt-out", default="")
     ap.add_argument("--contract-path", default="")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
@@ -2051,6 +2053,10 @@ def main() -> int:
         merged["candidate_output"] = args.candidate_output
     if str(args.ingress_receipt or "").strip():
         merged["ingress_receipt"] = args.ingress_receipt
+    if str(args.layer_intent_text or "").strip():
+        merged["layer_intent_text"] = args.layer_intent_text
+    if str(args.blocker_receipt_out or "").strip():
+        merged["blocker_receipt_out"] = args.blocker_receipt_out
 
     missing = [key for key in REQUIRED_FIELDS if not str(merged.get(key, "")).strip()]
     if missing:
@@ -2171,6 +2177,12 @@ def main() -> int:
         cmd.extend(["--out-reply-file", str(args.out_reply_file).strip()])
     if str(args.out_json or "").strip():
         cmd.extend(["--out-json", str(args.out_json).strip()])
+    layer_intent_text = str(merged.get("layer_intent_text", "")).strip()
+    if layer_intent_text:
+        cmd.extend(["--layer-intent-text", layer_intent_text])
+    blocker_receipt_out = str(merged.get("blocker_receipt_out", "")).strip()
+    if blocker_receipt_out:
+        cmd.extend(["--blocker-receipt-out", blocker_receipt_out])
 
     child_env = dict(os.environ)
     child_env["IDENTITY_PROTOCOL_EGRESS_WRAPPER_PATH"] = str(Path(__file__).resolve())

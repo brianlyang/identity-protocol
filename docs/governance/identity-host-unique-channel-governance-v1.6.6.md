@@ -493,6 +493,26 @@ Serialized replay conclusion for this delta:
 3. Closure state remains `CONDITIONAL_PASS` because same trust-domain self-injection is still not physically eliminated:
    - if attacker controls signer secret and wrapper attestation inputs in the same runtime trust domain, full physical non-forgeability is not yet guaranteed.
 
+### 5.4 Update-chain wrapper routing correction (2026-03-13, serialized)
+
+This correction freezes one implementation rule to prevent parent-attestation mismatch during strict update lanes:
+
+1. `identity_creator.py` must not direct-call canonical protocol egress in wrapper-only mode.
+2. For wrapper-only identities, creator strict paths must route through instance wrappers:
+   - ingress: `.identity/<identity_id>/runtime/gate/protocol_ingress_wrapper.py`
+   - egress: `.identity/<identity_id>/runtime/gate/protocol_egress_wrapper.py`
+3. Routed ingress envelope must not override wrapper-owned surface label:
+   - canonical required surface remains `host_ingress_wrapper`.
+4. `session_id` must be propagated end-to-end across creator -> wrapper -> protocol scripts.
+
+Serialized replay outcome (base-repo-architect):
+
+1. pre-mutation egress guard in `identity_creator update` now reaches:
+   - `final_emit_guard_status=PASS_REQUIRED`
+   - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
+2. previous mismatch signal (`egress_wrapper_parent_attestation_parent_command_mismatch`) is not reproduced after routing correction.
+3. remaining update blocker shifts to report freshness (`IP-PVA-001` / `IP-REL-001`), not wrapper parent-attestation wiring.
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:
