@@ -619,6 +619,52 @@ Posture after this correction:
 1. `Policy PASS`
 2. `Implementation CONDITIONAL PASS`
 
+### 5.9 Final closure round (2026-03-13, serialized 5x5 replay)
+
+This round closes the remaining v1.6.6 scan/three-plane wrapper-bypass surface by upgrading
+runtime scanners to use the same wrapper-routed execution semantics as creator strict lanes.
+
+Implemented:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - required-gate bundle calls are wrapper-routed (ingress wrapper) under wrapper-only contracts.
+   - send-time compose calls are wrapper-routed (egress wrapper) under wrapper-only contracts.
+   - scan session id fallback is propagated into wrapper-routed required-gate calls.
+   - scan tuple parity check no longer forces distinct surface labels for scan/scan replay pair.
+2. `scripts/report_three_plane_status.py`
+   - required-gate bundle calls are wrapper-routed (ingress wrapper) under wrapper-only contracts.
+   - send-time compose preflight is wrapper-routed (egress wrapper) under wrapper-only contracts.
+   - strict three-plane session id is propagated as wrapper fallback session.
+
+Serialized replay result (base-repo-architect):
+
+1. Self-test (5 serial rounds):
+   - run ids:
+     - `v166-selftest-post-r1-1773394376`
+     - `v166-selftest-post-r2-1773394378`
+     - `v166-selftest-post-r3-1773394380`
+     - `v166-selftest-post-r4-1773394383`
+     - `v166-selftest-post-r5-1773394385`
+   - each round:
+     - ingress `bundle_status=PASS_REQUIRED`
+     - `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+     - unique-entry gate `PASS_REQUIRED`
+     - egress `final_emit_guard_status=PASS_REQUIRED`
+2. Deep scan (5 serial rounds):
+   - each round:
+     - `rc=0`
+     - `summary: p0=0, p1=0, ok=1`
+     - `summary_m2m: fail=0`
+3. Mandatory closure interpretation:
+   - wrapper-routed scan/three-plane path is now aligned with creator strict path.
+   - previous m2m blocker set (`IP-HDSTAMP-003`, `IP-HDSTAMP-001`, wrapper provenance drift on scan)
+     is not reproduced in serialized replay.
+
+v1.6.6 acceptance posture (this stream, frozen):
+
+1. `Policy PASS`
+2. `Implementation PASS`
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:

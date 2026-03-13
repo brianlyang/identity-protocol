@@ -1128,3 +1128,55 @@ Interpretation:
 3. Reason conditional remains:
    - signer-root trust still not physically separated from same-domain caller control;
    - deep-scan still reports one stable P0 instance debt item.
+
+## 22) Final closure replay (2026-03-13, serialized 5x5)
+
+### 22.1 Code delta in this round
+
+1. `scripts/full_identity_protocol_scan.py`
+   - routes `required_gate_bundle_runner.py` through instance ingress wrapper.
+   - routes `final_emit_governed.py` send-time compose through instance egress wrapper.
+   - propagates strict scan session-id fallback into wrapper-routed gate calls.
+   - removes scan tuple parity dependency on distinct surface labels.
+2. `scripts/report_three_plane_status.py`
+   - routes `required_gate_bundle_runner.py` through instance ingress wrapper.
+   - routes send-time compose preflight through instance egress wrapper.
+   - propagates strict three-plane session-id fallback into wrapper-routed calls.
+
+### 22.2 Serialized replay evidence summary
+
+Self-test (5 serial rounds, base-repo-architect):
+
+1. `v166-selftest-post-r1-1773394376`
+2. `v166-selftest-post-r2-1773394378`
+3. `v166-selftest-post-r3-1773394380`
+4. `v166-selftest-post-r4-1773394383`
+5. `v166-selftest-post-r5-1773394385`
+
+Per round all pass:
+
+1. `bundle_status=PASS_REQUIRED`
+2. `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+3. `protocol_unique_entry_gate_status=PASS_REQUIRED`
+4. `final_emit_guard_status=PASS_REQUIRED`
+
+Deep scan (5 serial rounds, same identity):
+
+1. all rounds: `rc=0`
+2. all rounds: `summary(p0=0,p1=0,ok=1)`
+3. all rounds: `summary_m2m(fail=0)`
+
+### 22.3 Regression interpretation
+
+1. Previously recurring scan/three-plane wrapper bypass indicators are closed in this replay window:
+   - `IP-HDSTAMP-003`
+   - `IP-HDSTAMP-001`
+   - scan required-gate wrapper provenance drift (`IP-GATE-ENTRY-001` from non-wrapper surfaces)
+2. Replay now shows deterministic all-green scan posture for `base-repo-architect` under strict actor/session binding.
+
+### 22.4 Closure verdict for v1.6.6
+
+1. `Policy PASS`
+2. `Implementation PASS`
+3. scope statement:
+   - verdict applies to v1.6.6 frozen closure gates and serialized replay contract in this stream.
