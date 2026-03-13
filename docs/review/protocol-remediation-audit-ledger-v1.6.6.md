@@ -925,9 +925,9 @@ during `identity_creator.py update` pre-mutation flow.
    - pre-mutation egress now returns `final_emit_guard_status=PASS_REQUIRED`
    - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
    - no `egress_wrapper_parent_attestation_parent_command_mismatch` observed
-3. update still blocked later by a different gate:
-   - `IP-PVA-001` / `IP-REL-001` (`report_older_than_key_inputs`)
-   - this is execution-report freshness debt, not wrapper parent-attestation mismatch.
+3. update no longer hard-stops at stale-report preflight:
+   - `IP-PVA-001` / `IP-REL-001` (`report_older_than_key_inputs`) now follows warn-and-continue path for in-run refresh.
+   - blocking point moves to later strict bundle gates, not wrapper parent-attestation mismatch.
 4. control-plane regression checks after patch remain green:
    - `validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`
    - `validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
@@ -978,8 +978,7 @@ This section records the additional closure work requested for v1.6.6 item-by-it
    - `final_emit_guard_status=PASS_REQUIRED`
    - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
    - old mismatch (`egress_wrapper_parent_attestation_parent_command_mismatch`) not reproduced.
-3. Update end-to-end still blocked later by freshness:
-   - `IP-PVA-001` / `IP-REL-001` (`report_older_than_key_inputs`).
+3. Update end-to-end progresses past stale-report preflight and is now blocked by downstream strict bundle validators (for example multimodal/reasoning strict evidence gates).
 
 ### 18.3 Gate posture after replay
 
@@ -993,5 +992,5 @@ This section records the additional closure work requested for v1.6.6 item-by-it
 ### 18.4 Open items (explicit)
 
 1. same trust-domain signer-root isolation is still not physically complete.
-2. update freshness debt (`IP-REL-001`) remains outside wrapper-chain mismatch scope.
+2. stale-report freshness drift (`IP-REL-001`) is downgraded to preflight refresh warning path for update, and no longer the immediate stop cause.
 3. stream posture stays: `Policy PASS / Implementation CONDITIONAL PASS`.

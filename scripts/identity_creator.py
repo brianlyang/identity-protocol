@@ -3861,6 +3861,12 @@ def main() -> int:
         pva_baseline_ok = bool(tuple_checks.get("protocol_baseline_freshness", False))
         pva_prompt_ok = bool(tuple_checks.get("prompt_activation", False))
         pva_binding_ok = bool(tuple_checks.get("binding_tuple", False))
+        pva_freshness_payload = pva_payload.get("execution_report_freshness", {})
+        if not isinstance(pva_freshness_payload, dict):
+            pva_freshness_payload = {}
+        pva_freshness_stale_reasons = pva_freshness_payload.get("stale_reasons", [])
+        if not isinstance(pva_freshness_stale_reasons, list):
+            pva_freshness_stale_reasons = []
         legacy_tuple_refresh_allowed = (
             str(args.baseline_policy or "").strip().lower() == "strict"
             and pva_error_code in {"IP-PVA-003", "IP-PVA-004"}
@@ -3868,7 +3874,16 @@ def main() -> int:
             and pva_baseline_ok
             and (not pva_prompt_ok or not pva_binding_ok)
         )
-        if rc_pva != 0 and not legacy_tuple_refresh_allowed:
+        stale_report_refresh_allowed = (
+            str(args.baseline_policy or "").strip().lower() == "strict"
+            and pva_error_code == "IP-PVA-001"
+            and not pva_freshness_ok
+            and pva_baseline_ok
+            and pva_prompt_ok
+            and pva_binding_ok
+            and "report_older_than_key_inputs" in {str(x).strip() for x in pva_freshness_stale_reasons}
+        )
+        if rc_pva != 0 and not legacy_tuple_refresh_allowed and not stale_report_refresh_allowed:
             print("[FAIL] protocol version alignment validation failed; update blocked")
             return rc_pva
         if rc_pva != 0 and legacy_tuple_refresh_allowed:
@@ -3879,6 +3894,15 @@ def main() -> int:
             print(
                 "[WARN] protocol version alignment preflight reported legacy prompt/binding tuple drift; "
                 "continuing update to refresh execution tuple in-run"
+            )
+        if rc_pva != 0 and stale_report_refresh_allowed:
+            if not phase_transition_reason:
+                phase_transition_reason = "stale_execution_report_refresh"
+            if not phase_transition_error_code:
+                phase_transition_error_code = pva_error_code
+            print(
+                "[WARN] protocol version alignment preflight reported stale execution report; "
+                "continuing update to refresh report freshness in-run"
             )
         effective_capability_activation_policy = str(args.capability_activation_policy or "strict-union").strip().lower()
         capability_preflight_cmd = [

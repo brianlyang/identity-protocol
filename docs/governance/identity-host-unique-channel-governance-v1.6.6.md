@@ -511,7 +511,7 @@ Serialized replay outcome (base-repo-architect):
    - `final_emit_guard_status=PASS_REQUIRED`
    - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
 2. previous mismatch signal (`egress_wrapper_parent_attestation_parent_command_mismatch`) is not reproduced after routing correction.
-3. remaining update blocker shifts to report freshness (`IP-PVA-001` / `IP-REL-001`), not wrapper parent-attestation wiring.
+3. stale report freshness (`IP-PVA-001` / `IP-REL-001`) is now treated as in-run refreshable preflight drift (warn-and-continue) instead of hard stop; downstream strict bundle gates remain authoritative blockers.
 
 ### 5.5 Attestation strictness uplift + env-forge probes (2026-03-13, serialized)
 
