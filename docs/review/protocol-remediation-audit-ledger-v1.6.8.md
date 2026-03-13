@@ -1,6 +1,6 @@
 # Protocol Remediation Audit Ledger (v1.6.8 downsink path immutability stream)
 
-Status: Active  
+Status: Active (implementation replay verified on 2026-03-14)  
 Scope: protocol-only review ledger for path immutability of all protocol-governed downsink assets.
 
 ## 0) Stream objective
@@ -121,3 +121,41 @@ Evidence root pattern (strict docs):
 3. `identity/protocol/mappings/control-plane-invariants.current.yaml`
 4. `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
 5. `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+## 10) Implementation landing + serial replay closure (2026-03-14)
+
+### 10.1 Landed code surfaces
+
+1. Contract generation/materialization:
+   - `scripts/create_identity_pack.py`
+   - `scripts/repair_contract_backfill.py`
+2. New validators:
+   - `scripts/validate_protocol_downsink_path_immutability.py`
+   - `scripts/validate_protocol_downsink_path_write_guard.py`
+3. Required workflow + probe runner:
+   - `.github/workflows/_identity-required-gates.yml`
+   - `scripts/ci/run_downsink_path_immutability_probes_ci.sh`
+4. Runtime/deep-scan integration:
+   - `scripts/identity_creator.py`
+   - `scripts/report_three_plane_status.py`
+   - `scripts/full_identity_protocol_scan.py`
+
+### 10.2 Serial replay evidence (meets 5 + 5 requirement)
+
+1. Self-test 5 rounds (serial):
+   - `activity/evidence/v168-path-immutability/2026-03-14/selftest_overview_summary.json`
+2. Deep-scan 5 rounds (serial):
+   - `activity/evidence/v168-path-immutability/2026-03-14/deep_scan_overview_summary.json`
+3. Required CI negative probe matrix:
+   - `activity/evidence/v168-path-immutability/2026-03-14/path_probe_matrix.v168.20260314.json`
+   - `activity/evidence/v168-path-immutability/2026-03-14/ci_required_probe_report.v168.20260314.json`
+4. Registry parity snapshot:
+   - `activity/evidence/v168-path-immutability/2026-03-14/path_registry_snapshot.v168.20260314.json`
+5. Unified manifest:
+   - `activity/evidence/v168-path-immutability/2026-03-14/EVIDENCE_MANIFEST.v168.20260314.json`
+
+### 10.3 Verdict
+
+1. Policy verdict: `PASS`.
+2. Implementation verdict: `PASS`.
+3. Stream conclusion: v1.6.8 path immutability closure is landed and replay-verified under serial constraints.

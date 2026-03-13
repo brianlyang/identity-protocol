@@ -1,6 +1,6 @@
 # Identity Downsink Path Immutability Governance (v1.6.8)
 
-Status: Active (pre-development governance freeze)  
+Status: Active (implementation landed + serial replay verified, 2026-03-14)  
 Layer: protocol  
 Scope: all protocol-governed downsink assets (runtime gate / runtime broadcast / runtime protocol-feedback / future governed domains)
 
@@ -213,10 +213,12 @@ Protocol broadcast item for v1.6.8 must include:
    - `identity_id`, `source_layer`, `path_registry_status`, `negative_probe_status`, `error_code`, `stale_reasons`.
 4. required receipt location pattern under canonical outbox path.
 
-## 8) Stream posture (initial freeze)
+## 8) Stream posture (2026-03-14 closure)
 
-1. Policy posture: `PASS` (governance baseline frozen).
-2. Implementation posture: `CONDITIONAL_PASS` until validators + CI probes are fully landed and replayed.
+1. Policy posture: `PASS` (governance baseline frozen and registry-anchored).
+2. Implementation posture: `PASS` (validators + CI probe matrix + serial replay evidence landed).
+3. Canonical evidence root:
+   - `activity/evidence/v168-path-immutability/2026-03-14/EVIDENCE_MANIFEST.v168.20260314.json`
 
 ## 9) Stream continuity alias pointers
 

@@ -792,13 +792,13 @@ Serialized attach check (base-repo-architect):
 串行回放证据（本轮本地）：
 
 1. 5 轮串行自测：
-   - `/tmp/v166-closure-serial-selftest-5-v2.json`
+   - `activity/evidence/v166-host-channel/2026-03-13/v166_closure_serial_selftest_5_v2_summary.json`
    - `overall_passed=true`
 2. 5 轮串行深扫（轻量治理面）：
-   - `/tmp/v166-closure-targeted-deep-scan-5-light.json`
+   - `activity/evidence/v166-host-channel/2026-03-13/v166_closure_targeted_deep_scan_5_light_summary.json`
    - `overall_passed=true`
 3. trust-boundary CI 日志：
-   - `/tmp/v166-closure-gateway-trust-boundary-ci.log`
+   - `activity/evidence/v166-host-channel/2026-03-13/v166_closure_gateway_trust_boundary_ci_summary.json`
 
 口径保持：
 

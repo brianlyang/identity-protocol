@@ -1321,15 +1321,15 @@ commit: `cb4478e`
      - `error_code=IP-GATE-ENTRY-002`
      - `stale_reasons` 命中 `session_chain_parent_attestation_env_path_missing`（及父命令缺失/不匹配）
 2. 5 轮串行自测：
-   - `/tmp/v166-closure-serial-selftest-5-v2.json`
+   - `activity/evidence/v166-host-channel/2026-03-13/v166_closure_serial_selftest_5_v2_summary.json`
    - `overall_passed=true`
 3. 5 轮串行深扫（轻量治理面）：
-   - `/tmp/v166-closure-targeted-deep-scan-5-light.json`
+   - `activity/evidence/v166-host-channel/2026-03-13/v166_closure_targeted_deep_scan_5_light_summary.json`
    - `overall_passed=true`
 4. trust-boundary CI 全量探针：
    - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
    - `rc=0`
-   - 日志：`/tmp/v166-closure-gateway-trust-boundary-ci.log`
+   - 日志：`activity/evidence/v166-host-channel/2026-03-13/v166_closure_gateway_trust_boundary_ci_summary.json`
 
 ### 25.4 审计结论
 
