@@ -478,3 +478,76 @@ Supplemental diagnostic (recorded only):
    - `IP-HDSTAMP-003`
    - `IP-GATE-ENTRY-001`
 3. Per v1.6.5 Section-3 closure rules, this diagnostic is tracked as downstream v1.6.6 hardening input and does not replace or negate the mandatory deep-scan five-round closure.
+
+### 7.12 Real business probe: broadcast read + skill push/install/use closure (2026-03-13, base-repo-audit-expert-v3)
+
+This checkpoint addresses the hard requirement that closure evidence must show real runtime behavior, not declaration-only status.
+
+#### A. Broadcast read was explicitly fetched and consumed (not only counter pass)
+
+1. Runtime state file verified:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/state/broadcast_state.json`
+2. Receipt + ack artifacts verified:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/reports/broadcast/broadcast-receipt-v165-selftest-r3-20260313b-1773393415.json`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/reports/broadcast/broadcast-ack-v165-selftest-r4-20260313b-1773393432.json`
+3. Receipt payload showed the test broadcast id in all required read/ack transition fields:
+   - `visible_ids`, `unread_ids`, `pending_ack_ids`, `critical_unacked_ids`
+4. Ack payload showed:
+   - `acked_ids` includes test id
+   - `remaining_pending_ack_ids=[]`
+5. State convergence confirmed after ack:
+   - `pending_ack_ids=[]`
+   - `critical_unacked_ids=[]`
+   - test id retained in `read_ids` + `acked_ids` tails
+
+#### B. Skill push/install/use was executed as a real chain
+
+1. Temporary runtime probe scope:
+   - identity: `base-repo-audit-expert-v3`
+   - contract route patched for probe: `capability_orchestration_contract.task_type_routes.knowledge_api_probe.fallback_skills += v165-selftest-broadcast-skill`
+2. Before install:
+   - `validate_identity_capability_activation --activation-policy route-any-ready`
+   - result: `status=BLOCKED`, `error=IP-CAP-003`
+   - notes include `missing_skills=['v165-selftest-broadcast-skill']`
+3. Skill push/install target (project-local runtime-allowed root):
+   - `/Users/yangxi/claude/codex_project/weixinstore/.codex/skills/v165-selftest-broadcast-skill/SKILL.md`
+   - `/Users/yangxi/claude/codex_project/weixinstore/.codex/skills/v165-selftest-broadcast-skill/scripts/read_broadcast_state.py`
+4. After install:
+   - `validate_identity_capability_activation --activation-policy route-any-ready`
+   - result: `status=ACTIVATED`
+   - `active_skills` now contains `v165-selftest-broadcast-skill`
+5. Path integrity proof:
+   - `validate_skill_path_integrity --operation scan --json-only` => `path_integrity_status=PASS_REQUIRED`
+   - `skill_path_rows` contains the installed probe skill path with `path_exists=true` and `path_within_active_layout=true`
+6. Real usage proof (not only activation):
+   - command executed:
+     - `python3 .../.codex/skills/v165-selftest-broadcast-skill/scripts/read_broadcast_state.py --state .../runtime/state/broadcast_state.json`
+   - output confirms runtime state consumption:
+     - `pending_ack_count=0`
+     - `critical_unacked_count=0`
+     - and valid `read_count`/`acked_count`
+
+#### C. Runtime hygiene
+
+1. Probe-only `CURRENT_TASK.json` patch was restored to original snapshot after test:
+   - backup: `/tmp/base-repo-audit-expert-v3-CURRENT_TASK.backup.20260313c.json`
+2. Post-restore activation recheck:
+   - `validate_identity_capability_activation --activation-policy route-any-ready`
+   - result: `status=ACTIVATED`
+   - required/active skill sets returned to baseline (probe skill removed from required set).
+
+#### D. First-person usage notes (real use effect)
+
+1. I used the installed probe skill directly before and after ack against the live instance state file:
+   - before ack output (`/tmp/v165-skill-use-before-ack.json`):
+     - `pending_ack_count=1`
+     - `critical_unacked_count=1`
+   - after ack output (`/tmp/v165-skill-use-after-ack.json`):
+     - `pending_ack_count=0`
+     - `critical_unacked_count=0`
+2. Observed effect:
+   - The skill gives an immediate, low-latency view of broadcast backlog state from instance runtime state.
+   - It is useful as an operator-facing quick check for “whether this round still has critical unacked messages”.
+   - The read model is deterministic and consistent with wrapper receipt/ack transitions, so it is suitable for runtime triage.
+3. Cleanup:
+   - The live probe broadcast item (`v165-skill-use-1773395622`) was removed from protocol broadcast items after verification.
