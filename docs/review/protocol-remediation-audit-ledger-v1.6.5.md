@@ -443,3 +443,38 @@ Supplemental diagnostic (recorded, not closure gate replacement):
 
 1. `full_identity_protocol_scan.py --scan-mode target --with-docs-contract` using bound session id ran successfully but returned `summary.p0=1` / `summary_m2m.fail=1` on v1.6.6 strict-runtime checks (`IP-HDSTAMP-003`, `IP-GATE-ENTRY-001` family).
 2. This checkpoint keeps that result as downstream runtime hardening input and does not mark it as a v1.6.5 closure failure by itself.
+
+### 7.11 Serial closure rerun checkpoint (2026-03-13, base-repo-audit-expert-v3)
+
+This rerun is the strict serial replay requested after Section-3 standards freeze.
+All loops were executed in sequence only (no parallel steps).
+
+Serial self-test loop (`>=5`) rerun:
+
+1. `repair_contract_backfill --apply` => `PASS_REQUIRED` (`contract_backfill_status`, `host_gateway_contract_auto_wire_status`).
+2. `validate_protocol_unique_entry_gate --operation scan --force-check` => `PASS_REQUIRED` (`protocol_unique_entry_gate_status`, `protocol_host_gateway_broadcast_policy_status`).
+3. ingress wrapper (`run_id=v165-selftest-r3-20260313b`) with temporary critical broadcast item => `broadcast_visible_count=1`, `broadcast_unread_count=1`, `broadcast_pending_ack_count=1`, `broadcast_critical_unacked_count=1`.
+4. `identity_broadcast_ack.py --ack-all-pending` (`run_id=v165-selftest-r4-20260313b`) => `identity_broadcast_ack_status=PASS_REQUIRED`, `remaining_pending_ack_ids=[]`, `remaining_critical_unacked_ids=[]`.
+5. ingress wrapper (`run_id=v165-selftest-r5-20260313b`) => `broadcast_unread_count=0`, `broadcast_pending_ack_count=0`, `broadcast_critical_unacked_count=0`.
+
+Serial deep-scan loop (`>=5`) rerun:
+
+1. `validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`.
+2. `validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`.
+3. `validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`.
+4. `validate_doc_evidence_persistence.py --json-only` => `PASS_REQUIRED`.
+5. `validate_protocol_unique_entry_gate.py --operation scan --force-check --json-only` => `PASS_REQUIRED`.
+
+Auxiliary gate replay:
+
+1. `docs_command_contract_check.py` => `PASS`.
+
+Supplemental diagnostic (recorded only):
+
+1. `full_identity_protocol_scan.py --scan-mode target --with-docs-contract` (same actor/session binding) completed and produced:
+   - `summary: p0=1, p1=0, ok=0`
+   - `summary_m2m: fail=1`
+2. Current dominant strict-runtime error families remain:
+   - `IP-HDSTAMP-003`
+   - `IP-GATE-ENTRY-001`
+3. Per v1.6.5 Section-3 closure rules, this diagnostic is tracked as downstream v1.6.6 hardening input and does not replace or negate the mandatory deep-scan five-round closure.
