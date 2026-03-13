@@ -541,6 +541,24 @@ Serialized replay summary for this uplift:
    - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
 3. stream posture remains `CONDITIONAL_PASS` until signer root trust is physically separated from same-domain caller control.
 
+### 5.6 L3 reasoning fallback bootstrap hardening (2026-03-13, serialized)
+
+To avoid strict update lanes being blocked by legacy minimal learning samples, this stream adds
+deterministic L3 bootstrap enrichment:
+
+1. `scripts/repair_identity_learning_sample.py`
+   - upgrades bootstrap payload to include L3-minimum fields used by `RQ-035` fail-close checks:
+     - attempt fields: `result_code`, `target_reached`, `no_target_reached`, `next_action`, `evidence_refs`
+     - run fields: `roundtable_evidence_refs`, `vendor_evidence_refs`, `network_evidence_refs`, `reference_evidence_refs`
+     - external fields: `external_source_freshness_status`, `conflict_reconciliation_note`, `source_url_set`
+   - auto-repairs existing learning sample files when the file exists but misses L3-required fields.
+   - preserves existing sample `run_id` when enriching an existing sample.
+2. This is a protocol-side method update only (not manual instance hand-edit):
+   - instance owners run repair tool; tool performs down-sunk file mutation in instance runtime path.
+3. This hardening changes blocker class:
+   - from "bootstrap sample structurally insufficient for strict reasoning gate"
+   - to "instance still owes real runtime evidence/writeback closure" (expected for conditional posture).
+
 ## 6) External references
 
 1. OpenAI Codex approvals and sandbox:

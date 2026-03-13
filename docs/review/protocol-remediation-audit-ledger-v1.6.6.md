@@ -994,3 +994,46 @@ This section records the additional closure work requested for v1.6.6 item-by-it
 1. same trust-domain signer-root isolation is still not physically complete.
 2. stale-report freshness drift (`IP-REL-001`) is downgraded to preflight refresh warning path for update, and no longer the immediate stop cause.
 3. stream posture stays: `Policy PASS / Implementation CONDITIONAL PASS`.
+
+## 19) Office-instance follow-up replay mapping (2026-03-13, serialized)
+
+This section records a concrete downstream instance replay after wrapper-chain fixes were applied.
+
+### 19.1 Observed replay map (no overclaim)
+
+1. preflight/session-chain binding can pass after activate rebinding.
+2. strict update bundle still blocked by one remaining required contract:
+   - `asb16-rq-034` -> `PASS_REQUIRED`
+   - `asb16-rq-035` -> `FAIL_REQUIRED` (`IP-RL-RUN-002`)
+3. post-execution mandatory validator remains blocked on stale/non-closed report fields:
+   - `IP-WRB-003`
+4. prompt lifecycle validator can still fail on report hash drift when update does not produce a fresh closed report.
+
+Interpretation:
+
+1. wrapper routing/attestation fix is effective.
+2. residual blocker has shifted to runtime evidence quality and report closure consistency.
+
+### 19.2 Protocol-side method hardening for `RQ-035` bootstrap debt
+
+1. landed in `scripts/repair_identity_learning_sample.py`:
+   - L3-complete bootstrap payload generation.
+   - existing sample auto-enrichment when missing L3 required fields.
+2. this reduces false blocker class where old bootstrap samples fail strict reasoning gate before
+   instance-specific evidence loops can execute.
+
+### 19.3 Deterministic rerun sequence for instance operators
+
+Under wrapper-only strict policy, rerun in this order:
+
+1. `python3 scripts/repair_identity_learning_sample.py --catalog <runtime_catalog> --identity-id <identity_id>`
+2. `python3 scripts/identity_creator.py activate --identity-id <identity_id>`
+3. `python3 scripts/identity_creator.py update --identity-id <identity_id>`
+4. `python3 scripts/validate_reasoning_loop_failclose.py --catalog <runtime_catalog> --identity-id <identity_id> --operation update --json-only`
+5. `python3 scripts/validate_post_execution_mandatory.py --catalog <runtime_catalog> --identity-id <identity_id> --operation update --json-only`
+
+Pass target for this sequence:
+
+1. `RQ-035` moves from bootstrap-structure failure to runtime evidence closure.
+2. `IP-WRB-003` is evaluated against fresh update run output, not stale pre-fix report.
+3. posture stays `CONDITIONAL PASS` until signer trust boundary + physical conversation transport binding are closed.
