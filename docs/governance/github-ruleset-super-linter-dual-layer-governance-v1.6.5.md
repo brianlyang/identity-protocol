@@ -73,7 +73,14 @@ Hard boundary:
 1. Workflow/script hardcoded one-off policy that bypasses mapping intent is invalid.
 2. If mapping and document intent diverge, mapping+required-gate outputs win.
 
-## 3) Super-linter governance contract (speed + strictness)
+## 3) Section-3 execution contract (newcomer/recall safe)
+
+### 3.0 Role lock (why this section exists)
+
+1. Section 3 is the execution checklist for newcomer handoff and memory-loss recovery.
+2. This checklist is triggered on governance mutation/update/review actions, not per-round chat runtime.
+3. Runtime per-round wrapper enforcement remains the v1.6.6 scope; v1.6.5 Section 3 guarantees operators can always recover the correct governance actions from machine-checkable steps.
+4. No closure claim is valid if Section 3 cannot be executed by a fresh operator without tribal-memory assumptions.
 
 ### 3.1 Minimal fixed profile (avoid sprawl)
 
@@ -90,11 +97,25 @@ Super-linter must run with a fixed narrow profile first:
    - JSON
    - Markdown
    - GitHub Actions workflow syntax
+4. check name must remain stable across `pull_request` + `merge_group` surfaces so required-check bindings do not drift.
 
-### 3.2 Runtime SLO contract
+### 3.2 Health + wiring contract (machine-first)
+
+Section-3 completion requires both health and wiring proofs:
+
+1. Machine health checks must stay green:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+2. Required-gate workflow must include fixed-profile super-linter and delegated required-runtime gate lane (`scripts/ci/run_required_runtime_gates_ci.sh`) as auditable wiring surface.
+3. Drift/invariant validators must fail-close if super-linter/check-name/wiring tokens are missing or renamed.
+4. This contract is the attach-ready prerequisite for v1.6.6 unique-entry governance hooks (health broadcast, gate wiring, and status publication).
+
+### 3.2.1 Runtime SLO guard (front-door loop)
 
 1. Pre-merge business preflight target: `P95 < 3 minutes`.
-2. If super-linter profile expansion breaks this bound, expansion must be rolled back or split into non-blocking lanes before re-promotion.
+2. If profile expansion breaks this bound, expansion must be rolled back or split into non-blocking lanes before re-promotion.
 3. Release lanes may remain heavier; this SLO applies to front-door developer feedback loop.
 
 ### 3.3 Supply-chain control contract
@@ -102,6 +123,12 @@ Super-linter must run with a fixed narrow profile first:
 1. super-linter action references must be pinned and policy-reviewed.
 2. ruleset required-check binding must use stable check names to avoid merge-queue/required-check drift.
 3. action source policy (GitHub-owned/verified/pinning strategy) remains governed by offload mapping and platform receipts.
+
+### 3.4 Governance broadcast-readiness contract (for downstream runtime hooks)
+
+1. Section 3 must keep stream docs, allowlist, and control-plane status pointers machine-synchronized so runtime wrappers can consume one current governance state.
+2. Required-gate outcomes must publish canonical statuses/error families (not ad-hoc log text) for deterministic downstream broadcast and recovery guidance.
+3. If Section-3 status is stale or pointer-drifted, downstream runtime broadcast is treated as non-authoritative and release posture remains `CONDITIONAL_GO`.
 
 ## 4) GitHub rulesets hardening contract
 

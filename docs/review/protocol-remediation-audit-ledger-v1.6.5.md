@@ -92,26 +92,43 @@ Action taken:
 1. Findings above are now normalized into stream-level acceptance wording (section 4 and section 6).
 2. No semantic validator scope was expanded/reduced based on this feedback; only closure posture and activation obligations are tightened.
 
-## 3) Implementation checklist (v1.6.5)
+## 3) Implementation checklist (v1.6.5 section-3 execution pack)
+
+### 3.0 Role lock (newcomer/recall safe)
+
+1. Section 3 is the memory-independent execution pack for newcomer handoff and recall recovery.
+2. Operators must be able to run this checklist from machine-visible contracts/evidence without relying on tribal memory.
+3. Scope boundary: this section governs control-plane health/wiring/activation readiness; per-round runtime wrapper enforcement remains v1.6.6 scope.
 
 ### 3.1 Governance/data-plane readiness (must complete first)
 
 1. stream docs registered in stream-doc registry and alias requirements.
 2. strict evidence allowlist rows registered for v1.6.5 governance/review docs.
 3. audit index updated with v1.6.5 canonical pointers.
+4. docs command contract remains green after registry/allowlist/index updates.
 
-### 3.2 Code/CI hardening
+### 3.2 Health + wiring hardening
 
-1. add super-linter workflow (or reusable lane) with fixed profile.
+1. add super-linter workflow (or reusable lane) with fixed profile and stable check naming.
 2. bind super-linter check name into required checks/ruleset intent map.
-3. enforce anti-bypass in drift/invariant validators for newly introduced lint lane.
-4. keep existing semantic validators unchanged except integration wiring.
+3. required-gate workflow wiring must include delegated required-runtime gate lane (`scripts/ci/run_required_runtime_gates_ci.sh`) and remain drift-checkable.
+4. enforce anti-bypass in drift/invariant validators for newly introduced lint lane.
+5. keep existing semantic validators unchanged except integration wiring.
 
 ### 3.3 Platform activation and receipt closure
 
 1. apply ruleset restrictions for file path/extension/size.
 2. verify required-check binding includes required gates + super-linter.
 3. record activation receipts and exceptions (if any) in offload mapping status.
+4. keep explicit exception posture when platform capability is unavailable (no silent omission).
+
+### 3.4 Unique-entry attach readiness bridge (for v1.6.6 downstream hooks)
+
+1. Section-3 outputs (`invariants/drift/status/docs-contract`) must stay machine-parseable as authoritative governance state for downstream runtime hook broadcast.
+2. required-gate surfaces must keep gateway trust-boundary delegate visibility when host-channel controls are enabled:
+   - `.github/workflows/_identity-required-gates.yml`
+   - `scripts/validate_required_gate_surface_drift.py`
+3. This bridge does not replace v1.6.6 runtime closure tests; it guarantees upstream governance state is reliable and consumable.
 
 ## 4) Acceptance criteria
 
@@ -123,6 +140,8 @@ No implementation closure is accepted unless all checks pass:
 4. `python3 scripts/docs_command_contract_check.py`
 5. super-linter required check green in PR context
 6. ruleset activation receipt includes path/extension/size outcome (or explicit platform exception)
+7. Section-3 execution pack (3.1-3.3) is runnable from clean operator context without hidden prerequisites.
+8. when host-channel controls are enabled, gateway trust-boundary probe wiring remains present and drift-checked.
 
 ## 5) Residual risk register (initial)
 
