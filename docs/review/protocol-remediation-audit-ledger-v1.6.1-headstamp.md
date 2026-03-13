@@ -132,3 +132,42 @@ This section records the review-side understanding upgrade after v1.6.6 channel 
 3. Future promotions must avoid over-claim:
    - semantic green alone is insufficient without channel proof;
    - channel green alone is insufficient without semantic correctness.
+
+## 9) Coupling replay audit (v1.6.1 with v1.6.6 foundation, 2026-03-13)
+
+This checkpoint re-audits v1.6.1 under the current v1.6.6 closure baseline.
+
+### 9.1 Replay tuple
+
+1. identity: `base-repo-architect`
+2. actor/session: `assistant:codex` / `session-wrapper-chain`
+3. run id: `v161-v166-link-audit-20260313-2`
+4. source/work layer: `project` / `protocol`
+
+### 9.2 Item-by-item outcome
+
+1. ingress wrapper (`operation=scan`) -> `PASS_REQUIRED`
+   - receipt + provenance + parent-attestation all pass.
+2. `validate_protocol_unique_entry_gate --require-entry-receipt` -> `PASS_REQUIRED`
+   - wrapper-only contract and runtime gateway files all pass.
+3. `validate_headstamp_recurrence_closure --operation scan` -> `PASS_REQUIRED`
+   - dynamic replay and recurrence closure pass;
+   - canonical negative family remains `IP-HDSTAMP-*`.
+4. egress wrapper (same run/actor/session bound) -> `PASS_REQUIRED`
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `final_emit_guard_status=PASS_REQUIRED`
+   - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
+
+### 9.3 Audit interpretation
+
+1. v1.6.6 is validated as an execution deepening base for v1.6.1 (transport channel closure).
+2. v1.6.1 remains semantic owner (HUD/headstamp semantics + canonical error family).
+3. The two streams are now audit-coupled by machine receipts, not by narrative assertion.
+
+### 9.4 Verdict (this coupling checkpoint)
+
+1. Coupling policy verdict: `PASS`
+2. Coupling implementation verdict: `PASS`
+3. Scope caveat:
+   - this verdict is specific to v1.6.1×v1.6.6 linkage replay;
+   - unrelated strict-lane debts remain governed by their own validators.

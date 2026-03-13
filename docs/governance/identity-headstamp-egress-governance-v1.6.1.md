@@ -297,3 +297,57 @@ reinterprets v1.6.1 with execution-grade semantics.
 2. v1.6.6 is the channel-enforcement closure for per-round mandatory entry/egress routing.
 3. Acceptance interpretation for future audits must require both dimensions together:
    semantic correctness (v1.6.1) + transport non-bypassability (v1.6.6).
+
+## 12) Cross-stream coupling re-audit (v1.6.1 × v1.6.6, 2026-03-13)
+
+This section records a direct replay to verify that v1.6.6 acts as the execution
+deepening base for v1.6.1 headstamp semantics.
+
+### 12.1 Re-audit objective
+
+1. Prove that headstamp/HUD semantics are not only validator-green but also wrapper-delivered per round.
+2. Prove that v1.6.1 and v1.6.6 are composable in the same actor/session/run tuple.
+
+### 12.2 Serialized replay tuple
+
+1. identity: `base-repo-architect`
+2. actor/session: `assistant:codex` / `session-wrapper-chain`
+3. run id: `v161-v166-link-audit-20260313-2`
+4. source/work layer: `project` / `protocol`
+
+### 12.3 Observed machine outcomes
+
+1. ingress wrapper (`operation=scan`) returned:
+   - `bundle_status=PASS_REQUIRED`
+   - `protocol_unique_entry_receipt_status=PASS_REQUIRED`
+   - `wrapper_surface_status=PASS_REQUIRED`
+   - `wrapper_dispatch_token_status=PASS_REQUIRED`
+   - `wrapper_dispatch_proof_status=PASS_REQUIRED`
+   - `wrapper_parent_attestation_status=PASS_REQUIRED`
+2. unique-entry validator (`--require-entry-receipt`) returned:
+   - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+   - `protocol_host_gateway_contract_status=PASS_REQUIRED`
+   - `protocol_host_gateway_runtime_files_status=PASS_REQUIRED`
+   - `protocol_host_gateway_runtime_contract_status=PASS_REQUIRED`
+3. v1.6.1 recurrence validator (`operation=scan`) returned:
+   - `headstamp_recurrence_closure_status=PASS_REQUIRED`
+   - `dynamic_replay_status=PASS_REQUIRED`
+   - canonical negative families remained `IP-HDSTAMP-*`
+4. egress wrapper (same run + ingress receipt) returned:
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `final_emit_guard_status=PASS_REQUIRED`
+   - `egress_wrapper_parent_attestation_status=PASS_REQUIRED`
+   - `outlet_channel_id=final_emit_governed`
+
+### 12.4 Coupling interpretation
+
+1. v1.6.6 is confirmed as execution-channel foundation: it enforces wrapper-only ingress/egress path and tuple binding.
+2. v1.6.1 is confirmed as semantic foundation: it governs HUD/headstamp and canonical error-family behavior.
+3. Combined result:
+   - semantic pass is delivered through non-bypass transport path in the same round.
+   - this closes the historical gap where headstamp could be “declared green” but not transport-bound.
+
+### 12.5 Boundary note
+
+1. Strict-operation failures unrelated to headstamp semantics (for example multimodal/runtime evidence debts) remain independent tracks.
+2. Such debts do not invalidate this coupling proof, but they still block their own strict lanes by fail-close policy.
