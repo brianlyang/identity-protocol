@@ -1392,3 +1392,32 @@ commit: `cb4478e`
 3. Verdict:
    - `Policy PASS`
    - `Implementation CONDITIONAL PASS` (bounded to sender physical routing closure).
+
+### 26.6 Post-commit serial replay and probe coverage
+
+Post-commit hardening commits:
+
+1. `3e1c431` `feat(v1.6.6): harden centralized wrapper bus enforcement across strict surfaces`
+2. `8a3d195` `docs(v1.6.6): record unified wrapper bus closure and anti-drift re-audit`
+
+Serialized replay status (base-repo-audit-expert-v3):
+
+1. 5-round self-test (positive + bypass negatives): `overall_passed=true`
+   - local execution trace persisted in temporary runtime output (non-normative).
+2. 5-round deep-scan (core gate set): `overall_passed=true`
+   - local execution trace persisted in temporary runtime output (non-normative).
+
+Trust-boundary probes (required delegate):
+
+1. `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` -> `rc=0`
+2. blocked probes verified:
+   - `runner_local_key_forge_blocked`
+   - `runner_env_secret_forge_blocked`
+   - `final_emit_local_key_forge_blocked`
+   - `final_emit_env_secret_forge_blocked`
+   - `egress_wrapper_direct_call_blocked`
+
+Operational note:
+
+1. `validate_control_plane_status_sync` is parity-check against the generated status file and is expected to run after status regeneration in serialized loops.
+2. This does not weaken wrapper governance; it is ordering semantics of status artifact refresh.
