@@ -3356,6 +3356,7 @@ def _record_host_visible_surface_receipts(
     }
 
     receipt_paths: list[str] = []
+    receipt_paths_by_channel: dict[str, str] = {}
     errors: list[str] = []
     for channel in sorted(set(required_channels)):
         receipt_path = _receipt_path_for_channel(
@@ -3383,6 +3384,7 @@ def _record_host_visible_surface_receipts(
         try:
             _write_json_file(receipt_path, payload)
             receipt_paths.append(str(receipt_path))
+            receipt_paths_by_channel[str(channel).strip()] = str(receipt_path)
         except Exception as exc:
             errors.append(f"host_visible_surface_receipt_write_failed:{channel}:{exc}")
 
@@ -3411,12 +3413,9 @@ def _record_host_visible_surface_receipts(
     for channel in sorted(set(required_channels)):
         existing = channels_doc.get(channel)
         channel_doc = dict(existing) if isinstance(existing, dict) else {}
-        matching_receipts = [
-            path
-            for path in receipt_paths
-            if f"-{re.sub(r'[^A-Za-z0-9._-]+', '_', channel).strip('._') or 'unknown'}-" in Path(path).name
-        ]
-        latest_receipt_path = matching_receipts[-1] if matching_receipts else str(channel_doc.get("last_receipt_path", ""))
+        latest_receipt_path = str(receipt_paths_by_channel.get(str(channel).strip()) or "").strip()
+        if not latest_receipt_path:
+            latest_receipt_path = str(channel_doc.get("last_receipt_path", ""))
         pass_ok = all(str(status_map.get(field, "")).upper() == STATUS_PASS_REQUIRED for field in status_fields)
         channel_doc["last_receipt_path"] = latest_receipt_path
         channel_doc["last_status"] = STATUS_PASS_REQUIRED if pass_ok else STATUS_FAIL_REQUIRED
