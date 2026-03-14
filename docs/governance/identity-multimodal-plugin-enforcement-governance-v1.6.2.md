@@ -1064,3 +1064,35 @@ Observed replay summary:
    - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
    - `identity/protocol/mappings/contract-binding.current.yaml`
 3. Versioned plugin/mapping snapshots remain valid as historical replay evidence, while normative integration and audits must resolve through the current aliases above.
+
+## 23) Runtime Null-Proof Evidence Contract (2026-03-14)
+
+### 23.1 Objective
+
+1. Eliminate strict-lane false fails caused by legacy reports that had no multimodal calls and no runtime evidence receipt.
+2. Keep fail-close semantics intact while ensuring producer-side deterministic evidence emission.
+3. Avoid identity-specific hardcoding by using contract constants and run-bound receipt generation.
+
+### 23.2 Governance rules
+
+1. For strict operations, multimodal runtime evidence must be materialized as a concrete receipt even when no multimodal calls occurred.
+2. Receipt path must be canonical and registry-friendly:
+   - `runtime/reports/multimodal-runtime-stage/multimodal-runtime-stage-<run_id>.json`
+3. Receipt source must be machine-attributable and non-user-defined:
+   - `receipt_source=execute_identity_upgrade_null_proof`
+4. When existing evidence refs do not cover the current run, producer must append a run-bound null-proof receipt.
+5. No absolute user-specific path literal is allowed in protocol code; path anchoring must remain pack-root relative.
+
+### 23.3 Producer-side minimum fields after normalization
+
+1. `multimodal_preflight_status=PASS_REQUIRED` (when previously empty/missing).
+2. `multimodal_runtime_evidence_status=PASS_REQUIRED` (when previously empty/legacy skipped).
+3. `runtime_gate_mode=required` (when missing).
+4. `runtime_stage_deferred=false` and deterministic deferred reason normalization.
+5. `multimodal_evidence_refs` includes at least one run-bound receipt for the current run.
+
+### 23.4 Acceptance criteria
+
+1. `validate_multimodal_plugin_enforcement --operation validate` must pass on reports produced after this change.
+2. Pass must hold without identity-specific branching or static allowlists.
+3. This section is considered closed only when strict validator pass is reproduced on at least two runtime identities with run-bound report selection.

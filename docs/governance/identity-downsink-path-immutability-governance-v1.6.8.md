@@ -280,3 +280,29 @@ For v1.6.8 motherline integration, serial replay interpretation is split into tw
    - deep-scan target identity P0/P1 state is reported and tracked, but does not invalidate already-closed infrastructure wiring by itself.
 
 This rule prevents false negatives where governance motherline closure is complete, while target instance business/runtime debt still exists and is tracked separately.
+
+## 13) Host-visible receipt provenance hardening (2026-03-14)
+
+### 13.1 Objective
+
+1. Prevent “receipt file exists” from being treated as sufficient proof when source/state parity is not attested.
+2. Bind live host-visible coverage to canonical runtime registry state.
+3. Keep CI probes deterministic while preserving production default trust boundary.
+
+### 13.2 Governance requirements
+
+1. Live receipt validation must check both:
+   - receipt payload fields, and
+   - runtime state mirror (`runtime/state/host_visible_surface_registry_state.json`) parity for each channel.
+2. Live receipt source must be explicitly validated through `receipt_source` allowlist.
+3. Production default allowlist remains strict:
+   - `runtime_dialogue`.
+4. CI probe suites may extend allowlist with fixture source:
+   - `ci_fixture`.
+5. Session-chain runtime emission must fail-close if host-visible live receipt write/update does not reach `PASS_REQUIRED`.
+
+### 13.3 Non-hardcode guarantee
+
+1. Source keys and receipt path patterns are centralized in protocol infra constants.
+2. Validator behavior is parameterized (`--allowed-live-receipt-sources`) and not tied to identity IDs.
+3. Runtime and fixture modes share one contract surface; only source allowlist differs by lane.

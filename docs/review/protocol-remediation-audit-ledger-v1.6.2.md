@@ -846,3 +846,43 @@ Files:
 3. Ownership boundary unchanged:
    - protocol semantics are now normalized,
    - missing runtime stage evidence remains instance/runtime debt until refreshed reports are produced.
+
+## 23) Round-31.1 addendum: deterministic multimodal null-proof receipt emission (2026-03-14)
+
+### 23.1 Audit conclusion
+
+1. Producer-side runtime evidence emission is now deterministic for no-call multimodal runs.
+2. Strict validate lane no longer depends on legacy skipped/deferred metadata to infer runtime evidence.
+3. Run-bound evidence continuity is strengthened: when old refs exist but do not match current run, a current-run receipt is appended automatically.
+
+### 23.2 Fix set audited
+
+1. `scripts/protocol_infra_contract.py`
+   - Added canonical constants for multimodal runtime-stage receipt directory/prefix/source.
+2. `scripts/execute_identity_upgrade.py`
+   - Adds deterministic null-proof receipt writer under canonical pack-relative path.
+   - Normalizes runtime proof fields in producer output when null-proof receipt is emitted.
+   - Adds run-bound ref coverage guard (`existing refs not covering current run => append current-run receipt`).
+
+### 23.3 Serial replay evidence (strict validate)
+
+1. `base-repo-audit-expert-v3`
+   - update run produced report:
+     - `identity-upgrade-exec-base-repo-audit-expert-v3-1773488452`
+   - strict validator:
+     - `validate_multimodal_plugin_enforcement --operation validate --run-id identity-upgrade-exec-base-repo-audit-expert-v3-1773488452`
+   - result: `PASS_REQUIRED`, runtime evidence refs include current-run null-proof receipt.
+2. `custom-creative-ecom-analyst`
+   - update run produced report:
+     - `identity-upgrade-exec-custom-creative-ecom-analyst-1773488248`
+   - strict validator:
+     - `validate_multimodal_plugin_enforcement --operation validate --run-id identity-upgrade-exec-custom-creative-ecom-analyst-1773488248`
+   - result: `PASS_REQUIRED`, runtime evidence refs include current-run null-proof receipt.
+
+### 23.4 Residual boundary statement
+
+1. This fix closes producer determinism and strict-lane run-bound evidence materialization.
+2. It does not redefine instance business outcomes unrelated to multimodal runtime-proof fields.
+3. Ownership split remains explicit:
+   - protocol side: semantic/wiring determinism (closed here),
+   - instance side: per-identity business/run freshness debt (tracked separately).

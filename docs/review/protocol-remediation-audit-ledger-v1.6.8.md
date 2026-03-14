@@ -228,3 +228,38 @@ Observed result:
 2. `activity/evidence/v168-path-immutability/2026-03-14/ci_required_probe_report.v168.20260314-r2.json`
 3. `activity/evidence/v168-path-immutability/2026-03-14/path_registry_snapshot.v168.20260314-r2.json`
 4. `activity/evidence/v168-path-immutability/2026-03-14/EVIDENCE_MANIFEST.v168.20260314-r2.json`
+
+## 13) Round-31.1 addendum: host-visible live receipt source/state attestation hardening (2026-03-14)
+
+### 13.1 Audit conclusion
+
+1. Host-visible live coverage checks are upgraded from “receipt presence” to “receipt + runtime state parity + source attestation”.
+2. Session-chain wrapper now fail-closes when host-visible runtime receipt emission is not `PASS_REQUIRED`.
+3. CI fixture probes remain deterministic through explicit source allowlist extension, without weakening production defaults.
+
+### 13.2 Fix set audited
+
+1. `scripts/create_identity_pack.py`
+   - session-chain wrapper now records host-visible runtime receipts and blocks on non-pass status (`IP-HDSTAMP-003` path).
+2. `scripts/validate_host_transport_wiring_attestation.py`
+   - adds `--allowed-live-receipt-sources`.
+   - verifies both receipt payload and `host_visible_surface_registry_state.json` channel parity.
+3. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - writes fixture receipts with `receipt_source=ci_fixture`.
+   - writes matching state mirror entries.
+   - executes validator with explicit allowlist `runtime_dialogue,ci_fixture`.
+
+### 13.3 Replay evidence
+
+1. `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - `host_visible_contract_static`: `PASS`
+   - `host_visible_live_receipts_pass`: `PASS`
+   - `host_visible_commentary_bypass_blocked`: expected block (`rc=1`)
+2. Probe manifest:
+   - `/private/var/folders/.../identity-host-visible-surface-probes/manifest.host_visible_surface_live.json`
+
+### 13.4 Boundary statement
+
+1. This addendum strengthens v1.6.8 infra-level host-visible provenance checks.
+2. It does not claim closure of unrelated instance business debt.
+3. Verdict impact: infrastructure hardening improved; stream closure remains tied to full motherline gate outcomes.

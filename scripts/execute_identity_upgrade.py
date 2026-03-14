@@ -49,7 +49,6 @@ ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 ERR_FINAL_EMIT_CONTRACT_REQUIRED = "IP-OUTLET-004"
-ERR_PRE_MUTATION_PROJECTION_REQUIRED = "IP-OUTLET-005"
 ERR_PROMPT_WIRE_IO = "IP-PROMPT-WIRE-001"
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
@@ -456,6 +455,19 @@ def _safe_runtime_token(value: str, fallback: str) -> str:
     return token or fallback
 
 
+def _multimodal_refs_cover_run(refs: list[str], run_token: str) -> bool:
+    marker = str(run_token or "").strip()
+    if not marker:
+        return False
+    for ref in refs:
+        ref_token = str(ref or "").strip()
+        if not ref_token:
+            continue
+        if marker in Path(ref_token).name or marker in ref_token:
+            return True
+    return False
+
+
 def _write_multimodal_runtime_stage_receipt(
     *,
     pack_path: Path,
@@ -580,7 +592,10 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any], *, pack_path: Path
     no_runtime_counts = all(
         v is None for v in (mm_calls, mm_resolved, mm_unresolved, mm_errors, mm_retry_calls)
     )
-    if not mm_refs and no_runtime_counts:
+    run_token = _safe_runtime_token(run_id, "run")
+    refs_cover_current_run = _multimodal_refs_cover_run(mm_refs, run_token)
+    should_synthesize_runtime_stage_receipt = no_runtime_counts and (not mm_refs or not refs_cover_current_run)
+    if should_synthesize_runtime_stage_receipt:
         try:
             synthesized_runtime_stage_receipt_path = _write_multimodal_runtime_stage_receipt(
                 pack_path=pack_path,
@@ -592,7 +607,7 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any], *, pack_path: Path
         except Exception:
             synthesized_runtime_stage_receipt_path = ""
         if synthesized_runtime_stage_receipt_path:
-            mm_refs = [synthesized_runtime_stage_receipt_path]
+            mm_refs = sorted(dict.fromkeys([synthesized_runtime_stage_receipt_path, *mm_refs]))
             if preflight_status.upper() in {"", "MISSING"}:
                 preflight_status = STATUS_PASS_REQUIRED
             if runtime_evidence_status in {"", STATUS_SKIPPED_NOT_REQUIRED}:
@@ -1310,6 +1325,14 @@ def _base_report(
         "pre_mutation_projection_status": str(pre_mutation_projection_status or STATUS_SKIPPED_NOT_REQUIRED),
         "pre_mutation_projection_error_code": str(pre_mutation_projection_error_code or ""),
         "pre_mutation_projection_stale_reasons": list(pre_mutation_projection_stale_reasons),
+        "lane_routing_diagnostic_sentinels": {
+            "headstamp_first_line_status": str(headstamp_first_line_status or STATUS_SKIPPED_NOT_REQUIRED),
+            "entry_receipt_tuple_status": str(entry_receipt_tuple_status or STATUS_SKIPPED_NOT_REQUIRED),
+            "reply_transport_binding_status": str(reply_transport_binding_status or STATUS_SKIPPED_NOT_REQUIRED),
+            "emit_channel_id": str(emit_channel_id or ""),
+            "header_first_gate_status": str(header_first_gate_status or ""),
+            "lane_routing_error_code": str(lane_routing_error_code or ""),
+        },
         "why_now": str(why_now or ""),
         "actions_taken": [],
         "checks": [],
@@ -2149,7 +2172,7 @@ def main() -> int:
     )
     pre_mutation_projection_status = STATUS_PASS_REQUIRED if projection_ok else STATUS_FAIL_REQUIRED
     if not projection_ok:
-        pre_mutation_projection_error_code = ERR_PRE_MUTATION_PROJECTION_REQUIRED
+        pre_mutation_projection_error_code = ERR_FINAL_EMIT_CONTRACT_REQUIRED
 
     pre_mutation_error = ""
     if prompt_contract_auto_wire_status != "PASS_REQUIRED":
@@ -2157,7 +2180,7 @@ def main() -> int:
     elif header_first_gate_status != "PASS_REQUIRED":
         pre_mutation_error = ERR_EXEC_ORDER_HEADER_FIRST
     elif pre_mutation_projection_status != STATUS_PASS_REQUIRED:
-        pre_mutation_error = pre_mutation_projection_error_code or ERR_PRE_MUTATION_PROJECTION_REQUIRED
+        pre_mutation_error = pre_mutation_projection_error_code or ERR_FINAL_EMIT_CONTRACT_REQUIRED
     elif scaffold_consent_gate_status == "FAIL_REQUIRED":
         pre_mutation_error = ERR_EXEC_ORDER_SCAFFOLD_CONSENT
     elif not mutation_plan_disclosed:
