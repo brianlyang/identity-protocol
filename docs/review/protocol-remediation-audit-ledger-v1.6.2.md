@@ -820,3 +820,29 @@ Files:
    - `identity/protocol/plugins/FAILCLOSE_PLUGIN_GOVERNANCE.current.yaml`
    - `identity/protocol/mappings/contract-binding.current.yaml`
 3. Historical versioned references are preserved for replay traceability only; machine checks and future stream upgrades must bind through these current aliases.
+
+## 22) Round-31.0 addendum: strict legacy-defer normalization (2026-03-14)
+
+### 22.1 Problem statement
+
+1. Strict lane replay showed `IP-MM-RUN-003` in `operation=validate` when the selected report carried
+   legacy `runtime_stage_deferred=true` + `multimodal_runtime_evidence_status=SKIPPED_NOT_REQUIRED`.
+2. This made strict validate path depend on a deferred-skip branch before being blocked by strict policy,
+   which is semantically weaker than direct strict fail-close on missing runtime stage evidence.
+
+### 22.2 Protocol fix audited
+
+1. `scripts/validate_multimodal_plugin_enforcement.py`
+   - adds strict-lane guard (`strict_skip_forbidden_operation`) before accepting
+     report-derived defer (`defer_from_report`);
+   - strict skip-forbidden operations no longer inherit defer from legacy report metadata.
+
+### 22.3 Replay outcome
+
+1. `operation=validate` now fails deterministically with:
+   - `error_code=IP-MM-RUN-002`
+   - `stale_reasons` includes `runtime_stage_missing_input_gate`
+2. `IP-MM-RUN-003` is no longer the primary signal for this strict legacy-report path.
+3. Ownership boundary unchanged:
+   - protocol semantics are now normalized,
+   - missing runtime stage evidence remains instance/runtime debt until refreshed reports are produced.
