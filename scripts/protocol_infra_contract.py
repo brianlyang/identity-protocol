@@ -105,6 +105,9 @@ HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS: tuple[str, ...] = (
     "send_time_gate_status",
     "final_emit_contract_status",
 )
+HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
+HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
+HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "ci_fixture"
 
 # Wrapper semantic attestations.
 HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = "wrapper_template_attestation_policy"

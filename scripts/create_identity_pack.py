@@ -52,6 +52,9 @@ from protocol_infra_contract import (
     HOST_GATEWAY_STRICT_GATE_PROFILE as INFRA_HOST_GATEWAY_STRICT_GATE_PROFILE,
     HOST_GATEWAY_STRICT_OPERATIONS as INFRA_HOST_GATEWAY_STRICT_OPERATIONS,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE as INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE as INFRA_HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
@@ -178,6 +181,9 @@ HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = list(
 )
 HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD
+HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = INFRA_HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
 
 DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY = "protocol_downsink_path_immutability_contract_v1"
 DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID = "protocol_downsink_path_immutability_contract_v1"
@@ -697,6 +703,8 @@ def _default_host_visible_surface_state_doc(identity_id: str) -> dict:
         channel: {
             "last_receipt_path": "",
             "last_status": "",
+            "receipt_source": "",
+            "last_run_id": "",
             "updated_at_utc": "",
         }
         for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
@@ -3144,9 +3152,15 @@ from typing import Any
 
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 DEFAULT_OPERATION = "inspection"
 DEFAULT_WORK_LAYER = "instance"
 DEFAULT_SOURCE_LAYER = "project"
+HOST_VISIBLE_SURFACE_CONTRACT_KEY = "host_visible_surface_registry_contract_v1"
+HOST_VISIBLE_SURFACE_STATE_FILE_DEFAULT = "runtime/state/host_visible_surface_registry_state.json"
+HOST_VISIBLE_SURFACE_RECEIPT_PATTERN_DEFAULT = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
+HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
+HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
 
 
 def _load_json(raw: str) -> dict[str, Any]:
@@ -3247,6 +3261,181 @@ def _write_json_file(path: Path, payload: dict[str, Any]) -> None:
     tmp = path.with_suffix(path.suffix + f".tmp-{os.getpid()}")
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
     tmp.replace(path)
+
+
+def _as_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _receipt_path_for_channel(
+    *,
+    receipt_glob_path: Path,
+    channel: str,
+    run_id: str,
+    now_token: str,
+) -> Path:
+    pattern_name = receipt_glob_path.name
+    channel_token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(channel or "").strip()).strip("._") or "unknown"
+    run_token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(run_id or "").strip()).strip("._") or "run"
+    suffix = f"{now_token}-{channel_token}-{run_token}.json"
+    if "*" in pattern_name:
+        filename = pattern_name.replace("*", suffix, 1)
+    elif pattern_name.endswith(".json"):
+        filename = f"{pattern_name[:-5]}-{suffix}"
+    else:
+        filename = f"{pattern_name}-{suffix}"
+    return (receipt_glob_path.parent / filename).resolve()
+
+
+def _record_host_visible_surface_receipts(
+    *,
+    contract: dict[str, Any],
+    contract_path: Path,
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+    wrapper_surface_status: str,
+    entry_receipt_tuple_status: str,
+    headstamp_first_line_status: str,
+    send_time_gate_status: str,
+    final_emit_contract_status: str,
+    out_reply_file: Path,
+) -> tuple[str, str, list[str], list[str]]:
+    visible_contract = contract.get(HOST_VISIBLE_SURFACE_CONTRACT_KEY)
+    if not isinstance(visible_contract, dict) or visible_contract.get("required") is not True:
+        return "SKIPPED_NOT_REQUIRED", "", [], []
+
+    required_channels = _as_list(visible_contract.get("required_channels"))
+    if not required_channels:
+        return STATUS_FAIL_REQUIRED, "", [], ["host_visible_surface_required_channels_missing"]
+
+    state_path = _resolve_runtime_path(
+        contract_path,
+        str(visible_contract.get("runtime_state_file", "")).strip() or HOST_VISIBLE_SURFACE_STATE_FILE_DEFAULT,
+    )
+    receipt_glob_path = _resolve_runtime_path(
+        contract_path,
+        str(visible_contract.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN_DEFAULT,
+    )
+    if not str(state_path).strip():
+        return STATUS_FAIL_REQUIRED, "", [], ["host_visible_surface_state_path_unresolved"]
+    if not str(receipt_glob_path).strip():
+        return STATUS_FAIL_REQUIRED, str(state_path), [], ["host_visible_surface_receipt_path_unresolved"]
+
+    required_attestation_fields = set(_as_list(visible_contract.get("required_attestation_fields")))
+    if not required_attestation_fields:
+        required_attestation_fields = {
+            "emit_channel_id",
+            "wrapper_surface_status",
+            "entry_receipt_tuple_status",
+            "headstamp_first_line_status",
+            "send_time_gate_status",
+            "final_emit_contract_status",
+        }
+    status_fields = set(_as_list(visible_contract.get("required_pass_status_fields")))
+    if not status_fields:
+        status_fields = {
+            "wrapper_surface_status",
+            "entry_receipt_tuple_status",
+            "headstamp_first_line_status",
+            "send_time_gate_status",
+            "final_emit_contract_status",
+        }
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    status_map = {
+        "wrapper_surface_status": str(wrapper_surface_status or "").strip().upper(),
+        "entry_receipt_tuple_status": str(entry_receipt_tuple_status or "").strip().upper(),
+        "headstamp_first_line_status": str(headstamp_first_line_status or "").strip().upper(),
+        "send_time_gate_status": str(send_time_gate_status or "").strip().upper(),
+        "final_emit_contract_status": str(final_emit_contract_status or "").strip().upper(),
+    }
+
+    receipt_paths: list[str] = []
+    errors: list[str] = []
+    for channel in sorted(set(required_channels)):
+        receipt_path = _receipt_path_for_channel(
+            receipt_glob_path=receipt_glob_path,
+            channel=channel,
+            run_id=run_id,
+            now_token=now_token,
+        )
+        payload = {
+            "schema_version": "v1",
+            "created_at_utc": now,
+            "identity_id": str(identity_id or "").strip(),
+            "actor_id": str(actor_id or "").strip(),
+            "session_id": str(session_id or "").strip(),
+            "run_id": str(run_id or "").strip(),
+            "reply_transport_ref": str(out_reply_file),
+            "emit_channel_id": str(channel).strip(),
+            HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+        }
+        payload.update(status_map)
+        missing_fields = sorted(field for field in required_attestation_fields if field not in payload)
+        if missing_fields:
+            errors.append(f"host_visible_surface_receipt_missing_fields:{channel}:{','.join(missing_fields)}")
+            continue
+        try:
+            _write_json_file(receipt_path, payload)
+            receipt_paths.append(str(receipt_path))
+        except Exception as exc:
+            errors.append(f"host_visible_surface_receipt_write_failed:{channel}:{exc}")
+
+    default_state_channels = {
+        channel: {
+            "last_receipt_path": "",
+            "last_status": "",
+            "receipt_source": "",
+            "last_run_id": "",
+            "updated_at_utc": "",
+        }
+        for channel in sorted(set(required_channels))
+    }
+    state_doc = _load_json_file(
+        state_path,
+        default={
+            "schema_version": "v1",
+            "identity_id": str(identity_id or "").strip(),
+            "channels": default_state_channels,
+            "updated_at_utc": "",
+        },
+    )
+    channels_doc = state_doc.get("channels")
+    if not isinstance(channels_doc, dict):
+        channels_doc = {}
+    for channel in sorted(set(required_channels)):
+        existing = channels_doc.get(channel)
+        channel_doc = dict(existing) if isinstance(existing, dict) else {}
+        matching_receipts = [
+            path
+            for path in receipt_paths
+            if f"-{re.sub(r'[^A-Za-z0-9._-]+', '_', channel).strip('._') or 'unknown'}-" in Path(path).name
+        ]
+        latest_receipt_path = matching_receipts[-1] if matching_receipts else str(channel_doc.get("last_receipt_path", ""))
+        pass_ok = all(str(status_map.get(field, "")).upper() == STATUS_PASS_REQUIRED for field in status_fields)
+        channel_doc["last_receipt_path"] = latest_receipt_path
+        channel_doc["last_status"] = STATUS_PASS_REQUIRED if pass_ok else STATUS_FAIL_REQUIRED
+        channel_doc["receipt_source"] = HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+        channel_doc["last_run_id"] = str(run_id or "").strip()
+        channel_doc["updated_at_utc"] = now
+        channels_doc[channel] = channel_doc
+    state_doc["schema_version"] = "v1"
+    state_doc["identity_id"] = str(identity_id or "").strip()
+    state_doc["channels"] = channels_doc
+    state_doc["updated_at_utc"] = now
+    try:
+        _write_json_file(state_path, state_doc)
+    except Exception as exc:
+        errors.append(f"host_visible_surface_state_write_failed:{exc}")
+
+    if errors:
+        return STATUS_FAIL_REQUIRED, str(state_path), receipt_paths, errors
+    return STATUS_PASS_REQUIRED, str(state_path), receipt_paths, []
 
 
 def _select_latest_identity_bound_session(
