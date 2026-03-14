@@ -3498,6 +3498,9 @@ def main() -> int:
             stale_reason="ingress_bundle_not_pass_required",
             json_only=args.json_only,
         )
+    receipt_run_id = str(ingress_payload.get("run_id_binding", "")).strip()
+    receipt_session_id = str(ingress_payload.get("session_id", "")).strip()
+    receipt_actor_id = str(ingress_payload.get("actor_id", "")).strip()
 
     egress_cmd = [
         sys.executable,
@@ -3557,6 +3560,54 @@ def main() -> int:
         )
 
     reply_text = out_reply_path.read_text(encoding="utf-8", errors="ignore").strip()
+    reply_preview = reply_text.splitlines()[:2] if reply_text else []
+    first_line = str(reply_preview[0] if reply_preview else "").strip()
+    headstamp_first_line_status = (
+        STATUS_PASS_REQUIRED if first_line.startswith("Identity-Context:") else STATUS_FAIL_REQUIRED
+    )
+    outlet_channel_id = str(
+        egress_payload.get("outlet_channel_id")
+        or egress_payload.get("final_emit_channel_id")
+        or ""
+    ).strip()
+    outlet_preflight_receipt = str(egress_payload.get("outlet_preflight_receipt", "")).strip() or str(
+        ingress_receipt_path
+    )
+    final_emit_channel_id = str(egress_payload.get("final_emit_channel_id") or outlet_channel_id).strip()
+    final_emit_policy_mode = str(egress_payload.get("final_emit_policy_mode", "")).strip()
+    final_emit_schema_id = str(egress_payload.get("final_emit_schema_id", "")).strip()
+    final_emit_schema_status = str(egress_payload.get("final_emit_schema_status", "")).strip().upper()
+    final_emit_contract_status = str(
+        egress_payload.get("final_emit_contract_status")
+        or egress_payload.get("final_emit_guard_status")
+        or ""
+    ).strip().upper()
+    tuple_missing = [
+        key
+        for key, value in (
+            ("outlet_channel_id", outlet_channel_id),
+            ("outlet_preflight_receipt", outlet_preflight_receipt),
+            ("final_emit_channel_id", final_emit_channel_id),
+            ("final_emit_policy_mode", final_emit_policy_mode),
+            ("final_emit_schema_id", final_emit_schema_id),
+            ("final_emit_schema_status", final_emit_schema_status),
+            ("final_emit_contract_status", final_emit_contract_status),
+        )
+        if not str(value or "").strip()
+    ]
+    if tuple_missing:
+        return _fail(
+            error_code="IP-OUTLET-004",
+            stale_reason="session_chain_final_emit_tuple_missing:" + ",".join(sorted(tuple_missing)),
+            json_only=args.json_only,
+        )
+    tuple_status = STATUS_PASS_REQUIRED
+    if str(args.actor_id).strip() != receipt_actor_id:
+        tuple_status = STATUS_FAIL_REQUIRED
+    if str(resolved_session_id).strip() != receipt_session_id:
+        tuple_status = STATUS_FAIL_REQUIRED
+    if str(run_id).strip() != receipt_run_id:
+        tuple_status = STATUS_FAIL_REQUIRED
     _emit(
         {
             "protocol_session_chain_wrapper_status": STATUS_PASS_REQUIRED,
@@ -3570,12 +3621,35 @@ def main() -> int:
             "egress_wrapper_path": str(egress_wrapper_path),
             "ingress_receipt_path": str(ingress_receipt_path),
             "out_reply_file": str(out_reply_path),
-            "reply_preview": (reply_text.splitlines()[:2] if reply_text else []),
+            "reply_preview": reply_preview,
+            "reply_transport_ref": str(out_reply_path),
+            "reply_transport_binding_status": STATUS_PASS_REQUIRED,
             "ingress_bundle_status": ingress_payload.get("bundle_status", ""),
+            "wrapper_surface_status": ingress_payload.get("wrapper_surface_status", ""),
+            "entry_receipt_tuple_status": tuple_status,
+            "entry_receipt_tuple_run_id_status": (
+                STATUS_PASS_REQUIRED if str(run_id).strip() == receipt_run_id else STATUS_FAIL_REQUIRED
+            ),
+            "entry_receipt_tuple_session_id_status": (
+                STATUS_PASS_REQUIRED if str(resolved_session_id).strip() == receipt_session_id else STATUS_FAIL_REQUIRED
+            ),
+            "entry_receipt_tuple_actor_id_status": (
+                STATUS_PASS_REQUIRED if str(args.actor_id).strip() == receipt_actor_id else STATUS_FAIL_REQUIRED
+            ),
             "egress_guard_status": egress_payload.get("final_emit_guard_status", ""),
             "final_emit_guard_status": egress_payload.get("final_emit_guard_status", ""),
             "send_time_gate_status": egress_payload.get("send_time_gate_status", ""),
             "headstamp_status": egress_payload.get("headstamp_status", ""),
+            "headstamp_first_line_status": headstamp_first_line_status,
+            "emit_channel_id": final_emit_channel_id,
+            "outlet_channel_id": outlet_channel_id,
+            "outlet_preflight_receipt": outlet_preflight_receipt,
+            "outlet_bypass_detected": bool(egress_payload.get("outlet_bypass_detected", False)),
+            "final_emit_channel_id": final_emit_channel_id,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": final_emit_contract_status,
             "session_chain_parent_attestation_required": egress_payload.get(
                 "session_chain_parent_attestation_required",
                 False,

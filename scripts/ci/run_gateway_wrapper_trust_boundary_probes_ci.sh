@@ -240,6 +240,23 @@ elif name == "final_emit_env_secret_forge_blocked":
         and "egress_wrapper_parent_attestation_parent_command_missing" not in reasons
     ):
         raise SystemExit("final_emit_env_secret_forge_blocked: expected parent attestation block")
+elif name == "direct_text_emit":
+    if rc == 0:
+        raise SystemExit("direct_text_emit: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if "egress_grant_missing" not in reasons and str(doc.get("error_code", "")).strip() != "IP-HDSTAMP-003":
+        raise SystemExit("direct_text_emit: expected missing grant headstamp block")
+elif name == "channel_bypass_emit":
+    if rc == 0:
+        raise SystemExit("channel_bypass_emit: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if (
+        "session_chain_parent_attestation_env_path_missing" not in reasons
+        and "session_chain_parent_attestation_parent_command_mismatch" not in reasons
+        and "session_chain_parent_attestation_parent_command_missing" not in reasons
+        and "ingress_receipt_run_id_mismatch" not in reasons
+    ):
+        raise SystemExit("channel_bypass_emit: expected channel bypass attestation block")
 elif name == "egress_wrapper_direct_call_blocked":
     if rc == 0:
         raise SystemExit("egress_wrapper_direct_call_blocked: expected non-zero rc")
@@ -262,6 +279,30 @@ elif name == "session_chain_headstamp_first_line_required":
         first_line = str(preview[0] or "").strip()
     if not first_line.startswith("Identity-Context:"):
         raise SystemExit("session_chain_headstamp_first_line_required: missing Identity-Context first line")
+    if str(doc.get("headstamp_first_line_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_headstamp_first_line_required: headstamp_first_line_status must be PASS_REQUIRED")
+    required_tuple = (
+        "outlet_channel_id",
+        "outlet_preflight_receipt",
+        "outlet_bypass_detected",
+        "final_emit_channel_id",
+        "final_emit_policy_mode",
+        "final_emit_schema_id",
+        "final_emit_schema_status",
+        "final_emit_contract_status",
+        "emit_channel_id",
+        "wrapper_surface_status",
+        "entry_receipt_tuple_status",
+    )
+    missing_tuple = [key for key in required_tuple if key not in doc]
+    if missing_tuple:
+        raise SystemExit(
+            "session_chain_headstamp_first_line_required: tuple fields missing: " + ",".join(sorted(missing_tuple))
+        )
+    if str(doc.get("final_emit_contract_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_headstamp_first_line_required: final_emit_contract_status must be PASS_REQUIRED")
+    if str(doc.get("entry_receipt_tuple_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_headstamp_first_line_required: entry_receipt_tuple_status must be PASS_REQUIRED")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -486,6 +527,32 @@ run_probe final_emit_env_secret_forge_blocked \
   --strict-explicit-context \
   --egress-grant-json "$(cat "${FORGED_EGRESS_ENV_GRANT_JSON}")" \
   --egress-grant-signature "$(tr -d '\n' < "${FORGED_EGRESS_ENV_GRANT_SIG}")" \
+  --json-only
+
+run_probe direct_text_emit \
+  python3 scripts/final_emit_governed.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id probe-gateway-direct-text-emit \
+  --body-text "direct text emit bypass probe" \
+  --work-layer instance \
+  --source-layer project \
+  --strict-explicit-context \
+  --json-only
+
+run_probe channel_bypass_emit \
+  python3 "${EGRESS_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id probe-gateway-channel-bypass \
+  --work-layer instance \
+  --source-layer project \
+  --candidate-output "channel bypass emit probe" \
+  --ingress-receipt "${FIXTURE_ROOT}/identity/probe-gateway/runtime/state/required_gate_bundle_entry.latest.json" \
   --json-only
 
 python3 "${INGRESS_WRAPPER_PATH}" \

@@ -972,6 +972,32 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_direct_text_emit_probe = all(
+            token in text
+            for token in (
+                "run_probe direct_text_emit",
+                "python3 scripts/final_emit_governed.py",
+                "--body-text \"direct text emit bypass probe\"",
+            )
+        )
+        has_channel_bypass_emit_probe = all(
+            token in text
+            for token in (
+                "run_probe channel_bypass_emit",
+                "python3 \"${EGRESS_WRAPPER_PATH}\"",
+                "--candidate-output \"channel bypass emit probe\"",
+                "--ingress-receipt",
+            )
+        )
+        has_session_chain_tuple_assertions = all(
+            token in text
+            for token in (
+                "headstamp_first_line_status",
+                "entry_receipt_tuple_status",
+                "final_emit_contract_status",
+                "required_tuple",
+            )
+        )
         gateway_missing_tokens: list[str] = []
         if not has_runner_forge_probe:
             gateway_missing_tokens.append("gateway_runner_forge_probe_invocation_missing")
@@ -981,6 +1007,12 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_egress_wrapper_direct_probe_invocation_missing")
         if not has_session_chain_headstamp_probe:
             gateway_missing_tokens.append("gateway_session_chain_headstamp_probe_invocation_missing")
+        if not has_direct_text_emit_probe:
+            gateway_missing_tokens.append("gateway_direct_text_emit_probe_invocation_missing")
+        if not has_channel_bypass_emit_probe:
+            gateway_missing_tokens.append("gateway_channel_bypass_emit_probe_invocation_missing")
+        if not has_session_chain_tuple_assertions:
+            gateway_missing_tokens.append("gateway_session_chain_tuple_assertions_missing")
         if gateway_missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + gateway_missing_tokens))

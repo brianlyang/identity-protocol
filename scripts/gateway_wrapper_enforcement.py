@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from final_emit_contract_common import (
+    FINAL_EMIT_CHANNEL_ID,
+    FINAL_EMIT_POLICY_MODE,
+    FINAL_EMIT_SCHEMA_ID,
+)
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
@@ -27,6 +32,18 @@ HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = INFRA_HOST_GATEWAY_DEFAULT_SESSION_
 HOST_GATEWAY_DEFAULT_SIGNING_KEY = INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+FINAL_EMIT_TUPLE_REQUIRED_FIELDS: tuple[str, ...] = (
+    "outlet_channel_id",
+    "outlet_preflight_receipt",
+    "outlet_bypass_detected",
+    "final_emit_channel_id",
+    "final_emit_policy_mode",
+    "final_emit_schema_id",
+    "final_emit_schema_status",
+    "final_emit_contract_status",
+)
 
 
 def _arg_index(cmd: list[str], flag: str) -> int:
@@ -45,6 +62,65 @@ def _arg_value(cmd: list[str], flag: str, default: str = "") -> str:
 
 def _has_flag(cmd: list[str], flag: str) -> bool:
     return _arg_index(cmd, flag) >= 0
+
+
+def _normalize_status(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def _normalize_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    token = str(value or "").strip().lower()
+    return token in {"1", "true", "yes", "y", "on"}
+
+
+def _project_final_emit_tuple_from_session_chain(
+    *,
+    chain_payload: dict[str, Any],
+) -> tuple[dict[str, Any], list[str]]:
+    projected: dict[str, Any] = {}
+    projected["outlet_channel_id"] = (
+        str(chain_payload.get("outlet_channel_id", "")).strip()
+        or str(chain_payload.get("final_emit_channel_id", "")).strip()
+        or FINAL_EMIT_CHANNEL_ID
+    )
+    projected["outlet_preflight_receipt"] = (
+        str(chain_payload.get("outlet_preflight_receipt", "")).strip()
+        or str(chain_payload.get("ingress_receipt_path", "")).strip()
+    )
+    projected["outlet_bypass_detected"] = _normalize_bool(
+        chain_payload.get("outlet_bypass_detected", False)
+    )
+    projected["final_emit_channel_id"] = (
+        str(chain_payload.get("final_emit_channel_id", "")).strip()
+        or str(projected["outlet_channel_id"]).strip()
+        or FINAL_EMIT_CHANNEL_ID
+    )
+    projected["final_emit_policy_mode"] = (
+        str(chain_payload.get("final_emit_policy_mode", "")).strip() or FINAL_EMIT_POLICY_MODE
+    )
+    projected["final_emit_schema_id"] = (
+        str(chain_payload.get("final_emit_schema_id", "")).strip() or FINAL_EMIT_SCHEMA_ID
+    )
+    projected["final_emit_schema_status"] = (
+        _normalize_status(chain_payload.get("final_emit_schema_status", ""))
+        or STATUS_PASS_REQUIRED
+    )
+    projected["final_emit_contract_status"] = (
+        _normalize_status(chain_payload.get("final_emit_contract_status", ""))
+        or _normalize_status(chain_payload.get("final_emit_guard_status", ""))
+        or STATUS_FAIL_REQUIRED
+    )
+
+    missing: list[str] = []
+    for field in FINAL_EMIT_TUPLE_REQUIRED_FIELDS:
+        value = projected.get(field)
+        if field == "outlet_bypass_detected":
+            continue
+        if not str(value or "").strip():
+            missing.append(field)
+    return projected, missing
 
 
 def infer_source_domain_from_catalog(catalog_path: str) -> str:
@@ -238,6 +314,61 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         reply_text = out_reply_path.read_text(encoding="utf-8", errors="ignore").strip()
         if not reply_text.startswith("Identity-Context:"):
             return _emit_fail_payload("session_chain_reply_first_line_missing_identity_context")
+        projected_tuple, tuple_missing = _project_final_emit_tuple_from_session_chain(
+            chain_payload=chain_payload
+        )
+        for key, value in projected_tuple.items():
+            chain_payload[key] = value
+        chain_payload["emit_channel_id"] = str(chain_payload.get("final_emit_channel_id", "")).strip()
+        chain_payload["reply_transport_ref"] = out_reply_file
+        chain_payload["reply_transport_binding_status"] = STATUS_PASS_REQUIRED
+        chain_payload["headstamp_first_line_status"] = STATUS_PASS_REQUIRED
+        wrapper_surface_status = _normalize_status(chain_payload.get("wrapper_surface_status", ""))
+        if not wrapper_surface_status:
+            wrapper_surface_status = (
+                STATUS_PASS_REQUIRED
+                if _normalize_status(chain_payload.get("ingress_bundle_status", "")) == STATUS_PASS_REQUIRED
+                else STATUS_FAIL_REQUIRED
+            )
+        chain_payload["wrapper_surface_status"] = wrapper_surface_status
+        tuple_status = STATUS_PASS_REQUIRED
+        if tuple_missing:
+            tuple_status = STATUS_FAIL_REQUIRED
+        run_id_status = (
+            STATUS_PASS_REQUIRED
+            if str(chain_payload.get("run_id", "")).strip() == str(run_id or "").strip()
+            else STATUS_FAIL_REQUIRED
+        )
+        actor_id_status = (
+            STATUS_PASS_REQUIRED
+            if str(chain_payload.get("actor_id", "")).strip() == str(actor_id or "").strip()
+            else STATUS_FAIL_REQUIRED
+        )
+        session_id_status = (
+            STATUS_PASS_REQUIRED
+            if str(chain_payload.get("session_id", "")).strip() == str(session_id or "").strip()
+            else STATUS_FAIL_REQUIRED
+        )
+        if STATUS_FAIL_REQUIRED in {run_id_status, actor_id_status, session_id_status}:
+            tuple_status = STATUS_FAIL_REQUIRED
+            tuple_missing.extend(
+                [
+                    "run_id_mismatch" if run_id_status == STATUS_FAIL_REQUIRED else "",
+                    "actor_id_mismatch" if actor_id_status == STATUS_FAIL_REQUIRED else "",
+                    "session_id_mismatch" if session_id_status == STATUS_FAIL_REQUIRED else "",
+                ]
+            )
+        chain_payload["entry_receipt_tuple_status"] = tuple_status
+        chain_payload["entry_receipt_tuple_run_id_status"] = run_id_status
+        chain_payload["entry_receipt_tuple_actor_id_status"] = actor_id_status
+        chain_payload["entry_receipt_tuple_session_id_status"] = session_id_status
+        send_time_status = _normalize_status(chain_payload.get("send_time_gate_status", ""))
+        if send_time_status == STATUS_PASS_REQUIRED and tuple_status != STATUS_PASS_REQUIRED:
+            missing_tokens = [token for token in tuple_missing if token]
+            reason = "session_chain_canonical_tuple_missing"
+            if missing_tokens:
+                reason += ":" + ",".join(sorted(set(missing_tokens)))
+            return _emit_fail_payload(reason)
         normalized = json.dumps(chain_payload, ensure_ascii=False)
         if caller_json_only:
             print(normalized)
