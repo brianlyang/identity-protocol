@@ -640,6 +640,7 @@ def _protocol_unique_entry_gate_contract_skeleton() -> dict:
         "require_strict_operation_receipt": True,
         "entry_receipt_state_file": "runtime/state/required_gate_bundle_entry.latest.json",
         "entry_receipt_history_pattern": "runtime/reports/required-gate-bundle-entry/required-gate-bundle-entry-*.json",
+        "entry_receipt_max_age_seconds": 1800,
         "entry_receipt_required_fields": [
             "bundle_key",
             "bundle_contract_id",

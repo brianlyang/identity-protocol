@@ -85,6 +85,16 @@ VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
 )
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+TUPLE_CONTEXT_PRIMARY_MARKERS: set[str] = {
+    "entry_receipt_operation_mismatch",
+    "entry_receipt_run_id_mismatch",
+    "entry_receipt_actor_id_mismatch",
+    "entry_receipt_session_id_mismatch",
+}
+TUPLE_CONTEXT_ALLOWED_MARKERS: set[str] = {
+    *TUPLE_CONTEXT_PRIMARY_MARKERS,
+    "entry_receipt_bundle_status_not_pass",
+}
 
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
@@ -210,12 +220,105 @@ def _classify_m2m_projection(
     }
 
 
+def _is_tuple_context_only_stale_reasons(stale_reasons: list[str]) -> bool:
+    tokens = [str(x).strip() for x in stale_reasons if str(x).strip()]
+    if not tokens:
+        return False
+    primary_detected = False
+    for token in tokens:
+        if token in TUPLE_CONTEXT_PRIMARY_MARKERS:
+            primary_detected = True
+            continue
+        if token in TUPLE_CONTEXT_ALLOWED_MARKERS:
+            continue
+        if token.startswith("entry_receipt_required_fields_missing:"):
+            primary_detected = True
+            continue
+        return False
+    return primary_detected
+
+
+def _classify_tuple_context_projection(*, validators: dict[str, Any]) -> dict[str, Any]:
+    matches: list[dict[str, Any]] = []
+    tuple_rows: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+
+    for name, raw in (validators or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        payload = _parse_json_payload(str(entry.get("out", ""))) or {}
+        if isinstance(payload, dict):
+            tuple_rows.append((str(name), entry, payload))
+
+    coverage_entry = (validators or {}).get("required_contract_coverage")
+    coverage_payload = _parse_json_payload(
+        str((coverage_entry or {}).get("out", "")) if isinstance(coverage_entry, dict) else ""
+    ) or {}
+    for contract_row in (coverage_payload.get("contracts") or []):
+        if not isinstance(contract_row, dict):
+            continue
+        if str(contract_row.get("name", "")).strip() != "protocol_unique_entry_gate":
+            continue
+        tail_payload = _parse_json_payload(str(contract_row.get("validator_tail", ""))) or {}
+        if not isinstance(tail_payload, dict):
+            continue
+        tuple_rows.append(
+            (
+                "protocol_unique_entry_gate:coverage",
+                {
+                    "rc": 0
+                    if str(contract_row.get("validator_status", "")).strip().upper() == STATUS_PASS_REQUIRED
+                    else 1,
+                    "ok": str(contract_row.get("validator_status", "")).strip().upper() == STATUS_PASS_REQUIRED,
+                    "out": json.dumps(tail_payload, ensure_ascii=False),
+                    "err": "",
+                    "error_code": str(tail_payload.get("error_code", "")).strip()
+                    or str(contract_row.get("reason_code", "")).strip(),
+                },
+                tail_payload,
+            )
+        )
+
+    for name, entry, payload in tuple_rows:
+        tuple_only = bool(payload.get("protocol_unique_entry_receipt_tuple_context_only_failure", False))
+        if not tuple_only:
+            tuple_status = str(
+                payload.get("protocol_unique_entry_receipt_tuple_context_status", "")
+            ).strip().upper()
+            stale_reasons = [
+                str(x).strip()
+                for x in (payload.get("stale_reasons") or [])
+                if str(x).strip()
+            ]
+            if tuple_status == STATUS_FAIL_REQUIRED and _is_tuple_context_only_stale_reasons(stale_reasons):
+                tuple_only = True
+        if not tuple_only:
+            continue
+        mismatch_fields = [
+            str(x).strip()
+            for x in (payload.get("protocol_unique_entry_receipt_tuple_context_mismatch_fields") or [])
+            if str(x).strip()
+        ]
+        matches.append(
+            {
+                "validator": str(name),
+                "error_code": _extract_error_code_from_validator(entry),
+                "mismatch_fields": sorted(set(mismatch_fields)),
+            }
+        )
+    return {
+        "tuple_context_status": STATUS_PASS_REQUIRED if not matches else STATUS_FAIL_REQUIRED,
+        "tuple_context_only_failure": bool(matches),
+        "tuple_context_only_failure_count": len(matches),
+        "tuple_context_only_failure_validators": matches,
+    }
+
+
 def _build_governance_closure_axes(
     *,
     instance_status: str,
     repo_status: str,
     release_status: str,
     m2m_projection: dict[str, Any],
+    tuple_context_projection: dict[str, Any],
 ) -> dict[str, Any]:
     normalized_instance = str(instance_status or "").strip().upper()
     normalized_repo = str(repo_status or "").strip().upper()
@@ -224,6 +327,8 @@ def _build_governance_closure_axes(
     infra_pass = normalized_repo == "CLOSED" and m2m_status == "PASS"
     runtime_pass = normalized_instance == "CLOSED"
     release_pass = normalized_release == "CLOSED"
+    tuple_context_status = str(tuple_context_projection.get("tuple_context_status", "")).strip().upper()
+    tuple_context_pass = tuple_context_status != STATUS_FAIL_REQUIRED
     reasons: list[str] = []
     if normalized_repo != "CLOSED":
         reasons.append(f"repo_plane_not_closed:{normalized_repo or 'UNKNOWN'}")
@@ -233,10 +338,21 @@ def _build_governance_closure_axes(
         reasons.append(f"instance_plane_not_closed:{normalized_instance or 'UNKNOWN'}")
     if normalized_release != "CLOSED":
         reasons.append(f"release_plane_not_closed:{normalized_release or 'UNKNOWN'}")
+    if not tuple_context_pass:
+        tuple_validators = [
+            str(row.get("validator", "")).strip()
+            for row in (tuple_context_projection.get("tuple_context_only_failure_validators") or [])
+            if str(row.get("validator", "")).strip()
+        ]
+        reason = "tuple_context_only_failure_detected"
+        if tuple_validators:
+            reason += ":" + ",".join(sorted(set(tuple_validators)))
+        reasons.append(reason)
     return {
         "infrastructure_closure_status": STATUS_PASS_REQUIRED if infra_pass else STATUS_FAIL_REQUIRED,
         "runtime_readiness_status": STATUS_PASS_REQUIRED if runtime_pass else STATUS_FAIL_REQUIRED,
         "release_readiness_status": STATUS_PASS_REQUIRED if release_pass else STATUS_FAIL_REQUIRED,
+        "tuple_context_consistency_status": STATUS_PASS_REQUIRED if tuple_context_pass else STATUS_FAIL_REQUIRED,
         "decision_mode": "FULL_GO" if (infra_pass and runtime_pass and release_pass) else "CONDITIONAL_GO",
         "conditional_reasons": reasons,
     }
@@ -4718,14 +4834,20 @@ def main() -> int:
         repo_status=repo_status,
         release_status=release_status,
     )
+    tuple_context_projection = _classify_tuple_context_projection(
+        validators=instance_detail.get("validators", {}) if isinstance(instance_detail, dict) else {},
+    )
     payload["m2m_projection"] = m2m_projection
+    payload["tuple_context_projection"] = tuple_context_projection
     if isinstance(instance_detail, dict):
         instance_detail["m2m_projection"] = m2m_projection
+        instance_detail["tuple_context_projection"] = tuple_context_projection
     payload["governance_closure_axes"] = _build_governance_closure_axes(
         instance_status=instance_status,
         repo_status=repo_status,
         release_status=release_status,
         m2m_projection=m2m_projection,
+        tuple_context_projection=tuple_context_projection,
     )
 
     overall = "Conditional Go"

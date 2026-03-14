@@ -268,6 +268,32 @@ Scan-plane interpretation extension:
    - `summary_tuple_context`
 2. tuple-context-only failures remain hard failures at check level, but scan summaries must expose them as a separate machine-readable diagnostic dimension to avoid conflating context mismatch with protocol wiring regressions.
 
+Strict binding closure extension (mandatory):
+
+1. Under strict operation + `--require-entry-receipt`, unique-entry validator must enforce complete tuple binding:
+   - `operation`
+   - `run_id`
+   - `actor_id`
+   - `session_id`
+2. Any missing tuple field above is `FAIL_REQUIRED` with machine-readable stale reason:
+   - `entry_receipt_tuple_binding_incomplete:<missing_fields>`
+3. Creator orchestration paths (`validate`/`update`) must pass all tuple fields explicitly when invoking `validate_protocol_unique_entry_gate.py`.
+
+Strict receipt freshness extension (mandatory):
+
+1. `protocol_unique_entry_gate_contract_v1` must declare `entry_receipt_max_age_seconds` (>0).
+2. Under strict tuple-binding paths, receipt age must be within `entry_receipt_max_age_seconds`.
+3. Stale receipt replay outside freshness window is `FAIL_REQUIRED` with stale reason:
+   - `entry_receipt_stale:age_seconds=<n>:max_age_seconds=<m>`
+
+Required CI extension:
+
+1. Required lane must execute:
+   - `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+2. Minimum required outcomes:
+   - probe `tuple_binding_incomplete_blocked` must fail-close as expected.
+   - probe `tuple_binding_complete_pass` must pass with `PASS_REQUIRED`.
+
 ### 2.4.1 Headstamp continuity contract (mandatory)
 
 1. Egress wrapper must treat first-line identity tuple and layer tuple as send-time hard gate input.

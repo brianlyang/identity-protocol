@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -474,6 +475,8 @@ def main() -> int:
         "protocol_unique_entry_receipt_state_file": "",
         "protocol_unique_entry_receipt_history_pattern": "",
         "protocol_unique_entry_receipt_required_fields": [],
+        "protocol_unique_entry_receipt_max_age_seconds": 0,
+        "protocol_unique_entry_receipt_age_seconds": -1,
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_bundle_key": "",
@@ -492,6 +495,9 @@ def main() -> int:
         "protocol_unique_entry_receipt_tuple_context_observed": {},
         "protocol_unique_entry_receipt_tuple_context_only_failure": False,
         "protocol_unique_entry_receipt_tuple_context_next_action": "",
+        "protocol_unique_entry_receipt_tuple_binding_required": False,
+        "protocol_unique_entry_receipt_tuple_binding_expected_fields": [],
+        "protocol_unique_entry_receipt_tuple_binding_missing_fields": [],
         "protocol_unique_entry_receipt_surface_label": "",
         "protocol_unique_entry_receipt_wrapper_surface_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_token_status": "",
@@ -571,6 +577,11 @@ def main() -> int:
     receipt_required_by_contract = bool(contract.get("require_strict_operation_receipt", False))
     entry_receipt_state_file = str(contract.get("entry_receipt_state_file", "")).strip()
     entry_receipt_history_pattern = str(contract.get("entry_receipt_history_pattern", "")).strip()
+    entry_receipt_max_age_raw = contract.get("entry_receipt_max_age_seconds", 0)
+    try:
+        entry_receipt_max_age_seconds = int(entry_receipt_max_age_raw)
+    except Exception:
+        entry_receipt_max_age_seconds = 0
     entry_receipt_required_fields = _as_str_set(contract.get("entry_receipt_required_fields"))
 
     payload["protocol_unique_entry_script"] = entry_script
@@ -581,6 +592,7 @@ def main() -> int:
     payload["protocol_unique_entry_receipt_required"] = bool(args.require_entry_receipt)
     payload["protocol_unique_entry_receipt_state_file"] = entry_receipt_state_file
     payload["protocol_unique_entry_receipt_history_pattern"] = entry_receipt_history_pattern
+    payload["protocol_unique_entry_receipt_max_age_seconds"] = entry_receipt_max_age_seconds
     payload["protocol_unique_entry_receipt_required_fields"] = sorted(entry_receipt_required_fields)
 
     if contract.get("required") is not True:
@@ -603,6 +615,8 @@ def main() -> int:
         issues.append("entry_receipt_state_file_missing")
     if not entry_receipt_history_pattern:
         issues.append("entry_receipt_history_pattern_missing")
+    if entry_receipt_max_age_seconds <= 0:
+        issues.append("entry_receipt_max_age_seconds_invalid")
     if not entry_receipt_required_fields:
         issues.append("entry_receipt_required_fields_missing")
 
@@ -1475,6 +1489,41 @@ def main() -> int:
     payload["protocol_unique_entry_receipt_provenance_required"] = provenance_required
 
     receipt_required = bool(args.require_entry_receipt)
+    tuple_binding_required = bool(
+        receipt_required
+        and (
+            str(args.operation).strip().lower() in host_gateway_strict_operations
+            or strict_operation
+        )
+    )
+    tuple_binding_expected_fields: list[str] = ["operation", "run_id", "actor_id", "session_id"]
+    tuple_binding_missing_fields: list[str] = []
+    if tuple_binding_required:
+        if not run_id:
+            tuple_binding_missing_fields.append("run_id")
+        if not actor_id:
+            tuple_binding_missing_fields.append("actor_id")
+        if not session_id:
+            tuple_binding_missing_fields.append("session_id")
+    payload["protocol_unique_entry_receipt_tuple_binding_required"] = tuple_binding_required
+    payload["protocol_unique_entry_receipt_tuple_binding_expected_fields"] = list(tuple_binding_expected_fields)
+    payload["protocol_unique_entry_receipt_tuple_binding_missing_fields"] = list(tuple_binding_missing_fields)
+    if tuple_binding_required and tuple_binding_missing_fields:
+        payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+        payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+        payload["protocol_unique_entry_receipt_tuple_context_status"] = STATUS_FAIL_REQUIRED
+        payload["protocol_unique_entry_receipt_tuple_context_required_fields"] = list(tuple_binding_expected_fields)
+        payload["protocol_unique_entry_receipt_tuple_context_mismatch_fields"] = list(tuple_binding_missing_fields)
+        payload["protocol_unique_entry_receipt_tuple_context_next_action"] = (
+            "supply_actor_id_session_id_run_id_and_revalidate_entry_receipt"
+        )
+        payload["error_code"] = ERR_CONTRACT_INVALID
+        payload["stale_reasons"] = [
+            "entry_receipt_tuple_binding_incomplete:" + ",".join(tuple_binding_missing_fields)
+        ]
+        _emit(payload, json_only=args.json_only)
+        return 1
+
     if receipt_required:
         receipt_path = _resolve_entry_receipt_path(
             pack_path=pack_path,
@@ -1521,6 +1570,30 @@ def main() -> int:
         receipt_wrapper_parent_expected_path = str(
             receipt.get("wrapper_parent_attestation_expected_path", "")
         ).strip()
+        receipt_age_seconds = -1
+        if tuple_binding_required and entry_receipt_max_age_seconds > 0:
+            try:
+                receipt_age_seconds = max(0, int(time.time() - receipt_path.stat().st_mtime))
+            except Exception:
+                receipt_age_seconds = -1
+            payload["protocol_unique_entry_receipt_age_seconds"] = receipt_age_seconds
+            if receipt_age_seconds < 0:
+                payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+                payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+                payload["error_code"] = ERR_CONTRACT_INVALID
+                payload["stale_reasons"] = ["entry_receipt_age_unavailable"]
+                _emit(payload, json_only=args.json_only)
+                return 1
+            if receipt_age_seconds > entry_receipt_max_age_seconds:
+                payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+                payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+                payload["error_code"] = ERR_CONTRACT_INVALID
+                payload["stale_reasons"] = [
+                    "entry_receipt_stale:"
+                    f"age_seconds={receipt_age_seconds}:max_age_seconds={entry_receipt_max_age_seconds}"
+                ]
+                _emit(payload, json_only=args.json_only)
+                return 1
         payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
         payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
         payload["protocol_unique_entry_receipt_run_id_field"] = receipt_run_id_field

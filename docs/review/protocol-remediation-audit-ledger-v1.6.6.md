@@ -1853,3 +1853,41 @@ Replay expectation:
 
 1. protocol regressions continue to surface in normal severity and `m2m_projection`.
 2. tuple-context-only failures become separately countable without reducing fail-close strictness.
+
+### 26.18 Strict tuple binding + freshness closure (2026-03-14)
+
+Problem:
+
+1. strict `require-entry-receipt` validation could pass without actor/session binding when caller omitted tuple args.
+2. static/default run-id patterns and stale receipts could increase replay ambiguity over time.
+
+Fix landed:
+
+1. `scripts/validate_protocol_unique_entry_gate.py`
+   - strict + receipt paths now require complete tuple binding (`operation/run_id/actor_id/session_id`).
+   - missing tuple args fail-close with:
+     - `entry_receipt_tuple_binding_incomplete:<fields>`
+   - added strict receipt freshness guard via contract field:
+     - `entry_receipt_max_age_seconds`
+   - stale replay outside freshness window fail-closes with:
+     - `entry_receipt_stale:age_seconds=<n>:max_age_seconds=<m>`
+2. `scripts/identity_creator.py`
+   - validate/update unique-entry invocation now always passes:
+     - `--run-id --actor-id --session-id`
+   - validate/update fallback run token generation is timestamped (no static identity-only fallback).
+3. `scripts/create_identity_pack.py` + `scripts/repair_contract_backfill.py`
+   - unique-entry contract skeleton/backfill now guarantees:
+     - `entry_receipt_max_age_seconds` present and positive.
+4. Required CI lane:
+   - added probe delegate:
+     - `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - verifies:
+     - tuple-missing strict call is blocked
+     - tuple-complete strict call passes
+
+Three-plane alignment:
+
+1. `scripts/report_three_plane_status.py` now includes:
+   - `tuple_context_projection`
+   - `governance_closure_axes.tuple_context_consistency_status`
+2. this keeps Conditional-Go reasoning aligned with scan tuple-context diagnostics.
