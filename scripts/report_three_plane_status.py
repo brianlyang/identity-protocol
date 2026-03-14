@@ -83,6 +83,9 @@ VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
     "normalization_error_code",
     "semantic_convergence_error_code",
 )
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
     run_cmd = list(cmd)
@@ -204,6 +207,38 @@ def _classify_m2m_projection(
             for row in non_m2m_failed
         ],
         "failed_validator_count_total": len(failed),
+    }
+
+
+def _build_governance_closure_axes(
+    *,
+    instance_status: str,
+    repo_status: str,
+    release_status: str,
+    m2m_projection: dict[str, Any],
+) -> dict[str, Any]:
+    normalized_instance = str(instance_status or "").strip().upper()
+    normalized_repo = str(repo_status or "").strip().upper()
+    normalized_release = str(release_status or "").strip().upper()
+    m2m_status = str(m2m_projection.get("m2m_binding_closure_status", "")).strip().upper()
+    infra_pass = normalized_repo == "CLOSED" and m2m_status == "PASS"
+    runtime_pass = normalized_instance == "CLOSED"
+    release_pass = normalized_release == "CLOSED"
+    reasons: list[str] = []
+    if normalized_repo != "CLOSED":
+        reasons.append(f"repo_plane_not_closed:{normalized_repo or 'UNKNOWN'}")
+    if m2m_status != "PASS":
+        reasons.append(f"m2m_binding_not_pass:{m2m_status or 'UNKNOWN'}")
+    if normalized_instance != "CLOSED":
+        reasons.append(f"instance_plane_not_closed:{normalized_instance or 'UNKNOWN'}")
+    if normalized_release != "CLOSED":
+        reasons.append(f"release_plane_not_closed:{normalized_release or 'UNKNOWN'}")
+    return {
+        "infrastructure_closure_status": STATUS_PASS_REQUIRED if infra_pass else STATUS_FAIL_REQUIRED,
+        "runtime_readiness_status": STATUS_PASS_REQUIRED if runtime_pass else STATUS_FAIL_REQUIRED,
+        "release_readiness_status": STATUS_PASS_REQUIRED if release_pass else STATUS_FAIL_REQUIRED,
+        "decision_mode": "FULL_GO" if (infra_pass and runtime_pass and release_pass) else "CONDITIONAL_GO",
+        "conditional_reasons": reasons,
     }
 
 
@@ -4686,6 +4721,12 @@ def main() -> int:
     payload["m2m_projection"] = m2m_projection
     if isinstance(instance_detail, dict):
         instance_detail["m2m_projection"] = m2m_projection
+    payload["governance_closure_axes"] = _build_governance_closure_axes(
+        instance_status=instance_status,
+        repo_status=repo_status,
+        release_status=release_status,
+        m2m_projection=m2m_projection,
+    )
 
     overall = "Conditional Go"
     if instance_status == "CLOSED" and repo_status == "CLOSED" and release_status == "CLOSED":

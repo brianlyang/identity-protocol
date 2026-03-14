@@ -584,6 +584,29 @@ def _severity_for_row(row: dict[str, Any]) -> str:
     return "OK"
 
 
+def _summary_bucket_for_row(row: dict[str, Any]) -> str:
+    profile = str(row.get("profile", "")).strip().lower()
+    runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+    status = str(row.get("status", "")).strip().lower()
+    is_fixture = profile == "fixture" or runtime_mode == "demo_only"
+    if is_fixture:
+        return "fixture_or_demo"
+    if status == "active" and profile == "runtime":
+        return "runtime_active"
+    return "non_active_or_non_runtime"
+
+
+def _bump_summary(summary: dict[str, int], severity: str) -> None:
+    summary["total_identities"] = int(summary.get("total_identities", 0)) + 1
+    normalized = str(severity or "OK").strip().upper()
+    if normalized == "P0":
+        summary["p0"] = int(summary.get("p0", 0)) + 1
+    elif normalized == "P1":
+        summary["p1"] = int(summary.get("p1", 0)) + 1
+    else:
+        summary["ok"] = int(summary.get("ok", 0)) + 1
+
+
 def main() -> int:
     global SESSION_ID_FALLBACK
     ap = argparse.ArgumentParser(description="Scan all configured identities and emit cross-catalog governance status.")
@@ -739,6 +762,9 @@ def main() -> int:
         "catalog_dedup_skips": catalog_dedup_skips,
         "catalogs": [],
         "summary": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_runtime_active": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_fixture_or_demo": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
+        "summary_non_active_or_non_runtime": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
     }
     target_severity_map: dict[str, str] = {}
@@ -762,6 +788,18 @@ def main() -> int:
             target_m2m_map[identity_id] = "FAIL"
         else:
             target_m2m_map[identity_id] = "PASS"
+
+    def _record_summary(item: dict[str, Any]) -> None:
+        severity = str(item.get("severity", "OK")).strip().upper() or "OK"
+        _bump_summary(payload["summary"], severity)
+        bucket = _summary_bucket_for_row(item)
+        item["summary_bucket"] = bucket
+        if bucket == "runtime_active":
+            _bump_summary(payload["summary_runtime_active"], severity)
+        elif bucket == "fixture_or_demo":
+            _bump_summary(payload["summary_fixture_or_demo"], severity)
+        else:
+            _bump_summary(payload["summary_non_active_or_non_runtime"], severity)
 
     for layer, catalog in catalog_list:
         rows = _catalog_rows(catalog) if catalog.exists() else []
@@ -903,15 +941,15 @@ def main() -> int:
                     payload["summary_m2m"]["fail"] += 1
                 _update_target_m2m(iid, current_m2m)
                 _update_target_severity(iid, str(item["severity"]))
-                payload["summary"]["total_identities"] += 1
-                if item["severity"] == "P0":
-                    payload["summary"]["p0"] += 1
-                elif item["severity"] == "P1":
-                    payload["summary"]["p1"] += 1
-                else:
-                    payload["summary"]["ok"] += 1
+                _record_summary(item)
                 layer_out["identities"].append(item)
                 continue
+
+            row_profile = str(row.get("profile", "")).strip().lower()
+            row_runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+            row_status = str(row.get("status", "")).strip().lower()
+            row_is_active_runtime = row_status == "active" and row_profile == "runtime"
+            row_is_fixture = row_profile == "fixture" or row_runtime_mode == "demo_only"
 
             scan_session_id, session_resolution_mode, requested_session_bound = _resolve_effective_scan_session_id(
                 catalog_path=catalog,
@@ -926,7 +964,8 @@ def main() -> int:
             item["session_id_effective"] = scan_session_id
             item["session_id_resolution_mode"] = session_resolution_mode
             item["session_id_requested_bound"] = requested_session_bound
-            if session_id_input and not requested_session_bound:
+            item["requested_session_binding_required"] = row_is_active_runtime
+            if row_is_active_runtime and session_id_input and not requested_session_bound:
                 item["checks"]["requested_session_binding"] = {
                     "rc": 1,
                     "ok": False,
@@ -942,13 +981,18 @@ def main() -> int:
                 _update_target_m2m(iid, current_m2m)
                 item["severity"] = "P0"
                 _update_target_severity(iid, str(item["severity"]))
-                payload["summary"]["total_identities"] += 1
-                payload["summary"]["p0"] += 1
+                _record_summary(item)
                 layer_out["identities"].append(item)
                 continue
+            if (not row_is_active_runtime) and session_id_input and not requested_session_bound:
+                item["checks"]["requested_session_binding"] = {
+                    "rc": 0,
+                    "ok": True,
+                    "tail": "SKIPPED_NOT_REQUIRED requested --session-id binding is enforced only for active runtime rows",
+                }
 
-            is_active_runtime = str(row.get("status", "")).lower() == "active" and str(row.get("profile", "")).lower() == "runtime"
-            is_fixture = str(row.get("profile", "")).lower() == "fixture" or str(row.get("runtime_mode", "")).lower() == "demo_only"
+            is_active_runtime = row_is_active_runtime
+            is_fixture = row_is_fixture
             stamp_artifact = str(
                 runtime_temp_file(
                     channel="response-stamp",
@@ -4297,13 +4341,7 @@ def main() -> int:
             _update_target_m2m(iid, current_m2m)
             item["severity"] = _severity_for_row(item)
             _update_target_severity(iid, str(item["severity"]))
-            payload["summary"]["total_identities"] += 1
-            if item["severity"] == "P0":
-                payload["summary"]["p0"] += 1
-            elif item["severity"] == "P1":
-                payload["summary"]["p1"] += 1
-            else:
-                payload["summary"]["ok"] += 1
+            _record_summary(item)
             layer_out["identities"].append(item)
 
         payload["catalogs"].append(layer_out)

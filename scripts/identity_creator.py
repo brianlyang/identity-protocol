@@ -1241,6 +1241,25 @@ def _heal_identity(
             rc_fb = _step("auto_repair_feedback_evidence", fb_cmd)
             if rc_fb == 0:
                 rc = _step("revalidate_after_feedback_repair", validate_cmd)
+        if rc != 0:
+            feedback_linking_blob = report["steps"][-1].get("stdout", "") + report["steps"][-1].get("stderr", "")
+            if (
+                "feedback_batches_not_linked_in_index" in feedback_linking_blob
+                or "IP-GOV-FEEDBACK-002" in feedback_linking_blob
+            ):
+                feedback_link_cmd = [
+                    "python3",
+                    "scripts/repair_protocol_feedback_ssot_index.py",
+                    "--identity-id",
+                    identity_id,
+                    "--catalog",
+                    str(local_catalog),
+                    "--apply",
+                    "--json-only",
+                ]
+                rc_feedback_link = _step("auto_repair_protocol_feedback_ssot_index", feedback_link_cmd)
+                if rc_feedback_link == 0:
+                    rc = _step("revalidate_after_protocol_feedback_ssot_index_repair", validate_cmd)
         if rc != 0 and "missing capability arbitration sample report" in (report["steps"][-1].get("stdout", "") + report["steps"][-1].get("stderr", "")):
             arb_cmd = [
                 "python3",
@@ -3273,6 +3292,21 @@ def main() -> int:
         )
         if rc != 0:
             print("[FAIL] post-execution mandatory auto-repair failed; update blocked")
+            return rc
+        rc = _run(
+            [
+                "python3",
+                "scripts/repair_protocol_feedback_ssot_index.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--apply",
+                "--json-only",
+            ]
+        )
+        if rc != 0:
+            print("[FAIL] protocol-feedback SSOT index auto-repair failed; update blocked")
             return rc
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         update_run_id = str(args.run_id or "").strip() or creator_run_id
