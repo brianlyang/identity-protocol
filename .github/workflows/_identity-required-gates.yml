@@ -69,6 +69,25 @@ jobs:
       - name: Validate control-plane status sync (v1.6)
         run: python3 scripts/validate_control_plane_status_sync.py --json-only
 
+      - name: Validate stream version PR boundary (v1.6.8)
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [ -n "${PR_BASE_SHA}" ] && [ -n "${PR_HEAD_SHA}" ]; then
+            BASE_SHA="${PR_BASE_SHA}"
+            HEAD_SHA="${PR_HEAD_SHA}"
+          elif [ -n "${PUSH_BEFORE_SHA}" ] && [ "${PUSH_BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="${PUSH_BEFORE_SHA}"
+            HEAD_SHA="${CURRENT_SHA}"
+          else
+            BASE_SHA="$(git rev-parse HEAD~1)"
+            HEAD_SHA="$(git rev-parse HEAD)"
+          fi
+          python3 scripts/validate_stream_version_pr_boundary.py --base "${BASE_SHA}" --head "${HEAD_SHA}" --json-only
+
       - name: Validate governance docs command contract
         run: python3 scripts/docs_command_contract_check.py
 
