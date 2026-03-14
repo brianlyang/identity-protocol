@@ -263,3 +263,49 @@ Observed result:
 1. This addendum strengthens v1.6.8 infra-level host-visible provenance checks.
 2. It does not claim closure of unrelated instance business debt.
 3. Verdict impact: infrastructure hardening improved; stream closure remains tied to full motherline gate outcomes.
+
+## 14) Round-31.2 addendum: protocol-feedback SSOT index auto-repair + summary segregation (2026-03-14)
+
+### 14.1 Audit conclusion
+
+1. `IP-GOV-FEEDBACK-002` linkage drift is now repairable through protocol tooling, not manual index editing.
+2. Full-scan summary now isolates active runtime from fixture/non-active lanes to avoid closure noise.
+3. Requested session binding is enforced only on active runtime rows, preventing false P0 in mixed-layer target scans.
+
+### 14.2 Fix set audited
+
+1. `scripts/repair_protocol_feedback_ssot_index.py` (new)
+   - appends missing outbox batch links to protocol-feedback index using contract-driven roots.
+2. `scripts/identity_creator.py`
+   - update path includes mandatory `repair_protocol_feedback_ssot_index --apply`.
+   - heal/validate fallback now auto-runs the same repair when `IP-GOV-FEEDBACK-002` is detected.
+3. `scripts/full_identity_protocol_scan.py`
+   - adds summary buckets:
+     - `summary_runtime_active`
+     - `summary_fixture_or_demo`
+     - `summary_non_active_or_non_runtime`
+   - requested session-binding hard-fail now applies only to active runtime rows.
+
+### 14.3 Replay evidence
+
+1. protocol-feedback repair tool probe (synthetic root):
+   - `protocol_feedback_ssot_index_repair_status=PASS_REQUIRED`
+   - `appended_batch_links=1`
+   - `index_unlinked_batches_after=0`
+2. full-scan mixed-layer replay (`base-repo-architect`, source-layer both):
+   - `summary.p0=0`
+   - `summary_runtime_active.ok=1`
+   - `summary_non_active_or_non_runtime.ok=1`
+   - inactive row no longer triggers requested-session-binding P0.
+3. update integration smoke replay (`custom-creative-ecom-analyst`):
+   - `identity_creator.py update` returns `rc=0` with in-band SSOT index repair path executed.
+
+### 14.4 Three-plane structured closure axes
+
+1. `scripts/report_three_plane_status.py` now emits:
+   - `governance_closure_axes.infrastructure_closure_status`
+   - `governance_closure_axes.runtime_readiness_status`
+   - `governance_closure_axes.release_readiness_status`
+   - `governance_closure_axes.decision_mode`
+   - `governance_closure_axes.conditional_reasons`
+2. This converts “Conditional Go” from textual-only output to machine-consumable closure axes.

@@ -879,3 +879,24 @@ Current posture:
 1. `Policy PASS`
 2. `Implementation CONDITIONAL PASS`
 3. remaining condition is sender-layer physical routing closure (`wrapper output only`), not protocol semantic drift.
+
+### 5.14 Receipt tuple generation compatibility normalization (2026-03-14)
+
+To reduce false red caused by receipt field generation drift between scan/validate lanes, v1.6.6 tuple validation is normalized to accept canonical aliases while keeping strict equality on values.
+
+Protocol rules:
+
+1. Canonical tuple semantics remain unchanged:
+   - `run_id`, `actor_id`, `session_id`, `operation` must still match expected tuple values.
+2. Field-name alias compatibility is allowed for receipt parsing only:
+   - run-id aliases: `run_id_binding | run_id | requested_run_id`
+   - actor-id aliases: `actor_id | resolved_actor_id | entry_actor_id`
+   - session-id aliases: `session_id | resolved_session_id | entry_session_id`
+   - operation aliases: `operation | requested_operation | operation_name`
+3. Missing canonical required fields are considered satisfied only when an accepted alias provides the same tuple value.
+4. Validator payload must expose which source field was used per tuple element for audit traceability.
+
+Boundary:
+
+1. This is not a downgrade of tuple strictness.
+2. It only removes field-name generation drift noise; value mismatch is still `FAIL_REQUIRED`.

@@ -306,3 +306,39 @@ This rule prevents false negatives where governance motherline closure is comple
 1. Source keys and receipt path patterns are centralized in protocol infra constants.
 2. Validator behavior is parameterized (`--allowed-live-receipt-sources`) and not tied to identity IDs.
 3. Runtime and fixture modes share one contract surface; only source allowlist differs by lane.
+
+## 14) Protocol-feedback index auto-closure for SSOT continuity (2026-03-14)
+
+### 14.1 Objective
+
+1. Remove manual index-linking debt for `runtime/protocol-feedback/evidence-index/INDEX.md`.
+2. Ensure outbox SSOT remains machine-linked whenever new `FEEDBACK_BATCH_*.md` files exist.
+3. Keep path and linkage governance under protocol tooling (not manual instance edits).
+
+### 14.2 Governance rules
+
+1. Repair tooling must resolve paths via runtime contract + pack root; no absolute user-specific literals.
+2. Auto-linking may append missing markdown links only; it must not rewrite unrelated index history blocks.
+3. Any remaining unlinked batch after repair attempt is fail-close (`IP-GOV-FEEDBACK-002` family).
+4. Update path must invoke protocol-feedback SSOT index repair in-band before mutation execution.
+
+### 14.3 Required tooling surfaces
+
+1. `scripts/repair_protocol_feedback_ssot_index.py` (new)
+   - contract-driven index link backfill.
+2. `scripts/identity_creator.py` update path
+   - mandatory in-band `--apply` invocation of the repair tool.
+
+### 14.4 Expected result
+
+1. Full-scan `protocol_feedback_ssot_archival` no longer depends on ad-hoc manual index maintenance.
+2. Custom/runtime identities can self-heal linkage drift via protocol tools only.
+
+## 15) Observability segregation rule for deep-scan summaries (2026-03-14)
+
+1. Full-scan output must expose summary buckets separately:
+   - `summary_runtime_active`
+   - `summary_fixture_or_demo`
+   - `summary_non_active_or_non_runtime`
+2. Session-binding enforcement (`requested_session_binding`) is strict-required only for active runtime rows.
+3. This prevents inactive/global or fixture rows from polluting active-runtime closure narratives while keeping visibility intact.

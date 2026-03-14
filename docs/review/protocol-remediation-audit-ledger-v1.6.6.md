@@ -1764,3 +1764,28 @@ Checkpoint verdict update:
 
 1. the reported `host_visible_surface_live_state_channel_receipt_mismatch:final` residual is a valid protocol bug and is now absorbed with deterministic channel mapping.
 2. runtime live receipt closure remains converged after this fix under both normal and `run_id` token-collision probes.
+
+### 26.15 Tuple alias closure for scan/validate receipt drift (2026-03-14)
+
+Problem:
+
+1. unique-entry receipt tuple checks could false-fail when historical/alternate producers emitted alias field names instead of canonical tuple keys.
+2. this appeared as scan/validate drift noise even when tuple values were semantically identical.
+
+Fix landed:
+
+1. `scripts/validate_protocol_unique_entry_gate.py`
+   - added tuple alias resolver for `run_id/actor_id/session_id/operation`.
+   - required-field check now treats canonical tuple fields as satisfied when approved aliases exist with non-empty values.
+   - payload now records tuple source fields:
+     - `protocol_unique_entry_receipt_run_id_field`
+     - `protocol_unique_entry_receipt_actor_id_field`
+     - `protocol_unique_entry_receipt_session_id_field`
+     - `protocol_unique_entry_receipt_operation_field`.
+
+Replay:
+
+1. legacy-shape receipt probe (canonical tuple keys removed, alias keys only) now passes:
+   - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+   - tuple source fields point to alias keys (`run_id`, `resolved_actor_id`, `resolved_session_id`, `operation_name`).
+2. value mismatch semantics remain unchanged (still fail-close).
