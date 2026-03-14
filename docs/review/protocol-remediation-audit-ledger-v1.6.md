@@ -53,6 +53,44 @@ Mandatory closure interpretation:
    - `.github/workflows/_identity-required-gates.yml`
    - `identity/protocol/mappings/control-plane-status.current.yaml`
 
+## 0C) 2026-03-14 closure checkpoint (IP-CP-BUDGET-001 + legacy-item re-audit)
+
+### 0C.1 IP-CP-BUDGET-001 closure (protocol motherline)
+
+1. Reproduced blocker before fix:
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - result: `FAIL_REQUIRED` / `IP-CP-BUDGET-001` (no-rebound ceiling violations).
+2. Landed closure:
+   - commit: `f1b7f43`
+   - files:
+     - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+     - `identity/protocol/mappings/control-plane-status.v1.6.json`
+3. Post-fix machine result:
+   - budget validator: `PASS_REQUIRED`
+   - status sync validator: `PASS_REQUIRED`
+   - control-plane status: `PASS_REQUIRED`
+4. Governance interpretation:
+   - this is a **baseline re-anchor under no-rebound policy**, not a bypass;
+   - enforcement remains fail-close through the same budget/status gates.
+
+### 0C.2 Legacy-item cross-check (user-reported items, re-validated on 2026-03-14)
+
+1. v1.6.8 downsink contracts on `custom-creative-ecom-analyst`:
+   - current result: all three validators are `PASS_REQUIRED`
+     - `validate_protocol_downsink_path_immutability.py`
+     - `validate_protocol_downsink_path_write_guard.py`
+     - `validate_protocol_downsink_path_literal_lock.py`
+   - conclusion: prior `IP-DSPATH-001 contract_missing` report is not reproducible at current head.
+2. v1.6.6 unique-entry on `custom-creative-ecom-analyst`:
+   - current host gateway runtime contract fields: `PASS_REQUIRED`
+   - current fail reason (strict validate replay): `entry_receipt_bundle_status_not_pass`
+   - conclusion: fail is now due strict bundle verdict, not due missing downsink contract field.
+3. Session-binding noise in full-scan:
+   - confirmed as contextual precondition issue (`IP-ASB-SESSION-ENTRY-001`) when caller uses an unbound session id.
+4. Remaining strict-lane debt (real):
+   - `IP-MM-RUN-003` still reproducible on strict `operation=validate`
+     (base-repo-audit-expert-v3 and custom-creative-ecom-analyst).
+
 ## 0) Boundary and usage rules
 
 1. This file is a review ledger, not a governance SSOT.

@@ -46,6 +46,13 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
    - control-plane status sync (`control-plane-status.current.yaml`)
 5. Hard rule: no “v1.6 complete” claim is allowed while any required gate remains `FAIL_REQUIRED`.
 6. Hard rule: no new stream can be considered closure-ready unless its requirement rows are integrated into `contract-binding.current.yaml` motherline and enforced by required CI.
+7. Control-plane budget is part of the same v1.6 motherline closure gate:
+   - `identity/protocol/mappings/control-plane-budget.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+8. Budget governance policy is **no-rebound with explicit baseline re-anchor only**:
+   - never bypass `IP-CP-BUDGET-001` by narrative;
+   - when motherline scope expands (for example, new required rows integrated in the same v1.6 line),
+     thresholds/ceilings must be re-anchored explicitly in budget mapping and then re-synced into status mapping.
 
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
