@@ -14,6 +14,10 @@ from typing import Any
 import yaml
 
 from actor_session_common import load_actor_binding, resolve_actor_id
+from gateway_wrapper_enforcement import (
+    run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
+    run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -24,31 +28,50 @@ PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_release_freeze_boundary.py",
 }
 BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
+FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
 FAILCLOSE_PLUGIN_PROJECTION_SCRIPT = "scripts/validate_failclose_plugin_projection.py"
 FULL_SCAN_TARGET_REGRESSION_SCRIPT = "scripts/validate_full_scan_target_regression.py"
+PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _run(cmd: list[str]) -> int:
     print(f"[RUN] {' '.join(cmd)}")
-    p = subprocess.run(cmd)
-    if p.returncode != 0:
-        print(f"[FAIL] command failed ({p.returncode}): {' '.join(cmd)}")
-        return p.returncode
+    script = str(cmd[1]).strip() if len(cmd) >= 2 else ""
+    rc = 0
+    if script == BUNDLE_RUNNER_SCRIPT:
+        rc, _out, _err = _run_required_gate_bundle_via_ingress_wrapper(cmd=cmd, protocol_root=PROTOCOL_ROOT)
+    elif script == FINAL_EMIT_SCRIPT:
+        rc, _out, _err = _run_final_emit_via_instance_wrappers(cmd=cmd, protocol_root=PROTOCOL_ROOT)
+    else:
+        p = subprocess.run(cmd)
+        rc = p.returncode
+    if rc != 0:
+        print(f"[FAIL] command failed ({rc}): {' '.join(cmd)}")
+        return rc
     return 0
 
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
     print(f"[RUN] {' '.join(cmd)}")
-    p = subprocess.run(cmd, capture_output=True, text=True)
-    out = (p.stdout or "").strip()
-    err = (p.stderr or "").strip()
+    script = str(cmd[1]).strip() if len(cmd) >= 2 else ""
+    if script == BUNDLE_RUNNER_SCRIPT:
+        rc, raw_out, raw_err = _run_required_gate_bundle_via_ingress_wrapper(cmd=cmd, protocol_root=PROTOCOL_ROOT)
+    elif script == FINAL_EMIT_SCRIPT:
+        rc, raw_out, raw_err = _run_final_emit_via_instance_wrappers(cmd=cmd, protocol_root=PROTOCOL_ROOT)
+    else:
+        p = subprocess.run(cmd, capture_output=True, text=True)
+        rc = p.returncode
+        raw_out = p.stdout or ""
+        raw_err = p.stderr or ""
+    out = raw_out.strip()
+    err = raw_err.strip()
     if out:
         print(out)
     if err:
         print(err, file=sys.stderr)
-    if p.returncode != 0:
-        print(f"[FAIL] command failed ({p.returncode}): {' '.join(cmd)}")
-    return p.returncode, out, err
+    if rc != 0:
+        print(f"[FAIL] command failed ({rc}): {' '.join(cmd)}")
+    return rc, out, err
 
 
 def _replace_activation_policy(cmd: list[str], policy: str) -> list[str]:

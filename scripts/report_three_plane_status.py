@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_actor_id
-from identity_creator import (
-    _run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
-    _run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
+from gateway_wrapper_enforcement import (
+    run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
+    run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
@@ -70,6 +70,7 @@ PROTOCOL_FEEDBACK_OBS_VALIDATOR_NAMES: set[str] = {
 DOWNSINK_PATH_GOVERNANCE_VALIDATOR_NAMES: set[str] = {
     "downsink_path_immutability",
     "downsink_path_write_guard",
+    "downsink_path_literal_lock",
 }
 VALIDATOR_ERROR_CODE_KEYS: tuple[str, ...] = (
     "error_code",
@@ -88,12 +89,12 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
     if script == REQUIRED_GATE_BUNDLE_SCRIPT:
         if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
-        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(run_cmd)
+        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(cmd=run_cmd, protocol_root=PROTOCOL_ROOT)
         return rc, (out or "").strip(), (err or "").strip()
     if script == FINAL_EMIT_SCRIPT:
         if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
-        rc, out, err = _run_final_emit_via_instance_wrappers(run_cmd)
+        rc, out, err = _run_final_emit_via_instance_wrappers(cmd=run_cmd, protocol_root=PROTOCOL_ROOT)
         return rc, (out or "").strip(), (err or "").strip()
     run_cwd = cwd.resolve() if isinstance(cwd, Path) else PROTOCOL_ROOT
     p = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(run_cwd))
@@ -3213,6 +3214,32 @@ def _instance_plane_status(
     if rc_downsink_write_guard != 0 or downsink_write_guard_status == "FAIL_REQUIRED":
         hard_boundary = True
 
+    rc_downsink_literal_lock, out_downsink_literal_lock, err_downsink_literal_lock = _run(
+        [
+            "python3",
+            "scripts/validate_protocol_downsink_path_literal_lock.py",
+            "--identity-id",
+            args.identity_id,
+            "--catalog",
+            args.catalog,
+            "--operation",
+            "three-plane",
+            "--json-only",
+        ]
+    )
+    downsink_literal_lock_payload = _parse_json_payload(out_downsink_literal_lock) or {}
+    validators["downsink_path_literal_lock"] = {
+        "rc": rc_downsink_literal_lock,
+        "ok": rc_downsink_literal_lock == 0,
+        "out": out_downsink_literal_lock,
+        "err": err_downsink_literal_lock,
+    }
+    downsink_literal_lock_status = str(
+        downsink_literal_lock_payload.get("protocol_downsink_path_literal_lock_status", "")
+    ).strip().upper()
+    if rc_downsink_literal_lock != 0 or downsink_literal_lock_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
     rc_fresh, out_fresh, err_fresh = _run(
         [
             "python3",
@@ -4308,6 +4335,19 @@ def _instance_plane_status(
             "checked_candidates": downsink_write_guard_payload.get("checked_candidates", []),
             "registry_rule_count": downsink_write_guard_payload.get("registry_rule_count"),
             "stale_reasons": downsink_write_guard_payload.get("stale_reasons", []),
+        },
+        "downsink_path_literal_lock": {
+            "protocol_downsink_path_literal_lock_status": downsink_literal_lock_payload.get(
+                "protocol_downsink_path_literal_lock_status"
+            ),
+            "error_code": downsink_literal_lock_payload.get("error_code", ""),
+            "required_contract": downsink_literal_lock_payload.get("required_contract"),
+            "auto_required_signal": downsink_literal_lock_payload.get("auto_required_signal"),
+            "scan_file_count": downsink_literal_lock_payload.get("scan_file_count"),
+            "scan_files": downsink_literal_lock_payload.get("scan_files", []),
+            "scan_globs": downsink_literal_lock_payload.get("scan_globs", []),
+            "registry_rule_count": downsink_literal_lock_payload.get("registry_rule_count"),
+            "stale_reasons": downsink_literal_lock_payload.get("stale_reasons", []),
         },
         "identity_home_catalog_alignment": {
             "path_governance_status": home_align_payload.get("path_governance_status"),

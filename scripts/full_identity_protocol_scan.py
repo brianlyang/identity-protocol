@@ -13,9 +13,9 @@ from typing import Any
 
 import yaml
 from actor_session_common import load_actor_binding, resolve_actor_id
-from identity_creator import (
-    _run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
-    _run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
+from gateway_wrapper_enforcement import (
+    run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
+    run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -68,6 +68,7 @@ PROTOCOL_FEEDBACK_OBS_CHECK_NAMES: set[str] = {
 DOWNSINK_PATH_GOVERNANCE_CHECK_NAMES: set[str] = {
     "downsink_path_immutability",
     "downsink_path_write_guard",
+    "downsink_path_literal_lock",
 }
 CHECK_ERROR_CODE_KEYS: tuple[str, ...] = (
     "error_code",
@@ -176,11 +177,11 @@ def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckR
     if script == REQUIRED_GATE_BUNDLE_SCRIPT:
         if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
-        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(run_cmd)
+        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(cmd=run_cmd, protocol_root=cwd)
     elif script == FINAL_EMIT_SCRIPT:
         if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
-        rc, out, err = _run_final_emit_via_instance_wrappers(run_cmd)
+        rc, out, err = _run_final_emit_via_instance_wrappers(cmd=run_cmd, protocol_root=cwd)
     else:
         p = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(cwd), env=env)
         rc = p.returncode
@@ -492,6 +493,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "protocol_feedback_ssot_archival",
             "downsink_path_immutability",
             "downsink_path_write_guard",
+            "downsink_path_literal_lock",
             "protocol_version_alignment",
             "required_gate_bundle_runner",
             "required_gate_bundle_runner_shadow",
@@ -1689,6 +1691,17 @@ def main() -> int:
                 "downsink_path_write_guard": [
                     "python3",
                     "scripts/validate_protocol_downsink_path_write_guard.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--json-only",
+                ],
+                "downsink_path_literal_lock": [
+                    "python3",
+                    "scripts/validate_protocol_downsink_path_literal_lock.py",
                     "--catalog",
                     str(catalog),
                     "--identity-id",
@@ -3869,6 +3882,22 @@ def main() -> int:
                     ):
                         if k in downsink_guard_doc:
                             check_payload[k] = downsink_guard_doc.get(k)
+                if name == "downsink_path_literal_lock":
+                    downsink_literal_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_downsink_path_literal_lock_status",
+                        "error_code",
+                        "required_contract",
+                        "auto_required_signal",
+                        "scan_file_count",
+                        "scan_files",
+                        "scan_globs",
+                        "registry_rule_count",
+                        "probe_path_literals",
+                        "stale_reasons",
+                    ):
+                        if k in downsink_literal_doc:
+                            check_payload[k] = downsink_literal_doc.get(k)
                 if name == "writeback_continuity":
                     writeback_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
