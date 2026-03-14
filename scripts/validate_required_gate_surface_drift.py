@@ -21,6 +21,12 @@ STRICT_SURFACES: tuple[str, ...] = (
     "scripts/e2e_smoke_test.sh",
     ".github/workflows/_identity-required-gates.yml",
 )
+GATEWAY_WRAPPER_BUS_REQUIRED_SURFACES: tuple[str, ...] = (
+    "scripts/identity_creator.py",
+    "scripts/release_readiness_check.py",
+    "scripts/report_three_plane_status.py",
+    "scripts/full_identity_protocol_scan.py",
+)
 WORKFLOW_REQUIRED_GATE_SURFACE = ".github/workflows/_identity-required-gates.yml"
 SUPER_LINTER_WORKFLOW_SURFACE = ".github/workflows/super-linter.yml"
 REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
@@ -604,6 +610,7 @@ def main() -> int:
     forbidden_hits: dict[str, list[str]] = {}
     missing_final_egress_wrapper: list[str] = []
     forbidden_direct_egress_hits: dict[str, list[str]] = {}
+    gateway_wrapper_bus_missing: list[str] = []
     actor_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     session_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     bundle_arg_contract_missing: dict[str, list[dict[str, Any]]] = {}
@@ -639,6 +646,12 @@ def main() -> int:
             forbidden_hits[rel] = hits
         if rel in FINAL_EGRESS_REQUIRED_SURFACES and FINAL_EGRESS_WRAPPER_SCRIPT not in text:
             missing_final_egress_wrapper.append(rel)
+        if rel in GATEWAY_WRAPPER_BUS_REQUIRED_SURFACES and "gateway_wrapper_enforcement" not in text:
+            gateway_wrapper_bus_missing.append(rel)
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(
+                set(existing_tokens + ["gateway_wrapper_enforcement_import_missing"])
+            )
         direct_egress_hits = [needle for needle in FORBIDDEN_DIRECT_EGRESS_SCRIPTS if needle in text]
         if direct_egress_hits:
             forbidden_direct_egress_hits[rel] = direct_egress_hits
@@ -949,6 +962,9 @@ def main() -> int:
     elif missing_final_egress_wrapper or forbidden_direct_egress_hits:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-006"
+    elif gateway_wrapper_bus_missing:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-GATE-ENTRY-009"
     elif actor_id_passthrough_missing:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-003"
@@ -1007,6 +1023,8 @@ def main() -> int:
         "missing_final_egress_wrapper": missing_final_egress_wrapper,
         "forbidden_direct_egress_scripts": list(FORBIDDEN_DIRECT_EGRESS_SCRIPTS),
         "forbidden_direct_egress_hits": forbidden_direct_egress_hits,
+        "gateway_wrapper_bus_required_surfaces": list(GATEWAY_WRAPPER_BUS_REQUIRED_SURFACES),
+        "gateway_wrapper_bus_missing": gateway_wrapper_bus_missing,
         "actor_id_required_scripts": list(ACTOR_ID_REQUIRED_SCRIPTS),
         "actor_id_passthrough_missing": actor_id_passthrough_missing,
         "session_id_required_scripts": list(SESSION_ID_REQUIRED_SCRIPTS),
