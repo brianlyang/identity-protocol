@@ -241,6 +241,27 @@ To keep audit replay stable across streams:
 3. Actor/session tuple failures must preserve actor-session family (`IP-ASB-*`) where applicable.
 4. New wrappers must not replace canonical families with ad-hoc aliases.
 
+### 2.4.4 Receipt tuple-context interpretation contract (mandatory)
+
+To avoid false interpretation of tuple-context failures as protocol-regression failures, validator output must expose machine-readable tuple-context state.
+
+Required output fields from `validate_protocol_unique_entry_gate.py`:
+
+1. `protocol_unique_entry_receipt_tuple_context_status`
+2. `protocol_unique_entry_receipt_tuple_context_required_fields`
+3. `protocol_unique_entry_receipt_tuple_context_mismatch_fields`
+4. `protocol_unique_entry_receipt_tuple_context_expected`
+5. `protocol_unique_entry_receipt_tuple_context_observed`
+6. `protocol_unique_entry_receipt_tuple_context_only_failure`
+7. `protocol_unique_entry_receipt_tuple_context_next_action`
+
+Interpretation rules:
+
+1. tuple-context mismatch remains `FAIL_REQUIRED` (no policy relaxation).
+2. when failure is tuple-context-only, output must explicitly mark `..._only_failure=true`.
+3. remediation guidance must be machine-readable via `..._next_action` and must point to replaying wrapper flow with bound actor/session tuple.
+4. this contract improves diagnostics consistency and does not weaken any existing fail-close gate.
+
 ### 2.4.1 Headstamp continuity contract (mandatory)
 
 1. Egress wrapper must treat first-line identity tuple and layer tuple as send-time hard gate input.

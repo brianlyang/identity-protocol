@@ -485,6 +485,13 @@ def main() -> int:
         "protocol_unique_entry_receipt_session_id_field": "",
         "protocol_unique_entry_receipt_operation": "",
         "protocol_unique_entry_receipt_operation_field": "",
+        "protocol_unique_entry_receipt_tuple_context_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_tuple_context_required_fields": [],
+        "protocol_unique_entry_receipt_tuple_context_mismatch_fields": [],
+        "protocol_unique_entry_receipt_tuple_context_expected": {},
+        "protocol_unique_entry_receipt_tuple_context_observed": {},
+        "protocol_unique_entry_receipt_tuple_context_only_failure": False,
+        "protocol_unique_entry_receipt_tuple_context_next_action": "",
         "protocol_unique_entry_receipt_surface_label": "",
         "protocol_unique_entry_receipt_wrapper_surface_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_token_status": "",
@@ -1523,6 +1530,24 @@ def main() -> int:
         payload["protocol_unique_entry_receipt_session_id_field"] = receipt_session_id_field
         payload["protocol_unique_entry_receipt_operation"] = receipt_operation
         payload["protocol_unique_entry_receipt_operation_field"] = receipt_operation_field
+        tuple_context_expected: dict[str, str] = {
+            "operation": str(args.operation).strip().lower(),
+        }
+        if run_id:
+            tuple_context_expected["run_id"] = run_id
+        if actor_id:
+            tuple_context_expected["actor_id"] = actor_id
+        if session_id:
+            tuple_context_expected["session_id"] = session_id
+        tuple_context_observed: dict[str, str] = {
+            "operation": receipt_operation,
+            "run_id": receipt_run_id,
+            "actor_id": receipt_actor_id,
+            "session_id": receipt_session_id,
+        }
+        payload["protocol_unique_entry_receipt_tuple_context_required_fields"] = sorted(tuple_context_expected)
+        payload["protocol_unique_entry_receipt_tuple_context_expected"] = tuple_context_expected
+        payload["protocol_unique_entry_receipt_tuple_context_observed"] = tuple_context_observed
         payload["protocol_unique_entry_receipt_surface_label"] = receipt_surface_label
         payload["protocol_unique_entry_receipt_wrapper_surface_status"] = receipt_wrapper_surface_status
         payload["protocol_unique_entry_receipt_wrapper_dispatch_token_status"] = receipt_wrapper_dispatch_status
@@ -1613,15 +1638,81 @@ def main() -> int:
         if missing_fields:
             receipt_issues.append("entry_receipt_required_fields_missing:" + ",".join(missing_fields))
 
+        tuple_context_issue_fields: set[str] = set()
+        for token in receipt_issues:
+            if token == "entry_receipt_operation_mismatch":
+                tuple_context_issue_fields.add("operation")
+                continue
+            if token == "entry_receipt_run_id_mismatch":
+                tuple_context_issue_fields.add("run_id")
+                continue
+            if token == "entry_receipt_actor_id_mismatch":
+                tuple_context_issue_fields.add("actor_id")
+                continue
+            if token == "entry_receipt_session_id_mismatch":
+                tuple_context_issue_fields.add("session_id")
+                continue
+            if token.startswith("entry_receipt_required_fields_missing:"):
+                raw = token.split(":", 1)[1]
+                for field in [x.strip() for x in raw.split(",") if x.strip()]:
+                    if field in {"operation", "run_id_binding", "run_id"}:
+                        tuple_context_issue_fields.add("run_id" if field != "operation" else "operation")
+                    elif field in {"actor_id", "session_id"}:
+                        tuple_context_issue_fields.add(field)
+        tuple_context_required_fields = set(tuple_context_expected)
+        if tuple_context_required_fields:
+            if tuple_context_issue_fields:
+                payload["protocol_unique_entry_receipt_tuple_context_status"] = STATUS_FAIL_REQUIRED
+                payload["protocol_unique_entry_receipt_tuple_context_next_action"] = (
+                    "replay_wrapper_chain_with_bound_actor_session_tuple_and_revalidate_entry_receipt"
+                )
+            else:
+                payload["protocol_unique_entry_receipt_tuple_context_status"] = STATUS_PASS_REQUIRED
+            payload["protocol_unique_entry_receipt_tuple_context_mismatch_fields"] = sorted(
+                tuple_context_issue_fields
+            )
+        else:
+            payload["protocol_unique_entry_receipt_tuple_context_status"] = STATUS_SKIPPED_NOT_REQUIRED
+            payload["protocol_unique_entry_receipt_tuple_context_mismatch_fields"] = []
+
         if receipt_issues:
             payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
             payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
             payload["error_code"] = ERR_CONTRACT_INVALID
             payload["stale_reasons"] = receipt_issues
+            tuple_related_markers = {
+                "entry_receipt_operation_mismatch",
+                "entry_receipt_run_id_mismatch",
+                "entry_receipt_actor_id_mismatch",
+                "entry_receipt_session_id_mismatch",
+                "entry_receipt_bundle_status_not_pass",
+            }
+            tuple_primary_detected = any(
+                token in {
+                    "entry_receipt_operation_mismatch",
+                    "entry_receipt_run_id_mismatch",
+                    "entry_receipt_actor_id_mismatch",
+                    "entry_receipt_session_id_mismatch",
+                }
+                or token.startswith("entry_receipt_required_fields_missing:")
+                for token in receipt_issues
+            )
+            tuple_only_failure = all(
+                token in tuple_related_markers or token.startswith("entry_receipt_required_fields_missing:")
+                for token in receipt_issues
+            )
+            payload["protocol_unique_entry_receipt_tuple_context_only_failure"] = bool(
+                tuple_only_failure
+                and tuple_primary_detected
+                and payload.get("protocol_unique_entry_receipt_tuple_context_mismatch_fields")
+            )
             _emit(payload, json_only=args.json_only)
             return 1
 
         payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
+        if payload.get("protocol_unique_entry_receipt_tuple_context_required_fields"):
+            payload["protocol_unique_entry_receipt_tuple_context_status"] = STATUS_PASS_REQUIRED
+        payload["protocol_unique_entry_receipt_tuple_context_only_failure"] = False
 
     payload["protocol_unique_entry_gate_status"] = STATUS_PASS_REQUIRED
     payload["error_code"] = ""

@@ -1789,3 +1789,42 @@ Replay:
    - `protocol_unique_entry_gate_status=PASS_REQUIRED`
    - tuple source fields point to alias keys (`run_id`, `resolved_actor_id`, `resolved_session_id`, `operation_name`).
 2. value mismatch semantics remain unchanged (still fail-close).
+
+### 26.16 Tuple-context machine interpretation hardening (2026-03-14)
+
+Problem:
+
+1. audit replay confirmed that `IP-GATE-ENTRY-002` can represent two different realities:
+   - protocol contract defects
+   - actor/session/run tuple context mismatch against historical receipts
+2. without structured tuple-context fields, downstream scans can over-interpret tuple mismatch as generic protocol regression.
+
+Fix landed:
+
+1. `scripts/validate_protocol_unique_entry_gate.py` now emits tuple-context envelope fields:
+   - `protocol_unique_entry_receipt_tuple_context_status`
+   - `protocol_unique_entry_receipt_tuple_context_required_fields`
+   - `protocol_unique_entry_receipt_tuple_context_mismatch_fields`
+   - `protocol_unique_entry_receipt_tuple_context_expected`
+   - `protocol_unique_entry_receipt_tuple_context_observed`
+   - `protocol_unique_entry_receipt_tuple_context_only_failure`
+   - `protocol_unique_entry_receipt_tuple_context_next_action`
+2. fail-close semantics are unchanged:
+   - tuple mismatches still return `FAIL_REQUIRED` + `IP-GATE-ENTRY-002`.
+3. when stale reasons are tuple-only, validator marks:
+   - `protocol_unique_entry_receipt_tuple_context_only_failure=true`
+   - enabling machine consumers to classify remediation path without downgrading severity.
+
+Replay:
+
+1. tuple-aligned receipt path:
+   - `protocol_unique_entry_receipt_tuple_context_status=PASS_REQUIRED`
+2. tuple-mismatch probe path:
+   - `protocol_unique_entry_receipt_tuple_context_status=FAIL_REQUIRED`
+   - `protocol_unique_entry_receipt_tuple_context_mismatch_fields` contains offending keys
+   - `protocol_unique_entry_receipt_tuple_context_next_action` returned for deterministic replay.
+
+Checkpoint verdict update:
+
+1. v1.6.6 now preserves fail-close strictness while exposing explicit tuple-context diagnostics.
+2. this closes the audit-noted interpretation gap without loosening wrapper/receipt enforcement.
