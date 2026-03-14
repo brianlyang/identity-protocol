@@ -95,6 +95,24 @@ Mandatory closure interpretation:
      - `stale_reasons` includes `runtime_stage_missing_input_gate`
    - previous `IP-MM-RUN-003` reproduction on this strict lane is no longer a live protocol defect.
 
+### 0C.3 Control-plane budget re-anchor after host-visible surface governance uplift (2026-03-14)
+
+1. Context:
+   - host-visible surface governance became required in v1.6 motherline:
+     - live probe delegate wired in required gates
+     - validator surface added: `scripts/validate_host_transport_wiring_attestation.py`
+2. Impact:
+   - `validator_scripts` observed count moved from `152` to `153`.
+   - no other budget axes rebounded.
+3. Re-anchor:
+   - `identity/protocol/mappings/control-plane-budget.v1.6.yaml`
+     - `validator_scripts.warn: 153`
+     - `convergence_guard.ceilings.validator_scripts: 153`
+4. Post re-anchor:
+   - `validate_control_plane_budget --json-only` => `PASS_REQUIRED`
+   - `render_control_plane_status --write` => `control_plane_status=PASS_REQUIRED`
+   - `validate_control_plane_status_sync --json-only` => `PASS_REQUIRED`
+
 ## 0) Boundary and usage rules
 
 1. This file is a review ledger, not a governance SSOT.
