@@ -87,9 +87,13 @@ Mandatory closure interpretation:
    - conclusion: fail is now due strict bundle verdict, not due missing downsink contract field.
 3. Session-binding noise in full-scan:
    - confirmed as contextual precondition issue (`IP-ASB-SESSION-ENTRY-001`) when caller uses an unbound session id.
-4. Remaining strict-lane debt (real):
-   - `IP-MM-RUN-003` still reproducible on strict `operation=validate`
-     (base-repo-audit-expert-v3 and custom-creative-ecom-analyst).
+4. Strict-lane normalization closure (2026-03-14):
+   - strict `operation=validate` no longer accepts runtime-stage defer copied from legacy reports.
+   - `validate_multimodal_plugin_enforcement.py` now blocks report-derived defer on strict
+     skip-forbidden operations, yielding deterministic strict fail-close:
+     - `error_code=IP-MM-RUN-002`
+     - `stale_reasons` includes `runtime_stage_missing_input_gate`
+   - previous `IP-MM-RUN-003` reproduction on this strict lane is no longer a live protocol defect.
 
 ## 0) Boundary and usage rules
 

@@ -808,6 +808,9 @@ def main() -> int:
 
     if runtime_required and runtime_report_doc:
         operation_name = str(args.operation or "").strip().lower()
+        strict_skip_forbidden_operation = (
+            operation_name in STRICT_RUNTIME_SKIP_FORBIDDEN_OPERATIONS and required and not fixture_identity
+        )
         requested_run_id = str(args.run_id or "").strip()
         runtime_report_run_id = str(runtime_report_doc.get("run_id", "")).strip()
         payload["runtime_report_run_id"] = runtime_report_run_id
@@ -977,6 +980,7 @@ def main() -> int:
                 defer_from_report = (
                     runtime_stage_deferred_from_report
                     and runtime_evidence_status_from_report == STATUS_SKIPPED_NOT_REQUIRED
+                    and not strict_skip_forbidden_operation
                 )
                 if defer_legacy_update_stage or defer_legacy_report_stage or defer_from_report:
                     payload["multimodal_runtime_evidence_status"] = STATUS_SKIPPED_NOT_REQUIRED
