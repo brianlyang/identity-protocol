@@ -1423,3 +1423,24 @@ Operational note:
 
 1. `validate_control_plane_status_sync` is parity-check against the generated status file and is expected to run after status regeneration in serialized loops.
 2. This does not weaken wrapper governance; it is ordering semantics of status artifact refresh.
+
+### 26.7 Hard-closure replay after headstamp-required probe upgrade
+
+Upgrade commit:
+
+1. `418a75e` `feat(v1.6.6): require session-chain headstamp probe in trust-boundary gates`
+
+Closure replay (serialized):
+
+1. 5-round self-test replay: `overall_passed=true`
+   - positive path: session-chain wrapper status `PASS_REQUIRED` with `Identity-Context:` first line.
+   - negative path: direct egress and direct runner bypass both fail-closed.
+2. 5-round deep-scan replay: `overall_passed=true`
+   - `validate_required_gate_surface_drift`: `PASS_REQUIRED`
+   - `validate_control_plane_invariants`: `PASS_REQUIRED`
+   - `render_control_plane_status --write`: expected control-plane status rendering completed each round
+   - `validate_control_plane_status_sync`: `PASS_REQUIRED`
+3. trust-boundary suite replay remains green after upgrade:
+   - forged runner/grant probes blocked
+   - direct egress-wrapper call blocked
+   - `session_chain_headstamp_first_line_required` positive probe passed
