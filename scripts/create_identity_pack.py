@@ -3279,13 +3279,13 @@ def _receipt_path_for_channel(
     pattern_name = receipt_glob_path.name
     channel_token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(channel or "").strip()).strip("._") or "unknown"
     run_token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(run_id or "").strip()).strip("._") or "run"
-    suffix = f"{now_token}-{channel_token}-{run_token}.json"
+    suffix = f"{now_token}-{channel_token}-{run_token}"
     if "*" in pattern_name:
         filename = pattern_name.replace("*", suffix, 1)
     elif pattern_name.endswith(".json"):
-        filename = f"{pattern_name[:-5]}-{suffix}"
+        filename = f"{pattern_name[:-5]}-{suffix}.json"
     else:
-        filename = f"{pattern_name}-{suffix}"
+        filename = f"{pattern_name}-{suffix}.json"
     return (receipt_glob_path.parent / filename).resolve()
 
 
@@ -3881,6 +3881,40 @@ def main() -> int:
         tuple_status = STATUS_FAIL_REQUIRED
     if str(run_id).strip() != receipt_run_id:
         tuple_status = STATUS_FAIL_REQUIRED
+    host_visible_receipt_status = STATUS_FAIL_REQUIRED
+    host_visible_state_file = ""
+    host_visible_receipt_paths: list[str] = []
+    host_visible_stale_reasons: list[str] = []
+    (
+        host_visible_receipt_status,
+        host_visible_state_file,
+        host_visible_receipt_paths,
+        host_visible_stale_reasons,
+    ) = _record_host_visible_surface_receipts(
+        contract=contract,
+        contract_path=contract_path,
+        identity_id=str(args.identity_id).strip(),
+        actor_id=str(args.actor_id).strip(),
+        session_id=str(resolved_session_id).strip(),
+        run_id=str(run_id).strip(),
+        wrapper_surface_status=str(ingress_payload.get("wrapper_surface_status", "")).strip().upper(),
+        entry_receipt_tuple_status=str(tuple_status).strip().upper(),
+        headstamp_first_line_status=str(headstamp_first_line_status).strip().upper(),
+        send_time_gate_status=str(egress_payload.get("send_time_gate_status", "")).strip().upper(),
+        final_emit_contract_status=str(final_emit_contract_status).strip().upper(),
+        out_reply_file=out_reply_path,
+    )
+    if host_visible_receipt_status != STATUS_PASS_REQUIRED:
+        reason = (
+            ",".join(host_visible_stale_reasons)
+            if host_visible_stale_reasons
+            else "host_visible_surface_receipt_not_pass_required"
+        )
+        return _fail(
+            error_code="IP-HDSTAMP-003",
+            stale_reason=reason,
+            json_only=args.json_only,
+        )
     _emit(
         {
             "protocol_session_chain_wrapper_status": STATUS_PASS_REQUIRED,
@@ -3914,6 +3948,10 @@ def main() -> int:
             "send_time_gate_status": egress_payload.get("send_time_gate_status", ""),
             "headstamp_status": egress_payload.get("headstamp_status", ""),
             "headstamp_first_line_status": headstamp_first_line_status,
+            "host_visible_surface_live_receipt_status": host_visible_receipt_status,
+            "host_visible_surface_state_file": host_visible_state_file,
+            "host_visible_surface_live_receipt_paths": host_visible_receipt_paths,
+            "host_visible_surface_live_receipt_source": HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
             "emit_channel_id": final_emit_channel_id,
             "outlet_channel_id": outlet_channel_id,
             "outlet_preflight_receipt": outlet_preflight_receipt,

@@ -209,14 +209,31 @@ fields = {
     "final_emit_contract_status": "PASS_REQUIRED",
 }
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+state_path = pack_path / "runtime" / "state" / "host_visible_surface_registry_state.json"
+state_doc = {
+    "schema_version": "v1",
+    "identity_id": identity_id,
+    "channels": {},
+    "updated_at_utc": timestamp,
+}
 for idx, channel in enumerate(("commentary", "approval", "status", "final"), start=1):
     payload = {
         "emit_channel_id": channel,
         "created_at_utc": timestamp,
+        "receipt_source": "ci_fixture",
     }
     payload.update(fields)
     path = receipt_dir / f"host-visible-surface-{idx:02d}-{channel}.json"
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    state_doc["channels"][channel] = {
+        "last_receipt_path": str(path),
+        "last_status": "PASS_REQUIRED",
+        "receipt_source": "ci_fixture",
+        "last_run_id": f"fixture-{idx:02d}",
+        "updated_at_utc": timestamp,
+    }
+state_path.parent.mkdir(parents=True, exist_ok=True)
+state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 run_probe host_visible_live_receipts_pass \
@@ -224,6 +241,7 @@ run_probe host_visible_live_receipts_pass \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -252,6 +270,7 @@ run_probe host_visible_commentary_bypass_blocked \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
     --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"
