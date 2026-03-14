@@ -23,10 +23,7 @@ from resolve_identity_context import (
     resolve_identity,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
-from gateway_wrapper_enforcement import (
-    run_final_emit_via_instance_wrappers as _gw_run_final_emit_via_instance_wrappers,
-    run_required_gate_bundle_via_ingress_wrapper as _gw_run_required_gate_bundle_via_ingress_wrapper,
-)
+from gateway_wrapper_enforcement import run_gateway_wrapped_command as _gw_run_gateway_wrapped_command
 
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
@@ -123,31 +120,13 @@ def _has_flag(cmd: list[str], flag: str) -> bool:
     return _arg_index(cmd, flag) >= 0
 
 
-def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str]:
-    return _gw_run_final_emit_via_instance_wrappers(cmd=cmd, protocol_root=PROTOCOL_ROOT)
-
-
-def _run_required_gate_bundle_via_ingress_wrapper(cmd: list[str]) -> tuple[int, str, str]:
-    return _gw_run_required_gate_bundle_via_ingress_wrapper(cmd=cmd, protocol_root=PROTOCOL_ROOT)
-
-
 def _run(cmd: list[str]) -> int:
     rc, _out, _err = _run_capture(cmd)
     return rc
 
 
 def _run_capture(cmd: list[str]) -> tuple[int, str, str]:
-    if len(cmd) >= 2 and str(cmd[1]).strip() == FINAL_EMIT_SCRIPT:
-        return _run_final_emit_via_instance_wrappers(cmd)
-    if len(cmd) >= 2 and str(cmd[1]).strip() == REQUIRED_GATE_BUNDLE_SCRIPT:
-        return _run_required_gate_bundle_via_ingress_wrapper(cmd)
-    print("$", " ".join(cmd))
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
-    if p.stdout.strip():
-        print(p.stdout.strip())
-    if p.stderr.strip():
-        print(p.stderr.strip())
-    return p.returncode, p.stdout or "", p.stderr or ""
+    return _gw_run_gateway_wrapped_command(cmd=cmd, protocol_root=PROTOCOL_ROOT)
 
 
 def _parse_json_payload(raw: str) -> dict | None:

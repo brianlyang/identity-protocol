@@ -13,10 +13,7 @@ from typing import Any
 
 import yaml
 from actor_session_common import load_actor_binding, resolve_actor_id
-from gateway_wrapper_enforcement import (
-    run_final_emit_via_instance_wrappers as _run_final_emit_via_instance_wrappers,
-    run_required_gate_bundle_via_ingress_wrapper as _run_required_gate_bundle_via_ingress_wrapper,
-)
+from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -172,21 +169,17 @@ def _detect_session_lane_lock(
 
 
 def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckResult:
-    script = str(cmd[1]).strip() if len(cmd) >= 2 else ""
     run_cmd = list(cmd)
-    if script == REQUIRED_GATE_BUNDLE_SCRIPT:
-        if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+    script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+    if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
+        if script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
-        rc, out, err = _run_required_gate_bundle_via_ingress_wrapper(cmd=run_cmd, protocol_root=cwd)
-    elif script == FINAL_EMIT_SCRIPT:
-        if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
-            run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
-        rc, out, err = _run_final_emit_via_instance_wrappers(cmd=run_cmd, protocol_root=cwd)
-    else:
-        p = subprocess.run(run_cmd, capture_output=True, text=True, cwd=str(cwd), env=env)
-        rc = p.returncode
-        out = p.stdout or ""
-        err = p.stderr or ""
+    rc, out, err = _run_gateway_wrapped_command(
+        cmd=run_cmd,
+        protocol_root=cwd,
+        passthrough_cwd=cwd,
+        passthrough_env=env,
+    )
     out_text = out.strip()
     err_text = err.strip()
     tail = out_text.splitlines()[-1] if out_text else (err_text.splitlines()[-1] if err_text else "")

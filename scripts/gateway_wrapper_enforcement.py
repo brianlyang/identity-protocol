@@ -376,16 +376,28 @@ def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_roo
     return p_ingress.returncode, p_ingress.stdout or "", p_ingress.stderr or ""
 
 
-def run_gateway_wrapped_command(*, cmd: list[str], protocol_root: Path) -> tuple[int, str, str]:
+def run_gateway_wrapped_command(
+    *,
+    cmd: list[str],
+    protocol_root: Path,
+    passthrough_cwd: Path | None = None,
+    passthrough_env: dict[str, str] | None = None,
+) -> tuple[int, str, str]:
     if len(cmd) >= 2 and str(cmd[1]).strip() == FINAL_EMIT_SCRIPT:
         return run_final_emit_via_instance_wrappers(cmd=cmd, protocol_root=protocol_root)
     if len(cmd) >= 2 and str(cmd[1]).strip() == REQUIRED_GATE_BUNDLE_SCRIPT:
         return run_required_gate_bundle_via_ingress_wrapper(cmd=cmd, protocol_root=protocol_root)
     print("$", " ".join(cmd))
-    p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(protocol_root))
+    run_cwd = passthrough_cwd.resolve() if isinstance(passthrough_cwd, Path) else protocol_root
+    p = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        cwd=str(run_cwd),
+        env=passthrough_env,
+    )
     if p.stdout.strip():
         print(p.stdout.strip())
     if p.stderr.strip():
         print(p.stderr.strip())
     return p.returncode, p.stdout or "", p.stderr or ""
-
