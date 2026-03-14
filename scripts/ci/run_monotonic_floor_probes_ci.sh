@@ -69,6 +69,36 @@ multimodal_contract = {
     "provider_binding_path_pattern": "runtime/plugins/provider-bindings.local.yaml",
 }
 
+probe_gateway_contract = {
+    "required": True,
+    "contract_id": "protocol_host_unique_channel_contract_v1",
+    "ingress_wrapper_path": "runtime/gate/protocol_ingress_wrapper.py",
+    "ingress_wrapper_dispatch_token": "probe_mm_wrapper_dispatch_v1",
+    "host_dispatch_mode": "advisory",
+    "host_release_mode": "advisory",
+    "entry_receipt_policy": {
+        "required_surface_label": "host_ingress_wrapper",
+        "required_wrapper_surface_status": "PASS_REQUIRED",
+        "required_wrapper_dispatch_token_status": "PASS_REQUIRED",
+    },
+    "operation_profile_policy": {
+        "strict_operations": [
+            "activate",
+            "update",
+            "validate",
+            "readiness",
+            "e2e",
+            "ci",
+            "three-plane",
+            "mutation",
+        ],
+        "light_operations": ["scan", "inspection"],
+        "strict_gate_profile": "strict_full",
+        "light_gate_profile": "inspection_targeted",
+        "allow_upgrade_only": True,
+    },
+}
+
 (probe_floor_pack / "CURRENT_TASK.json").write_text(
     json.dumps(
         {
@@ -84,6 +114,7 @@ multimodal_contract = {
 (probe_mm_pack / "CURRENT_TASK.json").write_text(
     json.dumps(
         {
+            "protocol_host_unique_channel_contract_v1": probe_gateway_contract,
             "multimodal_plugin_enforcement_contract_v1": multimodal_contract,
             "reasoning_loop_failclose_contract_v1": reasoning_contract_mm,
         },

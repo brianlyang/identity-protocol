@@ -324,3 +324,21 @@ Reason:
 1. Control-plane foundations are strong and stable.
 2. Integration-kind fixed-directory rules are now machine-enforced in intake parity, schema, and invariants.
 3. 5 self-tests + 5 deep scans completed with expected pass/fail semantics.
+
+## 5) Round-31.1 addendum: monotonic probe wrapper-policy isolation (2026-03-14)
+
+1. Problem:
+   - `scripts/ci/run_monotonic_floor_probes_ci.sh` fixture started inheriting host-gateway
+     wrapper-default mapping errors (`host_gateway_contract_missing`) after wrapper policy became
+     mandatory in `required_gate_bundle_runner`.
+   - This polluted monotonic-floor probe semantics with unrelated wrapper provenance failures.
+2. Fix:
+   - probe fixture now injects a minimal `protocol_host_unique_channel_contract_v1` contract
+     for `probe-mm`, with explicit operation-profile and `host_dispatch_mode=advisory`.
+   - result: monotonic probes test multimodal/reasoning floor behavior only, not host-wrapper policy debt.
+3. Replay:
+   - `reasoning_floor_l0_fail` => rc=1 (expected)
+   - `multimodal_update_defer_allowed` => rc=0 (expected)
+   - `multimodal_readiness_skip_blocked` => rc=1 (expected)
+   - manifest emitted at runtime temp root:
+     `identity-monotonic-floor-probes/manifest.monotonic_floor_probes.json`.
