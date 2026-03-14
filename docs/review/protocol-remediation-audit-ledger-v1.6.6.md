@@ -1472,3 +1472,32 @@ Verdict update:
 1. v1.6.6 protocol-side drift governance is now resistant to comment/string spoof on strict surfaces.
 2. Required trust-boundary probes and control-plane gates remain green after AST hardening.
 3. No new protocol-level wrapper bus residuals detected in this checkpoint.
+
+### 26.9 Send-time wrapper tuple fallback hardening (2026-03-14)
+
+Commit landed in this checkpoint:
+
+1. `gateway_wrapper_enforcement.py` tuple fallback enhancement in `run_final_emit_via_instance_wrappers`.
+
+Problem observed:
+
+1. target deep-scan `send_time_reply_gate` could fail with
+   `IP-HDSTAMP-003` + `session_chain_canonical_tuple_missing:actor_id_mismatch`
+   when instance session-chain wrapper payload omitted `actor_id` in return body.
+2. this was a transport-shape mismatch, not an actor/session bypass acceptance.
+
+Fix:
+
+1. wrapper bridge now fills missing tuple fields from the already explicit caller tuple:
+   - `run_id`
+   - `actor_id`
+   - `session_id`
+2. fallback is **missing-only** (no override when payload already carries a value);
+   mismatched explicit values still fail-close.
+3. bridge emits `session_chain_tuple_fallback_fields` for replay observability.
+
+Result:
+
+1. send-time wrapper path no longer fails only due absent tuple fields in legacy
+   session-chain payload shape.
+2. tuple consistency guard remains active for real mismatches.

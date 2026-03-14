@@ -319,6 +319,20 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         )
         for key, value in projected_tuple.items():
             chain_payload[key] = value
+        tuple_fallback_fields: list[str] = []
+        for key, expected in (
+            ("run_id", run_id),
+            ("actor_id", actor_id),
+            ("session_id", session_id),
+        ):
+            if str(chain_payload.get(key, "")).strip():
+                continue
+            expected_token = str(expected or "").strip()
+            if expected_token:
+                chain_payload[key] = expected_token
+                tuple_fallback_fields.append(key)
+        if tuple_fallback_fields:
+            chain_payload["session_chain_tuple_fallback_fields"] = sorted(tuple_fallback_fields)
         chain_payload["emit_channel_id"] = str(chain_payload.get("final_emit_channel_id", "")).strip()
         chain_payload["reply_transport_ref"] = out_reply_file
         chain_payload["reply_transport_binding_status"] = STATUS_PASS_REQUIRED
