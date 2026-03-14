@@ -1674,3 +1674,93 @@ Checkpoint verdict update:
 1. v1.6.6 now has protocol-side runtime host-visible receipt production + state backwrite in the real wrapper chain.
 2. Runtime-vs-fixture evidence is explicitly separated by contracted source marker and validator policy.
 3. Upgrade reports now carry mandatory pre-mutation projection fields for sender/headstamp diagnostics.
+
+### 26.13 Global active-instance closure replay (2026-03-14)
+
+Objective:
+
+1. close the remaining governance-plane gap by executing the same runtime closure routine on active `source_layer=global` identities, not only project identities.
+
+Serialized closure routine (global catalog):
+
+1. `repair_contract_backfill --apply`
+2. `runtime/gate/protocol_session_chain_wrapper.py` live-chain trigger
+3. `validate_host_transport_wiring_attestation --require-live-receipts` (default source policy: `runtime_dialogue` only)
+
+Execution scope:
+
+1. catalog: `/Users/yangxi/.codex/.identity/catalog.local.yaml`
+2. active identities at execution time:
+   - `office-ops-expert`
+   - `system-requirements-analyst`
+
+Runtime closure evidence:
+
+1. scoreboard:
+   - `/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/activity/evidence/v166-global-runtime-closure/20260314T125204Z/scoreboard-v166-global-runtime-closure-20260314T125204Z.json`
+   - `overall_passed=true`
+2. per-identity session-chain live receipts:
+   - `office-ops-expert.session_chain.json`
+   - `system-requirements-analyst.session_chain.json`
+   - both include:
+     - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
+     - `headstamp_first_line_status=PASS_REQUIRED`
+     - `host_visible_surface_live_receipt_status=PASS_REQUIRED`
+     - `host_visible_surface_live_receipt_source=runtime_dialogue`
+3. per-identity live attestation:
+   - `office-ops-expert.live_attestation.json`
+   - `system-requirements-analyst.live_attestation.json`
+   - both include:
+     - `host_transport_wiring_attestation_status=PASS_REQUIRED`
+     - `host_transport_wiring_attestation_live_coverage_status=PASS_REQUIRED`
+     - `host_transport_wiring_attestation_allowed_live_receipt_sources=["runtime_dialogue"]`
+     - covered channels: `approval, commentary, final, status`
+
+Checkpoint verdict update:
+
+1. the host-visible runtime closure path now converges across both project and global active-instance domains.
+2. this removes the prior “project-only closure” operational gap and enforces the same runtime evidence semantics in global scope.
+
+### 26.14 Host-visible `final` channel state mismatch fix (2026-03-14)
+
+Problem (cross-instance reproducible residual):
+
+1. instance feedback reported `validate_host_transport_wiring_attestation --require-live-receipts` failures with:
+   - `error_code=IP-HDSTAMP-003`
+   - `stale_reasons=host_visible_surface_live_state_channel_receipt_mismatch:final`
+2. failure was reproducible across multiple identities when `run_id` contained token `final`.
+3. root cause was deterministic:
+   - state backwrite selected channel receipt path via filename contains-match (`-<channel>-`);
+   - when `run_id` included `final`, `final` channel could resolve to another channel path (typically `status`).
+
+Protocol-side fix landed:
+
+1. `scripts/create_identity_pack.py` (`_record_host_visible_surface_receipts`):
+   - replaced filename contains-match selection with deterministic write-time map:
+     - `receipt_paths_by_channel[channel] = receipt_path`
+   - state backwrite now resolves `last_receipt_path` by exact channel key lookup only.
+2. this removes run-id token coupling from channel routing and prevents `final/status` path aliasing.
+
+Serialized replay (post-fix):
+
+1. `run_id` collision probe with `run_id` containing `final-emit`:
+   - `custom-creative-ecom-analyst`:
+     - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
+     - `entry_receipt_tuple_status=PASS_REQUIRED`
+     - `host_visible_surface_live_receipt_status=PASS_REQUIRED`
+     - state check:
+       - `channels.final.last_receipt_path` contains `-final-`
+       - `channels.status.last_receipt_path` contains `-status-`
+       - `final != status`
+   - `base-repo-audit-expert-v3`:
+     - same pass conditions and same state-path separation.
+2. attestation replay:
+   - `validate_host_transport_wiring_attestation --require-live-receipts` returns `PASS_REQUIRED` for both identities above.
+3. required delegates replay:
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` -> PASS
+   - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` -> PASS
+
+Checkpoint verdict update:
+
+1. the reported `host_visible_surface_live_state_channel_receipt_mismatch:final` residual is a valid protocol bug and is now absorbed with deterministic channel mapping.
+2. runtime live receipt closure remains converged after this fix under both normal and `run_id` token-collision probes.
