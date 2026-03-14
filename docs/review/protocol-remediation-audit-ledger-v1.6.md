@@ -19,8 +19,39 @@ Purpose: Central place for architect + audit-expert planning, implementation rep
    - `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md`
    - `docs/review/protocol-remediation-audit-ledger-v1.6.2.md`
    - `docs/review/protocol-remediation-audit-ledger-v1.6.3.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.4.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.5.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.6.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.7.md`
+   - `docs/review/protocol-remediation-audit-ledger-v1.6.8.md`
 5. Historical evidence rows in this file may contain transient paths/threshold snapshots; they cannot override current-pointer SSOT.
 6. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
+
+## 0B) v1.6 comprehensive closure matrix (frozen)
+
+`v1.6` closure is defined as one integrated motherline across all active `v1.6.x` streams.
+No stream is allowed to remain a side-route.
+
+| Stream | Domain | Closure status source |
+| --- | --- | --- |
+| v1.6.1 | Headstamp/HUD egress | `docs/review/protocol-remediation-audit-ledger-v1.6.1-headstamp.md` |
+| v1.6.2 | Multimodal plugin enforcement | `docs/review/protocol-remediation-audit-ledger-v1.6.2.md` |
+| v1.6.3 | GitHub-native control-plane specialization | `docs/review/protocol-remediation-audit-ledger-v1.6.3.md` |
+| v1.6.4 | Fail-close monotonic governance | `docs/review/protocol-remediation-audit-ledger-v1.6.4.md` |
+| v1.6.5 | GitHub Rulesets + super-linter dual-layer governance | `docs/review/protocol-remediation-audit-ledger-v1.6.5.md` |
+| v1.6.6 | Host unique channel governance | `docs/review/protocol-remediation-audit-ledger-v1.6.6.md` |
+| v1.6.7 | Cross-layer runtime uniqueness | `docs/review/protocol-remediation-audit-ledger-v1.6.7.md` |
+| v1.6.8 | Downsink path immutability | `docs/review/protocol-remediation-audit-ledger-v1.6.8.md` |
+
+Mandatory closure interpretation:
+
+1. `v1.6` is not considered closed until required gates for all integrated streams are green.
+2. Any unresolved required gate remains `v1.6` debt and cannot be deferred to a later stream for narrative closure.
+3. Closure verdict must be machine-auditable from:
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `scripts/required_gate_bundle_runner.py`
+   - `.github/workflows/_identity-required-gates.yml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
 
 ## 0) Boundary and usage rules
 

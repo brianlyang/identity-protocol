@@ -26,6 +26,27 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
 6. Any `/tmp/*` evidence reference in this file is historical replay context only and must not be treated as current wiring contract input.
 7. New replay evidence for active streams must use persistent receipts under `activity/evidence/<stream>/<date>/...` with matching manifest tuples.
 
+## 0B) v1.6 comprehensive closure baseline (mandatory, no side-route expansion)
+
+1. `v1.6` is the single closure baseline for all `v1.6.x` protocol streams, including:
+   - `v1.6.1` headstamp/HUD egress governance
+   - `v1.6.2` multimodal plugin enforcement governance
+   - `v1.6.3` GitHub-native control-plane specialization
+   - `v1.6.4` fail-close monotonic governance
+   - `v1.6.5` GitHub Rulesets + super-linter dual-layer governance
+   - `v1.6.6` host unique channel governance
+   - `v1.6.7` cross-layer runtime uniqueness governance
+   - `v1.6.8` downsink path immutability governance
+2. Any `v1.6.x` stream enhancement is treated as **v1.6 closure work**, not as a separate release line.
+3. It is forbidden to postpone unresolved `v1.6` required-gate debt into future minor/major streams.
+4. The release conclusion for `v1.6` must be determined by current-pointer machine gates only:
+   - `contract-binding.current.yaml`
+   - `required_gate_bundle_runner.py`
+   - required CI workflow checks
+   - control-plane status sync (`control-plane-status.current.yaml`)
+5. Hard rule: no “v1.6 complete” claim is allowed while any required gate remains `FAIL_REQUIRED`.
+6. Hard rule: no new stream can be considered closure-ready unless its requirement rows are integrated into `contract-binding.current.yaml` motherline and enforced by required CI.
+
 ## 0) Governance Execution Mode and Release Lock (Mandatory)
 
 ### 0.1 Single execution entrypoint (topic SSOT)
