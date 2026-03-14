@@ -241,6 +241,13 @@ STRICT_SKIP_BLOCKING_POLICIES: set[str] = {
     "strict_no_skip",
     "forbid_skip",
 }
+DEFAULT_STRICT_SKIP_POLICY = "fail_close"
+DEFAULT_STRICT_SKIP_ALLOWED_REASONS: tuple[str, ...] = (
+    "fixture_profile_scope",
+    "contract_not_required",
+    "scan_probe_profile_filtered_not_required",
+)
+MONOTONIC_POLICY_DEFAULT_TARGET = "__strict_skip_defaults__"
 STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "multimodal_plugin_enforcement": "multimodal_runtime_evidence_status",
     "reasoning_loop_failclose_enforcement": "reasoning_runtime_evidence_status",
@@ -894,6 +901,25 @@ def _load_monotonic_policy_by_target(
         errors.append(f"plugin_governance_profiles_missing_or_invalid:{governance_path}")
         return policy_by_target, governance_path, errors
 
+    strict_skip_defaults = governance_doc.get("strict_skip_defaults")
+    if not isinstance(strict_skip_defaults, dict):
+        strict_skip_defaults = {}
+    default_strict_skip_policy = (
+        str(strict_skip_defaults.get("strict_skip_policy", DEFAULT_STRICT_SKIP_POLICY)).strip().lower()
+        or DEFAULT_STRICT_SKIP_POLICY
+    )
+    default_strict_skip_allowed_reasons = _as_str_list(
+        strict_skip_defaults.get("strict_skip_allowed_reasons", DEFAULT_STRICT_SKIP_ALLOWED_REASONS)
+    )
+    policy_by_target[MONOTONIC_POLICY_DEFAULT_TARGET] = {
+        "strict_skip_policy": default_strict_skip_policy,
+        "strict_skip_allowed_reasons": set(default_strict_skip_allowed_reasons),
+        "minimum_enforcement_level": "",
+        "allow_self_upgrade": False,
+        "allow_downgrade": False,
+        "strict_skip_default_applied": True,
+    }
+
     for row in profiles:
         if not isinstance(row, dict):
             continue
@@ -904,12 +930,20 @@ def _load_monotonic_policy_by_target(
         if not isinstance(monotonic, dict):
             monotonic = {}
         strict_skip_allowed_reasons = _as_str_list(monotonic.get("strict_skip_allowed_reasons"))
+        strict_skip_policy = str(monotonic.get("strict_skip_policy", "")).strip().lower() or default_strict_skip_policy
+        if strict_skip_allowed_reasons:
+            effective_skip_allowed_reasons = set(strict_skip_allowed_reasons)
+            strict_skip_default_applied = False
+        else:
+            effective_skip_allowed_reasons = set(default_strict_skip_allowed_reasons)
+            strict_skip_default_applied = True
         policy_by_target[target_name] = {
-            "strict_skip_policy": str(monotonic.get("strict_skip_policy", "")).strip().lower(),
-            "strict_skip_allowed_reasons": set(strict_skip_allowed_reasons),
+            "strict_skip_policy": strict_skip_policy,
+            "strict_skip_allowed_reasons": effective_skip_allowed_reasons,
             "minimum_enforcement_level": str(monotonic.get("minimum_enforcement_level", "")).strip().upper(),
             "allow_self_upgrade": _parse_bool_token(monotonic.get("allow_self_upgrade", False)),
             "allow_downgrade": _parse_bool_token(monotonic.get("allow_downgrade", False)),
+            "strict_skip_default_applied": strict_skip_default_applied,
         }
     return policy_by_target, governance_path, errors
 
@@ -1816,7 +1850,8 @@ def main() -> int:
         if payload_contract_issues:
             status_value = STATUS_FAIL_REQUIRED
 
-        monotonic_policy = monotonic_policy_by_target.get(spec.target_name, {})
+        default_monotonic_policy = monotonic_policy_by_target.get(MONOTONIC_POLICY_DEFAULT_TARGET, {})
+        monotonic_policy = monotonic_policy_by_target.get(spec.target_name, default_monotonic_policy)
         strict_skip_policy = str(monotonic_policy.get("strict_skip_policy", "")).strip().lower()
         strict_skip_allowed_reasons = {
             str(token).strip()
@@ -1825,12 +1860,13 @@ def main() -> int:
         }
         runtime_status_field = STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET.get(spec.target_name, "")
         runtime_status_value = str(payload.get(runtime_status_field, "")).strip().upper()
+        row_status_skipped = status_value == STATUS_SKIPPED_NOT_REQUIRED
+        runtime_status_skipped = bool(runtime_status_field) and runtime_status_value == STATUS_SKIPPED_NOT_REQUIRED
         if (
             required_contract
             and _is_strict_no_trim_operation(operation_normalized)
             and strict_skip_policy in STRICT_SKIP_BLOCKING_POLICIES
-            and runtime_status_field
-            and runtime_status_value == STATUS_SKIPPED_NOT_REQUIRED
+            and (row_status_skipped or runtime_status_skipped)
         ):
             stale_reason_tokens = {
                 str(token).strip()
@@ -1878,6 +1914,10 @@ def main() -> int:
                     "strict_skip_allowed_reasons": sorted(strict_skip_allowed_reasons),
                     "runtime_status_field": runtime_status_field,
                     "runtime_status_value": runtime_status_value,
+                    "row_status_value": status_value,
+                    "row_status_skipped": row_status_skipped,
+                    "runtime_status_skipped": runtime_status_skipped,
+                    "strict_skip_default_applied": bool(monotonic_policy.get("strict_skip_default_applied", False)),
                 },
                 "payload": payload,
                 "stderr_tail": (err.splitlines()[-1] if err else ""),

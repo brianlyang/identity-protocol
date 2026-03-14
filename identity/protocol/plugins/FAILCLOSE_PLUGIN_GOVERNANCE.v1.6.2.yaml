@@ -22,6 +22,13 @@ bundle_entry:
     - scripts/e2e_smoke_test.sh
     - .github/workflows/_identity-required-gates.yml
 
+strict_skip_defaults:
+  strict_skip_policy: fail_close
+  strict_skip_allowed_reasons:
+    - fixture_profile_scope
+    - contract_not_required
+    - scan_probe_profile_filtered_not_required
+
 plugin_failclose_profiles:
   - plugin_id: ai-folder-governance-enforcement
     requirement_key: asb16-rq-020
