@@ -129,6 +129,14 @@ Minimum fields:
 3. Any protocol-feedback emission outside registered paths is `FAIL_REQUIRED`.
 4. Mirror-only evidence without canonical outbox linkage remains invalid.
 
+### 2.6 Anti-forget protocol law lock (mandatory)
+
+1. Path governance must be machine-enforced, not memory-enforced.
+2. Source code introducing governed runtime path literals without registry linkage is `FAIL_REQUIRED`.
+3. Inline bypass is forbidden by default and only allowed with explicit marker:
+   - `downsink-path-lock: allow-nonregistry-literal`
+4. The marker is governance-audited and does not relax runtime write-guard policy.
+
 ## 3) CI and validator closure model (mandatory)
 
 ### 3.1 New required validators
@@ -137,6 +145,8 @@ Minimum fields:
    - validates contract presence, schema strictness, required domains, path canonicality, anchor containment.
 2. `validate_protocol_downsink_path_write_guard` (planned validator entrypoint)
    - validates writes/receipts/acks/outbox artifacts are inside registered path targets.
+3. `validate_protocol_downsink_path_literal_lock` (planned validator entrypoint)
+   - validates protocol source path literals are registry-bound and fail-close on unregistered governed literals.
 
 ### 3.2 New required CI probes (negative)
 
@@ -147,6 +157,7 @@ Minimum fields:
 3. attempt symlink escape outside anchor => must fail.
 4. write protocol-feedback batch to non-registry directory => must fail.
 5. write broadcast receipt to non-registry directory => must fail.
+6. introduce unregistered governed runtime path literal => must fail.
 
 ### 3.3 New required CI probes (positive)
 
@@ -163,8 +174,9 @@ v1.6.8 implementation must land with the following minimum code surfaces:
 3. immutability validator(s) + write-guard validator(s).
 4. CI job integration into required workflow.
 5. negative probe script with deterministic JSON outputs.
+6. source literal lock validator wired into validate/update/scan/three-plane flows.
 
-No stream closure claim is valid without all five.
+No stream closure claim is valid without all six.
 
 ## 5) Acceptance gates (v1.6.8)
 
@@ -209,6 +221,7 @@ Protocol broadcast item for v1.6.8 must include:
    - `identity_creator update`
    - `downsink_path_immutability validator`
    - `downsink_path_write_guard validator`
+   - `downsink_path_literal_lock validator`
 3. required return payload fields:
    - `identity_id`, `source_layer`, `path_registry_status`, `negative_probe_status`, `error_code`, `stale_reasons`.
 4. required receipt location pattern under canonical outbox path.
@@ -216,7 +229,7 @@ Protocol broadcast item for v1.6.8 must include:
 ## 8) Stream posture (2026-03-14 closure)
 
 1. Policy posture: `PASS` (governance baseline frozen and registry-anchored).
-2. Implementation posture: `PASS` (validators + CI probe matrix + serial replay evidence landed).
+2. Implementation posture: `PASS` (immutability + write-guard + literal-lock validators, CI probe matrix, serial replay evidence landed).
 3. Canonical evidence root:
    - `activity/evidence/v168-path-immutability/2026-03-14/EVIDENCE_MANIFEST.v168.20260314.json`
 

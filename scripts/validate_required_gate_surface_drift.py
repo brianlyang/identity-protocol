@@ -62,6 +62,7 @@ DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = 
     "scripts/repair_contract_backfill.py",
     "scripts/validate_protocol_downsink_path_immutability.py",
     "scripts/validate_protocol_downsink_path_write_guard.py",
+    "scripts/validate_protocol_downsink_path_literal_lock.py",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -865,6 +866,14 @@ def main() -> int:
                 "--probe-write-path \"runtime/reports/noncanonical/broadcast-receipt-probe.json\"",
             )
         )
+        has_literal_lock_probe = all(
+            token in text
+            for token in (
+                "run_probe probe_unregistered_literal_fail",
+                "scripts/validate_protocol_downsink_path_literal_lock.py",
+                "--probe-path-literal \"runtime/protocol-feedback/outbox-legacy/FEEDBACK_BATCH_probe.md\"",
+            )
+        )
         downsink_missing_tokens: list[str] = []
         if not has_noncanonical_probe:
             downsink_missing_tokens.append("downsink_noncanonical_probe_invocation_missing")
@@ -876,6 +885,8 @@ def main() -> int:
             downsink_missing_tokens.append("downsink_feedback_nonregistry_probe_invocation_missing")
         if not has_broadcast_nonregistry_probe:
             downsink_missing_tokens.append("downsink_broadcast_nonregistry_probe_invocation_missing")
+        if not has_literal_lock_probe:
+            downsink_missing_tokens.append("downsink_literal_lock_probe_invocation_missing")
         if downsink_missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + downsink_missing_tokens))

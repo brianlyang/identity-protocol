@@ -9,7 +9,10 @@ from typing import Any
 from create_identity_pack import (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
+    DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID,
     DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID,
+    DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER,
+    DOWNSINK_LITERAL_LOCK_SCAN_GLOBS,
     DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID,
     DOWNSINK_REQUIRED_DOMAINS,
     HOST_GATEWAY_BROADCAST_ACK_PATTERN,
@@ -548,10 +551,11 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
     return forced_required_keys, restored_validator_keys
 
 
-def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], list[str]]:
+def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str], list[str], list[str], list[str]]:
     forced_required_keys: list[str] = []
     restored_validator_keys: list[str] = []
     restored_write_guard_validator_keys: list[str] = []
+    restored_literal_lock_validator_keys: list[str] = []
     for key in REQUIRED_DOWNSINK_KEYS:
         default = DOWNSINK_CONTRACT_DEFAULTS.get(key, {})
         node = task.get(key)
@@ -560,6 +564,7 @@ def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str],
             forced_required_keys.append(key)
             restored_validator_keys.append(key)
             restored_write_guard_validator_keys.append(key)
+            restored_literal_lock_validator_keys.append(key)
             continue
         if node.get("required") is not True:
             node["required"] = True
@@ -573,6 +578,31 @@ def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str],
         if write_guard_validator_id != DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID:
             node["write_guard_validator_id"] = DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID
             restored_write_guard_validator_keys.append(key)
+        source_literal_lock_policy = node.get("source_literal_lock_policy")
+        if not isinstance(source_literal_lock_policy, dict):
+            source_literal_lock_policy = {}
+        if source_literal_lock_policy.get("required") is not True:
+            source_literal_lock_policy["required"] = True
+            restored_literal_lock_validator_keys.append(key)
+        source_literal_lock_validator_id = str(source_literal_lock_policy.get("validator_id", "")).strip()
+        if source_literal_lock_validator_id != DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID:
+            source_literal_lock_policy["validator_id"] = DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID
+            restored_literal_lock_validator_keys.append(key)
+        if bool(source_literal_lock_policy.get("enforce_registered_runtime_path_literals_only")) is not True:
+            source_literal_lock_policy["enforce_registered_runtime_path_literals_only"] = True
+            restored_literal_lock_validator_keys.append(key)
+        if (
+            str(source_literal_lock_policy.get("allow_inline_override_marker", "")).strip()
+            != DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER
+        ):
+            source_literal_lock_policy["allow_inline_override_marker"] = DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER
+            restored_literal_lock_validator_keys.append(key)
+        scan_globs = source_literal_lock_policy.get("scan_globs")
+        normalized_scan_globs = [str(item).strip() for item in (scan_globs or []) if str(item).strip()]
+        if set(normalized_scan_globs) != set(DOWNSINK_LITERAL_LOCK_SCAN_GLOBS):
+            source_literal_lock_policy["scan_globs"] = list(DOWNSINK_LITERAL_LOCK_SCAN_GLOBS)
+            restored_literal_lock_validator_keys.append(key)
+        node["source_literal_lock_policy"] = source_literal_lock_policy
 
         anchor_policy = node.get("anchor_policy")
         if not isinstance(anchor_policy, dict):
@@ -633,7 +663,13 @@ def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str],
                     current_domain_node["anchor_ref"] = str((default_domain_node or {}).get("anchor_ref", "")).strip()
                 path_registry[domain] = current_domain_node
         node["path_registry"] = path_registry
-    return forced_required_keys, restored_validator_keys, restored_write_guard_validator_keys
+    restored_literal_lock_validator_keys = sorted(set(restored_literal_lock_validator_keys))
+    return (
+        forced_required_keys,
+        restored_validator_keys,
+        restored_write_guard_validator_keys,
+        restored_literal_lock_validator_keys,
+    )
 
 
 def main() -> int:
@@ -678,7 +714,12 @@ def main() -> int:
         updated,
         identity_id=str(args.identity_id or "").strip(),
     )
-    forced_downsink_required_keys, restored_downsink_validator_keys, restored_downsink_write_guard_validator_keys = (
+    (
+        forced_downsink_required_keys,
+        restored_downsink_validator_keys,
+        restored_downsink_write_guard_validator_keys,
+        restored_downsink_literal_lock_validator_keys,
+    ) = (
         _normalize_downsink_path_contracts(updated)
     )
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
@@ -872,6 +913,25 @@ def main() -> int:
             or str((updated.get(k) or {}).get("validator_id", "")).strip() != DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID
             or str((updated.get(k) or {}).get("write_guard_validator_id", "")).strip()
             != DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID
+            or not isinstance((updated.get(k) or {}).get("source_literal_lock_policy"), dict)
+            or bool((((updated.get(k) or {}).get("source_literal_lock_policy")) or {}).get("required")) is not True
+            or str(
+                ((((updated.get(k) or {}).get("source_literal_lock_policy")) or {}).get("validator_id") or "")
+            ).strip()
+            != DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID
+            or bool(
+                ((((updated.get(k) or {}).get("source_literal_lock_policy")) or {}).get(
+                    "enforce_registered_runtime_path_literals_only"
+                ))
+            )
+            is not True
+            or str(
+                ((((updated.get(k) or {}).get("source_literal_lock_policy")) or {}).get(
+                    "allow_inline_override_marker"
+                ) or "")
+            ).strip()
+            != DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER
+            or not isinstance((((updated.get(k) or {}).get("source_literal_lock_policy")) or {}).get("scan_globs"), list)
             or not isinstance((updated.get(k) or {}).get("anchor_policy"), dict)
             or not isinstance((updated.get(k) or {}).get("schema_policy"), dict)
             or not isinstance((updated.get(k) or {}).get("operation_enforcement"), dict)
@@ -1018,6 +1078,7 @@ def main() -> int:
         "forced_downsink_required_keys": forced_downsink_required_keys,
         "restored_downsink_validator_keys": restored_downsink_validator_keys,
         "restored_downsink_write_guard_validator_keys": restored_downsink_write_guard_validator_keys,
+        "restored_downsink_literal_lock_validator_keys": restored_downsink_literal_lock_validator_keys,
         "host_gateway_artifacts": gateway_artifacts,
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED

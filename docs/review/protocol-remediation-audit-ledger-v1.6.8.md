@@ -21,7 +21,8 @@ Scope: protocol-only review ledger for path immutability of all protocol-governe
 
 1. `validate_protocol_downsink_path_immutability` (new validator entrypoint)
 2. `validate_protocol_downsink_path_write_guard` (new validator entrypoint)
-3. `downsink_path_immutability_probe_runner` (new CI probe runner entrypoint)
+3. `validate_protocol_downsink_path_literal_lock` (new validator entrypoint)
+4. `downsink_path_immutability_probe_runner` (new CI probe runner entrypoint)
 4. `create_identity_pack` (update: skeleton + materialization)
 5. `repair_contract_backfill` (update: backfill contract/path registry)
 
@@ -51,7 +52,8 @@ Scope: protocol-only review ledger for path immutability of all protocol-governe
 
 1. immutability validator enforces path canonicality + containment
 2. write-guard validator enforces artifact writes inside registered paths
-3. `CURRENT_TASK` vs runtime mirror parity enforced
+3. source literal lock validator enforces no unregistered governed literals in protocol source
+4. `CURRENT_TASK` vs runtime mirror parity enforced
 
 ### 3.4 CI layer
 
@@ -75,6 +77,9 @@ Scope: protocol-only review ledger for path immutability of all protocol-governe
    - expected: `FAIL_REQUIRED`
 5. `probe_broadcast_nonregistry_receipt`
    - write broadcast receipt outside canonical reports pattern
+   - expected: `FAIL_REQUIRED`
+6. `probe_unregistered_literal_fail`
+   - inject unregistered governed literal path
    - expected: `FAIL_REQUIRED`
 
 ## 5) Positive probe matrix (serial)
@@ -132,6 +137,7 @@ Evidence root pattern (strict docs):
 2. New validators:
    - `scripts/validate_protocol_downsink_path_immutability.py`
    - `scripts/validate_protocol_downsink_path_write_guard.py`
+   - `scripts/validate_protocol_downsink_path_literal_lock.py`
 3. Required workflow + probe runner:
    - `.github/workflows/_identity-required-gates.yml`
    - `scripts/ci/run_downsink_path_immutability_probes_ci.sh`
@@ -149,6 +155,7 @@ Evidence root pattern (strict docs):
 3. Required CI negative probe matrix:
    - `activity/evidence/v168-path-immutability/2026-03-14/path_probe_matrix.v168.20260314.json`
    - `activity/evidence/v168-path-immutability/2026-03-14/ci_required_probe_report.v168.20260314.json`
+   - Includes `probe_unregistered_literal_fail` for anti-forget source literal lock.
 4. Registry parity snapshot:
    - `activity/evidence/v168-path-immutability/2026-03-14/path_registry_snapshot.v168.20260314.json`
 5. Unified manifest:
@@ -158,4 +165,4 @@ Evidence root pattern (strict docs):
 
 1. Policy verdict: `PASS`.
 2. Implementation verdict: `PASS`.
-3. Stream conclusion: v1.6.8 path immutability closure is landed and replay-verified under serial constraints.
+3. Stream conclusion: v1.6.8 path immutability closure is landed and replay-verified under serial constraints, including anti-forget literal lock.

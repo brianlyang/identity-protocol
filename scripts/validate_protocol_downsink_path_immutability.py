@@ -10,7 +10,10 @@ from typing import Any
 from create_identity_pack import (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
+    DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID,
     DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID,
+    DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER,
+    DOWNSINK_LITERAL_LOCK_SCAN_GLOBS,
     DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID,
     DOWNSINK_PROTOCOL_BROADCAST_SOURCE_DOMAIN,
     DOWNSINK_REQUIRED_DOMAINS,
@@ -37,10 +40,18 @@ ALLOWED_CONTRACT_FIELDS = {
     "contract_id",
     "validator_id",
     "write_guard_validator_id",
+    "source_literal_lock_policy",
     "path_registry",
     "anchor_policy",
     "schema_policy",
     "operation_enforcement",
+}
+ALLOWED_SOURCE_LITERAL_LOCK_POLICY_FIELDS = {
+    "required",
+    "validator_id",
+    "enforce_registered_runtime_path_literals_only",
+    "allow_inline_override_marker",
+    "scan_globs",
 }
 ALLOWED_ANCHOR_POLICY_FIELDS = {
     "protocol_repo_root_ref",
@@ -261,6 +272,35 @@ def main() -> int:
     if str(contract.get("write_guard_validator_id", "")).strip() != DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID:
         issues.append("write_guard_validator_id_mismatch")
 
+    source_literal_lock_policy = contract.get("source_literal_lock_policy")
+    if not isinstance(source_literal_lock_policy, dict):
+        issues.append("source_literal_lock_policy_missing")
+        source_literal_lock_policy = {}
+    else:
+        if strict_schema:
+            unknown_source_lock_fields = _unknown_keys(
+                source_literal_lock_policy,
+                ALLOWED_SOURCE_LITERAL_LOCK_POLICY_FIELDS,
+            )
+            if unknown_source_lock_fields:
+                issues.append(f"unknown_source_literal_lock_policy_fields:{','.join(unknown_source_lock_fields)}")
+        if source_literal_lock_policy.get("required") is not True:
+            issues.append("source_literal_lock_policy_required_not_true")
+        if str(source_literal_lock_policy.get("validator_id", "")).strip() != DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID:
+            issues.append("source_literal_lock_policy_validator_id_mismatch")
+        if bool(source_literal_lock_policy.get("enforce_registered_runtime_path_literals_only")) is not True:
+            issues.append("source_literal_lock_policy_enforce_registered_literals_not_true")
+        if (
+            str(source_literal_lock_policy.get("allow_inline_override_marker", "")).strip()
+            != DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER
+        ):
+            issues.append("source_literal_lock_policy_allow_marker_mismatch")
+        scan_globs = source_literal_lock_policy.get("scan_globs")
+        if not isinstance(scan_globs, list) or not scan_globs:
+            issues.append("source_literal_lock_policy_scan_globs_missing")
+        elif set(str(item).strip() for item in scan_globs if str(item).strip()) != set(DOWNSINK_LITERAL_LOCK_SCAN_GLOBS):
+            issues.append("source_literal_lock_policy_scan_globs_mismatch")
+
     if strict_schema:
         unknown_contract_fields = _unknown_keys(contract, ALLOWED_CONTRACT_FIELDS)
         if unknown_contract_fields:
@@ -408,7 +448,13 @@ def main() -> int:
 
     if runtime_downsink_contract:
         if require_runtime_parity:
-            for field in ("path_registry", "anchor_policy", "schema_policy", "operation_enforcement"):
+            for field in (
+                "source_literal_lock_policy",
+                "path_registry",
+                "anchor_policy",
+                "schema_policy",
+                "operation_enforcement",
+            ):
                 declared = contract.get(field)
                 mirrored = runtime_downsink_contract.get(field)
                 if json.dumps(declared, ensure_ascii=False, sort_keys=True) != json.dumps(

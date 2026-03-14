@@ -137,6 +137,13 @@ DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY = "protocol_downsink_path_immutability_c
 DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID = "protocol_downsink_path_immutability_contract_v1"
 DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID = "scripts/validate_protocol_downsink_path_immutability.py"
 DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID = "scripts/validate_protocol_downsink_path_write_guard.py"
+DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID = "scripts/validate_protocol_downsink_path_literal_lock.py"
+DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER = "downsink-path-lock: allow-nonregistry-literal"
+DOWNSINK_LITERAL_LOCK_SCAN_GLOBS: tuple[str, ...] = (
+    "scripts/**/*.py",
+    "scripts/**/*.sh",
+    ".github/workflows/*.yml",
+)
 DOWNSINK_RUNTIME_MIRROR_PATH_ID = "runtime_gate.gateway_contract"
 DOWNSINK_ANCHOR_PROTOCOL_REPO_ROOT_REF = "{protocol_repo_root}"
 DOWNSINK_ANCHOR_IDENTITY_PACK_ROOT_REF = "{identity_pack_root}"
@@ -784,6 +791,13 @@ def _protocol_downsink_path_immutability_contract_skeleton() -> dict:
         "contract_id": DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
         "validator_id": DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID,
         "write_guard_validator_id": DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID,
+        "source_literal_lock_policy": {
+            "required": True,
+            "validator_id": DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID,
+            "enforce_registered_runtime_path_literals_only": True,
+            "allow_inline_override_marker": DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER,
+            "scan_globs": list(DOWNSINK_LITERAL_LOCK_SCAN_GLOBS),
+        },
         "path_registry": _protocol_downsink_path_registry_skeleton(),
         "anchor_policy": {
             "protocol_repo_root_ref": DOWNSINK_ANCHOR_PROTOCOL_REPO_ROOT_REF,
@@ -3739,6 +3753,13 @@ def materialize_protocol_host_gateway_artifacts(
     downsink_contract["contract_id"] = DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID
     downsink_contract["validator_id"] = DOWNSINK_PATH_IMMUTABILITY_VALIDATOR_ID
     downsink_contract["write_guard_validator_id"] = DOWNSINK_PATH_WRITE_GUARD_VALIDATOR_ID
+    downsink_contract["source_literal_lock_policy"] = {
+        "required": True,
+        "validator_id": DOWNSINK_PATH_LITERAL_LOCK_VALIDATOR_ID,
+        "enforce_registered_runtime_path_literals_only": True,
+        "allow_inline_override_marker": DOWNSINK_LITERAL_LOCK_ALLOW_INLINE_MARKER,
+        "scan_globs": list(DOWNSINK_LITERAL_LOCK_SCAN_GLOBS),
+    }
     downsink_contract["anchor_policy"] = {
         "protocol_repo_root_ref": DOWNSINK_ANCHOR_PROTOCOL_REPO_ROOT_REF,
         "identity_pack_root_ref": DOWNSINK_ANCHOR_IDENTITY_PACK_ROOT_REF,

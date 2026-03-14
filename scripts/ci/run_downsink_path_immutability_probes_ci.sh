@@ -199,6 +199,13 @@ run_probe probe_canonical_write_guard_pass 0 protocol_downsink_path_write_guard_
   --operation validate \
   --json-only
 
+run_probe probe_canonical_literal_lock_pass 0 protocol_downsink_path_literal_lock_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_literal_lock.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --json-only
+
 # Negative probe: non-canonical mutation
 restore_task
 mutate_registry_entry_path "runtime_gate.ingress_wrapper" "runtime/gate/noncanonical_ingress_wrapper.py"
@@ -280,6 +287,17 @@ run_probe probe_broadcast_nonregistry_receipt 1 protocol_downsink_path_write_gua
   --identity-id "${IDENTITY_ID}" \
   --operation validate \
   --probe-write-path "runtime/reports/noncanonical/broadcast-receipt-probe.json" \
+  --json-only
+
+# Negative probe: source literal lock with unregistered governed path
+restore_task
+rebuild_runtime_mirror
+run_probe probe_unregistered_literal_fail 1 protocol_downsink_path_literal_lock_status FAIL_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_literal_lock.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-path-literal "runtime/protocol-feedback/outbox-legacy/FEEDBACK_BATCH_probe.md" \
   --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${PROBE_MATRIX_PATH}" "${MANIFEST_PATH}"
