@@ -209,6 +209,27 @@ CONTRACT_KEYS = (
 
 HOST_GATEWAY_CONTRACT_KEYS = INFRA_HOST_GATEWAY_CONTRACT_KEYS
 
+ENTRY_RECEIPT_RUN_ID_FIELDS: tuple[str, ...] = (
+    "run_id_binding",
+    "run_id",
+    "requested_run_id",
+)
+ENTRY_RECEIPT_ACTOR_ID_FIELDS: tuple[str, ...] = (
+    "actor_id",
+    "resolved_actor_id",
+    "entry_actor_id",
+)
+ENTRY_RECEIPT_SESSION_ID_FIELDS: tuple[str, ...] = (
+    "session_id",
+    "resolved_session_id",
+    "entry_session_id",
+)
+ENTRY_RECEIPT_OPERATION_FIELDS: tuple[str, ...] = (
+    "operation",
+    "requested_operation",
+    "operation_name",
+)
+
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
@@ -368,6 +389,16 @@ def _resolve_entry_receipt_path(*, pack_path: Path, explicit_path: str, operatio
     return candidates[0].resolve() if candidates else None
 
 
+def _first_receipt_value(
+    receipt: dict[str, Any], fields: tuple[str, ...], *, lower: bool = False
+) -> tuple[str, str]:
+    for field in fields:
+        value = str(receipt.get(field, "")).strip()
+        if value:
+            return (value.lower(), field) if lower else (value, field)
+    return "", ""
+
+
 def _load_receipt(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -447,9 +478,13 @@ def main() -> int:
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_bundle_key": "",
         "protocol_unique_entry_receipt_run_id": "",
+        "protocol_unique_entry_receipt_run_id_field": "",
         "protocol_unique_entry_receipt_actor_id": "",
+        "protocol_unique_entry_receipt_actor_id_field": "",
         "protocol_unique_entry_receipt_session_id": "",
+        "protocol_unique_entry_receipt_session_id_field": "",
         "protocol_unique_entry_receipt_operation": "",
+        "protocol_unique_entry_receipt_operation_field": "",
         "protocol_unique_entry_receipt_surface_label": "",
         "protocol_unique_entry_receipt_wrapper_surface_status": "",
         "protocol_unique_entry_receipt_wrapper_dispatch_token_status": "",
@@ -1459,10 +1494,14 @@ def main() -> int:
 
         receipt_bundle_key = str(receipt.get("bundle_key", "")).strip()
         receipt_identity_id = str(receipt.get("identity_id", "")).strip()
-        receipt_operation = str(receipt.get("operation", "")).strip().lower()
-        receipt_run_id = str(receipt.get("run_id_binding", "")).strip()
-        receipt_actor_id = str(receipt.get("actor_id", "")).strip()
-        receipt_session_id = str(receipt.get("session_id", "")).strip()
+        receipt_operation, receipt_operation_field = _first_receipt_value(
+            receipt,
+            ENTRY_RECEIPT_OPERATION_FIELDS,
+            lower=True,
+        )
+        receipt_run_id, receipt_run_id_field = _first_receipt_value(receipt, ENTRY_RECEIPT_RUN_ID_FIELDS)
+        receipt_actor_id, receipt_actor_id_field = _first_receipt_value(receipt, ENTRY_RECEIPT_ACTOR_ID_FIELDS)
+        receipt_session_id, receipt_session_id_field = _first_receipt_value(receipt, ENTRY_RECEIPT_SESSION_ID_FIELDS)
         receipt_bundle_status = str(receipt.get("bundle_status", "")).strip().upper()
         receipt_surface_label = str(receipt.get("surface_label", "")).strip()
         receipt_wrapper_surface_status = str(receipt.get("wrapper_surface_status", "")).strip().upper()
@@ -1477,9 +1516,13 @@ def main() -> int:
         ).strip()
         payload["protocol_unique_entry_receipt_bundle_key"] = receipt_bundle_key
         payload["protocol_unique_entry_receipt_run_id"] = receipt_run_id
+        payload["protocol_unique_entry_receipt_run_id_field"] = receipt_run_id_field
         payload["protocol_unique_entry_receipt_actor_id"] = receipt_actor_id
+        payload["protocol_unique_entry_receipt_actor_id_field"] = receipt_actor_id_field
         payload["protocol_unique_entry_receipt_session_id"] = receipt_session_id
+        payload["protocol_unique_entry_receipt_session_id_field"] = receipt_session_id_field
         payload["protocol_unique_entry_receipt_operation"] = receipt_operation
+        payload["protocol_unique_entry_receipt_operation_field"] = receipt_operation_field
         payload["protocol_unique_entry_receipt_surface_label"] = receipt_surface_label
         payload["protocol_unique_entry_receipt_wrapper_surface_status"] = receipt_wrapper_surface_status
         payload["protocol_unique_entry_receipt_wrapper_dispatch_token_status"] = receipt_wrapper_dispatch_status
@@ -1494,6 +1537,18 @@ def main() -> int:
         )
         payload["protocol_unique_entry_receipt_wrapper_parent_attestation_expected_path"] = (
             receipt_wrapper_parent_expected_path
+        )
+        receipt_wrapper_parent_expected_path_resolved = ""
+        if receipt_wrapper_parent_expected_path:
+            receipt_wrapper_parent_expected_path_resolved = str(
+                _resolve_pack_relative_path(
+                    pack_path,
+                    receipt_wrapper_parent_expected_path,
+                    HOST_GATEWAY_EXPECTED_INGRESS_REL,
+                )
+            )
+        payload["protocol_unique_entry_receipt_wrapper_parent_attestation_expected_path_resolved"] = (
+            receipt_wrapper_parent_expected_path_resolved
         )
 
         receipt_issues: list[str] = []
@@ -1537,13 +1592,24 @@ def main() -> int:
             provenance_required
             and expected_ingress_wrapper_path
             and receipt_wrapper_parent_expected_path
-            and Path(receipt_wrapper_parent_expected_path).expanduser().resolve()
+            and receipt_wrapper_parent_expected_path_resolved
+            and Path(receipt_wrapper_parent_expected_path_resolved).expanduser().resolve()
             != Path(expected_ingress_wrapper_path).expanduser().resolve()
         ):
             receipt_issues.append("entry_receipt_wrapper_parent_attestation_expected_path_mismatch")
-        missing_fields = sorted(
-            field for field in entry_receipt_required_fields if field not in receipt
-        )
+        missing_fields: list[str] = []
+        for field in sorted(entry_receipt_required_fields):
+            if field in receipt:
+                continue
+            if field == "run_id_binding" and receipt_run_id:
+                continue
+            if field == "actor_id" and receipt_actor_id:
+                continue
+            if field == "session_id" and receipt_session_id:
+                continue
+            if field == "operation" and receipt_operation:
+                continue
+            missing_fields.append(field)
         if missing_fields:
             receipt_issues.append("entry_receipt_required_fields_missing:" + ",".join(missing_fields))
 
