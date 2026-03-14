@@ -125,6 +125,13 @@ def _has_flag(cmd: list[str], flag: str) -> bool:
     return _arg_index(cmd, flag) >= 0
 
 
+def _default_operation_run_token(identity_id: str, operation: str) -> str:
+    operation_token = str(operation or "run").strip().lower() or "run"
+    operation_token = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in operation_token)
+    ts = int(datetime.now(timezone.utc).timestamp())
+    return f"{operation_token}-{identity_id}-{ts}"
+
+
 def _run(cmd: list[str]) -> int:
     rc, _out, _err = _run_capture(cmd)
     return rc
@@ -1866,7 +1873,10 @@ def main() -> int:
         except Exception as e:
             print(f"[FAIL] {e}")
             return 1
-        validate_run_token = str(args.run_id or "").strip() or f"validate-{args.identity_id}"
+        validate_run_token = str(args.run_id or "").strip() or _default_operation_run_token(
+            args.identity_id,
+            "validate",
+        )
         validate_session_id = str(args.session_id or "").strip() or f"run:{validate_run_token}"
         rc_actor_binding_entry = _actor_binding_entry_guard(
             identity_id=args.identity_id,
@@ -2062,6 +2072,8 @@ def main() -> int:
                 "validate",
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--blocker-receipt-out",
                 reply_first_line_blocker_receipt,
             ],
@@ -2101,6 +2113,8 @@ def main() -> int:
                 "final_emit_governed",
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--json-only",
             ],
             [
@@ -2127,6 +2141,8 @@ def main() -> int:
                 send_time_reply_gate_blocker_receipt,
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
             ],
             [
                 "python3",
@@ -2141,6 +2157,8 @@ def main() -> int:
                 "validate",
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--json-only",
             ],
             [
@@ -2186,6 +2204,8 @@ def main() -> int:
                 "validate",
                 "--actor-id",
                 actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--blocker-receipt-out",
                 execution_reply_coherence_blocker_receipt,
             ],
@@ -2218,6 +2238,10 @@ def main() -> int:
                 args.repo_catalog,
                 "--identity-id",
                 args.identity_id,
+                "--actor-id",
+                actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--operation",
                 "validate",
             ],
@@ -2567,6 +2591,10 @@ def main() -> int:
                 "validate",
                 "--run-id",
                 validate_run_token,
+                "--actor-id",
+                actor_id_validate,
+                "--session-id",
+                validate_session_id,
                 "--entry-receipt",
                 required_gate_bundle_receipt_validate,
                 "--force-check",
@@ -3028,6 +3056,7 @@ def main() -> int:
             "scripts/validate_reply_identity_context_first_line.py",
             "scripts/validate_send_time_reply_gate.py",
             "scripts/validate_execution_reply_identity_coherence.py",
+            "scripts/validate_protocol_unique_entry_gate.py",
         }
         session_id_required_scripts = {
             "scripts/validate_required_contract_coverage.py",
@@ -3038,10 +3067,16 @@ def main() -> int:
             "scripts/validate_reply_identity_context_first_line.py",
             "scripts/validate_send_time_reply_gate.py",
             "scripts/validate_execution_reply_identity_coherence.py",
+            "scripts/validate_protocol_unique_entry_gate.py",
+        }
+        run_id_required_scripts = {
+            "scripts/validate_protocol_unique_entry_gate.py",
         }
         for cmd in checks:
             if len(cmd) < 2:
                 continue
+            if cmd[1] in run_id_required_scripts and "--run-id" not in cmd:
+                cmd.extend(["--run-id", validate_run_token])
             if cmd[1] in actor_id_required_scripts and "--actor-id" not in cmd:
                 cmd.extend(["--actor-id", actor_id_validate])
             if cmd[1] in session_id_required_scripts and "--session-id" not in cmd:
@@ -3368,6 +3403,8 @@ def main() -> int:
             args.identity_id,
             "--actor-id",
             actor_id_update,
+            "--session-id",
+            session_id_update,
             "--body-text",
             "PRE_MUTATION_HEADER_FIRST_GATE",
             "--out-reply-file",
@@ -3378,8 +3415,6 @@ def main() -> int:
             "final_emit_governed",
             "--json-only",
         ]
-        if str(session_id_update or "").strip():
-            pre_mutation_compose_cmd.extend(["--session-id", str(session_id_update).strip()])
         if args.layer_intent_text.strip():
             pre_mutation_compose_cmd.extend(["--layer-intent-text", args.layer_intent_text.strip()])
         if args.expected_work_layer.strip():
@@ -3752,7 +3787,10 @@ def main() -> int:
         if rc != 0:
             print("[FAIL] discovery requiredization validation failed; update blocked")
             return rc
-        update_bundle_run_token = str(update_required_gates_run_id or update_run_id or args.identity_id).strip()
+        update_bundle_run_token = str(update_required_gates_run_id or update_run_id).strip() or _default_operation_run_token(
+            args.identity_id,
+            "update",
+        )
         required_gate_bundle_receipt_update = str(
             runtime_temp_file(
                 channel="required-gate-bundle",
@@ -4169,6 +4207,10 @@ def main() -> int:
                 "update",
                 "--run-id",
                 update_bundle_run_token,
+                "--actor-id",
+                actor_id_update,
+                "--session-id",
+                session_id_update,
                 "--entry-receipt",
                 required_gate_bundle_receipt_update,
                 "--force-check",
