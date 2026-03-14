@@ -293,6 +293,8 @@ Required CI extension:
 2. Minimum required outcomes:
    - probe `tuple_binding_incomplete_blocked` must fail-close as expected.
    - probe `tuple_binding_complete_pass` must pass with `PASS_REQUIRED`.
+   - probe `tuple_binding_tampered_tuple_blocked` must fail-close on actor/session tuple mismatch.
+   - probe `tuple_binding_stale_receipt_blocked` must fail-close on stale replay receipt.
 
 ### 2.4.1 Headstamp continuity contract (mandatory)
 

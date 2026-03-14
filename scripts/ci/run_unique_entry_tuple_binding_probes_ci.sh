@@ -162,20 +162,26 @@ SESSION_ID="session-tuple-binding-probe"
 RUN_ID="probe-tuple-binding-run"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-tuple-binding/runtime/gate/protocol_ingress_wrapper.py"
 RECEIPT_PATH="${RESULT_ROOT}/receipt.validate.json"
+RECEIPT_TAMPERED_PATH="${RESULT_ROOT}/receipt.tampered.validate.json"
+RECEIPT_STALE_PATH="${RESULT_ROOT}/receipt.stale.validate.json"
 
-python3 - <<'PY' "${RECEIPT_PATH}" "${IDENTITY_ID}" "${RUN_ID}" "${ACTOR_ID}" "${SESSION_ID}" "${INGRESS_WRAPPER_PATH}"
+python3 - <<'PY' "${RECEIPT_PATH}" "${RECEIPT_TAMPERED_PATH}" "${RECEIPT_STALE_PATH}" "${IDENTITY_ID}" "${RUN_ID}" "${ACTOR_ID}" "${SESSION_ID}" "${INGRESS_WRAPPER_PATH}"
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import time
 from pathlib import Path
 
 receipt_path = Path(sys.argv[1]).resolve()
-identity_id = sys.argv[2]
-run_id = sys.argv[3]
-actor_id = sys.argv[4]
-session_id = sys.argv[5]
-ingress_wrapper_path = str(Path(sys.argv[6]).resolve())
+tampered_path = Path(sys.argv[2]).resolve()
+stale_path = Path(sys.argv[3]).resolve()
+identity_id = sys.argv[4]
+run_id = sys.argv[5]
+actor_id = sys.argv[6]
+session_id = sys.argv[7]
+ingress_wrapper_path = str(Path(sys.argv[8]).resolve())
 
 receipt = {
     "bundle_contract_id": "hotfix_p0_007_ucg_control_plane_freeze_contract_v1",
@@ -198,6 +204,17 @@ receipt = {
     "wrapper_parent_attestation_expected_path": ingress_wrapper_path,
 }
 receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+tampered = dict(receipt)
+tampered["actor_id"] = "assistant:tampered"
+tampered["session_id"] = "session-tuple-tampered"
+tampered_path.write_text(json.dumps(tampered, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+shutil.copy2(receipt_path, stale_path)
+stale_epoch = time.time() - 4000
+Path(stale_path).touch()
+import os
+os.utime(stale_path, (stale_epoch, stale_epoch))
 PY
 
 run_probe() {
@@ -251,6 +268,21 @@ elif name == "tuple_binding_complete_pass":
         raise SystemExit("tuple_binding_complete_pass: gate status must be PASS_REQUIRED")
     if str(doc.get("protocol_unique_entry_receipt_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("tuple_binding_complete_pass: receipt status must be PASS_REQUIRED")
+elif name == "tuple_binding_tampered_tuple_blocked":
+    if rc == 0:
+        raise SystemExit("tuple_binding_tampered_tuple_blocked: expected non-zero rc")
+    stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
+    tuple_tokens = {"entry_receipt_actor_id_mismatch", "entry_receipt_session_id_mismatch"}
+    if not any(token in tuple_tokens for token in stale):
+        raise SystemExit("tuple_binding_tampered_tuple_blocked: expected actor/session mismatch stale reason")
+    if str(doc.get("protocol_unique_entry_receipt_tuple_context_status", "")).strip().upper() != "FAIL_REQUIRED":
+        raise SystemExit("tuple_binding_tampered_tuple_blocked: tuple_context_status must be FAIL_REQUIRED")
+elif name == "tuple_binding_stale_receipt_blocked":
+    if rc == 0:
+        raise SystemExit("tuple_binding_stale_receipt_blocked: expected non-zero rc")
+    stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
+    if not any(token.startswith("entry_receipt_stale:") for token in stale):
+        raise SystemExit("tuple_binding_stale_receipt_blocked: expected entry_receipt_stale stale reason")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -306,6 +338,32 @@ run_probe tuple_binding_complete_pass \
   --actor-id "${ACTOR_ID}" \
   --session-id "${SESSION_ID}" \
   --entry-receipt "${RECEIPT_PATH}" \
+  --force-check \
+  --require-entry-receipt \
+  --json-only
+
+run_probe tuple_binding_tampered_tuple_blocked \
+  python3 scripts/validate_protocol_unique_entry_gate.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --run-id "${RUN_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --entry-receipt "${RECEIPT_TAMPERED_PATH}" \
+  --force-check \
+  --require-entry-receipt \
+  --json-only
+
+run_probe tuple_binding_stale_receipt_blocked \
+  python3 scripts/validate_protocol_unique_entry_gate.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --run-id "${RUN_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --entry-receipt "${RECEIPT_STALE_PATH}" \
   --force-check \
   --require-entry-receipt \
   --json-only

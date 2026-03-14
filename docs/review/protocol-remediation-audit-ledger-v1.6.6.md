@@ -1884,6 +1884,8 @@ Fix landed:
    - verifies:
      - tuple-missing strict call is blocked
      - tuple-complete strict call passes
+     - tampered actor/session tuple receipt is blocked
+     - stale replay receipt is blocked
 
 Three-plane alignment:
 
