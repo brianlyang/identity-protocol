@@ -279,6 +279,50 @@ For v1.6.8 motherline integration, serial replay interpretation is split into tw
 2. **Runtime readiness dimension (monitored, may remain conditional)**  
    - deep-scan target identity P0/P1 state is reported and tracked, but does not invalidate already-closed infrastructure wiring by itself.
 
+## 13) One-stream-per-PR governance boundary (mandatory, fail-close)
+
+This section upgrades PR discipline from convention to required enforcement and is part of the v1.6.8 closure baseline.
+
+### 13.1 Policy objective
+
+1. Every governance-changing PR must be anchored to exactly one `stream_version` in the active stream registry.
+2. A stream anchor is complete only when both documents change in the same PR range:
+   - governance doc
+   - review ledger doc
+3. Core protocol changes (scripts, protocol mappings, CI workflow) without a stream-doc anchor are rejected.
+4. This policy must not rely on hardcoded version literals; stream discovery is always alias-driven.
+
+### 13.2 Enforcement mechanism
+
+Required validator:
+
+- `scripts/validate_stream_version_pr_boundary.py`
+
+Required CI wiring:
+
+- `.github/workflows/_identity-required-gates.yml`
+
+The validator resolves stream coverage from:
+
+- `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+and validates each range (`--base`, `--head`) against dynamic registry entries.
+
+### 13.3 Fail-close error model
+
+1. `IP-STREAM-PR-001`: core protocol changes exist but no stream-doc anchor exists in the same range.
+2. `IP-STREAM-PR-002`: more than one stream version is changed in one PR range.
+3. `IP-STREAM-PR-003`: governance/review pair is incomplete for the resolved stream.
+4. `IP-STREAM-PR-004`: stream registry entrypoint is missing or structurally invalid.
+
+Any of the above statuses is `FAIL_REQUIRED` and blocks merge.
+
+### 13.4 Anti-forget continuity contract
+
+1. Future streams (for example `v1.6.9`, `v1.7.3`) are automatically covered when added to the active stream registry.
+2. No script or workflow is allowed to pin enforcement to a fixed stream list.
+3. PR governance remains stable even when stream versions evolve, because enforcement binds to the current alias and schema, not to remembered version names.
+
 This rule prevents false negatives where governance motherline closure is complete, while target instance business/runtime debt still exists and is tracked separately.
 
 ## 13) Host-visible receipt provenance hardening (2026-03-14)

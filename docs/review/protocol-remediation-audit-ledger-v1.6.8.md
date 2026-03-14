@@ -171,9 +171,9 @@ Evidence root pattern (strict docs):
 
 ### 11.1 Closure objective (frozen)
 
-1. 将 v1.6.8 downsink 三个验证器从“侧链显式调用”提升为 `contract-binding.current.yaml` 母线 requirement rows；
-2. 将 coverage 判定从“单文档硬编码（v1.6.0）”升级为“stream registry 动态解析 + stream_version 正则校验”；
-3. 保证后续版本（v1.6.9 / v1.7.x）新增 stream 时，系统自动拦截漏接线，而不是依赖记忆。
+1. Promote the v1.6.8 downsink validator trio from side-route explicit calls into motherline requirement rows in `contract-binding.current.yaml`.
+2. Upgrade coverage validation from single-doc hardcoding to dynamic stream-registry resolution plus `stream_version` regex enforcement.
+3. Ensure future streams (for example `v1.6.9`, `v1.7.x`) are protected by automatic wiring checks rather than memory-based process discipline.
 
 ### 11.2 Requirement rows integrated
 
@@ -309,3 +309,41 @@ Observed result:
    - `governance_closure_axes.decision_mode`
    - `governance_closure_axes.conditional_reasons`
 2. This converts “Conditional Go” from textual-only output to machine-consumable closure axes.
+
+## 15) Round-31.3 addendum: one-stream-per-PR boundary enforcement (2026-03-14)
+
+### 15.1 Audit objective
+
+1. Convert "one stream per PR" from recommendation to required CI policy.
+2. Reject multi-stream or anchor-missing PR ranges in fail-close mode.
+3. Keep enforcement dynamic and alias-driven (no stream hardcoding).
+
+### 15.2 Landed implementation
+
+1. New validator:
+   - `scripts/validate_stream_version_pr_boundary.py`
+2. Required CI integration:
+   - `.github/workflows/_identity-required-gates.yml`
+3. Registry authority:
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+### 15.3 Error-code closure contract
+
+1. `IP-STREAM-PR-001`: core changes without stream-doc anchor.
+2. `IP-STREAM-PR-002`: multiple stream versions touched in one range.
+3. `IP-STREAM-PR-003`: governance/review pair not both present.
+4. `IP-STREAM-PR-004`: stream registry missing or invalid.
+
+Any of these outcomes is `FAIL_REQUIRED` and blocks merge in the required gate workflow.
+
+### 15.4 Replay checklist (serial)
+
+1. `python3 -m py_compile scripts/validate_stream_version_pr_boundary.py`
+2. `python3 scripts/validate_stream_version_pr_boundary.py --base <base> --head <head> --json-only`
+3. `python3 scripts/docs_command_contract_check.py`
+4. `python3 scripts/validate_doc_evidence_persistence.py --json-only`
+
+### 15.5 Verdict impact
+
+1. v1.6.8 anti-forget governance is strengthened with merge-time mandatory enforcement.
+2. Future stream upgrades inherit this policy automatically through registry aliases.
