@@ -53,11 +53,13 @@ REQUIRED_GATE_CI_DELEGATE_SCRIPT = "scripts/ci/run_required_runtime_gates_ci.sh"
 FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regression_ci.sh"
 MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
 GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh"
+HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_host_visible_surface_live_probes_ci.sh"
 DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_downsink_path_immutability_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
     GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
+    HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
     DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
@@ -83,6 +85,10 @@ MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
 GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     CANONICAL_FINAL_EMIT_SCRIPT,
+)
+HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/repair_contract_backfill.py",
+    "scripts/validate_host_transport_wiring_attestation.py",
 )
 DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/repair_contract_backfill.py",
@@ -1017,6 +1023,56 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + gateway_missing_tokens))
 
+    host_visible_probe_delegate_path = repo_root / HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT
+    if not host_visible_probe_delegate_path.exists():
+        missing_surface_files.append(HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(host_visible_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_static_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_contract_static",
+                "scripts/validate_host_transport_wiring_attestation.py",
+                "--json-only",
+            )
+        )
+        has_live_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_live_receipts_pass",
+                "scripts/validate_host_transport_wiring_attestation.py",
+                "--require-live-receipts",
+            )
+        )
+        has_negative_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_commentary_bypass_blocked",
+                "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status",
+            )
+        )
+        host_visible_missing_tokens: list[str] = []
+        if not has_static_probe:
+            host_visible_missing_tokens.append("host_visible_surface_static_probe_invocation_missing")
+        if not has_live_probe:
+            host_visible_missing_tokens.append("host_visible_surface_live_probe_invocation_missing")
+        if not has_negative_probe:
+            host_visible_missing_tokens.append("host_visible_surface_commentary_negative_probe_invocation_missing")
+        if host_visible_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
+
     downsink_probe_delegate_path = repo_root / DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT
     if not downsink_probe_delegate_path.exists():
         missing_surface_files.append(DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT)
@@ -1190,6 +1246,10 @@ def main() -> int:
         "gateway_trust_boundary_probe_ci_delegate_script": GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
         "gateway_trust_boundary_delegate_required_python_scripts": list(
             GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "host_visible_surface_probe_ci_delegate_script": HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
+        "host_visible_surface_delegate_required_python_scripts": list(
+            HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
         ),
         "downsink_path_immutability_probe_ci_delegate_script": DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
         "downsink_path_immutability_delegate_required_python_scripts": list(
