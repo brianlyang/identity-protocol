@@ -134,6 +134,7 @@ def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str
     identity_id = _arg_value(cmd, "--identity-id")
     actor_id = _arg_value(cmd, "--actor-id")
     body_text = _arg_value(cmd, "--body-text")
+    caller_json_only = _has_flag(cmd, "--json-only")
     if not catalog or not identity_id or not actor_id or not body_text:
         return _emit_fail_payload("final_emit_wrapper_required_args_missing")
 
@@ -150,14 +151,8 @@ def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str
 
     host_gateway_contract = _pick_host_gateway_contract(task if isinstance(task, dict) else {})
     host_release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
-    if host_release_mode and host_release_mode != "wrapper_only":
-        print("[WARN] host_release_mode not wrapper_only; fallback to canonical final_emit")
-        p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
-        if p.stdout.strip():
-            print(p.stdout.strip())
-        if p.stderr.strip():
-            print(p.stderr.strip())
-        return p.returncode, p.stdout or "", p.stderr or ""
+    if host_release_mode != "wrapper_only":
+        return _emit_fail_payload(f"host_release_mode_not_wrapper_only:{host_release_mode or 'missing'}")
 
     session_chain_wrapper = _resolve_pack_relative_path(
         pack_path,
@@ -236,28 +231,46 @@ def _run_final_emit_via_instance_wrappers(cmd: list[str]) -> tuple[int, str, str
             chain_payload["final_emit_guard_status"] = final_guard
         if layer_intent_text:
             chain_payload.setdefault("layer_intent_text", layer_intent_text)
+        if final_guard != "PASS_REQUIRED":
+            return _emit_fail_payload("session_chain_final_emit_guard_not_pass_required")
+        out_reply_file = str(chain_payload.get("out_reply_file", "")).strip()
+        if not out_reply_file:
+            return _emit_fail_payload("session_chain_out_reply_file_missing")
+        out_reply_path = Path(out_reply_file).expanduser().resolve()
+        if not out_reply_path.exists():
+            return _emit_fail_payload("session_chain_out_reply_file_not_found")
+        reply_text = out_reply_path.read_text(encoding="utf-8", errors="ignore").strip()
+        if not reply_text.startswith("Identity-Context:"):
+            return _emit_fail_payload("session_chain_reply_first_line_missing_identity_context")
         normalized = json.dumps(chain_payload, ensure_ascii=False)
-        print(normalized)
-        return 0, normalized, p_chain.stderr or ""
+        if caller_json_only:
+            print(normalized)
+            return 0, normalized, p_chain.stderr or ""
+        print(reply_text)
+        return 0, reply_text, p_chain.stderr or ""
     if p_chain.stdout.strip():
         print(p_chain.stdout.strip())
     return 0, p_chain.stdout or "", p_chain.stderr or ""
 
 
 def _run_required_gate_bundle_via_ingress_wrapper(cmd: list[str]) -> tuple[int, str, str]:
+    def _emit_fail_payload(stale_reason: str) -> tuple[int, str, str]:
+        payload = {
+            "bundle_status": "FAIL_REQUIRED",
+            "error_code": "IP-GATE-ENTRY-001",
+            "stale_reasons": [str(stale_reason or "required_gate_wrapper_route_failed")],
+        }
+        out = json.dumps(payload, ensure_ascii=False)
+        print(out)
+        return 1, out, ""
+
     catalog = _arg_value(cmd, "--catalog")
     identity_id = _arg_value(cmd, "--identity-id")
     operation = _arg_value(cmd, "--operation")
     run_id = _arg_value(cmd, "--run-id")
     actor_id = _arg_value(cmd, "--actor-id")
     if not catalog or not identity_id or not operation or not run_id or not actor_id:
-        print("[WARN] wrapper route skipped: required_gate_bundle command missing required args")
-        p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
-        if p.stdout.strip():
-            print(p.stdout.strip())
-        if p.stderr.strip():
-            print(p.stderr.strip())
-        return p.returncode, p.stdout or "", p.stderr or ""
+        return _emit_fail_payload("required_gate_wrapper_required_args_missing")
 
     try:
         pack_path, task_path = resolve_pack_and_task(
@@ -279,14 +292,8 @@ def _run_required_gate_bundle_via_ingress_wrapper(cmd: list[str]) -> tuple[int, 
 
     host_gateway_contract = _pick_host_gateway_contract(task if isinstance(task, dict) else {})
     host_dispatch_mode = str(host_gateway_contract.get("host_dispatch_mode", "")).strip().lower()
-    if host_dispatch_mode and host_dispatch_mode != "wrapper_only":
-        print("[WARN] host_dispatch_mode not wrapper_only; fallback to canonical bundle runner")
-        p = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROTOCOL_ROOT))
-        if p.stdout.strip():
-            print(p.stdout.strip())
-        if p.stderr.strip():
-            print(p.stderr.strip())
-        return p.returncode, p.stdout or "", p.stderr or ""
+    if host_dispatch_mode != "wrapper_only":
+        return _emit_fail_payload(f"host_dispatch_mode_not_wrapper_only:{host_dispatch_mode or 'missing'}")
 
     ingress_wrapper = _resolve_pack_relative_path(
         pack_path,
