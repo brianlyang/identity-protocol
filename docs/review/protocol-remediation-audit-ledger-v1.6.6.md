@@ -1600,3 +1600,77 @@ Checkpoint verdict update:
 
 1. v1.6.6 inspection-lane protocol-feedback requiredization no longer over-links historical activity by default.
 2. strict lanes retain fail-close pressure; no downgrade of strict governance semantics was introduced.
+
+### 26.12 Host-visible runtime live receipt closure (2026-03-14)
+
+Problem statement (runtime residual confirmed by instances):
+
+1. Static contract + CI fixture probes could pass while runtime `--require-live-receipts` still failed with `IP-HDSTAMP-003`.
+2. No guaranteed runtime writer existed for `runtime/reports/host-visible-surface/host-visible-surface-*.json`.
+3. `host_visible_surface_registry_state.json` could remain stale/empty without fail-close.
+4. Validator did not separate runtime receipts from fixture receipts.
+
+Protocol-side closure implemented:
+
+1. `scripts/create_identity_pack.py` (`protocol_session_chain_wrapper` template):
+   - added runtime host-visible receipt writer bound to the real wrapper chain;
+   - writes per required channel (`commentary|approval|status|final`);
+   - receipt write failure is fail-close (`IP-HDSTAMP-003`);
+   - writes source marker `receipt_source=runtime_dialogue`;
+   - backwrites `runtime/state/host_visible_surface_registry_state.json` each round with:
+     - `last_receipt_path`
+     - `last_status`
+     - `receipt_source`
+     - `last_run_id`
+     - `updated_at_utc`.
+2. `scripts/validate_host_transport_wiring_attestation.py`:
+   - added `--allowed-live-receipt-sources` (default `runtime_dialogue`);
+   - `--require-live-receipts` now validates both receipt and state channel parity;
+   - state/receipt source mismatch now fail-closes;
+   - CI may explicitly extend allowed sources to include `ci_fixture`, but runtime default no longer accepts fixture-only evidence.
+3. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`:
+   - fixture receipts now explicitly mark `receipt_source=ci_fixture`;
+   - fixture state file is written with channel parity fields;
+   - live probe invocation explicitly declares `--allowed-live-receipt-sources runtime_dialogue,ci_fixture`.
+4. `scripts/execute_identity_upgrade.py`:
+   - added pre-mutation projection fields to report surfaces:
+     - `headstamp_first_line_status`
+     - `entry_receipt_tuple_status`
+     - `emit_channel_id`
+     - `reply_transport_binding_status`;
+   - added projection integrity gate (`pre_mutation_projection_status`) in pre-mutation fail-close path;
+   - added non-skipped lane diagnostics projection (`lane_routing_diagnostic_sentinels`) to reduce skipped-preflight masking.
+
+Serialized evidence (runtime, not fixture-only):
+
+1. Runtime 5-round serial chain replay (base-repo-audit-expert-v3):
+   - scoreboard:
+     - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/reports/v166-runtime-serial5/scoreboard-v166-runtime-serial5-1773489110.json`
+   - result: `overall_passed=true`
+   - each round included:
+     - `protocol_session_chain_wrapper` PASS
+     - `validate_host_transport_wiring_attestation --require-live-receipts` PASS
+     - direct runner bypass blocked
+     - direct final emit bypass blocked.
+2. Cross-instance runtime live attestation PASS (default runtime source only):
+   - `base-repo-audit-expert-v3` -> PASS_REQUIRED
+   - `custom-creative-ecom-analyst` -> PASS_REQUIRED
+3. Source separation proof:
+   - fixture identity `probe-visible` with default allowed source (`runtime_dialogue`) fails as expected with:
+     - `host_visible_surface_live_channel_receipt_source_invalid:*:ci_fixture`
+     - `host_visible_surface_live_state_channel_source_invalid:*:ci_fixture`.
+4. Required lane delegates still pass:
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` -> PASS
+   - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` -> PASS.
+
+Deep-scan replay note:
+
+1. Runtime deep-scan 5-round replay was executed and archived at:
+   - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/reports/v166-deepscan-serial5-runtime/scoreboard-v166-deepscan-serial5-runtime-1773489272.json`
+2. `overall_passed=false` in this replay is driven by current target summary severity (`summary.p0=1`) and is not a host-visible runtime receipt regression (runtime live attestation remained PASS in the same execution window).
+
+Checkpoint verdict update:
+
+1. v1.6.6 now has protocol-side runtime host-visible receipt production + state backwrite in the real wrapper chain.
+2. Runtime-vs-fixture evidence is explicitly separated by contracted source marker and validator policy.
+3. Upgrade reports now carry mandatory pre-mutation projection fields for sender/headstamp diagnostics.
