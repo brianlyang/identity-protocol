@@ -1416,6 +1416,8 @@ Trust-boundary probes (required delegate):
    - `final_emit_local_key_forge_blocked`
    - `final_emit_env_secret_forge_blocked`
    - `egress_wrapper_direct_call_blocked`
+3. positive headstamp-required probe verified:
+   - `session_chain_headstamp_first_line_required` (`rc=0`, first line must start with `Identity-Context:`; otherwise probe fails)
 
 Operational note:
 

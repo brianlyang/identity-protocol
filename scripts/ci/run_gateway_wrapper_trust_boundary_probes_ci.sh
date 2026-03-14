@@ -250,6 +250,18 @@ elif name == "egress_wrapper_direct_call_blocked":
         and "session_chain_parent_attestation_parent_command_missing" not in reasons
     ):
         raise SystemExit("egress_wrapper_direct_call_blocked: expected session-chain parent attestation block")
+elif name == "session_chain_headstamp_first_line_required":
+    if rc != 0:
+        raise SystemExit("session_chain_headstamp_first_line_required: expected zero rc")
+    status = str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("session_chain_headstamp_first_line_required: expected PASS_REQUIRED status")
+    preview = doc.get("reply_preview")
+    first_line = ""
+    if isinstance(preview, list) and preview:
+        first_line = str(preview[0] or "").strip()
+    if not first_line.startswith("Identity-Context:"):
+        raise SystemExit("session_chain_headstamp_first_line_required: missing Identity-Context first line")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -498,6 +510,19 @@ run_probe egress_wrapper_direct_call_blocked \
   --source-layer project \
   --candidate-output "direct egress wrapper bypass probe" \
   --ingress-receipt "${FIXTURE_ROOT}/identity/probe-gateway/runtime/state/required_gate_bundle_entry.latest.json" \
+  --json-only
+
+run_probe session_chain_headstamp_first_line_required \
+  python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id probe-gateway-session-chain-headstamp \
+  --work-layer instance \
+  --source-layer project \
+  --operation inspection \
+  --message "session chain headstamp required probe" \
   --json-only
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"

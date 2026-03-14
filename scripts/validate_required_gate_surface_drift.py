@@ -834,6 +834,15 @@ def main() -> int:
                 "--ingress-receipt",
             )
         )
+        has_session_chain_headstamp_probe = all(
+            token in text
+            for token in (
+                "run_probe session_chain_headstamp_first_line_required",
+                "python3 \"${SESSION_CHAIN_WRAPPER_PATH}\"",
+                "--message \"session chain headstamp required probe\"",
+                "--json-only",
+            )
+        )
         gateway_missing_tokens: list[str] = []
         if not has_runner_forge_probe:
             gateway_missing_tokens.append("gateway_runner_forge_probe_invocation_missing")
@@ -841,6 +850,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_egress_forge_probe_invocation_missing")
         if not has_egress_wrapper_direct_probe:
             gateway_missing_tokens.append("gateway_egress_wrapper_direct_probe_invocation_missing")
+        if not has_session_chain_headstamp_probe:
+            gateway_missing_tokens.append("gateway_session_chain_headstamp_probe_invocation_missing")
         if gateway_missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + gateway_missing_tokens))
