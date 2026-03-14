@@ -130,6 +130,9 @@ To make v1.6.6 directly implementable without per-team interpretation drift, the
 11. `egress_receipt_policy` (`required: true`)
 12. `headstamp_policy` (`required: true`)
 13. `identity_tuple_fields` (must contain `actor_id`, `session_id`, `run_id`, `work_layer`, `source_layer`)
+14. `host_visible_surface_registry_contract_ref` (must resolve to `host_visible_surface_registry_contract_v1`)
+15. `wrapper_template_attestation_policy` (must contain ingress/egress/session-chain template hashes + semantic tokens)
+16. `host_visible_surface_registry_contract_v1` (runtime parity mirror of CURRENT_TASK host-visible surface contract)
 
 Schema/fail-close rules:
 
@@ -137,6 +140,7 @@ Schema/fail-close rules:
 2. `protocol_ingress_script` and `protocol_egress_script` must be explicit paths, not inferred defaults.
 3. Any missing required field above is `FAIL_REQUIRED` during init/update validation.
 4. Any canonical script mismatch is `FAIL_REQUIRED` (no alias authority).
+5. Any wrapper-template hash mismatch or missing session-chain semantic token is `FAIL_REQUIRED`.
 
 ### 2.2.2 Wrapper invocation envelope contract (mandatory)
 
@@ -202,6 +206,31 @@ Required model:
    - `session_id` must match
    - `actor_id` must match
 5. Missing/mismatched receipt or headstamp is `FAIL_REQUIRED`.
+
+### 2.4.3 Host-visible surface registry + transport attestation contract (mandatory)
+
+To close sender-side bypass on host-visible channels (including `commentary`), v1.6.6 requires an explicit transport contract:
+
+1. CURRENT_TASK must include `host_visible_surface_registry_contract_v1` with:
+   - `required_channels` containing `commentary`, `approval`, `status`, `final`
+   - `required_attestation_fields` containing:
+     - `emit_channel_id`
+     - `wrapper_surface_status`
+     - `entry_receipt_tuple_status`
+     - `headstamp_first_line_status`
+     - `send_time_gate_status`
+     - `final_emit_contract_status`
+   - `required_pass_status_fields` containing wrapper/tuple/headstamp/send-time/final-contract status keys
+2. Host gateway contract must reference it through
+   `host_visible_surface_registry_contract_ref=host_visible_surface_registry_contract_v1`.
+3. Runtime gateway contract must mirror the same host-visible surface object with parity checks.
+4. Validator `scripts/validate_host_transport_wiring_attestation.py` is mandatory:
+   - static contract/schema checks are always required
+   - live receipt coverage checks are required in probe mode (`--require-live-receipts`)
+5. Required CI lane must execute
+   `scripts/ci/run_host_visible_surface_live_probes_ci.sh` and fail-close when:
+   - live `commentary` channel attestation is missing
+   - any required pass-status field is not `PASS_REQUIRED`
 
 ### 2.4.2 Failure-code family preservation contract (mandatory)
 

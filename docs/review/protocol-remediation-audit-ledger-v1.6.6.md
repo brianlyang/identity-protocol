@@ -1501,3 +1501,62 @@ Result:
 1. send-time wrapper path no longer fails only due absent tuple fields in legacy
    session-chain payload shape.
 2. tuple consistency guard remains active for real mismatches.
+
+### 26.10 Commentary-channel P0 closure checkpoint (2026-03-14)
+
+Commits landed in this checkpoint:
+
+1. `3036466` `feat(v1.6.6): add host-visible surface registry and wrapper template attestation contracts`
+2. `13948ec` `feat(v1.6.6): require host-visible surface live probes in required lane`
+
+Root-cause class addressed:
+
+1. Host-visible sender channel bypass (especially `commentary`) could evade physical attestation in prior baseline.
+2. Wrapper files existed, but no canonical host-visible channel registry + live transport attestation probe existed as required infrastructure.
+
+Protocol-side infrastructure added:
+
+1. New contract key: `host_visible_surface_registry_contract_v1`.
+2. New validator: `scripts/validate_host_transport_wiring_attestation.py`.
+3. New required CI delegate: `scripts/ci/run_host_visible_surface_live_probes_ci.sh`.
+4. Required lane wiring:
+   - `.github/workflows/_identity-required-gates.yml` now executes host-visible live probes.
+   - `scripts/validate_required_gate_surface_drift.py` fail-closes if this delegate/probe tokens drift.
+5. Wrapper attestation hardening:
+   - `wrapper_template_attestation_policy` is now required in host gateway contract.
+   - validator checks ingress/egress/session-chain template hashes and required semantic tokens.
+6. Runtime parity hardening:
+   - runtime gateway contract must mirror both:
+     - `host_visible_surface_registry_contract_v1`
+     - `wrapper_template_attestation_policy`
+
+Serialized verification (base-repo-audit-expert-v3):
+
+1. Backfill/materialize:
+   - `python3 scripts/repair_contract_backfill.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --apply --json-only`
+   - result: `host_visible_surface_contract_auto_wire_status=PASS_REQUIRED`
+2. 5-round self serial replay:
+   - scoreboard:
+     - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/reports/v166-self-serial5/scoreboard-v166-self-serial5-1773482502.json`
+   - result: `overall_passed=true`
+   - each round included:
+     - session-chain positive pass
+     - unique-entry receipt validation pass
+     - host-transport attestation validator pass
+     - direct runner bypass blocked
+     - direct final-emit bypass blocked
+3. 5-round deep-scan serial replay:
+   - scoreboard:
+     - `/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-audit-expert-v3/runtime/reports/v166-deepscan-serial5/scoreboard-v166-deepscan-serial5-1773482601.json`
+   - result: `overall_passed=true`
+4. Host-visible live probe suite:
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` -> `rc=0`
+   - enforced probes:
+     - `host_visible_contract_static`
+     - `host_visible_live_receipts_pass`
+     - `host_visible_commentary_bypass_blocked` (`rc=1` expected fail-close probe)
+
+Checkpoint verdict update:
+
+1. v1.6.6 now has protocol-native host-visible channel registry + live attestation probes in required lane.
+2. Commentary-channel bypass class is now machine-detected and required-lane fail-close, not operator memory-dependent.
