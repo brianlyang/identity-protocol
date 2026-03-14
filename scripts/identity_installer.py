@@ -90,6 +90,8 @@ def _ensure_host_gateway_downsink(
     try:
         from create_identity_pack import (
             HOST_GATEWAY_CONTRACT_KEY,
+            UNIQUE_EGRESS_SCRIPT,
+            UNIQUE_INGRESS_SCRIPT,
             materialize_protocol_host_gateway_artifacts,
         )
     except Exception as exc:
@@ -133,9 +135,9 @@ def _ensure_host_gateway_downsink(
     }
     if not required_flag:
         return False, payload, "host_gateway_required_flag_not_true"
-    if ingress_script != "scripts/required_gate_bundle_runner.py":
+    if ingress_script != UNIQUE_INGRESS_SCRIPT:
         return False, payload, "host_gateway_ingress_script_mismatch"
-    if egress_script != "scripts/final_emit_governed.py":
+    if egress_script != UNIQUE_EGRESS_SCRIPT:
         return False, payload, "host_gateway_egress_script_mismatch"
     if missing_runtime_files:
         return False, payload, "host_gateway_runtime_files_missing"

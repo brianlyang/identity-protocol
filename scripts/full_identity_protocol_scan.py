@@ -14,6 +14,10 @@ from typing import Any
 import yaml
 from actor_session_common import load_actor_binding, resolve_actor_id
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from protocol_infra_contract import (
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -81,8 +85,8 @@ DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-prof
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 SCRIPT_PATH = Path(__file__).resolve()
 DEFAULT_REPO_ROOT = SCRIPT_PATH.parent.parent
-FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
-REQUIRED_GATE_BUNDLE_SCRIPT = "scripts/required_gate_bundle_runner.py"
+FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
+REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 SESSION_ID_FALLBACK = ""
 
 

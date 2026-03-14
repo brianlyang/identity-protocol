@@ -26,6 +26,7 @@ HOST_GATEWAY_REQUIRED_RELEASE_MODE = "wrapper_only"
 HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER = "runtime/gate/protocol_ingress_wrapper.py"
 HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER = "runtime/gate/protocol_egress_wrapper.py"
 HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = "runtime/gate/protocol_session_chain_wrapper.py"
+HOST_GATEWAY_DEFAULT_RUNTIME_CONTRACT = "runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_DEFAULT_SIGNING_KEY = "runtime/state/protocol_gateway_signing_key.txt"
 
 # Wrapper runtime contract paths (identity-relative form).
@@ -67,6 +68,7 @@ HOST_GATEWAY_LIGHT_OPERATIONS: tuple[str, ...] = (
 )
 HOST_GATEWAY_STRICT_GATE_PROFILE = "strict_full"
 HOST_GATEWAY_LIGHT_GATE_PROFILE = "inspection_targeted"
+HOST_GATEWAY_ALLOW_UPGRADE_ONLY = True
 
 # Signer defaults.
 HOST_GATEWAY_SIGNER_MODE = "runtime_env_secret"

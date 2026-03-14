@@ -15,6 +15,10 @@ import yaml
 
 from actor_session_common import load_actor_binding, resolve_actor_id
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from protocol_infra_contract import (
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
 
@@ -24,8 +28,8 @@ PROTOCOL_PUBLISH_SCRIPTS = {
     "scripts/validate_release_metadata_sync.py",
     "scripts/validate_release_freeze_boundary.py",
 }
-BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
-FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
+BUNDLE_RUNNER_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
+FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 FAILCLOSE_PLUGIN_PROJECTION_SCRIPT = "scripts/validate_failclose_plugin_projection.py"
 FULL_SCAN_TARGET_REGRESSION_SCRIPT = "scripts/validate_full_scan_target_regression.py"
 PROTOCOL_ROOT = Path(__file__).resolve().parent.parent

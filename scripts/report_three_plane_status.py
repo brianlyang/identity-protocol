@@ -13,6 +13,10 @@ from typing import Any
 
 from actor_session_common import load_actor_binding, resolve_actor_id
 from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gateway_wrapped_command
+from protocol_infra_contract import (
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import resolve_identity
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -21,8 +25,8 @@ PROTOCOL_ROOT = Path(__file__).resolve().parent.parent
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
 LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
-FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
-REQUIRED_GATE_BUNDLE_SCRIPT = "scripts/required_gate_bundle_runner.py"
+FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
+REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 SESSION_ID_FALLBACK = ""
 
 M2M_VALIDATOR_NAMES: set[str] = {

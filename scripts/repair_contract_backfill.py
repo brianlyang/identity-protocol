@@ -126,7 +126,7 @@ ERR_DOWNSINK_WIRE_INVALID = "IP-DSPATH-002"
 REASONING_LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
 REASONING_MIN_LEVEL = "L3"
 FILE_GOVERNANCE_SKILL_ID = "ai-folder-governance"
-ENTRY_SCRIPT = "scripts/required_gate_bundle_runner.py"
+ENTRY_SCRIPT = UNIQUE_INGRESS_SCRIPT
 ENTRY_BUNDLE_KEY = "required_gate_bundle_runner"
 
 

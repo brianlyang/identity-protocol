@@ -10,6 +10,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from protocol_infra_contract import (
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -27,6 +31,15 @@ GATEWAY_WRAPPER_BUS_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/release_readiness_check.py",
     "scripts/report_three_plane_status.py",
     "scripts/full_identity_protocol_scan.py",
+)
+INFRA_CONTRACT_REQUIRED_SURFACES: tuple[str, ...] = GATEWAY_WRAPPER_BUS_REQUIRED_SURFACES
+INFRA_CONTRACT_REQUIRED_IMPORT = "protocol_infra_contract"
+INFRA_CONTRACT_FORBIDDEN_LITERAL_TARGETS: tuple[str, ...] = (
+    "FINAL_EMIT_SCRIPT",
+    "REQUIRED_GATE_BUNDLE_SCRIPT",
+    "BUNDLE_RUNNER_SCRIPT",
+    "EXPECTED_ENTRY_SCRIPT",
+    "EXPECTED_EGRESS_SCRIPT",
 )
 GATEWAY_WRAPPER_BUS_REQUIRED_IMPORT = "gateway_wrapper_enforcement"
 GATEWAY_WRAPPER_BUS_REQUIRED_CALL = "run_gateway_wrapped_command"
@@ -64,12 +77,12 @@ FULL_SCAN_DELEGATED_REQUIRED_TOKENS: tuple[str, ...] = (
 )
 MONOTONIC_PROBE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_reasoning_loop_failclose.py",
-    "scripts/required_gate_bundle_runner.py",
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
 )
 MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
 GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
-    "scripts/required_gate_bundle_runner.py",
-    "scripts/final_emit_governed.py",
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    CANONICAL_FINAL_EMIT_SCRIPT,
 )
 DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/repair_contract_backfill.py",
@@ -121,10 +134,10 @@ FINAL_EGRESS_REQUIRED_SURFACES: tuple[str, ...] = (
     "scripts/e2e_smoke_test.sh",
 )
 
-BUNDLE_RUNNER_SCRIPT = "scripts/required_gate_bundle_runner.py"
+BUNDLE_RUNNER_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 RECURRENCE_ESCALATOR_SCRIPT = "scripts/validate_required_gate_recurrence_escalator.py"
 TUPLE_PARITY_SCRIPT = "scripts/validate_required_gate_tuple_parity.py"
-FINAL_EGRESS_WRAPPER_SCRIPT = "scripts/final_emit_governed.py"
+FINAL_EGRESS_WRAPPER_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 FORBIDDEN_DIRECT_EGRESS_SCRIPTS: tuple[str, ...] = (
     "scripts/compose_and_validate_governed_reply.py",
 )
@@ -160,7 +173,7 @@ SESSION_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_required_contract_coverage.py",
     "scripts/render_identity_response_stamp.py",
     "scripts/validate_identity_response_stamp.py",
-    "scripts/final_emit_governed.py",
+    FINAL_EGRESS_WRAPPER_SCRIPT,
     "scripts/validate_headstamp_recurrence_closure.py",
     "scripts/validate_reply_identity_context_first_line.py",
     "scripts/validate_send_time_reply_gate.py",
@@ -300,6 +313,55 @@ def _gateway_wrapper_bus_ast_violations(surface_path: Path, text: str) -> list[s
     for helper in GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS:
         if helper in legacy_called_helpers or helper in imported_legacy_names:
             violations.append(f"legacy_gateway_helper_detected:{helper}")
+    return sorted(set(violations))
+
+
+def _infra_contract_ast_violations(surface_path: Path, text: str) -> list[str]:
+    # Enforce canonical infrastructure import to avoid script-local hardcoded routing literals.
+    if surface_path.suffix.lower() != ".py":
+        if INFRA_CONTRACT_REQUIRED_IMPORT not in text:
+            return ["protocol_infra_contract_import_missing"]
+        return []
+
+    try:
+        tree = ast.parse(text, filename=str(surface_path))
+    except SyntaxError:
+        return ["protocol_infra_contract_ast_parse_failed"]
+
+    imported_infra = False
+    literal_assignment_hits: list[str] = []
+    canonical_literals = {
+        CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+        CANONICAL_FINAL_EMIT_SCRIPT,
+    }
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == INFRA_CONTRACT_REQUIRED_IMPORT:
+            imported_infra = True
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if str(alias.name or "").strip() == INFRA_CONTRACT_REQUIRED_IMPORT:
+                    imported_infra = True
+        elif isinstance(node, ast.Assign):
+            value = node.value
+            if not isinstance(value, ast.Constant) or not isinstance(value.value, str):
+                continue
+            literal_value = str(value.value or "").strip()
+            if literal_value not in canonical_literals:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    target_name = str(target.id or "").strip()
+                    if target_name in INFRA_CONTRACT_FORBIDDEN_LITERAL_TARGETS:
+                        literal_assignment_hits.append(
+                            f"canonical_script_literal_assignment_detected:{target_name}"
+                        )
+
+    violations: list[str] = []
+    if not imported_infra:
+        violations.append("protocol_infra_contract_import_missing")
+    if literal_assignment_hits:
+        violations.extend(sorted(set(literal_assignment_hits)))
     return sorted(set(violations))
 
 
@@ -690,6 +752,8 @@ def main() -> int:
     forbidden_direct_egress_hits: dict[str, list[str]] = {}
     gateway_wrapper_bus_missing: list[str] = []
     gateway_wrapper_bus_violations: dict[str, list[str]] = {}
+    infra_contract_missing: list[str] = []
+    infra_contract_violations: dict[str, list[str]] = {}
     actor_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     session_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     bundle_arg_contract_missing: dict[str, list[dict[str, Any]]] = {}
@@ -730,6 +794,11 @@ def main() -> int:
             if bus_violations:
                 gateway_wrapper_bus_missing.append(rel)
                 gateway_wrapper_bus_violations[rel] = sorted(set(bus_violations))
+        if rel in INFRA_CONTRACT_REQUIRED_SURFACES:
+            infra_violations = _infra_contract_ast_violations(path, text)
+            if infra_violations:
+                infra_contract_missing.append(rel)
+                infra_contract_violations[rel] = sorted(set(infra_violations))
         direct_egress_hits = [needle for needle in FORBIDDEN_DIRECT_EGRESS_SCRIPTS if needle in text]
         if direct_egress_hits:
             forbidden_direct_egress_hits[rel] = direct_egress_hits
@@ -822,7 +891,7 @@ def main() -> int:
             token in text
             for token in (
                 "run_probe multimodal_update_defer_allowed",
-                "scripts/required_gate_bundle_runner.py",
+                BUNDLE_RUNNER_SCRIPT,
                 "--identity-id probe-mm",
                 "--operation update",
                 "--target-name " + MONOTONIC_PROBE_REQUIRED_TARGET,
@@ -834,7 +903,7 @@ def main() -> int:
             token in text
             for token in (
                 "run_probe multimodal_readiness_skip_blocked",
-                "scripts/required_gate_bundle_runner.py",
+                BUNDLE_RUNNER_SCRIPT,
                 "--identity-id probe-mm",
                 "--operation readiness",
                 "--target-name " + MONOTONIC_PROBE_REQUIRED_TARGET,
@@ -871,7 +940,7 @@ def main() -> int:
             token in text
             for token in (
                 "run_probe runner_local_key_forge_blocked",
-                "scripts/required_gate_bundle_runner.py",
+                BUNDLE_RUNNER_SCRIPT,
                 "--wrapper-proof-json",
                 "--wrapper-proof-signature",
             )
@@ -880,7 +949,7 @@ def main() -> int:
             token in text
             for token in (
                 "run_probe final_emit_local_key_forge_blocked",
-                "scripts/final_emit_governed.py",
+                FINAL_EGRESS_WRAPPER_SCRIPT,
                 "--egress-grant-json",
                 "--egress-grant-signature",
             )
@@ -1045,7 +1114,7 @@ def main() -> int:
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
-    elif gateway_wrapper_bus_missing:
+    elif gateway_wrapper_bus_missing or infra_contract_missing:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-009"
     elif missing_lineage_refs or missing_execution_tokens or forbidden_hits or dialogue_bundle_missing:
@@ -1116,6 +1185,11 @@ def main() -> int:
         "gateway_wrapper_bus_forbidden_legacy_helpers": list(GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS),
         "gateway_wrapper_bus_missing": gateway_wrapper_bus_missing,
         "gateway_wrapper_bus_violations": gateway_wrapper_bus_violations,
+        "infra_contract_required_surfaces": list(INFRA_CONTRACT_REQUIRED_SURFACES),
+        "infra_contract_required_import": INFRA_CONTRACT_REQUIRED_IMPORT,
+        "infra_contract_forbidden_literal_targets": list(INFRA_CONTRACT_FORBIDDEN_LITERAL_TARGETS),
+        "infra_contract_missing": infra_contract_missing,
+        "infra_contract_violations": infra_contract_violations,
         "actor_id_required_scripts": list(ACTOR_ID_REQUIRED_SCRIPTS),
         "actor_id_passthrough_missing": actor_id_passthrough_missing,
         "session_id_required_scripts": list(SESSION_ID_REQUIRED_SCRIPTS),

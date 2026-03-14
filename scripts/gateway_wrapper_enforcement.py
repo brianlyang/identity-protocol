@@ -10,17 +10,23 @@ from pathlib import Path
 from typing import Any
 
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
-
-HOST_GATEWAY_CONTRACT_KEYS = (
-    "protocol_host_unique_channel_contract_v1",
-    "protocol_gateway_wrapper_contract_v1",
-    "protocol_gateway_contract_v1",
+from protocol_infra_contract import (
+    CANONICAL_FINAL_EMIT_SCRIPT,
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    HOST_GATEWAY_CONTRACT_KEYS as INFRA_HOST_GATEWAY_CONTRACT_KEYS,
+    HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
+    HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER,
+    HOST_GATEWAY_DEFAULT_SIGNING_KEY as INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY,
+    HOST_GATEWAY_REQUIRED_DISPATCH_MODE as INFRA_HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
+    HOST_GATEWAY_REQUIRED_RELEASE_MODE as INFRA_HOST_GATEWAY_REQUIRED_RELEASE_MODE,
 )
-HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER = "runtime/gate/protocol_ingress_wrapper.py"
-HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = "runtime/gate/protocol_session_chain_wrapper.py"
-HOST_GATEWAY_DEFAULT_SIGNING_KEY = "runtime/state/protocol_gateway_signing_key.txt"
-FINAL_EMIT_SCRIPT = "scripts/final_emit_governed.py"
-REQUIRED_GATE_BUNDLE_SCRIPT = "scripts/required_gate_bundle_runner.py"
+
+HOST_GATEWAY_CONTRACT_KEYS = INFRA_HOST_GATEWAY_CONTRACT_KEYS
+HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER = INFRA_HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER
+HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = INFRA_HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER
+HOST_GATEWAY_DEFAULT_SIGNING_KEY = INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY
+FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
+REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 
 
 def _arg_index(cmd: list[str], flag: str) -> int:
@@ -135,7 +141,7 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
 
     host_gateway_contract = pick_host_gateway_contract(task if isinstance(task, dict) else {})
     host_release_mode = str(host_gateway_contract.get("host_release_mode", "")).strip().lower()
-    if host_release_mode != "wrapper_only":
+    if host_release_mode != INFRA_HOST_GATEWAY_REQUIRED_RELEASE_MODE:
         return _emit_fail_payload(f"host_release_mode_not_wrapper_only:{host_release_mode or 'missing'}")
 
     session_chain_wrapper = resolve_pack_relative_path(
@@ -275,7 +281,7 @@ def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_roo
 
     host_gateway_contract = pick_host_gateway_contract(task if isinstance(task, dict) else {})
     host_dispatch_mode = str(host_gateway_contract.get("host_dispatch_mode", "")).strip().lower()
-    if host_dispatch_mode != "wrapper_only":
+    if host_dispatch_mode != INFRA_HOST_GATEWAY_REQUIRED_DISPATCH_MODE:
         return _emit_fail_payload(f"host_dispatch_mode_not_wrapper_only:{host_dispatch_mode or 'missing'}")
 
     ingress_wrapper = resolve_pack_relative_path(
