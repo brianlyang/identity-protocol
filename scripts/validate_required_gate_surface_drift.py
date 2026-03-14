@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ast
 import argparse
 import json
 import re
@@ -229,6 +230,77 @@ def _read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except Exception:
         return path.read_text(encoding="utf-8", errors="ignore")
+
+
+def _gateway_wrapper_bus_ast_violations(surface_path: Path, text: str) -> list[str]:
+    # AST-level check avoids comment/string token spoofing for required bus checks.
+    if surface_path.suffix.lower() != ".py":
+        violations: list[str] = []
+        if GATEWAY_WRAPPER_BUS_REQUIRED_IMPORT not in text:
+            violations.append("gateway_wrapper_enforcement_import_missing")
+        if GATEWAY_WRAPPER_BUS_REQUIRED_CALL not in text:
+            violations.append("run_gateway_wrapped_command_call_missing")
+        for helper in GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS:
+            if helper in text:
+                violations.append(f"legacy_gateway_helper_detected:{helper}")
+        return sorted(set(violations))
+
+    try:
+        tree = ast.parse(text, filename=str(surface_path))
+    except SyntaxError:
+        return ["gateway_wrapper_enforcement_ast_parse_failed"]
+
+    imported_bus_names: set[str] = set()
+    imported_module_aliases: set[str] = set()
+    imported_legacy_names: set[str] = set()
+    legacy_called_helpers: set[str] = set()
+    has_bus_call = False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "gateway_wrapper_enforcement":
+            for alias in node.names:
+                raw_name = str(alias.name or "").strip()
+                as_name = str(alias.asname or alias.name or "").strip()
+                if not raw_name or not as_name:
+                    continue
+                if raw_name == GATEWAY_WRAPPER_BUS_REQUIRED_CALL:
+                    imported_bus_names.add(as_name)
+                if raw_name in GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS:
+                    imported_legacy_names.add(as_name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                raw_name = str(alias.name or "").strip()
+                if raw_name == GATEWAY_WRAPPER_BUS_REQUIRED_IMPORT:
+                    imported_module_aliases.add(str(alias.asname or raw_name).strip())
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name):
+            fn = str(func.id or "").strip()
+            if fn in imported_bus_names:
+                has_bus_call = True
+            if fn in imported_legacy_names:
+                legacy_called_helpers.add(fn)
+        elif isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+            module_ref = str(func.value.id or "").strip()
+            attr = str(func.attr or "").strip()
+            if module_ref in imported_module_aliases and attr == GATEWAY_WRAPPER_BUS_REQUIRED_CALL:
+                has_bus_call = True
+            if module_ref in imported_module_aliases and attr in GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS:
+                legacy_called_helpers.add(attr)
+
+    violations: list[str] = []
+    if not imported_bus_names and not imported_module_aliases:
+        violations.append("gateway_wrapper_enforcement_import_missing")
+    if not has_bus_call:
+        violations.append("run_gateway_wrapped_command_call_missing")
+
+    for helper in GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS:
+        if helper in legacy_called_helpers or helper in imported_legacy_names:
+            violations.append(f"legacy_gateway_helper_detected:{helper}")
+    return sorted(set(violations))
 
 
 def _extract_shell_invocations(text: str, executable: str) -> set[str]:
@@ -654,19 +726,7 @@ def main() -> int:
         if rel in FINAL_EGRESS_REQUIRED_SURFACES and FINAL_EGRESS_WRAPPER_SCRIPT not in text:
             missing_final_egress_wrapper.append(rel)
         if rel in GATEWAY_WRAPPER_BUS_REQUIRED_SURFACES:
-            bus_violations: list[str] = []
-            if GATEWAY_WRAPPER_BUS_REQUIRED_IMPORT not in text:
-                bus_violations.append("gateway_wrapper_enforcement_import_missing")
-            if GATEWAY_WRAPPER_BUS_REQUIRED_CALL not in text:
-                bus_violations.append("run_gateway_wrapped_command_call_missing")
-            legacy_hits = [
-                helper
-                for helper in GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS
-                if helper in text
-            ]
-            if legacy_hits:
-                for helper in legacy_hits:
-                    bus_violations.append(f"legacy_gateway_helper_detected:{helper}")
+            bus_violations = _gateway_wrapper_bus_ast_violations(path, text)
             if bus_violations:
                 gateway_wrapper_bus_missing.append(rel)
                 gateway_wrapper_bus_violations[rel] = sorted(set(bus_violations))
