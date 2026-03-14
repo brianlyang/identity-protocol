@@ -24,6 +24,16 @@ from runtime_temp_path_common import named_temp_root, runtime_temp_file
 LOCK_PROTOCOL_PREFIX = "SESSION_LANE_LOCK_PROTOCOL_"
 LOCK_EXIT_PREFIX = "SESSION_LANE_LOCK_EXIT_"
 IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
+TUPLE_CONTEXT_PRIMARY_MARKERS: set[str] = {
+    "entry_receipt_operation_mismatch",
+    "entry_receipt_run_id_mismatch",
+    "entry_receipt_actor_id_mismatch",
+    "entry_receipt_session_id_mismatch",
+}
+TUPLE_CONTEXT_ALLOWED_MARKERS: set[str] = {
+    *TUPLE_CONTEXT_PRIMARY_MARKERS,
+    "entry_receipt_bundle_status_not_pass",
+}
 
 M2M_CHECK_NAMES: set[str] = {
     "requested_session_binding",
@@ -331,6 +341,75 @@ def _classify_m2m_projection(*, checks: dict[str, Any]) -> dict[str, Any]:
             for row in non_m2m_failed
         ],
         "failed_check_count_total": len(failed),
+    }
+
+
+def _is_tuple_context_only_stale_reasons(stale_reasons: list[str]) -> bool:
+    tokens = [str(x).strip() for x in stale_reasons if str(x).strip()]
+    if not tokens:
+        return False
+    primary_detected = False
+    for token in tokens:
+        if token in TUPLE_CONTEXT_PRIMARY_MARKERS:
+            primary_detected = True
+            continue
+        if token in TUPLE_CONTEXT_ALLOWED_MARKERS:
+            continue
+        if token.startswith("entry_receipt_required_fields_missing:"):
+            primary_detected = True
+            continue
+        return False
+    return primary_detected
+
+
+def _classify_tuple_context_projection(*, checks: dict[str, Any]) -> dict[str, Any]:
+    matches: list[dict[str, Any]] = []
+
+    def _append_if_match(check_name: str, entry: dict[str, Any], *, source: str) -> None:
+        tuple_only = bool(entry.get("protocol_unique_entry_receipt_tuple_context_only_failure", False))
+        if not tuple_only:
+            tuple_status = str(
+                entry.get("protocol_unique_entry_receipt_tuple_context_status", "")
+            ).strip().upper()
+            stale_reasons = [
+                str(x).strip()
+                for x in (entry.get("stale_reasons") or [])
+                if str(x).strip()
+            ]
+            if tuple_status == "FAIL_REQUIRED" and _is_tuple_context_only_stale_reasons(stale_reasons):
+                tuple_only = True
+        if not tuple_only:
+            return
+        mismatch_fields = [
+            str(x).strip()
+            for x in (entry.get("protocol_unique_entry_receipt_tuple_context_mismatch_fields") or [])
+            if str(x).strip()
+        ]
+        matches.append(
+            {
+                "check": str(check_name),
+                "source": source,
+                "error_code": _extract_check_error_code(entry),
+                "mismatch_fields": sorted(set(mismatch_fields)),
+            }
+        )
+
+    for check_name, raw in (checks or {}).items():
+        entry = raw if isinstance(raw, dict) else {}
+        _append_if_match(str(check_name), entry, source="check_payload")
+        for row in (entry.get("results") or []):
+            if not isinstance(row, dict):
+                continue
+            row_payload = row.get("payload")
+            if isinstance(row_payload, dict):
+                _append_if_match(str(check_name), row_payload, source="check_result_payload")
+            _append_if_match(str(check_name), row, source="check_result_row")
+
+    return {
+        "tuple_context_only_failure": bool(matches),
+        "tuple_context_only_failure_count": len(matches),
+        "tuple_context_only_failure_scope": "tuple_context_only" if matches else "",
+        "tuple_context_only_failure_checks": matches,
     }
 
 
@@ -766,6 +845,14 @@ def main() -> int:
         "summary_fixture_or_demo": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_non_active_or_non_runtime": {"total_identities": 0, "p0": 0, "p1": 0, "ok": 0},
         "summary_m2m": {"total_identities": 0, "pass": 0, "fail": 0},
+        "summary_tuple_context": {
+            "total_identities": 0,
+            "tuple_context_only_failures": 0,
+            "runtime_active_failures": 0,
+            "fixture_or_demo_failures": 0,
+            "non_active_or_non_runtime_failures": 0,
+            "identity_ids": [],
+        },
     }
     target_severity_map: dict[str, str] = {}
     target_m2m_map: dict[str, str] = {}
@@ -791,6 +878,8 @@ def main() -> int:
 
     def _record_summary(item: dict[str, Any]) -> None:
         severity = str(item.get("severity", "OK")).strip().upper() or "OK"
+        tuple_projection = _classify_tuple_context_projection(checks=item.get("checks", {}))
+        item["tuple_context_projection"] = tuple_projection
         _bump_summary(payload["summary"], severity)
         bucket = _summary_bucket_for_row(item)
         item["summary_bucket"] = bucket
@@ -800,6 +889,19 @@ def main() -> int:
             _bump_summary(payload["summary_fixture_or_demo"], severity)
         else:
             _bump_summary(payload["summary_non_active_or_non_runtime"], severity)
+        tuple_summary = payload["summary_tuple_context"]
+        tuple_summary["total_identities"] += 1
+        if bool(tuple_projection.get("tuple_context_only_failure", False)):
+            tuple_summary["tuple_context_only_failures"] += 1
+            if bucket == "runtime_active":
+                tuple_summary["runtime_active_failures"] += 1
+            elif bucket == "fixture_or_demo":
+                tuple_summary["fixture_or_demo_failures"] += 1
+            else:
+                tuple_summary["non_active_or_non_runtime_failures"] += 1
+            identity_id = str(item.get("identity_id", "")).strip()
+            if identity_id and identity_id not in tuple_summary["identity_ids"]:
+                tuple_summary["identity_ids"].append(identity_id)
 
     for layer, catalog in catalog_list:
         rows = _catalog_rows(catalog) if catalog.exists() else []

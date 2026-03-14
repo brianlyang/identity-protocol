@@ -262,6 +262,12 @@ Interpretation rules:
 3. remediation guidance must be machine-readable via `..._next_action` and must point to replaying wrapper flow with bound actor/session tuple.
 4. this contract improves diagnostics consistency and does not weaken any existing fail-close gate.
 
+Scan-plane interpretation extension:
+
+1. `scripts/full_identity_protocol_scan.py` must publish tuple-context-only failures under a dedicated summary bucket:
+   - `summary_tuple_context`
+2. tuple-context-only failures remain hard failures at check level, but scan summaries must expose them as a separate machine-readable diagnostic dimension to avoid conflating context mismatch with protocol wiring regressions.
+
 ### 2.4.1 Headstamp continuity contract (mandatory)
 
 1. Egress wrapper must treat first-line identity tuple and layer tuple as send-time hard gate input.

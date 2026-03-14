@@ -1828,3 +1828,28 @@ Checkpoint verdict update:
 
 1. v1.6.6 now preserves fail-close strictness while exposing explicit tuple-context diagnostics.
 2. this closes the audit-noted interpretation gap without loosening wrapper/receipt enforcement.
+
+### 26.17 Full-scan tuple-context summary segregation (2026-03-14)
+
+Problem:
+
+1. target scans can aggregate tuple-context-only failures into generic P0/P1 severity without exposing whether root cause is context mismatch or protocol wiring regression.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py` now computes `tuple_context_projection` for each identity row.
+2. scan payload now includes:
+   - `summary_tuple_context.total_identities`
+   - `summary_tuple_context.tuple_context_only_failures`
+   - `summary_tuple_context.runtime_active_failures`
+   - `summary_tuple_context.fixture_or_demo_failures`
+   - `summary_tuple_context.non_active_or_non_runtime_failures`
+   - `summary_tuple_context.identity_ids`
+3. detection supports:
+   - explicit validator flag `protocol_unique_entry_receipt_tuple_context_only_failure`
+   - fallback stale-reason classifier for tuple-context-only receipt mismatches.
+
+Replay expectation:
+
+1. protocol regressions continue to surface in normal severity and `m2m_projection`.
+2. tuple-context-only failures become separately countable without reducing fail-close strictness.
