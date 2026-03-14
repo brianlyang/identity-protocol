@@ -71,6 +71,25 @@ def _load_stream_registry(path: Path) -> list[dict[str, str]]:
     return out
 
 
+def _resolve_stream_registry(path: Path) -> tuple[Path, list[dict[str, str]]]:
+    entry_doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if isinstance(entry_doc, dict) and isinstance(entry_doc.get("stream_docs"), list):
+        return path, _load_stream_registry(path)
+    active_file = str((entry_doc or {}).get("active_file", "")).strip()
+    if not active_file:
+        raise ValueError("stream registry entry missing stream_docs and active_file")
+    active_path = Path(active_file)
+    if not active_path.is_absolute():
+        candidate_from_entry = (path.parent / active_path).resolve()
+        if candidate_from_entry.exists():
+            active_path = candidate_from_entry
+        else:
+            active_path = (Path.cwd() / active_path).resolve()
+    if not active_path.exists():
+        raise ValueError(f"active stream registry file missing: {active_file}")
+    return active_path, _load_stream_registry(active_path)
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -104,6 +123,7 @@ def main() -> int:
         "core_changed_file_count": len(core_changed),
         "core_changed_files": core_changed,
         "stream_registry_entry": args.stream_registry,
+        "stream_registry_entry_path": "",
         "stream_registry_resolved_path": "",
         "touched_stream_versions": [],
         "touched_stream_docs": [],
@@ -118,7 +138,7 @@ def main() -> int:
         return 0
 
     registry_entry = Path(args.stream_registry).expanduser().resolve()
-    payload["stream_registry_resolved_path"] = str(registry_entry)
+    payload["stream_registry_entry_path"] = str(registry_entry)
     if not registry_entry.exists():
         payload["stream_version_pr_boundary_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_STREAM_REGISTRY_INVALID
@@ -127,13 +147,14 @@ def main() -> int:
         return 1
 
     try:
-        rows = _load_stream_registry(registry_entry)
+        resolved_registry, rows = _resolve_stream_registry(registry_entry)
     except Exception as exc:
         payload["stream_version_pr_boundary_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_STREAM_REGISTRY_INVALID
         payload["stale_reasons"] = [f"stream_registry_invalid:{exc}"]
         _emit(payload, json_only=args.json_only)
         return 1
+    payload["stream_registry_resolved_path"] = str(resolved_registry)
 
     doc_to_stream: dict[str, tuple[str, str]] = {}
     for row in rows:
