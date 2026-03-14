@@ -77,6 +77,45 @@ HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH = True
 HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS = 300
 HOST_GATEWAY_EGRESS_GRANT_MAX_AGE_SECONDS = 300
 
+# Host-visible surface registry defaults.
+HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY = "host_visible_surface_registry_contract_v1"
+HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID = "host_visible_surface_registry_contract_v1"
+HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR = "scripts/validate_host_transport_wiring_attestation.py"
+HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE = "scripts/ci/run_host_visible_surface_live_probes_ci.sh"
+HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS: tuple[str, ...] = (
+    "commentary",
+    "approval",
+    "status",
+    "final",
+)
+HOST_VISIBLE_SURFACE_STATE_FILE = "runtime/state/host_visible_surface_registry_state.json"
+HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
+HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS: tuple[str, ...] = (
+    "emit_channel_id",
+    "wrapper_surface_status",
+    "entry_receipt_tuple_status",
+    "headstamp_first_line_status",
+    "send_time_gate_status",
+    "final_emit_contract_status",
+)
+HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS: tuple[str, ...] = (
+    "wrapper_surface_status",
+    "entry_receipt_tuple_status",
+    "headstamp_first_line_status",
+    "send_time_gate_status",
+    "final_emit_contract_status",
+)
+
+# Wrapper semantic attestations.
+HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = "wrapper_template_attestation_policy"
+HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID = "host_gateway_wrapper_template_attestation_v1"
+HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS: tuple[str, ...] = (
+    "headstamp_first_line_status",
+    "entry_receipt_tuple_status",
+    "final_emit_contract_status",
+    "Identity-Context:",
+)
+
 # Broadcast governance paths.
 HOST_GATEWAY_BROADCAST_ITEMS_DIR = "identity/protocol/broadcast/items"
 HOST_GATEWAY_BROADCAST_INDEX_FILE = "identity/protocol/broadcast/index.json"

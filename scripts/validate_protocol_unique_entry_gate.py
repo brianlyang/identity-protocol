@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,17 @@ from protocol_infra_contract import (
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
     HOST_GATEWAY_REQUIRED_SURFACE_STATUS as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS as INFRA_HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
+    HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS as INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS,
+    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
+    HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
+    HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
+    HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+    HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+    HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_SURFACE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_STATE_FILE,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -64,6 +76,17 @@ HOST_GATEWAY_EXPECTED_CONTRACT_REL = INFRA_HOST_GATEWAY_DEFAULT_RUNTIME_CONTRACT
 HOST_GATEWAY_BROADCAST_ITEMS_DIR = INFRA_HOST_GATEWAY_BROADCAST_ITEMS_DIR
 HOST_GATEWAY_BROADCAST_INDEX_FILE = INFRA_HOST_GATEWAY_BROADCAST_INDEX_FILE
 HOST_GATEWAY_BROADCAST_SCHEMA_FILE = INFRA_HOST_GATEWAY_BROADCAST_SCHEMA_FILE
+HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY
+HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS = set(INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS)
+HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
+HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
+HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
+HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
+HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS)
+HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS)
+HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
+HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
+HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
 HOST_GATEWAY_ALLOWED_FIELDS = {
     "contract_id",
     "required",
@@ -85,6 +108,8 @@ HOST_GATEWAY_ALLOWED_FIELDS = {
     "egress_grant_policy",
     "headstamp_policy",
     "broadcast_policy",
+    "host_visible_surface_registry_contract_ref",
+    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
 }
 HOST_GATEWAY_OPERATION_PROFILE_ALLOWED_FIELDS = {
     "strict_operations",
@@ -127,6 +152,28 @@ HOST_GATEWAY_BROADCAST_POLICY_ALLOWED_FIELDS = {
     "instance_ack_pattern",
     "block_on_critical_unacked",
 }
+HOST_GATEWAY_TEMPLATE_ATTESTATION_ALLOWED_FIELDS = {
+    "required",
+    "attestation_id",
+    "ingress_wrapper_template_sha256",
+    "egress_wrapper_template_sha256",
+    "session_chain_wrapper_template_sha256",
+    "session_chain_required_semantic_tokens",
+    "required_tuple_fields",
+}
+HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
+    "required",
+    "contract_id",
+    "validator",
+    "required_channels",
+    "runtime_state_file",
+    "runtime_receipt_pattern",
+    "required_attestation_fields",
+    "required_pass_status_fields",
+    "required_live_probe_delegate",
+    "host_dispatch_mode_required",
+    "host_release_mode_required",
+}
 RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "schema_version",
     "identity_id",
@@ -147,7 +194,10 @@ RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "host_release_mode",
     "ingress_wrapper_dispatch_token",
     "operation_profile_policy",
+    "host_visible_surface_registry_contract_ref",
+    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     "broadcast_policy",
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     "protocol_downsink_path_immutability_contract_v1",
 }
 
@@ -219,6 +269,23 @@ def _unknown_keys(node: Any, allowed: set[str]) -> list[str]:
     if not isinstance(node, dict):
         return []
     return sorted(str(k) for k in node.keys() if str(k) not in allowed)
+
+
+def _as_str_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(8192)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def _validate_signer_policy(node: Any, *, issue_prefix: str, issues: list[str]) -> str:
@@ -412,6 +479,22 @@ def main() -> int:
         "protocol_host_gateway_strict_gate_profile": "",
         "protocol_host_gateway_light_gate_profile": "",
         "protocol_host_gateway_allow_upgrade_only": True,
+        "protocol_host_gateway_wrapper_template_attestation_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_wrapper_template_attestation_id": "",
+        "protocol_host_gateway_wrapper_template_ingress_sha256": "",
+        "protocol_host_gateway_wrapper_template_egress_sha256": "",
+        "protocol_host_gateway_wrapper_template_session_chain_sha256": "",
+        "protocol_host_gateway_session_chain_semantic_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_host_visible_surface_contract_ref": "",
+        "protocol_host_visible_surface_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_visible_surface_contract_key": HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+        "protocol_host_visible_surface_validator": "",
+        "protocol_host_visible_surface_required_channels": [],
+        "protocol_host_visible_surface_state_file": "",
+        "protocol_host_visible_surface_receipt_pattern": "",
+        "protocol_host_visible_surface_required_attestation_fields": [],
+        "protocol_host_visible_surface_required_pass_status_fields": [],
+        "protocol_host_visible_surface_live_probe_delegate": "",
         "protocol_host_gateway_broadcast_policy_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_broadcast_items_dir": "",
         "protocol_host_gateway_broadcast_index_file": "",
@@ -488,6 +571,70 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
+    host_visible_surface_contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
+    host_visible_surface_issues: list[str] = []
+    if not isinstance(host_visible_surface_contract, dict) or not host_visible_surface_contract:
+        host_visible_surface_issues.append("host_visible_surface_contract_missing")
+    else:
+        unknown_visible_fields = _unknown_keys(host_visible_surface_contract, HOST_VISIBLE_SURFACE_ALLOWED_FIELDS)
+        if unknown_visible_fields:
+            host_visible_surface_issues.append(
+                "host_visible_surface_contract_additional_properties:" + ",".join(unknown_visible_fields)
+            )
+        if host_visible_surface_contract.get("required") is not True:
+            host_visible_surface_issues.append("host_visible_surface_required_flag_not_true")
+        if str(host_visible_surface_contract.get("contract_id", "")).strip() != HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID:
+            host_visible_surface_issues.append("host_visible_surface_contract_id_mismatch")
+        visible_validator = str(host_visible_surface_contract.get("validator", "")).strip()
+        payload["protocol_host_visible_surface_validator"] = visible_validator
+        if visible_validator != HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR:
+            host_visible_surface_issues.append("host_visible_surface_validator_mismatch")
+        visible_channels = set(_as_str_list(host_visible_surface_contract.get("required_channels")))
+        payload["protocol_host_visible_surface_required_channels"] = sorted(visible_channels)
+        if not HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS.issubset(visible_channels):
+            host_visible_surface_issues.append("host_visible_surface_required_channels_missing")
+        state_file = str(host_visible_surface_contract.get("runtime_state_file", "")).strip()
+        receipt_pattern = str(host_visible_surface_contract.get("runtime_receipt_pattern", "")).strip()
+        payload["protocol_host_visible_surface_state_file"] = state_file
+        payload["protocol_host_visible_surface_receipt_pattern"] = receipt_pattern
+        if not state_file:
+            host_visible_surface_issues.append("host_visible_surface_state_file_missing")
+        if not receipt_pattern:
+            host_visible_surface_issues.append("host_visible_surface_receipt_pattern_missing")
+        if receipt_pattern and receipt_pattern != HOST_VISIBLE_SURFACE_RECEIPT_PATTERN:
+            host_visible_surface_issues.append("host_visible_surface_receipt_pattern_mismatch")
+        attestation_fields = set(_as_str_list(host_visible_surface_contract.get("required_attestation_fields")))
+        payload["protocol_host_visible_surface_required_attestation_fields"] = sorted(attestation_fields)
+        if not HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS.issubset(attestation_fields):
+            host_visible_surface_issues.append("host_visible_surface_required_attestation_fields_missing")
+        pass_status_fields = set(_as_str_list(host_visible_surface_contract.get("required_pass_status_fields")))
+        payload["protocol_host_visible_surface_required_pass_status_fields"] = sorted(pass_status_fields)
+        if not HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS.issubset(pass_status_fields):
+            host_visible_surface_issues.append("host_visible_surface_required_pass_status_fields_missing")
+        live_probe_delegate = str(host_visible_surface_contract.get("required_live_probe_delegate", "")).strip()
+        payload["protocol_host_visible_surface_live_probe_delegate"] = live_probe_delegate
+        if live_probe_delegate != HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE:
+            host_visible_surface_issues.append("host_visible_surface_live_probe_delegate_mismatch")
+        dispatch_mode_required = str(
+            host_visible_surface_contract.get("host_dispatch_mode_required", "")
+        ).strip().lower()
+        release_mode_required = str(
+            host_visible_surface_contract.get("host_release_mode_required", "")
+        ).strip().lower()
+        if dispatch_mode_required != EXPECTED_HOST_DISPATCH_MODE:
+            host_visible_surface_issues.append("host_visible_surface_dispatch_mode_required_mismatch")
+        if release_mode_required != EXPECTED_HOST_RELEASE_MODE:
+            host_visible_surface_issues.append("host_visible_surface_release_mode_required_mismatch")
+        if state_file:
+            state_path = _resolve_pack_relative_path(pack_path, state_file, HOST_VISIBLE_SURFACE_STATE_FILE)
+            if not state_path.exists() or not state_path.is_file():
+                host_visible_surface_issues.append("host_visible_surface_state_file_not_found")
+
+    if host_visible_surface_issues:
+        payload["protocol_host_visible_surface_contract_status"] = STATUS_FAIL_REQUIRED
+    else:
+        payload["protocol_host_visible_surface_contract_status"] = STATUS_PASS_REQUIRED
+
     host_gateway_contract, host_gateway_contract_key = _resolve_host_gateway_contract(task)
     payload["protocol_host_gateway_contract_key"] = host_gateway_contract_key
     receipt_required_surface_label = DEFAULT_ENTRY_RECEIPT_SURFACE_LABEL
@@ -519,12 +666,16 @@ def main() -> int:
         ingress_dispatch_token = str(host_gateway_contract.get("ingress_wrapper_dispatch_token", "")).strip()
         tuple_fields = _as_str_set(host_gateway_contract.get("identity_tuple_fields"))
         operation_profile_policy = host_gateway_contract.get("operation_profile_policy")
+        visible_surface_contract_ref = str(
+            host_gateway_contract.get("host_visible_surface_registry_contract_ref", "")
+        ).strip()
         payload["protocol_host_gateway_ingress_script"] = ingress_script
         payload["protocol_host_gateway_egress_script"] = egress_script
         payload["protocol_host_gateway_dispatch_mode"] = dispatch_mode
         payload["protocol_host_gateway_release_mode"] = release_mode
         payload["protocol_host_gateway_ingress_dispatch_token"] = ingress_dispatch_token
         payload["protocol_host_gateway_identity_tuple_fields"] = sorted(tuple_fields)
+        payload["protocol_host_gateway_host_visible_surface_contract_ref"] = visible_surface_contract_ref
 
         ingress_wrapper_path = _resolve_pack_relative_path(
             pack_path,
@@ -567,8 +718,55 @@ def main() -> int:
             host_gateway_issues.append("host_gateway_release_mode_not_wrapper_only")
         if not ingress_dispatch_token:
             host_gateway_issues.append("host_gateway_ingress_dispatch_token_missing")
+        if visible_surface_contract_ref != HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY:
+            host_gateway_issues.append("host_gateway_host_visible_surface_contract_ref_mismatch")
         if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(tuple_fields):
             host_gateway_issues.append("host_gateway_tuple_fields_missing")
+        template_attestation_policy = host_gateway_contract.get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)
+        if not isinstance(template_attestation_policy, dict):
+            host_gateway_issues.append("host_gateway_wrapper_template_attestation_policy_missing")
+        else:
+            unknown_template_fields = _unknown_keys(
+                template_attestation_policy,
+                HOST_GATEWAY_TEMPLATE_ATTESTATION_ALLOWED_FIELDS,
+            )
+            if unknown_template_fields:
+                host_gateway_issues.append(
+                    "host_gateway_wrapper_template_attestation_additional_properties:"
+                    + ",".join(unknown_template_fields)
+                )
+            if template_attestation_policy.get("required") is not True:
+                host_gateway_issues.append("host_gateway_wrapper_template_attestation_required_not_true")
+            attestation_id = str(template_attestation_policy.get("attestation_id", "")).strip()
+            ingress_template_sha = str(
+                template_attestation_policy.get("ingress_wrapper_template_sha256", "")
+            ).strip()
+            egress_template_sha = str(
+                template_attestation_policy.get("egress_wrapper_template_sha256", "")
+            ).strip()
+            session_chain_template_sha = str(
+                template_attestation_policy.get("session_chain_wrapper_template_sha256", "")
+            ).strip()
+            semantic_tokens = set(
+                _as_str_list(template_attestation_policy.get("session_chain_required_semantic_tokens"))
+            )
+            required_tuple_fields = set(_as_str_list(template_attestation_policy.get("required_tuple_fields")))
+            payload["protocol_host_gateway_wrapper_template_attestation_id"] = attestation_id
+            payload["protocol_host_gateway_wrapper_template_ingress_sha256"] = ingress_template_sha
+            payload["protocol_host_gateway_wrapper_template_egress_sha256"] = egress_template_sha
+            payload["protocol_host_gateway_wrapper_template_session_chain_sha256"] = session_chain_template_sha
+            if not attestation_id:
+                host_gateway_issues.append("host_gateway_wrapper_template_attestation_id_missing")
+            if not ingress_template_sha:
+                host_gateway_issues.append("host_gateway_wrapper_template_ingress_sha256_missing")
+            if not egress_template_sha:
+                host_gateway_issues.append("host_gateway_wrapper_template_egress_sha256_missing")
+            if not session_chain_template_sha:
+                host_gateway_issues.append("host_gateway_wrapper_template_session_chain_sha256_missing")
+            if not HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS.issubset(semantic_tokens):
+                host_gateway_issues.append("host_gateway_wrapper_template_semantic_tokens_missing")
+            if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(required_tuple_fields):
+                host_gateway_issues.append("host_gateway_wrapper_template_required_tuple_fields_missing")
         if not isinstance(operation_profile_policy, dict):
             host_gateway_issues.append("host_gateway_operation_profile_policy_missing")
         else:
@@ -765,10 +963,48 @@ def main() -> int:
             payload["protocol_host_gateway_runtime_files_status"] = STATUS_PASS_REQUIRED
             ingress_text = ingress_wrapper_path.read_text(encoding="utf-8", errors="ignore")
             egress_text = egress_wrapper_path.read_text(encoding="utf-8", errors="ignore")
+            session_chain_text = session_chain_wrapper_path.read_text(encoding="utf-8", errors="ignore")
             if EXPECTED_ENTRY_SCRIPT not in ingress_text:
                 host_gateway_issues.append("host_gateway_ingress_wrapper_not_bound_to_canonical_script")
             if EXPECTED_EGRESS_SCRIPT not in egress_text:
                 host_gateway_issues.append("host_gateway_egress_wrapper_not_bound_to_canonical_script")
+            session_chain_semantic_missing = sorted(
+                token
+                for token in HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS
+                if token not in session_chain_text
+            )
+            if session_chain_semantic_missing:
+                host_gateway_issues.append(
+                    "host_gateway_session_chain_wrapper_semantic_tokens_missing:"
+                    + ",".join(session_chain_semantic_missing)
+                )
+                payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_FAIL_REQUIRED
+            else:
+                payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_PASS_REQUIRED
+            template_attestation_policy = host_gateway_contract.get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)
+            if isinstance(template_attestation_policy, dict):
+                ingress_wrapper_sha = _sha256_file(ingress_wrapper_path)
+                egress_wrapper_sha = _sha256_file(egress_wrapper_path)
+                session_chain_wrapper_sha = _sha256_file(session_chain_wrapper_path)
+                expected_ingress_sha = str(
+                    template_attestation_policy.get("ingress_wrapper_template_sha256", "")
+                ).strip()
+                expected_egress_sha = str(
+                    template_attestation_policy.get("egress_wrapper_template_sha256", "")
+                ).strip()
+                expected_session_chain_sha = str(
+                    template_attestation_policy.get("session_chain_wrapper_template_sha256", "")
+                ).strip()
+                if expected_ingress_sha and ingress_wrapper_sha != expected_ingress_sha:
+                    host_gateway_issues.append("host_gateway_ingress_wrapper_template_sha256_mismatch")
+                if expected_egress_sha and egress_wrapper_sha != expected_egress_sha:
+                    host_gateway_issues.append("host_gateway_egress_wrapper_template_sha256_mismatch")
+                if expected_session_chain_sha and session_chain_wrapper_sha != expected_session_chain_sha:
+                    host_gateway_issues.append("host_gateway_session_chain_wrapper_template_sha256_mismatch")
+            if not any("wrapper_template" in issue for issue in host_gateway_issues):
+                payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_PASS_REQUIRED
+            else:
+                payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_FAIL_REQUIRED
             try:
                 runtime_gateway_contract = _load_receipt(gateway_contract_path)
             except Exception as exc:
@@ -846,6 +1082,66 @@ def main() -> int:
                         host_gateway_issues.append("host_gateway_runtime_contract_light_gate_profile_mismatch")
                     if runtime_allow_upgrade_only != contract_allow_upgrade_only:
                         host_gateway_issues.append("host_gateway_runtime_contract_allow_upgrade_only_mismatch")
+                runtime_visible_ref = str(
+                    runtime_gateway_contract.get("host_visible_surface_registry_contract_ref", "")
+                ).strip()
+                if runtime_visible_ref != visible_surface_contract_ref:
+                    host_gateway_issues.append("host_gateway_runtime_contract_host_visible_surface_contract_ref_mismatch")
+                runtime_template_attestation = runtime_gateway_contract.get(
+                    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY
+                )
+                if not isinstance(runtime_template_attestation, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_wrapper_template_attestation_missing")
+                else:
+                    unknown_runtime_template_fields = _unknown_keys(
+                        runtime_template_attestation,
+                        HOST_GATEWAY_TEMPLATE_ATTESTATION_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_template_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_wrapper_template_attestation_additional_properties:"
+                            + ",".join(unknown_runtime_template_fields)
+                        )
+                    contract_template_attestation = (
+                        host_gateway_contract.get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)
+                        if isinstance(host_gateway_contract, dict)
+                        else {}
+                    )
+                    if isinstance(contract_template_attestation, dict):
+                        for field in (
+                            "required",
+                            "attestation_id",
+                            "ingress_wrapper_template_sha256",
+                            "egress_wrapper_template_sha256",
+                            "session_chain_wrapper_template_sha256",
+                            "session_chain_required_semantic_tokens",
+                            "required_tuple_fields",
+                        ):
+                            if runtime_template_attestation.get(field) != contract_template_attestation.get(field):
+                                host_gateway_issues.append(
+                                    "host_gateway_runtime_contract_wrapper_template_attestation_parity_mismatch:" + field
+                                )
+                runtime_visible_surface_contract = runtime_gateway_contract.get(
+                    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
+                )
+                if not isinstance(runtime_visible_surface_contract, dict):
+                    host_gateway_issues.append("host_gateway_runtime_contract_host_visible_surface_contract_missing")
+                else:
+                    unknown_runtime_visible_fields = _unknown_keys(
+                        runtime_visible_surface_contract,
+                        HOST_VISIBLE_SURFACE_ALLOWED_FIELDS,
+                    )
+                    if unknown_runtime_visible_fields:
+                        host_gateway_issues.append(
+                            "host_gateway_runtime_contract_host_visible_surface_contract_additional_properties:"
+                            + ",".join(unknown_runtime_visible_fields)
+                        )
+                    if isinstance(host_visible_surface_contract, dict):
+                        for field in HOST_VISIBLE_SURFACE_ALLOWED_FIELDS:
+                            if runtime_visible_surface_contract.get(field) != host_visible_surface_contract.get(field):
+                                host_gateway_issues.append(
+                                    "host_gateway_runtime_contract_host_visible_surface_contract_parity_mismatch:" + field
+                                )
                 runtime_entry_policy = runtime_gateway_contract.get("entry_receipt_policy")
                 if not isinstance(runtime_entry_policy, dict):
                     host_gateway_issues.append("host_gateway_runtime_contract_entry_receipt_policy_missing")
@@ -1091,6 +1387,28 @@ def main() -> int:
         payload["protocol_host_gateway_broadcast_policy_status"] = STATUS_FAIL_REQUIRED
     elif payload["protocol_host_gateway_broadcast_policy_status"] == STATUS_SKIPPED_NOT_REQUIRED:
         payload["protocol_host_gateway_broadcast_policy_status"] = STATUS_PASS_REQUIRED
+
+    if any("host_visible_surface" in issue for issue in host_visible_surface_issues + host_gateway_issues):
+        payload["protocol_host_visible_surface_contract_status"] = STATUS_FAIL_REQUIRED
+    elif payload["protocol_host_visible_surface_contract_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_visible_surface_contract_status"] = STATUS_PASS_REQUIRED
+
+    if any("wrapper_template" in issue for issue in host_gateway_issues):
+        payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_FAIL_REQUIRED
+    elif payload["protocol_host_gateway_wrapper_template_attestation_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_PASS_REQUIRED
+
+    if any("session_chain_wrapper_semantic_tokens_missing" in issue for issue in host_gateway_issues):
+        payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_FAIL_REQUIRED
+    elif payload["protocol_host_gateway_session_chain_semantic_status"] == STATUS_SKIPPED_NOT_REQUIRED:
+        payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_PASS_REQUIRED
+
+    if host_visible_surface_issues:
+        payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = ERR_CONTRACT_INVALID
+        payload["stale_reasons"] = host_visible_surface_issues
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     if host_gateway_issues:
         payload["protocol_host_gateway_contract_status"] = STATUS_FAIL_REQUIRED

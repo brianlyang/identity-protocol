@@ -33,12 +33,24 @@ from create_identity_pack import (
     HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
     HOST_GATEWAY_REQUIRED_RELEASE_MODE,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
+    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
+    HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
+    HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+    HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+    HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_SURFACE_STATE_FILE,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _derived_prompt_conformance_contract_skeleton,
     _ensure_intake_p1_contracts,
     _multimodal_plugin_enforcement_contract_skeleton,
     _host_gateway_signer_secret_env,
+    _host_gateway_wrapper_template_attestation_policy,
+    _host_visible_surface_registry_contract_skeleton,
     _protocol_downsink_path_immutability_contract_skeleton,
     _protocol_host_unique_channel_contract_skeleton,
     _protocol_unique_entry_gate_contract_skeleton,
@@ -84,6 +96,9 @@ REQUIRED_ENTRY_KEYS = (
 REQUIRED_HOST_GATEWAY_KEYS = (
     HOST_GATEWAY_CONTRACT_KEY,
 )
+REQUIRED_HOST_VISIBLE_SURFACE_KEYS = (
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+)
 REQUIRED_DOWNSINK_KEYS = (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY,
 )
@@ -107,6 +122,9 @@ ENTRY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 HOST_GATEWAY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton("default"),
 }
+HOST_VISIBLE_SURFACE_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY: _host_visible_surface_registry_contract_skeleton(),
+}
 DOWNSINK_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),
 }
@@ -121,6 +139,8 @@ ERR_ENTRY_WIRE_MISSING = "IP-GATE-ENTRY-001"
 ERR_ENTRY_WIRE_INVALID = "IP-GATE-ENTRY-002"
 ERR_HOST_GATEWAY_WIRE_MISSING = "IP-GATE-ENTRY-001"
 ERR_HOST_GATEWAY_WIRE_INVALID = "IP-GATE-ENTRY-002"
+ERR_VISIBLE_SURFACE_WIRE_MISSING = "IP-HDSTAMP-001"
+ERR_VISIBLE_SURFACE_WIRE_INVALID = "IP-HDSTAMP-003"
 ERR_DOWNSINK_WIRE_MISSING = "IP-DSPATH-001"
 ERR_DOWNSINK_WIRE_INVALID = "IP-DSPATH-002"
 REASONING_LEVEL_RANK = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
@@ -548,6 +568,64 @@ def _normalize_host_gateway_contracts(task: dict[str, Any], *, identity_id: str 
             broadcast_policy.get("block_on_critical_unacked", False)
         )
         node["broadcast_policy"] = broadcast_policy
+        node["host_visible_surface_registry_contract_ref"] = HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
+        node[HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY] = _host_gateway_wrapper_template_attestation_policy()
+    return forced_required_keys, restored_validator_keys
+
+
+def _normalize_host_visible_surface_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    forced_required_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key in REQUIRED_HOST_VISIBLE_SURFACE_KEYS:
+        default = HOST_VISIBLE_SURFACE_CONTRACT_DEFAULTS.get(key, {})
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            forced_required_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        if node.get("required") is not True:
+            node["required"] = True
+            forced_required_keys.append(key)
+        validator = str(node.get("validator", "")).strip()
+        if not validator:
+            node["validator"] = str(default.get("validator", "")).strip()
+            restored_validator_keys.append(key)
+        node["contract_id"] = HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
+        node["validator"] = HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
+        channels = node.get("required_channels")
+        if not isinstance(channels, list):
+            channels = []
+        merged_channels = [str(item).strip() for item in channels if str(item).strip()]
+        for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS:
+            if channel not in merged_channels:
+                merged_channels.append(channel)
+        node["required_channels"] = merged_channels
+        if not str(node.get("runtime_state_file", "")).strip():
+            node["runtime_state_file"] = str(default.get("runtime_state_file", "")).strip() or HOST_VISIBLE_SURFACE_STATE_FILE
+        if not str(node.get("runtime_receipt_pattern", "")).strip():
+            node["runtime_receipt_pattern"] = (
+                str(default.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+            )
+        attestation_fields = node.get("required_attestation_fields")
+        if not isinstance(attestation_fields, list):
+            attestation_fields = []
+        merged_attestation_fields = [str(item).strip() for item in attestation_fields if str(item).strip()]
+        for field in HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS:
+            if field not in merged_attestation_fields:
+                merged_attestation_fields.append(field)
+        node["required_attestation_fields"] = merged_attestation_fields
+        pass_status_fields = node.get("required_pass_status_fields")
+        if not isinstance(pass_status_fields, list):
+            pass_status_fields = []
+        merged_pass_status_fields = [str(item).strip() for item in pass_status_fields if str(item).strip()]
+        for field in HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS:
+            if field not in merged_pass_status_fields:
+                merged_pass_status_fields.append(field)
+        node["required_pass_status_fields"] = merged_pass_status_fields
+        node["required_live_probe_delegate"] = HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
+        node["host_dispatch_mode_required"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
+        node["host_release_mode_required"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
     return forced_required_keys, restored_validator_keys
 
 
@@ -699,6 +777,9 @@ def main() -> int:
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
     entry_missing_before = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(task_doc.get(k), dict)]
     host_gateway_missing_before = [k for k in REQUIRED_HOST_GATEWAY_KEYS if not isinstance(task_doc.get(k), dict)]
+    host_visible_surface_missing_before = [
+        k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(task_doc.get(k), dict)
+    ]
     downsink_missing_before = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(task_doc.get(k), dict)]
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
@@ -715,6 +796,10 @@ def main() -> int:
         identity_id=str(args.identity_id or "").strip(),
     )
     (
+        forced_host_visible_surface_required_keys,
+        restored_host_visible_surface_validator_keys,
+    ) = _normalize_host_visible_surface_contracts(updated)
+    (
         forced_downsink_required_keys,
         restored_downsink_validator_keys,
         restored_downsink_write_guard_validator_keys,
@@ -728,6 +813,9 @@ def main() -> int:
     reasoning_missing_after = [k for k in REQUIRED_REASONING_KEYS if not isinstance(updated.get(k), dict)]
     entry_missing_after = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(updated.get(k), dict)]
     host_gateway_missing_after = [k for k in REQUIRED_HOST_GATEWAY_KEYS if not isinstance(updated.get(k), dict)]
+    host_visible_surface_missing_after = [
+        k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(updated.get(k), dict)
+    ]
     downsink_missing_after = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(updated.get(k), dict)]
     prompt_invalid_after = [
         k
@@ -901,6 +989,78 @@ def main() -> int:
                 (((updated.get(k) or {}).get("broadcast_policy") or {}).get("block_on_critical_unacked")),
                 bool,
             )
+            or str(((updated.get(k) or {}).get("host_visible_surface_registry_contract_ref") or "")).strip()
+            != HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
+            or not isinstance((updated.get(k) or {}).get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY), dict)
+            or bool(
+                (((updated.get(k) or {}).get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)) or {}).get("required")
+            )
+            is not True
+            or not str(
+                ((((updated.get(k) or {}).get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)) or {}).get(
+                    "ingress_wrapper_template_sha256"
+                ) or "")
+            ).strip()
+            or not str(
+                ((((updated.get(k) or {}).get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)) or {}).get(
+                    "egress_wrapper_template_sha256"
+                ) or "")
+            ).strip()
+            or not str(
+                ((((updated.get(k) or {}).get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)) or {}).get(
+                    "session_chain_wrapper_template_sha256"
+                ) or "")
+            ).strip()
+            or not isinstance(
+                ((((updated.get(k) or {}).get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY)) or {}).get(
+                    "session_chain_required_semantic_tokens"
+                )),
+                list,
+            )
+        )
+    ]
+    host_visible_surface_invalid_after = [
+        k
+        for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS
+        if isinstance(updated.get(k), dict)
+        and (
+            updated.get(k, {}).get("required") is not True
+            or str((updated.get(k) or {}).get("contract_id", "")).strip()
+            != HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
+            or str((updated.get(k) or {}).get("validator", "")).strip()
+            != HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
+            or not isinstance((updated.get(k) or {}).get("required_channels"), list)
+            or not set(HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS).issubset(
+                {
+                    str(item).strip()
+                    for item in ((updated.get(k) or {}).get("required_channels") or [])
+                    if str(item).strip()
+                }
+            )
+            or not str((updated.get(k) or {}).get("runtime_state_file", "")).strip()
+            or not str((updated.get(k) or {}).get("runtime_receipt_pattern", "")).strip()
+            or not isinstance((updated.get(k) or {}).get("required_attestation_fields"), list)
+            or not set(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS).issubset(
+                {
+                    str(item).strip()
+                    for item in ((updated.get(k) or {}).get("required_attestation_fields") or [])
+                    if str(item).strip()
+                }
+            )
+            or not isinstance((updated.get(k) or {}).get("required_pass_status_fields"), list)
+            or not set(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS).issubset(
+                {
+                    str(item).strip()
+                    for item in ((updated.get(k) or {}).get("required_pass_status_fields") or [])
+                    if str(item).strip()
+                }
+            )
+            or str((updated.get(k) or {}).get("required_live_probe_delegate", "")).strip()
+            != HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
+            or str((updated.get(k) or {}).get("host_dispatch_mode_required", "")).strip().lower()
+            != HOST_GATEWAY_REQUIRED_DISPATCH_MODE
+            or str((updated.get(k) or {}).get("host_release_mode_required", "")).strip().lower()
+            != HOST_GATEWAY_REQUIRED_RELEASE_MODE
         )
     ]
     downsink_invalid_after = [
@@ -948,7 +1108,13 @@ def main() -> int:
     legacy_drift_after = _legacy_path_drift_fields(updated, args.identity_id)
 
     gateway_artifacts = {}
-    if args.apply and not host_gateway_missing_after and not host_gateway_invalid_after:
+    if (
+        args.apply
+        and not host_gateway_missing_after
+        and not host_gateway_invalid_after
+        and not host_visible_surface_missing_after
+        and not host_visible_surface_invalid_after
+    ):
         gateway_artifacts = materialize_protocol_host_gateway_artifacts(
             task=updated,
             identity_id=args.identity_id,
@@ -1007,6 +1173,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_HOST_GATEWAY_WIRE_INVALID
         stale_reasons = ["required_host_gateway_contract_invalid_after_backfill"]
+    elif host_visible_surface_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_VISIBLE_SURFACE_WIRE_MISSING
+        stale_reasons = ["required_host_visible_surface_contract_keys_missing_after_backfill"]
+    elif host_visible_surface_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_VISIBLE_SURFACE_WIRE_INVALID
+        stale_reasons = ["required_host_visible_surface_contract_invalid_after_backfill"]
     elif downsink_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_DOWNSINK_WIRE_MISSING
@@ -1071,6 +1245,12 @@ def main() -> int:
         "invalid_host_gateway_contract_keys_after": host_gateway_invalid_after,
         "forced_host_gateway_required_keys": forced_host_gateway_required_keys,
         "restored_host_gateway_validator_keys": restored_host_gateway_validator_keys,
+        "required_host_visible_surface_contract_keys": list(REQUIRED_HOST_VISIBLE_SURFACE_KEYS),
+        "missing_host_visible_surface_contract_keys_before": host_visible_surface_missing_before,
+        "missing_host_visible_surface_contract_keys_after": host_visible_surface_missing_after,
+        "invalid_host_visible_surface_contract_keys_after": host_visible_surface_invalid_after,
+        "forced_host_visible_surface_required_keys": forced_host_visible_surface_required_keys,
+        "restored_host_visible_surface_validator_keys": restored_host_visible_surface_validator_keys,
         "required_downsink_contract_keys": list(REQUIRED_DOWNSINK_KEYS),
         "missing_downsink_contract_keys_before": downsink_missing_before,
         "missing_downsink_contract_keys_after": downsink_missing_after,
@@ -1098,6 +1278,20 @@ def main() -> int:
                 ERR_HOST_GATEWAY_WIRE_MISSING
                 if host_gateway_missing_after
                 else ERR_HOST_GATEWAY_WIRE_INVALID
+            )
+        ),
+        "host_visible_surface_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED
+            if not host_visible_surface_missing_after and not host_visible_surface_invalid_after
+            else STATUS_FAIL_REQUIRED
+        ),
+        "host_visible_surface_contract_auto_wire_error_code": (
+            ""
+            if not host_visible_surface_missing_after and not host_visible_surface_invalid_after
+            else (
+                ERR_VISIBLE_SURFACE_WIRE_MISSING
+                if host_visible_surface_missing_after
+                else ERR_VISIBLE_SURFACE_WIRE_INVALID
             )
         ),
         "downsink_contract_auto_wire_status": (
@@ -1140,6 +1334,7 @@ def main() -> int:
             + list(REQUIRED_REASONING_KEYS)
             + list(REQUIRED_ENTRY_KEYS)
             + list(REQUIRED_HOST_GATEWAY_KEYS)
+            + list(REQUIRED_HOST_VISIBLE_SURFACE_KEYS)
             + list(REQUIRED_DOWNSINK_KEYS)
         ),
         "stale_reasons": stale_reasons,

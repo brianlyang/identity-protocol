@@ -32,6 +32,7 @@ from protocol_infra_contract import (
     HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS as INFRA_HOST_GATEWAY_INGRESS_PROOF_MAX_AGE_SECONDS,
     HOST_GATEWAY_LIGHT_GATE_PROFILE as INFRA_HOST_GATEWAY_LIGHT_GATE_PROFILE,
     HOST_GATEWAY_LIGHT_OPERATIONS as INFRA_HOST_GATEWAY_LIGHT_OPERATIONS,
+    HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS as INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS,
     HOST_GATEWAY_RELATIVE_CONTRACT_PATH as INFRA_HOST_GATEWAY_RELATIVE_CONTRACT_PATH,
     HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH as INFRA_HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
     HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH as INFRA_HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
@@ -43,11 +44,22 @@ from protocol_infra_contract import (
     HOST_GATEWAY_REQUIRED_SURFACE_LABEL as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_LABEL,
     HOST_GATEWAY_REQUIRED_SURFACE_STATUS as INFRA_HOST_GATEWAY_REQUIRED_SURFACE_STATUS,
     HOST_GATEWAY_REQUIRED_TUPLE_FIELDS as INFRA_HOST_GATEWAY_REQUIRED_TUPLE_FIELDS,
+    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID,
+    HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH as INFRA_HOST_GATEWAY_SIGNER_ENV_BOOTSTRAP_FROM_KEY_PATH,
     HOST_GATEWAY_SIGNER_MODE as INFRA_HOST_GATEWAY_SIGNER_MODE,
     HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX as INFRA_HOST_GATEWAY_SIGNER_SECRET_ENV_PREFIX,
     HOST_GATEWAY_STRICT_GATE_PROFILE as INFRA_HOST_GATEWAY_STRICT_GATE_PROFILE,
     HOST_GATEWAY_STRICT_OPERATIONS as INFRA_HOST_GATEWAY_STRICT_OPERATIONS,
+    HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
+    HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+    HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
+    HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+    HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_SURFACE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_STATE_FILE,
 )
 
 
@@ -148,6 +160,24 @@ HOST_GATEWAY_BROADCAST_STATE_FILE = INFRA_HOST_GATEWAY_BROADCAST_STATE_FILE
 HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN = INFRA_HOST_GATEWAY_BROADCAST_RECEIPT_PATTERN
 HOST_GATEWAY_BROADCAST_ACK_PATTERN = INFRA_HOST_GATEWAY_BROADCAST_ACK_PATTERN
 HOST_GATEWAY_REQUIRED_TUPLE_FIELDS = list(INFRA_HOST_GATEWAY_REQUIRED_TUPLE_FIELDS)
+HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY
+HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID = INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID
+HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS = list(
+    INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS
+)
+HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
+HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
+HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
+HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE = INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
+HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS = list(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS)
+HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS = list(
+    INFRA_HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS
+)
+HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = list(
+    INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS
+)
+HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
+HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
 
 DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY = "protocol_downsink_path_immutability_contract_v1"
 DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID = "protocol_downsink_path_immutability_contract_v1"
@@ -662,6 +692,58 @@ def _default_broadcast_state_doc(identity_id: str) -> dict:
     }
 
 
+def _default_host_visible_surface_state_doc(identity_id: str) -> dict:
+    channels = {
+        channel: {
+            "last_receipt_path": "",
+            "last_status": "",
+            "updated_at_utc": "",
+        }
+        for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    }
+    return {
+        "schema_version": "v1",
+        "identity_id": str(identity_id or "").strip(),
+        "channels": channels,
+        "updated_at_utc": "",
+    }
+
+
+def _host_visible_surface_registry_contract_skeleton() -> dict:
+    return {
+        "required": True,
+        "contract_id": HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
+        "validator": HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+        "required_channels": list(HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS),
+        "runtime_state_file": HOST_VISIBLE_SURFACE_STATE_FILE,
+        "runtime_receipt_pattern": HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+        "required_attestation_fields": list(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS),
+        "required_pass_status_fields": list(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS),
+        "required_live_probe_delegate": HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
+        "host_dispatch_mode_required": HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
+        "host_release_mode_required": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
+    }
+
+
+def _sha256_text(payload: str) -> str:
+    return hashlib.sha256(str(payload or "").encode("utf-8")).hexdigest()
+
+
+def _host_gateway_wrapper_template_attestation_policy() -> dict:
+    ingress_template = _protocol_ingress_wrapper_template()
+    egress_template = _protocol_egress_wrapper_template()
+    session_chain_template = _protocol_session_chain_wrapper_template()
+    return {
+        "required": True,
+        "attestation_id": HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID,
+        "ingress_wrapper_template_sha256": _sha256_text(ingress_template),
+        "egress_wrapper_template_sha256": _sha256_text(egress_template),
+        "session_chain_wrapper_template_sha256": _sha256_text(session_chain_template),
+        "session_chain_required_semantic_tokens": list(HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS),
+        "required_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
+    }
+
+
 def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
     signer_secret_env = _host_gateway_signer_secret_env(identity_id)
     return {
@@ -708,6 +790,8 @@ def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
         "operation_profile_policy": _host_gateway_operation_profile_policy(),
         "broadcast_policy": _host_gateway_broadcast_policy(),
+        "host_visible_surface_registry_contract_ref": HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+        HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY: _host_gateway_wrapper_template_attestation_policy(),
     }
 
 
@@ -3683,6 +3767,16 @@ def materialize_protocol_host_gateway_artifacts(
     if not isinstance(contract, dict):
         contract = _protocol_host_unique_channel_contract_skeleton(identity_id)
         task[HOST_GATEWAY_CONTRACT_KEY] = contract
+    visible_surface_contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
+    if not isinstance(visible_surface_contract, dict):
+        visible_surface_contract = _host_visible_surface_registry_contract_skeleton()
+        task[HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY] = visible_surface_contract
+    else:
+        visible_surface_contract = _deep_merge_defaults(
+            _host_visible_surface_registry_contract_skeleton(),
+            visible_surface_contract,
+        )
+        task[HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY] = visible_surface_contract
     downsink_contract = task.get(DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY)
     if not isinstance(downsink_contract, dict):
         downsink_contract = _protocol_downsink_path_immutability_contract_skeleton()
@@ -3740,6 +3834,11 @@ def materialize_protocol_host_gateway_artifacts(
         HOST_GATEWAY_BROADCAST_STATE_FILE,
         fallback=HOST_GATEWAY_BROADCAST_STATE_FILE,
     )
+    visible_surface_state_path = _resolve_pack_runtime_path(
+        pack_dir,
+        str(visible_surface_contract.get("runtime_state_file", "")).strip(),
+        fallback=HOST_VISIBLE_SURFACE_STATE_FILE,
+    )
 
     contract["required"] = True
     contract["contract_id"] = HOST_GATEWAY_CONTRACT_ID
@@ -3789,6 +3888,22 @@ def materialize_protocol_host_gateway_artifacts(
         "instance_ack_pattern": HOST_GATEWAY_BROADCAST_ACK_PATTERN,
         "block_on_critical_unacked": bool(broadcast_policy.get("block_on_critical_unacked", False)),
     }
+    contract["host_visible_surface_registry_contract_ref"] = HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
+    contract[HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY] = _host_gateway_wrapper_template_attestation_policy()
+
+    visible_surface_contract["required"] = True
+    visible_surface_contract["contract_id"] = HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID
+    visible_surface_contract["validator"] = HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR
+    visible_surface_contract["required_channels"] = list(HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS)
+    visible_surface_contract["runtime_state_file"] = visible_surface_state_path.as_posix()
+    visible_surface_contract["runtime_receipt_pattern"] = str(
+        visible_surface_contract.get("runtime_receipt_pattern", "")
+    ).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+    visible_surface_contract["required_attestation_fields"] = list(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS)
+    visible_surface_contract["required_pass_status_fields"] = list(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
+    visible_surface_contract["required_live_probe_delegate"] = HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
+    visible_surface_contract["host_dispatch_mode_required"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
+    visible_surface_contract["host_release_mode_required"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
 
     ingress_wrapper_rel = _pack_relative_path(
         pack_dir,
@@ -3957,6 +4072,10 @@ def materialize_protocol_host_gateway_artifacts(
         "host_release_mode": HOST_GATEWAY_REQUIRED_RELEASE_MODE,
         "ingress_wrapper_dispatch_token": HOST_GATEWAY_INGRESS_DISPATCH_TOKEN,
         "operation_profile_policy": _host_gateway_operation_profile_policy(),
+        "host_visible_surface_registry_contract_ref": HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+        HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY: json.loads(
+            json.dumps(contract.get(HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY, {}))
+        ),
         "broadcast_policy": {
             "required": True,
             "protocol_broadcast_items_dir": HOST_GATEWAY_BROADCAST_ITEMS_DIR,
@@ -3967,11 +4086,14 @@ def materialize_protocol_host_gateway_artifacts(
             "instance_ack_pattern": str(contract["broadcast_policy"]["instance_ack_pattern"]).strip(),
             "block_on_critical_unacked": bool(contract["broadcast_policy"]["block_on_critical_unacked"]),
         },
+        HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY: json.loads(json.dumps(visible_surface_contract)),
         DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: json.loads(json.dumps(downsink_contract)),
     }
     write_json(gateway_contract_path, gateway_contract_payload)
     if not broadcast_state_path.exists():
         write_json(broadcast_state_path, _default_broadcast_state_doc(identity_id))
+    if not visible_surface_state_path.exists():
+        write_json(visible_surface_state_path, _default_host_visible_surface_state_doc(identity_id))
     write(ingress_wrapper_path, _protocol_ingress_wrapper_template())
     write(egress_wrapper_path, _protocol_egress_wrapper_template())
     write(session_chain_wrapper_path, _protocol_session_chain_wrapper_template())
@@ -3981,6 +4103,7 @@ def materialize_protocol_host_gateway_artifacts(
         "ingress_wrapper_path": ingress_wrapper_path.as_posix(),
         "egress_wrapper_path": egress_wrapper_path.as_posix(),
         "session_chain_wrapper_path": session_chain_wrapper_path.as_posix(),
+        "host_visible_surface_state_file": visible_surface_state_path.as_posix(),
     }
 
 
