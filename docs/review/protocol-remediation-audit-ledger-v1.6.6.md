@@ -1444,3 +1444,31 @@ Closure replay (serialized):
    - forged runner/grant probes blocked
    - direct egress-wrapper call blocked
    - `session_chain_headstamp_first_line_required` positive probe passed
+
+### 26.8 Deep-scan residual closure checkpoint (2026-03-14)
+
+Commit landed in this checkpoint:
+
+1. `abb3e3f` `feat(v1.6.6): enforce AST-level wrapper bus import/call checks on strict surfaces`
+   - upgraded strict-surface bus enforcement from plain token matching to AST-level validation;
+   - requires real import + real call of `run_gateway_wrapped_command`;
+   - rejects legacy helper usage on strict surfaces with fail-close drift reporting.
+
+Serialized verification in this checkpoint:
+
+1. `python3 -m py_compile scripts/validate_required_gate_surface_drift.py` -> pass.
+2. `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`.
+3. `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` -> `rc=0` (all forged/direct-bypass negatives blocked, headstamp-required positive probe passed).
+4. `python3 scripts/validate_control_plane_invariants.py --json-only` -> `PASS_REQUIRED`.
+5. `python3 scripts/validate_control_plane_status_sync.py --json-only` -> `PASS_REQUIRED`.
+6. `python3 scripts/docs_command_contract_check.py` -> `PASS`.
+7. `python3 scripts/validate_doc_evidence_persistence.py --json-only` -> `PASS_REQUIRED`.
+8. `python3 scripts/full_identity_protocol_scan.py --scan-mode target --target-source-layer project --identity-ids base-repo-audit-expert-v3 --actor-id assistant:codex --session-id run:v166-broadcast-follow-session --expected-work-layer protocol --expected-source-layer project` completed with:
+   - `m2m_binding_closure_status=PASS`;
+   - remaining `P0` items are non-m2m instance feedback contracts (`IP-SPLIT-001`, `IP-SEM-004`, `IP-COV-001`), not protocol wrapper bus execution regressions.
+
+Verdict update:
+
+1. v1.6.6 protocol-side drift governance is now resistant to comment/string spoof on strict surfaces.
+2. Required trust-boundary probes and control-plane gates remain green after AST hardening.
+3. No new protocol-level wrapper bus residuals detected in this checkpoint.
