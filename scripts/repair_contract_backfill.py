@@ -48,6 +48,7 @@ from create_identity_pack import (
     _derived_prompt_conformance_contract_skeleton,
     _ensure_intake_p1_contracts,
     _multimodal_plugin_enforcement_contract_skeleton,
+    _protocol_lane_activation_headstamp_contract_skeleton,
     _host_gateway_signer_secret_env,
     _host_gateway_wrapper_template_attestation_policy,
     _host_visible_surface_registry_contract_skeleton,
@@ -93,6 +94,9 @@ REQUIRED_REASONING_KEYS = (
 REQUIRED_ENTRY_KEYS = (
     "protocol_unique_entry_gate_contract_v1",
 )
+REQUIRED_LANE_HEADSTAMP_KEYS = (
+    "protocol_lane_activation_headstamp_contract_v1",
+)
 REQUIRED_HOST_GATEWAY_KEYS = (
     HOST_GATEWAY_CONTRACT_KEY,
 )
@@ -119,6 +123,9 @@ REASONING_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 ENTRY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     "protocol_unique_entry_gate_contract_v1": _protocol_unique_entry_gate_contract_skeleton(),
 }
+LANE_HEADSTAMP_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),
+}
 HOST_GATEWAY_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     HOST_GATEWAY_CONTRACT_KEY: _protocol_host_unique_channel_contract_skeleton("default"),
 }
@@ -137,6 +144,8 @@ ERR_RL_WIRE_MISSING = "IP-RL-WIRE-001"
 ERR_RL_WIRE_INVALID = "IP-RL-WIRE-002"
 ERR_ENTRY_WIRE_MISSING = "IP-GATE-ENTRY-001"
 ERR_ENTRY_WIRE_INVALID = "IP-GATE-ENTRY-002"
+ERR_LANE_HEADSTAMP_WIRE_MISSING = "IP-LANE-WIRE-001"
+ERR_LANE_HEADSTAMP_WIRE_INVALID = "IP-LANE-WIRE-002"
 ERR_HOST_GATEWAY_WIRE_MISSING = "IP-GATE-ENTRY-001"
 ERR_HOST_GATEWAY_WIRE_INVALID = "IP-GATE-ENTRY-002"
 ERR_VISIBLE_SURFACE_WIRE_MISSING = "IP-HDSTAMP-001"
@@ -399,6 +408,47 @@ def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], 
             node["onboarding_single_entry_command"] = str(default.get("onboarding_single_entry_command", "")).strip()
         if not str(node.get("extension_attach_entrypoint", "")).strip():
             node["extension_attach_entrypoint"] = str(default.get("extension_attach_entrypoint", "")).strip()
+    return forced_required_keys, restored_validator_keys
+
+
+def _normalize_lane_headstamp_contracts(task: dict[str, Any]) -> tuple[list[str], list[str]]:
+    forced_required_keys: list[str] = []
+    restored_validator_keys: list[str] = []
+    for key in REQUIRED_LANE_HEADSTAMP_KEYS:
+        default = LANE_HEADSTAMP_CONTRACT_DEFAULTS.get(key, {})
+        node = task.get(key)
+        if not isinstance(node, dict):
+            task[key] = json.loads(json.dumps(default))
+            forced_required_keys.append(key)
+            restored_validator_keys.append(key)
+            continue
+        if node.get("required") is not True:
+            node["required"] = True
+            forced_required_keys.append(key)
+        validator = str(node.get("enforcement_validator", "")).strip()
+        if not validator:
+            node["enforcement_validator"] = str(default.get("enforcement_validator", "")).strip()
+            restored_validator_keys.append(key)
+        if not str(node.get("required_lane", "")).strip():
+            node["required_lane"] = str(default.get("required_lane", "")).strip()
+        if node.get("route_non_starvation") is not True:
+            node["route_non_starvation"] = True
+        if node.get("headstamp_dual_context_required") is not True:
+            node["headstamp_dual_context_required"] = True
+        required_fields = node.get("required_fields")
+        default_required_fields = [
+            str(item).strip()
+            for item in (default.get("required_fields") or [])
+            if str(item).strip()
+        ]
+        if not isinstance(required_fields, list):
+            node["required_fields"] = list(default_required_fields)
+        else:
+            merged = [str(item).strip() for item in required_fields if str(item).strip()]
+            for field in default_required_fields:
+                if field not in merged:
+                    merged.append(field)
+            node["required_fields"] = merged
     return forced_required_keys, restored_validator_keys
 
 
@@ -776,6 +826,7 @@ def main() -> int:
     multimodal_missing_before = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(task_doc.get(k), dict)]
     reasoning_missing_before = [k for k in REQUIRED_REASONING_KEYS if not isinstance(task_doc.get(k), dict)]
     entry_missing_before = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(task_doc.get(k), dict)]
+    lane_headstamp_missing_before = [k for k in REQUIRED_LANE_HEADSTAMP_KEYS if not isinstance(task_doc.get(k), dict)]
     host_gateway_missing_before = [k for k in REQUIRED_HOST_GATEWAY_KEYS if not isinstance(task_doc.get(k), dict)]
     host_visible_surface_missing_before = [
         k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(task_doc.get(k), dict)
@@ -791,6 +842,10 @@ def main() -> int:
     forced_mm_required_keys, restored_mm_validator_keys, arbitration_link_restored = _normalize_multimodal_contracts(updated)
     forced_rl_required_keys, restored_rl_validator_keys, reasoning_arbitration_link_restored = _normalize_reasoning_contracts(updated)
     forced_entry_required_keys, restored_entry_validator_keys = _normalize_unique_entry_contracts(updated)
+    (
+        forced_lane_headstamp_required_keys,
+        restored_lane_headstamp_validator_keys,
+    ) = _normalize_lane_headstamp_contracts(updated)
     forced_host_gateway_required_keys, restored_host_gateway_validator_keys = _normalize_host_gateway_contracts(
         updated,
         identity_id=str(args.identity_id or "").strip(),
@@ -812,6 +867,7 @@ def main() -> int:
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
     reasoning_missing_after = [k for k in REQUIRED_REASONING_KEYS if not isinstance(updated.get(k), dict)]
     entry_missing_after = [k for k in REQUIRED_ENTRY_KEYS if not isinstance(updated.get(k), dict)]
+    lane_headstamp_missing_after = [k for k in REQUIRED_LANE_HEADSTAMP_KEYS if not isinstance(updated.get(k), dict)]
     host_gateway_missing_after = [k for k in REQUIRED_HOST_GATEWAY_KEYS if not isinstance(updated.get(k), dict)]
     host_visible_surface_missing_after = [
         k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(updated.get(k), dict)
@@ -860,6 +916,39 @@ def main() -> int:
             or not str((updated.get(k) or {}).get("entry_receipt_history_pattern", "")).strip()
             or not isinstance((updated.get(k) or {}).get("entry_receipt_required_fields"), list)
             or not list((updated.get(k) or {}).get("entry_receipt_required_fields") or [])
+        )
+    ]
+    lane_headstamp_invalid_after = [
+        k
+        for k in REQUIRED_LANE_HEADSTAMP_KEYS
+        if isinstance(updated.get(k), dict)
+        and (
+            updated.get(k, {}).get("required") is not True
+            or str((updated.get(k) or {}).get("enforcement_validator", "")).strip()
+            != "scripts/validate_protocol_lane_headstamp_continuity.py"
+            or str((updated.get(k) or {}).get("required_lane", "")).strip().lower() != "protocol"
+            or (updated.get(k) or {}).get("route_non_starvation") is not True
+            or (updated.get(k) or {}).get("headstamp_dual_context_required") is not True
+            or not isinstance((updated.get(k) or {}).get("required_fields"), list)
+            or not set(
+                [
+                    "requested_lane",
+                    "previous_lane",
+                    "resolved_lane",
+                    "lane_activation_status",
+                    "lane_activation_error_code",
+                    "route_source_ref",
+                    "lane_activation_evidence_ref",
+                    "headstamp_continuity_status",
+                    "headstamp_error_code",
+                ]
+            ).issubset(
+                {
+                    str(item).strip()
+                    for item in ((updated.get(k) or {}).get("required_fields") or [])
+                    if str(item).strip()
+                }
+            )
         )
     ]
     host_gateway_invalid_after = [
@@ -1165,6 +1254,14 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_ENTRY_WIRE_INVALID
         stale_reasons = ["required_unique_entry_contract_invalid_after_backfill"]
+    elif lane_headstamp_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_LANE_HEADSTAMP_WIRE_MISSING
+        stale_reasons = ["required_lane_headstamp_contract_keys_missing_after_backfill"]
+    elif lane_headstamp_invalid_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = ERR_LANE_HEADSTAMP_WIRE_INVALID
+        stale_reasons = ["required_lane_headstamp_contract_invalid_after_backfill"]
     elif host_gateway_missing_after:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_HOST_GATEWAY_WIRE_MISSING
@@ -1239,6 +1336,12 @@ def main() -> int:
         "invalid_unique_entry_contract_keys_after": entry_invalid_after,
         "forced_unique_entry_required_keys": forced_entry_required_keys,
         "restored_unique_entry_validator_keys": restored_entry_validator_keys,
+        "required_lane_headstamp_contract_keys": list(REQUIRED_LANE_HEADSTAMP_KEYS),
+        "missing_lane_headstamp_contract_keys_before": lane_headstamp_missing_before,
+        "missing_lane_headstamp_contract_keys_after": lane_headstamp_missing_after,
+        "invalid_lane_headstamp_contract_keys_after": lane_headstamp_invalid_after,
+        "forced_lane_headstamp_required_keys": forced_lane_headstamp_required_keys,
+        "restored_lane_headstamp_validator_keys": restored_lane_headstamp_validator_keys,
         "required_host_gateway_contract_keys": list(REQUIRED_HOST_GATEWAY_KEYS),
         "missing_host_gateway_contract_keys_before": host_gateway_missing_before,
         "missing_host_gateway_contract_keys_after": host_gateway_missing_after,
@@ -1267,6 +1370,20 @@ def main() -> int:
             ""
             if not entry_missing_after and not entry_invalid_after
             else (ERR_ENTRY_WIRE_MISSING if entry_missing_after else ERR_ENTRY_WIRE_INVALID)
+        ),
+        "lane_headstamp_contract_auto_wire_status": (
+            STATUS_PASS_REQUIRED
+            if not lane_headstamp_missing_after and not lane_headstamp_invalid_after
+            else STATUS_FAIL_REQUIRED
+        ),
+        "lane_headstamp_contract_auto_wire_error_code": (
+            ""
+            if not lane_headstamp_missing_after and not lane_headstamp_invalid_after
+            else (
+                ERR_LANE_HEADSTAMP_WIRE_MISSING
+                if lane_headstamp_missing_after
+                else ERR_LANE_HEADSTAMP_WIRE_INVALID
+            )
         ),
         "host_gateway_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not host_gateway_missing_after and not host_gateway_invalid_after else STATUS_FAIL_REQUIRED
@@ -1333,6 +1450,7 @@ def main() -> int:
             + list(REQUIRED_MULTIMODAL_KEYS)
             + list(REQUIRED_REASONING_KEYS)
             + list(REQUIRED_ENTRY_KEYS)
+            + list(REQUIRED_LANE_HEADSTAMP_KEYS)
             + list(REQUIRED_HOST_GATEWAY_KEYS)
             + list(REQUIRED_HOST_VISIBLE_SURFACE_KEYS)
             + list(REQUIRED_DOWNSINK_KEYS)

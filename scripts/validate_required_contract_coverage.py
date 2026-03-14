@@ -135,6 +135,7 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "vendor_api_discovery",
     "vendor_api_solution",
     "gated_switch_guard",
+    "protocol_lane_headstamp_continuity",
     "protocol_unique_entry_gate",
     "downsink_path_immutability",
     "downsink_path_write_guard",
