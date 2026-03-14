@@ -109,6 +109,11 @@ HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
 HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "ci_fixture"
 
+# Multimodal runtime stage null-proof receipts.
+MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR = "runtime/reports/multimodal-runtime-stage"
+MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX = "multimodal-runtime-stage"
+MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE = "execute_identity_upgrade_null_proof"
+
 # Wrapper semantic attestations.
 HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY = "wrapper_template_attestation_policy"
 HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID = "host_gateway_wrapper_template_attestation_v1"

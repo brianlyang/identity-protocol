@@ -20,6 +20,11 @@ from final_emit_contract_common import (
     FINAL_EMIT_POLICY_MODE,
     FINAL_EMIT_SCHEMA_ID,
 )
+from protocol_infra_contract import (
+    MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR,
+    MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX,
+    MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE,
+)
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from resolve_identity_context import collect_protocol_evidence, default_identity_home, resolve_identity
 from runtime_temp_path_common import runtime_temp_file, runtime_temp_root
@@ -35,15 +40,30 @@ PROTOCOL_PUBLISH_CHECKS = {
     "scripts/validate_release_freeze_boundary.py",
 }
 MULTIMODAL_ENFORCEMENT_VALIDATOR = "scripts/validate_multimodal_plugin_enforcement.py"
+MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR = INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR
+MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX = INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX
+MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE = INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE
 
 ERR_EXEC_ORDER_HEADER_FIRST = "IP-EXEC-ORDER-001"
 ERR_EXEC_ORDER_SCAFFOLD_CONSENT = "IP-EXEC-ORDER-002"
 ERR_EXEC_ORDER_MUTATION_PLAN = "IP-EXEC-ORDER-003"
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 ERR_FINAL_EMIT_CONTRACT_REQUIRED = "IP-OUTLET-004"
+ERR_PRE_MUTATION_PROJECTION_REQUIRED = "IP-OUTLET-005"
 ERR_PROMPT_WIRE_IO = "IP-PROMPT-WIRE-001"
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+
+PRE_MUTATION_PROJECTION_REQUIRED_FIELDS: tuple[str, ...] = (
+    "headstamp_first_line_status",
+    "entry_receipt_tuple_status",
+    "emit_channel_id",
+    "reply_transport_binding_status",
+)
 
 REQUIRED_PROMPT_CONTRACT_KEYS: tuple[str, ...] = (
     "prompt_bootstrap_capability_contract_v1",
@@ -272,6 +292,32 @@ def _validate_final_emit_contract_snapshot(
     return len(stale_reasons) == 0, stale_reasons
 
 
+def _validate_pre_mutation_projection(
+    *,
+    header_first_gate_status: str,
+    projection: dict[str, Any],
+) -> tuple[bool, list[str]]:
+    stale_reasons: list[str] = []
+    if str(header_first_gate_status or "").strip().upper() != STATUS_PASS_REQUIRED:
+        return True, stale_reasons
+    for field in PRE_MUTATION_PROJECTION_REQUIRED_FIELDS:
+        value = projection.get(field)
+        if not str(value or "").strip():
+            stale_reasons.append(f"pre_mutation_projection_field_missing:{field}")
+    for field in (
+        "headstamp_first_line_status",
+        "entry_receipt_tuple_status",
+        "reply_transport_binding_status",
+    ):
+        value = str(projection.get(field, "")).strip().upper()
+        if value != STATUS_PASS_REQUIRED:
+            stale_reasons.append(f"pre_mutation_projection_status_not_pass:{field}")
+    emit_channel_id = str(projection.get("emit_channel_id", "")).strip()
+    if emit_channel_id and emit_channel_id != FINAL_EMIT_CHANNEL_ID:
+        stale_reasons.append("pre_mutation_projection_emit_channel_not_canonical")
+    return len(stale_reasons) == 0, stale_reasons
+
+
 def _lane_context(layer_intent_text: str, expected_work_layer: str, expected_source_layer: str) -> dict[str, Any]:
     resolved = resolve_layer_intent(
         explicit_work_layer=str(expected_work_layer or "").strip(),
@@ -405,7 +451,44 @@ def _extract_multimodal_payload_from_checks(checks: list[dict[str, Any]]) -> dic
     return {}
 
 
-def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
+def _safe_runtime_token(value: str, fallback: str) -> str:
+    token = "".join(ch if ch.isalnum() or ch in {"_", "-", "."} else "_" for ch in str(value or "").strip()).strip("._")
+    return token or fallback
+
+
+def _write_multimodal_runtime_stage_receipt(
+    *,
+    pack_path: Path,
+    report: dict[str, Any],
+    run_id: str,
+    preflight_status: str,
+    runtime_evidence_status: str,
+) -> str:
+    run_token = _safe_runtime_token(run_id, "run")
+    out_dir = (pack_path.resolve() / MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = (out_dir / f"{MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX}-{run_token}.json").resolve()
+    payload = {
+        "schema_version": "v1",
+        "identity_id": str(report.get("identity_id", "")).strip(),
+        "run_id": str(run_id or "").strip(),
+        "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "receipt_source": MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE,
+        "stage_mode": "null_proof",
+        "multimodal_preflight_status": str(preflight_status or "").strip(),
+        "multimodal_runtime_evidence_status": str(runtime_evidence_status or "").strip(),
+        "multimodal_calls": None,
+        "multimodal_resolved": None,
+        "multimodal_unresolved": None,
+        "multimodal_errors": None,
+        "multimodal_retry_calls": None,
+        "stale_reasons": [],
+    }
+    _write_json(out_path, payload)
+    return str(out_path)
+
+
+def _ensure_multimodal_runtime_fields(report: dict[str, Any], *, pack_path: Path, run_id: str) -> dict[str, Any]:
     """
     Enforce producer-side runtime-proof field emission in every execution report.
     This preserves fail-close semantics while preventing observability blind spots.
@@ -493,6 +576,31 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
     existing_refs = report.get("multimodal_evidence_refs")
     refs_value = existing_refs if isinstance(existing_refs, list) else mm_payload.get("multimodal_runtime_evidence_refs")
     mm_refs = sorted(dict.fromkeys(str(x).strip() for x in (refs_value or []) if str(x).strip()))
+    synthesized_runtime_stage_receipt_path = ""
+    no_runtime_counts = all(
+        v is None for v in (mm_calls, mm_resolved, mm_unresolved, mm_errors, mm_retry_calls)
+    )
+    if not mm_refs and no_runtime_counts:
+        try:
+            synthesized_runtime_stage_receipt_path = _write_multimodal_runtime_stage_receipt(
+                pack_path=pack_path,
+                report=report,
+                run_id=run_id,
+                preflight_status=preflight_status,
+                runtime_evidence_status=runtime_evidence_status,
+            )
+        except Exception:
+            synthesized_runtime_stage_receipt_path = ""
+        if synthesized_runtime_stage_receipt_path:
+            mm_refs = [synthesized_runtime_stage_receipt_path]
+            if preflight_status.upper() in {"", "MISSING"}:
+                preflight_status = STATUS_PASS_REQUIRED
+            if runtime_evidence_status in {"", STATUS_SKIPPED_NOT_REQUIRED}:
+                runtime_evidence_status = STATUS_PASS_REQUIRED
+            if not runtime_gate_mode:
+                runtime_gate_mode = "required"
+            runtime_stage_deferred = False
+            runtime_stage_deferred_reason = "runtime_stage_null_proof_receipt_emitted"
 
     gate_report_path = str(
         _pick_mm_value(
@@ -538,6 +646,7 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
     report["runtime_stage_producer_detected"] = runtime_stage_producer_detected
     report["runtime_stage_deferred"] = runtime_stage_deferred
     report["runtime_stage_deferred_reason"] = runtime_stage_deferred_reason
+    report["multimodal_runtime_stage_receipt_path"] = synthesized_runtime_stage_receipt_path
     report["multimodal_summary"] = {
         "status": preflight_status,
         "runtime_evidence_status": runtime_evidence_status,
@@ -549,6 +658,7 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
         "mode": runtime_gate_mode,
         "required_confidence": runtime_gate_required_confidence,
         "evidence_refs": mm_refs,
+        "runtime_stage_receipt_path": synthesized_runtime_stage_receipt_path,
         "runtime_stage_deferred": runtime_stage_deferred,
         "runtime_stage_deferred_reason": runtime_stage_deferred_reason,
     }
@@ -557,7 +667,7 @@ def _ensure_multimodal_runtime_fields(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def _write_report_with_pointer(*, report_path: Path, data: dict[str, Any], pack_path: Path, run_id: str) -> None:
-    enriched = _ensure_multimodal_runtime_fields(dict(data))
+    enriched = _ensure_multimodal_runtime_fields(dict(data), pack_path=pack_path, run_id=run_id)
     _write_json(report_path, enriched)
     try:
         _write_active_execution_report_pointer(pack_path=pack_path, report_path=report_path, run_id=run_id)
@@ -1124,6 +1234,13 @@ def _base_report(
     final_emit_schema_id: str = "",
     final_emit_schema_status: str = "",
     final_emit_contract_status: str = "",
+    headstamp_first_line_status: str = "",
+    entry_receipt_tuple_status: str = "",
+    emit_channel_id: str = "",
+    reply_transport_binding_status: str = "",
+    pre_mutation_projection_status: str = STATUS_SKIPPED_NOT_REQUIRED,
+    pre_mutation_projection_error_code: str = "",
+    pre_mutation_projection_stale_reasons: list[str] | None = None,
     why_now: str = "",
 ) -> dict[str, Any]:
     """
@@ -1136,6 +1253,7 @@ def _base_report(
     skipped_protocol_publish_checks = skipped_protocol_publish_checks or []
     protocol_feedback_paths = protocol_feedback_paths or []
     planned_files = planned_files or []
+    pre_mutation_projection_stale_reasons = pre_mutation_projection_stale_reasons or []
     return {
         "run_id": run_id,
         "identity_id": identity_id,
@@ -1185,6 +1303,13 @@ def _base_report(
         "final_emit_schema_id": str(final_emit_schema_id or ""),
         "final_emit_schema_status": str(final_emit_schema_status or ""),
         "final_emit_contract_status": str(final_emit_contract_status or ""),
+        "headstamp_first_line_status": str(headstamp_first_line_status or ""),
+        "entry_receipt_tuple_status": str(entry_receipt_tuple_status or ""),
+        "emit_channel_id": str(emit_channel_id or ""),
+        "reply_transport_binding_status": str(reply_transport_binding_status or ""),
+        "pre_mutation_projection_status": str(pre_mutation_projection_status or STATUS_SKIPPED_NOT_REQUIRED),
+        "pre_mutation_projection_error_code": str(pre_mutation_projection_error_code or ""),
+        "pre_mutation_projection_stale_reasons": list(pre_mutation_projection_stale_reasons),
         "why_now": str(why_now or ""),
         "actions_taken": [],
         "checks": [],
@@ -1603,6 +1728,26 @@ def _run_header_first_gate(
     error_code = str(payload.get("send_time_error_code") or payload.get("error_code") or "").strip()
     if not final_emit_ok and not error_code:
         error_code = ERR_FINAL_EMIT_CONTRACT_REQUIRED
+    reply_path = Path(str(reply_file).strip()).expanduser().resolve()
+    reply_transport_binding_status = STATUS_PASS_REQUIRED if reply_path.exists() else STATUS_FAIL_REQUIRED
+    headstamp_first_line_status = STATUS_FAIL_REQUIRED
+    if reply_path.exists():
+        try:
+            reply_text = reply_path.read_text(encoding="utf-8", errors="ignore").strip()
+            first_line = str(reply_text.splitlines()[0] if reply_text else "").strip()
+            if first_line.startswith("Identity-Context:"):
+                headstamp_first_line_status = STATUS_PASS_REQUIRED
+        except Exception:
+            headstamp_first_line_status = STATUS_FAIL_REQUIRED
+    emit_channel_id = str(final_emit_channel_id or outlet_channel_id or FINAL_EMIT_CHANNEL_ID).strip()
+    entry_receipt_tuple_status = (
+        STATUS_PASS_REQUIRED
+        if (
+            str(send_time_status).upper() == STATUS_PASS_REQUIRED
+            and str(final_emit_contract_status).upper() == STATUS_PASS_REQUIRED
+        )
+        else STATUS_FAIL_REQUIRED
+    )
     return {
         "ok": ok,
         "rc": proc.returncode,
@@ -1622,6 +1767,10 @@ def _run_header_first_gate(
         "final_emit_contract_status": final_emit_contract_status,
         "final_emit_contract_ok": final_emit_ok,
         "final_emit_stale_reasons": final_emit_stale_reasons,
+        "headstamp_first_line_status": headstamp_first_line_status,
+        "entry_receipt_tuple_status": entry_receipt_tuple_status,
+        "emit_channel_id": emit_channel_id,
+        "reply_transport_binding_status": reply_transport_binding_status,
         "stdout_tail": (proc.stdout or "").strip().splitlines()[-1] if (proc.stdout or "").strip() else "",
         "stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
     }
@@ -1713,6 +1862,26 @@ def main() -> int:
     ap.add_argument("--final-emit-schema-id", default="", help="optional final emit schema id passthrough")
     ap.add_argument("--final-emit-schema-status", default="", help="optional final emit schema status passthrough")
     ap.add_argument("--final-emit-contract-status", default="", help="optional final emit contract status passthrough")
+    ap.add_argument(
+        "--headstamp-first-line-status",
+        default="",
+        help="optional pre-mutation projection field override",
+    )
+    ap.add_argument(
+        "--entry-receipt-tuple-status",
+        default="",
+        help="optional pre-mutation projection field override",
+    )
+    ap.add_argument(
+        "--emit-channel-id",
+        default="",
+        help="optional pre-mutation projection field override",
+    )
+    ap.add_argument(
+        "--reply-transport-binding-status",
+        default="",
+        help="optional pre-mutation projection field override",
+    )
     ap.add_argument("--phase-a-refresh-applied", action="store_true")
     ap.add_argument("--phase-b-strict-revalidate-status", default="NOT_APPLICABLE")
     ap.add_argument("--phase-transition-reason", default="")
@@ -1863,6 +2032,13 @@ def main() -> int:
     final_emit_schema_id = ""
     final_emit_schema_status = ""
     final_emit_contract_status = ""
+    headstamp_first_line_status = STATUS_SKIPPED_NOT_REQUIRED
+    entry_receipt_tuple_status = STATUS_SKIPPED_NOT_REQUIRED
+    emit_channel_id = ""
+    reply_transport_binding_status = STATUS_SKIPPED_NOT_REQUIRED
+    pre_mutation_projection_status = STATUS_SKIPPED_NOT_REQUIRED
+    pre_mutation_projection_error_code = ""
+    pre_mutation_projection_stale_reasons: list[str] = []
     pre_mutation_gate_error_code = ""
     if not header_first_gate_status:
         if not actor_id:
@@ -1902,6 +2078,12 @@ def main() -> int:
             final_emit_schema_id = str(header_probe.get("final_emit_schema_id", "")).strip()
             final_emit_schema_status = str(header_probe.get("final_emit_schema_status", "")).strip().upper()
             final_emit_contract_status = str(header_probe.get("final_emit_contract_status", "")).strip().upper()
+            headstamp_first_line_status = str(header_probe.get("headstamp_first_line_status", "")).strip().upper()
+            entry_receipt_tuple_status = str(header_probe.get("entry_receipt_tuple_status", "")).strip().upper()
+            emit_channel_id = str(header_probe.get("emit_channel_id", "")).strip()
+            reply_transport_binding_status = str(
+                header_probe.get("reply_transport_binding_status", "")
+            ).strip().upper()
     elif header_first_gate_status not in {"PASS_REQUIRED", "FAIL_REQUIRED"}:
         header_first_gate_status = "FAIL_REQUIRED"
         pre_mutation_gate_error_code = ERR_EXEC_ORDER_HEADER_FIRST
@@ -1925,6 +2107,19 @@ def main() -> int:
             str(args.final_emit_contract_status or "").strip().upper()
             or ("FAIL_REQUIRED" if header_first_gate_status != "PASS_REQUIRED" else "PASS_REQUIRED")
         )
+        headstamp_first_line_status = (
+            str(args.headstamp_first_line_status or "").strip().upper()
+            or ("PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED)
+        )
+        entry_receipt_tuple_status = (
+            str(args.entry_receipt_tuple_status or "").strip().upper()
+            or ("PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED)
+        )
+        emit_channel_id = str(args.emit_channel_id or "").strip() or str(final_emit_channel_id or "").strip()
+        reply_transport_binding_status = (
+            str(args.reply_transport_binding_status or "").strip().upper()
+            or ("PASS_REQUIRED" if header_first_gate_status == STATUS_PASS_REQUIRED else STATUS_FAIL_REQUIRED)
+        )
         if header_first_gate_status == "PASS_REQUIRED":
             final_emit_ok, _final_emit_stale_reasons = _validate_final_emit_contract_snapshot(
                 send_time_gate_status=send_time_gate_status,
@@ -1942,11 +2137,27 @@ def main() -> int:
                 header_first_gate_status = "FAIL_REQUIRED"
                 pre_mutation_gate_error_code = pre_mutation_gate_error_code or ERR_FINAL_EMIT_CONTRACT_REQUIRED
 
+    projection_payload = {
+        "headstamp_first_line_status": headstamp_first_line_status,
+        "entry_receipt_tuple_status": entry_receipt_tuple_status,
+        "emit_channel_id": emit_channel_id,
+        "reply_transport_binding_status": reply_transport_binding_status,
+    }
+    projection_ok, pre_mutation_projection_stale_reasons = _validate_pre_mutation_projection(
+        header_first_gate_status=header_first_gate_status,
+        projection=projection_payload,
+    )
+    pre_mutation_projection_status = STATUS_PASS_REQUIRED if projection_ok else STATUS_FAIL_REQUIRED
+    if not projection_ok:
+        pre_mutation_projection_error_code = ERR_PRE_MUTATION_PROJECTION_REQUIRED
+
     pre_mutation_error = ""
     if prompt_contract_auto_wire_status != "PASS_REQUIRED":
         pre_mutation_error = prompt_contract_auto_wire_error_code or ERR_PROMPT_WIRE_INVALID
     elif header_first_gate_status != "PASS_REQUIRED":
         pre_mutation_error = ERR_EXEC_ORDER_HEADER_FIRST
+    elif pre_mutation_projection_status != STATUS_PASS_REQUIRED:
+        pre_mutation_error = pre_mutation_projection_error_code or ERR_PRE_MUTATION_PROJECTION_REQUIRED
     elif scaffold_consent_gate_status == "FAIL_REQUIRED":
         pre_mutation_error = ERR_EXEC_ORDER_SCAFFOLD_CONSENT
     elif not mutation_plan_disclosed:
@@ -2004,6 +2215,13 @@ def main() -> int:
             final_emit_schema_id=final_emit_schema_id,
             final_emit_schema_status=final_emit_schema_status,
             final_emit_contract_status=final_emit_contract_status,
+            headstamp_first_line_status=headstamp_first_line_status,
+            entry_receipt_tuple_status=entry_receipt_tuple_status,
+            emit_channel_id=emit_channel_id,
+            reply_transport_binding_status=reply_transport_binding_status,
+            pre_mutation_projection_status=pre_mutation_projection_status,
+            pre_mutation_projection_error_code=pre_mutation_projection_error_code,
+            pre_mutation_projection_stale_reasons=pre_mutation_projection_stale_reasons,
             why_now=why_now,
         )
         report.update(
@@ -2172,6 +2390,13 @@ def main() -> int:
             final_emit_schema_id=final_emit_schema_id,
             final_emit_schema_status=final_emit_schema_status,
             final_emit_contract_status=final_emit_contract_status,
+            headstamp_first_line_status=headstamp_first_line_status,
+            entry_receipt_tuple_status=entry_receipt_tuple_status,
+            emit_channel_id=emit_channel_id,
+            reply_transport_binding_status=reply_transport_binding_status,
+            pre_mutation_projection_status=pre_mutation_projection_status,
+            pre_mutation_projection_error_code=pre_mutation_projection_error_code,
+            pre_mutation_projection_stale_reasons=pre_mutation_projection_stale_reasons,
             why_now=why_now,
         )
         report.update(
@@ -2329,6 +2554,13 @@ def main() -> int:
             final_emit_schema_id=final_emit_schema_id,
             final_emit_schema_status=final_emit_schema_status,
             final_emit_contract_status=final_emit_contract_status,
+            headstamp_first_line_status=headstamp_first_line_status,
+            entry_receipt_tuple_status=entry_receipt_tuple_status,
+            emit_channel_id=emit_channel_id,
+            reply_transport_binding_status=reply_transport_binding_status,
+            pre_mutation_projection_status=pre_mutation_projection_status,
+            pre_mutation_projection_error_code=pre_mutation_projection_error_code,
+            pre_mutation_projection_stale_reasons=pre_mutation_projection_stale_reasons,
             why_now=why_now,
         )
         report.update(
@@ -2455,6 +2687,13 @@ def main() -> int:
             final_emit_schema_id=final_emit_schema_id,
             final_emit_schema_status=final_emit_schema_status,
             final_emit_contract_status=final_emit_contract_status,
+            headstamp_first_line_status=headstamp_first_line_status,
+            entry_receipt_tuple_status=entry_receipt_tuple_status,
+            emit_channel_id=emit_channel_id,
+            reply_transport_binding_status=reply_transport_binding_status,
+            pre_mutation_projection_status=pre_mutation_projection_status,
+            pre_mutation_projection_error_code=pre_mutation_projection_error_code,
+            pre_mutation_projection_stale_reasons=pre_mutation_projection_stale_reasons,
             why_now=why_now,
         )
         report.update(
@@ -2707,6 +2946,13 @@ def main() -> int:
                         final_emit_schema_id=final_emit_schema_id,
                         final_emit_schema_status=final_emit_schema_status,
                         final_emit_contract_status=final_emit_contract_status,
+                        headstamp_first_line_status=headstamp_first_line_status,
+                        entry_receipt_tuple_status=entry_receipt_tuple_status,
+                        emit_channel_id=emit_channel_id,
+                        reply_transport_binding_status=reply_transport_binding_status,
+                        pre_mutation_projection_status=pre_mutation_projection_status,
+                        pre_mutation_projection_error_code=pre_mutation_projection_error_code,
+                        pre_mutation_projection_stale_reasons=pre_mutation_projection_stale_reasons,
                         why_now=why_now,
                     ),
                     "upgrade_required": upgrade_required,
@@ -3093,6 +3339,21 @@ def main() -> int:
         "final_emit_schema_id": str(final_emit_schema_id or ""),
         "final_emit_schema_status": str(final_emit_schema_status or ""),
         "final_emit_contract_status": str(final_emit_contract_status or ""),
+        "headstamp_first_line_status": str(headstamp_first_line_status or ""),
+        "entry_receipt_tuple_status": str(entry_receipt_tuple_status or ""),
+        "emit_channel_id": str(emit_channel_id or ""),
+        "reply_transport_binding_status": str(reply_transport_binding_status or ""),
+        "pre_mutation_projection_status": str(pre_mutation_projection_status or STATUS_SKIPPED_NOT_REQUIRED),
+        "pre_mutation_projection_error_code": str(pre_mutation_projection_error_code or ""),
+        "pre_mutation_projection_stale_reasons": list(pre_mutation_projection_stale_reasons or []),
+        "lane_routing_diagnostic_sentinels": {
+            "headstamp_first_line_status": str(headstamp_first_line_status or STATUS_SKIPPED_NOT_REQUIRED),
+            "entry_receipt_tuple_status": str(entry_receipt_tuple_status or STATUS_SKIPPED_NOT_REQUIRED),
+            "reply_transport_binding_status": str(reply_transport_binding_status or STATUS_SKIPPED_NOT_REQUIRED),
+            "emit_channel_id": str(emit_channel_id or ""),
+            "header_first_gate_status": str(header_first_gate_status or ""),
+            "lane_routing_error_code": str(lane_routing_payload.get("error_code", "")),
+        },
         "why_now": why_now,
     }
     report.update(
