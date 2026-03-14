@@ -18,6 +18,21 @@ IGNORED_ACTIVITY_FILENAMES = {
     ".DS_Store",
 }
 
+STRICT_REQUIREDIZATION_OPERATIONS = {
+    "activate",
+    "update",
+    "readiness",
+    "e2e",
+    "ci",
+    "validate",
+    "mutation",
+}
+INSPECTION_REQUIREDIZATION_OPERATIONS = {
+    "scan",
+    "three-plane",
+    "inspection",
+}
+
 
 def _should_ignore_activity_file(path: Path) -> bool:
     name = path.name
@@ -82,6 +97,33 @@ def build_correlation_keys(
         if token:
             out.add(token)
     return sorted(out)
+
+
+def should_seed_default_correlation_keys(
+    *,
+    operation: str,
+    run_id: str = "",
+    explicit_keys: Iterable[str] | None = None,
+) -> bool:
+    """
+    Decide whether to seed correlation with latest-report default keys.
+
+    Governance rationale:
+    - strict lanes should keep default seeding for resilience;
+    - inspection lanes (scan/three-plane/inspection) must avoid historical
+      false-linkage unless the caller explicitly scopes current round via run_id
+      or explicit correlation keys.
+    """
+
+    op = str(operation or "").strip().lower()
+    rid = str(run_id or "").strip()
+    explicit_present = any(str(x or "").strip() for x in (explicit_keys or []))
+
+    if op in STRICT_REQUIREDIZATION_OPERATIONS:
+        return True
+    if op in INSPECTION_REQUIREDIZATION_OPERATIONS and not rid and not explicit_present:
+        return False
+    return True
 
 
 def collect_protocol_feedback_activity(

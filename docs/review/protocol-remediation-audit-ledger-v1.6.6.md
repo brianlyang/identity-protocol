@@ -1560,3 +1560,43 @@ Checkpoint verdict update:
 
 1. v1.6.6 now has protocol-native host-visible channel registry + live attestation probes in required lane.
 2. Commentary-channel bypass class is now machine-detected and required-lane fail-close, not operator memory-dependent.
+
+### 26.11 Inspection-lane correlation seeding closure (2026-03-14)
+
+Commit landed in this checkpoint:
+
+1. `fix(v1.6.6): gate default correlation seeding by operation scope for protocol-feedback lane validators`
+   - introduced operation-aware default correlation seeding policy in:
+     - `scripts/protocol_feedback_lane_common.py`
+   - strict operations (`activate|update|readiness|e2e|ci|validate|mutation`) keep historical default seeding for resilience;
+   - inspection operations (`scan|three-plane|inspection`) disable historical default seeding when no explicit `run_id` / `correlation_key` is provided, preventing false current-round linkage.
+
+Surfaces aligned under this closure:
+
+1. `scripts/validate_instance_protocol_split_receipt.py`
+2. `scripts/validate_vendor_namespace_separation.py`
+3. `scripts/validate_protocol_feedback_sidecar_contract.py`
+4. `scripts/validate_semantic_routing_guard.py`
+5. `scripts/validate_protocol_vendor_semantic_isolation.py`
+6. `scripts/validate_protocol_data_sanitization_boundary.py`
+7. `scripts/validate_external_source_trust_chain.py`
+
+Serialized verification in this checkpoint:
+
+1. `python3 -m py_compile` across all touched validators/common helper -> `PYC_OK`.
+2. Inspection-lane explicit checks (no run-id) now resolve to scoped skip instead of false requiredization:
+   - `validate_instance_protocol_split_receipt --operation scan` -> `SKIPPED_NOT_REQUIRED`.
+   - `validate_vendor_namespace_separation --operation scan` -> `SKIPPED_NOT_REQUIRED`.
+   - `validate_protocol_feedback_sidecar_contract --operation scan` -> non-blocking skip path with `required_contract=false`.
+3. Strict-lane behavior preserved:
+   - same validators under `--operation validate` remain required and fail-close where evidence is missing.
+4. Coverage closure:
+   - `validate_required_contract_coverage --operation scan` for `base-repo-audit-expert-v3` now exits `rc=0`, with prior false `IP-COV-001` pressure removed from inspection lane.
+5. Deep-scan target replay with actor-bound session:
+   - `full_identity_protocol_scan --scan-mode target --identity-ids base-repo-audit-expert-v3 --target-source-layer project --actor-id assistant:codex --session-id run:v166-broadcast-follow-session`
+   - result: `summary.p0=0`, `summary_m2m.pass=1`, `severity=OK` for the target identity.
+
+Checkpoint verdict update:
+
+1. v1.6.6 inspection-lane protocol-feedback requiredization no longer over-links historical activity by default.
+2. strict lanes retain fail-close pressure; no downgrade of strict governance semantics was introduced.
