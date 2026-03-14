@@ -1338,3 +1338,57 @@ commit: `cb4478e`
 3. 口径保持：
    - `Policy PASS`
    - `Implementation CONDITIONAL PASS`（发送器物理路由边界仍需接线层闭环）。
+
+## 26) Unified wrapper bus closure re-audit (2026-03-14, base-repo-audit-expert-v3)
+
+### 26.1 Trigger
+
+1. Strict surfaces still carried script-local wrapper routing branches, which left a long-term drift risk.
+2. Field feedback reported inconsistent headstamp visibility, so the protocol execution surface needed to be consolidated first into one routing bus before sender-layer wiring closure.
+
+### 26.2 Committed baseline entering this round
+
+1. `53027f2` `feat(v1.6.6): centralize wrapper-only gateway routing across core protocol entrypoints`
+   - added `scripts/gateway_wrapper_enforcement.py`
+   - integrated into:
+     - `scripts/identity_creator.py`
+     - `scripts/release_readiness_check.py`
+     - `scripts/report_three_plane_status.py`
+     - `scripts/full_identity_protocol_scan.py`
+2. `3cf1998` `feat(v1.6.6): enforce centralized gateway wrapper bus import on strict surfaces`
+   - drift gate added strict-surface bus import enforcement;
+   - drift code: `IP-GATE-ENTRY-009`.
+3. `9445fdf` `fix(v1.6.6): fail-close creator wrapper routes and emit stamped reply on non-json calls`
+   - non-JSON creator response path remains stamped-first-line enforced;
+   - wrapper-only violations remain fail-closed.
+
+### 26.3 This-round hardening delta
+
+1. Strict surfaces now route through the same bus API (`run_gateway_wrapped_command`) instead of mixed helper branches.
+2. Drift gate upgraded from import-only check to import+call+legacy-helper-rejection:
+   - required token: `run_gateway_wrapped_command`
+   - forbidden legacy helpers on strict surfaces:
+     - `run_final_emit_via_instance_wrappers`
+     - `run_required_gate_bundle_via_ingress_wrapper`
+3. `IP-GATE-ENTRY-009` precedence fixed:
+   - gateway bus violations are now evaluated before generic execution-token failures, so bus drift is no longer masked by `IP-GATE-ENTRY-002`.
+
+### 26.4 Serialized verification (this round)
+
+1. Syntax + gates:
+   - `python3 -m py_compile scripts/gateway_wrapper_enforcement.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/report_three_plane_status.py scripts/full_identity_protocol_scan.py scripts/validate_required_gate_surface_drift.py`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+2. Behavior probes:
+   - positive session-chain path keeps `reply_preview[0]` with `Identity-Context:`
+   - direct `scripts/final_emit_governed.py` without wrapper parent chain remains `FAIL_REQUIRED`
+3. Serial replay:
+   - 5-round self-test: `overall_passed=true`
+   - 5-round deep-scan: `overall_passed=true`
+
+### 26.5 Verdict and boundary
+
+1. Protocol-side v1.6.6 closure is now bus-centric and anti-drift strict, with reduced bypass surface across strict entrypoints.
+2. UI-layer guaranteed headstamp on every emitted message still depends on sender physical wiring consuming wrapper artifacts only.
+3. Verdict:
+   - `Policy PASS`
+   - `Implementation CONDITIONAL PASS` (bounded to sender physical routing closure).

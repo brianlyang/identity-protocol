@@ -804,3 +804,49 @@ Serialized attach check (base-repo-architect):
 
 1. wrapper 链路与协议唯一入口/出口映射：`PASS_REQUIRED`。
 2. 会话渲染器是否“物理只消费 wrapper out_reply_file”：仍取决于发送器接线实现，属于运行侧集成边界。
+
+### 5.13 Unified wrapper bus closure (2026-03-14, base-repo-audit-expert-v3)
+
+This checkpoint consolidates the v1.6.6 execution path from distributed per-script wiring into a single governance bus, so wrapper-only fail-close rules are maintained in one module and drift surface is reduced.
+
+Implementation landing (already committed):
+
+1. `scripts/gateway_wrapper_enforcement.py` (new)
+   - Provides centralized routing for canonical ingress/egress wrapper execution, fail-close enforcement, and stamped first-line emission for non-JSON replies.
+2. `scripts/identity_creator.py`
+   - Uses the centralized bus instead of duplicating wrapper command orchestration inline.
+3. `scripts/release_readiness_check.py`
+   - `_run` and `_run_capture` now route through the same bus, keeping readiness flow aligned with wrapper-only contract semantics.
+4. `scripts/report_three_plane_status.py`
+   - Routes through the centralized bus to avoid independent three-plane drift.
+5. `scripts/full_identity_protocol_scan.py`
+   - Routes through the centralized bus so scan behavior stays source-aligned with ingress/egress policy.
+6. `scripts/validate_required_gate_surface_drift.py`
+   - Adds required strict-surface bus import enforcement:
+     - strict surfaces must import and use `gateway_wrapper_enforcement`;
+     - drift violation code: `IP-GATE-ENTRY-009`.
+
+Governance effect (non-patch style hardening):
+
+1. Wrapper-only allow/deny behavior and headstamp emission rules are consolidated into one control point.
+2. Any strict surface bypassing the bus is fail-closed by required drift gates.
+3. Future health checks, wiring, and broadcast hooks can attach to one bus instead of divergent script branches.
+
+Serialized validation (this round):
+
+1. Syntax and drift gates:
+   - `python3 -m py_compile scripts/gateway_wrapper_enforcement.py scripts/identity_creator.py scripts/release_readiness_check.py scripts/report_three_plane_status.py scripts/full_identity_protocol_scan.py`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`
+2. Session positive/negative probes:
+   - positive `protocol_session_chain_wrapper.py` path -> `PASS_REQUIRED`, with `reply_preview[0]` matching `Identity-Context:`
+   - direct `scripts/final_emit_governed.py` call without wrapper parent chain -> `FAIL_REQUIRED`
+3. 5+5 serial replay:
+   - 5-round self-test: `overall_passed=true`
+   - 5-round deep-scan: `overall_passed=true`
+   - temporary local files are execution traces only and are not normative evidence; normative evidence remains command contract + gate status.
+
+Current posture:
+
+1. `Policy PASS`
+2. `Implementation CONDITIONAL PASS`
+3. remaining condition is sender-layer physical routing closure (`wrapper output only`), not protocol semantic drift.
