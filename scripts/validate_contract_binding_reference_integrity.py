@@ -9,6 +9,13 @@ from typing import Any
 
 import yaml
 
+from contract_binding_mapping_common import (
+    collect_requirement_rows,
+    is_requirement_id,
+    is_requirement_key,
+    is_stream_version,
+)
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_POLICY = "IP-CP-INV-001"
@@ -34,8 +41,6 @@ STREAM_FIELD_PREFIX: dict[str, str] = {
     "governance_anchor": "docs/governance/",
     "review_anchor": "docs/review/",
 }
-RQ_KEY_RE = re.compile(r"^asb16-rq-\d{3}$")
-RQ_ID_RE = re.compile(r"^ASB16-RQ-\d{3}$")
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -154,6 +159,11 @@ def _load_stream_allowed_docs(registry_path: Path) -> tuple[set[str], list[str]]
             if not isinstance(row, dict):
                 errors.append("stream_doc_registry_row_not_object")
                 continue
+            stream_version = str(row.get("stream_version", "")).strip()
+            if not stream_version:
+                errors.append("stream_doc_registry_stream_version_missing")
+            elif not is_stream_version(stream_version):
+                errors.append(f"stream_doc_registry_stream_version_invalid:{stream_version}")
             for field in ("governance_doc", "review_doc"):
                 value = str(row.get(field, "")).strip()
                 if value:
@@ -216,17 +226,13 @@ def main() -> int:
             stale_reasons.append(f"contract_mapping_parse_failed:{mapping_path}:{exc}")
             mapping_doc = {}
 
-    rows = {
-        key: value
-        for key, value in mapping_doc.items()
-        if isinstance(key, str) and key.startswith("asb16-rq-") and isinstance(value, dict)
-    }
+    rows = collect_requirement_rows(mapping_doc)
 
     heading_cache: dict[Path, set[str]] = {}
     for requirement_key in sorted(rows.keys()):
         row = rows[requirement_key]
 
-        if not RQ_KEY_RE.match(requirement_key):
+        if not is_requirement_key(requirement_key):
             _append_violation(
                 violations,
                 requirement_key=requirement_key,
@@ -235,7 +241,7 @@ def main() -> int:
             )
 
         requirement_id = str(row.get("requirement_id", "")).strip()
-        if not requirement_id or not RQ_ID_RE.match(requirement_id):
+        if not requirement_id or not is_requirement_id(requirement_id):
             _append_violation(
                 violations,
                 requirement_key=requirement_key,

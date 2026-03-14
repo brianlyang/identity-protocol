@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from contract_binding_mapping_common import requirement_row_keys
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -102,7 +104,7 @@ def _resolve_current_yaml_alias(repo_root: Path, configured_rel: str) -> tuple[P
 def _mapping_bundle_gap(repo_root: Path) -> tuple[int, list[str], int]:
     mapping_path = _resolve_contract_mapping(repo_root)
     data = yaml.safe_load(mapping_path.read_text(encoding="utf-8")) or {}
-    mapping_rows = sorted(k for k in data.keys() if isinstance(k, str) and k.startswith("asb16-rq-"))
+    mapping_rows = requirement_row_keys(data if isinstance(data, dict) else {})
 
     from required_gate_bundle_runner import BUNDLE_REQUIREMENT_ORDER  # local import to avoid boot issues
 

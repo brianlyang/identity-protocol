@@ -77,6 +77,9 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
     "scripts/validate_execution_target_tuple_isolation.py": "execution_target_tuple_isolation_status",
     "scripts/validate_protocol_unique_entry_gate.py": "protocol_unique_entry_gate_status",
+    "scripts/validate_protocol_downsink_path_immutability.py": "protocol_downsink_path_immutability_status",
+    "scripts/validate_protocol_downsink_path_write_guard.py": "protocol_downsink_path_write_guard_status",
+    "scripts/validate_protocol_downsink_path_literal_lock.py": "protocol_downsink_path_literal_lock_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -113,6 +116,9 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "skill_path_integrity",
     "protocol_unique_entry_gate",
     "protocol_lane_headstamp_continuity",
+    "downsink_path_immutability",
+    "downsink_path_write_guard",
+    "downsink_path_literal_lock",
 }
 
 INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
@@ -130,6 +136,9 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "vendor_api_solution",
     "gated_switch_guard",
     "protocol_unique_entry_gate",
+    "downsink_path_immutability",
+    "downsink_path_write_guard",
+    "downsink_path_literal_lock",
 }
 
 FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
@@ -155,6 +164,9 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_semantic_convergence.py",
     "scripts/validate_prompt_kernel_executable_coupling.py",
     "scripts/validate_protocol_unique_entry_gate.py",
+    "scripts/validate_protocol_downsink_path_immutability.py",
+    "scripts/validate_protocol_downsink_path_write_guard.py",
+    "scripts/validate_protocol_downsink_path_literal_lock.py",
 }
 
 
@@ -550,6 +562,36 @@ TARGETS = (
         validator_script="scripts/validate_protocol_unique_entry_gate.py",
         validator_args=("--force-check", "--json-only"),
     ),
+    ContractTarget(
+        name="downsink_path_immutability",
+        contract_keys=(
+            "protocol_downsink_path_immutability_contract_v1",
+            "protocol_downsink_path_immutability_contract",
+            "rq_036_downsink_path_immutability_contract_v1",
+        ),
+        validator_script="scripts/validate_protocol_downsink_path_immutability.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="downsink_path_write_guard",
+        contract_keys=(
+            "protocol_downsink_path_immutability_contract_v1",
+            "protocol_downsink_path_immutability_contract",
+            "rq_037_downsink_path_write_guard_contract_v1",
+        ),
+        validator_script="scripts/validate_protocol_downsink_path_write_guard.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="downsink_path_literal_lock",
+        contract_keys=(
+            "protocol_downsink_path_immutability_contract_v1",
+            "protocol_downsink_path_immutability_contract",
+            "rq_038_downsink_path_literal_lock_contract_v1",
+        ),
+        validator_script="scripts/validate_protocol_downsink_path_literal_lock.py",
+        validator_args=("--json-only",),
+    ),
 )
 
 
@@ -586,6 +628,13 @@ def _resolve_contract_for_target(task: dict[str, Any], target: ContractTarget) -
                 continue
             token = str(key or "").strip().lower()
             if "unique_entry" in token and "contract" in token:
+                return raw, str(key)
+    if target.name in {"downsink_path_immutability", "downsink_path_write_guard", "downsink_path_literal_lock"}:
+        for key, raw in task.items():
+            if not isinstance(raw, dict):
+                continue
+            token = str(key or "").strip().lower()
+            if "downsink" in token and "path" in token and "contract" in token:
                 return raw, str(key)
     return {}, target.contract_keys[0]
 
@@ -696,6 +745,9 @@ def _run_validator(
         "scripts/validate_protocol_lane_headstamp_continuity.py",
         "scripts/validate_execution_target_tuple_isolation.py",
         "scripts/validate_protocol_unique_entry_gate.py",
+        "scripts/validate_protocol_downsink_path_immutability.py",
+        "scripts/validate_protocol_downsink_path_write_guard.py",
+        "scripts/validate_protocol_downsink_path_literal_lock.py",
     }:
         cmd += ["--operation", operation]
     if script == "scripts/validate_instance_protocol_split_receipt.py":

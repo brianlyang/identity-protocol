@@ -166,3 +166,65 @@ Evidence root pattern (strict docs):
 1. Policy verdict: `PASS`.
 2. Implementation verdict: `PASS`.
 3. Stream conclusion: v1.6.8 path immutability closure is landed and replay-verified under serial constraints, including anti-forget literal lock.
+
+## 11) Requirement mapping closure motherline v1.6.8
+
+### 11.1 Closure objective (frozen)
+
+1. 将 v1.6.8 downsink 三个验证器从“侧链显式调用”提升为 `contract-binding.current.yaml` 母线 requirement rows；
+2. 将 coverage 判定从“单文档硬编码（v1.6.0）”升级为“stream registry 动态解析 + stream_version 正则校验”；
+3. 保证后续版本（v1.6.9 / v1.7.x）新增 stream 时，系统自动拦截漏接线，而不是依赖记忆。
+
+### 11.2 Requirement rows integrated
+
+| Requirement ID | Mapping Key | Validator | Status |
+| --- | --- | --- | --- |
+| ASB16-RQ-036 | asb16-rq-036 | scripts/validate_protocol_downsink_path_immutability.py | integrated |
+| ASB16-RQ-037 | asb16-rq-037 | scripts/validate_protocol_downsink_path_write_guard.py | integrated |
+| ASB16-RQ-038 | asb16-rq-038 | scripts/validate_protocol_downsink_path_literal_lock.py | integrated |
+
+### 11.3 Audit pass criteria
+
+1. `validate_control_plane_invariants`: `mapping_rows_missing_in_bundle_count == 0`.
+2. `validate_contract_mapping_coverage --force-required`: `contract_mapping_coverage_status == PASS_REQUIRED` with no alias or stream-version error.
+3. `docs_command_contract_check` + `validate_doc_evidence_persistence`: stream-registry format checks pass (including `stream_version` regex validation).
+
+## 12) Serial replay refresh (2026-03-14, motherline-r2)
+
+### 12.1 Infrastructure replay (5 rounds self-test, serial)
+
+Evidence:
+
+1. `activity/evidence/v168-path-immutability/2026-03-14/selftest_motherline_overview_summary.json`
+2. `activity/evidence/v168-path-immutability/2026-03-14/selftest_motherline_round_01_summary.json` ... `_05_...`
+
+Observed result:
+
+1. `round_count=5`
+2. `overall_passed=true`
+3. Every round passes:
+   - contract backfill
+   - downsink immutability validator
+   - downsink write-guard validator
+   - downsink literal-lock validator
+   - dynamic mapping coverage validator (`--force-required`)
+
+### 12.2 Deep-scan replay (5 rounds, serial)
+
+Evidence:
+
+1. `activity/evidence/v168-path-immutability/2026-03-14/deep_scan_motherline_overview_summary.json`
+2. `activity/evidence/v168-path-immutability/2026-03-14/deep_scan_motherline_round_01_summary.json` ... `_05_...`
+
+Observed result:
+
+1. `round_count=5`
+2. Target instance (`base-repo-architect`) remains stable at `p0=1` for all rounds.
+3. Interpretation: infrastructure motherline closure is validated; target runtime debt remains explicit (not hidden by governance greenwashing).
+
+### 12.3 Probe + registry artifacts (r2 snapshot)
+
+1. `activity/evidence/v168-path-immutability/2026-03-14/path_probe_matrix.v168.20260314-r2.json`
+2. `activity/evidence/v168-path-immutability/2026-03-14/ci_required_probe_report.v168.20260314-r2.json`
+3. `activity/evidence/v168-path-immutability/2026-03-14/path_registry_snapshot.v168.20260314-r2.json`
+4. `activity/evidence/v168-path-immutability/2026-03-14/EVIDENCE_MANIFEST.v168.20260314-r2.json`

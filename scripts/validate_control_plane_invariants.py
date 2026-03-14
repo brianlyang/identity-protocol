@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from contract_binding_mapping_common import collect_requirement_rows, requirement_row_keys
+
 try:
     from jsonschema import Draft202012Validator
 except Exception:  # pragma: no cover - runtime dependency guard
@@ -61,7 +63,7 @@ def _read_text(path: Path) -> str:
 
 
 def _mapping_rows(mapping_doc: dict[str, Any]) -> list[str]:
-    return sorted(k for k in mapping_doc.keys() if isinstance(k, str) and k.startswith("asb16-rq-"))
+    return requirement_row_keys(mapping_doc)
 
 
 def _bundle_rows() -> list[str]:
@@ -291,11 +293,7 @@ def _validate_mapping_alias_contract(
                         )
                 required_row_fields = _as_str_list(alias_cfg.get("required_row_fields"))
                 if required_row_fields:
-                    mapping_rows = [
-                        (key, value)
-                        for key, value in active_doc.items()
-                        if isinstance(key, str) and key.startswith("asb16-rq-") and isinstance(value, dict)
-                    ]
+                    mapping_rows = list(collect_requirement_rows(active_doc).items())
                     if not mapping_rows:
                         violation_count += 1
                         violations.append(

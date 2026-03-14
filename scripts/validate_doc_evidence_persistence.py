@@ -29,6 +29,8 @@ from typing import Any
 
 import yaml
 
+from contract_binding_mapping_common import is_stream_version
+
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -116,6 +118,8 @@ def _load_strict_doc_scopes(repo_root: Path) -> tuple[dict[str, str], list[str],
         stream_version = str(row.get("stream_version", "")).strip() or f"row_{idx}"
         if stream_version in stream_versions_seen:
             errors.append(f"stream_doc_registry_invalid:duplicate_stream_version:{stream_version}")
+        if stream_version.startswith("row_") or not is_stream_version(stream_version):
+            errors.append(f"stream_doc_registry_invalid:invalid_stream_version_format:{stream_version}")
         stream_versions_seen.add(stream_version)
         governance_doc = _norm_path(row.get("governance_doc", ""))
         review_doc = _norm_path(row.get("review_doc", ""))

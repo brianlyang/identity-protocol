@@ -26,6 +26,8 @@ from typing import List, Set, Tuple
 
 import yaml
 
+from contract_binding_mapping_common import is_stream_version
+
 
 INDEX_PATH = "docs/governance/AUDIT_SNAPSHOT_INDEX.md"
 STREAM_DOC_REGISTRY_PATH = "identity/protocol/mappings/stream-doc-registry.current.yaml"
@@ -320,6 +322,8 @@ def _load_stream_doc_registry(
         stream_version = str(row.get("stream_version", "")).strip() or f"row-{idx}"
         if stream_version in stream_versions_seen:
             errors.append(f"[INVALID_STREAM_DOC_REGISTRY] duplicate stream_version: {stream_version}")
+        if stream_version.startswith("row-") or not is_stream_version(stream_version):
+            errors.append(f"[INVALID_STREAM_DOC_REGISTRY] invalid stream_version format: {stream_version}")
         stream_versions_seen.add(stream_version)
         governance_doc = _norm_path(row.get("governance_doc", ""))
         review_doc = _norm_path(row.get("review_doc", ""))
@@ -352,6 +356,10 @@ def _load_stream_doc_registry(
             if stream_version in alias_versions_seen:
                 errors.append(
                     f"[INVALID_STREAM_DOC_REGISTRY] duplicate stream_doc_required_alias_refs stream_version: {stream_version}"
+                )
+            if stream_version.startswith("row-") or not is_stream_version(stream_version):
+                errors.append(
+                    f"[INVALID_STREAM_DOC_REGISTRY] invalid stream_doc_required_alias_refs stream_version format: {stream_version}"
                 )
             alias_versions_seen.add(stream_version)
 

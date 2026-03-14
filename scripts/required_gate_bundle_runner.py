@@ -93,6 +93,9 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-033",
     "asb16-rq-034",
     "asb16-rq-035",
+    "asb16-rq-036",
+    "asb16-rq-037",
+    "asb16-rq-038",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -131,6 +134,9 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-033": "execution_target_tuple_isolation",
     "asb16-rq-034": "multimodal_plugin_enforcement",
     "asb16-rq-035": "reasoning_loop_failclose_enforcement",
+    "asb16-rq-036": "downsink_path_immutability",
+    "asb16-rq-037": "downsink_path_write_guard",
+    "asb16-rq-038": "downsink_path_literal_lock",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -170,6 +176,9 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "execution_target_tuple_isolation": "execution_target_tuple_isolation_status",
     "multimodal_plugin_enforcement": "multimodal_plugin_enforcement_status",
     "reasoning_loop_failclose_enforcement": "reasoning_loop_failclose_status",
+    "downsink_path_immutability": "protocol_downsink_path_immutability_status",
+    "downsink_path_write_guard": "protocol_downsink_path_write_guard_status",
+    "downsink_path_literal_lock": "protocol_downsink_path_literal_lock_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (

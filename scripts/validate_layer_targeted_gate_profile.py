@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from contract_binding_mapping_common import requirement_row_keys
+
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
@@ -119,11 +121,7 @@ def main() -> int:
     except Exception as exc:
         parse_errors.append(f"contract_mapping_invalid:{mapping_path}:{exc}")
 
-    requirement_rows = sorted(
-        key
-        for key in mapping_doc.keys()
-        if isinstance(key, str) and key.startswith("asb16-rq-")
-    )
+    requirement_rows = requirement_row_keys(mapping_doc)
     requirement_set = set(requirement_rows)
 
     if not parse_errors:

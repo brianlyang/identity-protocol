@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-09T03:40:00Z"
-  row_count: 35
+  last_updated_utc: "2026-03-14T05:10:00Z"
+  row_count: 38
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -16,6 +16,7 @@ _meta:
     - "Hotfix extension adds RQ-033 execution-target tuple isolation mapping row with lane wiring closure."
     - "Post-audit alignment: RQ-018 canonical validator path now points to scripts/validate_dedup_monotonicity.py with wrapper compatibility retained."
     - "v1.6.2 multimodal stream adds RQ-034 multimodal plugin enforcement mapping row with central provider profile governance hooks."
+    - "v1.6.8 path-immutability stream is promoted into motherline rows RQ-036/037/038 to avoid side-chain drift."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1005,6 +1006,96 @@ asb16-rq-035:
     - IP-RL-RUN-007
     - IP-RL-RUN-008
   mapping_state: phase6_v162_reasoning_loop_seed
+
+asb16-rq-036:
+  requirement_id: ASB16-RQ-036
+  kernel_contract_id: rq_036_downsink_path_immutability_contract_v1
+  kernel_source_path: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  validator_ids:
+    - scripts/validate_protocol_downsink_path_immutability.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.8.md#11-requirement-mapping-closure-motherline-v168
+  report_field_refs:
+    - protocol_downsink_path_immutability_status
+    - contract_key
+    - runtime_mirror_contract_path
+    - required_domains
+    - error_code
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-DSPATH-001
+    - IP-DSPATH-002
+    - IP-DSPATH-003
+  mapping_state: phase6_v168_path_immutability_motherline
+
+asb16-rq-037:
+  requirement_id: ASB16-RQ-037
+  kernel_contract_id: rq_037_downsink_path_write_guard_contract_v1
+  kernel_source_path: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  validator_ids:
+    - scripts/validate_protocol_downsink_path_write_guard.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.8.md#11-requirement-mapping-closure-motherline-v168
+  report_field_refs:
+    - protocol_downsink_path_write_guard_status
+    - contract_key
+    - checked_candidate_count
+    - checked_candidates
+    - registry_rule_count
+    - error_code
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-DSPATH-001
+    - IP-DSPATH-002
+    - IP-DSPATH-004
+  mapping_state: phase6_v168_path_immutability_motherline
+
+asb16-rq-038:
+  requirement_id: ASB16-RQ-038
+  kernel_contract_id: rq_038_downsink_path_literal_lock_contract_v1
+  kernel_source_path: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  validator_ids:
+    - scripts/validate_protocol_downsink_path_literal_lock.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md#10-requirement-mapping-motherline-integration-v168
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.8.md#11-requirement-mapping-closure-motherline-v168
+  report_field_refs:
+    - protocol_downsink_path_literal_lock_status
+    - contract_key
+    - scan_file_count
+    - scan_files
+    - scan_globs
+    - registry_rule_count
+    - error_code
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-DSPATH-001
+    - IP-DSPATH-002
+    - IP-DSPATH-005
+  mapping_state: phase6_v168_path_immutability_motherline
 
 asb16-rq-030:
   requirement_id: ASB16-RQ-030

@@ -239,3 +239,44 @@ Protocol broadcast item for v1.6.8 must include:
 2. `identity/protocol/mappings/control-plane-invariants.current.yaml`
 3. `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
 4. `identity/protocol/mappings/stream-doc-registry.current.yaml`
+
+## 10) Requirement mapping motherline integration (v1.6.8)
+
+v1.6.8 is no longer allowed to exist as a “side-chain script bundle”.
+It must be integrated into the v1.6 motherline row mapping (`contract-binding.current.yaml`)
+and enforced through the unified execution bus (`required_gate_bundle_runner`).
+
+| Requirement ID | Mapping Key | Target Name | Validator | Priority | Gate Surfaces |
+| --- | --- | --- | --- | --- | --- |
+| ASB16-RQ-036 | asb16-rq-036 | downsink_path_immutability | scripts/validate_protocol_downsink_path_immutability.py | P0 | creator/readiness/e2e/full-scan/three-plane/ci |
+| ASB16-RQ-037 | asb16-rq-037 | downsink_path_write_guard | scripts/validate_protocol_downsink_path_write_guard.py | P0 | creator/readiness/e2e/full-scan/three-plane/ci |
+| ASB16-RQ-038 | asb16-rq-038 | downsink_path_literal_lock | scripts/validate_protocol_downsink_path_literal_lock.py | P0 | creator/readiness/e2e/full-scan/three-plane/ci |
+
+Closure requirements (all must hold simultaneously):
+
+1. All three requirement rows must exist in the active file pointed to by `contract-binding.current.yaml`.
+2. `required_gate_bundle_runner` must include key + target/status mappings for all three rows.
+3. `validate_control_plane_invariants` must report bundle-mapping parity with zero gap.
+4. Non-`*.current.*` alias files must never become governance entrypoints (no direct version-file wiring).
+
+## 11) Anti-forget baseline for future streams (no version hardcode)
+
+1. Stream discovery and validation must be dynamically resolved from `stream-doc-registry.current.yaml`.
+2. `stream_version` must match regex `^v\\d+\\.\\d+\\.\\d+$`.
+3. Coverage validation must not hardcode a single governance doc (for example, v1.6.0 only); it must resolve all active stream docs from current aliases.
+4. For any new stream (for example, v1.6.9 or v1.7.3), it is forbidden to land “side-route validators not integrated into motherline row mapping.”
+
+## 12) Serial verification interpretation for motherline integration
+
+For v1.6.8 motherline integration, serial replay interpretation is split into two dimensions:
+
+1. **Infrastructure closure dimension (must pass)**  
+   - control-plane invariants  
+   - required gate surface drift  
+   - contract-binding reference integrity  
+   - docs/evidence contract gates  
+   - contract mapping coverage (`--force-required`)  
+2. **Runtime readiness dimension (monitored, may remain conditional)**  
+   - deep-scan target identity P0/P1 state is reported and tracked, but does not invalidate already-closed infrastructure wiring by itself.
+
+This rule prevents false negatives where governance motherline closure is complete, while target instance business/runtime debt still exists and is tracked separately.
