@@ -44,6 +44,8 @@ M2M_CHECK_NAMES: set[str] = {
     "response_stamp_validation",
     "reply_identity_context_first_line",
     "send_time_reply_gate",
+    "protocol_lane_headstamp_continuity",
+    "host_transport_wiring_attestation",
     "headstamp_recurrence_closure",
     "execution_reply_identity_coherence",
     "required_gate_tuple_parity",
@@ -540,6 +542,8 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "reply_identity_context_first_line",
             "layer_intent_resolution",
             "send_time_reply_gate",
+            "protocol_lane_headstamp_continuity",
+            "host_transport_wiring_attestation",
             "headstamp_recurrence_closure",
             "execution_reply_identity_coherence",
             "writeback_continuity",
@@ -1460,6 +1464,35 @@ def main() -> int:
                     actor_id,
                     "--session-id",
                     scan_session_id,
+                    "--json-only",
+                ],
+                "protocol_lane_headstamp_continuity": [
+                    "python3",
+                    "scripts/validate_protocol_lane_headstamp_continuity.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--operation",
+                    "scan",
+                    "--stamp-json",
+                    stamp_artifact,
+                    "--actor-id",
+                    actor_id,
+                    "--expected-work-layer",
+                    effective_work_layer,
+                    "--expected-source-layer",
+                    effective_source_layer,
+                    "--json-only",
+                ],
+                "host_transport_wiring_attestation": [
+                    "python3",
+                    "scripts/validate_host_transport_wiring_attestation.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    iid,
+                    "--require-live-receipts",
                     "--json-only",
                 ],
                 "headstamp_recurrence_closure": [
@@ -4290,6 +4323,42 @@ def main() -> int:
                     ):
                         if k in send_doc:
                             check_payload[k] = send_doc.get(k)
+                if name == "protocol_lane_headstamp_continuity":
+                    lane_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "protocol_lane_headstamp_status",
+                        "protocol_lane_activation_status",
+                        "lane_activation_error_code",
+                        "headstamp_continuity_status",
+                        "headstamp_error_code",
+                        "requested_lane",
+                        "previous_lane",
+                        "resolved_lane",
+                        "route_source_ref",
+                        "lane_activation_evidence_ref",
+                        "protocol_request_detected",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in lane_doc:
+                            check_payload[k] = lane_doc.get(k)
+                if name == "host_transport_wiring_attestation":
+                    host_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "host_transport_wiring_attestation_status",
+                        "host_transport_wiring_attestation_live_coverage_status",
+                        "host_transport_wiring_attestation_required_channels",
+                        "host_transport_wiring_attestation_live_covered_channels",
+                        "host_transport_wiring_attestation_runtime_receipt_max_age_seconds",
+                        "host_transport_wiring_attestation_live_receipt_required",
+                        "host_transport_wiring_attestation_allowed_live_receipt_sources",
+                        "host_transport_wiring_attestation_state_file",
+                        "host_transport_wiring_attestation_receipt_pattern",
+                        "error_code",
+                        "stale_reasons",
+                    ):
+                        if k in host_doc:
+                            check_payload[k] = host_doc.get(k)
                 if name == "execution_reply_identity_coherence":
                     coherence_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

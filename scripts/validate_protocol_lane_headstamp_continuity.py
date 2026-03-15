@@ -169,6 +169,8 @@ def main() -> int:
         "headstamp_identity_id": "",
         "headstamp_actor_id": "",
         "actor_binding_identity_id": "",
+        "report_ref": "",
+        "stamp_ref": "",
         "stale_reasons": [],
         "evidence_ref": "",
     }
@@ -215,9 +217,9 @@ def main() -> int:
 
     resolved_lane = _norm_lane(
         _nonempty(
+            parsed_stamp.get("work_layer"),
             report_doc.get("work_layer"),
             report_doc.get("resolved_work_layer"),
-            parsed_stamp.get("work_layer"),
             requested_lane,
             "instance",
         )
@@ -227,6 +229,8 @@ def main() -> int:
         report_doc.get("route_source_ref"),
         report_doc.get("lane_resolution_decision"),
         report_doc.get("lane_resolution_source"),
+        stamp_doc.get("intent_source"),
+        stamp_doc.get("layer_intent_resolution_status"),
     )
 
     payload["requested_lane"] = requested_lane or "instance"
@@ -236,6 +240,8 @@ def main() -> int:
     payload["lane_activation_evidence_ref"] = report_ref or stamp_ref
     payload["protocol_request_detected"] = protocol_request_detected
     payload["evidence_ref"] = report_ref or stamp_ref or str(task_path)
+    payload["report_ref"] = report_ref
+    payload["stamp_ref"] = stamp_ref
 
     if not enforce_required:
         payload["stale_reasons"] = ["contract_not_required"]
@@ -254,7 +260,7 @@ def main() -> int:
         lane_status = STATUS_FAIL_REQUIRED
         lane_error_code = ERR_ROUTE_NOT_CONFIGURED
         lane_reasons.append("protocol_route_source_missing")
-    elif protocol_request_detected and not report_ref:
+    elif protocol_request_detected and not (report_ref or stamp_ref):
         lane_status = STATUS_FAIL_REQUIRED
         lane_error_code = ERR_LANE_RECEIPT_MISSING
         lane_reasons.append("lane_activation_receipt_missing")
