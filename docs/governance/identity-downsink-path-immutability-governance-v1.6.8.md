@@ -212,6 +212,18 @@ References:
 - https://developers.openai.com/codex/skills/
 - https://json-schema.org/understanding-json-schema/reference/object
 
+### 6.1 Cross-verification evidence capture contract (roundtable/vendor/context7/openai-doc)
+
+To prevent “reference drift by memory”, v1.6.8 requires machine-citable cross-verification artifacts:
+
+1. Roundtable/internal synthesis must be captured in the paired review ledger section for the same stream.
+2. Vendor/reference anchors must include stable URL pointers (no screenshot-only evidence).
+3. Context7 retrieval (library-doc alignment) and OpenAI official doc retrieval are treated as distinct evidence tracks:
+   - Context7 track: dependency/library behavior references used by governance design.
+   - OpenAI-doc track: official OpenAI platform/codex policy references.
+4. Any stream claiming cross-verification completion without ledger-citable evidence refs is `Implementation CONDITIONAL_PASS`.
+5. This contract is version-agnostic and must remain alias/registry-driven (no fixed stream hardcoding).
+
 ## 7) Broadcast directive template (for downstream identity rollout)
 
 Protocol broadcast item for v1.6.8 must include:

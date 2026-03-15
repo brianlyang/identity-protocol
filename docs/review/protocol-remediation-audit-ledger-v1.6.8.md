@@ -396,3 +396,24 @@ Any of these outcomes is `FAIL_REQUIRED` and blocks merge in the required gate w
 1. v1.6.8 now provides consistent machine semantics from scan summary to three-plane decision mode.
 2. host-visible runtime freshness is no longer “receipt-presence only”.
 3. anti-forget guidance is integrated into governance control surfaces rather than manual memory.
+
+### 16.5 Cross-verification evidence capture hardening (2026-03-15)
+
+Problem:
+
+1. cross-verification statements can degrade into prose-only claims when roundtable/vendor/context7/openai-doc references are not consistently captured.
+2. this creates recall risk in later streams even when technical controls are correct.
+
+Fix landed:
+
+1. governance doc now includes an explicit evidence capture contract for:
+   - roundtable/internal synthesis,
+   - vendor/reference URLs,
+   - Context7 retrieval track,
+   - OpenAI official doc retrieval track.
+2. closure interpretation is tightened:
+   - missing ledger-citable evidence refs keeps stream at `Implementation CONDITIONAL_PASS`.
+
+Checkpoint verdict update:
+
+1. v1.6.8 cross-verification is now enforceable as a machine-auditable capture discipline, not memory-dependent narration.
