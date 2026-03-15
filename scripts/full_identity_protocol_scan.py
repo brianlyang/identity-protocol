@@ -1436,6 +1436,8 @@ def main() -> int:
                     actor_id,
                     "--session-id",
                     scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
                     "--json-only",
                 ],
                 "send_time_reply_gate_validate": [

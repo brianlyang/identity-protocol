@@ -311,6 +311,16 @@ Required CI extension:
    - probe `tuple_binding_migration_contract_pass` must pass after backfill.
    - probe `tuple_binding_stale_receipt_blocked` must fail-close on stale replay receipt.
 
+Strict scan live run-id pass-through extension (mandatory):
+
+1. strict full-scan flow must bind one canonical scan run id and pass it to both lanes:
+   - `required_gate_bundle_runner.py --run-id <required_gate_bundle_run_id>`
+   - `final_emit_governed.py --run-id <required_gate_bundle_run_id>`
+2. host-visible live attestation in the same scan must verify against the same bound id:
+   - `validate_host_transport_wiring_attestation.py --require-run-id <required_gate_bundle_run_id>`
+3. if send-time lane emits live receipts under a different run id, attestation must fail-close (`IP-HDSTAMP-003`).
+4. this contract is dynamic/alias-driven and does not permit identity-specific or literal run-id hardcoding.
+
 ### 2.4.1 Headstamp continuity contract (mandatory)
 
 1. Egress wrapper must treat first-line identity tuple and layer tuple as send-time hard gate input.

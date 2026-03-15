@@ -2330,3 +2330,31 @@ Checkpoint verdict update:
 1. global runtime write/read permission failures are now normalized into explicit escalation-required evidence instead of generic ambiguous failures.
 2. control-plane operators can deterministically classify “policy failure” vs “privilege boundary failure” from machine output.
 3. strict closure remains fail-close: no permission fallback path can silently mark governance surfaces as pass.
+
+### 26.28 Strict scan run-id parity between required-gate lane and send-time lane (2026-03-15)
+
+Problem:
+
+1. strict full-scan bound host-visible attestation to `required_gate_bundle_run_id`.
+2. send-time lane invocation in full scan did not pass explicit `--run-id`, so egress wrapper could emit a different runtime run id.
+3. result was deterministic `IP-HDSTAMP-003` run-id mismatch in host-visible attestation despite valid tuple/session binding.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - `send_time_reply_gate` command now passes:
+     - `--run-id <required_gate_bundle_run_id>`
+   - this aligns required-gate bundle lane and send-time host-visible receipt emission under one strict run-id tuple.
+
+Replay (serial, machine evidence):
+
+1. strict target deep-scan serial replay summary:
+   - runtime replay artifact `v166_deepscan_serial3_after_runidfix_<timestamp>.json`
+2. round-level result:
+   - round-1: `p0=0`, `summary_m2m.fail=0` (run-id mismatch class closed)
+   - rounds-2/3: residual `IP-HDSTAMP-003` remained, but stale reasons shifted to receipt-source invalid (`ci_fixture`) instead of run-id mismatch.
+
+Checkpoint verdict update:
+
+1. strict scan run-id parity gap is closed in orchestration (no hardcoded id literals).
+2. remaining host-visible instability has moved to source-selection contamination (`runtime_dialogue` vs `ci_fixture`) and is tracked as a separate closure item (not a run-id binding regression).
