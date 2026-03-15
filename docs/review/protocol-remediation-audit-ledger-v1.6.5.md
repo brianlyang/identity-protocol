@@ -750,3 +750,26 @@ Result:
 1. all six commands returned `PASS_REQUIRED` / `PASS`.
 2. budget/status mirrors now track the latest no-rebound baseline (`error_codes=440`, `error_code_families=150`).
 3. closure remains tooling-governed (renderer + validators), with no manual hardcoded counter edits.
+
+### 7.20 Status mirror resync after delegated invocation counter drift (2026-03-15)
+
+Context:
+
+1. after strict governance delegate growth, live `control_plane_budget.payload` changed:
+   - `required_gate_delegate_inclusive_python_invocations: 160 -> 161`
+2. this produced `validate_control_plane_status_sync.py` mismatch:
+   - `checks.control_plane_budget.payload` drift.
+
+Action (canonical, serial):
+
+1. `python3 scripts/render_control_plane_status.py --write --json-only`
+2. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+5. `python3 scripts/docs_command_contract_check.py`
+
+Result:
+
+1. status sync returned `PASS_REQUIRED` with `mismatch_count=0`.
+2. control-plane budget/drift/docs checks stayed green.
+3. mirror truthfulness contract remains satisfied under iterative delegate counter growth.

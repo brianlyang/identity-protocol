@@ -434,6 +434,7 @@ Interpretation lock:
    - observed delta,
    - replay commands,
    - pass evidence.
+4. status payload-level drifts (for example `checks.control_plane_budget.payload`) are part of the same mirror contract and require immediate renderer resync in the same checkpoint.
 
 ## 9) External references
 
