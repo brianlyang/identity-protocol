@@ -27,7 +27,9 @@ from create_identity_pack import materialize_protocol_host_gateway_artifacts
 
 identity_root = fixture_root / "identity"
 probe_pack = identity_root / "probe-tuple-binding"
+probe_migration_pack = identity_root / "probe-max-age-migration"
 (probe_pack / "runtime" / "state").mkdir(parents=True, exist_ok=True)
+(probe_migration_pack / "runtime" / "state").mkdir(parents=True, exist_ok=True)
 catalog_path = fixture_root / "catalog.yaml"
 
 catalog = {
@@ -37,6 +39,13 @@ catalog = {
             "id": "probe-tuple-binding",
             "status": "active",
             "pack_path": str(probe_pack),
+            "profile": "runtime",
+            "runtime_mode": "local_only",
+        },
+        {
+            "id": "probe-max-age-migration",
+            "status": "active",
+            "pack_path": str(probe_migration_pack),
             "profile": "runtime",
             "runtime_mode": "local_only",
         }
@@ -145,8 +154,29 @@ materialize_protocol_host_gateway_artifacts(
     protocol_root=repo_root,
 )
 
+task_migration = json.loads(json.dumps(task))
+task_migration["protocol_unique_entry_gate_contract_v1"].pop("entry_receipt_max_age_seconds", None)
+task_migration["protocol_host_unique_channel_contract_v1"]["ingress_proof_policy"][
+    "signer_secret_env"
+] = "IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_MAX_AGE_MIGRATION"
+task_migration["protocol_host_unique_channel_contract_v1"]["egress_grant_policy"][
+    "signer_secret_env"
+] = "IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_MAX_AGE_MIGRATION"
+
+materialize_protocol_host_gateway_artifacts(
+    task=task_migration,
+    identity_id="probe-max-age-migration",
+    pack_dir=probe_migration_pack,
+    catalog_path=catalog_path,
+    protocol_root=repo_root,
+)
+
 (probe_pack / "CURRENT_TASK.json").write_text(
     json.dumps(task, ensure_ascii=False, indent=2) + "\n",
+    encoding="utf-8",
+)
+(probe_migration_pack / "CURRENT_TASK.json").write_text(
+    json.dumps(task_migration, ensure_ascii=False, indent=2) + "\n",
     encoding="utf-8",
 )
 catalog_path.write_text(
@@ -157,31 +187,40 @@ PY
 
 CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-tuple-binding"
+MIGRATION_ID="probe-max-age-migration"
 ACTOR_ID="assistant:ci-probe"
 SESSION_ID="session-tuple-binding-probe"
 RUN_ID="probe-tuple-binding-run"
+RUN_ID_MIGRATION="probe-max-age-migration-run"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-tuple-binding/runtime/gate/protocol_ingress_wrapper.py"
+INGRESS_WRAPPER_PATH_MIGRATION="${FIXTURE_ROOT}/identity/probe-max-age-migration/runtime/gate/protocol_ingress_wrapper.py"
 RECEIPT_PATH="${RESULT_ROOT}/receipt.validate.json"
 RECEIPT_TAMPERED_PATH="${RESULT_ROOT}/receipt.tampered.validate.json"
 RECEIPT_STALE_PATH="${RESULT_ROOT}/receipt.stale.validate.json"
+RECEIPT_MIGRATION_PATH="${RESULT_ROOT}/receipt.migration.validate.json"
 
-python3 - <<'PY' "${RECEIPT_PATH}" "${RECEIPT_TAMPERED_PATH}" "${RECEIPT_STALE_PATH}" "${IDENTITY_ID}" "${RUN_ID}" "${ACTOR_ID}" "${SESSION_ID}" "${INGRESS_WRAPPER_PATH}"
+python3 - <<'PY' "${RECEIPT_PATH}" "${RECEIPT_TAMPERED_PATH}" "${RECEIPT_STALE_PATH}" "${RECEIPT_MIGRATION_PATH}" "${IDENTITY_ID}" "${RUN_ID}" "${MIGRATION_ID}" "${RUN_ID_MIGRATION}" "${ACTOR_ID}" "${SESSION_ID}" "${INGRESS_WRAPPER_PATH}" "${INGRESS_WRAPPER_PATH_MIGRATION}"
 from __future__ import annotations
 
 import json
 import shutil
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 receipt_path = Path(sys.argv[1]).resolve()
 tampered_path = Path(sys.argv[2]).resolve()
 stale_path = Path(sys.argv[3]).resolve()
-identity_id = sys.argv[4]
-run_id = sys.argv[5]
-actor_id = sys.argv[6]
-session_id = sys.argv[7]
-ingress_wrapper_path = str(Path(sys.argv[8]).resolve())
+migration_path = Path(sys.argv[4]).resolve()
+identity_id = sys.argv[5]
+run_id = sys.argv[6]
+migration_id = sys.argv[7]
+migration_run_id = sys.argv[8]
+actor_id = sys.argv[9]
+session_id = sys.argv[10]
+ingress_wrapper_path = str(Path(sys.argv[11]).resolve())
+migration_ingress_wrapper_path = str(Path(sys.argv[12]).resolve())
 
 receipt = {
     "bundle_contract_id": "hotfix_p0_007_ucg_control_plane_freeze_contract_v1",
@@ -199,9 +238,11 @@ receipt = {
     "wrapper_dispatch_required": True,
     "wrapper_dispatch_proof_required": True,
     "wrapper_dispatch_proof_status": "PASS_REQUIRED",
+    "wrapper_dispatch_proof_issued_at_epoch": int(time.time()),
     "wrapper_parent_attestation_required": True,
     "wrapper_parent_attestation_status": "PASS_REQUIRED",
     "wrapper_parent_attestation_expected_path": ingress_wrapper_path,
+    "created_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
 }
 receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -212,9 +253,18 @@ tampered_path.write_text(json.dumps(tampered, ensure_ascii=False, indent=2) + "\
 
 shutil.copy2(receipt_path, stale_path)
 stale_epoch = time.time() - 4000
+stale = json.loads(stale_path.read_text(encoding="utf-8"))
+stale["wrapper_dispatch_proof_issued_at_epoch"] = int(stale_epoch)
+stale["created_at_utc"] = datetime.fromtimestamp(stale_epoch, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+stale_path.write_text(json.dumps(stale, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+# replay/touch attack simulation: file mtime refreshed to "now" while payload timestamp stays stale.
 Path(stale_path).touch()
-import os
-os.utime(stale_path, (stale_epoch, stale_epoch))
+
+migration_receipt = dict(receipt)
+migration_receipt["identity_id"] = migration_id
+migration_receipt["run_id_binding"] = migration_run_id
+migration_receipt["wrapper_parent_attestation_expected_path"] = migration_ingress_wrapper_path
+migration_path.write_text(json.dumps(migration_receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
 
 run_probe() {
@@ -283,6 +333,25 @@ elif name == "tuple_binding_stale_receipt_blocked":
     stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
     if not any(token.startswith("entry_receipt_stale:") for token in stale):
         raise SystemExit("tuple_binding_stale_receipt_blocked: expected entry_receipt_stale stale reason")
+elif name == "tuple_binding_migration_missing_max_age_blocked":
+    if rc == 0:
+        raise SystemExit("tuple_binding_migration_missing_max_age_blocked: expected non-zero rc")
+    stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
+    if "entry_receipt_max_age_seconds_invalid" not in stale:
+        raise SystemExit(
+            "tuple_binding_migration_missing_max_age_blocked: expected entry_receipt_max_age_seconds_invalid"
+        )
+elif name == "tuple_binding_migration_backfill_apply":
+    if rc != 0:
+        raise SystemExit("tuple_binding_migration_backfill_apply: expected zero rc")
+    status = str(doc.get("contract_backfill_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("tuple_binding_migration_backfill_apply: contract_backfill_status must be PASS_REQUIRED")
+elif name == "tuple_binding_migration_contract_pass":
+    if rc != 0:
+        raise SystemExit("tuple_binding_migration_contract_pass: expected zero rc")
+    if str(doc.get("protocol_unique_entry_gate_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("tuple_binding_migration_contract_pass: gate status must be PASS_REQUIRED")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -351,6 +420,39 @@ run_probe tuple_binding_tampered_tuple_blocked \
   --actor-id "${ACTOR_ID}" \
   --session-id "${SESSION_ID}" \
   --entry-receipt "${RECEIPT_TAMPERED_PATH}" \
+  --force-check \
+  --require-entry-receipt \
+  --json-only
+
+run_probe tuple_binding_migration_missing_max_age_blocked \
+  python3 scripts/validate_protocol_unique_entry_gate.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${MIGRATION_ID}" \
+  --operation validate \
+  --run-id "${RUN_ID_MIGRATION}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --entry-receipt "${RECEIPT_MIGRATION_PATH}" \
+  --force-check \
+  --require-entry-receipt \
+  --json-only
+
+run_probe tuple_binding_migration_backfill_apply \
+  python3 scripts/repair_contract_backfill.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${MIGRATION_ID}" \
+  --apply \
+  --json-only
+
+run_probe tuple_binding_migration_contract_pass \
+  python3 scripts/validate_protocol_unique_entry_gate.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${MIGRATION_ID}" \
+  --operation validate \
+  --run-id "${RUN_ID_MIGRATION}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --entry-receipt "${RECEIPT_MIGRATION_PATH}" \
   --force-check \
   --require-entry-receipt \
   --json-only

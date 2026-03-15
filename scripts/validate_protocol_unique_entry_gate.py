@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ from protocol_infra_contract import (
     HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS as INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS,
     HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS as INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
@@ -88,6 +90,7 @@ HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS = set(INFRA_HOST_VISIBLE_SURFAC
 HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
 HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS
 HOST_GATEWAY_ALLOWED_FIELDS = {
     "contract_id",
     "required",
@@ -169,6 +172,7 @@ HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
     "required_channels",
     "runtime_state_file",
     "runtime_receipt_pattern",
+    "runtime_receipt_max_age_seconds",
     "required_attestation_fields",
     "required_pass_status_fields",
     "required_live_probe_delegate",
@@ -229,6 +233,17 @@ ENTRY_RECEIPT_OPERATION_FIELDS: tuple[str, ...] = (
     "operation",
     "requested_operation",
     "operation_name",
+)
+ENTRY_RECEIPT_PAYLOAD_EPOCH_FIELDS: tuple[str, ...] = (
+    "wrapper_dispatch_proof_issued_at_epoch",
+    "issued_at_epoch",
+    "created_at_epoch",
+)
+ENTRY_RECEIPT_PAYLOAD_ISO_FIELDS: tuple[str, ...] = (
+    "created_at_utc",
+    "created_at",
+    "issued_at_utc",
+    "issued_at",
 )
 
 
@@ -407,6 +422,37 @@ def _load_receipt(path: Path) -> dict[str, Any]:
     return data
 
 
+def _parse_iso_timestamp_to_epoch(value: Any) -> int:
+    token = str(value or "").strip()
+    if not token:
+        return 0
+    normalized = token
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except Exception:
+        return 0
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    try:
+        return int(dt.timestamp())
+    except Exception:
+        return 0
+
+
+def _extract_receipt_payload_timestamp_epoch(receipt: dict[str, Any]) -> tuple[int, str]:
+    for field in ENTRY_RECEIPT_PAYLOAD_EPOCH_FIELDS:
+        value = _safe_int(receipt.get(field), default=0)
+        if value > 0:
+            return value, field
+    for field in ENTRY_RECEIPT_PAYLOAD_ISO_FIELDS:
+        value = _parse_iso_timestamp_to_epoch(receipt.get(field))
+        if value > 0:
+            return value, field
+    return 0, ""
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate protocol unique-entry gate contract.")
     ap.add_argument("--catalog", required=True)
@@ -477,6 +523,11 @@ def main() -> int:
         "protocol_unique_entry_receipt_required_fields": [],
         "protocol_unique_entry_receipt_max_age_seconds": 0,
         "protocol_unique_entry_receipt_age_seconds": -1,
+        "protocol_unique_entry_receipt_payload_age_seconds": -1,
+        "protocol_unique_entry_receipt_file_age_seconds": -1,
+        "protocol_unique_entry_receipt_age_source": "",
+        "protocol_unique_entry_receipt_payload_timestamp_epoch": 0,
+        "protocol_unique_entry_receipt_payload_timestamp_field": "",
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_bundle_key": "",
@@ -540,6 +591,7 @@ def main() -> int:
         "protocol_host_visible_surface_required_channels": [],
         "protocol_host_visible_surface_state_file": "",
         "protocol_host_visible_surface_receipt_pattern": "",
+        "protocol_host_visible_surface_runtime_receipt_max_age_seconds": 0,
         "protocol_host_visible_surface_required_attestation_fields": [],
         "protocol_host_visible_surface_required_pass_status_fields": [],
         "protocol_host_visible_surface_live_probe_delegate": "",
@@ -651,14 +703,27 @@ def main() -> int:
             host_visible_surface_issues.append("host_visible_surface_required_channels_missing")
         state_file = str(host_visible_surface_contract.get("runtime_state_file", "")).strip()
         receipt_pattern = str(host_visible_surface_contract.get("runtime_receipt_pattern", "")).strip()
+        max_age_raw = host_visible_surface_contract.get(
+            "runtime_receipt_max_age_seconds",
+            HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
+        )
+        try:
+            runtime_receipt_max_age_seconds = int(max_age_raw)
+        except Exception:
+            runtime_receipt_max_age_seconds = 0
         payload["protocol_host_visible_surface_state_file"] = state_file
         payload["protocol_host_visible_surface_receipt_pattern"] = receipt_pattern
+        payload["protocol_host_visible_surface_runtime_receipt_max_age_seconds"] = (
+            runtime_receipt_max_age_seconds
+        )
         if not state_file:
             host_visible_surface_issues.append("host_visible_surface_state_file_missing")
         if not receipt_pattern:
             host_visible_surface_issues.append("host_visible_surface_receipt_pattern_missing")
         if receipt_pattern and receipt_pattern != HOST_VISIBLE_SURFACE_RECEIPT_PATTERN:
             host_visible_surface_issues.append("host_visible_surface_receipt_pattern_mismatch")
+        if runtime_receipt_max_age_seconds <= 0:
+            host_visible_surface_issues.append("host_visible_surface_runtime_receipt_max_age_seconds_invalid")
         attestation_fields = set(_as_str_list(host_visible_surface_contract.get("required_attestation_fields")))
         payload["protocol_host_visible_surface_required_attestation_fields"] = sorted(attestation_fields)
         if not HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS.issubset(attestation_fields):
@@ -1570,12 +1635,41 @@ def main() -> int:
         receipt_wrapper_parent_expected_path = str(
             receipt.get("wrapper_parent_attestation_expected_path", "")
         ).strip()
+        receipt_payload_epoch, receipt_payload_field = _extract_receipt_payload_timestamp_epoch(receipt)
+        payload["protocol_unique_entry_receipt_payload_timestamp_epoch"] = receipt_payload_epoch
+        payload["protocol_unique_entry_receipt_payload_timestamp_field"] = receipt_payload_field
         receipt_age_seconds = -1
         if tuple_binding_required and entry_receipt_max_age_seconds > 0:
+            now_epoch = int(time.time())
+            receipt_file_age_seconds = -1
             try:
-                receipt_age_seconds = max(0, int(time.time() - receipt_path.stat().st_mtime))
+                receipt_file_age_seconds = max(0, int(now_epoch - receipt_path.stat().st_mtime))
             except Exception:
+                receipt_file_age_seconds = -1
+            payload["protocol_unique_entry_receipt_file_age_seconds"] = receipt_file_age_seconds
+
+            receipt_payload_age_seconds = -1
+            if receipt_payload_epoch > 0:
+                if receipt_payload_epoch > now_epoch + 30:
+                    payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
+                    payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
+                    payload["error_code"] = ERR_CONTRACT_INVALID
+                    payload["stale_reasons"] = [
+                        "entry_receipt_payload_timestamp_in_future:"
+                        f"payload_epoch={receipt_payload_epoch}:now_epoch={now_epoch}"
+                    ]
+                    _emit(payload, json_only=args.json_only)
+                    return 1
+                receipt_payload_age_seconds = max(0, now_epoch - receipt_payload_epoch)
+            payload["protocol_unique_entry_receipt_payload_age_seconds"] = receipt_payload_age_seconds
+
+            available_ages = [x for x in [receipt_file_age_seconds, receipt_payload_age_seconds] if x >= 0]
+            if available_ages:
+                receipt_age_seconds = max(available_ages)
+                payload["protocol_unique_entry_receipt_age_source"] = "max(payload_timestamp,file_mtime)"
+            else:
                 receipt_age_seconds = -1
+                payload["protocol_unique_entry_receipt_age_source"] = "unavailable"
             payload["protocol_unique_entry_receipt_age_seconds"] = receipt_age_seconds
             if receipt_age_seconds < 0:
                 payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
@@ -1590,7 +1684,9 @@ def main() -> int:
                 payload["error_code"] = ERR_CONTRACT_INVALID
                 payload["stale_reasons"] = [
                     "entry_receipt_stale:"
-                    f"age_seconds={receipt_age_seconds}:max_age_seconds={entry_receipt_max_age_seconds}"
+                    f"age_seconds={receipt_age_seconds}:max_age_seconds={entry_receipt_max_age_seconds}:"
+                    f"payload_age_seconds={payload.get('protocol_unique_entry_receipt_payload_age_seconds', -1)}:"
+                    f"file_age_seconds={payload.get('protocol_unique_entry_receipt_file_age_seconds', -1)}"
                 ]
                 _emit(payload, json_only=args.json_only)
                 return 1

@@ -207,6 +207,13 @@ def _merge_required_skills(node: dict[str, Any], required_skill_id: str) -> bool
     return True
 
 
+def _safe_int(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return int(default)
+
+
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -390,6 +397,11 @@ def _normalize_unique_entry_contracts(task: dict[str, Any]) -> tuple[list[str], 
             node["entry_receipt_state_file"] = str(default.get("entry_receipt_state_file", "")).strip()
         if not str(node.get("entry_receipt_history_pattern", "")).strip():
             node["entry_receipt_history_pattern"] = str(default.get("entry_receipt_history_pattern", "")).strip()
+        default_max_age_seconds = _safe_int(default.get("entry_receipt_max_age_seconds"), default=1800)
+        if default_max_age_seconds <= 0:
+            default_max_age_seconds = 1800
+        if _safe_int(node.get("entry_receipt_max_age_seconds"), default=0) <= 0:
+            node["entry_receipt_max_age_seconds"] = default_max_age_seconds
         receipt_fields = node.get("entry_receipt_required_fields")
         default_receipt_fields = [
             str(item).strip()
@@ -657,6 +669,19 @@ def _normalize_host_visible_surface_contracts(task: dict[str, Any]) -> tuple[lis
             node["runtime_receipt_pattern"] = (
                 str(default.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
             )
+        max_age_raw = node.get("runtime_receipt_max_age_seconds")
+        try:
+            max_age_seconds = int(max_age_raw)
+        except Exception:
+            max_age_seconds = 0
+        if max_age_seconds <= 0:
+            try:
+                max_age_seconds = int(default.get("runtime_receipt_max_age_seconds", 0))
+            except Exception:
+                max_age_seconds = 0
+        if max_age_seconds <= 0:
+            max_age_seconds = 300
+        node["runtime_receipt_max_age_seconds"] = int(max_age_seconds)
         attestation_fields = node.get("required_attestation_fields")
         if not isinstance(attestation_fields, list):
             attestation_fields = []
@@ -914,6 +939,7 @@ def main() -> int:
             or updated.get(k, {}).get("require_strict_operation_receipt") is not True
             or not str((updated.get(k) or {}).get("entry_receipt_state_file", "")).strip()
             or not str((updated.get(k) or {}).get("entry_receipt_history_pattern", "")).strip()
+            or _safe_int((updated.get(k) or {}).get("entry_receipt_max_age_seconds"), default=0) <= 0
             or not isinstance((updated.get(k) or {}).get("entry_receipt_required_fields"), list)
             or not list((updated.get(k) or {}).get("entry_receipt_required_fields") or [])
         )
@@ -1128,6 +1154,7 @@ def main() -> int:
             )
             or not str((updated.get(k) or {}).get("runtime_state_file", "")).strip()
             or not str((updated.get(k) or {}).get("runtime_receipt_pattern", "")).strip()
+            or _safe_int((updated.get(k) or {}).get("runtime_receipt_max_age_seconds", 0), default=0) <= 0
             or not isinstance((updated.get(k) or {}).get("required_attestation_fields"), list)
             or not set(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS).issubset(
                 {

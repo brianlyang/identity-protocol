@@ -1893,3 +1893,48 @@ Three-plane alignment:
    - `tuple_context_projection`
    - `governance_closure_axes.tuple_context_consistency_status`
 2. this keeps Conditional-Go reasoning aligned with scan tuple-context diagnostics.
+
+### 26.19 Migration max-age closure + payload freshness hardening (2026-03-15)
+
+Problem:
+
+1. legacy active packs could miss `entry_receipt_max_age_seconds`, causing strict unique-entry checks to fail with
+   `entry_receipt_max_age_seconds_invalid` even after code-level freshness guards landed.
+2. freshness evaluation based only on receipt file mtime could be bypassed by replay touch/copy (mtime refresh).
+3. three-plane could report `decision_mode=FULL_GO` while `tuple_context_consistency_status=FAIL_REQUIRED`,
+   creating semantic conflict in machine interpretation.
+
+Fix landed:
+
+1. `scripts/repair_contract_backfill.py`
+   - unique-entry normalization now auto-backfills `entry_receipt_max_age_seconds` to a positive default
+     when missing/non-positive.
+   - post-normalization invalid checks now treat non-positive max-age as fail-close invalid state.
+2. `scripts/validate_protocol_unique_entry_gate.py`
+   - freshness now prefers payload timestamp fields (epoch/ISO) with file mtime as secondary evidence.
+   - effective age uses `max(payload_age_seconds, file_age_seconds)` to fail-close touch/copy replay.
+   - stale reason now emits both age components:
+     - `entry_receipt_stale:...:payload_age_seconds=<p>:file_age_seconds=<f>`
+3. `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - added migration probe chain:
+     - `tuple_binding_migration_missing_max_age_blocked`
+     - `tuple_binding_migration_backfill_apply`
+     - `tuple_binding_migration_contract_pass`
+   - stale probe now simulates touched replay receipts (fresh mtime + stale payload timestamp).
+4. `scripts/report_three_plane_status.py`
+   - `decision_mode=FULL_GO` now requires tuple-context consistency pass as well.
+
+Replay:
+
+1. tuple probe suite now runs seven required probes and passes end-to-end, including migration + touched-replay stale checks.
+2. project active pack (`base-repo-architect`) reproduced pre-fix failure:
+   - `entry_receipt_max_age_seconds_invalid`
+3. after `repair_contract_backfill.py --apply`, strict unique-entry contract check returns:
+   - `protocol_unique_entry_gate_status=PASS_REQUIRED`
+   - `protocol_unique_entry_receipt_max_age_seconds=1800`
+
+Checkpoint verdict update:
+
+1. v1.6.6 tuple/freshness closure now covers both new-code path and legacy pack migration path.
+2. stale-replay semantics are fail-closed against file-touch bypass attempts.
+3. three-plane decision semantics are now consistent with tuple-context closure axis.

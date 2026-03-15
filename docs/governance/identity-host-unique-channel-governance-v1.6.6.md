@@ -282,9 +282,19 @@ Strict binding closure extension (mandatory):
 Strict receipt freshness extension (mandatory):
 
 1. `protocol_unique_entry_gate_contract_v1` must declare `entry_receipt_max_age_seconds` (>0).
-2. Under strict tuple-binding paths, receipt age must be within `entry_receipt_max_age_seconds`.
-3. Stale receipt replay outside freshness window is `FAIL_REQUIRED` with stale reason:
-   - `entry_receipt_stale:age_seconds=<n>:max_age_seconds=<m>`
+2. Under strict tuple-binding paths, receipt freshness must be computed from both:
+   - payload signed/issued timestamp (primary), and
+   - receipt file mtime (secondary).
+3. Effective freshness age is `max(payload_age_seconds, file_age_seconds)` to fail-close touch/copy replay attempts.
+4. Receipt payload timestamp parsing order is contract-fixed:
+   - epoch fields first (for example `wrapper_dispatch_proof_issued_at_epoch`)
+   - ISO fields next (for example `created_at_utc`)
+5. If payload timestamp is in the future (beyond skew tolerance), validation must fail-close.
+6. Stale receipt replay outside freshness window is `FAIL_REQUIRED` with stale reason:
+   - `entry_receipt_stale:age_seconds=<n>:max_age_seconds=<m>:payload_age_seconds=<p>:file_age_seconds=<f>`
+7. Migration closure is mandatory:
+   - `repair_contract_backfill.py` must normalize missing/invalid `entry_receipt_max_age_seconds` to a positive default from contract skeleton.
+   - active runtime packs cannot remain in a state where `entry_receipt_max_age_seconds<=0`.
 
 Required CI extension:
 
@@ -294,6 +304,9 @@ Required CI extension:
    - probe `tuple_binding_incomplete_blocked` must fail-close as expected.
    - probe `tuple_binding_complete_pass` must pass with `PASS_REQUIRED`.
    - probe `tuple_binding_tampered_tuple_blocked` must fail-close on actor/session tuple mismatch.
+   - probe `tuple_binding_migration_missing_max_age_blocked` must fail-close before backfill.
+   - probe `tuple_binding_migration_backfill_apply` must pass and apply migration fix.
+   - probe `tuple_binding_migration_contract_pass` must pass after backfill.
    - probe `tuple_binding_stale_receipt_blocked` must fail-close on stale replay receipt.
 
 ### 2.4.1 Headstamp continuity contract (mandatory)
