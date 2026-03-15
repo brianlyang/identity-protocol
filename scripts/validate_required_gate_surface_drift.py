@@ -56,6 +56,7 @@ GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_gateway_wrappe
 HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_host_visible_surface_live_probes_ci.sh"
 UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh"
 DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_downsink_path_immutability_probes_ci.sh"
+INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_installer_version_baseline_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
@@ -63,6 +64,7 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
     UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT,
     DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
+    INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
@@ -102,6 +104,10 @@ DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = 
     "scripts/validate_protocol_downsink_path_immutability.py",
     "scripts/validate_protocol_downsink_path_write_guard.py",
     "scripts/validate_protocol_downsink_path_literal_lock.py",
+)
+INSTALLER_VERSION_BASELINE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/identity_installer.py",
+    "scripts/check_version_baseline_migration_closure.py",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -1233,6 +1239,49 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + downsink_missing_tokens))
 
+    installer_baseline_probe_delegate_path = repo_root / INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT
+    if not installer_baseline_probe_delegate_path.exists():
+        missing_surface_files.append(INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(installer_baseline_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in INSTALLER_VERSION_BASELINE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts and script not in text
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_install_probe = all(
+            token in text
+            for token in (
+                "run_probe install_legacy_pack_version_drift_blocked",
+                "scripts/identity_installer.py",
+                "version_baseline_apply_status",
+                "version_baseline_verify_status",
+            )
+        )
+        has_migration_closure_probe = all(
+            token in text
+            for token in (
+                "run_probe install_then_migration_closure_pass",
+                "scripts/check_version_baseline_migration_closure.py",
+                "--catalog",
+                "--json-only",
+            )
+        )
+        installer_missing_tokens: list[str] = []
+        if not has_install_probe:
+            installer_missing_tokens.append("installer_version_baseline_install_probe_invocation_missing")
+        if not has_migration_closure_probe:
+            installer_missing_tokens.append("installer_version_baseline_migration_closure_probe_invocation_missing")
+        if installer_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + installer_missing_tokens))
+
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():
         missing_surface_files.append(DIALOGUE_FEEDBACK_BUNDLE_SCRIPT)
@@ -1341,6 +1390,10 @@ def main() -> int:
         "downsink_path_immutability_probe_ci_delegate_script": DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
         "downsink_path_immutability_delegate_required_python_scripts": list(
             DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "installer_version_baseline_probe_ci_delegate_script": INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT,
+        "installer_version_baseline_delegate_required_python_scripts": list(
+            INSTALLER_VERSION_BASELINE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
         ),
         "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),

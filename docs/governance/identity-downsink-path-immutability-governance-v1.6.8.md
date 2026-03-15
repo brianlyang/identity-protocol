@@ -477,3 +477,45 @@ Interpretation lock:
 1. Stream evolution is handled by alias switch (`*.current.yaml` -> new `active_file`).
 2. Enforcement scripts must not pin fixed stream literals in code paths.
 3. This closure is infrastructure-first: humans do not need to remember version tuples for correctness.
+
+## 17) Installer atomic baseline closure + report selector isolation (2026-03-16)
+
+### 17.1 Problem statement
+
+1. Legacy source packs could be installed with catalog row upgraded but `CURRENT_TASK.json` / `META.yaml` still stale.
+2. This created a non-atomic drift window where migration closure required post-install manual backfill.
+3. Execution report auto-selection could pick cross-identity artifacts and pollute freshness/baseline interpretation.
+
+### 17.2 Mandatory installer contract
+
+1. `identity_installer install/adopt` must apply baseline SSOT atomically across:
+   - `CURRENT_TASK.json`
+   - `META.yaml`
+   - runtime catalog row
+2. Activation (`--activate`) is allowed only after baseline verification pass.
+3. Baseline precheck failure is fail-close and must block:
+   - activation
+   - host gateway downsink continuation.
+
+### 17.3 Mandatory probe/CI closure
+
+1. Required CI must run installer baseline probes:
+   - `scripts/ci/run_installer_version_baseline_probes_ci.sh`
+2. Probe suite must contain:
+   - `install_legacy_pack_version_drift_blocked`
+   - `install_then_migration_closure_pass`
+3. Surface drift validator must enforce probe wiring presence and required delegated scripts.
+
+### 17.4 Report selector isolation rule
+
+1. `validate_execution_report_freshness.py` auto mode must select from strict identity tuple candidates only:
+   - `identity_id`
+   - `resolved_pack_path`
+   - `identity_prompt_path`
+2. If no strict tuple candidate exists, validator must fail-close with explicit selector reason.
+3. `validate_identity_protocol_baseline_freshness.py` must follow the same tuple-isolated auto-selection semantics.
+
+### 17.5 Non-hardcode guarantee
+
+1. Installer and probe logic remain alias-driven and identity-agnostic.
+2. No identity allowlist or stream literal pinning is permitted in closure code paths.

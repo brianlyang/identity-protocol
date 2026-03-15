@@ -87,6 +87,42 @@ def _collect_reports(identity_id: str, resolved_pack_path: Path, explicit_report
     return _collect_from_roots(identity_id, fallback_roots)
 
 
+def _identity_tuple_checks(
+    *,
+    report_data: dict[str, Any],
+    identity_id: str,
+    catalog_path: Path,
+    resolved_pack_path: Path,
+) -> tuple[dict[str, bool], list[str]]:
+    report_identity_id = str(report_data.get("identity_id", "")).strip()
+    report_catalog_path = str(report_data.get("catalog_path", "")).strip()
+    report_pack_path = str(
+        report_data.get("resolved_pack_path", "")
+        or report_data.get("pack_path", "")
+        or ""
+    ).strip()
+
+    identity_id_match = bool(report_identity_id) and report_identity_id == identity_id
+    catalog_path_match = bool(report_catalog_path) and Path(report_catalog_path).expanduser().resolve() == catalog_path
+    pack_path_match = bool(report_pack_path) and Path(report_pack_path).expanduser().resolve() == resolved_pack_path
+    strict_identity_tuple_match = identity_id_match and pack_path_match
+
+    checks = {
+        "identity_id_match": identity_id_match,
+        "catalog_path_match": catalog_path_match,
+        "pack_path_match": pack_path_match,
+        "strict_identity_tuple_match": strict_identity_tuple_match,
+    }
+    stale_reasons: list[str] = []
+    if not identity_id_match:
+        stale_reasons.append("identity_id_mismatch_or_missing")
+    if not catalog_path_match:
+        stale_reasons.append("catalog_path_mismatch_or_missing")
+    if not pack_path_match:
+        stale_reasons.append("pack_path_mismatch_or_missing")
+    return checks, stale_reasons
+
+
 def _resolve_current_head(protocol_root: Path) -> tuple[str, str]:
     rc, out, _ = _run(["git", "-C", str(protocol_root), "rev-parse", "HEAD"])
     if rc != 0:
@@ -307,6 +343,58 @@ def main() -> int:
 
     selected = reports[0]
     report_data = _safe_json(selected)
+    evaluated_reports: list[tuple[Path, dict[str, bool], list[str], dict[str, Any]]] = []
+    for candidate in reports:
+        candidate_data = _safe_json(candidate)
+        if not candidate_data:
+            continue
+        tuple_checks, tuple_reasons = _identity_tuple_checks(
+            report_data=candidate_data,
+            identity_id=args.identity_id,
+            catalog_path=catalog_path,
+            resolved_pack_path=resolved_pack_path,
+        )
+        evaluated_reports.append((candidate, tuple_checks, tuple_reasons, candidate_data))
+    strict_tuple_matches = [x for x in evaluated_reports if bool(x[1].get("strict_identity_tuple_match", False))]
+
+    if not args.execution_report.strip() and strict_tuple_matches:
+        selected, tuple_checks, tuple_reasons, report_data = strict_tuple_matches[0]
+    elif not args.execution_report.strip() and not strict_tuple_matches:
+        status = "FAIL" if args.baseline_policy == "strict" else "WARN"
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "resolved_pack_path": str(resolved_pack_path),
+            "report_selected_path": "",
+            "report_protocol_root": "",
+            "report_protocol_commit_sha": "",
+            "protocol_head_sha_at_run_start": "",
+            "baseline_reference_mode": "",
+            "current_protocol_head_sha": "",
+            "head_drift_detected": False,
+            "baseline_status": status,
+            "baseline_error_code": ERR_REPORT_INVALID,
+            "lag_commits": None,
+            "tuple_checks": {},
+            "strict_tuple_candidate_count": 0,
+            "stale_reasons": ["execution_report_not_found", "report_selector_identity_tuple_no_match_candidates"],
+        }
+        if args.json_only:
+            print(json.dumps(payload, ensure_ascii=False))
+        else:
+            print(
+                f"[WARN] {ERR_REPORT_INVALID} no auto report matched strict identity tuple for identity={args.identity_id}"
+            )
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1 if args.baseline_policy == "strict" else 0
+    else:
+        tuple_checks, tuple_reasons = _identity_tuple_checks(
+            report_data=report_data,
+            identity_id=args.identity_id,
+            catalog_path=catalog_path,
+            resolved_pack_path=resolved_pack_path,
+        )
+
     if not report_data:
         status = "FAIL" if args.baseline_policy == "strict" else "WARN"
         payload = {
@@ -323,6 +411,8 @@ def main() -> int:
             "baseline_status": status,
             "baseline_error_code": ERR_REPORT_INVALID,
             "lag_commits": None,
+            "tuple_checks": {},
+            "strict_tuple_candidate_count": len(strict_tuple_matches),
             "stale_reasons": ["execution_report_invalid_json"],
         }
         if args.json_only:
@@ -332,7 +422,21 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 1 if args.baseline_policy == "strict" else 0
 
-    result = _evaluate(report_data, baseline_policy=args.baseline_policy)
+    tuple_ok = bool(tuple_checks.get("strict_identity_tuple_match", False))
+    if tuple_ok:
+        result = _evaluate(report_data, baseline_policy=args.baseline_policy)
+    else:
+        status = "FAIL" if args.baseline_policy == "strict" else "WARN"
+        result = BaselineResult(
+            status=status,
+            error_code=ERR_REPORT_INVALID,
+            stale_reasons=list(tuple_reasons),
+            lag_commits=None,
+            current_head_sha="",
+            protocol_head_sha_at_run_start="",
+            baseline_reference_mode="",
+            head_drift_detected=False,
+        )
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
@@ -347,6 +451,8 @@ def main() -> int:
         "baseline_status": result.status,
         "baseline_error_code": result.error_code,
         "lag_commits": result.lag_commits,
+        "tuple_checks": tuple_checks,
+        "strict_tuple_candidate_count": len(strict_tuple_matches),
         "stale_reasons": result.stale_reasons,
     }
 

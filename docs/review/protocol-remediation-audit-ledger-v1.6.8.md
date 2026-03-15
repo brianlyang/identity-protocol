@@ -505,3 +505,46 @@ Checkpoint verdict update:
 1. v1.6.8 now closes the scaffold-version anti-forget gap with alias-driven infrastructure controls.
 2. Future stream upgrades can rotate baseline via mapping alias without script hardcoding or identity-specific patches.
 3. "Version governance" is now machine-enforced instead of memory-enforced.
+
+## 18) Installer atomic closure + report selector isolation (2026-03-16)
+
+### 18.1 Problem reconfirmed
+
+1. Install/adopt paths could leave non-atomic scaffold drift (`catalog` aligned but `CURRENT_TASK`/`META` stale) under legacy source packs.
+2. Freshness auto-selection could surface cross-identity reports and amplify non-actionable noise.
+
+### 18.2 Landed closure set
+
+1. `scripts/identity_installer.py`
+   - applies baseline to task/meta/catalog in install/adopt paths.
+   - verifies baseline tuple before activation.
+   - blocks activation/downsink when baseline closure is non-pass.
+   - emits machine report fields:
+     - `version_baseline_apply_status`
+     - `version_baseline_catalog_sync_status`
+     - `version_baseline_verify_status`
+     - `install_block_reasons`
+2. New required probe suite:
+   - `scripts/ci/run_installer_version_baseline_probes_ci.sh`
+   - probes:
+     - `install_legacy_pack_version_drift_blocked`
+     - `install_then_migration_closure_pass`
+3. Required workflow wiring:
+   - `.github/workflows/_identity-required-gates.yml` executes installer baseline probe suite.
+4. Surface drift lock:
+   - `scripts/validate_required_gate_surface_drift.py` now enforces installer probe delegate + token wiring.
+5. Report selector isolation hardening:
+   - `scripts/validate_execution_report_freshness.py`
+   - `scripts/validate_identity_protocol_baseline_freshness.py`
+   enforce strict identity tuple candidate selection in auto mode.
+
+### 18.3 Replay acceptance (serial)
+
+1. `bash scripts/ci/run_installer_version_baseline_probes_ci.sh` => both probes PASS.
+2. `python3 scripts/check_version_baseline_migration_closure.py --repo-catalog <fixture> --catalog <fixture> --json-only` => `PASS_REQUIRED`.
+3. Freshness validators in auto mode now fail-close when only cross-identity candidates exist (`report_selector_identity_tuple_no_match_candidates`).
+
+### 18.4 Verdict update
+
+1. v1.6.8 now closes installer-path anti-forget drift at install-time, not only post-repair.
+2. Runtime readiness interpretation is protected from cross-identity report selection noise by tuple-isolated auto mode.

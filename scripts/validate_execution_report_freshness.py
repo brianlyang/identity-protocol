@@ -26,6 +26,7 @@ class CandidateEval:
     prompt_path_match: bool
     prompt_sha_match: bool
     report_newer_than_key_inputs: bool
+    strict_identity_tuple_match: bool
     score: int
     report_mtime: float
     stale_reasons: list[str]
@@ -38,6 +39,11 @@ def _iso_from_ts(ts: float) -> str:
 
 def _derive_freshness_hint(stale_reasons: list[str]) -> tuple[str, str]:
     reasons = {str(x).strip() for x in (stale_reasons or []) if str(x).strip()}
+    if "report_selector_identity_tuple_no_match_candidates" in reasons:
+        return (
+            "regenerate_identity_scoped_execution_report",
+            "auto-selected reports do not match identity tuple; regenerate report for current identity pack",
+        )
     if "report_older_than_key_inputs" in reasons:
         return (
             "run_identity_creator_update_then_rerun_validate",
@@ -155,6 +161,7 @@ def _eval_candidate(
     prompt_path_match = bool(report_prompt) and Path(report_prompt).expanduser().resolve() == prompt_path
     prompt_sha_match = bool(report_prompt_sha) and report_prompt_sha == prompt_sha
     report_newer_than_key_inputs = path.stat().st_mtime >= key_input_latest_mtime
+    strict_identity_tuple_match = identity_id_match and pack_path_match and prompt_path_match
 
     reasons: list[str] = []
     if not identity_id_match:
@@ -187,6 +194,7 @@ def _eval_candidate(
         prompt_path_match=prompt_path_match,
         prompt_sha_match=prompt_sha_match,
         report_newer_than_key_inputs=report_newer_than_key_inputs,
+        strict_identity_tuple_match=strict_identity_tuple_match,
         score=score,
         report_mtime=report_mtime,
         stale_reasons=reasons,
@@ -286,7 +294,42 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 1 if args.execution_report_policy == "strict" else 0
 
-    selected = _select_best(evaluated)
+    strict_tuple_candidates = [c for c in evaluated if c.strict_identity_tuple_match]
+    if not args.report.strip():
+        if not strict_tuple_candidates:
+            stale_reasons = [
+                "execution_report_not_found",
+                "report_selector_identity_tuple_no_match_candidates",
+            ]
+            next_action, hint = _derive_freshness_hint(stale_reasons)
+            payload = {
+                "identity_id": args.identity_id,
+                "catalog_path": str(catalog_path),
+                "resolved_pack_path": str(resolved_pack),
+                "execution_report_policy": args.execution_report_policy,
+                "selection_mode": "auto",
+                "report_selected_path": "",
+                "candidate_count": len(evaluated),
+                "strict_tuple_candidate_count": 0,
+                "freshness_status": "FAIL" if args.execution_report_policy == "strict" else "WARN",
+                "freshness_error_code": ERROR_STALE,
+                "stale_reasons": stale_reasons,
+                "next_action": next_action,
+                "hint": hint,
+                "checks": {},
+                "key_input_paths": [str(p) for p in key_inputs],
+                "key_input_latest_mtime_utc": _iso_from_ts(key_input_latest_mtime),
+            }
+            if args.json_only:
+                print(json.dumps(payload, ensure_ascii=False))
+            else:
+                print(f"[FAIL] {ERROR_STALE} auto-selected reports do not match current identity tuple")
+                print(f"[HINT] {hint}")
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            return 1 if args.execution_report_policy == "strict" else 0
+        selected = _select_best(strict_tuple_candidates)
+    else:
+        selected = _select_best(evaluated)
     checks = {
         "identity_id_match": selected.identity_id_match,
         "catalog_path_match": selected.catalog_path_match,
@@ -309,6 +352,7 @@ def main() -> int:
         "selection_mode": "explicit" if args.report.strip() else "auto",
         "report_selected_path": str(selected.path),
         "candidate_count": len(evaluated),
+        "strict_tuple_candidate_count": len(strict_tuple_candidates),
         "report_mtime_utc": _iso_from_ts(selected.path.stat().st_mtime),
         "key_input_paths": [str(p) for p in key_inputs],
         "key_input_latest_mtime_utc": _iso_from_ts(key_input_latest_mtime),

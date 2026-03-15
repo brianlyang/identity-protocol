@@ -269,6 +269,9 @@ jobs:
       - name: Validate downsink path immutability probes (v1.6.8)
         run: bash scripts/ci/run_downsink_path_immutability_probes_ci.sh
 
+      - name: Validate installer version baseline probes (v1.6.8)
+        run: bash scripts/ci/run_installer_version_baseline_probes_ci.sh
+
       - name: Validate full-scan target regression (p0=0)
         run: |
           IDS="${IDS:-}"
