@@ -16,6 +16,11 @@ import yaml
 
 from resolve_identity_context import default_identity_home, default_local_catalog_path, default_local_instances_root
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID
+from version_baseline_common import (
+    apply_version_baseline_to_catalog_row,
+    apply_version_baseline_to_task_doc,
+    load_version_baseline_or_raise,
+)
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
@@ -272,15 +277,24 @@ def _repo_root() -> Path:
     return cur
 
 
-def _minimal_current_task(identity_id: str, title: str, description: str) -> dict:
+def _minimal_current_task(
+    identity_id: str,
+    title: str,
+    description: str,
+    *,
+    agent_identity_versions: dict[str, str],
+) -> dict:
+    methodology_version = str((agent_identity_versions or {}).get("methodology_version", "")).strip()
+    prompt_version = str((agent_identity_versions or {}).get("prompt_version", "")).strip()
+    json_version = str((agent_identity_versions or {}).get("json_version", "")).strip()
     task = {
         "task_id": f"{identity_id}_bootstrap",
         "agent_identity": {
             "name": identity_id,
             "role": title,
-            "methodology_version": "v1.2.3",
-            "prompt_version": "v1.2.3",
-            "json_version": "v1.2.3",
+            "methodology_version": methodology_version,
+            "prompt_version": prompt_version,
+            "json_version": json_version,
             "identity_prompt_path": f"identity/packs/{identity_id}/IDENTITY_PROMPT.md",
             "canon_path": "identity/protocol/IDENTITY_PROTOCOL.md",
         },
@@ -4447,7 +4461,13 @@ def _normalize_bootstrap_task_ids(value, identity_id: str):
     return value
 
 
-def _legacy_full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
+def _legacy_full_contract_current_task(
+    identity_id: str,
+    title: str,
+    description: str,
+    *,
+    version_baseline: dict[str, Any],
+) -> dict:
     template_path = Path("identity/store-manager/CURRENT_TASK.json")
     if not template_path.exists():
         raise FileNotFoundError(f"missing template CURRENT_TASK: {template_path}")
@@ -4462,6 +4482,7 @@ def _legacy_full_contract_current_task(identity_id: str, title: str, description
         agent["name"] = identity_id
         agent["role"] = title
         agent["identity_prompt_path"] = f"identity/packs/{identity_id}/IDENTITY_PROMPT.md"
+    apply_version_baseline_to_task_doc(task, version_baseline)
     objective = task.setdefault("objective", {})
     if isinstance(objective, dict):
         objective["title"] = description
@@ -4562,10 +4583,21 @@ def _default_required_checks() -> list[str]:
     ]
 
 
-def _neutral_full_contract_current_task(identity_id: str, title: str, description: str) -> dict:
+def _neutral_full_contract_current_task(
+    identity_id: str,
+    title: str,
+    description: str,
+    *,
+    agent_identity_versions: dict[str, str],
+) -> dict:
     identity_token = identity_id.replace("-", "_")
     checks = _default_required_checks()
-    task = _minimal_current_task(identity_id, title, description)
+    task = _minimal_current_task(
+        identity_id,
+        title,
+        description,
+        agent_identity_versions=agent_identity_versions,
+    )
     gates = task.setdefault("gates", {})
     extra_required_gates = [
         "identity_update_gate",
@@ -5678,16 +5710,20 @@ def _bootstrap_neutral_identity_samples(identity_id: str, runtime_root: Path, ta
     _write_install_provenance_reports(identity_id, runtime_root)
 
 
-def _inject_scaffold_metadata(task: dict, profile: str) -> dict:
+def _inject_scaffold_metadata(task: dict, profile: str, *, version_baseline: dict[str, Any]) -> dict:
+    scaffold_versions = (version_baseline.get("scaffold_metadata") or {}) if isinstance(version_baseline, dict) else {}
     metadata = {
         "scaffold_profile": profile,
         "scaffold_generation_mode": "neutral-default" if profile == "full-contract" else "explicit_opt_in",
-        "protocol_contract_version": "v1.5.0",
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "blocker_taxonomy_mode": "canonical",
         "blocker_alias_map_version": "v1",
         "domain_neutrality_required": profile != "legacy-commerce-overlay",
     }
+    for field, raw in scaffold_versions.items():
+        token = str(raw or "").strip()
+        if token:
+            metadata[field] = token
     existing = task.get("scaffold_metadata")
     if isinstance(existing, dict):
         existing.update(metadata)
@@ -5772,6 +5808,15 @@ def main() -> int:
     catalog_path = Path(args.catalog).expanduser().resolve()
     identity_profile = "fixture" if args.repo_fixture else "runtime"
     identity_runtime_mode = "demo_only" if args.repo_fixture else "local_only"
+    try:
+        version_baseline = load_version_baseline_or_raise(repo_root=repo_root)
+    except Exception as exc:
+        print(f"[FAIL] version baseline unavailable: {exc}")
+        return 1
+    agent_identity_versions = dict(version_baseline.get("agent_identity") or {})
+    meta_methodology_version = str((version_baseline.get("meta") or {}).get("methodology_version", "")).strip()
+    if not meta_methodology_version:
+        meta_methodology_version = str(agent_identity_versions.get("methodology_version", "")).strip()
 
     if args.repo_fixture:
         if args.repo_fixture_confirm.strip() != REPO_FIXTURE_CONFIRM_TOKEN:
@@ -5821,7 +5866,7 @@ def main() -> int:
             f'title: "{args.title}"\n'
             f'description: "{args.description}"\n'
             f'status: "{"active" if (not args.register or args.activate) else "inactive"}"\n'
-            'methodology_version: "v1.2.3"\n'
+            f'methodology_version: "{meta_methodology_version}"\n'
             f'profile: "{identity_profile}"\n'
             f'runtime_mode: "{identity_runtime_mode}"\n'
             f'scaffold_profile: "{args.profile}"\n'
@@ -5843,12 +5888,28 @@ def main() -> int:
         return 1
 
     if args.profile == "full-contract":
-        current_task = _neutral_full_contract_current_task(identity_id, args.title, args.description)
+        current_task = _neutral_full_contract_current_task(
+            identity_id,
+            args.title,
+            args.description,
+            agent_identity_versions=agent_identity_versions,
+        )
     elif args.profile == "legacy-commerce-overlay":
-        current_task = _legacy_full_contract_current_task(identity_id, args.title, args.description)
+        current_task = _legacy_full_contract_current_task(
+            identity_id,
+            args.title,
+            args.description,
+            version_baseline=version_baseline,
+        )
     else:
-        current_task = _minimal_current_task(identity_id, args.title, args.description)
-    current_task = _inject_scaffold_metadata(current_task, args.profile)
+        current_task = _minimal_current_task(
+            identity_id,
+            args.title,
+            args.description,
+            agent_identity_versions=agent_identity_versions,
+        )
+    apply_version_baseline_to_task_doc(current_task, version_baseline)
+    current_task = _inject_scaffold_metadata(current_task, args.profile, version_baseline=version_baseline)
     current_task = _rewrite_identity_pack_root(current_task, identity_id, pack_dir)
     current_task = _rewrite_runtime_root(current_task, runtime_root)
     gateway_artifacts = materialize_protocol_host_gateway_artifacts(
@@ -5979,13 +6040,14 @@ def main() -> int:
                 "title": args.title,
                 "description": args.description,
                 "status": "active" if args.activate else "inactive",
-                "methodology_version": "v1.2.3",
+                "methodology_version": "",
                 "profile": identity_profile,
                 "runtime_mode": identity_runtime_mode,
                 "pack_path": str(pack_dir),
                 "tags": ["identity"],
             }
         )
+        apply_version_baseline_to_catalog_row(identities[-1], version_baseline)
         catalog["identities"] = identities
         if args.set_default:
             catalog["default_identity"] = identity_id

@@ -20,6 +20,10 @@ from resolve_identity_context import (
     ensure_local_catalog,
     resolve_identity,
 )
+from version_baseline_common import (
+    apply_version_baseline_to_catalog_row,
+    load_version_baseline_or_raise,
+)
 
 REPO_TARGET_CONFIRM_TOKEN = "I_UNDERSTAND_REPO_TARGET_WRITE"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -286,6 +290,7 @@ def _register_identity(
     pack_path: str,
     activate: bool,
     *,
+    version_baseline: dict[str, Any],
     profile: str,
     runtime_mode: str,
 ) -> None:
@@ -308,22 +313,23 @@ def _register_identity(
         existing["description"] = description or existing.get("description", "")
         existing["profile"] = profile
         existing["runtime_mode"] = runtime_mode
+        apply_version_baseline_to_catalog_row(existing, version_baseline)
         if activate:
             existing["status"] = "active"
     else:
-        identities.append(
-            {
-                "id": identity_id,
-                "title": title or identity_id,
-                "description": description or "",
-                "status": "active" if activate else "inactive",
-                "methodology_version": "v1.2.3",
-                "profile": profile,
-                "runtime_mode": runtime_mode,
-                "pack_path": pack_path,
-                "tags": ["identity"],
-            }
-        )
+        row = {
+            "id": identity_id,
+            "title": title or identity_id,
+            "description": description or "",
+            "status": "active" if activate else "inactive",
+            "methodology_version": "",
+            "profile": profile,
+            "runtime_mode": runtime_mode,
+            "pack_path": pack_path,
+            "tags": ["identity"],
+        }
+        apply_version_baseline_to_catalog_row(row, version_baseline)
+        identities.append(row)
     catalog["identities"] = identities
     _dump_yaml(catalog_path, catalog)
 
@@ -567,6 +573,12 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 
 def cmd_adopt(args: argparse.Namespace) -> int:
+    try:
+        version_baseline = load_version_baseline_or_raise(repo_root=_repo_root())
+    except Exception as exc:
+        print(f"[FAIL] version baseline unavailable: {exc}")
+        return 1
+
     _enforce_target_boundary(args)
     if not args.source_pack:
         print("[FAIL] adopt requires --source-pack")
@@ -600,7 +612,7 @@ def cmd_adopt(args: argparse.Namespace) -> int:
             "title": args.title or args.identity_id,
             "description": args.description or "",
             "status": "inactive",
-            "methodology_version": "v1.4.x",
+            "methodology_version": "",
             "tags": ["identity", "runtime"],
         }
         identities.append(row)
@@ -616,6 +628,7 @@ def cmd_adopt(args: argparse.Namespace) -> int:
     row["profile"] = "runtime"
     row["runtime_mode"] = "local_only"
     row["instance_uid"] = str(row.get("instance_uid", "")).strip() or f"inst-{uuid.uuid4()}"
+    apply_version_baseline_to_catalog_row(row, version_baseline)
     if args.activate:
         for item in identities:
             if isinstance(item, dict):
@@ -787,6 +800,12 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
+    try:
+        version_baseline = load_version_baseline_or_raise(repo_root=_repo_root())
+    except Exception as exc:
+        print(f"[FAIL] version baseline unavailable: {exc}")
+        return 1
+
     rc = _single_active_precheck(
         Path(args.catalog).expanduser().resolve(),
         args.identity_id,
@@ -829,6 +848,7 @@ def cmd_install(args: argparse.Namespace, *, dry_run: bool) -> int:
             args.description,
             (Path(args.target_root) / args.identity_id).as_posix(),
             args.activate,
+            version_baseline=version_baseline,
             profile=identity_profile,
             runtime_mode=identity_runtime_mode,
         )

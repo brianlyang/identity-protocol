@@ -430,3 +430,50 @@ Interpretation lock:
    - `summary_non_active_or_non_runtime`
 2. Session-binding enforcement (`requested_session_binding`) is strict-required only for active runtime rows.
 3. This prevents inactive/global or fixture rows from polluting active-runtime closure narratives while keeping visibility intact.
+
+## 16) Version-baseline SSOT hardening (2026-03-15)
+
+### 16.1 Objective
+
+1. Remove scaffold-version drift caused by generator/installer hardcoded literals.
+2. Convert "remember to update versions" into alias-driven fail-close governance.
+3. Keep future upgrades (`v1.6.9`, `v1.7.3`, ...) non-hardcoded and dynamically resolvable.
+
+### 16.2 Mandatory contract
+
+1. Version baseline must be resolved from alias pointer (never hardcoded in scripts):
+   - `identity/protocol/mappings/version-baseline.current.yaml`
+2. Active baseline file is stream-bound and replaceable without script edits:
+   - `identity/protocol/mappings/version-baseline.v1.6.yaml`
+3. Runtime scaffolds must align with baseline tuple fields:
+   - `agent_identity.methodology_version/prompt_version/json_version`
+   - `scaffold_metadata.protocol_contract_version/required_version_stream/required_gate_bundle_contract_version/identity_protocol_version`
+   - catalog `methodology_version`
+   - `META.yaml` `methodology_version`
+
+### 16.3 Required enforcement surfaces
+
+1. Baseline resolver utility:
+   - `scripts/version_baseline_common.py`
+2. Generator/installer/backfill consume baseline dynamically:
+   - `scripts/create_identity_pack.py`
+   - `scripts/identity_installer.py`
+   - `scripts/repair_contract_backfill.py`
+3. Version-alignment validator adds scaffold-baseline gate:
+   - `scripts/validate_identity_protocol_version_alignment.py`
+   - fail-close code: `IP-PVA-002` (scaffold-baseline branch)
+4. Active-runtime migration closure checker:
+   - `scripts/check_version_baseline_migration_closure.py`
+
+### 16.4 Fail-close interpretation
+
+1. Baseline pointer missing/invalid => `FAIL_REQUIRED`.
+2. Any tuple mismatch against active baseline => `IP-PVA-002` (scaffold-baseline branch).
+3. Auto-repair is protocol-tool driven only (no manual per-identity edits):
+   - `repair_contract_backfill.py --apply`
+
+### 16.5 Anti-forget continuity
+
+1. Stream evolution is handled by alias switch (`*.current.yaml` -> new `active_file`).
+2. Enforcement scripts must not pin fixed stream literals in code paths.
+3. This closure is infrastructure-first: humans do not need to remember version tuples for correctness.

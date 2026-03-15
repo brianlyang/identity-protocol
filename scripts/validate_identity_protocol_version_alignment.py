@@ -7,7 +7,16 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from resolve_identity_context import resolve_identity
+from version_baseline_common import (
+    REQUIRED_AGENT_IDENTITY_FIELDS,
+    REQUIRED_CATALOG_FIELDS,
+    REQUIRED_META_FIELDS,
+    REQUIRED_SCAFFOLD_METADATA_FIELDS,
+    resolve_version_baseline,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
@@ -17,6 +26,7 @@ ERR_REPORT_ALIGNMENT = "IP-PVA-001"
 ERR_BASELINE_ALIGNMENT = "IP-PVA-002"
 ERR_PROMPT_ALIGNMENT = "IP-PVA-003"
 ERR_BINDING_ALIGNMENT = "IP-PVA-004"
+ERR_SCAFFOLD_BASELINE_ALIGNMENT = ERR_BASELINE_ALIGNMENT
 
 STRICT_OPERATIONS = {"activate", "update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
@@ -53,6 +63,45 @@ def _tail(out: str, err: str) -> str:
     if not merged:
         return ""
     return merged.splitlines()[-1]
+
+
+def _safe_load_yaml(path: Path) -> dict[str, Any]:
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _safe_load_json(path: Path) -> dict[str, Any]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _task_snapshot(task_doc: dict[str, Any]) -> dict[str, dict[str, str]]:
+    agent = task_doc.get("agent_identity") if isinstance(task_doc.get("agent_identity"), dict) else {}
+    scaffold = task_doc.get("scaffold_metadata") if isinstance(task_doc.get("scaffold_metadata"), dict) else {}
+    return {
+        "agent_identity": {
+            field: str(agent.get(field, "")).strip()
+            for field in REQUIRED_AGENT_IDENTITY_FIELDS
+        },
+        "scaffold_metadata": {
+            field: str(scaffold.get(field, "")).strip()
+            for field in REQUIRED_SCAFFOLD_METADATA_FIELDS
+        },
+    }
+
+
+def _meta_snapshot(meta_doc: dict[str, Any]) -> dict[str, str]:
+    return {field: str(meta_doc.get(field, "")).strip() for field in REQUIRED_META_FIELDS}
+
+
+def _catalog_snapshot(catalog_row: dict[str, Any]) -> dict[str, str]:
+    return {field: str(catalog_row.get(field, "")).strip() for field in REQUIRED_CATALOG_FIELDS}
 
 
 def main() -> int:
@@ -95,6 +144,108 @@ def main() -> int:
     policy = str(args.alignment_policy or "strict").strip().lower()
     operation = str(args.operation or "validate").strip().lower()
     inspection_mode = operation in INSPECTION_OPERATIONS
+    repo_root = Path(__file__).resolve().parents[1]
+
+    baseline_state = resolve_version_baseline(repo_root=repo_root)
+    version_baseline_ok = bool(baseline_state.get("ok"))
+    version_baseline_error = str(baseline_state.get("error", "")).strip()
+
+    task_path = (resolved_pack_path / "CURRENT_TASK.json").resolve()
+    meta_path = (resolved_pack_path / "META.yaml").resolve()
+    task_doc = _safe_load_json(task_path) if task_path.exists() else {}
+    meta_doc = _safe_load_yaml(meta_path) if meta_path.exists() else {}
+    catalog_doc = _safe_load_yaml(catalog_path)
+    catalog_rows = catalog_doc.get("identities")
+    catalog_rows = catalog_rows if isinstance(catalog_rows, list) else []
+    catalog_row = next(
+        (
+            row
+            for row in catalog_rows
+            if isinstance(row, dict) and str(row.get("id", "")).strip() == str(args.identity_id or "").strip()
+        ),
+        {},
+    )
+
+    task_snapshot = _task_snapshot(task_doc)
+    meta_snapshot = _meta_snapshot(meta_doc)
+    catalog_snapshot = _catalog_snapshot(catalog_row if isinstance(catalog_row, dict) else {})
+
+    baseline_task_agent = dict(baseline_state.get("agent_identity") or {})
+    baseline_task_scaffold = dict(baseline_state.get("scaffold_metadata") or {})
+    baseline_meta = dict(baseline_state.get("meta") or {})
+    baseline_catalog = dict(baseline_state.get("catalog") or {})
+    baseline_missing_fields = [
+        str(x).strip()
+        for x in (baseline_state.get("missing_fields") or [])
+        if str(x).strip()
+    ]
+
+    version_mismatches: list[dict[str, str]] = []
+    version_stale_reasons: list[str] = []
+
+    if not task_path.exists():
+        version_stale_reasons.append("current_task_missing")
+    if not meta_path.exists():
+        version_stale_reasons.append("meta_file_missing")
+    if not isinstance(catalog_row, dict) or not catalog_row:
+        version_stale_reasons.append("catalog_identity_row_missing")
+
+    if not version_baseline_ok:
+        if version_baseline_error:
+            version_stale_reasons.append(f"version_baseline_resolution_failed:{version_baseline_error}")
+        else:
+            version_stale_reasons.append("version_baseline_resolution_failed")
+        if baseline_missing_fields:
+            version_stale_reasons.append(
+                "version_baseline_required_fields_missing:" + ",".join(sorted(set(baseline_missing_fields)))
+            )
+    else:
+        for field in REQUIRED_AGENT_IDENTITY_FIELDS:
+            expected = str(baseline_task_agent.get(field, "")).strip()
+            observed = str(((task_snapshot.get("agent_identity") or {}).get(field)) or "").strip()
+            if expected and observed != expected:
+                version_mismatches.append(
+                    {
+                        "field": f"task.agent_identity.{field}",
+                        "expected": expected,
+                        "observed": observed,
+                    }
+                )
+        for field in REQUIRED_SCAFFOLD_METADATA_FIELDS:
+            expected = str(baseline_task_scaffold.get(field, "")).strip()
+            observed = str(((task_snapshot.get("scaffold_metadata") or {}).get(field)) or "").strip()
+            if expected and observed != expected:
+                version_mismatches.append(
+                    {
+                        "field": f"task.scaffold_metadata.{field}",
+                        "expected": expected,
+                        "observed": observed,
+                    }
+                )
+        for field in REQUIRED_META_FIELDS:
+            expected = str(baseline_meta.get(field, "")).strip()
+            observed = str(meta_snapshot.get(field, "")).strip()
+            if expected and observed != expected:
+                version_mismatches.append(
+                    {
+                        "field": f"meta.{field}",
+                        "expected": expected,
+                        "observed": observed,
+                    }
+                )
+        for field in REQUIRED_CATALOG_FIELDS:
+            expected = str(baseline_catalog.get(field, "")).strip()
+            observed = str(catalog_snapshot.get(field, "")).strip()
+            if expected and observed != expected:
+                version_mismatches.append(
+                    {
+                        "field": f"catalog.{field}",
+                        "expected": expected,
+                        "observed": observed,
+                    }
+                )
+
+    scaffold_baseline_ok = version_baseline_ok and not version_mismatches and not version_stale_reasons
 
     fresh_cmd = [
         "python3",
@@ -195,6 +346,10 @@ def main() -> int:
         stale_reasons.append("prompt_activation_mismatch")
     if report_exists and not binding_ok:
         stale_reasons.append("binding_tuple_mismatch")
+    if not scaffold_baseline_ok:
+        stale_reasons.extend(version_stale_reasons)
+        if version_mismatches:
+            stale_reasons.append("scaffold_version_baseline_mismatch")
 
     status = STATUS_PASS_REQUIRED
     error_code = ""
@@ -206,6 +361,10 @@ def main() -> int:
         hint = str(freshness_payload.get("hint", "")).strip()
     elif not baseline_ok:
         error_code = ERR_BASELINE_ALIGNMENT
+    elif not scaffold_baseline_ok:
+        error_code = ERR_SCAFFOLD_BASELINE_ALIGNMENT
+        next_action = "run_repair_contract_backfill_apply"
+        hint = "python3 scripts/repair_contract_backfill.py --catalog <catalog> --identity-id <id> --apply --json-only"
     elif not prompt_ok:
         error_code = ERR_PROMPT_ALIGNMENT
     elif not binding_ok:
@@ -237,6 +396,7 @@ def main() -> int:
         "tuple_checks": {
             "execution_report_freshness": freshness_ok,
             "protocol_baseline_freshness": baseline_ok,
+            "scaffold_version_baseline_alignment": scaffold_baseline_ok,
             "prompt_activation": prompt_ok,
             "binding_tuple": binding_ok,
         },
@@ -265,6 +425,23 @@ def main() -> int:
             "head_drift_detected": baseline_payload.get("head_drift_detected", False),
             "lag_commits": baseline_payload.get("lag_commits"),
             "stale_reasons": baseline_payload.get("stale_reasons", []),
+        },
+        "scaffold_version_baseline_alignment": {
+            "status": STATUS_PASS_REQUIRED if scaffold_baseline_ok else STATUS_FAIL_REQUIRED,
+            "error_code": "" if scaffold_baseline_ok else ERR_SCAFFOLD_BASELINE_ALIGNMENT,
+            "entry_file": str(baseline_state.get("entry_path", "")),
+            "resolved_file": str(baseline_state.get("resolved_path", "")),
+            "stream_version": str(baseline_state.get("stream_version", "")),
+            "baseline_ok": version_baseline_ok,
+            "baseline_error": version_baseline_error,
+            "baseline_missing_fields": baseline_missing_fields,
+            "task_path": str(task_path),
+            "meta_path": str(meta_path),
+            "task_snapshot": task_snapshot,
+            "catalog_snapshot": catalog_snapshot,
+            "meta_snapshot": meta_snapshot,
+            "mismatches": version_mismatches,
+            "stale_reasons": version_stale_reasons,
         },
         "prompt_activation": {
             "rc": rc_prompt,

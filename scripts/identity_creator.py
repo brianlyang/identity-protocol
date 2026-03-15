@@ -3787,6 +3787,7 @@ def main() -> int:
             tuple_checks = {}
         pva_freshness_ok = bool(tuple_checks.get("execution_report_freshness", False))
         pva_baseline_ok = bool(tuple_checks.get("protocol_baseline_freshness", False))
+        pva_scaffold_ok = bool(tuple_checks.get("scaffold_version_baseline_alignment", False))
         pva_prompt_ok = bool(tuple_checks.get("prompt_activation", False))
         pva_binding_ok = bool(tuple_checks.get("binding_tuple", False))
         pva_freshness_payload = pva_payload.get("execution_report_freshness", {})
@@ -3811,6 +3812,67 @@ def main() -> int:
             and pva_binding_ok
             and "report_older_than_key_inputs" in {str(x).strip() for x in pva_freshness_stale_reasons}
         )
+        scaffold_version_backfill_allowed = (
+            str(args.baseline_policy or "").strip().lower() == "strict"
+            and pva_error_code == "IP-PVA-002"
+            and not pva_scaffold_ok
+        )
+        if rc_pva != 0 and scaffold_version_backfill_allowed:
+            repair_cmd = [
+                "python3",
+                "scripts/repair_contract_backfill.py",
+                "--catalog",
+                args.catalog,
+                "--identity-id",
+                args.identity_id,
+                "--apply",
+                "--json-only",
+            ]
+            rc_repair, out_repair, _ = _run_capture(repair_cmd)
+            repair_payload = _parse_json_payload(out_repair) or {}
+            repair_status = str(repair_payload.get("contract_backfill_status", "")).strip().upper()
+            repair_ok = rc_repair == 0 and repair_status in {"PASS_REQUIRED", "SKIPPED_NOT_REQUIRED"}
+            if not repair_ok:
+                print("[FAIL] protocol version alignment scaffold mismatch auto-repair failed; update blocked")
+                return rc_repair or 1
+            rc_pva, out_pva, _ = _run_capture(protocol_alignment_cmd)
+            pva_payload = _parse_json_payload(out_pva) or {}
+            pva_error_code = str(pva_payload.get("error_code", "")).strip()
+            tuple_checks = pva_payload.get("tuple_checks", {})
+            if not isinstance(tuple_checks, dict):
+                tuple_checks = {}
+            pva_freshness_ok = bool(tuple_checks.get("execution_report_freshness", False))
+            pva_baseline_ok = bool(tuple_checks.get("protocol_baseline_freshness", False))
+            pva_scaffold_ok = bool(tuple_checks.get("scaffold_version_baseline_alignment", False))
+            pva_prompt_ok = bool(tuple_checks.get("prompt_activation", False))
+            pva_binding_ok = bool(tuple_checks.get("binding_tuple", False))
+            pva_freshness_payload = pva_payload.get("execution_report_freshness", {})
+            if not isinstance(pva_freshness_payload, dict):
+                pva_freshness_payload = {}
+            pva_freshness_stale_reasons = pva_freshness_payload.get("stale_reasons", [])
+            if not isinstance(pva_freshness_stale_reasons, list):
+                pva_freshness_stale_reasons = []
+            if rc_pva == 0 and not phase_transition_reason:
+                phase_transition_reason = "scaffold_version_baseline_backfill"
+                phase_transition_error_code = "IP-PVA-002"
+
+        legacy_tuple_refresh_allowed = (
+            str(args.baseline_policy or "").strip().lower() == "strict"
+            and pva_error_code in {"IP-PVA-003", "IP-PVA-004"}
+            and pva_freshness_ok
+            and pva_baseline_ok
+            and (not pva_prompt_ok or not pva_binding_ok)
+        )
+        stale_report_refresh_allowed = (
+            str(args.baseline_policy or "").strip().lower() == "strict"
+            and pva_error_code == "IP-PVA-001"
+            and not pva_freshness_ok
+            and pva_baseline_ok
+            and pva_prompt_ok
+            and pva_binding_ok
+            and "report_older_than_key_inputs" in {str(x).strip() for x in pva_freshness_stale_reasons}
+        )
+
         if rc_pva != 0 and not legacy_tuple_refresh_allowed and not stale_report_refresh_allowed:
             print("[FAIL] protocol version alignment validation failed; update blocked")
             return rc_pva

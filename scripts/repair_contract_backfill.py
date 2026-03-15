@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+import yaml
 
 from create_identity_pack import (
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_ID,
@@ -66,6 +67,12 @@ from create_identity_pack import (
     materialize_protocol_host_gateway_artifacts,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from version_baseline_common import (
+    apply_version_baseline_to_catalog_row,
+    apply_version_baseline_to_meta_doc,
+    apply_version_baseline_to_task_doc,
+    load_version_baseline_or_raise,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -216,6 +223,50 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def _safe_load_yaml(path: Path) -> dict[str, Any]:
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def _safe_dump_yaml(path: Path, payload: dict[str, Any]) -> None:
+    path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+
+def _task_version_snapshot(task_doc: dict[str, Any]) -> dict[str, Any]:
+    agent = task_doc.get("agent_identity") if isinstance(task_doc.get("agent_identity"), dict) else {}
+    scaffold = task_doc.get("scaffold_metadata") if isinstance(task_doc.get("scaffold_metadata"), dict) else {}
+    return {
+        "agent_identity": {
+            "methodology_version": str(agent.get("methodology_version", "")).strip(),
+            "prompt_version": str(agent.get("prompt_version", "")).strip(),
+            "json_version": str(agent.get("json_version", "")).strip(),
+        },
+        "scaffold_metadata": {
+            "protocol_contract_version": str(scaffold.get("protocol_contract_version", "")).strip(),
+            "required_version_stream": str(scaffold.get("required_version_stream", "")).strip(),
+            "required_gate_bundle_contract_version": str(
+                scaffold.get("required_gate_bundle_contract_version", "")
+            ).strip(),
+            "identity_protocol_version": str(scaffold.get("identity_protocol_version", "")).strip(),
+        },
+    }
+
+
+def _catalog_version_snapshot(catalog_row: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(catalog_row, dict):
+        return {"methodology_version": ""}
+    return {"methodology_version": str(catalog_row.get("methodology_version", "")).strip()}
+
+
+def _meta_version_snapshot(meta_doc: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(meta_doc, dict):
+        return {"methodology_version": ""}
+    return {"methodology_version": str(meta_doc.get("methodology_version", "")).strip()}
 
 
 def _sha256_file(path: Path) -> str:
@@ -898,6 +949,46 @@ def main() -> int:
         print(f"[FAIL] {exc}")
         return 1
 
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        version_baseline = load_version_baseline_or_raise(repo_root=repo_root)
+    except Exception as exc:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog),
+            "pack_path": str(pack_path),
+            "task_path": str(task_path),
+            "contract_backfill_status": STATUS_FAIL_REQUIRED,
+            "error_code": "IP-CBKF-001",
+            "changed": False,
+            "applied": False,
+            "version_baseline_status": STATUS_FAIL_REQUIRED,
+            "version_baseline_error": str(exc),
+            "stale_reasons": ["version_baseline_unavailable"],
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    catalog_doc = _safe_load_yaml(catalog)
+    catalog_rows = catalog_doc.get("identities")
+    catalog_rows = catalog_rows if isinstance(catalog_rows, list) else []
+    catalog_row = next(
+        (
+            row
+            for row in catalog_rows
+            if isinstance(row, dict) and str(row.get("id", "")).strip() == str(args.identity_id or "").strip()
+        ),
+        None,
+    )
+    catalog_row_before = json.loads(json.dumps(catalog_row)) if isinstance(catalog_row, dict) else {}
+    catalog_row_version_changed = False
+    if isinstance(catalog_row, dict):
+        catalog_row_version_changed = apply_version_baseline_to_catalog_row(catalog_row, version_baseline)
+
+    meta_path = (pack_path / "META.yaml").resolve()
+    meta_doc = _safe_load_yaml(meta_path)
+    meta_before = json.loads(json.dumps(meta_doc)) if isinstance(meta_doc, dict) else {}
+
     before = json.loads(json.dumps(task_doc))
     missing_before = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(task_doc.get(k), dict)]
     prompt_missing_before = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(task_doc.get(k), dict)]
@@ -940,6 +1031,10 @@ def main() -> int:
     ) = (
         _normalize_downsink_path_contracts(updated)
     )
+    task_version_changed = apply_version_baseline_to_task_doc(updated, version_baseline)
+    meta_version_changed = False
+    if isinstance(meta_doc, dict):
+        meta_version_changed = apply_version_baseline_to_meta_doc(meta_doc, version_baseline)
     missing_after = [k for k in REQUIRED_INTAKE_KEYS if not isinstance(updated.get(k), dict)]
     prompt_missing_after = [k for k in REQUIRED_PROMPT_KEYS if not isinstance(updated.get(k), dict)]
     multimodal_missing_after = [k for k in REQUIRED_MULTIMODAL_KEYS if not isinstance(updated.get(k), dict)]
@@ -1298,7 +1393,7 @@ def main() -> int:
             identity_id=args.identity_id,
             pack_dir=pack_path,
             catalog_path=catalog,
-            protocol_root=Path(__file__).resolve().parent.parent,
+            protocol_root=repo_root,
         )
     host_gateway_wrapper_snapshot_after = _collect_host_gateway_wrapper_template_snapshot(
         updated,
@@ -1315,11 +1410,21 @@ def main() -> int:
             host_gateway_wrapper_artifact_changed_paths.append(wrapper_key)
     host_gateway_wrapper_artifacts_refreshed = bool(host_gateway_wrapper_artifact_changed_paths)
 
-    changed = before != updated
+    task_changed = before != updated
+    catalog_changed = catalog_row_version_changed
+    meta_changed = meta_version_changed
+    changed = task_changed or catalog_changed or meta_changed
     applied = False
-    if changed and args.apply:
-        task_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        applied = True
+    if args.apply:
+        if task_changed:
+            task_path.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            applied = True
+        if catalog_changed:
+            _safe_dump_yaml(catalog, catalog_doc)
+            applied = True
+        if meta_changed:
+            _safe_dump_yaml(meta_path, meta_doc)
+            applied = True
 
     if missing_after:
         status = STATUS_FAIL_REQUIRED
@@ -1402,6 +1507,18 @@ def main() -> int:
         error_code = ""
         stale_reasons = ["already_backfilled"] if not applied else []
 
+    version_baseline_info = {
+        "entry_file": str(version_baseline.get("entry_path", "")),
+        "resolved_file": str(version_baseline.get("resolved_path", "")),
+        "stream_version": str(version_baseline.get("stream_version", "")),
+    }
+    task_versions_before = _task_version_snapshot(before)
+    task_versions_after = _task_version_snapshot(updated)
+    catalog_versions_before = _catalog_version_snapshot(catalog_row_before)
+    catalog_versions_after = _catalog_version_snapshot(catalog_row if isinstance(catalog_row, dict) else {})
+    meta_versions_before = _meta_version_snapshot(meta_before)
+    meta_versions_after = _meta_version_snapshot(meta_doc if isinstance(meta_doc, dict) else {})
+
     payload = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog),
@@ -1410,6 +1527,21 @@ def main() -> int:
         "contract_backfill_status": status,
         "error_code": error_code,
         "changed": changed,
+        "task_changed": task_changed,
+        "catalog_changed": catalog_changed,
+        "meta_changed": meta_changed,
+        "version_baseline_status": STATUS_PASS_REQUIRED,
+        "version_baseline": version_baseline_info,
+        "task_version_changed": task_version_changed,
+        "catalog_row_version_changed": catalog_row_version_changed,
+        "meta_version_changed": meta_version_changed,
+        "task_versions_before": task_versions_before,
+        "task_versions_after": task_versions_after,
+        "catalog_versions_before": catalog_versions_before,
+        "catalog_versions_after": catalog_versions_after,
+        "meta_versions_before": meta_versions_before,
+        "meta_versions_after": meta_versions_after,
+        "meta_path": str(meta_path),
         "host_gateway_wrapper_artifacts_refreshed": host_gateway_wrapper_artifacts_refreshed,
         "host_gateway_wrapper_artifact_changed_paths": host_gateway_wrapper_artifact_changed_paths,
         "host_gateway_wrapper_snapshot_before": host_gateway_wrapper_snapshot_before,

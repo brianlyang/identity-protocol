@@ -454,3 +454,54 @@ Checkpoint verdict update:
 
 1. global active-runtime migration closure can now be enforced from creator preflight path, not only from fixture probes.
 2. closure claim semantics are aligned: global claim requires global active-runtime pass.
+
+## 17) Round-32 addendum: version-baseline SSOT closure (2026-03-15)
+
+### 17.1 Problem confirmed
+
+1. Scaffold version fields were drifting across runtime identities (`v1.2.3`, `v1.3`, missing scaffold metadata).
+2. Creator/installer paths still relied on hardcoded literals.
+3. Existing protocol-version alignment check did not fail-close scaffold tuple drift.
+
+### 17.2 Landed fix set
+
+1. Added alias-driven baseline mapping:
+   - `identity/protocol/mappings/version-baseline.current.yaml`
+   - `identity/protocol/mappings/version-baseline.v1.6.yaml`
+2. Added shared resolver/apply utility:
+   - `scripts/version_baseline_common.py`
+3. Removed scaffold hardcoded literals from generation/install flows:
+   - `scripts/create_identity_pack.py`
+   - `scripts/identity_installer.py`
+4. Extended protocol backfill to include version tuple normalization across:
+   - `CURRENT_TASK.json`
+   - runtime catalog row (`methodology_version`)
+   - `META.yaml`
+   (`scripts/repair_contract_backfill.py`)
+5. Extended alignment validator with scaffold-baseline fail-close:
+   - `scripts/validate_identity_protocol_version_alignment.py`
+   - fail-close branch under `IP-PVA-002` (scaffold-baseline alignment)
+6. Added active-runtime migration closure checker:
+   - `scripts/check_version_baseline_migration_closure.py`
+7. Update flow resilience:
+   - `scripts/identity_creator.py` now runs protocol backfill auto-repair when scaffold-baseline branch of `IP-PVA-002` is detected during strict update preflight.
+
+### 17.3 Replay evidence (serial)
+
+1. compile sanity:
+   - `python3 -m py_compile scripts/version_baseline_common.py scripts/create_identity_pack.py scripts/identity_installer.py scripts/repair_contract_backfill.py scripts/validate_identity_protocol_version_alignment.py`
+2. pre-repair scaffold mismatch proof:
+   - `validate_identity_protocol_version_alignment --identity-id base-repo-architect ... --operation validate --alignment-policy strict --json-only`
+   - result: `FAIL_REQUIRED`, `error_code=IP-PVA-002` with `tuple_checks.scaffold_version_baseline_alignment=false`
+3. protocol repair apply:
+   - `repair_contract_backfill.py --catalog .identity/catalog.local.yaml --identity-id base-repo-architect --apply --json-only`
+   - `repair_contract_backfill.py --catalog .identity/catalog.local.yaml --identity-id base-repo-closure-orchestrator --apply --json-only`
+4. post-repair tuple check:
+   - `validate_identity_protocol_version_alignment ...`
+   - `tuple_checks.scaffold_version_baseline_alignment=true`
+
+### 17.4 Verdict impact
+
+1. v1.6.8 now closes the scaffold-version anti-forget gap with alias-driven infrastructure controls.
+2. Future stream upgrades can rotate baseline via mapping alias without script hardcoding or identity-specific patches.
+3. "Version governance" is now machine-enforced instead of memory-enforced.
