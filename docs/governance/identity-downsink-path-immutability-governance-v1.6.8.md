@@ -370,6 +370,25 @@ This rule prevents false negatives where governance motherline closure is comple
    - `ci_fixture`.
 5. Session-chain runtime emission must fail-close if host-visible live receipt write/update does not reach `PASS_REQUIRED`.
 
+## 14) Active-runtime unique-entry migration preflight binding (2026-03-15)
+
+This checkpoint closes the last-mile gap between CI probe success and local active-runtime reality.
+
+Mandatory rules:
+
+1. `identity_creator validate` must execute active-runtime migration closure check before required validator bundle execution:
+   - `scripts/check_unique_entry_contract_migration_closure.py --repo-catalog <...> --catalog <...> --json-only`
+2. `identity_creator update` must run the same preflight and apply protocol-tool repair when violations exist:
+   - violating identities are repaired via `scripts/repair_contract_backfill.py --apply`
+   - closure check is re-run; non-pass result remains fail-close.
+3. No identity-specific hardcoded list is allowed; violating identities are discovered dynamically from checker payload rows.
+4. This preflight is catalog-driven and applies to all active runtime identities in the selected runtime source layer.
+
+Interpretation lock:
+
+1. Per-identity success is insufficient for “global active-runtime closed” claims.
+2. Global closure claims require migration checker pass across active runtime rows, not fixture-only probe pass.
+
 ### 13.3 Non-hardcode guarantee
 
 1. Source keys and receipt path patterns are centralized in protocol infra constants.

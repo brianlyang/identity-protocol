@@ -278,6 +278,94 @@ def _emit_two_phase_trace(
     print(json.dumps(payload, ensure_ascii=False))
 
 
+def _extract_unique_entry_migration_violation_ids(payload: dict | None) -> list[str]:
+    data = payload if isinstance(payload, dict) else {}
+    rows = data.get("violations")
+    if not isinstance(rows, list):
+        rows = []
+    ordered_ids: list[str] = []
+    seen: set[str] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        identity_id = str(row.get("identity_id", "")).strip()
+        if not identity_id or identity_id in seen:
+            continue
+        seen.add(identity_id)
+        ordered_ids.append(identity_id)
+    return ordered_ids
+
+
+def _enforce_unique_entry_migration_closure(
+    *,
+    catalog: str,
+    repo_catalog: str,
+    operation: str,
+    auto_repair: bool,
+) -> int:
+    check_cmd = [
+        "python3",
+        "scripts/check_unique_entry_contract_migration_closure.py",
+        "--repo-catalog",
+        str(repo_catalog),
+        "--catalog",
+        str(catalog),
+        "--json-only",
+    ]
+    rc_check, out_check, _ = _run_capture(check_cmd)
+    payload = _parse_json_payload(out_check) or {}
+    status = str(payload.get("unique_entry_contract_migration_closure_status", "")).strip().upper()
+    if rc_check == 0 and status == "PASS_REQUIRED":
+        return 0
+
+    violation_ids = _extract_unique_entry_migration_violation_ids(payload)
+    if auto_repair and violation_ids:
+        print(
+            "[WARN] active runtime unique-entry migration closure not met; "
+            "running contract backfill for violating identities."
+        )
+        for violating_id in violation_ids:
+            rc_fix = _run(
+                [
+                    "python3",
+                    "scripts/repair_contract_backfill.py",
+                    "--catalog",
+                    str(catalog),
+                    "--identity-id",
+                    violating_id,
+                    "--apply",
+                    "--json-only",
+                ]
+            )
+            if rc_fix != 0:
+                print(
+                    "[FAIL] active runtime unique-entry migration auto-repair failed "
+                    f"(identity={violating_id}); {operation} blocked"
+                )
+                return rc_fix
+        rc_recheck, out_recheck, _ = _run_capture(check_cmd)
+        payload_recheck = _parse_json_payload(out_recheck) or {}
+        status_recheck = str(
+            payload_recheck.get("unique_entry_contract_migration_closure_status", "")
+        ).strip().upper()
+        if rc_recheck == 0 and status_recheck == "PASS_REQUIRED":
+            return 0
+        remaining = _extract_unique_entry_migration_violation_ids(payload_recheck)
+        remaining_token = ",".join(remaining) if remaining else "unknown"
+        print(
+            "[FAIL] active runtime unique-entry migration closure still failed after auto-repair; "
+            f"{operation} blocked (remaining={remaining_token})"
+        )
+        return 1
+
+    violation_token = ",".join(violation_ids) if violation_ids else "unknown"
+    print(
+        "[FAIL] active runtime unique-entry migration closure failed; "
+        f"{operation} blocked (violations={violation_token})"
+    )
+    return 1
+
+
 def _runtime_mode_guard(
     identity_id: str,
     catalog: str,
@@ -1887,6 +1975,14 @@ def main() -> int:
         )
         if rc_actor_binding_entry != 0:
             return rc_actor_binding_entry
+        rc_unique_entry_migration = _enforce_unique_entry_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="validate",
+            auto_repair=False,
+        )
+        if rc_unique_entry_migration != 0:
+            return rc_unique_entry_migration
         required_gate_bundle_receipt_validate = str(
             runtime_temp_file(
                 channel="required-gate-bundle",
@@ -3342,6 +3438,14 @@ def main() -> int:
         )
         if rc != 0:
             print("[FAIL] protocol-feedback SSOT index auto-repair failed; update blocked")
+            return rc
+        rc = _enforce_unique_entry_migration_closure(
+            catalog=args.catalog,
+            repo_catalog=args.repo_catalog,
+            operation="update",
+            auto_repair=True,
+        )
+        if rc != 0:
             return rc
         creator_run_id = f"identity-upgrade-exec-{args.identity_id}-{int(datetime.now(timezone.utc).timestamp())}"
         update_run_id = str(args.run_id or "").strip() or creator_run_id

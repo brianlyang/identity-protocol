@@ -417,3 +417,40 @@ Fix landed:
 Checkpoint verdict update:
 
 1. v1.6.8 cross-verification is now enforceable as a machine-auditable capture discipline, not memory-dependent narration.
+
+### 16.6 Active-runtime unique-entry migration preflight integration (2026-03-15)
+
+Problem:
+
+1. CI tuple probe coverage can be green while local project active-runtime packs still contain migration debt.
+2. This creates a “single identity pass vs global active-runtime pass” interpretation mismatch.
+
+Fix landed:
+
+1. `scripts/identity_creator.py`
+   - adds preflight closure helper bound to:
+     - `scripts/check_unique_entry_contract_migration_closure.py`
+     - `scripts/repair_contract_backfill.py`
+2. `validate` operation:
+   - executes migration closure check in fail-close mode before required validator bundle.
+3. `update` operation:
+   - executes migration closure check;
+   - auto-repairs violating active runtime identities with protocol toolchain (no manual edits);
+   - rechecks closure and blocks update if still non-pass.
+4. identity discovery is payload-driven from checker `violations` rows (no hardcoded identity IDs).
+
+Replay:
+
+1. before repair:
+   - `check_unique_entry_contract_migration_closure --catalog .identity/catalog.local.yaml --json-only`
+   - `FAIL_REQUIRED`, violation identity included `custom-creative-ecom-analyst`.
+2. protocol auto-repair command:
+   - `repair_contract_backfill.py --catalog .identity/catalog.local.yaml --identity-id custom-creative-ecom-analyst --apply --json-only`
+   - `PASS_REQUIRED`.
+3. after repair:
+   - same migration closure check returns `PASS_REQUIRED` with zero violations.
+
+Checkpoint verdict update:
+
+1. global active-runtime migration closure can now be enforced from creator preflight path, not only from fixture probes.
+2. closure claim semantics are aligned: global claim requires global active-runtime pass.
