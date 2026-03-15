@@ -2439,3 +2439,24 @@ Checkpoint verdict update:
 
 1. send-time fail-close remains unchanged, but blocker stage is now machine-distinguishable from real first-line parse failure.
 2. operator diagnostics can classify "pre-first-line block" vs "first-line malformed/missing" without manual log interpretation.
+
+### 26.32 Blocker-active controlled recovery entrypoint (2026-03-15)
+
+Problem:
+
+1. strict next-hop block is correct when `host_transport_post_check_blocker_active=true`, but operators lacked a canonical protocol-side recovery entry.
+2. ad-hoc/manual edits on runtime state files are unsafe and non-auditable.
+
+Fix landed:
+
+1. `scripts/recover_host_visible_post_check_state.py`
+   - reseeds required host-visible channel receipts with explicit tuple binding (`actor_id/session_id/run_id`).
+   - rewrites host-visible runtime state from the same tuple in one transaction.
+   - immediately reruns `validate_host_transport_wiring_attestation.py --require-live-receipts` with required tuple binding.
+2. recovery stays fail-close:
+   - if live attestation is not `PASS_REQUIRED`, tool returns `FAIL_REQUIRED` and does not claim unblock success.
+
+Checkpoint verdict update:
+
+1. blocker-active deadlock now has deterministic protocol tool entrypoint.
+2. recovery path is infrastructure-level, auditable, and avoids manual state mutation drift.

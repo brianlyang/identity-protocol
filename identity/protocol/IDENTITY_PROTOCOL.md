@@ -831,6 +831,16 @@ Hard constraints:
    - `send_time_block_stage=pre_first_line_post_check_*`
    and MUST NOT report synthetic first-line-missing evidence (`reply_first_line_missing_count=0`).
 
+Operational recovery path (control-plane only):
+
+1. If `host_transport_post_check_blocker_active=true` due stale/mismatched live receipts, recovery MUST use protocol toolchain, not manual state edits:
+   - `scripts/recover_host_visible_post_check_state.py`
+2. Recovery tool MUST:
+   - reseed required host-visible channel receipts with explicit tuple (`actor_id/session_id/run_id`)
+   - rewrite runtime state using same tuple
+   - immediately rerun `validate_host_transport_wiring_attestation.py --require-live-receipts`
+3. If live attestation does not return `PASS_REQUIRED`, recovery remains failed and next-hop strict block stays active.
+
 Metrics (release gate thresholds):
 
 1. `pre_send_gate_pass_rate >= 0.95`

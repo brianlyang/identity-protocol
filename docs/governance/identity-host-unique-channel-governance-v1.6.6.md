@@ -1138,6 +1138,11 @@ Implementation anchors:
      - `host_visible_post_check_metrics.host_visible_post_check_metrics_status`
      - `host_visible_post_check_metrics.metrics.*`
      - `host_visible_post_check_metrics.metric_statuses.*`
+7. `scripts/recover_host_visible_post_check_state.py`
+   - controlled recovery entry for blocker-active deadlock:
+     - reseed channel receipts + runtime state with explicit tuple binding
+     - immediately rerun live attestation (`--require-live-receipts`)
+     - no manual state-file edits are allowed
 
 Metrics (must all pass for closure claim):
 
