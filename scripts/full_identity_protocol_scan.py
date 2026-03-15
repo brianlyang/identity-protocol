@@ -17,6 +17,7 @@ from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gate
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
     HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE,
@@ -1708,6 +1709,27 @@ def main() -> int:
                     effective_source_layer,
                     "--json-only",
                 ],
+                "host_visible_post_check_recovery": [
+                    "python3",
+                    "scripts/recover_host_visible_post_check_state.py",
+                    "--catalog",
+                    str(catalog),
+                    "--repo-catalog",
+                    str(repo_catalog),
+                    "--identity-id",
+                    iid,
+                    "--actor-id",
+                    actor_id,
+                    "--session-id",
+                    scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
+                    "--receipt-source",
+                    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+                    "--allowed-live-receipt-sources",
+                    f"{HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE},{HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE}",
+                    "--json-only",
+                ],
                 "host_transport_wiring_attestation": [
                     "python3",
                     "scripts/validate_host_transport_wiring_attestation.py",
@@ -3105,11 +3127,29 @@ def main() -> int:
             ):
                 check_order.remove("host_transport_wiring_attestation")
                 check_order.insert(check_order.index("send_time_reply_gate"), "host_transport_wiring_attestation")
+            if (
+                "host_visible_post_check_recovery" in checks
+                and "host_transport_wiring_attestation" in checks
+                and check_order.index("host_visible_post_check_recovery")
+                > check_order.index("host_transport_wiring_attestation")
+            ):
+                check_order.remove("host_visible_post_check_recovery")
+                check_order.insert(check_order.index("host_transport_wiring_attestation"), "host_visible_post_check_recovery")
+            if (
+                "host_visible_post_check_recovery" in checks
+                and "send_time_reply_gate" in checks
+                and check_order.index("host_visible_post_check_recovery") > check_order.index("send_time_reply_gate")
+            ):
+                check_order.remove("host_visible_post_check_recovery")
+                check_order.insert(check_order.index("send_time_reply_gate"), "host_visible_post_check_recovery")
             for name in check_order:
                 cmd = checks[name]
                 run_cmd = cmd
                 if name == "host_transport_wiring_attestation":
-                    allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
+                    allowed_sources = {
+                        HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+                        HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+                    }
                     allowed_sources.update(
                         str(token).strip()
                         for token in live_host_receipt_sources
@@ -4678,6 +4718,24 @@ def main() -> int:
                     ):
                         if k in host_doc:
                             check_payload[k] = host_doc.get(k)
+                if name == "host_visible_post_check_recovery":
+                    recovery_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "recovery_status",
+                        "error_code",
+                        "attestation_status",
+                        "attestation_error_code",
+                        "attestation_stale_reasons",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_state_write_status",
+                        "host_transport_post_check_closure_state_path",
+                        "seeded_channels",
+                        "seeded_receipt_paths",
+                        "seeded_receipt_source",
+                        "stale_reasons",
+                    ):
+                        if k in recovery_doc:
+                            check_payload[k] = recovery_doc.get(k)
                 if name == "execution_reply_identity_coherence":
                     coherence_doc = _parse_json_safely(r.stdout) or {}
                     for k in (

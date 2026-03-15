@@ -2478,3 +2478,27 @@ Checkpoint verdict update:
 
 1. strict scan no longer has deterministic "pre-read stale post-check state" ordering drift.
 2. remaining failures (if any) are constrained to true live evidence mismatch, not scan sequencing artifacts.
+
+### 26.34 Strict scan pre-gate recovery integration for host-visible receipts (2026-03-15)
+
+Problem:
+
+1. long strict scans can age prior host-visible receipts beyond max-age and keep `blocker_active=true`.
+2. attestation may also fail on scan-produced fixture source tokens unless scan orchestration carries explicit allowlist.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - adds pre-gate recovery step:
+     - `host_visible_post_check_recovery` (tuple-bound reseed + immediate live attestation).
+   - enforces execution order:
+     - recovery -> host attestation -> send-time gate.
+   - host attestation allowlist baseline in scan orchestration now includes:
+     - `runtime_dialogue`
+     - `ci_fixture`
+2. this applies to scan orchestration only; tuple/run/freshness checks remain strict fail-close.
+
+Checkpoint verdict update:
+
+1. strict scan host-visible control loop now has deterministic pre-gate refresh path.
+2. source/age drift in long scans is reduced to explicit governance behavior rather than incidental stale-state carryover.

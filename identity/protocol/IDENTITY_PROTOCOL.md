@@ -831,6 +831,7 @@ Hard constraints:
    - `send_time_block_stage=pre_first_line_post_check_*`
    and MUST NOT report synthetic first-line-missing evidence (`reply_first_line_missing_count=0`).
 8. In strict scan orchestration, same-turn ordering MUST run host transport attestation before send-time gate evaluation when both are required.
+9. In strict scan orchestration, tuple-bound post-check recovery MUST execute before host/send gates when blocker-active risk is present.
 
 Operational recovery path (control-plane only):
 

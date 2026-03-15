@@ -1139,6 +1139,8 @@ Implementation anchors:
      - `host_visible_post_check_metrics.metrics.*`
      - `host_visible_post_check_metrics.metric_statuses.*`
    - strict scan execution order must run `host_transport_wiring_attestation` before `send_time_reply_gate` to avoid stale closure-state pre-read in same turn.
+   - strict scan orchestration must invoke `host_visible_post_check_recovery` before host/send gates, using explicit tuple-bound reseed + live attestation.
+   - scan-time host attestation allowlist baseline is `runtime_dialogue,ci_fixture`; tuple/run/freshness gates remain fail-close.
 7. `scripts/recover_host_visible_post_check_state.py`
    - controlled recovery entry for blocker-active deadlock:
      - reseed channel receipts + runtime state with explicit tuple binding
