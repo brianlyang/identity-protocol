@@ -2221,3 +2221,68 @@ Checkpoint verdict update:
 
 1. strict unique-entry receipt enforcement is now contract-default in strict operation lanes.
 2. failure to pass `--require-entry-receipt` no longer creates a permissive execution window.
+
+### 26.26 Host-visible strict live run-binding requiredization (2026-03-15)
+
+Problem:
+
+1. host-visible live attestation could pass in strict lanes without explicit run binding, leaving a cross-turn receipt reuse window.
+2. strict scan and required coverage did not consistently pass run binding arguments into host-visible attestation.
+3. CI and drift governance did not hard-require a negative probe proving missing run binding is blocked.
+
+Fix landed:
+
+1. `scripts/protocol_infra_contract.py`
+   - added infra constant:
+     - `HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED = True`.
+2. `scripts/create_identity_pack.py`
+   - host-visible registry contract skeleton now emits:
+     - `strict_live_run_binding_required: true`.
+3. `scripts/repair_contract_backfill.py`
+   - backfill normalization now forces `strict_live_run_binding_required=true`.
+   - post-backfill invalidity checks now fail-close when this field is not true.
+4. `scripts/validate_protocol_unique_entry_gate.py`
+   - host-visible contract allowlist now includes `strict_live_run_binding_required`.
+   - unique-entry validation now fail-closes if host-visible strict run binding is not true.
+   - projected field added:
+     - `protocol_host_visible_surface_strict_live_run_binding_required`.
+5. `scripts/validate_host_transport_wiring_attestation.py`
+   - strict live run binding now defaults from contract/infra.
+   - when `--require-live-receipts` is enabled and strict binding is required, missing `--require-run-id` now fail-closes with:
+     - `host_visible_surface_live_run_id_required_missing`.
+6. `scripts/full_identity_protocol_scan.py`
+   - strict host-visible attestation now passes `--require-run-id <required_gate_bundle_run_id>`.
+   - lane/headstamp continuity delegate also receives bound `--session-id` and `--run-id`.
+7. `scripts/validate_required_contract_coverage.py`
+   - host-visible validator delegate now receives `--require-actor-id`, `--require-session-id`, and `--require-run-id`.
+8. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - positive live probe now binds `--require-run-id run:ci-probe-receipt`.
+   - added required negative probe:
+     - `host_visible_live_run_binding_required_blocked`
+     - expects `host_visible_surface_live_run_id_required_missing`.
+9. `scripts/validate_required_gate_surface_drift.py`
+   - required tokens now enforce `--require-run-id` on host-visible live probe invocations.
+   - required tokens now include `host_visible_live_run_binding_required_blocked` coverage.
+
+Replay (serial, machine evidence):
+
+1. compile sanity:
+   - `python3 -m py_compile ...` on all touched Python scripts -> PASS.
+2. host-visible CI probe suite:
+   - `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh` -> PASS.
+   - includes `host_visible_live_run_binding_required_blocked` (expected non-zero).
+3. required surface drift:
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only` -> `PASS_REQUIRED`.
+4. live runtime attestation replay (global `system-requirements-analyst`):
+   - no run-id request -> `FAIL_REQUIRED` with `host_visible_surface_live_run_id_required_missing`.
+   - matched run-id request -> `PASS_REQUIRED`.
+   - drifted run-id request -> `FAIL_REQUIRED` with per-channel run-id mismatch stale reasons.
+5. strict full scan replay:
+   - `python3 scripts/full_identity_protocol_scan.py ... --identity-id system-requirements-analyst ...`
+   - now surfaces residual host-visible run-binding mismatch as explicit `IP-HDSTAMP-003` (no false green).
+
+Checkpoint verdict update:
+
+1. host-visible live run binding is now a strict default contract requirement, not an optional caller behavior.
+2. strict scan/coverage/CI governance now carries bound run context end-to-end.
+3. remaining P0 closure is now narrowed to real host sender physical lane convergence (same-turn run-bound receipt production), not validator optionality.

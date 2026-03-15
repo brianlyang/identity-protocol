@@ -144,6 +144,12 @@ elif name == "host_visible_live_receipts_pass":
         raise SystemExit("host_visible_live_receipts_pass: expected zero rc")
     if status != "PASS_REQUIRED":
         raise SystemExit("host_visible_live_receipts_pass: expected PASS_REQUIRED status")
+elif name == "host_visible_live_run_binding_required_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_live_run_binding_required_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_run_id_required_missing"
+    if token not in reasons:
+        raise SystemExit("host_visible_live_run_binding_required_blocked: expected strict run binding token")
 elif name == "host_visible_commentary_bypass_blocked":
     if rc == 0:
         raise SystemExit("host_visible_commentary_bypass_blocked: expected non-zero rc")
@@ -261,6 +267,17 @@ run_probe host_visible_live_receipts_pass \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe host_visible_live_run_binding_required_blocked \
+  python3 scripts/validate_host_transport_wiring_attestation.py \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -292,6 +309,7 @@ run_probe host_visible_receipt_stale_blocked \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -347,6 +365,7 @@ run_probe host_visible_commentary_session_binding_blocked \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -401,6 +420,7 @@ run_probe host_visible_commentary_bypass_blocked \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
+    --require-run-id run:ci-probe-receipt \
     --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

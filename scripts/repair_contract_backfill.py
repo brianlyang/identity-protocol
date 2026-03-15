@@ -40,6 +40,7 @@ from create_identity_pack import (
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
     HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+    HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
@@ -742,6 +743,7 @@ def _normalize_host_visible_surface_contracts(task: dict[str, Any]) -> tuple[lis
         node["required_live_probe_delegate"] = HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE
         node["host_dispatch_mode_required"] = HOST_GATEWAY_REQUIRED_DISPATCH_MODE
         node["host_release_mode_required"] = HOST_GATEWAY_REQUIRED_RELEASE_MODE
+        node["strict_live_run_binding_required"] = bool(HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED)
     return forced_required_keys, restored_validator_keys
 
 
@@ -1218,6 +1220,7 @@ def main() -> int:
             != HOST_GATEWAY_REQUIRED_DISPATCH_MODE
             or str((updated.get(k) or {}).get("host_release_mode_required", "")).strip().lower()
             != HOST_GATEWAY_REQUIRED_RELEASE_MODE
+            or (updated.get(k) or {}).get("strict_live_run_binding_required") is not True
         )
     ]
     downsink_invalid_after = [

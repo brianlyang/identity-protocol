@@ -18,6 +18,7 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
     HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+    HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
@@ -45,6 +46,19 @@ def _as_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _as_bool(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    token = str(value or "").strip().lower()
+    if token in {"1", "true", "yes", "on"}:
+        return True
+    if token in {"0", "false", "no", "off"}:
+        return False
+    return bool(default)
 
 
 def _parse_csv(value: str) -> list[str]:
@@ -147,6 +161,9 @@ def main() -> int:
         "host_transport_wiring_attestation_required_actor_id": str(args.require_actor_id or "").strip(),
         "host_transport_wiring_attestation_required_session_id": str(args.require_session_id or "").strip(),
         "host_transport_wiring_attestation_required_run_id": str(args.require_run_id or "").strip(),
+        "host_transport_wiring_attestation_strict_live_run_binding_required": bool(
+            HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED
+        ),
         "error_code": "",
         "stale_reasons": [],
     }
@@ -200,6 +217,16 @@ def main() -> int:
 
     dispatch_mode_required = str(host_visible_contract.get("host_dispatch_mode_required", "")).strip().lower()
     release_mode_required = str(host_visible_contract.get("host_release_mode_required", "")).strip().lower()
+    strict_live_run_binding_required = _as_bool(
+        host_visible_contract.get(
+            "strict_live_run_binding_required",
+            HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
+        ),
+        default=bool(HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED),
+    )
+    payload["host_transport_wiring_attestation_strict_live_run_binding_required"] = bool(
+        strict_live_run_binding_required
+    )
     if dispatch_mode_required != HOST_GATEWAY_REQUIRED_DISPATCH_MODE:
         issues.append("host_visible_surface_dispatch_mode_required_mismatch")
     if release_mode_required != HOST_GATEWAY_REQUIRED_RELEASE_MODE:
@@ -226,8 +253,13 @@ def main() -> int:
         required_session_id = str(args.require_session_id or "").strip()
         required_run_id = str(args.require_run_id or "").strip()
         payload["host_transport_wiring_attestation_live_binding_required"] = bool(
-            required_actor_id or required_session_id or required_run_id
+            required_actor_id
+            or required_session_id
+            or required_run_id
+            or strict_live_run_binding_required
         )
+        if strict_live_run_binding_required and not required_run_id:
+            issues.append("host_visible_surface_live_run_id_required_missing")
         allowed_sources = set(_parse_csv(args.allowed_live_receipt_sources))
         if not allowed_sources:
             allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}

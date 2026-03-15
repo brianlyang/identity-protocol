@@ -1060,6 +1060,7 @@ def main() -> int:
                 "run_probe host_visible_live_receipts_pass",
                 "scripts/validate_host_transport_wiring_attestation.py",
                 "--require-live-receipts",
+                "--require-run-id",
             )
         )
         has_negative_probe = all(
@@ -1069,12 +1070,21 @@ def main() -> int:
                 "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status",
             )
         )
+        has_run_binding_negative_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_live_run_binding_required_blocked",
+                "host_visible_surface_live_run_id_required_missing",
+                "--require-live-receipts",
+            )
+        )
         has_binding_negative_probe = all(
             token in text
             for token in (
                 "run_probe host_visible_commentary_session_binding_blocked",
                 "host_visible_surface_live_channel_session_id_mismatch:commentary:",
                 "--require-session-id",
+                "--require-run-id",
             )
         )
         host_visible_missing_tokens: list[str] = []
@@ -1084,6 +1094,8 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_live_probe_invocation_missing")
         if not has_negative_probe:
             host_visible_missing_tokens.append("host_visible_surface_commentary_negative_probe_invocation_missing")
+        if not has_run_binding_negative_probe:
+            host_visible_missing_tokens.append("host_visible_surface_run_binding_negative_probe_invocation_missing")
         if not has_binding_negative_probe:
             host_visible_missing_tokens.append("host_visible_surface_commentary_session_binding_negative_probe_invocation_missing")
         if host_visible_missing_tokens:

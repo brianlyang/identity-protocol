@@ -771,6 +771,13 @@ def _run_validator(
             cmd += ["--session-id", session_id]
         if run_id:
             cmd += ["--run-id", run_id]
+    if script == "scripts/validate_host_transport_wiring_attestation.py":
+        if actor_id:
+            cmd += ["--require-actor-id", actor_id]
+        if session_id:
+            cmd += ["--require-session-id", session_id]
+        if run_id:
+            cmd += ["--require-run-id", run_id]
     if script == "scripts/validate_protocol_lane_headstamp_continuity.py":
         if expected_work_layer:
             cmd += ["--expected-work-layer", expected_work_layer]

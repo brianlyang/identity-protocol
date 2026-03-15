@@ -30,6 +30,7 @@ from protocol_infra_contract import (
     HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS as INFRA_HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS,
     HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
+    HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED as INFRA_HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS as INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
@@ -90,6 +91,7 @@ HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS = set(INFRA_HOST_VISIBLE_SURFAC
 HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = set(INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS)
 HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED = INFRA_HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS
 HOST_GATEWAY_ALLOWED_FIELDS = {
     "contract_id",
@@ -173,6 +175,7 @@ HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
     "runtime_state_file",
     "runtime_receipt_pattern",
     "runtime_receipt_max_age_seconds",
+    "strict_live_run_binding_required",
     "required_attestation_fields",
     "required_pass_status_fields",
     "required_live_probe_delegate",
@@ -597,6 +600,7 @@ def main() -> int:
         "protocol_host_visible_surface_state_file": "",
         "protocol_host_visible_surface_receipt_pattern": "",
         "protocol_host_visible_surface_runtime_receipt_max_age_seconds": 0,
+        "protocol_host_visible_surface_strict_live_run_binding_required": True,
         "protocol_host_visible_surface_required_attestation_fields": [],
         "protocol_host_visible_surface_required_pass_status_fields": [],
         "protocol_host_visible_surface_live_probe_delegate": "",
@@ -721,6 +725,17 @@ def main() -> int:
         payload["protocol_host_visible_surface_runtime_receipt_max_age_seconds"] = (
             runtime_receipt_max_age_seconds
         )
+        strict_live_run_binding_required = bool(
+            _as_bool(
+                host_visible_surface_contract.get(
+                    "strict_live_run_binding_required",
+                    HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
+                )
+            )
+        )
+        payload["protocol_host_visible_surface_strict_live_run_binding_required"] = (
+            strict_live_run_binding_required
+        )
         if not state_file:
             host_visible_surface_issues.append("host_visible_surface_state_file_missing")
         if not receipt_pattern:
@@ -729,6 +744,8 @@ def main() -> int:
             host_visible_surface_issues.append("host_visible_surface_receipt_pattern_mismatch")
         if runtime_receipt_max_age_seconds <= 0:
             host_visible_surface_issues.append("host_visible_surface_runtime_receipt_max_age_seconds_invalid")
+        if not strict_live_run_binding_required:
+            host_visible_surface_issues.append("host_visible_surface_strict_live_run_binding_required_not_true")
         attestation_fields = set(_as_str_list(host_visible_surface_contract.get("required_attestation_fields")))
         payload["protocol_host_visible_surface_required_attestation_fields"] = sorted(attestation_fields)
         if not HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS.issubset(attestation_fields):
