@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -212,6 +213,46 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def _sha256_file(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        return ""
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(131072)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _resolve_pack_runtime_path(pack_path: Path, raw_path: str, fallback: str) -> Path:
+    token = str(raw_path or "").strip() or str(fallback)
+    candidate = Path(token).expanduser()
+    if not candidate.is_absolute():
+        candidate = (pack_path / candidate).resolve()
+    return candidate
+
+
+def _collect_host_gateway_wrapper_template_snapshot(task: dict[str, Any], *, pack_path: Path) -> dict[str, dict[str, Any]]:
+    contract = task.get(HOST_GATEWAY_CONTRACT_KEY)
+    node = contract if isinstance(contract, dict) else {}
+    wrapper_specs = {
+        "ingress_wrapper_path": HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH,
+        "egress_wrapper_path": HOST_GATEWAY_RELATIVE_EGRESS_WRAPPER_PATH,
+        "session_chain_wrapper_path": HOST_GATEWAY_RELATIVE_SESSION_CHAIN_WRAPPER_PATH,
+    }
+    payload: dict[str, dict[str, Any]] = {}
+    for key, fallback in wrapper_specs.items():
+        resolved = _resolve_pack_runtime_path(pack_path, str(node.get(key, "")).strip(), fallback)
+        payload[key] = {
+            "path": str(resolved),
+            "exists": bool(resolved.exists() and resolved.is_file()),
+            "sha256": _sha256_file(resolved),
+        }
+    return payload
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -1223,7 +1264,12 @@ def main() -> int:
     ]
     legacy_drift_after = _legacy_path_drift_fields(updated, args.identity_id)
 
+    host_gateway_wrapper_snapshot_before = _collect_host_gateway_wrapper_template_snapshot(
+        updated,
+        pack_path=pack_path,
+    )
     gateway_artifacts = {}
+    host_gateway_artifact_materialization_invoked = False
     if (
         args.apply
         and not host_gateway_missing_after
@@ -1231,6 +1277,7 @@ def main() -> int:
         and not host_visible_surface_missing_after
         and not host_visible_surface_invalid_after
     ):
+        host_gateway_artifact_materialization_invoked = True
         gateway_artifacts = materialize_protocol_host_gateway_artifacts(
             task=updated,
             identity_id=args.identity_id,
@@ -1238,6 +1285,20 @@ def main() -> int:
             catalog_path=catalog,
             protocol_root=Path(__file__).resolve().parent.parent,
         )
+    host_gateway_wrapper_snapshot_after = _collect_host_gateway_wrapper_template_snapshot(
+        updated,
+        pack_path=pack_path,
+    )
+    host_gateway_wrapper_artifact_changed_paths: list[str] = []
+    for wrapper_key, before_snapshot in host_gateway_wrapper_snapshot_before.items():
+        after_snapshot = host_gateway_wrapper_snapshot_after.get(wrapper_key) or {}
+        before_sha = str(before_snapshot.get("sha256", "")).strip()
+        after_sha = str(after_snapshot.get("sha256", "")).strip()
+        before_exists = bool(before_snapshot.get("exists"))
+        after_exists = bool(after_snapshot.get("exists"))
+        if before_sha != after_sha or before_exists != after_exists:
+            host_gateway_wrapper_artifact_changed_paths.append(wrapper_key)
+    host_gateway_wrapper_artifacts_refreshed = bool(host_gateway_wrapper_artifact_changed_paths)
 
     changed = before != updated
     applied = False
@@ -1317,7 +1378,7 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
         stale_reasons = ["legacy_contract_path_drift_after_backfill"]
-    elif changed:
+    elif changed or host_gateway_wrapper_artifacts_refreshed:
         status = STATUS_PASS_REQUIRED if applied else STATUS_SKIPPED_NOT_REQUIRED
         error_code = ""
         stale_reasons = [] if applied else ["dry_run_only"]
@@ -1334,6 +1395,11 @@ def main() -> int:
         "contract_backfill_status": status,
         "error_code": error_code,
         "changed": changed,
+        "host_gateway_wrapper_artifacts_refreshed": host_gateway_wrapper_artifacts_refreshed,
+        "host_gateway_wrapper_artifact_changed_paths": host_gateway_wrapper_artifact_changed_paths,
+        "host_gateway_wrapper_snapshot_before": host_gateway_wrapper_snapshot_before,
+        "host_gateway_wrapper_snapshot_after": host_gateway_wrapper_snapshot_after,
+        "host_gateway_artifact_materialization_invoked": host_gateway_artifact_materialization_invoked,
         "applied": applied,
         "missing_contract_keys_before": missing_before,
         "missing_contract_keys_after": missing_after,
