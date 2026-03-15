@@ -30,6 +30,8 @@ REASON_SKIPPED = "IP-COV-001"
 REASON_FAIL = "IP-COV-999"
 REASON_LANE_REQUIRED = "IP-COV-LANE-001"
 REASON_REQUIRED_SUBCHECK_SKIPPED = "IP-COV-UE-001"
+REASON_REQUIRED_STATUS_SKIPPED = "IP-COV-REQ-001"
+REASON_REQUIRED_NO_CURRENT_ROUND_EVIDENCE = "IP-COV-REQ-002"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
 SCRIPT_PATH = Path(__file__).resolve()
@@ -76,6 +78,7 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_v16_skill_path_integrity.py": "path_integrity_status",
     "scripts/validate_gated_switch_guard.py": "gated_switch_guard_status",
     "scripts/validate_protocol_lane_headstamp_continuity.py": "protocol_lane_headstamp_status",
+    "scripts/validate_host_transport_wiring_attestation.py": "host_transport_wiring_attestation_status",
     "scripts/validate_execution_target_tuple_isolation.py": "execution_target_tuple_isolation_status",
     "scripts/validate_protocol_unique_entry_gate.py": "protocol_unique_entry_gate_status",
     "scripts/validate_protocol_downsink_path_immutability.py": "protocol_downsink_path_immutability_status",
@@ -117,6 +120,7 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "skill_path_integrity",
     "protocol_unique_entry_gate",
     "protocol_lane_headstamp_continuity",
+    "host_transport_wiring_attestation",
     "downsink_path_immutability",
     "downsink_path_write_guard",
     "downsink_path_literal_lock",
@@ -137,6 +141,7 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "vendor_api_solution",
     "gated_switch_guard",
     "protocol_lane_headstamp_continuity",
+    "host_transport_wiring_attestation",
     "protocol_unique_entry_gate",
     "downsink_path_immutability",
     "downsink_path_write_guard",
@@ -545,6 +550,15 @@ TARGETS = (
         validator_args=("--json-only",),
     ),
     ContractTarget(
+        name="host_transport_wiring_attestation",
+        contract_keys=(
+            "host_visible_surface_registry_contract_v1",
+            "host_visible_surface_registry_contract",
+        ),
+        validator_script="scripts/validate_host_transport_wiring_attestation.py",
+        validator_args=("--require-live-receipts", "--json-only"),
+    ),
+    ContractTarget(
         name="execution_target_tuple_isolation",
         contract_keys=(
             "execution_target_tuple_isolation_contract_v1",
@@ -678,6 +692,16 @@ def _classify_from_payload(
 ) -> tuple[str, str]:
     status_key = STATUS_FIELD_BY_SCRIPT.get(script, "")
     validator_status = str(payload.get(status_key, "")).strip().upper() if status_key else ""
+    if required and validator_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons = payload.get("stale_reasons")
+        stale_tokens = (
+            [str(item).strip() for item in stale_reasons if str(item).strip()]
+            if isinstance(stale_reasons, list)
+            else []
+        )
+        if "required_contract_not_applicable_no_current_round_evidence_source" in stale_tokens:
+            return STATUS_FAIL_REQUIRED, REASON_REQUIRED_NO_CURRENT_ROUND_EVIDENCE
+        return STATUS_FAIL_REQUIRED, REASON_REQUIRED_STATUS_SKIPPED
     if (
         script == "scripts/validate_protocol_unique_entry_gate.py"
         and required
@@ -772,12 +796,17 @@ def _run_validator(
         if run_id:
             cmd += ["--run-id", run_id]
     if script == "scripts/validate_host_transport_wiring_attestation.py":
+        effective_run_id = str(run_id or "").strip()
+        if not effective_run_id:
+            session_token = str(session_id or "").strip()
+            if session_token.startswith("run:") and len(session_token) > 4:
+                effective_run_id = session_token.split(":", 1)[1].strip()
         if actor_id:
             cmd += ["--require-actor-id", actor_id]
         if session_id:
             cmd += ["--require-session-id", session_id]
-        if run_id:
-            cmd += ["--require-run-id", run_id]
+        if effective_run_id:
+            cmd += ["--require-run-id", effective_run_id]
     if script == "scripts/validate_protocol_lane_headstamp_continuity.py":
         if expected_work_layer:
             cmd += ["--expected-work-layer", expected_work_layer]
@@ -979,7 +1008,7 @@ def main() -> int:
         if isinstance(payload, dict):
             payload_required = payload.get("required_contract")
             if isinstance(payload_required, bool):
-                required_effective = payload_required
+                required_effective = required_effective or payload_required
             requiredization_current_round_linked = bool(payload.get("requiredization_current_round_linked", False))
             if not requiredization_current_round_linked and str(payload.get("activity_correlation_status", "")).strip().upper() == "CORRELATED_CURRENT_ROUND":
                 requiredization_current_round_linked = True

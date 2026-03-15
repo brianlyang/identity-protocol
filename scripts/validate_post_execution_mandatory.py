@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
+from protocol_infra_contract import HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
 from tool_vendor_governance_common import latest_identity_upgrade_report, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -20,6 +21,12 @@ REPO_ROOT = SCRIPT_DIR.parent
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate", "mutation"}
 INSPECTION_OPERATIONS = {"scan", "three-plane", "inspection"}
+HOST_VISIBLE_GOVERNED_CHANNELS = {
+    str(channel).strip().lower()
+    for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    if str(channel).strip()
+}
+HOST_VISIBLE_GOVERNED_CHANNELS.add(FINAL_EMIT_CHANNEL_ID.lower())
 
 MANDATORY_REPORT_FIELDS = (
     "permission_state",
@@ -113,6 +120,14 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
         print(json.dumps(payload, ensure_ascii=False))
     else:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _is_host_visible_governed_channel(channel_id: str) -> bool:
+    return str(channel_id or "").strip().lower() in HOST_VISIBLE_GOVERNED_CHANNELS
+
+
+def _is_final_emit_channel(channel_id: str) -> bool:
+    return str(channel_id or "").strip().lower() == FINAL_EMIT_CHANNEL_ID
 
 
 def main() -> int:
@@ -259,17 +274,20 @@ def main() -> int:
             stale_reasons.append("phase_b_strict_revalidate_status_missing_after_phase_a")
 
     if args.operation in STRICT_OPERATIONS:
+        outlet_channel_id = str(payload.get("outlet_channel_id", "")).strip()
         if not bool(payload.get("governed_outlet_enforced", False)):
             stale_reasons.append("governed_outlet_not_enforced")
-        if not str(payload.get("outlet_channel_id", "")).strip():
+        if not outlet_channel_id:
             stale_reasons.append("outlet_channel_id_missing")
+        elif not _is_host_visible_governed_channel(outlet_channel_id):
+            stale_reasons.append("outlet_channel_id_not_governed_host_visible")
         if not str(payload.get("outlet_preflight_receipt", "")).strip():
             stale_reasons.append("outlet_preflight_receipt_missing")
         if bool(payload.get("outlet_bypass_detected", False)):
             stale_reasons.append("outlet_bypass_detected_in_strict_operation")
         if str(payload.get("final_emit_channel_id", "")).strip() != FINAL_EMIT_CHANNEL_ID:
             stale_reasons.append("final_emit_channel_id_not_canonical")
-        if str(payload.get("final_emit_policy_mode", "")).strip() != FINAL_EMIT_POLICY_MODE:
+        if _is_final_emit_channel(outlet_channel_id) and str(payload.get("final_emit_policy_mode", "")).strip() != FINAL_EMIT_POLICY_MODE:
             stale_reasons.append("final_emit_policy_mode_not_required")
         if str(payload.get("final_emit_schema_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
             stale_reasons.append("final_emit_schema_status_not_pass")

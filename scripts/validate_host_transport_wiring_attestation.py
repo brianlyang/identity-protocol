@@ -282,6 +282,8 @@ def main() -> int:
     payload["host_transport_wiring_attestation_strict_live_run_binding_required"] = bool(
         strict_live_run_binding_required
     )
+    if strict_live_run_binding_required is not True:
+        issues.append("host_visible_surface_strict_live_run_binding_required_not_true")
     if dispatch_mode_required != HOST_GATEWAY_REQUIRED_DISPATCH_MODE:
         issues.append("host_visible_surface_dispatch_mode_required_mismatch")
     if release_mode_required != HOST_GATEWAY_REQUIRED_RELEASE_MODE:

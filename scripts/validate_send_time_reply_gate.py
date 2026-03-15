@@ -57,6 +57,7 @@ HOST_VISIBLE_GOVERNED_CHANNELS = {
 HOST_VISIBLE_GOVERNED_CHANNELS.add(normalize_text(FINAL_EMIT_CHANNEL_ID).lower())
 SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
+REPO_ROOT = SCRIPT_DIR.parent
 
 
 def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
@@ -69,6 +70,19 @@ def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
     profile = str((row or {}).get("profile", "")).strip().lower()
     runtime_mode = str((row or {}).get("runtime_mode", "")).strip().lower()
     return profile == "fixture" or runtime_mode == "demo_only"
+
+
+def _resolve_input_path(raw_path: str) -> Path:
+    candidate = Path(str(raw_path or "")).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    cwd_candidate = (Path.cwd() / candidate).resolve()
+    if cwd_candidate.exists():
+        return cwd_candidate
+    repo_candidate = (REPO_ROOT / candidate).resolve()
+    if repo_candidate.exists():
+        return repo_candidate
+    return cwd_candidate
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any]:
@@ -244,7 +258,8 @@ def main() -> int:
     args = ap.parse_args()
     strict_context_hint = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
 
-    catalog_path = Path(args.catalog).expanduser().resolve()
+    catalog_path = _resolve_input_path(args.catalog)
+    repo_catalog_path = _resolve_input_path(args.repo_catalog)
     if catalog_path.exists() and _is_fixture_identity(catalog_path, args.identity_id):
         payload = {
             "identity_id": args.identity_id,
@@ -301,7 +316,7 @@ def main() -> int:
     except Exception as exc:
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "send_time_gate_status": STATUS_FAIL_REQUIRED if strict_context_hint else STATUS_WARN_NON_BLOCKING,
             "error_code": ERR_SEND_TIME_GATE,
@@ -339,7 +354,7 @@ def main() -> int:
     if strict_context and not host_visible_governed_channel_ok:
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "validator_operation": "validate" if args.operation == "send-time" else args.operation,
             "send_time_gate_enforced": bool(args.enforce_send_time_gate),
@@ -393,7 +408,7 @@ def main() -> int:
     if strict_context and final_emit_channel_ok and not final_emit_policy_ok:
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "validator_operation": "validate" if args.operation == "send-time" else args.operation,
             "send_time_gate_enforced": bool(args.enforce_send_time_gate),
@@ -447,7 +462,7 @@ def main() -> int:
     if strict_context and final_emit_channel_ok and not final_emit_schema_ok:
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "validator_operation": "validate" if args.operation == "send-time" else args.operation,
             "send_time_gate_enforced": bool(args.enforce_send_time_gate),
@@ -501,7 +516,7 @@ def main() -> int:
     if strict_context and not governed_outlet:
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "validator_operation": "validate" if args.operation == "send-time" else args.operation,
             "send_time_gate_enforced": bool(args.enforce_send_time_gate),
@@ -560,7 +575,7 @@ def main() -> int:
         )
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "validator_operation": "validate" if args.operation == "send-time" else args.operation,
             "send_time_gate_enforced": bool(args.enforce_send_time_gate),
@@ -613,7 +628,7 @@ def main() -> int:
     if strict_context and not bool(args.reply_outlet_guard_applied):
         payload = {
             "identity_id": args.identity_id,
-            "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+            "catalog_path": str(catalog_path),
             "operation": args.operation,
             "validator_operation": "validate" if args.operation == "send-time" else args.operation,
             "send_time_gate_enforced": bool(args.enforce_send_time_gate),
@@ -690,9 +705,9 @@ def main() -> int:
         "--identity-id",
         args.identity_id,
         "--catalog",
-        args.catalog,
+        str(catalog_path),
         "--repo-catalog",
-        args.repo_catalog,
+        str(repo_catalog_path),
         "--operation",
         op_for_validator,
         "--json-only",
@@ -739,7 +754,7 @@ def main() -> int:
 
     payload = {
         "identity_id": args.identity_id,
-        "catalog_path": str(Path(args.catalog).expanduser().resolve()),
+        "catalog_path": str(catalog_path),
         "operation": args.operation,
         "validator_operation": op_for_validator,
         "send_time_gate_enforced": bool(args.enforce_send_time_gate),

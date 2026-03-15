@@ -21,6 +21,7 @@ from final_emit_contract_common import (
     FINAL_EMIT_SCHEMA_ID,
 )
 from protocol_infra_contract import (
+    HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_PREFIX,
     MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE as INFRA_MULTIMODAL_RUNTIME_STAGE_RECEIPT_SOURCE,
@@ -56,6 +57,12 @@ ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+HOST_VISIBLE_GOVERNED_CHANNELS = {
+    str(channel).strip().lower()
+    for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    if str(channel).strip()
+}
+HOST_VISIBLE_GOVERNED_CHANNELS.add(FINAL_EMIT_CHANNEL_ID.lower())
 
 PRE_MUTATION_PROJECTION_REQUIRED_FIELDS: tuple[str, ...] = (
     "headstamp_first_line_status",
@@ -254,6 +261,14 @@ def _parse_json_payload(raw: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _is_host_visible_governed_channel(channel_id: str) -> bool:
+    return str(channel_id or "").strip().lower() in HOST_VISIBLE_GOVERNED_CHANNELS
+
+
+def _is_final_emit_channel(channel_id: str) -> bool:
+    return str(channel_id or "").strip().lower() == FINAL_EMIT_CHANNEL_ID
+
+
 def _validate_final_emit_contract_snapshot(
     *,
     send_time_gate_status: str,
@@ -272,18 +287,19 @@ def _validate_final_emit_contract_snapshot(
         stale_reasons.append("send_time_gate_not_pass_required")
     if not bool(governed_outlet_enforced):
         stale_reasons.append("governed_outlet_not_enforced")
-    if str(outlet_channel_id or "").strip() != FINAL_EMIT_CHANNEL_ID:
-        stale_reasons.append("outlet_channel_not_final_emit_governed")
+    if not _is_host_visible_governed_channel(outlet_channel_id):
+        stale_reasons.append("outlet_channel_not_governed_host_visible")
     if not str(outlet_preflight_receipt or "").strip():
         stale_reasons.append("outlet_preflight_receipt_missing")
     if bool(outlet_bypass_detected):
         stale_reasons.append("outlet_bypass_detected")
     if str(final_emit_channel_id or "").strip() != FINAL_EMIT_CHANNEL_ID:
         stale_reasons.append("final_emit_channel_not_canonical")
-    if str(final_emit_policy_mode or "").strip() != FINAL_EMIT_POLICY_MODE:
-        stale_reasons.append("final_emit_policy_mode_not_tool_choice_required")
-    if str(final_emit_schema_id or "").strip() != FINAL_EMIT_SCHEMA_ID:
-        stale_reasons.append("final_emit_schema_id_not_canonical")
+    if _is_final_emit_channel(outlet_channel_id):
+        if str(final_emit_policy_mode or "").strip() != FINAL_EMIT_POLICY_MODE:
+            stale_reasons.append("final_emit_policy_mode_not_tool_choice_required")
+        if str(final_emit_schema_id or "").strip() != FINAL_EMIT_SCHEMA_ID:
+            stale_reasons.append("final_emit_schema_id_not_canonical")
     if str(final_emit_schema_status or "").strip().upper() != "PASS_REQUIRED":
         stale_reasons.append("final_emit_schema_status_not_pass_required")
     if str(final_emit_contract_status or "").strip().upper() != "PASS_REQUIRED":
@@ -312,8 +328,8 @@ def _validate_pre_mutation_projection(
         if value != STATUS_PASS_REQUIRED:
             stale_reasons.append(f"pre_mutation_projection_status_not_pass:{field}")
     emit_channel_id = str(projection.get("emit_channel_id", "")).strip()
-    if emit_channel_id and emit_channel_id != FINAL_EMIT_CHANNEL_ID:
-        stale_reasons.append("pre_mutation_projection_emit_channel_not_canonical")
+    if emit_channel_id and not _is_host_visible_governed_channel(emit_channel_id):
+        stale_reasons.append("pre_mutation_projection_emit_channel_not_governed_host_visible")
     return len(stale_reasons) == 0, stale_reasons
 
 
