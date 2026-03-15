@@ -749,6 +749,10 @@ def _host_gateway_wrapper_template_attestation_policy() -> dict:
     ingress_template = _protocol_ingress_wrapper_template()
     egress_template = _protocol_egress_wrapper_template()
     session_chain_template = _protocol_session_chain_wrapper_template()
+    _assert_wrapper_template_constant_bindings(
+        egress_template=egress_template,
+        session_chain_template=session_chain_template,
+    )
     return {
         "required": True,
         "attestation_id": HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_ID,
@@ -758,6 +762,24 @@ def _host_gateway_wrapper_template_attestation_policy() -> dict:
         "session_chain_required_semantic_tokens": list(HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS),
         "required_tuple_fields": list(HOST_GATEWAY_REQUIRED_TUPLE_FIELDS),
     }
+
+
+def _assert_wrapper_template_constant_bindings(
+    *,
+    egress_template: str,
+    session_chain_template: str,
+) -> None:
+    missing: list[str] = []
+    egress_expected = f'FINAL_EMIT_CHANNEL_ID = "{FINAL_EMIT_CHANNEL_ID}"'
+    if egress_expected not in str(egress_template):
+        missing.append("egress_template_missing_final_emit_channel_constant_binding")
+    session_chain_expected = (
+        f'HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "{HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE}"'
+    )
+    if session_chain_expected not in str(session_chain_template):
+        missing.append("session_chain_template_missing_fixture_receipt_source_constant_binding")
+    if missing:
+        raise RuntimeError("wrapper_template_constant_binding_invariant_failed:" + ",".join(missing))
 
 
 def _protocol_host_unique_channel_contract_skeleton(identity_id: str) -> dict:
@@ -2499,7 +2521,7 @@ if __name__ == "__main__":
 
 
 def _protocol_egress_wrapper_template() -> str:
-    return """#!/usr/bin/env python3
+    template = """#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -2520,6 +2542,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 CANONICAL_EGRESS_SCRIPT = "scripts/final_emit_governed.py"
+FINAL_EMIT_CHANNEL_ID = "__TEMPLATE_FINAL_EMIT_CHANNEL_ID__"
 REQUIRED_FIELDS = (
     "actor_id",
     "session_id",
@@ -3141,10 +3164,11 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 """
+    return template.replace("__TEMPLATE_FINAL_EMIT_CHANNEL_ID__", FINAL_EMIT_CHANNEL_ID)
 
 
 def _protocol_session_chain_wrapper_template() -> str:
-    return """#!/usr/bin/env python3
+    template = """#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -3170,6 +3194,7 @@ HOST_VISIBLE_SURFACE_STATE_FILE_DEFAULT = "runtime/state/host_visible_surface_re
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN_DEFAULT = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
 HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
+HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "__TEMPLATE_HOST_VISIBLE_FIXTURE_RECEIPT_SOURCE__"
 PRIVILEGE_ESCALATION_ERROR_CODE = "IP-PRIV-ESC-001"
 PRIVILEGE_ESCALATION_REASON_PREFIX = "privilege_escalation_required"
 PRIVILEGE_ESCALATION_REMEDIATION_HINT = "rerun_with_host_privilege_escalation"
@@ -4044,6 +4069,10 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 """
+    return template.replace(
+        "__TEMPLATE_HOST_VISIBLE_FIXTURE_RECEIPT_SOURCE__",
+        HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+    )
 
 
 def materialize_protocol_host_gateway_artifacts(
