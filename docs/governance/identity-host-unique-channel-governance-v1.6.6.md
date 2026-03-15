@@ -1125,6 +1125,11 @@ Implementation anchors:
    - write failure is escalation-required fail-close (`IP-PRIV-ESC-001` family).
 4. `scripts/validate_send_time_reply_gate.py`
    - strict-path preflight reads post-check closure state and blocks next hop when `blocker_active=true`.
+   - blocked-before-first-line semantics are explicit:
+     - `reply_first_line_gate_executed=false`
+     - `reply_first_line_status=SKIPPED_NOT_REQUIRED`
+     - `send_time_block_stage=pre_first_line_post_check_*`
+     - `reply_first_line_missing_count=0`
 5. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
    - required probe `send_time_next_hop_blocked_by_post_check`.
    - required probe `send_time_next_hop_blocked_on_missing_post_check_state`.
@@ -1154,3 +1159,4 @@ Interpretation lock:
 
 1. This is infrastructure closure behavior; it cannot be replaced by identity-local/manual headstamp printing.
 2. If pre-send and post-check conclusions diverge, post-check blocker semantics are authoritative for next-hop release.
+3. "reply_sample_count=0 + pre_first_line_post_check_*" means first-line gate was not reached; it must not be interpreted as "headstamp text generation failed".

@@ -484,7 +484,10 @@ def main() -> int:
             "layer_intent_text": str(args.layer_intent_text or "").strip(),
             "send_time_gate_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_POST_CHECK_BLOCKER_ACTIVE,
-            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_first_line_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "reply_first_line_gate_executed": False,
+            "send_time_block_stage": "pre_first_line_post_check_state_unavailable",
+            "reply_first_line_blocked_reason": "host_transport_post_check_state_unavailable",
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
@@ -499,8 +502,8 @@ def main() -> int:
             "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
             "reply_sample_count": 0,
-            "reply_first_line_missing_count": 1,
-            "reply_first_line_missing_refs": ["host_transport_post_check_state_unavailable"],
+            "reply_first_line_missing_count": 0,
+            "reply_first_line_missing_refs": [],
             "expected_identity_id": args.identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
@@ -553,7 +556,10 @@ def main() -> int:
             "layer_intent_text": str(args.layer_intent_text or "").strip(),
             "send_time_gate_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_POST_CHECK_BLOCKER_ACTIVE,
-            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_first_line_status": STATUS_SKIPPED_NOT_REQUIRED,
+            "reply_first_line_gate_executed": False,
+            "send_time_block_stage": "pre_first_line_post_check_blocker_active",
+            "reply_first_line_blocked_reason": "host_transport_post_check_blocker_active",
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
@@ -568,8 +574,8 @@ def main() -> int:
             "outlet_bypass_detected": True,
             "reply_evidence_ref": "",
             "reply_sample_count": 0,
-            "reply_first_line_missing_count": 1,
-            "reply_first_line_missing_refs": ["host_transport_post_check_blocker_active"],
+            "reply_first_line_missing_count": 0,
+            "reply_first_line_missing_refs": [],
             "expected_identity_id": args.identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
@@ -989,6 +995,11 @@ def main() -> int:
     first_line_status = str(validator_payload.get("reply_first_line_status", "")).strip() or (
         STATUS_PASS_REQUIRED if p.returncode == 0 else STATUS_FAIL_REQUIRED
     )
+    first_line_gate_executed = bool(validator_payload.get("reply_first_line_gate_executed", True))
+    send_time_block_stage = str(validator_payload.get("send_time_block_stage", "")).strip()
+    if not send_time_block_stage:
+        send_time_block_stage = "first_line_gate" if first_line_gate_executed else "unknown"
+    first_line_blocked_reason = str(validator_payload.get("reply_first_line_blocked_reason", "")).strip()
     error_code = str(validator_payload.get("error_code", "")).strip()
     if p.returncode != 0 and not error_code:
         error_code = ERR_SEND_TIME_GATE
@@ -1030,6 +1041,9 @@ def main() -> int:
         "send_time_gate_status": send_time_status,
         "error_code": error_code,
         "reply_first_line_status": first_line_status,
+        "reply_first_line_gate_executed": first_line_gate_executed,
+        "send_time_block_stage": send_time_block_stage,
+        "reply_first_line_blocked_reason": first_line_blocked_reason,
         "reply_evidence_mode": evidence_mode,
         "reply_transport_ref": reply_transport_ref,
         "reply_evidence_ref": validator_payload.get("reply_evidence_ref", ""),

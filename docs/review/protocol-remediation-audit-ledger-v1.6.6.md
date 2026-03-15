@@ -2406,3 +2406,36 @@ Checkpoint verdict update:
 
 1. strict full-scan host-visible source selection is now evidence-bound and deterministic.
 2. fail-close semantics remain intact for stale receipts, tuple/run mismatch, and missing closure-state artifacts.
+
+### 26.31 Send-time pre-first-line blocker stage normalization (2026-03-15)
+
+Problem:
+
+1. strict send-time can fail-close before first-line validator when host transport post-check guard is active.
+2. payload previously projected this as `reply_first_line_status=FAIL_REQUIRED` with synthetic missing-count markers.
+3. operators could misread this as "headstamp text generation failed" instead of "next-hop blocked before first-line gate".
+
+Fix landed:
+
+1. `scripts/validate_send_time_reply_gate.py`
+   - post-check guard branches now emit explicit stage semantics:
+     - `reply_first_line_gate_executed=false`
+     - `reply_first_line_status=SKIPPED_NOT_REQUIRED`
+     - `send_time_block_stage=pre_first_line_post_check_*`
+     - `reply_first_line_blocked_reason=<post_check_reason>`
+     - `reply_first_line_missing_count=0`
+2. `scripts/full_identity_protocol_scan.py`
+   - propagates the new stage fields into scan check payloads.
+   - adds metric sample projection:
+     - `host_visible_post_check_metrics.samples.pre_send_gate_not_reached_total`
+   - emits stale reason when detected:
+     - `metric_pre_send_gate_not_reached_due_post_check_blocker`
+3. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - hard-asserts stage semantics for both required negative probes:
+     - `send_time_next_hop_blocked_by_post_check`
+     - `send_time_next_hop_blocked_on_missing_post_check_state`
+
+Checkpoint verdict update:
+
+1. send-time fail-close remains unchanged, but blocker stage is now machine-distinguishable from real first-line parse failure.
+2. operator diagnostics can classify "pre-first-line block" vs "first-line malformed/missing" without manual log interpretation.

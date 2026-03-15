@@ -456,6 +456,7 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
 
     pre_send_total = 0
     pre_send_passed = 0
+    pre_send_not_reached = 0
     post_check_total = 0
     post_check_passed = 0
     next_hop_total = 0
@@ -476,6 +477,10 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         if isinstance(send_entry, dict):
             pre_send_total += 1
             send_status = str(send_entry.get("send_time_gate_status", "")).strip().upper()
+            first_line_gate_executed = bool(send_entry.get("reply_first_line_gate_executed", True))
+            block_stage = str(send_entry.get("send_time_block_stage", "")).strip()
+            if (not first_line_gate_executed) and block_stage.startswith("pre_first_line_post_check_"):
+                pre_send_not_reached += 1
             if bool(send_entry.get("ok", False)) and send_status in {"", STATUS_PASS_REQUIRED}:
                 pre_send_passed += 1
             post_check_state_status = str(send_entry.get("host_transport_post_check_state_status", "")).strip()
@@ -577,6 +582,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
     stale_reasons: list[str] = []
     if pre_send_status == STATUS_FAIL_REQUIRED:
         stale_reasons.append("metric_pre_send_gate_pass_rate_below_threshold")
+    if pre_send_not_reached > 0:
+        stale_reasons.append("metric_pre_send_gate_not_reached_due_post_check_blocker")
     if post_check_status == STATUS_FAIL_REQUIRED:
         stale_reasons.append("metric_post_check_detectability_rate_below_threshold")
     if next_hop_status == STATUS_FAIL_REQUIRED:
@@ -599,6 +606,7 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         "samples": {
             "runtime_active_total": len(runtime_rows),
             "pre_send_gate_total": pre_send_total,
+            "pre_send_gate_not_reached_total": pre_send_not_reached,
             "post_check_detectability_total": post_check_total,
             "next_hop_block_total": next_hop_total,
             "false_green_total": false_green_total,
@@ -4560,6 +4568,10 @@ def main() -> int:
                         "reply_evidence_mode",
                         "reply_evidence_ref",
                         "reply_sample_count",
+                        "reply_first_line_status",
+                        "reply_first_line_gate_executed",
+                        "send_time_block_stage",
+                        "reply_first_line_blocked_reason",
                         "reply_first_line_missing_count",
                         "reply_first_line_missing_refs",
                         "blocker_receipt_path",
@@ -4591,6 +4603,10 @@ def main() -> int:
                         "reply_evidence_mode",
                         "reply_evidence_ref",
                         "reply_sample_count",
+                        "reply_first_line_status",
+                        "reply_first_line_gate_executed",
+                        "send_time_block_stage",
+                        "reply_first_line_blocked_reason",
                         "reply_first_line_missing_count",
                         "reply_first_line_missing_refs",
                         "blocker_receipt_path",

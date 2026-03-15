@@ -169,6 +169,16 @@ elif name == "send_time_next_hop_blocked_by_post_check":
     gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
     if gate_status != "FAIL_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: send_time_gate_status must be FAIL_REQUIRED")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "SKIPPED_NOT_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
+    if bool(doc.get("reply_first_line_gate_executed", True)):
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_first_line_gate_executed must be false")
+    block_stage = str(doc.get("send_time_block_stage", "")).strip()
+    if block_stage != "pre_first_line_post_check_blocker_active":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: unexpected send_time_block_stage")
+    if int(doc.get("reply_first_line_missing_count", 0)) != 0:
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: missing_count must be zero before first-line gate")
     token = "host_transport_post_check_blocker_active"
     if token not in reasons:
         raise SystemExit("send_time_next_hop_blocked_by_post_check: expected blocker activation reason")
@@ -178,6 +188,16 @@ elif name == "send_time_next_hop_blocked_on_missing_post_check_state":
     gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
     if gate_status != "FAIL_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: send_time_gate_status must be FAIL_REQUIRED")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "SKIPPED_NOT_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
+    if bool(doc.get("reply_first_line_gate_executed", True)):
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: reply_first_line_gate_executed must be false")
+    block_stage = str(doc.get("send_time_block_stage", "")).strip()
+    if block_stage != "pre_first_line_post_check_state_unavailable":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: unexpected send_time_block_stage")
+    if int(doc.get("reply_first_line_missing_count", 0)) != 0:
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: missing_count must be zero before first-line gate")
     token = "host_transport_post_check_state_unavailable"
     if token not in reasons:
         raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: expected missing-state fail-close token")

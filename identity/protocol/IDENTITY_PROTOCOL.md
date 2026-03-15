@@ -813,6 +813,9 @@ Required receipt/state fields:
 - `host_transport_post_check_blocker_active`
 - `host_transport_post_check_closure_status`
 - `host_transport_post_check_error_code`
+- `reply_first_line_gate_executed`
+- `send_time_block_stage`
+- `reply_first_line_blocked_reason`
 
 Hard constraints:
 
@@ -822,6 +825,11 @@ Hard constraints:
 4. If post-check closure state is missing/invalid/unreadable in strict operations, send-time MUST hard-block next hop (`FAIL_REQUIRED`).
 5. If `block_on_active=true` and `blocker_active=true`, send-time MUST hard-block next hop (`FAIL_REQUIRED`).
 6. This contract is control-plane level only: instance-local manual prefixing is not a valid substitute.
+7. When strict send-time is blocked before first-line validator execution, payload MUST mark:
+   - `reply_first_line_gate_executed=false`
+   - `reply_first_line_status=SKIPPED_NOT_REQUIRED`
+   - `send_time_block_stage=pre_first_line_post_check_*`
+   and MUST NOT report synthetic first-line-missing evidence (`reply_first_line_missing_count=0`).
 
 Metrics (release gate thresholds):
 
