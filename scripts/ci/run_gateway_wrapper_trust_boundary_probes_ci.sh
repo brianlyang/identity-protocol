@@ -154,6 +154,7 @@ CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-gateway"
 ACTOR_ID="assistant:ci-probe"
 SESSION_ID="session-gateway-probe"
+SESSION_CHAIN_RUN_ID="probe-gateway-session-chain-headstamp"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
 EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
 SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper.py"
@@ -303,6 +304,18 @@ elif name == "session_chain_headstamp_first_line_required":
         raise SystemExit("session_chain_headstamp_first_line_required: final_emit_contract_status must be PASS_REQUIRED")
     if str(doc.get("entry_receipt_tuple_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("session_chain_headstamp_first_line_required: entry_receipt_tuple_status must be PASS_REQUIRED")
+elif name == "strict_first_line_missing_evidence_blocked":
+    if rc == 0:
+        raise SystemExit("strict_first_line_missing_evidence_blocked: expected non-zero rc")
+    status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if status != "FAIL_REQUIRED":
+        raise SystemExit("strict_first_line_missing_evidence_blocked: expected FAIL_REQUIRED status")
+    reasons = stale_reasons(doc)
+    if "reply_evidence_missing" not in reasons:
+        raise SystemExit("strict_first_line_missing_evidence_blocked: expected reply_evidence_missing reason")
+    enforce_mode = str(doc.get("reply_first_line_gate_enforce_mode", "")).strip().lower()
+    if enforce_mode != "strict_default":
+        raise SystemExit("strict_first_line_missing_evidence_blocked: expected strict_default enforce mode")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -579,17 +592,35 @@ run_probe egress_wrapper_direct_call_blocked \
   --ingress-receipt "${FIXTURE_ROOT}/identity/probe-gateway/runtime/state/required_gate_bundle_entry.latest.json" \
   --json-only
 
+python3 scripts/recover_host_visible_post_check_state.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id "${SESSION_CHAIN_RUN_ID}" \
+  --json-only >/dev/null
+
 run_probe session_chain_headstamp_first_line_required \
   python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --actor-id "${ACTOR_ID}" \
   --session-id "${SESSION_ID}" \
-  --run-id probe-gateway-session-chain-headstamp \
+  --run-id "${SESSION_CHAIN_RUN_ID}" \
   --work-layer instance \
   --source-layer project \
   --operation inspection \
   --message "session chain headstamp required probe" \
+  --json-only
+
+run_probe strict_first_line_missing_evidence_blocked \
+  python3 scripts/validate_reply_identity_context_first_line.py \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --force-check \
   --json-only
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"

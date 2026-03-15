@@ -351,3 +351,25 @@ deepening base for v1.6.1 headstamp semantics.
 
 1. Strict-operation failures unrelated to headstamp semantics (for example multimodal/runtime evidence debts) remain independent tracks.
 2. Such debts do not invalidate this coupling proof, but they still block their own strict lanes by fail-close policy.
+
+## 13) Strict-default first-line evidence fail-close (2026-03-15)
+
+### 13.1 Root-cause closure statement
+
+1. A strict operation could invoke `validate_reply_identity_context_first_line.py` with `--force-check` but without `--enforce-first-line-gate`.
+2. In that path, empty reply evidence (`reply_sample_count=0`) could pass, which created a loophole for HUD/headstamp omission in strict lanes.
+3. This loophole is classified as a v1.6.1 semantic breach (`H01` + strict fail-close violation).
+
+### 13.2 Normative rule (MUST)
+
+1. For strict operations (`activate/update/mutation/readiness/e2e/ci/validate/three-plane`), first-line evidence gate is mandatory by default.
+2. Missing reply evidence in strict operation MUST return:
+   - `reply_first_line_status=FAIL_REQUIRED`
+   - `error_code=IP-HDSTAMP-001`
+   - `stale_reasons` containing `reply_evidence_missing`
+3. `--enforce-first-line-gate` remains supported, but strict-default enforcement no longer depends on that explicit flag.
+
+### 13.3 Regression prevention
+
+1. CI gateway trust-boundary probes MUST include a negative case where strict operation omits first-line evidence and is blocked.
+2. Surface-drift validator MUST assert this probe invocation exists, so future refactors cannot silently remove it.

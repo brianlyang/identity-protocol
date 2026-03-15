@@ -250,7 +250,9 @@ def main() -> int:
         return 1
 
     contract = _select_contract(task)
-    force_required = bool(args.force_check or args.enforce_first_line_gate)
+    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
+    first_line_gate_enforced = bool(args.enforce_first_line_gate or strict_format_enforced)
+    force_required = bool(args.force_check or first_line_gate_enforced)
     if not force_required and not contract_required(contract):
         payload = {
             "identity_id": args.identity_id,
@@ -329,8 +331,10 @@ def main() -> int:
     stale_reasons: list[str] = []
     error_code = ""
 
-    if args.enforce_first_line_gate and len(first_lines) == 0:
+    if first_line_gate_enforced and len(first_lines) == 0:
         stale_reasons.append("reply_evidence_missing")
+        if strict_format_enforced and not args.enforce_first_line_gate:
+            stale_reasons.append("reply_evidence_missing_strict_default_gate")
         error_code = ERR_REPLY_FIRST_LINE
 
     if len(missing_refs) > 0:
@@ -339,7 +343,6 @@ def main() -> int:
             error_code = ERR_REPLY_FIRST_LINE
 
     parsed_first: dict[str, Any] = parse_identity_context_stamp(first_lines[0]) if first_lines else {}
-    strict_format_enforced = args.operation in STRICT_LOCK_OPERATIONS
     expected_source_layer_input = str(args.expected_source_layer or "").strip().lower()
     expected_source_layer_input_invalid = bool(
         expected_source_layer_input and expected_source_layer_input not in ALLOWED_SOURCE_LAYERS
@@ -451,7 +454,7 @@ def main() -> int:
         stale_reasons.append("actor_bound_identity_mismatch")
         error_code = ERR_RUNTIME_BINDING_MISMATCH
 
-    lock_boundary_enforced = bool(args.enforce_first_line_gate and args.operation in STRICT_LOCK_OPERATIONS)
+    lock_boundary_enforced = bool(first_line_gate_enforced and strict_format_enforced)
     parsed_lock_state = ""
     parsed_actor_id = ""
     if not error_code and first_lines:
@@ -487,6 +490,12 @@ def main() -> int:
         "operation": args.operation,
         "required_contract": bool(force_required or contract_required(contract)),
         "reply_first_line_status": STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED,
+        "reply_first_line_gate_executed": first_line_gate_enforced,
+        "reply_first_line_gate_enforce_mode": (
+            "strict_default"
+            if strict_format_enforced and not args.enforce_first_line_gate
+            else ("explicit" if args.enforce_first_line_gate else "contract")
+        ),
         "error_code": error_code,
         "layer_intent_resolution_status": STATUS_PASS_REQUIRED if not error_code else STATUS_FAIL_REQUIRED,
         "resolved_work_layer": expected_work_layer,

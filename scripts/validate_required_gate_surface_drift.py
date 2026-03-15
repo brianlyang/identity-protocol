@@ -985,6 +985,15 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_strict_default_first_line_probe = all(
+            token in text
+            for token in (
+                "run_probe strict_first_line_missing_evidence_blocked",
+                "python3 scripts/validate_reply_identity_context_first_line.py",
+                "--operation validate",
+                "--force-check",
+            )
+        )
         has_direct_text_emit_probe = all(
             token in text
             for token in (
@@ -1020,6 +1029,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_egress_wrapper_direct_probe_invocation_missing")
         if not has_session_chain_headstamp_probe:
             gateway_missing_tokens.append("gateway_session_chain_headstamp_probe_invocation_missing")
+        if not has_strict_default_first_line_probe:
+            gateway_missing_tokens.append("gateway_strict_default_first_line_probe_invocation_missing")
         if not has_direct_text_emit_probe:
             gateway_missing_tokens.append("gateway_direct_text_emit_probe_invocation_missing")
         if not has_channel_bypass_emit_probe:

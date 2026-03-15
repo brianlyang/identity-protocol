@@ -35,6 +35,7 @@ Purpose: single review ledger for all headstamp/HUD issues moved from v1.6.0
 | HS16-102 | 2026-03-08 | protocol | enforce final egress wrapper adoption on strict surfaces + auto-context self-wiring | 5f15aef | SPEC_READY | PENDING_INTAKE |
 | HS16-103 | 2026-03-09 | protocol | canonicalize headstamp error family to `IP-HDSTAMP-*` across strict wrappers/validators and projection classifiers | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 | HS16-104 | 2026-03-09 | protocol | cross-surface replay confirms canonical family in three-plane/full-scan strict actor-session bound mode | local-replay-validated | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
+| HS16-105 | 2026-03-15 | protocol | strict-default first-line evidence fail-close (no HUD evidence cannot pass strict even without `--enforce-first-line-gate`) + CI negative probe lock | pending-commit | ACCEPT_WITH_FIX | REPLAYED_LOCAL |
 
 ## 3) Current blocker map (headstamp only)
 
@@ -171,3 +172,24 @@ This checkpoint re-audits v1.6.1 under the current v1.6.6 closure baseline.
 3. Scope caveat:
    - this verdict is specific to v1.6.1×v1.6.6 linkage replay;
    - unrelated strict-lane debts remain governed by their own validators.
+
+## 10) HS16-105 replay evidence (strict-default first-line closure)
+
+Replay objective:
+
+1. Verify that strict operations fail-close on missing first-line evidence without relying on explicit `--enforce-first-line-gate`.
+
+Observed before fix (captured in local audit replay):
+
+1. `validate_reply_identity_context_first_line --operation validate --force-check` could pass with `reply_sample_count=0`.
+
+Observed after fix:
+
+1. Same strict invocation now returns non-zero with:
+   - `reply_first_line_status=FAIL_REQUIRED`
+   - `error_code=IP-HDSTAMP-001`
+   - `stale_reasons` includes `reply_evidence_missing` and strict-default marker.
+2. Positive wrapper-chain probe still passes (`session_chain_headstamp_first_line_required`).
+3. New negative probe passes (`strict_first_line_missing_evidence_blocked`) in:
+   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+4. Required surface drift now checks this probe wiring exists, preventing regression by omission.
