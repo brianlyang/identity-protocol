@@ -523,6 +523,7 @@ def main() -> int:
         "protocol_unique_entry_receipt_required": False,
         "protocol_unique_entry_receipt_required_by_cli_flag": False,
         "protocol_unique_entry_receipt_required_by_contract": False,
+        "protocol_unique_entry_receipt_required_by_strict_default": False,
         "protocol_unique_entry_receipt_required_strict_operation": False,
         "protocol_unique_entry_receipt_required_reason": "not_required",
         "protocol_unique_entry_receipt_required_operation": str(args.operation).strip().lower(),
@@ -1580,13 +1581,23 @@ def main() -> int:
     )
     receipt_required_by_cli = bool(args.require_entry_receipt)
     receipt_required_by_contract_scope = bool(receipt_required_by_contract and strict_receipt_operation)
-    receipt_required = bool(receipt_required_by_cli or receipt_required_by_contract_scope)
+    receipt_required_by_strict_default = bool(strict_receipt_operation)
+    receipt_required = bool(
+        receipt_required_by_cli
+        or receipt_required_by_contract_scope
+        or receipt_required_by_strict_default
+    )
     payload["protocol_unique_entry_receipt_required"] = receipt_required
     payload["protocol_unique_entry_receipt_required_by_cli_flag"] = receipt_required_by_cli
     payload["protocol_unique_entry_receipt_required_by_contract"] = receipt_required_by_contract_scope
+    payload["protocol_unique_entry_receipt_required_by_strict_default"] = (
+        receipt_required_by_strict_default
+    )
     payload["protocol_unique_entry_receipt_required_strict_operation"] = strict_receipt_operation
     if receipt_required_by_cli:
         payload["protocol_unique_entry_receipt_required_reason"] = "cli_flag"
+    elif receipt_required_by_strict_default:
+        payload["protocol_unique_entry_receipt_required_reason"] = "strict_operation_default"
     elif receipt_required_by_contract_scope:
         payload["protocol_unique_entry_receipt_required_reason"] = "strict_operation_contract"
     else:
