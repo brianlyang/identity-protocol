@@ -551,3 +551,25 @@ This checkpoint addresses the hard requirement that closure evidence must show r
    - The read model is deterministic and consistent with wrapper receipt/ack transitions, so it is suitable for runtime triage.
 3. Cleanup:
    - The live probe broadcast item (`v165-skill-use-1773395622`) was removed from protocol broadcast items after verification.
+
+### 7.13 Control-plane status truth sync rerun (2026-03-15)
+
+Problem:
+
+1. live control-plane checks moved to `FAIL_REQUIRED` (budget rebound), but persisted status artifact still showed `PASS_REQUIRED`.
+2. this caused `validate_control_plane_status_sync.py` drift failures (`IP-CP-STATUS-001`), including stale `promotion_ready=true`.
+
+Action:
+
+1. regenerated status artifact using canonical renderer:
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+2. reran sync validator:
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+
+Result:
+
+1. `validate_control_plane_status_sync` now returns `PASS_REQUIRED`.
+2. persisted status file correctly reflects live budget blocker:
+   - `control_plane_status=FAIL_REQUIRED`
+   - `promotion_ready=false`
+3. this preserves v1.6.5 rule that status artifacts must mirror live machine outcomes, including fail states.
