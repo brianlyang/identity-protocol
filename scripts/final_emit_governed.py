@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import hmac
 import json
@@ -28,6 +29,11 @@ from headstamp_error_family_common import (
     inject_legacy_error_fields,
 )
 from tool_vendor_governance_common import resolve_pack_and_task
+from protocol_infra_contract import (
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
+)
 
 try:
     import psutil  # type: ignore
@@ -163,6 +169,28 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(default)
 
 
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: Path, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path.expanduser().resolve())
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
+
+
 def _read_process_commandline(pid: int) -> str:
     if pid <= 0:
         return ""
@@ -287,14 +315,29 @@ def _consume_egress_nonce(
     max_age_seconds: int,
 ) -> tuple[bool, str]:
     state_path = (pack_path / "runtime" / "state" / EGRESS_GRANT_NONCE_STATE_FILE).resolve()
-    state_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            return False, _format_privilege_escalation_reason(
+                path=state_path.parent,
+                scope="egress_grant_nonce_state_dir_write",
+                exc=exc,
+            )
+        return False, f"egress_grant_nonce_state_dir_write_failed:{exc}"
     state_doc: dict[str, Any] = {"used": {}}
     if state_path.exists():
         try:
             loaded = json.loads(state_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 state_doc = loaded
-        except Exception:
+        except Exception as exc:
+            if _is_privilege_escalation_error(exc):
+                return False, _format_privilege_escalation_reason(
+                    path=state_path,
+                    scope="egress_grant_nonce_state_read",
+                    exc=exc,
+                )
             state_doc = {"used": {}}
     used = state_doc.get("used")
     if not isinstance(used, dict):
@@ -315,6 +358,12 @@ def _consume_egress_nonce(
     try:
         state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            return False, _format_privilege_escalation_reason(
+                path=state_path,
+                scope="egress_grant_nonce_state_write",
+                exc=exc,
+            )
         return False, f"egress_grant_nonce_state_write_failed:{exc}"
     return True, ""
 

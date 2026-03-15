@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import time
 from pathlib import Path
@@ -25,6 +26,9 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_STATE_FILE,
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
@@ -65,6 +69,28 @@ def _parse_csv(value: str) -> list[str]:
     return [token for token in [str(item).strip() for item in str(value or "").split(",")] if token]
 
 
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: Path, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path.expanduser().resolve())
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
+
+
 def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: str) -> Path:
     token = str(raw_path or "").strip()
     if not token:
@@ -86,18 +112,47 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
-def _latest_receipt_by_channel(receipts: list[Path]) -> dict[str, Path]:
+def _latest_receipt_by_channel(receipts: list[Path]) -> tuple[dict[str, Path], list[str]]:
     by_channel: dict[str, Path] = {}
-    for path in sorted(receipts, key=lambda item: item.stat().st_mtime, reverse=True):
+    issues: list[str] = []
+    def _safe_mtime(item: Path) -> float:
+        try:
+            return float(item.stat().st_mtime)
+        except Exception as exc:
+            if _is_privilege_escalation_error(exc):
+                issues.append(
+                    _format_privilege_escalation_reason(
+                        path=item,
+                        scope="host_visible_live_receipt_stat",
+                        exc=exc,
+                    )
+                )
+            else:
+                issues.append(f"host_visible_surface_live_channel_receipt_stat_failed:{item.name}")
+            return -1.0
+
+    for path in sorted(receipts, key=_safe_mtime, reverse=True):
         try:
             payload = _load_json(path)
-        except Exception:
+        except Exception as exc:
+            if _is_privilege_escalation_error(exc):
+                issues.append(
+                    _format_privilege_escalation_reason(
+                        path=path,
+                        scope="host_visible_live_receipt_read",
+                        exc=exc,
+                    )
+                )
+            else:
+                issues.append(
+                    f"host_visible_surface_live_channel_receipt_invalid:{path.name}:{type(exc).__name__}"
+                )
             continue
         channel = str(payload.get("emit_channel_id", "")).strip()
         if not channel or channel in by_channel:
             continue
         by_channel[channel] = path
-    return by_channel
+    return by_channel, issues
 
 
 def _pick_host_gateway_contract(task: dict[str, Any]) -> tuple[dict[str, Any], str]:
@@ -274,8 +329,17 @@ def main() -> int:
                 state_channels = channels_node if isinstance(channels_node, dict) else {}
             else:
                 issues.append("host_visible_surface_live_state_file_missing")
-        except Exception:
-            issues.append("host_visible_surface_live_state_file_invalid")
+        except Exception as exc:
+            if _is_privilege_escalation_error(exc):
+                issues.append(
+                    _format_privilege_escalation_reason(
+                        path=state_path,
+                        scope="host_visible_live_state_read",
+                        exc=exc,
+                    )
+                )
+            else:
+                issues.append("host_visible_surface_live_state_file_invalid")
 
         receipt_glob_path = _resolve_pack_relative_path(
             pack_path,
@@ -285,12 +349,26 @@ def main() -> int:
         if receipt_glob_path.is_file():
             receipt_files = [receipt_glob_path]
         else:
-            receipt_files = sorted(pack_path.glob(receipt_pattern), key=lambda item: item.stat().st_mtime)
+            try:
+                receipt_files = sorted(pack_path.glob(receipt_pattern), key=lambda item: item.stat().st_mtime)
+            except Exception as exc:
+                if _is_privilege_escalation_error(exc):
+                    issues.append(
+                        _format_privilege_escalation_reason(
+                            path=receipt_glob_path.parent,
+                            scope="host_visible_live_receipt_glob",
+                            exc=exc,
+                        )
+                    )
+                else:
+                    issues.append("host_visible_surface_live_receipt_glob_failed")
+                receipt_files = []
         if not receipt_files:
             issues.append("host_visible_surface_live_receipts_missing")
             payload["host_transport_wiring_attestation_live_coverage_status"] = STATUS_FAIL_REQUIRED
         else:
-            latest_by_channel = _latest_receipt_by_channel(receipt_files)
+            latest_by_channel, latest_scan_issues = _latest_receipt_by_channel(receipt_files)
+            issues.extend(latest_scan_issues)
             covered_channels = sorted(latest_by_channel.keys())
             payload["host_transport_wiring_attestation_live_covered_channels"] = covered_channels
             for channel in sorted(required_channels):
@@ -300,8 +378,17 @@ def main() -> int:
                     continue
                 try:
                     receipt_doc = _load_json(receipt_path)
-                except Exception:
-                    issues.append(f"host_visible_surface_live_channel_receipt_invalid:{channel}")
+                except Exception as exc:
+                    if _is_privilege_escalation_error(exc):
+                        issues.append(
+                            _format_privilege_escalation_reason(
+                                path=receipt_path,
+                                scope=f"host_visible_live_channel_receipt_read:{channel}",
+                                exc=exc,
+                            )
+                        )
+                    else:
+                        issues.append(f"host_visible_surface_live_channel_receipt_invalid:{channel}")
                     continue
                 receipt_age_seconds = max(0, int(time.time() - receipt_path.stat().st_mtime))
                 if receipt_age_seconds > runtime_receipt_max_age_seconds:

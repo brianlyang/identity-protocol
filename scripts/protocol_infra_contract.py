@@ -92,6 +92,9 @@ HOST_VISIBLE_SURFACE_STATE_FILE = "runtime/state/host_visible_surface_registry_s
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = 300
 HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED = True
+PRIVILEGE_ESCALATION_ERROR_CODE = "IP-PRIV-ESC-001"
+PRIVILEGE_ESCALATION_REASON_PREFIX = "privilege_escalation_required"
+PRIVILEGE_ESCALATION_REMEDIATION_HINT = "rerun_with_host_privilege_escalation"
 HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS: tuple[str, ...] = (
     "emit_channel_id",
     "wrapper_surface_status",

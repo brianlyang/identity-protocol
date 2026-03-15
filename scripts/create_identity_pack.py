@@ -3147,6 +3147,7 @@ def _protocol_session_chain_wrapper_template() -> str:
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import os
 import re
@@ -3168,6 +3169,9 @@ HOST_VISIBLE_SURFACE_STATE_FILE_DEFAULT = "runtime/state/host_visible_surface_re
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN_DEFAULT = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
 HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
+PRIVILEGE_ESCALATION_ERROR_CODE = "IP-PRIV-ESC-001"
+PRIVILEGE_ESCALATION_REASON_PREFIX = "privilege_escalation_required"
+PRIVILEGE_ESCALATION_REMEDIATION_HINT = "rerun_with_host_privilege_escalation"
 
 
 def _load_json(raw: str) -> dict[str, Any]:
@@ -3242,6 +3246,28 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(default)
 
 
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: Path, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path.expanduser().resolve())
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
+
+
 def _actor_session_filename(actor_id: str) -> str:
     token = re.sub(r"[^A-Za-z0-9._-]+", "_", str(actor_id or "").strip()).strip("._")
     if not token:
@@ -3258,16 +3284,46 @@ def _load_json_file(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
         return dict(default)
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="session_chain_state_read",
+                    exc=exc,
+                )
+            ) from exc
         return dict(default)
     return data if isinstance(data, dict) else dict(default)
 
 
 def _write_json_file(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path.parent,
+                    scope="session_chain_state_dir_write",
+                    exc=exc,
+                )
+            ) from exc
+        raise
     tmp = path.with_suffix(path.suffix + f".tmp-{os.getpid()}")
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
-    tmp.replace(path)
+    try:
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+        tmp.replace(path)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="session_chain_state_write",
+                    exc=exc,
+                )
+            ) from exc
+        raise
 
 
 def _as_list(value: Any) -> list[str]:

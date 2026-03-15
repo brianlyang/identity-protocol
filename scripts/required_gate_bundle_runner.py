@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import hmac
 import json
@@ -16,6 +17,11 @@ from typing import Any
 
 import yaml
 
+from protocol_infra_contract import (
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
+)
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 try:
@@ -312,6 +318,28 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(default)
 
 
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: Path, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path.expanduser().resolve())
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
+
+
 def _resolve_pack_relative_path(pack_path: Path, raw_path: str, default_rel: str = "") -> Path:
     token = str(raw_path or "").strip() or str(default_rel or "").strip()
     if not token:
@@ -344,14 +372,29 @@ def _consume_wrapper_nonce(
 
     now_epoch = int(datetime.now(timezone.utc).timestamp())
     state_path = (pack_path / "runtime" / "state" / WRAPPER_PROOF_NONCE_STATE_FILE).resolve()
-    state_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            return False, _format_privilege_escalation_reason(
+                path=state_path.parent,
+                scope="wrapper_dispatch_proof_nonce_state_dir_write",
+                exc=exc,
+            )
+        return False, f"wrapper_dispatch_proof_nonce_state_dir_write_failed:{exc}"
     state_doc: dict[str, Any] = {"used": {}}
     if state_path.exists():
         try:
             loaded = json.loads(state_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 state_doc = loaded
-        except Exception:
+        except Exception as exc:
+            if _is_privilege_escalation_error(exc):
+                return False, _format_privilege_escalation_reason(
+                    path=state_path,
+                    scope="wrapper_dispatch_proof_nonce_state_read",
+                    exc=exc,
+                )
             state_doc = {"used": {}}
     used = state_doc.get("used")
     if not isinstance(used, dict):
@@ -375,6 +418,12 @@ def _consume_wrapper_nonce(
     try:
         state_path.write_text(json.dumps(state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            return False, _format_privilege_escalation_reason(
+                path=state_path,
+                scope="wrapper_dispatch_proof_nonce_state_write",
+                exc=exc,
+            )
         return False, f"wrapper_dispatch_proof_nonce_state_write_failed:{exc}"
     return True, ""
 
@@ -1413,11 +1462,26 @@ def _persist_unique_entry_receipt(
     try:
         state_dir.mkdir(parents=True, exist_ok=True)
         history_dir.mkdir(parents=True, exist_ok=True)
-        _write_payload_out(str(latest_path), receipt)
-        _write_payload_out(str(operation_path), receipt)
-        _write_payload_out(str(history_path), receipt)
     except Exception as exc:
-        return "", "", f"persist_failed:{exc}"
+        if _is_privilege_escalation_error(exc):
+            return "", "", _format_privilege_escalation_reason(
+                path=state_dir if not state_dir.exists() else history_dir,
+                scope="required_gate_bundle_entry_state_dir_write",
+                exc=exc,
+            )
+        return "", "", f"persist_state_dir_failed:{exc}"
+
+    for target_path in (latest_path, operation_path, history_path):
+        try:
+            _write_payload_out(str(target_path), receipt)
+        except Exception as exc:
+            if _is_privilege_escalation_error(exc):
+                return "", "", _format_privilege_escalation_reason(
+                    path=target_path,
+                    scope="required_gate_bundle_entry_receipt_write",
+                    exc=exc,
+                )
+            return "", "", f"persist_failed:{target_path}:{exc}"
 
     return str(latest_path), str(history_path), ""
 

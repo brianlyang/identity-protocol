@@ -2286,3 +2286,47 @@ Checkpoint verdict update:
 1. host-visible live run binding is now a strict default contract requirement, not an optional caller behavior.
 2. strict scan/coverage/CI governance now carries bound run context end-to-end.
 3. remaining P0 closure is now narrowed to real host sender physical lane convergence (same-turn run-bound receipt production), not validator optionality.
+
+### 26.27 Privilege-escalation fail-close normalization for global runtime writes (2026-03-15)
+
+Problem:
+
+1. cross-layer execution against `<global>` runtime paths (`~/.codex/.identity/...`) can hit OS-level write restrictions in sandboxed contexts.
+2. previous behavior returned generic write/read failures (`*_write_failed`, `*_invalid`) without a normalized machine token indicating escalation is required.
+3. this created diagnosis ambiguity and encouraged operator-side retries without explicit escalation gating.
+
+Fix landed:
+
+1. `scripts/protocol_infra_contract.py`
+   - added canonical privilege escalation invariants:
+     - `PRIVILEGE_ESCALATION_ERROR_CODE = IP-PRIV-ESC-001`
+     - `PRIVILEGE_ESCALATION_REASON_PREFIX = privilege_escalation_required`
+     - `PRIVILEGE_ESCALATION_REMEDIATION_HINT = rerun_with_host_privilege_escalation`.
+2. `scripts/required_gate_bundle_runner.py`
+   - wrapper nonce state dir/read/write now detect permission/readonly failures and emit normalized escalation reasons.
+   - unique-entry receipt persistence now fail-closes with path-scoped escalation reasons when state/report writes are blocked.
+3. `scripts/final_emit_governed.py`
+   - egress nonce state dir/read/write now detect permission/readonly failures and emit normalized escalation reasons.
+4. `scripts/validate_host_transport_wiring_attestation.py`
+   - live state/receipt read, stat, and glob failures now classify permission/readonly errors into normalized escalation stale reasons.
+   - receipt scanning no longer silently skips privilege-denied artifacts.
+5. `scripts/create_identity_pack.py` (session-chain wrapper template)
+   - session-chain runtime state read/write helpers now raise structured privilege escalation failures for permission-denied paths.
+   - downstream host-visible receipt/state write failures therefore preserve escalation-required semantics in wrapper fail-close output.
+
+Replay (serial, machine evidence):
+
+1. global wrapper live probe executed with host privilege escalation:
+   - `protocol_session_chain_wrapper.py ... --run-id sra-global-liveprobe-20260315T133600Z` -> `PASS_REQUIRED`.
+2. host-visible validator without run-id binding:
+   - `sra_global_live_norunid_20260315T1336.json` (runtime replay artifact) -> `FAIL_REQUIRED`, `IP-HDSTAMP-003`, includes strict token.
+3. host-visible validator with matching run-id:
+   - `sra_global_live_runmatch_20260315T1336.json` (runtime replay artifact) -> `PASS_REQUIRED`.
+4. host-visible validator with drifted run-id:
+   - `sra_global_live_rundrift_20260315T1336.json` (runtime replay artifact) -> `FAIL_REQUIRED`, `IP-HDSTAMP-003`, per-channel run-id mismatch reasons.
+
+Checkpoint verdict update:
+
+1. global runtime write/read permission failures are now normalized into explicit escalation-required evidence instead of generic ambiguous failures.
+2. control-plane operators can deterministically classify “policy failure” vs “privilege boundary failure” from machine output.
+3. strict closure remains fail-close: no permission fallback path can silently mark governance surfaces as pass.
