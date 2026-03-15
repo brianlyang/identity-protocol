@@ -1913,6 +1913,8 @@ def main() -> int:
                     actor_id,
                     "--session-id",
                     scan_session_id,
+                    "--run-id",
+                    required_gate_bundle_run_id,
                     "--json-only",
                 ],
                 "unlock_formula_automation": [

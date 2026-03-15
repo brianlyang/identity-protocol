@@ -320,6 +320,9 @@ Strict scan live run-id pass-through extension (mandatory):
    - `validate_host_transport_wiring_attestation.py --require-run-id <required_gate_bundle_run_id>`
 3. if send-time lane emits live receipts under a different run id, attestation must fail-close (`IP-HDSTAMP-003`).
 4. this contract is dynamic/alias-driven and does not permit identity-specific or literal run-id hardcoding.
+5. delegated strict coverage scans must propagate the same run id tuple to required-contract coverage validator:
+   - `validate_required_contract_coverage.py --run-id <required_gate_bundle_run_id>`
+   - so nested unique-entry/lane validators cannot degrade to stale/default run context.
 
 ### 2.4.1 Headstamp continuity contract (mandatory)
 

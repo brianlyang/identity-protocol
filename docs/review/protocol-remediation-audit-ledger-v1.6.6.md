@@ -2358,3 +2358,22 @@ Checkpoint verdict update:
 
 1. strict scan run-id parity gap is closed in orchestration (no hardcoded id literals).
 2. remaining host-visible instability has moved to source-selection contamination (`runtime_dialogue` vs `ci_fixture`) and is tracked as a separate closure item (not a run-id binding regression).
+
+### 26.29 Required-contract coverage strict tuple pass-through closure (2026-03-15)
+
+Problem:
+
+1. strict full-scan delegated `validate_required_contract_coverage.py` with actor/session but without bound run id.
+2. nested validators (`protocol_unique_entry_gate`, `protocol_lane_headstamp_continuity`) could therefore evaluate stale/default run context and inflate false-red diagnostics.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - required-contract coverage invocation now includes:
+     - `--run-id <required_gate_bundle_run_id>`
+2. strict delegated coverage now receives complete tuple context (`actor_id/session_id/run_id`) from the same scan-bound source.
+
+Checkpoint verdict update:
+
+1. strict coverage tuple context is now end-to-end orchestration-bound.
+2. this change remains infrastructure-level and alias-driven; no identity-specific literals were introduced.
