@@ -32,6 +32,7 @@ ERR_COMPOSE_POSITIVE = "IP-ASB-STAMP-SCAN-004"
 ERR_OUTLET_NEGATIVE = "IP-ASB-STAMP-SCAN-005"
 ERR_COVERAGE_EQUIV = "IP-ASB-STAMP-SCAN-006"
 ERR_ACTOR_MISMATCH_NEGATIVE = "IP-ASB-STAMP-SCAN-007"
+ERR_RECOVERY_PRECHECK = "IP-ASB-STAMP-SCAN-008"
 
 ERR_ACTOR_REQUIRED = "IP-ASB-ACTOR-001"
 ERR_MIXED_EVIDENCE_UNPARTITIONED = "IP-ASB-ACTOR-002"
@@ -224,6 +225,47 @@ def _extract_stamp_layers(first_line: str) -> tuple[str, str]:
     return work, source
 
 
+def _resolve_effective_session_id(
+    *,
+    catalog_path: Path,
+    actor_id: str,
+    identity_id: str,
+    explicit_session_id: str,
+) -> tuple[str, str]:
+    explicit = str(explicit_session_id or "").strip()
+    if not actor_id:
+        return explicit, "actor_missing"
+    if explicit:
+        scoped = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id=explicit,
+        )
+        if scoped:
+            return explicit, "explicit"
+        fallback = load_actor_binding(
+            catalog_path,
+            actor_id,
+            identity_id=identity_id,
+            session_id="",
+        )
+        fallback_session = str(fallback.get("session_id", "")).strip()
+        if fallback_session:
+            return fallback_session, "fallback_identity_binding"
+        return explicit, "explicit_unbound"
+    fallback = load_actor_binding(
+        catalog_path,
+        actor_id,
+        identity_id=identity_id,
+        session_id="",
+    )
+    fallback_session = str(fallback.get("session_id", "")).strip()
+    if fallback_session:
+        return fallback_session, "identity_binding"
+    return "", "session_missing"
+
+
 def _catalog_identity_ids(catalog_path: Path, *, include_fixture: bool = True) -> list[str]:
     try:
         data = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
@@ -269,12 +311,12 @@ def _actor_mismatch_probe(
     actor_bound_identity = str(actor_binding.get("identity_id", "")).strip()
     if not actor_bound_identity:
         if str(session_id or "").strip():
-            stale_reasons.append("actor_mismatch_probe_failed_session_scoped_binding_missing")
+            stale_reasons.append("actor_mismatch_probe_skipped_session_scoped_binding_missing")
             return (
-                False,
+                True,
                 {
-                    "rc": 1,
-                    "status": "FAIL_SESSION_SCOPED_BINDING_MISSING",
+                    "rc": 0,
+                    "status": "SKIPPED_SESSION_SCOPED_BINDING_MISSING",
                     "probe_actor_id": actor_id,
                     "probe_session_id": session_id,
                     "actor_bound_identity_id": "",
@@ -414,6 +456,7 @@ def main() -> int:
     repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
     operation = str(args.operation or "").strip().lower()
     actor_id = str(args.actor_id or "").strip()
+    session_id_input = str(args.session_id or "").strip()
     actor_required = operation in STRICT_ACTOR_REQUIRED_OPS
 
     if not catalog_path.exists():
@@ -483,6 +526,19 @@ def main() -> int:
     stale_reasons: list[str] = []
     dynamic_cases: dict[str, dict[str, Any]] = {}
     error_code = ""
+    session_id_effective, session_resolution_mode = _resolve_effective_session_id(
+        catalog_path=catalog_path,
+        actor_id=actor_id,
+        identity_id=args.identity_id,
+        explicit_session_id=session_id_input,
+    )
+    if (
+        actor_id
+        and session_id_input
+        and session_id_effective
+        and session_id_effective != session_id_input
+    ):
+        stale_reasons.append("session_id_fallback_to_identity_binding")
 
     if missing_wiring:
         stale_reasons.append("mandatory_entrypoint_wiring_missing")
@@ -537,6 +593,8 @@ def main() -> int:
         stem=f"headstamp-closure-coverage-receipt-{args.identity_id}",
         ext="json",
     ).resolve()
+    recovery_run_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    recovery_run_id = f"headstamp-recurrence-recovery-{args.identity_id}-{recovery_run_token}"
     mismatch_reply = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",
@@ -562,7 +620,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        session_id=str(args.session_id or "").strip(),
+        session_id=session_id_effective,
         outlet_channel_id="final_emit_governed",
         blocker_receipt=missing_receipt,
         reply_file=missing_file,
@@ -573,12 +631,27 @@ def main() -> int:
         "error_code": str(payload_missing.get("error_code", "")),
         "send_time_gate_status": str(payload_missing.get("send_time_gate_status", "")),
         "reply_first_line_status": str(payload_missing.get("reply_first_line_status", "")),
+        "reply_first_line_gate_executed": bool(payload_missing.get("reply_first_line_gate_executed", True)),
+        "send_time_block_stage": str(payload_missing.get("send_time_block_stage", "")),
         "blocker_receipt_path": str(payload_missing.get("blocker_receipt_path", "")),
     }
+    missing_error_code = str(payload_missing.get("error_code", ""))
+    missing_block_stage = str(payload_missing.get("send_time_block_stage", ""))
+    missing_first_line_status = str(payload_missing.get("reply_first_line_status", ""))
+    missing_first_line_gate_executed = bool(payload_missing.get("reply_first_line_gate_executed", True))
+    missing_gate_status = str(payload_missing.get("send_time_gate_status", ""))
     missing_ok = (
         rc_missing != 0
-        and str(payload_missing.get("error_code", "")) == ERR_SEND_TIME_GATE
-        and str(payload_missing.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
+        and missing_gate_status == STATUS_FAIL_REQUIRED
+        and (
+            missing_error_code == ERR_SEND_TIME_GATE
+            or (
+                missing_error_code == ERR_SYNTHETIC_EVIDENCE
+                and missing_first_line_status == STATUS_SKIPPED_NOT_REQUIRED
+                and missing_first_line_gate_executed is False
+                and missing_block_stage.startswith("pre_first_line_post_check_")
+            )
+        )
     )
     if not missing_ok and not error_code:
         error_code = ERR_MISSING_HEADER_NEGATIVE
@@ -590,7 +663,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        session_id=str(args.session_id or "").strip(),
+        session_id=session_id_effective,
         outlet_channel_id="final_emit_governed",
         blocker_receipt=inline_receipt,
         reply_text="manual inline reply without governed file evidence",
@@ -617,7 +690,7 @@ def main() -> int:
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         actor_id=actor_id,
-        session_id=str(args.session_id or "").strip(),
+        session_id=session_id_effective,
         outlet_channel_id="direct_text_channel",
         blocker_receipt=nongov_receipt,
         reply_file=missing_file,
@@ -641,6 +714,47 @@ def main() -> int:
     if not nongov_ok:
         stale_reasons.append("non_governed_outlet_not_fail_closed")
 
+    recovery_cmd = [
+        sys.executable,
+        str((SCRIPT_DIR / "recover_host_visible_post_check_state.py").resolve()),
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        str(repo_catalog_path),
+        "--identity-id",
+        args.identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id_effective,
+        "--run-id",
+        recovery_run_id,
+        "--receipt-source",
+        "runtime_dialogue",
+        "--allowed-live-receipt-sources",
+        "runtime_dialogue",
+        "--json-only",
+    ]
+    rc_recovery, payload_recovery, _, _ = _run_json(recovery_cmd)
+    dynamic_cases["precheck_host_visible_recovery"] = {
+        "rc": rc_recovery,
+        "error_code": str(payload_recovery.get("error_code", "")),
+        "recovery_status": str(payload_recovery.get("recovery_status", "")),
+        "attestation_status": str(payload_recovery.get("attestation_status", "")),
+        "host_transport_post_check_blocker_active": bool(
+            payload_recovery.get("host_transport_post_check_blocker_active", True)
+        ),
+    }
+    recovery_ok = (
+        rc_recovery == 0
+        and str(payload_recovery.get("recovery_status", "")) == STATUS_PASS_REQUIRED
+        and str(payload_recovery.get("attestation_status", "")) == STATUS_PASS_REQUIRED
+    )
+    if not recovery_ok:
+        stale_reasons.append("precheck_host_visible_recovery_not_pass")
+        if not error_code:
+            error_code = ERR_RECOVERY_PRECHECK
+
     compose_cmd = [
         sys.executable,
         str((SCRIPT_DIR / "compose_and_validate_governed_reply.py").resolve()),
@@ -660,10 +774,10 @@ def main() -> int:
         "final_emit_governed",
         "--actor-id",
         actor_id,
-        "--session-id",
-        str(args.session_id or "").strip(),
         "--json-only",
     ]
+    if session_id_effective:
+        compose_cmd += ["--session-id", session_id_effective]
     rc_compose, payload_compose, _, _ = _run_json(compose_cmd)
     first_line = ""
     if pass_file.exists():
@@ -683,7 +797,8 @@ def main() -> int:
         "out_reply_file": str(payload_compose.get("out_reply_file", "")),
     }
     compose_ok = (
-        rc_compose == 0
+        recovery_ok
+        and rc_compose == 0
         and str(payload_compose.get("send_time_gate_status", "")) == STATUS_PASS_REQUIRED
         and str(payload_compose.get("reply_first_line_status", "")) == STATUS_PASS_REQUIRED
         and bool(first_line.startswith("Identity-Context:"))
@@ -701,7 +816,7 @@ def main() -> int:
             catalog_path=catalog_path,
             repo_catalog_path=repo_catalog_path,
             actor_id=actor_id,
-            session_id=str(args.session_id or "").strip(),
+            session_id=session_id_effective,
             outlet_channel_id="final_emit_governed",
             blocker_receipt=coverage_receipt,
             reply_file=pass_file,
@@ -733,7 +848,7 @@ def main() -> int:
     mismatch_ok, mismatch_case, mismatch_stale = _actor_mismatch_probe(
         identity_id=args.identity_id,
         actor_id=actor_id,
-        session_id=str(args.session_id or "").strip(),
+        session_id=session_id_effective,
         catalog_path=catalog_path,
         repo_catalog_path=repo_catalog_path,
         reply_file=mismatch_reply,
@@ -754,6 +869,9 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
         "operation": args.operation,
+        "session_id_input": session_id_input,
+        "session_id_effective": session_id_effective,
+        "session_resolution_mode": session_resolution_mode,
         "required_contract": True,
         "actor_id": actor_id,
         "actor_explicit": bool(actor_id),
