@@ -1983,3 +1983,52 @@ Checkpoint verdict update:
 1. host-visible control plane now blocks stale receipt replay by default, not only missing/invalid shape.
 2. commentary sender bypass is surfaced as machine-detectable stale/live failure in protocol validator outputs.
 3. this closes the “old receipt masks current channel bypass” audit gap under v1.6.6 required lane.
+
+### 26.21 Cross-instance P0 absorption: strict-scan live attestation + lane continuity closure (2026-03-15)
+
+Feedback intake (cross-instance):
+
+1. `custom-creative-ecom-analyst`: strict full-scan could remain green while standalone host-visible live attestation still failed.
+2. `system-requirements-analyst`: host-visible channels still needed protocol-level hard gate semantics in strict path.
+3. `office-ops-expert`: lane/headstamp continuity failures could be over-coupled to stale report selection.
+
+Infrastructure fixes landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - requiredized `validate_host_transport_wiring_attestation.py --require-live-receipts` as strict scan check.
+   - requiredized `validate_protocol_lane_headstamp_continuity.py` as strict scan check.
+   - both checks are now part of `core_fail` and `M2M_CHECK_NAMES`, so failures are promoted into P0/m2m summary instead of staying outside scan projection.
+2. `scripts/validate_protocol_lane_headstamp_continuity.py`
+   - reduced stale-report over-coupling by accepting current-turn stamp evidence (`--stamp-json`) as lane/headstamp continuity evidence source.
+   - lane receipt requirement now accepts `report_ref OR stamp_ref` (fail-close remains when both are absent).
+   - lane resolution now prefers parsed current stamp work-layer over stale report lane fields.
+3. `scripts/repair_contract_backfill.py`
+   - added wrapper-template snapshot projections (before/after digest + changed paths) so “already_backfilled” can be distinguished from actual wrapper artifact refresh.
+   - this closes observability blind spots for session-chain/ingress/egress wrapper template sync.
+
+Replay (serial, machine evidence):
+
+1. strict target scan (bound actor/session):
+   - `v166-targetscan-after-lane-livefix.json` (runtime replay artifact)
+   - `summary: p0=0, p1=0, ok=1`, `summary_m2m.fail=0`.
+   - new strict checks present and passing:
+     - `protocol_lane_headstamp_continuity`
+     - `host_transport_wiring_attestation`.
+2. serial self-test replay:
+   - `v166-selftest-serial5-after-p0-absorb-summary.json` (runtime replay artifact)
+   - `all_passed=true`.
+3. serial deep-scan replay (operator-adjusted closure threshold):
+   - `v166-deepscan-serial3-after-p0-absorb-summary.json` (runtime replay artifact)
+   - `all_passed=true` with 3/3 rounds:
+     - `rc=0, p0=0, p1=0, ok=1, m2m_fail=0`.
+4. host-visible live probe suite:
+   - `v166-host-visible-probes-after-wrapper-snapshot.log` (runtime replay artifact)
+   - includes negative probes:
+     - stale receipt blocked
+     - commentary bypass blocked.
+
+Checkpoint verdict update:
+
+1. strict full-scan now includes live host-visible attestation and lane/headstamp continuity as first-class required gates.
+2. lane continuity validation no longer depends solely on stale report selection when current-turn stamp evidence is available.
+3. wrapper template sync is now auditable in backfill receipts (artifact-level change visibility preserved).
