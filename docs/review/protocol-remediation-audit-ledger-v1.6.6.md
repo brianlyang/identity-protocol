@@ -2502,3 +2502,45 @@ Checkpoint verdict update:
 
 1. strict scan host-visible control loop now has deterministic pre-gate refresh path.
 2. source/age drift in long scans is reduced to explicit governance behavior rather than incidental stale-state carryover.
+
+### 26.35 IP-ASB-203 actor-scope closure and orchestration wiring (2026-03-15)
+
+Problem:
+
+1. `validate_cross_actor_isolation.py` previously scanned all actor binding files under shared runtime root.
+2. strict current-actor scans could be blocked by unrelated historical actor dirt (`binding_identity_not_in_catalog:*`) from other actor files.
+3. this created false-hard-failure semantics for current actor closure.
+
+Fix landed:
+
+1. `scripts/validate_cross_actor_isolation.py`
+   - adds `--actor-id` and `--scope-mode`:
+     - `catalog_all` (legacy strict-all),
+     - `actor_primary` (current actor fail-close + non-target warnings),
+     - `actor_only` (current actor fail-close only).
+   - emits split machine projection:
+     - blocking: `cross_actor_isolation_status`, `stale_reasons`
+     - telemetry: `global_observation_status`, `global_observation_stale_reasons`
+2. strict orchestrators now pass actor scope explicitly:
+   - `scripts/full_identity_protocol_scan.py`
+   - `scripts/report_three_plane_status.py`
+   - `scripts/collect_identity_health_report.py`
+   - `scripts/identity_creator.py`
+   - `scripts/release_readiness_check.py`
+   - `scripts/e2e_smoke_test.sh`
+   - `scripts/ci/run_required_runtime_gates_ci.sh`
+
+Replay plan (machine-verifiable):
+
+1. Construct catalog with one clean target actor binding and one dirty non-target actor binding.
+2. Run:
+   - `validate_cross_actor_isolation --scope-mode catalog_all` -> expected `FAIL_REQUIRED`.
+   - `validate_cross_actor_isolation --scope-mode actor_primary --actor-id <target>` -> expected `PASS_REQUIRED` + `global_observation_status=WARN_NON_BLOCKING`.
+   - `validate_cross_actor_isolation --scope-mode actor_primary --actor-id <dirty_actor>` -> expected `FAIL_REQUIRED`.
+3. strict full-scan/three-plane should not regress to cross-actor false block when target actor tuple is clean.
+
+Checkpoint verdict update:
+
+1. Current actor strict closure and global hygiene telemetry are now protocol-distinct and machine-projected.
+2. `IP-ASB-203` retains fail-close semantics for target actor scope; unrelated actor contamination no longer hard-blocks by default.
+3. This is a control-plane wiring change, not instance-local patching.

@@ -1168,3 +1168,41 @@ Interpretation lock:
 1. This is infrastructure closure behavior; it cannot be replaced by identity-local/manual headstamp printing.
 2. If pre-send and post-check conclusions diverge, post-check blocker semantics are authoritative for next-hop release.
 3. "reply_sample_count=0 + pre_first_line_post_check_*" means first-line gate was not reached; it must not be interpreted as "headstamp text generation failed".
+
+### 5.20 Cross-actor isolation actor-scope closure semantics (2026-03-15)
+
+This checkpoint closes `IP-ASB-203` false blocking caused by shared actor-session directories:
+current actor strict closure must stay fail-close, while non-target actor contamination stays observable.
+
+Contract upgrades:
+
+1. `validate_cross_actor_isolation` adds explicit scope modes:
+   - `catalog_all` (legacy strict-all behavior)
+   - `actor_primary` (current actor fail-close + non-target warning telemetry)
+   - `actor_only` (current actor fail-close only)
+2. Strict runtime orchestrators must pass actor-scope parameters:
+   - `--actor-id <resolved_actor_id>`
+   - `--scope-mode actor_primary`
+3. Validator payload must project both dimensions:
+   - blocking axis: `cross_actor_isolation_status`, `stale_reasons`
+   - non-blocking telemetry axis: `global_observation_status`, `global_observation_stale_reasons`
+
+Implementation anchors:
+
+1. `scripts/validate_cross_actor_isolation.py`
+   - actor-scope evaluation and split projection.
+2. `scripts/full_identity_protocol_scan.py`
+   - strict scan invocation passes actor scope and records telemetry projection.
+3. `scripts/report_three_plane_status.py`
+   - strict three-plane invocation passes actor scope and exports telemetry projection.
+4. `scripts/collect_identity_health_report.py`
+   - cross-actor check receives actor scope; telemetry warning maps to `WARN`.
+5. `scripts/identity_creator.py`, `scripts/release_readiness_check.py`,
+   `scripts/e2e_smoke_test.sh`, `scripts/ci/run_required_runtime_gates_ci.sh`
+   - strict validation lanes now pass actor scope explicitly.
+
+Interpretation lock:
+
+1. Current actor contamination remains hard-blocking (`FAIL_REQUIRED` / `IP-ASB-203`).
+2. Non-target actor contamination is no longer allowed to masquerade as current actor hard failure.
+3. Global hygiene cleanup is still mandatory governance work, but does not override current actor strict closure outcome by default.

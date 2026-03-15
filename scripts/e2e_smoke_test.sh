@@ -187,7 +187,7 @@ for ID in $IDS; do
   TARGET_SESSION_ID="$(resolve_identity_session_id "$ID")"
   python3 scripts/validate_actor_session_binding.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --operation e2e
   python3 scripts/validate_no_implicit_switch.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
-  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --operation e2e
+  python3 scripts/validate_cross_actor_isolation.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --scope-mode actor_primary --operation e2e
   python3 scripts/validate_actor_session_multibinding_concurrency.py --identity-id "$ID" --catalog "$CATALOG_PATH" --actor-id "$SESSION_ACTOR_ID" --session-id "$TARGET_SESSION_ID" --operation e2e --json-only
 done
 

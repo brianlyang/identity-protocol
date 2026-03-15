@@ -206,7 +206,10 @@ SUGGESTIONS = {
     "vendor_api_solution": "Complete solution option matrix with exactly one selected option and rollback/fallback refs.",
     "actor_session_binding": "Run `validate_actor_session_binding --operation validate` and repair actor binding tuples for current actor/session.",
     "implicit_switch_guard": "Run `validate_no_implicit_switch --operation validate` and reconcile unexpected switch reports/identity drift.",
-    "cross_actor_isolation": "Run `validate_cross_actor_isolation --operation validate` and eliminate cross-actor identity contamination before closure.",
+    "cross_actor_isolation": (
+        "Run `validate_cross_actor_isolation --operation validate --actor-id <actor> --scope-mode actor_primary` "
+        "and clean current-actor binding contamination before closure."
+    ),
     "pointer_drift_guard": "Run `validate_identity_session_pointer_consistency --require-mirror` and fix canonical/mirror pointer drift.",
     "session_refresh_status": "Run refresh_identity_session_status and repair actor binding/session pointer drift before re-validating health.",
     "headstamp_recurrence_closure": "Run `validate_headstamp_recurrence_closure --operation validate --actor-id <actor> --session-id <run:...>` and enforce governed final emission (compose + send-time gate + canonical blocker receipt).",
@@ -537,6 +540,8 @@ def main() -> int:
             cmd += ["--actor-id", actor_id]
         if name in {"actor_session_binding", "headstamp_recurrence_closure"} and session_id:
             cmd += ["--session-id", session_id]
+        if name == "cross_actor_isolation" and actor_id:
+            cmd += ["--actor-id", actor_id, "--scope-mode", "actor_primary"]
         if name == "pointer_drift_guard" and actor_id:
             cmd += ["--actor-id", actor_id]
         if name == "pointer_drift_guard" and session_id:
@@ -668,6 +673,9 @@ def main() -> int:
                 status = "WARN"
             elif x_status == "FAIL_REQUIRED":
                 status = "FAIL"
+            global_obs_status = str(payload.get("global_observation_status", "")).strip().upper()
+            if status == "PASS" and global_obs_status == "WARN_NON_BLOCKING":
+                status = "WARN"
             x_code = str(payload.get("error_code", "")).strip()
             if x_code:
                 error_code = x_code

@@ -115,6 +115,26 @@ Permission-state contract (CI-gated):
   - `writeback_precheck`
 - CI/release requires `writeback_status=WRITTEN`; deferred permission status is not release-pass eligible.
 
+### Cross-actor isolation scope semantics (v1.6.8 additive)
+
+`IP-ASB-203` enforcement must distinguish current-actor closure from global hygiene telemetry.
+
+1. Canonical validator:
+   - `scripts/validate_cross_actor_isolation.py`
+2. Supported scope modes:
+   - `catalog_all`: fail-close on any actor binding anomaly in catalog scope.
+   - `actor_primary`: fail-close on current actor scope, keep non-target actor anomalies as warning telemetry.
+   - `actor_only`: fail-close on current actor scope only.
+3. Strict runtime orchestrators (full-scan/three-plane/readiness/e2e/ci) must pass:
+   - `--actor-id <resolved_actor_id>`
+   - `--scope-mode actor_primary`
+4. Telemetry contract (machine-readable):
+   - `cross_actor_isolation_status` remains blocking status for current actor scope.
+   - `global_observation_status` + `global_observation_stale_reasons` expose non-target actor contamination.
+5. Fail-close boundary:
+   - current actor scope anomalies remain `FAIL_REQUIRED` (`IP-ASB-203`);
+   - unrelated actor-file anomalies are visible warnings and must not hard-block current actor closure by default.
+
 ## Registry contract
 
 `identity/catalog/identities.yaml` must include:
