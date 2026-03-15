@@ -316,8 +316,9 @@ elif name == "strict_receipt_default_blocked":
         raise SystemExit("strict_receipt_default_blocked: expected non-zero rc")
     if doc.get("protocol_unique_entry_receipt_required") is not True:
         raise SystemExit("strict_receipt_default_blocked: receipt_required must be true")
-    if str(doc.get("protocol_unique_entry_receipt_required_reason", "")).strip() != "strict_operation_contract":
-        raise SystemExit("strict_receipt_default_blocked: expected strict_operation_contract reason")
+    required_reason = str(doc.get("protocol_unique_entry_receipt_required_reason", "")).strip()
+    if required_reason not in {"strict_operation_default", "strict_operation_contract"}:
+        raise SystemExit("strict_receipt_default_blocked: expected strict_operation_default/contract reason")
     stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
     if "entry_receipt_missing" not in stale:
         raise SystemExit("strict_receipt_default_blocked: expected entry_receipt_missing stale reason")

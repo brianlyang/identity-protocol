@@ -181,6 +181,8 @@ HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
     "required_live_probe_delegate",
     "host_dispatch_mode_required",
     "host_release_mode_required",
+    "post_check_closure_state_file",
+    "post_check_block_on_active",
 }
 RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "schema_version",
