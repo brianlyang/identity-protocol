@@ -16,6 +16,9 @@ from final_emit_contract_common import (
     normalize_status,
     normalize_text,
 )
+from protocol_infra_contract import (
+    HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+)
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
     ERR_HDSTAMP_MISSING_OR_MALFORMED,
@@ -30,6 +33,7 @@ ERR_NON_GOVERNED_OUTLET = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 ERR_FINAL_EMIT_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_FINAL_EMIT_SCHEMA_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_GOVERNED_HOST_VISIBLE_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -45,6 +49,12 @@ STRICT_SEND_TIME_OPERATIONS = {
     "three-plane",
     "send-time",
 }
+HOST_VISIBLE_GOVERNED_CHANNELS = {
+    normalize_text(channel).lower()
+    for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    if normalize_text(channel)
+}
+HOST_VISIBLE_GOVERNED_CHANNELS.add(normalize_text(FINAL_EMIT_CHANNEL_ID).lower())
 SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
 
@@ -139,9 +149,13 @@ def _is_governed_outlet(channel_id: str) -> bool:
     cid = str(channel_id or "").strip().lower()
     if not cid:
         return False
-    if cid == FINAL_EMIT_CHANNEL_ID:
+    if cid in HOST_VISIBLE_GOVERNED_CHANNELS:
         return True
     return cid.startswith("governed_") or cid.startswith("governed-") or cid in {"governed", "governedoutlet"}
+
+
+def _is_host_visible_governed_channel(channel_id: str) -> bool:
+    return normalize_text(channel_id).lower() in HOST_VISIBLE_GOVERNED_CHANNELS
 
 
 def _is_final_emit_channel(channel_id: str) -> bool:
@@ -184,7 +198,7 @@ def main() -> int:
     ap.add_argument(
         "--outlet-channel-id",
         default=FINAL_EMIT_CHANNEL_ID,
-        help="logical reply outlet channel id; strict operations require canonical final_emit_governed channel",
+        help="logical reply outlet channel id; strict operations require governed host-visible channel",
     )
     ap.add_argument(
         "--final-emit-policy-mode",
@@ -306,6 +320,7 @@ def main() -> int:
     strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
     reply_transport_ref = _reply_transport_ref(args, evidence_mode)
     outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
+    host_visible_governed_channel_ok = _is_host_visible_governed_channel(outlet_channel_id)
     governed_outlet = _is_governed_outlet(outlet_channel_id)
     final_emit_channel_ok = _is_final_emit_channel(outlet_channel_id)
     final_emit_policy_mode = str(args.final_emit_policy_mode or "").strip() or FINAL_EMIT_POLICY_MODE
@@ -313,12 +328,15 @@ def main() -> int:
     final_emit_schema_id = str(args.final_emit_schema_id or "").strip() or FINAL_EMIT_SCHEMA_ID
     final_emit_schema_status = str(args.final_emit_schema_status or "").strip().upper() or STATUS_PASS_REQUIRED
     final_emit_schema_ok = _is_final_emit_schema_pass(final_emit_schema_status)
-    final_emit_contract_ok = final_emit_channel_ok and final_emit_policy_ok and final_emit_schema_ok
+    if final_emit_channel_ok:
+        final_emit_contract_ok = final_emit_policy_ok and final_emit_schema_ok
+    else:
+        final_emit_contract_ok = host_visible_governed_channel_ok
     final_emit_contract_status = STATUS_PASS_REQUIRED if final_emit_contract_ok else STATUS_FAIL_REQUIRED
     strict_outlet_enforced = strict_context and governed_outlet and bool(args.reply_outlet_guard_applied)
     preflight_receipt_ref = str(Path(args.blocker_receipt_out).expanduser().resolve()) if str(args.blocker_receipt_out or "").strip() else ""
 
-    if strict_context and not final_emit_channel_ok:
+    if strict_context and not host_visible_governed_channel_ok:
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
@@ -330,7 +348,7 @@ def main() -> int:
             "expected_source_layer": str(args.expected_source_layer or "").strip(),
             "layer_intent_text": str(args.layer_intent_text or "").strip(),
             "send_time_gate_status": STATUS_FAIL_REQUIRED,
-            "error_code": ERR_FINAL_EMIT_CHANNEL_REQUIRED,
+            "error_code": ERR_GOVERNED_HOST_VISIBLE_CHANNEL_REQUIRED,
             "reply_first_line_status": STATUS_FAIL_REQUIRED,
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
@@ -347,7 +365,7 @@ def main() -> int:
             "reply_evidence_ref": "",
             "reply_sample_count": 0,
             "reply_first_line_missing_count": 1,
-            "reply_first_line_missing_refs": ["final_emit_channel_not_canonical"],
+            "reply_first_line_missing_refs": ["host_visible_governed_channel_required"],
             "expected_identity_id": args.identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
@@ -361,18 +379,18 @@ def main() -> int:
             "resolved_source_layer": "",
             "intent_confidence": 0.0,
             "intent_source": "strict_send_time_guard",
-            "fallback_reason": "final_emit_channel_not_canonical",
+            "fallback_reason": "host_visible_governed_channel_required",
             "protocol_triggered": False,
             "protocol_trigger_reasons": [],
             "protocol_trigger_confidence": 0.0,
             "blocker_receipt_path": "",
-            "stale_reasons": ["strict_send_time_final_emit_channel_required"],
+            "stale_reasons": ["strict_send_time_governed_host_visible_channel_required"],
             "upstream_validator_rc": 1,
         }
         _emit(payload, json_only=args.json_only)
         return 1
 
-    if strict_context and not final_emit_policy_ok:
+    if strict_context and final_emit_channel_ok and not final_emit_policy_ok:
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
@@ -426,7 +444,7 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
-    if strict_context and not final_emit_schema_ok:
+    if strict_context and final_emit_channel_ok and not final_emit_schema_ok:
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(Path(args.catalog).expanduser().resolve()),
@@ -738,7 +756,7 @@ def main() -> int:
         "outlet_bypass_detected": bool(
             (strict_context and not governed_outlet)
             or (strict_context and not bool(args.reply_outlet_guard_applied))
-            or (strict_context and not final_emit_contract_ok)
+            or (strict_context and final_emit_channel_ok and not final_emit_contract_ok)
             or str(error_code).strip() == ERR_NON_GOVERNED_OUTLET
         ),
         "expected_work_layer": expected_work_layer,
