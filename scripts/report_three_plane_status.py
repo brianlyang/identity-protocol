@@ -353,7 +353,9 @@ def _build_governance_closure_axes(
         "runtime_readiness_status": STATUS_PASS_REQUIRED if runtime_pass else STATUS_FAIL_REQUIRED,
         "release_readiness_status": STATUS_PASS_REQUIRED if release_pass else STATUS_FAIL_REQUIRED,
         "tuple_context_consistency_status": STATUS_PASS_REQUIRED if tuple_context_pass else STATUS_FAIL_REQUIRED,
-        "decision_mode": "FULL_GO" if (infra_pass and runtime_pass and release_pass) else "CONDITIONAL_GO",
+        "decision_mode": (
+            "FULL_GO" if (infra_pass and runtime_pass and release_pass and tuple_context_pass) else "CONDITIONAL_GO"
+        ),
         "conditional_reasons": reasons,
     }
 

@@ -266,6 +266,19 @@ Closure requirements (all must hold simultaneously):
 3. Coverage validation must not hardcode a single governance doc (for example, v1.6.0 only); it must resolve all active stream docs from current aliases.
 4. For any new stream (for example, v1.6.9 or v1.7.3), it is forbidden to land “side-route validators not integrated into motherline row mapping.”
 
+### 11.1 Governance handbook binding contract (mandatory)
+
+To prevent future stream memory drift, onboarding/readiness guidance must be machine-linked instead of human-memory-only:
+
+1. Canonical handbook pointer must remain alias-driven:
+   - `identity/protocol/plugins/PLUGIN_WIRING_PLAYBOOK.current.md`
+2. Handbook policy must remain contract-controlled:
+   - `identity/protocol/plugins/PLUGIN_DOC_CONTROL.current.yaml`
+3. Required docs lane must verify handbook token linkage (no prose-only updates):
+   - `python3 scripts/docs_command_contract_check.py`
+4. Any new stream that modifies governance wiring without updating the handbook linkage contract is `FAIL_REQUIRED`.
+5. This rule is version-agnostic and cannot be hardcoded to a fixed stream list.
+
 ## 12) Serial verification interpretation for motherline integration
 
 For v1.6.8 motherline integration, serial replay interpretation is split into two dimensions:

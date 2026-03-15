@@ -347,3 +347,52 @@ Any of these outcomes is `FAIL_REQUIRED` and blocks merge in the required gate w
 
 1. v1.6.8 anti-forget governance is strengthened with merge-time mandatory enforcement.
 2. Future stream upgrades inherit this policy automatically through registry aliases.
+
+## 16) Round-31.4 addendum: closure-axis semantics + host-visible freshness floor (2026-03-15)
+
+### 16.1 Audit conclusion
+
+1. Three-plane decision semantics are now aligned with tuple-context closure axis.
+2. Host-visible live receipt checks now include an explicit runtime freshness window.
+3. Handbook continuity is bound into v1.6.8 governance (alias-driven, non-hardcoded).
+
+### 16.2 Fix set audited
+
+1. `scripts/report_three_plane_status.py`
+   - `governance_closure_axes.decision_mode=FULL_GO` now requires:
+     - infrastructure closed
+     - runtime closed
+     - release closed
+     - tuple context consistency pass
+2. Host-visible freshness floor:
+   - `scripts/protocol_infra_contract.py`
+     - adds `HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS`.
+   - `scripts/create_identity_pack.py`
+     - host-visible contract skeleton now includes `runtime_receipt_max_age_seconds`.
+   - `scripts/validate_host_transport_wiring_attestation.py`
+     - validates positive `runtime_receipt_max_age_seconds`.
+     - fail-closes stale live receipts:
+       - `host_visible_surface_live_channel_receipt_stale:<channel>:age_seconds=<n>:max_age_seconds=<m>`
+   - `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+     - adds stale-receipt negative probe.
+3. Governance handbook binding:
+   - `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
+     now requires alias-driven handbook linkage via:
+     - `PLUGIN_WIRING_PLAYBOOK.current.md`
+     - `PLUGIN_DOC_CONTROL.current.yaml`
+
+### 16.3 Replay evidence
+
+1. `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - `host_visible_contract_static`: PASS
+   - `host_visible_live_receipts_pass`: PASS
+   - `host_visible_receipt_stale_blocked`: expected block
+   - `host_visible_commentary_bypass_blocked`: expected block
+2. tuple probe suite remains PASS after freshness floor additions:
+   - `bash scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+
+### 16.4 Verdict impact
+
+1. v1.6.8 now provides consistent machine semantics from scan summary to three-plane decision mode.
+2. host-visible runtime freshness is no longer “receipt-presence only”.
+3. anti-forget guidance is integrated into governance control surfaces rather than manual memory.

@@ -150,6 +150,14 @@ elif name == "host_visible_commentary_bypass_blocked":
     token = "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status"
     if token not in reasons:
         raise SystemExit("host_visible_commentary_bypass_blocked: expected commentary fail-close token")
+elif name == "host_visible_receipt_stale_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_receipt_stale_blocked: expected non-zero rc")
+    if not any(
+        token.startswith("host_visible_surface_live_channel_receipt_stale:commentary:")
+        for token in reasons
+    ):
+        raise SystemExit("host_visible_receipt_stale_blocked: expected stale receipt fail-close token")
 else:
     raise SystemExit(f"unknown probe name: {name}")
 PY
@@ -243,6 +251,59 @@ run_probe host_visible_live_receipts_pass \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import os
+import time
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
+stale_epoch = int(time.time()) - 600
+os.utime(path, (stale_epoch, stale_epoch))
+PY
+
+run_probe host_visible_receipt_stale_blocked \
+  python3 scripts/validate_host_transport_wiring_attestation.py \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+receipt_dir = pack_path / "runtime" / "reports" / "host-visible-surface"
+timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+path = receipt_dir / "host-visible-surface-01-commentary.json"
+doc = json.loads(path.read_text(encoding="utf-8"))
+doc["created_at_utc"] = timestamp
+path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
 from __future__ import annotations

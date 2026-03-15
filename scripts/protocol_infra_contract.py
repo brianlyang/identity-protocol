@@ -90,6 +90,7 @@ HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS: tuple[str, ...] = (
 )
 HOST_VISIBLE_SURFACE_STATE_FILE = "runtime/state/host_visible_surface_registry_state.json"
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
+HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = 300
 HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS: tuple[str, ...] = (
     "emit_channel_id",
     "wrapper_surface_status",

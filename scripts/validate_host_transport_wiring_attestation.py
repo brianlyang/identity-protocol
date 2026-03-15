@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_STATE_FILE,
 )
@@ -131,6 +133,7 @@ def main() -> int:
         "host_transport_wiring_attestation_required_channels": [],
         "host_transport_wiring_attestation_state_file": "",
         "host_transport_wiring_attestation_receipt_pattern": "",
+        "host_transport_wiring_attestation_runtime_receipt_max_age_seconds": 0,
         "host_transport_wiring_attestation_live_receipt_required": bool(args.require_live_receipts),
         "host_transport_wiring_attestation_allowed_live_receipt_sources": _parse_csv(
             args.allowed_live_receipt_sources
@@ -167,8 +170,17 @@ def main() -> int:
 
     state_file = str(host_visible_contract.get("runtime_state_file", "")).strip() or HOST_VISIBLE_SURFACE_STATE_FILE
     receipt_pattern = str(host_visible_contract.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+    max_age_raw = host_visible_contract.get(
+        "runtime_receipt_max_age_seconds",
+        HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
+    )
+    try:
+        runtime_receipt_max_age_seconds = int(max_age_raw)
+    except Exception:
+        runtime_receipt_max_age_seconds = 0
     payload["host_transport_wiring_attestation_state_file"] = state_file
     payload["host_transport_wiring_attestation_receipt_pattern"] = receipt_pattern
+    payload["host_transport_wiring_attestation_runtime_receipt_max_age_seconds"] = runtime_receipt_max_age_seconds
 
     required_attestation_fields = set(_as_list(host_visible_contract.get("required_attestation_fields")))
     required_pass_status_fields = set(_as_list(host_visible_contract.get("required_pass_status_fields")))
@@ -176,6 +188,8 @@ def main() -> int:
         issues.append("host_visible_surface_required_attestation_fields_missing")
     if not set(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS).issubset(required_pass_status_fields):
         issues.append("host_visible_surface_required_pass_status_fields_missing")
+    if runtime_receipt_max_age_seconds <= 0:
+        issues.append("host_visible_surface_runtime_receipt_max_age_seconds_invalid")
 
     dispatch_mode_required = str(host_visible_contract.get("host_dispatch_mode_required", "")).strip().lower()
     release_mode_required = str(host_visible_contract.get("host_release_mode_required", "")).strip().lower()
@@ -244,6 +258,12 @@ def main() -> int:
                 except Exception:
                     issues.append(f"host_visible_surface_live_channel_receipt_invalid:{channel}")
                     continue
+                receipt_age_seconds = max(0, int(time.time() - receipt_path.stat().st_mtime))
+                if receipt_age_seconds > runtime_receipt_max_age_seconds:
+                    issues.append(
+                        "host_visible_surface_live_channel_receipt_stale:"
+                        f"{channel}:age_seconds={receipt_age_seconds}:max_age_seconds={runtime_receipt_max_age_seconds}"
+                    )
                 source_value = str(receipt_doc.get(HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD, "")).strip()
                 if source_value not in allowed_sources:
                     issues.append(
