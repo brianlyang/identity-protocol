@@ -2032,3 +2032,56 @@ Checkpoint verdict update:
 1. strict full-scan now includes live host-visible attestation and lane/headstamp continuity as first-class required gates.
 2. lane continuity validation no longer depends solely on stale report selection when current-turn stamp evidence is available.
 3. wrapper template sync is now auditable in backfill receipts (artifact-level change visibility preserved).
+
+### 26.22 Commentary live-lane binding hardening for host-visible control plane (2026-03-15)
+
+Problem:
+
+1. cross-instance feedback isolated a residual bypass shape: commentary progress outputs could appear without same-session host-visible receipt binding.
+2. previous host-visible live validator enforced freshness + pass fields, but did not enforce actor/session tuple binding on receipts.
+3. this could allow recent-but-not-current-session receipts to mask commentary control-plane detachment.
+
+Fix landed:
+
+1. `scripts/validate_host_transport_wiring_attestation.py`
+   - added optional strict binding guards:
+     - `--require-actor-id`
+     - `--require-session-id`
+     - `--require-run-id`
+   - live attestation now fail-closes on per-channel mismatches:
+     - `host_visible_surface_live_channel_actor_id_mismatch:<channel>:...`
+     - `host_visible_surface_live_channel_session_id_mismatch:<channel>:...`
+     - `host_visible_surface_live_channel_run_id_mismatch:<channel>:...`
+   - state/receipt run-id parity is now validated:
+     - `host_visible_surface_live_state_channel_run_id_receipt_mismatch:<channel>:...`
+2. `scripts/full_identity_protocol_scan.py`
+   - strict host-visible check now passes current actor/session binding into live attestation:
+     - `--require-actor-id <actor>`
+     - `--require-session-id <session>`
+   - this moves commentary live binding into strict scan P0/m2m projection.
+3. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - added required negative probe:
+     - `host_visible_commentary_session_binding_blocked` (expects non-zero rc).
+4. `scripts/validate_required_gate_surface_drift.py`
+   - required-surface drift now enforces presence of the commentary session-binding negative probe invocation.
+
+Replay:
+
+1. host-visible probe suite:
+   - `v166-host-visible-probes-after-binding-hardening.log`
+   - includes:
+     - `host_visible_commentary_session_binding_blocked (rc=1)`
+     - `host_visible_commentary_bypass_blocked (rc=1)`.
+2. strict target scan with bound actor/session:
+   - `v166-targetscan-after-commentary-binding-hardening.json`
+   - `summary: p0=0, p1=0, ok=1`, `summary_m2m.fail=0`
+   - `host_transport_wiring_attestation_live_binding_required=true`.
+3. explicit mismatch replay:
+   - `v166-hostvisible-session-mismatch-negative.json`
+   - fails with `IP-HDSTAMP-003` and per-channel session mismatch reasons.
+
+Checkpoint verdict update:
+
+1. commentary live lane is now guarded by same-session host-visible receipt binding in protocol validators.
+2. strict scan can no longer pass on “fresh but foreign-session” commentary receipts.
+3. negative probe coverage explicitly includes commentary session-binding bypass.
