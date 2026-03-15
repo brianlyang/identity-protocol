@@ -352,6 +352,12 @@ elif name == "tuple_binding_migration_contract_pass":
         raise SystemExit("tuple_binding_migration_contract_pass: expected zero rc")
     if str(doc.get("protocol_unique_entry_gate_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("tuple_binding_migration_contract_pass: gate status must be PASS_REQUIRED")
+elif name == "tuple_binding_active_runtime_contract_closure":
+    if rc != 0:
+        raise SystemExit("tuple_binding_active_runtime_contract_closure: expected zero rc")
+    status = str(doc.get("unique_entry_contract_migration_closure_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("tuple_binding_active_runtime_contract_closure: closure status must be PASS_REQUIRED")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -455,6 +461,11 @@ run_probe tuple_binding_migration_contract_pass \
   --entry-receipt "${RECEIPT_MIGRATION_PATH}" \
   --force-check \
   --require-entry-receipt \
+  --json-only
+
+run_probe tuple_binding_active_runtime_contract_closure \
+  python3 scripts/check_unique_entry_contract_migration_closure.py \
+  --catalog "${CATALOG_PATH}" \
   --json-only
 
 run_probe tuple_binding_stale_receipt_blocked \

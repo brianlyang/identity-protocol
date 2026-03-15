@@ -1029,3 +1029,27 @@ Interpretation lock:
 
 1. If either live host-visible attestation or lane/headstamp continuity fails, strict target scan cannot claim closure.
 2. Cross-instance runtime P0 findings must remain machine-visible in P0/m2m summaries, not hidden in out-of-band logs.
+
+### 5.17 Active-runtime unique-entry migration closure probe (2026-03-15)
+
+This checkpoint formalizes a dedicated migration-closure probe to ensure active runtime identities
+do not regress on unique-entry max-age contract completeness.
+
+Contract rule:
+
+1. Every active runtime identity included in probe catalogs must expose:
+   - `protocol_unique_entry_gate_contract_v1.entry_receipt_max_age_seconds > 0`
+2. Missing/invalid values are fail-close and must block required probe suite completion.
+
+Implementation anchors:
+
+1. `scripts/check_unique_entry_contract_migration_closure.py`
+   - validates active runtime identity rows across catalog inputs;
+   - checks `CURRENT_TASK.json` contract presence and max-age positivity.
+2. `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - required probe `tuple_binding_active_runtime_contract_closure` calls the migration-closure checker.
+
+Interpretation lock:
+
+1. code-level freshness guard is not sufficient by itself; migration closure must also hold for active runtime contracts.
+2. probe failures here are migration debt, not tuple-value mismatch noise.

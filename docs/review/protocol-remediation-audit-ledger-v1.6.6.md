@@ -2085,3 +2085,38 @@ Checkpoint verdict update:
 1. commentary live lane is now guarded by same-session host-visible receipt binding in protocol validators.
 2. strict scan can no longer pass on “fresh but foreign-session” commentary receipts.
 3. negative probe coverage explicitly includes commentary session-binding bypass.
+
+### 26.23 Active-runtime unique-entry migration closure probe (2026-03-15)
+
+Problem:
+
+1. cross-instance audit highlighted a practical migration risk:
+   strict logic may be upgraded, but active runtime packs can still miss
+   `protocol_unique_entry_gate_contract_v1.entry_receipt_max_age_seconds`.
+2. without a dedicated closure probe, this debt can hide until late strict-validate execution.
+
+Fix landed:
+
+1. added `scripts/check_unique_entry_contract_migration_closure.py`:
+   - scans active runtime identities across provided catalogs;
+   - validates `CURRENT_TASK.json` contains unique-entry contract with positive max-age.
+2. integrated into required tuple probe suite:
+   - `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - new required probe: `tuple_binding_active_runtime_contract_closure`.
+3. fail-close semantics:
+   - missing contract or `entry_receipt_max_age_seconds<=0` => `FAIL_REQUIRED` (`IP-GATE-ENTRY-002`).
+
+Replay:
+
+1. `bash scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - PASS
+   - includes `tuple_binding_active_runtime_contract_closure rc=0`.
+2. migration negative + repair chain still holds:
+   - `tuple_binding_migration_missing_max_age_blocked rc=1`
+   - `tuple_binding_migration_backfill_apply rc=0`
+   - `tuple_binding_migration_contract_pass rc=0`.
+
+Checkpoint verdict update:
+
+1. migration closure is now checked as an explicit probe target, not only inferred from generic strict-validate failures.
+2. this reduces “code upgraded but active pack schema stale” blind spots in v1.6.6 closure.
