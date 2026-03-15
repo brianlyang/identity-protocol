@@ -2460,3 +2460,21 @@ Checkpoint verdict update:
 
 1. blocker-active deadlock now has deterministic protocol tool entrypoint.
 2. recovery path is infrastructure-level, auditable, and avoids manual state mutation drift.
+
+### 26.33 Strict scan execution-order hardening for post-check state freshness (2026-03-15)
+
+Problem:
+
+1. in strict full-scan, `send_time_reply_gate` could run before same-turn `host_transport_wiring_attestation`.
+2. send-time then consumed previous closure-state snapshot and could fail-close for stale blocker reasons before current-turn attestation updated state.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - enforces check order: `host_transport_wiring_attestation` executes before `send_time_reply_gate` when both are present.
+   - same-turn attestation state is now available to send-time within one scan turn.
+
+Checkpoint verdict update:
+
+1. strict scan no longer has deterministic "pre-read stale post-check state" ordering drift.
+2. remaining failures (if any) are constrained to true live evidence mismatch, not scan sequencing artifacts.

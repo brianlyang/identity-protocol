@@ -830,6 +830,7 @@ Hard constraints:
    - `reply_first_line_status=SKIPPED_NOT_REQUIRED`
    - `send_time_block_stage=pre_first_line_post_check_*`
    and MUST NOT report synthetic first-line-missing evidence (`reply_first_line_missing_count=0`).
+8. In strict scan orchestration, same-turn ordering MUST run host transport attestation before send-time gate evaluation when both are required.
 
 Operational recovery path (control-plane only):
 

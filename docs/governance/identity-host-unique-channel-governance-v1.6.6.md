@@ -1138,6 +1138,7 @@ Implementation anchors:
      - `host_visible_post_check_metrics.host_visible_post_check_metrics_status`
      - `host_visible_post_check_metrics.metrics.*`
      - `host_visible_post_check_metrics.metric_statuses.*`
+   - strict scan execution order must run `host_transport_wiring_attestation` before `send_time_reply_gate` to avoid stale closure-state pre-read in same turn.
 7. `scripts/recover_host_visible_post_check_state.py`
    - controlled recovery entry for blocker-active deadlock:
      - reseed channel receipts + runtime state with explicit tuple binding

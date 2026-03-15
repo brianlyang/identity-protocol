@@ -3097,7 +3097,16 @@ def main() -> int:
                     if isinstance(rl_cmd, list) and "--report-selected-path" not in rl_cmd:
                         rl_cmd.extend(["--report-selected-path", str(latest_report)])
             live_host_receipt_sources: set[str] = set()
-            for name, cmd in checks.items():
+            check_order = list(checks.keys())
+            if (
+                "send_time_reply_gate" in checks
+                and "host_transport_wiring_attestation" in checks
+                and check_order.index("send_time_reply_gate") < check_order.index("host_transport_wiring_attestation")
+            ):
+                check_order.remove("host_transport_wiring_attestation")
+                check_order.insert(check_order.index("send_time_reply_gate"), "host_transport_wiring_attestation")
+            for name in check_order:
+                cmd = checks[name]
                 run_cmd = cmd
                 if name == "host_transport_wiring_attestation":
                     allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
