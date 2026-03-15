@@ -213,6 +213,7 @@ To close sender-side bypass on host-visible channels (including `commentary`), v
 
 1. CURRENT_TASK must include `host_visible_surface_registry_contract_v1` with:
    - `required_channels` containing `commentary`, `approval`, `status`, `final`
+   - `runtime_receipt_max_age_seconds` declared as positive integer (fail-close freshness window)
    - `required_attestation_fields` containing:
      - `emit_channel_id`
      - `wrapper_surface_status`
@@ -230,6 +231,7 @@ To close sender-side bypass on host-visible channels (including `commentary`), v
 5. Required CI lane must execute
    `scripts/ci/run_host_visible_surface_live_probes_ci.sh` and fail-close when:
    - live `commentary` channel attestation is missing
+   - any channel live receipt is stale beyond `runtime_receipt_max_age_seconds`
    - any required pass-status field is not `PASS_REQUIRED`
 
 ### 2.4.2 Failure-code family preservation contract (mandatory)

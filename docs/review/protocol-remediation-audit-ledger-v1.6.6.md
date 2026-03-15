@@ -1938,3 +1938,48 @@ Checkpoint verdict update:
 1. v1.6.6 tuple/freshness closure now covers both new-code path and legacy pack migration path.
 2. stale-replay semantics are fail-closed against file-touch bypass attempts.
 3. three-plane decision semantics are now consistent with tuple-context closure axis.
+
+### 26.20 Host-visible live freshness closure for commentary bypass detection (2026-03-15)
+
+Problem:
+
+1. host-visible runtime attestation previously checked channel receipt existence + status only.
+2. stale historical receipts could still satisfy contract shape checks, masking current-turn sender bypass.
+3. this left a P0 blind spot for commentary channel physical wiring when no fresh receipt was produced.
+
+Fix landed:
+
+1. `scripts/protocol_infra_contract.py`
+   - introduced canonical host-visible freshness default:
+     - `HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS=300`.
+2. `scripts/create_identity_pack.py` + `scripts/repair_contract_backfill.py`
+   - host-visible contract skeleton/backfill now declares:
+     - `runtime_receipt_max_age_seconds` (positive required).
+3. `scripts/validate_protocol_unique_entry_gate.py`
+   - host-visible schema/contract allowlist now includes `runtime_receipt_max_age_seconds`.
+   - non-positive values are fail-close:
+     - `host_visible_surface_runtime_receipt_max_age_seconds_invalid`.
+4. `scripts/validate_host_transport_wiring_attestation.py`
+   - `--require-live-receipts` now enforces per-channel freshness using receipt mtime.
+   - stale channels fail-close with:
+     - `host_visible_surface_live_channel_receipt_stale:<channel>:age_seconds=<n>:max_age_seconds=<m>`.
+5. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - added required negative probe:
+     - `host_visible_receipt_stale_blocked` (expects stale commentary receipt to fail-close).
+
+Replay:
+
+1. `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh`:
+   - PASS (includes `host_visible_receipt_stale_blocked (rc=1)` and `host_visible_commentary_bypass_blocked (rc=1)`).
+2. `python3 scripts/validate_host_transport_wiring_attestation.py --catalog /Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml --identity-id base-repo-audit-expert-v3 --require-live-receipts --json-only`:
+   - FAIL_REQUIRED with stale reasons on all four channels:
+     - `host_visible_surface_live_channel_receipt_stale:commentary...`
+     - `host_visible_surface_live_channel_receipt_stale:approval...`
+     - `host_visible_surface_live_channel_receipt_stale:status...`
+     - `host_visible_surface_live_channel_receipt_stale:final...`.
+
+Checkpoint verdict update:
+
+1. host-visible control plane now blocks stale receipt replay by default, not only missing/invalid shape.
+2. commentary sender bypass is surfaced as machine-detectable stale/live failure in protocol validator outputs.
+3. this closes the “old receipt masks current channel bypass” audit gap under v1.6.6 required lane.
