@@ -654,3 +654,27 @@ Checkpoint verdict update:
 1. v1.6.5 section-3 closure evidence has been refreshed under the latest v1.6.6 freshness gate semantics.
 2. serial self-test (`5`) and serial deep-scan (`5`) are both green under strict bound execution.
 3. closure evidence remains machine-replayable and fail-close aligned.
+
+### 7.16 Control-plane status mirror resync after delegate probe expansion (2026-03-15)
+
+Context:
+
+1. v1.6.6 tuple-binding probe suite gained one additional active-runtime migration-closure probe.
+2. this changed control-plane observed counters used by v1.6.5 status mirror fields:
+   - `required_gate_delegate_inclusive_python_invocations`
+   - `required_gate_delegate_inclusive_unique_python_scripts`
+3. status artifact had to be refreshed to keep machine mirror truthfulness aligned with live checks.
+
+Action (serial, canonical path):
+
+1. `python3 scripts/render_control_plane_status.py --write --json-only`
+2. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+5. `python3 scripts/docs_command_contract_check.py`
+
+Result:
+
+1. all five commands returned pass status (`PASS_REQUIRED` / `PASS`).
+2. `control-plane-status.v1.6.json` now reflects live counters and command-contract snippet count after probe growth.
+3. this closes the mirror-drift gap without manual editing and preserves v1.6.5 alias-driven governance semantics.

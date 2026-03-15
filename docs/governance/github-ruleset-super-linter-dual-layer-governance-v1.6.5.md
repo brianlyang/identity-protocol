@@ -402,6 +402,15 @@ Interpretation lock:
    - keep one-stream-per-PR boundary green via `validate_stream_version_pr_boundary.py`.
 5. No hardcoded stream branching is allowed in budget tooling; active mappings must resolve through `*.current.yaml` aliases.
 
+### 8.3 Status mirror refresh contract after delegated probe growth (mandatory)
+
+1. Any approved expansion of required-gate delegate probes that changes observed control-plane counters (for example `required_gate_delegate_inclusive_*`) must trigger a status mirror refresh in the same stream PR.
+2. The refresh path is always machine-generated and alias-resolved:
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+3. Persisting outdated counter snapshots after delegated probe growth is non-compliant, even if the final status remains `PASS_REQUIRED`.
+4. Stream closure reporting must cite the refreshed status artifact (`control-plane-status.current.yaml` -> active file) and keep one-stream-per-PR boundary green.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:
