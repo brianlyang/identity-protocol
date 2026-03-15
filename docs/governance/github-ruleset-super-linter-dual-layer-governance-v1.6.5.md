@@ -412,6 +412,20 @@ Interpretation lock:
 3. Persisting outdated counter snapshots after delegated probe growth is non-compliant, even if the final status remains `PASS_REQUIRED`.
 4. Stream closure reporting must cite the refreshed status artifact (`control-plane-status.current.yaml` -> active file) and keep one-stream-per-PR boundary green.
 
+### 8.4 Rebound absorber contract for adjacent-stream growth (mandatory)
+
+1. v1.6.5 no-rebound guard remains authoritative even when observed telemetry growth originates from adjacent streams (for example v1.6.6/v1.6.8 core-gate additions).
+2. Any rebound that pushes live counters above the current no-rebound ceiling must be absorbed by the canonical renderer flow in the same checkpoint:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+3. The absorber checkpoint is valid only when serial validators all return pass:
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `python3 scripts/docs_command_contract_check.py`
+4. One-stream-per-PR boundary remains mandatory:
+   - rebound absorption updates must stay in the v1.6.5 stream doc pair and pass `validate_stream_version_pr_boundary.py`.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

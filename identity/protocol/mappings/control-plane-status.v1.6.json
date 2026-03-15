@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-15T04:23:50Z",
-  "git_head_short": "5e1a915",
+  "generated_at_utc": "2026-03-15T07:32:18Z",
+  "git_head_short": "4132798",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -27,7 +27,7 @@
       "status": "PASS_REQUIRED",
       "error_code": "",
       "stdout_tail": [
-        "{\"control_plane_budget_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"budget_file_entry\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml\", \"budget_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml\", \"budget_file_active_file\": \"identity/protocol/mappings/control-plane-budget.v1.6.yaml\", \"budget_file_alias_error\": \"\", \"strict_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\", \".github/workflows/_identity-required-gates.yml\"], \"observed\": {\"validator_scripts\": 154, \"error_codes\": 437, \"error_code_families\": 148, \"mapping_rows_missing_in_bundle\": 0, \"bundle_rows\": 38, \"missing_mapping_rows\": [], \"strict_direct_validate_calls\": {\"scripts/identity_creator.py\": 89, \"scripts/release_readiness_check.py\": 107, \"scripts/report_three_plane_status.py\": 78, \"scripts/full_identity_protocol_scan.py\": 87, \"scripts/e2e_smoke_test.sh\": 116, \".github/workflows/_identity-required-gates.yml\": 13}, \"required_gate_workflow_python_invocations\": 16, \"required_gate_workflow_unique_python_scripts\": 16, \"required_gate_delegate_inclusive_python_invocations\": 158, \"required_gate_delegate_inclusive_unique_python_scripts\": 126}, \"budgets\": {\"validator_scripts\": {\"warn\": 154, \"fail\": 157}, \"error_codes\": {\"warn\": 437, \"fail\": 443}, \"error_code_families\": {\"warn\": 148, \"fail\": 155}, \"mapping_rows_missing_in_bundle\": {\"warn\": 0, \"fail\": 1}, \"direct_validate_calls\": {\"scripts/identity_creator.py\": {\"warn\": 89, \"fail\": 94}, \"scripts/release_readiness_check.py\": {\"warn\": 107, \"fail\": 112}, \"scripts/report_three_plane_status.py\": {\"warn\": 78, \"fail\": 83}, \"scripts/full_identity_protocol_scan.py\": {\"warn\": 87, \"fail\": 92}, \"scripts/e2e_smoke_test.sh\": {\"warn\": 116, \"fail\": 121}, \".github/workflows/_identity-required-gates.yml\": {\"warn\": 13, \"fail\": 15}}}, \"offload_budget\": {\"source_file\": \"identity/protocol/mappings/github-control-plane-offload.current.yaml\", \"resolved_plan_path\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml\", \"plan_resolution_error\": \"\", \"phase_1_required_gate_workflow_python_invocations_max\": 95}, \"error_code_family_strategy\": {\"mode\": \"numeric_suffix_collapse\", \"rationale\": \"Enforce convergence on stable contract families while preserving raw code telemetry.\", \"family_regex\": \"s/-[0-9]+$//\", \"migration_note\": \"Raw error-code count remains monitored; promotion guard now also enforces family-level budgets and no-rebound ceilings.\"}, \"convergence_guard\": {\"enabled\": true, \"mode\": \"no_rebound\", \"enforce_mode\": \"fail_required\", \"ceiling_count\": 5, \"violations\": []}, \"warn_violation_count\": 0, \"warn_violations\": [], \"fail_violation_count\": 0, \"fail_violations\": [], \"stale_reasons\": []}"
+        "{\"control_plane_budget_status\": \"PASS_REQUIRED\", \"error_code\": \"\", \"budget_file_entry\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.current.yaml\", \"budget_file\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/control-plane-budget.v1.6.yaml\", \"budget_file_active_file\": \"identity/protocol/mappings/control-plane-budget.v1.6.yaml\", \"budget_file_alias_error\": \"\", \"strict_surfaces\": [\"scripts/identity_creator.py\", \"scripts/release_readiness_check.py\", \"scripts/report_three_plane_status.py\", \"scripts/full_identity_protocol_scan.py\", \"scripts/e2e_smoke_test.sh\", \".github/workflows/_identity-required-gates.yml\"], \"observed\": {\"validator_scripts\": 154, \"error_codes\": 438, \"error_code_families\": 149, \"mapping_rows_missing_in_bundle\": 0, \"bundle_rows\": 38, \"missing_mapping_rows\": [], \"strict_direct_validate_calls\": {\"scripts/identity_creator.py\": 89, \"scripts/release_readiness_check.py\": 107, \"scripts/report_three_plane_status.py\": 78, \"scripts/full_identity_protocol_scan.py\": 87, \"scripts/e2e_smoke_test.sh\": 116, \".github/workflows/_identity-required-gates.yml\": 13}, \"required_gate_workflow_python_invocations\": 16, \"required_gate_workflow_unique_python_scripts\": 16, \"required_gate_delegate_inclusive_python_invocations\": 159, \"required_gate_delegate_inclusive_unique_python_scripts\": 126}, \"budgets\": {\"validator_scripts\": {\"warn\": 154, \"fail\": 157}, \"error_codes\": {\"warn\": 438, \"fail\": 444}, \"error_code_families\": {\"warn\": 149, \"fail\": 156}, \"mapping_rows_missing_in_bundle\": {\"warn\": 0, \"fail\": 1}, \"direct_validate_calls\": {\"scripts/identity_creator.py\": {\"warn\": 89, \"fail\": 94}, \"scripts/release_readiness_check.py\": {\"warn\": 107, \"fail\": 112}, \"scripts/report_three_plane_status.py\": {\"warn\": 78, \"fail\": 83}, \"scripts/full_identity_protocol_scan.py\": {\"warn\": 87, \"fail\": 92}, \"scripts/e2e_smoke_test.sh\": {\"warn\": 116, \"fail\": 121}, \".github/workflows/_identity-required-gates.yml\": {\"warn\": 13, \"fail\": 15}}}, \"offload_budget\": {\"source_file\": \"identity/protocol/mappings/github-control-plane-offload.current.yaml\", \"resolved_plan_path\": \"/Users/yangxi/claude/codex_project/weixinstore/identity-protocol-local/identity/protocol/mappings/github-control-plane-offload.v1.6.5.yaml\", \"plan_resolution_error\": \"\", \"phase_1_required_gate_workflow_python_invocations_max\": 95}, \"error_code_family_strategy\": {\"mode\": \"numeric_suffix_collapse\", \"rationale\": \"Enforce convergence on stable contract families while preserving raw code telemetry.\", \"family_regex\": \"s/-[0-9]+$//\", \"migration_note\": \"Raw error-code count remains monitored; promotion guard now also enforces family-level budgets and no-rebound ceilings.\"}, \"convergence_guard\": {\"enabled\": true, \"mode\": \"no_rebound\", \"enforce_mode\": \"fail_required\", \"ceiling_count\": 5, \"violations\": []}, \"warn_violation_count\": 0, \"warn_violations\": [], \"fail_violation_count\": 0, \"fail_violations\": [], \"stale_reasons\": []}"
       ],
       "stderr_tail": [],
       "payload": {
@@ -47,8 +47,8 @@
         ],
         "observed": {
           "validator_scripts": 154,
-          "error_codes": 437,
-          "error_code_families": 148,
+          "error_codes": 438,
+          "error_code_families": 149,
           "mapping_rows_missing_in_bundle": 0,
           "bundle_rows": 38,
           "missing_mapping_rows": [],
@@ -62,7 +62,7 @@
           },
           "required_gate_workflow_python_invocations": 16,
           "required_gate_workflow_unique_python_scripts": 16,
-          "required_gate_delegate_inclusive_python_invocations": 158,
+          "required_gate_delegate_inclusive_python_invocations": 159,
           "required_gate_delegate_inclusive_unique_python_scripts": 126
         },
         "budgets": {
@@ -71,12 +71,12 @@
             "fail": 157
           },
           "error_codes": {
-            "warn": 437,
-            "fail": 443
+            "warn": 438,
+            "fail": 444
           },
           "error_code_families": {
-            "warn": 148,
-            "fail": 155
+            "warn": 149,
+            "fail": 156
           },
           "mapping_rows_missing_in_bundle": {
             "warn": 0,
@@ -607,7 +607,7 @@
       "error_code": "",
       "stdout_tail": [
         "[INFO] docs checked: 56",
-        "[INFO] command snippets checked: 1660",
+        "[INFO] command snippets checked: 1700",
         "[PASS] docs command contract check passed."
       ],
       "stderr_tail": [],

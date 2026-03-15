@@ -702,3 +702,27 @@ Result:
 1. budget and status mirrors are re-aligned with live counters (`PASS_REQUIRED`).
 2. no-rebound ceilings now track the refreshed baseline without manual hardcoded edits.
 3. this preserves v1.6.5 governance contract: control-plane mirrors remain machine-synced even when growth originates from adjacent streams.
+
+### 7.18 Rebound absorber replay after required-gate footprint increment (2026-03-15)
+
+Context:
+
+1. a subsequent required-gate footprint increment increased live telemetry again:
+   - `error_codes: 437 -> 438`
+   - `error_code_families: 148 -> 149`
+2. no-rebound ceiling therefore re-blocked with `IP-CP-BUDGET-001` until budget/status mirrors were refreshed.
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+6. `python3 scripts/docs_command_contract_check.py`
+
+Result:
+
+1. all validators returned `PASS_REQUIRED`/`PASS`.
+2. budget ceilings and status mirror now reflect the new live baseline (`error_codes=438`, `error_code_families=149`).
+3. rebound absorption remained tooling-driven (renderer + validators) and preserved one-stream-per-PR governance discipline.
