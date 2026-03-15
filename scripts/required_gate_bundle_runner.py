@@ -252,6 +252,11 @@ STRICT_SKIP_RUNTIME_STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "multimodal_plugin_enforcement": "multimodal_runtime_evidence_status",
     "reasoning_loop_failclose_enforcement": "reasoning_runtime_evidence_status",
 }
+ERR_ENTRY_CONTRACT = "IP-GATE-ENTRY-001"
+ERR_ENTRY_REQUIRED = "IP-GATE-ENTRY-002"
+ERR_ENTRY_REQUIRED_EVIDENCE_GAP = "IP-GATE-ENTRY-008"
+REQUIRED_EVIDENCE_GAP_TOKEN = "required_contract_not_applicable_no_current_round_evidence_source"
+STRICT_SKIP_NOT_ALLOWED_PREFIX = "strict_skip_not_allowed:"
 ENTRY_RECEIPT_STATE_FILE = "required_gate_bundle_entry.latest.json"
 ENTRY_RECEIPT_HISTORY_DIR = "required-gate-bundle-entry"
 WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT = 300
@@ -1187,6 +1192,33 @@ def _load_gate_profile_selection(
             if not requirement_keys:
                 errors.append(f"gate_profile_requirement_keys_empty:{selected_name}")
 
+    operation_overrides = selected.get("operation_requirement_overrides")
+    if isinstance(operation_overrides, dict):
+        override_node = operation_overrides.get(normalized_operation)
+        if not isinstance(override_node, dict):
+            override_node = operation_overrides.get("*")
+        if isinstance(override_node, dict):
+            include_keys = _as_str_list(override_node.get("include_requirement_keys"))
+            exclude_keys = _as_str_list(override_node.get("exclude_requirement_keys"))
+            unknown_include = sorted({key for key in include_keys if key not in known_requirement_keys})
+            unknown_exclude = sorted({key for key in exclude_keys if key not in known_requirement_keys})
+            if unknown_include:
+                errors.append(
+                    f"gate_profile_unknown_override_include_keys:{selected_name}:{normalized_operation}:{','.join(unknown_include)}"
+                )
+            if unknown_exclude:
+                errors.append(
+                    f"gate_profile_unknown_override_exclude_keys:{selected_name}:{normalized_operation}:{','.join(unknown_exclude)}"
+                )
+            include_keys = [key for key in include_keys if key in known_requirement_keys]
+            exclude_keys_set = {key for key in exclude_keys if key in known_requirement_keys}
+            if include_keys:
+                requirement_keys = tuple(key for key in include_keys if key not in exclude_keys_set)
+            elif exclude_keys_set:
+                requirement_keys = tuple(key for key in requirement_keys if key not in exclude_keys_set)
+            if not requirement_keys:
+                errors.append(f"gate_profile_requirement_keys_empty_after_override:{selected_name}:{normalized_operation}")
+
     selection = GateProfileSelection(
         profile_name=selected_name,
         profile_mode=mode,
@@ -1426,6 +1458,29 @@ def _derive_required_contract_reason(
     if op in {"scan", "inspection"} and label.endswith("_scan_probe"):
         return "scan_probe_optional_not_required"
     return "no_required_contract_detected"
+
+
+def _row_has_required_current_round_evidence_gap(row: dict[str, Any]) -> bool:
+    stale_reasons = {
+        str(token).strip()
+        for token in (row.get("stale_reasons") or [])
+        if str(token).strip()
+    }
+    issue_tokens = {
+        str(token).strip()
+        for token in (row.get("payload_contract_issues") or [])
+        if str(token).strip()
+    }
+    if REQUIRED_EVIDENCE_GAP_TOKEN in stale_reasons:
+        return True
+    for token in issue_tokens:
+        if not token.startswith(STRICT_SKIP_NOT_ALLOWED_PREFIX):
+            continue
+        _, _, reason_csv = token.partition(":")
+        reason_set = {item.strip() for item in reason_csv.split(",") if item.strip()}
+        if REQUIRED_EVIDENCE_GAP_TOKEN in reason_set:
+            return True
+    return False
 
 
 def _normalize_headstamp_projection_status(raw: str) -> tuple[str, bool]:
