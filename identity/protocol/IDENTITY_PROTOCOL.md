@@ -803,6 +803,32 @@ Hard constraints:
 1. Missing/malformed/mismatched headstamp must block outbound send.
 2. Governed and direct/manual send paths must share canonical pre-send verdict semantics.
 
+### rq_036_host_visible_post_check_next_hop_block_contract_v1
+
+Required receipt/state fields:
+
+- `host_transport_post_check_closure_state_file`
+- `host_transport_post_check_state_write_status`
+- `host_transport_post_check_block_on_active`
+- `host_transport_post_check_blocker_active`
+- `host_transport_post_check_closure_status`
+- `host_transport_post_check_error_code`
+
+Hard constraints:
+
+1. Host-visible transport attestation MUST persist a post-check closure state on every run.
+2. Any write failure on closure state MUST fail-close with escalation-required semantics (`IP-PRIV-ESC-001` family).
+3. In strict operations, send-time gate MUST read the post-check closure state before release.
+4. If `block_on_active=true` and `blocker_active=true`, send-time MUST hard-block next hop (`FAIL_REQUIRED`).
+5. This contract is control-plane level only: instance-local manual prefixing is not a valid substitute.
+
+Metrics (release gate thresholds):
+
+1. `pre_send_gate_pass_rate >= 0.95`
+2. `post_check_detectability_rate = 1.00` for injected negative probes.
+3. `next_hop_block_rate = 1.00` after post-check blocker activation.
+4. `false_green_rate = 0.00` for strict run-bound host-visible attestation.
+
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 
 The following sections are **kernel anchor placeholders** for v1.6 Batch-6/7 mapping survivability.

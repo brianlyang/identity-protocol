@@ -1093,3 +1093,52 @@ Interpretation lock:
 
 1. strict paths cannot degrade into optional receipt mode by omitting CLI flags.
 2. tuple context diagnostics remain explainable, but bypass by "missing flag" is no longer valid.
+
+### 5.19 Post-check detectability + next-hop hard block closure (2026-03-15)
+
+This checkpoint defines the control-plane closure model for residual host sender risk:
+`95% pre-send hard gating + 100% post-check detectability + next-hop hard block`.
+
+Contract upgrades:
+
+1. Host-visible contract must declare:
+   - `post_check_closure_state_file`
+   - `post_check_block_on_active=true`
+2. Host transport attestation must persist post-check closure state on every run.
+3. Strict send-time gate must consume post-check closure state before release.
+4. If post-check state indicates blocker active, strict send-time must fail-close on next hop.
+
+Implementation anchors:
+
+1. `scripts/protocol_infra_contract.py`
+   - canonical post-check state constants and schema version.
+2. `scripts/create_identity_pack.py` + `scripts/repair_contract_backfill.py`
+   - materialize/backfill post-check closure fields for active runtime packs.
+3. `scripts/validate_host_transport_wiring_attestation.py`
+   - writes `runtime/state/host_visible_surface_live_closure_state.json`.
+   - write failure is escalation-required fail-close (`IP-PRIV-ESC-001` family).
+4. `scripts/validate_send_time_reply_gate.py`
+   - strict-path preflight reads post-check closure state and blocks next hop when `blocker_active=true`.
+5. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - required probe `send_time_next_hop_blocked_by_post_check`.
+
+Metrics (must all pass for closure claim):
+
+1. `pre_send_gate_pass_rate >= 0.95`
+2. `post_check_detectability_rate = 1.00`
+3. `next_hop_block_rate = 1.00`
+4. `false_green_rate = 0.00`
+
+Minimum verification cadence (operator baseline):
+
+1. `3` serial self-test rounds.
+2. `3` serial deep-scan rounds.
+3. At least one negative probe run proving:
+   - post-check blocker activation,
+   - next-hop strict send-time hard block,
+   - blocker reason projection in validator payload.
+
+Interpretation lock:
+
+1. This is infrastructure closure behavior; it cannot be replaced by identity-local/manual headstamp printing.
+2. If pre-send and post-check conclusions diverge, post-check blocker semantics are authoritative for next-hop release.
