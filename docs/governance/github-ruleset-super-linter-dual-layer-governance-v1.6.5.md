@@ -426,6 +426,15 @@ Interpretation lock:
 4. One-stream-per-PR boundary remains mandatory:
    - rebound absorption updates must stay in the v1.6.5 stream doc pair and pass `validate_stream_version_pr_boundary.py`.
 
+### 8.5 Rebound re-entry handling contract (mandatory)
+
+1. rebound absorption is iterative by design: if live telemetry grows again after a valid absorber checkpoint, the same renderer+validator sequence must be replayed immediately.
+2. re-entry absorption must stay machine-generated and alias-resolved; manual literal counter edits are non-compliant.
+3. each re-entry checkpoint must be recorded in the paired review ledger with:
+   - observed delta,
+   - replay commands,
+   - pass evidence.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

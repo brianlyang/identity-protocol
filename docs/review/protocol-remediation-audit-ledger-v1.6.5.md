@@ -726,3 +726,27 @@ Result:
 1. all validators returned `PASS_REQUIRED`/`PASS`.
 2. budget ceilings and status mirror now reflect the new live baseline (`error_codes=438`, `error_code_families=149`).
 3. rebound absorption remained tooling-driven (renderer + validators) and preserved one-stream-per-PR governance discipline.
+
+### 7.19 Rebound absorber replay after strict host-visible governance expansion (2026-03-15)
+
+Context:
+
+1. additional strict host-visible governance hardening increased live control-plane telemetry again:
+   - `error_codes: 438 -> 440`
+   - `error_code_families: 149 -> 150`
+2. no-rebound guard therefore re-opened `IP-CP-BUDGET-001` until budget/status mirrors were refreshed.
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+6. `python3 scripts/docs_command_contract_check.py`
+
+Result:
+
+1. all six commands returned `PASS_REQUIRED` / `PASS`.
+2. budget/status mirrors now track the latest no-rebound baseline (`error_codes=440`, `error_code_families=150`).
+3. closure remains tooling-governed (renderer + validators), with no manual hardcoded counter edits.
