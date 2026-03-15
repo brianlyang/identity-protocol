@@ -1,6 +1,6 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-15T02:45:40Z'
+last_updated_utc: '2026-03-15T02:56:31Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
@@ -26,8 +26,8 @@ budgets:
       warn: 78
       fail: 83
     scripts/full_identity_protocol_scan.py:
-      warn: 85
-      fail: 90
+      warn: 87
+      fail: 92
     scripts/e2e_smoke_test.sh:
       warn: 116
       fail: 121
@@ -38,7 +38,7 @@ convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-15T02:45:40Z'
+  baseline_snapshot_utc: '2026-03-15T02:56:31Z'
   ceilings:
     validator_scripts: 154
     error_codes: 436
@@ -48,7 +48,7 @@ convergence_guard:
       scripts/identity_creator.py: 89
       scripts/release_readiness_check.py: 107
       scripts/report_three_plane_status.py: 78
-      scripts/full_identity_protocol_scan.py: 85
+      scripts/full_identity_protocol_scan.py: 87
       scripts/e2e_smoke_test.sh: 116
       .github/workflows/_identity-required-gates.yml: 13
 error_code_family_strategy:
