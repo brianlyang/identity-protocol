@@ -401,6 +401,7 @@ Interpretation lock:
    - update this governance doc and its paired review ledger in the same stream PR,
    - keep one-stream-per-PR boundary green via `validate_stream_version_pr_boundary.py`.
 5. No hardcoded stream branching is allowed in budget tooling; active mappings must resolve through `*.current.yaml` aliases.
+6. If control-plane core scripts evolve in adjacent streams and trigger no-rebound ceiling drift, v1.6.5 budget/status mirrors must be resynchronized immediately via renderer + status mirror flow in the same checkpoint (never deferred to later manual cleanup).
 
 ### 8.3 Status mirror refresh contract after delegated probe growth (mandatory)
 

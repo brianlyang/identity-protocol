@@ -678,3 +678,27 @@ Result:
 1. all five commands returned pass status (`PASS_REQUIRED` / `PASS`).
 2. `control-plane-status.v1.6.json` now reflects live counters and command-contract snippet count after probe growth.
 3. this closes the mirror-drift gap without manual editing and preserves v1.6.5 alias-driven governance semantics.
+
+### 7.17 No-rebound budget/status resync after adjacent stream core growth (2026-03-15)
+
+Context:
+
+1. adjacent stream core script expansion increased live control-plane telemetry:
+   - `error_codes: 436 -> 437`
+   - `error_code_families: 147 -> 148`
+2. v1.6.5 no-rebound guard therefore reported `IP-CP-BUDGET-001` until budget/status mirrors were refreshed.
+
+Action (canonical, alias-driven, serial):
+
+1. `python3 scripts/render_control_plane_budget.py --write --json-only`
+2. `python3 scripts/render_control_plane_status.py --write --json-only`
+3. `python3 scripts/validate_control_plane_budget.py --json-only`
+4. `python3 scripts/validate_control_plane_status_sync.py --json-only`
+5. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+6. `python3 scripts/docs_command_contract_check.py`
+
+Result:
+
+1. budget and status mirrors are re-aligned with live counters (`PASS_REQUIRED`).
+2. no-rebound ceilings now track the refreshed baseline without manual hardcoded edits.
+3. this preserves v1.6.5 governance contract: control-plane mirrors remain machine-synced even when growth originates from adjacent streams.
