@@ -1106,7 +1106,8 @@ Contract upgrades:
    - `post_check_block_on_active=true`
 2. Host transport attestation must persist post-check closure state on every run.
 3. Strict send-time gate must consume post-check closure state before release.
-4. If post-check state indicates blocker active, strict send-time must fail-close on next hop.
+4. If post-check state is missing/invalid/unreadable, strict send-time must fail-close on next hop.
+5. If post-check state indicates blocker active, strict send-time must fail-close on next hop.
 
 Implementation anchors:
 
@@ -1121,6 +1122,12 @@ Implementation anchors:
    - strict-path preflight reads post-check closure state and blocks next hop when `blocker_active=true`.
 5. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
    - required probe `send_time_next_hop_blocked_by_post_check`.
+   - required probe `send_time_next_hop_blocked_on_missing_post_check_state`.
+6. `scripts/full_identity_protocol_scan.py`
+   - emits machine-readable metric projection:
+     - `host_visible_post_check_metrics.host_visible_post_check_metrics_status`
+     - `host_visible_post_check_metrics.metrics.*`
+     - `host_visible_post_check_metrics.metric_statuses.*`
 
 Metrics (must all pass for closure claim):
 

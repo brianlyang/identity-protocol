@@ -172,6 +172,15 @@ elif name == "send_time_next_hop_blocked_by_post_check":
     token = "host_transport_post_check_blocker_active"
     if token not in reasons:
         raise SystemExit("send_time_next_hop_blocked_by_post_check: expected blocker activation reason")
+elif name == "send_time_next_hop_blocked_on_missing_post_check_state":
+    if rc == 0:
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: send_time_gate_status must be FAIL_REQUIRED")
+    token = "host_transport_post_check_state_unavailable"
+    if token not in reasons:
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: expected missing-state fail-close token")
 elif name == "host_visible_commentary_session_binding_blocked":
     if rc == 0:
         raise SystemExit("host_visible_commentary_session_binding_blocked: expected non-zero rc")
@@ -284,6 +293,38 @@ run_probe host_visible_live_receipts_pass \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
     --require-run-id run:ci-probe-receipt \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "state" / "host_visible_surface_live_closure_state.json"
+if path.exists():
+    path.unlink()
+PY
+
+run_probe send_time_next_hop_blocked_on_missing_post_check_state \
+  python3 scripts/validate_send_time_reply_gate.py \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --operation validate \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
     --json-only
 
 run_probe host_visible_live_run_binding_required_blocked \

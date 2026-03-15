@@ -819,8 +819,9 @@ Hard constraints:
 1. Host-visible transport attestation MUST persist a post-check closure state on every run.
 2. Any write failure on closure state MUST fail-close with escalation-required semantics (`IP-PRIV-ESC-001` family).
 3. In strict operations, send-time gate MUST read the post-check closure state before release.
-4. If `block_on_active=true` and `blocker_active=true`, send-time MUST hard-block next hop (`FAIL_REQUIRED`).
-5. This contract is control-plane level only: instance-local manual prefixing is not a valid substitute.
+4. If post-check closure state is missing/invalid/unreadable in strict operations, send-time MUST hard-block next hop (`FAIL_REQUIRED`).
+5. If `block_on_active=true` and `blocker_active=true`, send-time MUST hard-block next hop (`FAIL_REQUIRED`).
+6. This contract is control-plane level only: instance-local manual prefixing is not a valid substitute.
 
 Metrics (release gate thresholds):
 
@@ -828,6 +829,12 @@ Metrics (release gate thresholds):
 2. `post_check_detectability_rate = 1.00` for injected negative probes.
 3. `next_hop_block_rate = 1.00` after post-check blocker activation.
 4. `false_green_rate = 0.00` for strict run-bound host-visible attestation.
+
+Machine projection (required in strict scans):
+
+1. `host_visible_post_check_metrics.host_visible_post_check_metrics_status`
+2. `host_visible_post_check_metrics.metrics.*`
+3. `host_visible_post_check_metrics.metric_statuses.*`
 
 ## Batch-6/7 anchor placeholders (v1.6 intake, non-promotional)
 

@@ -17,6 +17,10 @@ from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gate
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
+    HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE,
+    HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE,
+    HOST_VISIBLE_FALSE_GREEN_MAX_RATE,
 )
 from response_stamp_common import DEFAULT_WORK_LAYER, resolve_layer_intent
 from runtime_temp_path_common import named_temp_root, runtime_temp_file
@@ -100,6 +104,9 @@ DEFAULT_REPO_ROOT = SCRIPT_PATH.parent.parent
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 SESSION_ID_FALLBACK = ""
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 
 
 @dataclass
@@ -412,6 +419,204 @@ def _classify_tuple_context_projection(*, checks: dict[str, Any]) -> dict[str, A
         "tuple_context_only_failure_count": len(matches),
         "tuple_context_only_failure_scope": "tuple_context_only" if matches else "",
         "tuple_context_only_failure_checks": matches,
+    }
+
+
+def _safe_rate(*, passed: int, total: int) -> float:
+    if total <= 0:
+        return 1.0
+    return float(passed) / float(total)
+
+
+def _status_by_min_rate(*, rate: float, min_rate: float, total: int) -> str:
+    if total <= 0:
+        return STATUS_SKIPPED_NOT_REQUIRED
+    return STATUS_PASS_REQUIRED if rate >= min_rate else STATUS_FAIL_REQUIRED
+
+
+def _status_by_max_rate(*, rate: float, max_rate: float, total: int) -> str:
+    if total <= 0:
+        return STATUS_SKIPPED_NOT_REQUIRED
+    return STATUS_PASS_REQUIRED if rate <= max_rate else STATUS_FAIL_REQUIRED
+
+
+def _stale_reason_contains(stale_reasons: list[str], token: str) -> bool:
+    target = str(token or "").strip()
+    if not target:
+        return False
+    for reason in [str(item).strip() for item in (stale_reasons or []) if str(item).strip()]:
+        if reason == target or reason.startswith(f"{target}:"):
+            return True
+    return False
+
+
+def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    runtime_rows = [row for row in rows if _summary_bucket_for_row(row) == "runtime_active"]
+
+    pre_send_total = 0
+    pre_send_passed = 0
+    post_check_total = 0
+    post_check_passed = 0
+    next_hop_total = 0
+    next_hop_blocked = 0
+    false_green_total = 0
+    false_green_count = 0
+    next_hop_candidates: list[str] = []
+    false_green_identities: list[str] = []
+
+    for row in runtime_rows:
+        identity_id = str(row.get("identity_id", "")).strip()
+        checks = row.get("checks") if isinstance(row.get("checks"), dict) else {}
+        send_entry = checks.get("send_time_reply_gate_validate")
+        if not isinstance(send_entry, dict):
+            send_entry = checks.get("send_time_reply_gate")
+        host_entry = checks.get("host_transport_wiring_attestation")
+
+        if isinstance(send_entry, dict):
+            pre_send_total += 1
+            send_status = str(send_entry.get("send_time_gate_status", "")).strip().upper()
+            if bool(send_entry.get("ok", False)) and send_status in {"", STATUS_PASS_REQUIRED}:
+                pre_send_passed += 1
+            post_check_state_status = str(send_entry.get("host_transport_post_check_state_status", "")).strip()
+            post_check_state_unavailable = post_check_state_status in {
+                "STATE_UNCHECKED",
+                "STATE_MISSING",
+                "STATE_INVALID",
+                "STATE_RESOLVE_FAILED",
+                "STATE_CONTRACT_MISSING",
+            }
+            post_check_guard_expected = bool(send_entry.get("host_transport_post_check_block_on_active", False)) and (
+                bool(send_entry.get("host_transport_post_check_blocker_active", False))
+                or post_check_state_unavailable
+            )
+            if post_check_guard_expected:
+                next_hop_total += 1
+                if identity_id:
+                    next_hop_candidates.append(identity_id)
+                stale_reasons = [
+                    str(item).strip() for item in (send_entry.get("stale_reasons") or []) if str(item).strip()
+                ]
+                if send_status == STATUS_FAIL_REQUIRED and (
+                    _stale_reason_contains(stale_reasons, "host_transport_post_check_blocker_active")
+                    or _stale_reason_contains(stale_reasons, "host_transport_post_check_state_unavailable")
+                ):
+                    next_hop_blocked += 1
+
+        if isinstance(host_entry, dict):
+            post_check_total += 1
+            false_green_total += 1
+            write_status = str(host_entry.get("host_transport_post_check_state_write_status", "")).strip().upper()
+            state_path = str(host_entry.get("host_transport_post_check_closure_state_path", "")).strip()
+            if write_status == STATUS_PASS_REQUIRED and state_path:
+                post_check_passed += 1
+
+            host_status = str(host_entry.get("host_transport_wiring_attestation_status", "")).strip().upper()
+            strict_binding_required = bool(
+                host_entry.get("host_transport_wiring_attestation_strict_live_run_binding_required", False)
+            )
+            live_receipts_required = bool(host_entry.get("host_transport_wiring_attestation_live_receipt_required", False))
+            required_run_id = str(host_entry.get("host_transport_wiring_attestation_required_run_id", "")).strip()
+            is_false_green = (
+                host_status == STATUS_PASS_REQUIRED
+                and (
+                    not strict_binding_required
+                    or (live_receipts_required and not required_run_id)
+                )
+            )
+            if is_false_green:
+                false_green_count += 1
+                if identity_id:
+                    false_green_identities.append(identity_id)
+
+    pre_send_rate = _safe_rate(passed=pre_send_passed, total=pre_send_total)
+    post_check_rate = _safe_rate(passed=post_check_passed, total=post_check_total)
+    next_hop_rate = _safe_rate(passed=next_hop_blocked, total=next_hop_total)
+    false_green_rate = _safe_rate(passed=false_green_count, total=false_green_total)
+
+    pre_send_status = _status_by_min_rate(
+        rate=pre_send_rate,
+        min_rate=float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
+        total=pre_send_total,
+    )
+    post_check_status = _status_by_min_rate(
+        rate=post_check_rate,
+        min_rate=float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
+        total=post_check_total,
+    )
+    next_hop_status = _status_by_min_rate(
+        rate=next_hop_rate,
+        min_rate=float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
+        total=next_hop_total,
+    )
+    false_green_status = _status_by_max_rate(
+        rate=false_green_rate,
+        max_rate=float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+        total=false_green_total,
+    )
+
+    metric_statuses = (
+        pre_send_status,
+        post_check_status,
+        next_hop_status,
+        false_green_status,
+    )
+    overall_status = STATUS_PASS_REQUIRED
+    if any(status == STATUS_FAIL_REQUIRED for status in metric_statuses):
+        overall_status = STATUS_FAIL_REQUIRED
+    elif any(status == STATUS_SKIPPED_NOT_REQUIRED for status in metric_statuses):
+        overall_status = STATUS_SKIPPED_NOT_REQUIRED
+
+    closure_claim_ready = (
+        pre_send_status == STATUS_PASS_REQUIRED
+        and post_check_status == STATUS_PASS_REQUIRED
+        and next_hop_status == STATUS_PASS_REQUIRED
+        and false_green_status == STATUS_PASS_REQUIRED
+    )
+
+    stale_reasons: list[str] = []
+    if pre_send_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_pre_send_gate_pass_rate_below_threshold")
+    if post_check_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_post_check_detectability_rate_below_threshold")
+    if next_hop_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_next_hop_block_rate_below_threshold")
+    if next_hop_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_next_hop_block_rate_insufficient_blocker_samples")
+    if false_green_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_false_green_rate_above_threshold")
+
+    return {
+        "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
+        "host_visible_post_check_metrics_status": overall_status,
+        "closure_claim_ready": bool(closure_claim_ready),
+        "thresholds": {
+            "pre_send_gate_pass_rate_min": float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
+            "post_check_detectability_rate_min": float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
+            "next_hop_block_rate_min": float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
+            "false_green_rate_max": float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+        },
+        "samples": {
+            "runtime_active_total": len(runtime_rows),
+            "pre_send_gate_total": pre_send_total,
+            "post_check_detectability_total": post_check_total,
+            "next_hop_block_total": next_hop_total,
+            "false_green_total": false_green_total,
+        },
+        "metrics": {
+            "pre_send_gate_pass_rate": pre_send_rate,
+            "post_check_detectability_rate": post_check_rate,
+            "next_hop_block_rate": next_hop_rate,
+            "false_green_rate": false_green_rate,
+        },
+        "metric_statuses": {
+            "pre_send_gate_pass_rate_status": pre_send_status,
+            "post_check_detectability_rate_status": post_check_status,
+            "next_hop_block_rate_status": next_hop_status,
+            "false_green_rate_status": false_green_status,
+        },
+        "next_hop_block_identity_ids": sorted(set(next_hop_candidates)),
+        "false_green_identity_ids": sorted(set(false_green_identities)),
+        "stale_reasons": stale_reasons,
     }
 
 
@@ -860,6 +1065,7 @@ def main() -> int:
     }
     target_severity_map: dict[str, str] = {}
     target_m2m_map: dict[str, str] = {}
+    all_scanned_rows: list[dict[str, Any]] = []
 
     def _update_target_severity(identity_id: str, severity: str) -> None:
         if args.scan_mode != "target":
@@ -1048,6 +1254,7 @@ def main() -> int:
                 _update_target_m2m(iid, current_m2m)
                 _update_target_severity(iid, str(item["severity"]))
                 _record_summary(item)
+                all_scanned_rows.append(item)
                 layer_out["identities"].append(item)
                 continue
 
@@ -1088,6 +1295,7 @@ def main() -> int:
                 item["severity"] = "P0"
                 _update_target_severity(iid, str(item["severity"]))
                 _record_summary(item)
+                all_scanned_rows.append(item)
                 layer_out["identities"].append(item)
                 continue
             if (not row_is_active_runtime) and session_id_input and not requested_session_bound:
@@ -4333,10 +4541,48 @@ def main() -> int:
                         "reply_first_line_missing_count",
                         "reply_first_line_missing_refs",
                         "blocker_receipt_path",
+                        "host_transport_post_check_state_file",
+                        "host_transport_post_check_state_path",
+                        "host_transport_post_check_state_status",
+                        "host_transport_post_check_block_on_active",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_closure_status",
+                        "host_transport_post_check_error_code",
                         "stale_reasons",
                     ):
                         if k in send_doc:
                             check_payload[k] = send_doc.get(k)
+                if name == "send_time_reply_gate_validate":
+                    send_validate_doc = _parse_json_safely(r.stdout) or {}
+                    for k in (
+                        "send_time_gate_status",
+                        "error_code",
+                        "governed_outlet_enforced",
+                        "outlet_channel_id",
+                        "final_emit_channel_id",
+                        "final_emit_policy_mode",
+                        "final_emit_schema_id",
+                        "final_emit_schema_status",
+                        "final_emit_contract_status",
+                        "outlet_preflight_receipt",
+                        "outlet_bypass_detected",
+                        "reply_evidence_mode",
+                        "reply_evidence_ref",
+                        "reply_sample_count",
+                        "reply_first_line_missing_count",
+                        "reply_first_line_missing_refs",
+                        "blocker_receipt_path",
+                        "host_transport_post_check_state_file",
+                        "host_transport_post_check_state_path",
+                        "host_transport_post_check_state_status",
+                        "host_transport_post_check_block_on_active",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_closure_status",
+                        "host_transport_post_check_error_code",
+                        "stale_reasons",
+                    ):
+                        if k in send_validate_doc:
+                            check_payload[k] = send_validate_doc.get(k)
                 if name == "protocol_lane_headstamp_continuity":
                     lane_doc = _parse_json_safely(r.stdout) or {}
                     for k in (
@@ -4372,6 +4618,14 @@ def main() -> int:
                         "host_transport_wiring_attestation_required_run_id",
                         "host_transport_wiring_attestation_state_file",
                         "host_transport_wiring_attestation_receipt_pattern",
+                        "host_transport_wiring_attestation_strict_live_run_binding_required",
+                        "host_transport_post_check_closure_state_file",
+                        "host_transport_post_check_closure_state_path",
+                        "host_transport_post_check_block_on_active",
+                        "host_transport_post_check_blocker_active",
+                        "host_transport_post_check_closure_status",
+                        "host_transport_post_check_checked_at_utc",
+                        "host_transport_post_check_state_write_status",
                         "error_code",
                         "stale_reasons",
                     ):
@@ -4531,6 +4785,7 @@ def main() -> int:
             item["severity"] = _severity_for_row(item)
             _update_target_severity(iid, str(item["severity"]))
             _record_summary(item)
+            all_scanned_rows.append(item)
             layer_out["identities"].append(item)
 
         payload["catalogs"].append(layer_out)
@@ -4558,6 +4813,8 @@ def main() -> int:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             print(f"[FAIL] target identities not found in selected catalogs: {missing}")
             return 2
+
+    payload["host_visible_post_check_metrics"] = _build_host_visible_post_check_metrics(rows=all_scanned_rows)
 
     if args.out:
         out = Path(args.out).expanduser().resolve()

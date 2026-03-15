@@ -455,6 +455,82 @@ def main() -> int:
     post_check_error_code = str(post_check_state.get("error_code", "")).strip()
     post_check_closure_status = str(post_check_state.get("closure_status", "")).strip()
     post_check_stale_reasons = list(post_check_state.get("stale_reasons") or [])
+    post_check_state_unavailable = post_check_state_status in {
+        "STATE_UNCHECKED",
+        "STATE_MISSING",
+        "STATE_INVALID",
+        "STATE_RESOLVE_FAILED",
+        "STATE_CONTRACT_MISSING",
+    }
+
+    if strict_context and post_check_block_on_active and post_check_state_unavailable:
+        stale_reasons = ["host_transport_post_check_state_unavailable"]
+        if post_check_state_status:
+            stale_reasons.append(f"host_transport_post_check_state_status:{post_check_state_status}")
+        if post_check_error_code:
+            stale_reasons.append(f"host_transport_post_check_error_code:{post_check_error_code}")
+        stale_reasons.extend(
+            [f"host_transport_post_check_reason:{reason}" for reason in post_check_stale_reasons if str(reason).strip()]
+        )
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_POST_CHECK_BLOCKER_ACTIVE,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": strict_outlet_enforced,
+            "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": final_emit_contract_status,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["host_transport_post_check_state_unavailable"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "host_transport_post_check_guard",
+            "fallback_reason": "host_transport_post_check_state_unavailable",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "host_transport_post_check_state_file": post_check_state_file,
+            "host_transport_post_check_state_path": post_check_state_path,
+            "host_transport_post_check_state_status": post_check_state_status,
+            "host_transport_post_check_block_on_active": post_check_block_on_active,
+            "host_transport_post_check_blocker_active": post_check_blocker_active,
+            "host_transport_post_check_closure_status": post_check_closure_status,
+            "host_transport_post_check_error_code": post_check_error_code,
+            "stale_reasons": stale_reasons,
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     if strict_context and post_check_block_on_active and post_check_blocker_active:
         stale_reasons = ["host_transport_post_check_blocker_active"]
