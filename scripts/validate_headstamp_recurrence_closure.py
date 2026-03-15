@@ -16,6 +16,7 @@ from actor_session_common import DEFAULT_BINDING_KEY_MODE, load_actor_binding, l
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
     ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
@@ -38,6 +39,7 @@ ERR_ACTOR_REQUIRED = "IP-ASB-ACTOR-001"
 ERR_MIXED_EVIDENCE_UNPARTITIONED = "IP-ASB-ACTOR-002"
 
 ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
+ERR_SEND_TIME_EVIDENCE_MISSING = ERR_HDSTAMP_REPLY_EVIDENCE_MISSING
 ERR_SYNTHETIC_EVIDENCE = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_NON_GOVERNED_OUTLET = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_FINAL_EMIT_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
@@ -645,6 +647,7 @@ def main() -> int:
         and missing_gate_status == STATUS_FAIL_REQUIRED
         and (
             missing_error_code == ERR_SEND_TIME_GATE
+            or missing_error_code == ERR_SEND_TIME_EVIDENCE_MISSING
             or (
                 missing_error_code == ERR_SYNTHETIC_EVIDENCE
                 and missing_first_line_status == STATUS_SKIPPED_NOT_REQUIRED

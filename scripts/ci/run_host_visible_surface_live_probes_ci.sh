@@ -245,6 +245,7 @@ run_probe host_visible_contract_static \
   python3 scripts/validate_host_transport_wiring_attestation.py \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
+    --operation ci \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -308,6 +309,7 @@ run_probe host_visible_live_receipts_pass \
   python3 scripts/validate_host_transport_wiring_attestation.py \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
+    --operation ci \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
@@ -351,6 +353,7 @@ run_probe host_visible_live_run_binding_required_blocked \
   python3 scripts/validate_host_transport_wiring_attestation.py \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
+    --operation ci \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
@@ -382,6 +385,7 @@ run_probe host_visible_receipt_stale_blocked \
   python3 scripts/validate_host_transport_wiring_attestation.py \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
+    --operation ci \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
@@ -438,6 +442,7 @@ run_probe host_visible_commentary_session_binding_blocked \
   python3 scripts/validate_host_transport_wiring_attestation.py \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
+    --operation ci \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \
@@ -493,6 +498,7 @@ run_probe host_visible_commentary_bypass_blocked \
   python3 scripts/validate_host_transport_wiring_attestation.py \
     --catalog "${CATALOG_PATH}" \
     --identity-id "${IDENTITY_ID}" \
+    --operation ci \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
     --require-actor-id assistant:ci-probe \

@@ -25,12 +25,14 @@ from protocol_infra_contract import (
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
     ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
+ERR_SEND_TIME_EVIDENCE_MISSING = ERR_HDSTAMP_REPLY_EVIDENCE_MISSING
 ERR_SYNTHETIC_EVIDENCE = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_OUTLET_GUARD_MISSING = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_NON_GOVERNED_OUTLET = ERR_HDSTAMP_RECEIPT_MISSING
@@ -415,7 +417,7 @@ def main() -> int:
             "catalog_path": str(catalog_path),
             "operation": args.operation,
             "send_time_gate_status": STATUS_FAIL_REQUIRED if strict_context_hint else STATUS_WARN_NON_BLOCKING,
-            "error_code": ERR_SEND_TIME_GATE,
+            "error_code": ERR_SEND_TIME_EVIDENCE_MISSING,
             "reply_evidence_mode": "invalid_input",
             "reply_transport_ref": "invalid_input",
             "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
@@ -824,11 +826,18 @@ def main() -> int:
         return 1
 
     if strict_context and evidence_mode in {"reply_text", "stamp_json", "stamp_json_composed_reply", "missing"}:
-        synthetic_reason = (
-            "strict_send_time_inline_reply_text_forbidden"
-            if evidence_mode == "reply_text"
-            else "strict_send_time_synthetic_evidence_forbidden"
-        )
+        if evidence_mode == "missing":
+            synthetic_reason = "strict_send_time_reply_evidence_missing"
+            synthetic_error_code = ERR_SEND_TIME_EVIDENCE_MISSING
+            missing_refs = ["strict_reply_evidence_missing"]
+        elif evidence_mode == "reply_text":
+            synthetic_reason = "strict_send_time_inline_reply_text_forbidden"
+            synthetic_error_code = ERR_SYNTHETIC_EVIDENCE
+            missing_refs = ["strict_evidence_source_not_live"]
+        else:
+            synthetic_reason = "strict_send_time_synthetic_evidence_forbidden"
+            synthetic_error_code = ERR_SYNTHETIC_EVIDENCE
+            missing_refs = ["strict_evidence_source_not_live"]
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
@@ -840,7 +849,7 @@ def main() -> int:
             "expected_source_layer": str(args.expected_source_layer or "").strip(),
             "layer_intent_text": str(args.layer_intent_text or "").strip(),
             "send_time_gate_status": STATUS_FAIL_REQUIRED,
-            "error_code": ERR_SYNTHETIC_EVIDENCE,
+            "error_code": synthetic_error_code,
             "reply_first_line_status": STATUS_FAIL_REQUIRED,
             "reply_evidence_mode": evidence_mode,
             "reply_transport_ref": reply_transport_ref,
@@ -857,7 +866,7 @@ def main() -> int:
             "reply_evidence_ref": "",
             "reply_sample_count": 0,
             "reply_first_line_missing_count": 1,
-            "reply_first_line_missing_refs": ["strict_evidence_source_not_live"],
+            "reply_first_line_missing_refs": missing_refs,
             "expected_identity_id": args.identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
@@ -1002,7 +1011,7 @@ def main() -> int:
     first_line_blocked_reason = str(validator_payload.get("reply_first_line_blocked_reason", "")).strip()
     error_code = str(validator_payload.get("error_code", "")).strip()
     if p.returncode != 0 and not error_code:
-        error_code = ERR_SEND_TIME_GATE
+        error_code = ERR_SEND_TIME_EVIDENCE_MISSING if evidence_mode == "missing" else ERR_SEND_TIME_GATE
 
     send_time_status = first_line_status
     if send_time_status not in {

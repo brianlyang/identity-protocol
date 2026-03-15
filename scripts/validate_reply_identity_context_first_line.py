@@ -10,6 +10,7 @@ from actor_session_common import load_actor_binding, load_actor_binding_store
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
     ERR_HDSTAMP_MISSING_OR_MALFORMED,
+    ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
     inject_legacy_error_fields,
 )
 from response_stamp_common import (
@@ -28,6 +29,7 @@ STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_REPLY_FIRST_LINE = ERR_HDSTAMP_MISSING_OR_MALFORMED
+ERR_REPLY_EVIDENCE_MISSING = ERR_HDSTAMP_REPLY_EVIDENCE_MISSING
 ERR_INVALID_EXPECTED_SOURCE_LAYER = "IP-SOURCE-LAYER-001"
 ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 STRICT_LOCK_OPERATIONS = {
@@ -335,7 +337,7 @@ def main() -> int:
         stale_reasons.append("reply_evidence_missing")
         if strict_format_enforced and not args.enforce_first_line_gate:
             stale_reasons.append("reply_evidence_missing_strict_default_gate")
-        error_code = ERR_REPLY_FIRST_LINE
+        error_code = ERR_REPLY_EVIDENCE_MISSING
 
     if len(missing_refs) > 0:
         stale_reasons.append("reply_first_line_identity_context_missing")

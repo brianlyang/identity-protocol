@@ -41,6 +41,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_MISSING = "IP-HDSTAMP-001"
 ERR_INVALID = "IP-HDSTAMP-003"
+FIXTURE_ALLOWED_OPERATIONS = {"scan", "ci", "three-plane"}
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -275,6 +276,23 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate host transport visible-surface wiring attestation contract.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument(
+        "--operation",
+        choices=[
+            "activate",
+            "update",
+            "mutation",
+            "readiness",
+            "e2e",
+            "ci",
+            "validate",
+            "scan",
+            "three-plane",
+            "inspection",
+            "send-time",
+        ],
+        default="validate",
+    )
     ap.add_argument("--require-live-receipts", action="store_true")
     ap.add_argument("--require-actor-id", default="", help="optional expected actor_id for live receipt binding")
     ap.add_argument("--require-session-id", default="", help="optional expected session_id for live receipt binding")
@@ -308,6 +326,7 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "pack_path": str(pack_path),
         "task_path": str(task_path),
+        "operation": str(args.operation or "").strip(),
         "host_transport_wiring_attestation_status": STATUS_PASS_REQUIRED,
         "host_transport_wiring_attestation_contract_key": HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
         "host_transport_wiring_attestation_required_channels": [],
@@ -321,6 +340,8 @@ def main() -> int:
         "host_transport_wiring_attestation_live_coverage_status": STATUS_PASS_REQUIRED,
         "host_transport_wiring_attestation_live_covered_channels": [],
         "host_transport_wiring_attestation_live_binding_required": False,
+        "host_transport_wiring_attestation_fixture_source_allowed": str(args.operation or "").strip()
+        in FIXTURE_ALLOWED_OPERATIONS,
         "host_transport_wiring_attestation_required_actor_id": str(args.require_actor_id or "").strip(),
         "host_transport_wiring_attestation_required_session_id": str(args.require_session_id or "").strip(),
         "host_transport_wiring_attestation_required_run_id": str(args.require_run_id or "").strip(),
@@ -454,6 +475,16 @@ def main() -> int:
         if strict_live_run_binding_required and not required_run_id:
             issues.append("host_visible_surface_live_run_id_required_missing")
         allowed_sources = set(_parse_csv(args.allowed_live_receipt_sources))
+        if not allowed_sources:
+            allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
+        fixture_allowed = str(args.operation or "").strip() in FIXTURE_ALLOWED_OPERATIONS
+        payload["host_transport_wiring_attestation_fixture_source_allowed"] = fixture_allowed
+        if not fixture_allowed and HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE in allowed_sources:
+            allowed_sources.discard(HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE)
+            issues.append(
+                "host_visible_surface_live_fixture_source_forbidden_for_operation:"
+                f"{str(args.operation or '').strip() or 'unknown'}"
+            )
         if not allowed_sources:
             allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
         payload["host_transport_wiring_attestation_allowed_live_receipt_sources"] = sorted(allowed_sources)

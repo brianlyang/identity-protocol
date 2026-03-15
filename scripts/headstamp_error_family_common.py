@@ -6,6 +6,7 @@ from typing import Any
 ERR_HDSTAMP_MISSING_OR_MALFORMED = "IP-HDSTAMP-001"
 ERR_HDSTAMP_ACTOR_LAYER_MISMATCH = "IP-HDSTAMP-002"
 ERR_HDSTAMP_RECEIPT_MISSING = "IP-HDSTAMP-003"
+ERR_HDSTAMP_REPLY_EVIDENCE_MISSING = "IP-HDSTAMP-004"
 
 # Legacy/compatibility aliases kept for replay migration and historical receipts.
 LEGACY_ERR_SEND_TIME_GATE = "IP-ASB-STAMP-SESSION-001"
@@ -53,6 +54,7 @@ def canonicalize_headstamp_error_code(error_code: str) -> tuple[str, str]:
         ERR_HDSTAMP_MISSING_OR_MALFORMED,
         ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
         ERR_HDSTAMP_RECEIPT_MISSING,
+        ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
     }:
         return token, ""
     mapped = LEGACY_HEADSTAMP_ERROR_MAP.get(token, "")
@@ -80,4 +82,3 @@ def inject_legacy_error_fields(payload: dict[str, Any], *, legacy_error_code: st
         out.pop("legacy_error_code", None)
         out.pop("compat_error_code", None)
     return out
-

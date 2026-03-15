@@ -15,6 +15,7 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
     HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
@@ -26,6 +27,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_MISSING = "IP-HDSTAMP-001"
 ERR_INVALID = "IP-HDSTAMP-003"
+FIXTURE_ALLOWED_OPERATIONS = {"scan", "ci", "three-plane"}
 
 SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
@@ -102,6 +104,20 @@ def _parse_json_payload(stdout: str) -> dict[str, Any]:
     return {}
 
 
+def _default_receipt_source_for_operation(operation: str) -> str:
+    op = str(operation or "").strip().lower()
+    if op in FIXTURE_ALLOWED_OPERATIONS:
+        return HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+    return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+
+
+def _default_allowed_sources_for_operation(operation: str) -> str:
+    op = str(operation or "").strip().lower()
+    if op in FIXTURE_ALLOWED_OPERATIONS:
+        return f"{HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE},{HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE}"
+    return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(
         description=(
@@ -112,30 +128,61 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
+    ap.add_argument(
+        "--operation",
+        choices=[
+            "activate",
+            "update",
+            "mutation",
+            "readiness",
+            "e2e",
+            "ci",
+            "validate",
+            "scan",
+            "three-plane",
+            "inspection",
+            "send-time",
+        ],
+        default="validate",
+    )
     ap.add_argument("--actor-id", required=True)
     ap.add_argument("--session-id", required=True)
     ap.add_argument("--run-id", required=True)
-    ap.add_argument("--receipt-source", default=HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE)
+    ap.add_argument("--receipt-source", default="")
     ap.add_argument("--reply-transport-ref", default="runtime:host_visible_post_check_recovery")
-    ap.add_argument("--allowed-live-receipt-sources", default="runtime_dialogue,ci_fixture")
+    ap.add_argument("--allowed-live-receipt-sources", default="")
     ap.add_argument("--skip-attestation", action="store_true")
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
     repo_catalog_path = Path(args.repo_catalog).expanduser().resolve()
+    operation = str(args.operation or "").strip().lower() or "validate"
+    receipt_source = str(args.receipt_source or "").strip() or _default_receipt_source_for_operation(operation)
+    allowed_live_receipt_sources = (
+        str(args.allowed_live_receipt_sources or "").strip() or _default_allowed_sources_for_operation(operation)
+    )
 
     base_payload: dict[str, Any] = {
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
+        "operation": operation,
         "run_id": str(args.run_id).strip(),
         "actor_id": str(args.actor_id).strip(),
         "session_id": str(args.session_id).strip(),
+        "receipt_source": receipt_source,
+        "allowed_live_receipt_sources": allowed_live_receipt_sources,
         "recovery_status": STATUS_FAIL_REQUIRED,
         "error_code": "",
         "stale_reasons": [],
     }
+
+    if operation not in FIXTURE_ALLOWED_OPERATIONS and receipt_source == HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE:
+        base_payload["error_code"] = ERR_INVALID
+        base_payload["stale_reasons"] = [f"fixture_receipt_source_forbidden_for_operation:{operation}"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
 
     try:
         pack_path, task_path = resolve_pack_and_task(catalog_path, args.identity_id)
@@ -201,7 +248,7 @@ def main() -> int:
             "run_id": str(args.run_id).strip(),
             "reply_transport_ref": str(args.reply_transport_ref).strip(),
             "emit_channel_id": str(channel).strip(),
-            HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: str(args.receipt_source).strip(),
+            HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: receipt_source,
         }
         receipt_payload.update(status_map)
         missing_fields = sorted(field for field in required_attestation_fields if field not in receipt_payload)
@@ -240,7 +287,7 @@ def main() -> int:
         ch_doc["last_status"] = STATUS_PASS_REQUIRED if all(
             status_map.get(field, "") == STATUS_PASS_REQUIRED for field in required_pass_status_fields
         ) else STATUS_FAIL_REQUIRED
-        ch_doc["receipt_source"] = str(args.receipt_source).strip()
+        ch_doc["receipt_source"] = receipt_source
         ch_doc["last_run_id"] = str(args.run_id).strip()
         ch_doc["updated_at_utc"] = now
         channels_doc[channel] = ch_doc
@@ -258,7 +305,7 @@ def main() -> int:
             "host_visible_receipt_pattern": str(receipt_glob_path),
             "seeded_channels": required_channels,
             "seeded_receipt_paths": receipt_paths,
-            "seeded_receipt_source": str(args.receipt_source).strip(),
+            "seeded_receipt_source": receipt_source,
         }
     )
 
@@ -282,6 +329,8 @@ def main() -> int:
         str(catalog_path),
         "--identity-id",
         str(args.identity_id).strip(),
+        "--operation",
+        operation,
         "--require-live-receipts",
         "--require-actor-id",
         str(args.actor_id).strip(),
@@ -290,7 +339,7 @@ def main() -> int:
         "--require-run-id",
         str(args.run_id).strip(),
         "--allowed-live-receipt-sources",
-        str(args.allowed_live_receipt_sources).strip(),
+        allowed_live_receipt_sources,
         "--json-only",
     ]
     proc = subprocess.run(attestation_cmd, capture_output=True, text=True, cwd=str(REPO_ROOT))
@@ -328,4 +377,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
