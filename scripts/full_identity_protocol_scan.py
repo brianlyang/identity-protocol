@@ -17,6 +17,7 @@ from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gate
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
     HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE,
     HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE,
@@ -3087,8 +3088,26 @@ def main() -> int:
                     rl_cmd = checks.get("reasoning_loop_failclose_enforcement")
                     if isinstance(rl_cmd, list) and "--report-selected-path" not in rl_cmd:
                         rl_cmd.extend(["--report-selected-path", str(latest_report)])
+            live_host_receipt_sources: set[str] = set()
             for name, cmd in checks.items():
-                r = _run(cmd, cwd=repo_root)
+                run_cmd = cmd
+                if name == "host_transport_wiring_attestation":
+                    allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
+                    allowed_sources.update(
+                        str(token).strip()
+                        for token in live_host_receipt_sources
+                        if str(token).strip()
+                    )
+                    if allowed_sources:
+                        run_cmd = list(cmd)
+                        if "--allowed-live-receipt-sources" not in run_cmd:
+                            run_cmd.extend(
+                                [
+                                    "--allowed-live-receipt-sources",
+                                    ",".join(sorted(allowed_sources)),
+                                ]
+                            )
+                r = _run(run_cmd, cwd=repo_root)
                 check_payload: dict[str, Any] = {"rc": r.rc, "ok": r.ok, "tail": r.tail}
                 if name in {"capability_activation_preflight", "capability_activation_report"}:
                     cap_status, cap_code = _extract_capability_signal(r.stdout)
@@ -4523,6 +4542,9 @@ def main() -> int:
                             check_payload[k] = reply_doc.get(k)
                 if name == "send_time_reply_gate":
                     send_doc = _parse_json_safely(r.stdout) or {}
+                    send_host_source = str(send_doc.get("host_visible_surface_live_receipt_source", "")).strip()
+                    if send_host_source:
+                        live_host_receipt_sources.add(send_host_source)
                     for k in (
                         "send_time_gate_status",
                         "error_code",

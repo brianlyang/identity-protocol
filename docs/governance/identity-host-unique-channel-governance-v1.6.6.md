@@ -323,6 +323,11 @@ Strict scan live run-id pass-through extension (mandatory):
 5. delegated strict coverage scans must propagate the same run id tuple to required-contract coverage validator:
    - `validate_required_contract_coverage.py --run-id <required_gate_bundle_run_id>`
    - so nested unique-entry/lane validators cannot degrade to stale/default run context.
+6. strict full-scan host-visible attestation allowlist must be seeded from same-turn send-time evidence:
+   - baseline include `runtime_dialogue`
+   - append send-time emitted `host_visible_surface_live_receipt_source` when present
+   - pass merged allowlist via `validate_host_transport_wiring_attestation.py --allowed-live-receipt-sources ...`
+   - this avoids false-red source contamination while preserving actor/session/run binding and freshness fail-close gates.
 
 ### 2.4.1 Headstamp continuity contract (mandatory)
 

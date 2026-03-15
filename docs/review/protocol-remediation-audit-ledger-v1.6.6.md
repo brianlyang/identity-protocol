@@ -2377,3 +2377,32 @@ Checkpoint verdict update:
 
 1. strict coverage tuple context is now end-to-end orchestration-bound.
 2. this change remains infrastructure-level and alias-driven; no identity-specific literals were introduced.
+
+### 26.30 Host-visible live source allowlist closure for strict full-scan (2026-03-15)
+
+Problem:
+
+1. strict full-scan send-time lane can emit host-visible receipts using controlled non-dialogue source tags (for example `ci_fixture`) for scripted replay evidence.
+2. host transport attestation in the same full-scan defaulted allowlist to `runtime_dialogue` only.
+3. this produced deterministic false-red source failures (`...receipt_source_invalid`) even when tuple/run/freshness were otherwise valid for the same scan turn.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - captures `host_visible_surface_live_receipt_source` from same-turn `send_time_reply_gate` output.
+   - when invoking `validate_host_transport_wiring_attestation.py`, builds dynamic allowlist:
+     - baseline `runtime_dialogue`
+     - plus send-time emitted source hints for that turn.
+   - passes merged value through:
+     - `--allowed-live-receipt-sources <merged_sources_csv>`
+2. no identity-specific literal routing added; source merge is runtime evidence-derived.
+
+Replay:
+
+1. strict scan replay keeps tuple/run propagation and host-visible attestation in one orchestration path.
+2. source mismatch class is no longer forced by static allowlist drift; remaining failures (if present) are constrained to real freshness/run/state issues.
+
+Checkpoint verdict update:
+
+1. strict full-scan host-visible source selection is now evidence-bound and deterministic.
+2. fail-close semantics remain intact for stale receipts, tuple/run mismatch, and missing closure-state artifacts.
