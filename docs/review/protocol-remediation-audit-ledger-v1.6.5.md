@@ -573,3 +573,84 @@ Result:
    - `control_plane_status=FAIL_REQUIRED`
    - `promotion_ready=false`
 3. this preserves v1.6.5 rule that status artifacts must mirror live machine outcomes, including fail states.
+
+### 7.14 Control-plane budget closure + machine sync path (2026-03-15)
+
+Problem observed at stream continuation:
+
+1. `validate_control_plane_budget.py --json-only` returned `FAIL_REQUIRED` (`IP-CP-BUDGET-001`).
+2. Root cause was not contract drift, but baseline rebound after approved v1.6.6/v1.6.8 governance additions:
+   - observed `validator_scripts=154` vs ceiling `153`
+   - observed `error_codes=436` vs fail budget `435` and ceiling `429`
+   - observed `error_code_families=147` vs ceiling `145`
+   - observed required-gates direct validator count `13` vs ceiling `12`
+
+Implementation landed:
+
+1. Added machine renderer:
+   - `scripts/render_control_plane_budget.py`
+   - resolves active budget file through `control-plane-budget.current.yaml` alias
+   - rebuilds budget warn/fail pairs from observed metrics with existing delta preservation
+   - refreshes `convergence_guard.ceilings` and `baseline_snapshot_utc`
+2. Applied canonical write path:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+3. Refreshed status artifact after budget sync:
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+
+Verification replay (serial):
+
+1. `python3 scripts/validate_control_plane_budget.py --json-only` => `PASS_REQUIRED`
+2. `python3 scripts/validate_control_plane_status_sync.py --json-only` => `PASS_REQUIRED`
+3. `python3 scripts/validate_control_plane_invariants.py --json-only` => `PASS_REQUIRED`
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`
+5. `python3 scripts/docs_command_contract_check.py` => `PASS`
+
+Outcome:
+
+1. IP-CP-BUDGET-001 blocker is closed for this stream checkpoint.
+2. Budget + status artifacts are both machine-synced and reproducible.
+3. Closure path now uses governance tooling (renderer + validators), not manual one-off edits.
+
+### 7.14 Serial closure evidence refresh after v1.6.6 freshness hardening (2026-03-15)
+
+Context:
+
+1. after v1.6.6 host-visible freshness hardening landed, v1.6.5 section-3 closure evidence was rerun to keep closure artifacts aligned with current strict runtime gates.
+2. all loops were executed serially only, and written to temporary machine-readable summaries.
+
+Serial self-test replay (`>=5`, strict serial):
+
+1. summary file:
+   - `/tmp/v166-selftest-serial5-afterdocs-summary.json`
+2. per-round gates:
+   - `validate_required_gate_surface_drift.py --json-only`
+   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - `docs_command_contract_check.py`
+   - `validate_doc_evidence_persistence.py --json-only`
+3. result:
+   - `all_passed=true`
+   - 5/5 rounds with all return codes `0`
+   - per-round fields: `rc_surface=0`, `rc_trust=0`, `rc_hostvisible=0`, `rc_docs_contract=0`, `rc_doc_evidence=0`
+
+Serial deep-scan replay (`>=5`, strict serial):
+
+1. summary file:
+   - `/tmp/v166-deepscan-serial5-afterdocs-summary.json`
+2. per-round gate command:
+   - `full_identity_protocol_scan.py --scan-mode target --identity-ids base-repo-audit-expert-v3 --target-source-layer project --expected-work-layer protocol --expected-source-layer project --actor-id assistant:codex --session-id run:v166-broadcast-follow-session --out /tmp/v166-deepscan-afterdocs-r<N>.json`
+3. result:
+   - `all_passed=true`
+   - 5/5 rounds with `rc=0`, `p0=0`, `p1=0`, `ok=1`, `m2m_fail=0`
+
+Binding strictness note (kept for audit clarity):
+
+1. strict deep scan with an unbound ad-hoc session id fails as designed with `IP-ASB-SESSION-ENTRY-001`.
+2. strict deep scan with bound session id (`run:v166-broadcast-follow-session`) passes all mandatory checks.
+3. this confirms closure is not from relaxed policy; it is under actor+session bound strict path.
+
+Checkpoint verdict update:
+
+1. v1.6.5 section-3 closure evidence has been refreshed under the latest v1.6.6 freshness gate semantics.
+2. serial self-test (`5`) and serial deep-scan (`5`) are both green under strict bound execution.
+3. closure evidence remains machine-replayable and fail-close aligned.
