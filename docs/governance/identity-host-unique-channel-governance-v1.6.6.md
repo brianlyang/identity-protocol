@@ -970,3 +970,62 @@ Boundary:
 
 1. This is not a downgrade of tuple strictness.
 2. It only removes field-name generation drift noise; value mismatch is still `FAIL_REQUIRED`.
+
+### 5.15 Host-visible live freshness as strict full-scan contract (2026-03-15)
+
+This checkpoint upgrades host-visible channel attestations from shape-only checks to
+live freshness-enforced checks in strict scan paths.
+
+Contract additions:
+
+1. Host-visible surfaces now include a canonical freshness ceiling:
+   - `runtime_receipt_max_age_seconds` (positive required).
+2. Freshness is enforced by required validators in strict scan/release gates:
+   - stale channel receipts are fail-closed.
+3. Required CI probes must include stale-receipt and commentary-bypass negative cases.
+
+Implementation anchors:
+
+1. `scripts/protocol_infra_contract.py`
+   - `HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS`.
+2. `scripts/create_identity_pack.py` + `scripts/repair_contract_backfill.py`
+   - materialize/backfill `runtime_receipt_max_age_seconds`.
+3. `scripts/validate_host_transport_wiring_attestation.py`
+   - `--require-live-receipts` enforces per-channel freshness.
+4. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - stale receipt blocked probe is requiredized.
+
+Interpretation lock:
+
+1. A stale historical receipt cannot be used as current-turn proof.
+2. Host-visible checks remain fail-close and are not downgraded to observability-only output.
+
+### 5.16 Cross-instance P0 absorption into strict scan/m2m projection (2026-03-15)
+
+This checkpoint absorbs cross-instance audit findings into protocol-level strict scan closure,
+so externally observed P0s are visible in the canonical `full_identity_protocol_scan` result.
+
+Contract upgrades:
+
+1. `full_identity_protocol_scan` strict path must include:
+   - `validate_host_transport_wiring_attestation.py --require-live-receipts`
+   - `validate_protocol_lane_headstamp_continuity.py`
+2. Both checks are promoted into:
+   - required `core_fail` path,
+   - m2m projection classification.
+3. Lane/headstamp continuity must accept current-turn stamp evidence as valid continuity source;
+   stale report-only coupling is non-compliant.
+
+Implementation anchors:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - requiredized live host-visible + lane continuity checks for strict target scans.
+2. `scripts/validate_protocol_lane_headstamp_continuity.py`
+   - continuity evidence model accepts `report_ref OR stamp_ref`.
+3. `scripts/repair_contract_backfill.py`
+   - wrapper template sync snapshot fields included in backfill receipts for artifact-level visibility.
+
+Interpretation lock:
+
+1. If either live host-visible attestation or lane/headstamp continuity fails, strict target scan cannot claim closure.
+2. Cross-instance runtime P0 findings must remain machine-visible in P0/m2m summaries, not hidden in out-of-band logs.
