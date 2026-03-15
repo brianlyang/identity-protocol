@@ -99,6 +99,9 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--require-live-receipts", action="store_true")
+    ap.add_argument("--require-actor-id", default="", help="optional expected actor_id for live receipt binding")
+    ap.add_argument("--require-session-id", default="", help="optional expected session_id for live receipt binding")
+    ap.add_argument("--require-run-id", default="", help="optional expected run_id for live receipt binding")
     ap.add_argument(
         "--allowed-live-receipt-sources",
         default=HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
@@ -140,6 +143,10 @@ def main() -> int:
         ),
         "host_transport_wiring_attestation_live_coverage_status": STATUS_PASS_REQUIRED,
         "host_transport_wiring_attestation_live_covered_channels": [],
+        "host_transport_wiring_attestation_live_binding_required": False,
+        "host_transport_wiring_attestation_required_actor_id": str(args.require_actor_id or "").strip(),
+        "host_transport_wiring_attestation_required_session_id": str(args.require_session_id or "").strip(),
+        "host_transport_wiring_attestation_required_run_id": str(args.require_run_id or "").strip(),
         "error_code": "",
         "stale_reasons": [],
     }
@@ -215,6 +222,12 @@ def main() -> int:
             issues.append("host_gateway_release_mode_not_wrapper_only")
 
     if args.require_live_receipts:
+        required_actor_id = str(args.require_actor_id or "").strip()
+        required_session_id = str(args.require_session_id or "").strip()
+        required_run_id = str(args.require_run_id or "").strip()
+        payload["host_transport_wiring_attestation_live_binding_required"] = bool(
+            required_actor_id or required_session_id or required_run_id
+        )
         allowed_sources = set(_parse_csv(args.allowed_live_receipt_sources))
         if not allowed_sources:
             allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
@@ -276,6 +289,24 @@ def main() -> int:
                     status_value = str(receipt_doc.get(field, "")).strip().upper()
                     if status_value != STATUS_PASS_REQUIRED:
                         issues.append(f"host_visible_surface_live_channel_status_not_pass:{channel}:{field}")
+                receipt_actor_id = str(receipt_doc.get("actor_id", "")).strip()
+                receipt_session_id = str(receipt_doc.get("session_id", "")).strip()
+                receipt_run_id = str(receipt_doc.get("run_id", "")).strip()
+                if required_actor_id and receipt_actor_id != required_actor_id:
+                    issues.append(
+                        "host_visible_surface_live_channel_actor_id_mismatch:"
+                        f"{channel}:expected={required_actor_id}:observed={receipt_actor_id or 'missing'}"
+                    )
+                if required_session_id and receipt_session_id != required_session_id:
+                    issues.append(
+                        "host_visible_surface_live_channel_session_id_mismatch:"
+                        f"{channel}:expected={required_session_id}:observed={receipt_session_id or 'missing'}"
+                    )
+                if required_run_id and receipt_run_id != required_run_id:
+                    issues.append(
+                        "host_visible_surface_live_channel_run_id_mismatch:"
+                        f"{channel}:expected={required_run_id}:observed={receipt_run_id or 'missing'}"
+                    )
                 channel_state = state_channels.get(channel)
                 if not isinstance(channel_state, dict):
                     issues.append(f"host_visible_surface_live_state_channel_missing:{channel}")
@@ -288,6 +319,17 @@ def main() -> int:
                 state_last_status = str(channel_state.get("last_status", "")).strip().upper()
                 if state_last_status != STATUS_PASS_REQUIRED:
                     issues.append(f"host_visible_surface_live_state_channel_status_not_pass:{channel}")
+                state_last_run_id = str(channel_state.get("last_run_id", "")).strip()
+                if state_last_run_id and receipt_run_id and state_last_run_id != receipt_run_id:
+                    issues.append(
+                        "host_visible_surface_live_state_channel_run_id_receipt_mismatch:"
+                        f"{channel}:state={state_last_run_id}:receipt={receipt_run_id}"
+                    )
+                if required_run_id and state_last_run_id != required_run_id:
+                    issues.append(
+                        "host_visible_surface_live_state_channel_run_id_mismatch:"
+                        f"{channel}:expected={required_run_id}:observed={state_last_run_id or 'missing'}"
+                    )
                 state_source = str(channel_state.get(HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD, "")).strip()
                 if state_source not in allowed_sources:
                     issues.append(

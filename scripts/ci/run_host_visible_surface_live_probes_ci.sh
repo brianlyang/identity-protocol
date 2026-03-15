@@ -150,6 +150,12 @@ elif name == "host_visible_commentary_bypass_blocked":
     token = "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status"
     if token not in reasons:
         raise SystemExit("host_visible_commentary_bypass_blocked: expected commentary fail-close token")
+elif name == "host_visible_commentary_session_binding_blocked":
+    if rc == 0:
+        raise SystemExit("host_visible_commentary_session_binding_blocked: expected non-zero rc")
+    token = "host_visible_surface_live_channel_session_id_mismatch:commentary:expected=run:ci-probe-session:observed=run:ci-probe-session-drift"
+    if token not in reasons:
+        raise SystemExit("host_visible_commentary_session_binding_blocked: expected commentary session mismatch token")
 elif name == "host_visible_receipt_stale_blocked":
     if rc == 0:
         raise SystemExit("host_visible_receipt_stale_blocked: expected non-zero rc")
@@ -229,6 +235,9 @@ for idx, channel in enumerate(("commentary", "approval", "status", "final"), sta
         "emit_channel_id": channel,
         "created_at_utc": timestamp,
         "receipt_source": "ci_fixture",
+        "actor_id": "assistant:ci-probe",
+        "session_id": "run:ci-probe-session",
+        "run_id": "run:ci-probe-receipt",
     }
     payload.update(fields)
     path = receipt_dir / f"host-visible-surface-{idx:02d}-{channel}.json"
@@ -237,7 +246,7 @@ for idx, channel in enumerate(("commentary", "approval", "status", "final"), sta
         "last_receipt_path": str(path),
         "last_status": "PASS_REQUIRED",
         "receipt_source": "ci_fixture",
-        "last_run_id": f"fixture-{idx:02d}",
+        "last_run_id": "run:ci-probe-receipt",
         "updated_at_utc": timestamp,
     }
 state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -250,6 +259,8 @@ run_probe host_visible_live_receipts_pass \
     --identity-id "${IDENTITY_ID}" \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -279,6 +290,8 @@ run_probe host_visible_receipt_stale_blocked \
     --identity-id "${IDENTITY_ID}" \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
@@ -322,6 +335,60 @@ identity_id = sys.argv[2]
 pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
 path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
 doc = json.loads(path.read_text(encoding="utf-8"))
+doc["session_id"] = "run:ci-probe-session-drift"
+path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+run_probe host_visible_commentary_session_binding_blocked \
+  python3 scripts/validate_host_transport_wiring_attestation.py \
+    --catalog "${CATALOG_PATH}" \
+    --identity-id "${IDENTITY_ID}" \
+    --require-live-receipts \
+    --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
+    --json-only
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
+doc = json.loads(path.read_text(encoding="utf-8"))
+doc["session_id"] = "run:ci-probe-session"
+doc["created_at_utc"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+PY
+
+python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+repo_root = Path(sys.argv[3]).resolve()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from tool_vendor_governance_common import resolve_pack_and_task
+
+catalog_path = Path(sys.argv[1]).resolve()
+identity_id = sys.argv[2]
+pack_path, _ = resolve_pack_and_task(catalog_path, identity_id)
+path = pack_path / "runtime" / "reports" / "host-visible-surface" / "host-visible-surface-01-commentary.json"
+doc = json.loads(path.read_text(encoding="utf-8"))
 doc["headstamp_first_line_status"] = "FAIL_REQUIRED"
 path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 PY
@@ -332,6 +399,8 @@ run_probe host_visible_commentary_bypass_blocked \
     --identity-id "${IDENTITY_ID}" \
     --require-live-receipts \
     --allowed-live-receipt-sources runtime_dialogue,ci_fixture \
+    --require-actor-id assistant:ci-probe \
+    --require-session-id run:ci-probe-session \
     --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

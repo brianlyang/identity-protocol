@@ -1062,6 +1062,14 @@ def main() -> int:
                 "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status",
             )
         )
+        has_binding_negative_probe = all(
+            token in text
+            for token in (
+                "run_probe host_visible_commentary_session_binding_blocked",
+                "host_visible_surface_live_channel_session_id_mismatch:commentary:",
+                "--require-session-id",
+            )
+        )
         host_visible_missing_tokens: list[str] = []
         if not has_static_probe:
             host_visible_missing_tokens.append("host_visible_surface_static_probe_invocation_missing")
@@ -1069,6 +1077,8 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_live_probe_invocation_missing")
         if not has_negative_probe:
             host_visible_missing_tokens.append("host_visible_surface_commentary_negative_probe_invocation_missing")
+        if not has_binding_negative_probe:
+            host_visible_missing_tokens.append("host_visible_surface_commentary_session_binding_negative_probe_invocation_missing")
         if host_visible_missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
