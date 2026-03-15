@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from final_emit_contract_common import FINAL_EMIT_CHANNEL_ID, FINAL_EMIT_POLICY_MODE
+from protocol_infra_contract import HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
 from tool_vendor_governance_common import contract_required, latest_identity_upgrade_report, load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -19,6 +20,12 @@ ERR_OUTLET_BYPASS = "IP-OUTLET-003"
 ERR_FINAL_EMIT_CONTRACT = "IP-OUTLET-004"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
+HOST_VISIBLE_GOVERNED_CHANNELS = {
+    str(channel).strip().lower()
+    for channel in HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS
+    if str(channel).strip()
+}
+HOST_VISIBLE_GOVERNED_CHANNELS.add(FINAL_EMIT_CHANNEL_ID.lower())
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -201,19 +208,24 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
+    outlet_channel_norm = outlet_channel_id.strip().lower()
+    outlet_is_governed = outlet_channel_norm in HOST_VISIBLE_GOVERNED_CHANNELS
+    outlet_is_final_emit = outlet_channel_norm == FINAL_EMIT_CHANNEL_ID.lower()
+
     if (
-        outlet_channel_id != FINAL_EMIT_CHANNEL_ID
+        not outlet_is_governed
         or final_emit_channel_id != FINAL_EMIT_CHANNEL_ID
-        or final_emit_policy_mode != FINAL_EMIT_POLICY_MODE
+        or (outlet_is_final_emit and final_emit_policy_mode != FINAL_EMIT_POLICY_MODE)
         or final_emit_schema_status != STATUS_PASS_REQUIRED
         or final_emit_contract_status != STATUS_PASS_REQUIRED
     ):
         payload["outlet_matrix_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_FINAL_EMIT_CONTRACT
         payload["stale_reasons"] = [
-            "final_emit_contract_mismatch",
-            f"expected_outlet_channel_id:{FINAL_EMIT_CHANNEL_ID}",
-            f"expected_final_emit_policy_mode:{FINAL_EMIT_POLICY_MODE}",
+            "governed_outlet_contract_mismatch",
+            f"expected_outlet_channel_id_in:{','.join(sorted(HOST_VISIBLE_GOVERNED_CHANNELS))}",
+            f"expected_final_emit_channel_id:{FINAL_EMIT_CHANNEL_ID}",
+            f"expected_final_emit_policy_mode_when_outlet_is_final_emit:{FINAL_EMIT_POLICY_MODE}",
             f"expected_final_emit_schema_status:{STATUS_PASS_REQUIRED}",
             f"expected_final_emit_contract_status:{STATUS_PASS_REQUIRED}",
         ]
