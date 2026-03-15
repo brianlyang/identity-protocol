@@ -311,6 +311,16 @@ if name == "tuple_binding_incomplete_blocked":
         raise SystemExit("tuple_binding_incomplete_blocked: expected tuple_binding_incomplete stale reason")
     if str(doc.get("protocol_unique_entry_receipt_tuple_context_status", "")).strip().upper() != "FAIL_REQUIRED":
         raise SystemExit("tuple_binding_incomplete_blocked: tuple_context_status must be FAIL_REQUIRED")
+elif name == "strict_receipt_default_blocked":
+    if rc == 0:
+        raise SystemExit("strict_receipt_default_blocked: expected non-zero rc")
+    if doc.get("protocol_unique_entry_receipt_required") is not True:
+        raise SystemExit("strict_receipt_default_blocked: receipt_required must be true")
+    if str(doc.get("protocol_unique_entry_receipt_required_reason", "")).strip() != "strict_operation_contract":
+        raise SystemExit("strict_receipt_default_blocked: expected strict_operation_contract reason")
+    stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
+    if "entry_receipt_missing" not in stale:
+        raise SystemExit("strict_receipt_default_blocked: expected entry_receipt_missing stale reason")
 elif name == "tuple_binding_complete_pass":
     if rc != 0:
         raise SystemExit("tuple_binding_complete_pass: expected zero rc")
@@ -402,6 +412,16 @@ run_probe tuple_binding_incomplete_blocked \
   --entry-receipt "${RECEIPT_PATH}" \
   --force-check \
   --require-entry-receipt \
+  --json-only
+
+run_probe strict_receipt_default_blocked \
+  python3 scripts/validate_protocol_unique_entry_gate.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --run-id "${RUN_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
   --json-only
 
 run_probe tuple_binding_complete_pass \

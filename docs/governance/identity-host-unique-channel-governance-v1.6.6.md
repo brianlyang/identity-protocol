@@ -1053,3 +1053,30 @@ Interpretation lock:
 
 1. code-level freshness guard is not sufficient by itself; migration closure must also hold for active runtime contracts.
 2. probe failures here are migration debt, not tuple-value mismatch noise.
+
+### 5.18 Strict operation default entry-receipt requiredization (2026-03-15)
+
+This checkpoint closes a bypass surface where strict operations could still rely on
+`operation+run_id` checks only when callers forgot `--require-entry-receipt`.
+
+Contract rule:
+
+1. For strict operation scopes, entry receipt must be required by contract even without CLI forcing flags.
+2. validator payload must expose machine-readable requiredization provenance:
+   - `protocol_unique_entry_receipt_required_by_cli_flag`
+   - `protocol_unique_entry_receipt_required_by_contract`
+   - `protocol_unique_entry_receipt_required_reason`
+
+Implementation anchors:
+
+1. `scripts/validate_protocol_unique_entry_gate.py`
+   - computes strict-operation contract requiredization and emits provenance fields.
+2. `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - required negative probe `strict_receipt_default_blocked` validates fail-close without `--require-entry-receipt`.
+3. `scripts/validate_required_gate_surface_drift.py`
+   - enforces strict-default receipt probe invocation in required delegate surface checks.
+
+Interpretation lock:
+
+1. strict paths cannot degrade into optional receipt mode by omitting CLI flags.
+2. tuple context diagnostics remain explainable, but bypass by "missing flag" is no longer valid.

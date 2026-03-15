@@ -54,12 +54,14 @@ FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regressio
 MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
 GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh"
 HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_host_visible_surface_live_probes_ci.sh"
+UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh"
 DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_downsink_path_immutability_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
     GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
     HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
+    UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT,
     DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
@@ -89,6 +91,11 @@ GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
 HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/repair_contract_backfill.py",
     "scripts/validate_host_transport_wiring_attestation.py",
+)
+UNIQUE_ENTRY_TUPLE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_protocol_unique_entry_gate.py",
+    "scripts/repair_contract_backfill.py",
+    "scripts/check_unique_entry_contract_migration_closure.py",
 )
 DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/repair_contract_backfill.py",
@@ -1083,6 +1090,49 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
 
+    unique_entry_probe_delegate_path = repo_root / UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT
+    if not unique_entry_probe_delegate_path.exists():
+        missing_surface_files.append(UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(unique_entry_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in UNIQUE_ENTRY_TUPLE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_strict_default_receipt_probe = all(
+            token in text
+            for token in (
+                "run_probe strict_receipt_default_blocked",
+                "protocol_unique_entry_receipt_required",
+                "strict_operation_contract",
+                "entry_receipt_missing",
+            )
+        )
+        has_migration_closure_probe = all(
+            token in text
+            for token in (
+                "run_probe tuple_binding_active_runtime_contract_closure",
+                "scripts/check_unique_entry_contract_migration_closure.py",
+                "--catalog",
+                "--json-only",
+            )
+        )
+        unique_entry_missing_tokens: list[str] = []
+        if not has_strict_default_receipt_probe:
+            unique_entry_missing_tokens.append("unique_entry_strict_default_receipt_probe_invocation_missing")
+        if not has_migration_closure_probe:
+            unique_entry_missing_tokens.append("unique_entry_migration_closure_probe_invocation_missing")
+        if unique_entry_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + unique_entry_missing_tokens))
+
     downsink_probe_delegate_path = repo_root / DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT
     if not downsink_probe_delegate_path.exists():
         missing_surface_files.append(DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT)
@@ -1260,6 +1310,10 @@ def main() -> int:
         "host_visible_surface_probe_ci_delegate_script": HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
         "host_visible_surface_delegate_required_python_scripts": list(
             HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "unique_entry_tuple_probe_ci_delegate_script": UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT,
+        "unique_entry_tuple_delegate_required_python_scripts": list(
+            UNIQUE_ENTRY_TUPLE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
         ),
         "downsink_path_immutability_probe_ci_delegate_script": DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
         "downsink_path_immutability_delegate_required_python_scripts": list(

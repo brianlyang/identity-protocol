@@ -2120,3 +2120,36 @@ Checkpoint verdict update:
 
 1. migration closure is now checked as an explicit probe target, not only inferred from generic strict-validate failures.
 2. this reduces “code upgraded but active pack schema stale” blind spots in v1.6.6 closure.
+
+### 26.24 Strict default receipt requiredization for unique-entry validator (2026-03-15)
+
+Problem:
+
+1. strict operation runs could still pass caller-side omission of `--require-entry-receipt`, leaving
+   a potential "receipt not explicitly required" interpretation gap.
+2. audit replay required strict semantics to be contract-driven by default (not caller-flag dependent).
+
+Fix landed:
+
+1. `scripts/validate_protocol_unique_entry_gate.py` now computes receipt requiredization with dual provenance:
+   - CLI flag path (`protocol_unique_entry_receipt_required_by_cli_flag=true`), or
+   - strict-operation contract path (`protocol_unique_entry_receipt_required_by_contract=true`).
+2. machine-readable reason field added:
+   - `protocol_unique_entry_receipt_required_reason` in `{cli_flag, strict_operation_contract, not_required}`.
+3. `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh` adds required probe:
+   - `strict_receipt_default_blocked` (strict validate operation, no `--require-entry-receipt`, expected fail-close).
+4. `scripts/validate_required_gate_surface_drift.py` now requiredizes this probe token set and migration-closure invocation.
+
+Replay:
+
+1. `bash scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - PASS
+   - includes `strict_receipt_default_blocked rc=1`.
+2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `PASS_REQUIRED`
+   - unique-entry tuple probe delegate tokens present.
+
+Checkpoint verdict update:
+
+1. strict unique-entry receipt enforcement is now contract-default in strict operation lanes.
+2. failure to pass `--require-entry-receipt` no longer creates a permissive execution window.
