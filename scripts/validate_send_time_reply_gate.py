@@ -18,6 +18,9 @@ from final_emit_contract_common import (
 )
 from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
+    HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
 )
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
@@ -25,6 +28,7 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
+from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
 ERR_SYNTHETIC_EVIDENCE = ERR_HDSTAMP_RECEIPT_MISSING
@@ -34,6 +38,7 @@ ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 ERR_FINAL_EMIT_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_FINAL_EMIT_SCHEMA_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_GOVERNED_HOST_VISIBLE_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
+ERR_POST_CHECK_BLOCKER_ACTIVE = ERR_HDSTAMP_RECEIPT_MISSING
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -83,6 +88,97 @@ def _resolve_input_path(raw_path: str) -> Path:
     if repo_candidate.exists():
         return repo_candidate
     return cwd_candidate
+
+
+def _as_bool(value: Any, *, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    token = str(value or "").strip().lower()
+    if token in {"1", "true", "yes", "on"}:
+        return True
+    if token in {"0", "false", "no", "off"}:
+        return False
+    return bool(default)
+
+
+def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: str) -> Path:
+    token = str(raw_path or "").strip()
+    if not token:
+        return (pack_path / fallback_rel).resolve()
+    p = Path(token).expanduser()
+    if p.is_absolute():
+        return p.resolve()
+    if token.startswith("identity/runtime/"):
+        return (pack_path / "runtime" / token[len("identity/runtime/") :]).resolve()
+    if token.startswith("runtime/"):
+        return (pack_path / token).resolve()
+    return (pack_path / token).resolve()
+
+
+def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "state_file": HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+        "state_path": "",
+        "state_status": "STATE_UNCHECKED",
+        "block_on_active": bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+        "blocker_active": False,
+        "closure_status": "",
+        "error_code": "",
+        "stale_reasons": [],
+    }
+    try:
+        pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
+        task = load_json(task_path)
+    except Exception as exc:
+        payload["state_status"] = "STATE_RESOLVE_FAILED"
+        payload["stale_reasons"] = [f"host_transport_post_check_state_resolve_failed:{type(exc).__name__}"]
+        return payload
+
+    contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
+    if not isinstance(contract, dict):
+        payload["state_status"] = "STATE_CONTRACT_MISSING"
+        payload["stale_reasons"] = ["host_transport_post_check_contract_missing"]
+        return payload
+
+    closure_state_file = (
+        str(contract.get("post_check_closure_state_file", "")).strip()
+        or HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
+    )
+    block_on_active = _as_bool(
+        contract.get("post_check_block_on_active", HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+        default=bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+    )
+    state_path = _resolve_pack_relative_path(
+        pack_path,
+        closure_state_file,
+        HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+    )
+
+    payload["state_file"] = closure_state_file
+    payload["state_path"] = str(state_path)
+    payload["block_on_active"] = bool(block_on_active)
+    if not state_path.exists() or not state_path.is_file():
+        payload["state_status"] = "STATE_MISSING"
+        payload["stale_reasons"] = ["host_transport_post_check_state_missing"]
+        return payload
+
+    try:
+        state_doc = load_json(state_path)
+    except Exception as exc:
+        payload["state_status"] = "STATE_INVALID"
+        payload["stale_reasons"] = [f"host_transport_post_check_state_invalid:{type(exc).__name__}"]
+        return payload
+
+    payload["state_status"] = "STATE_PRESENT"
+    payload["blocker_active"] = bool(state_doc.get("blocker_active", False))
+    payload["closure_status"] = str(state_doc.get("closure_status", "")).strip().upper()
+    payload["error_code"] = str(state_doc.get("error_code", "")).strip()
+    payload["stale_reasons"] = [
+        str(item).strip() for item in (state_doc.get("stale_reasons") or []) if str(item).strip()
+    ]
+    return payload
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any]:
@@ -350,6 +446,84 @@ def main() -> int:
     final_emit_contract_status = STATUS_PASS_REQUIRED if final_emit_contract_ok else STATUS_FAIL_REQUIRED
     strict_outlet_enforced = strict_context and governed_outlet and bool(args.reply_outlet_guard_applied)
     preflight_receipt_ref = str(Path(args.blocker_receipt_out).expanduser().resolve()) if str(args.blocker_receipt_out or "").strip() else ""
+    post_check_state = _load_host_transport_post_check_state(catalog_path, args.identity_id)
+    post_check_blocker_active = bool(post_check_state.get("blocker_active", False))
+    post_check_block_on_active = bool(post_check_state.get("block_on_active", False))
+    post_check_state_file = str(post_check_state.get("state_file", "")).strip()
+    post_check_state_path = str(post_check_state.get("state_path", "")).strip()
+    post_check_state_status = str(post_check_state.get("state_status", "")).strip()
+    post_check_error_code = str(post_check_state.get("error_code", "")).strip()
+    post_check_closure_status = str(post_check_state.get("closure_status", "")).strip()
+    post_check_stale_reasons = list(post_check_state.get("stale_reasons") or [])
+
+    if strict_context and post_check_block_on_active and post_check_blocker_active:
+        stale_reasons = ["host_transport_post_check_blocker_active"]
+        if post_check_error_code:
+            stale_reasons.append(f"host_transport_post_check_error_code:{post_check_error_code}")
+        if post_check_closure_status:
+            stale_reasons.append(f"host_transport_post_check_closure_status:{post_check_closure_status}")
+        stale_reasons.extend(
+            [f"host_transport_post_check_reason:{reason}" for reason in post_check_stale_reasons if str(reason).strip()]
+        )
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "operation": args.operation,
+            "validator_operation": "validate" if args.operation == "send-time" else args.operation,
+            "send_time_gate_enforced": bool(args.enforce_send_time_gate),
+            "required_contract": True,
+            "expected_work_layer": str(args.expected_work_layer or "").strip(),
+            "expected_source_layer": str(args.expected_source_layer or "").strip(),
+            "layer_intent_text": str(args.layer_intent_text or "").strip(),
+            "send_time_gate_status": STATUS_FAIL_REQUIRED,
+            "error_code": ERR_POST_CHECK_BLOCKER_ACTIVE,
+            "reply_first_line_status": STATUS_FAIL_REQUIRED,
+            "reply_evidence_mode": evidence_mode,
+            "reply_transport_ref": reply_transport_ref,
+            "reply_outlet_guard_applied": bool(args.reply_outlet_guard_applied),
+            "governed_outlet_enforced": strict_outlet_enforced,
+            "outlet_channel_id": outlet_channel_id,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": final_emit_policy_mode,
+            "final_emit_schema_id": final_emit_schema_id,
+            "final_emit_schema_status": final_emit_schema_status,
+            "final_emit_contract_status": final_emit_contract_status,
+            "outlet_preflight_receipt": preflight_receipt_ref,
+            "outlet_bypass_detected": True,
+            "reply_evidence_ref": "",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_first_line_missing_refs": ["host_transport_post_check_blocker_active"],
+            "expected_identity_id": args.identity_id,
+            "reply_first_line_work_layer": "",
+            "reply_first_line_source_layer": "",
+            "expected_source_layer_input": "",
+            "expected_source_layer_effective": "",
+            "expected_source_layer_validation_status": "",
+            "expected_source_layer_validation_error_code": "",
+            "source_layer_downgrade_applied": False,
+            "layer_intent_resolution_status": "",
+            "resolved_work_layer": "",
+            "resolved_source_layer": "",
+            "intent_confidence": 0.0,
+            "intent_source": "host_transport_post_check_guard",
+            "fallback_reason": "host_transport_post_check_blocker_active",
+            "protocol_triggered": False,
+            "protocol_trigger_reasons": [],
+            "protocol_trigger_confidence": 0.0,
+            "blocker_receipt_path": "",
+            "host_transport_post_check_state_file": post_check_state_file,
+            "host_transport_post_check_state_path": post_check_state_path,
+            "host_transport_post_check_state_status": post_check_state_status,
+            "host_transport_post_check_block_on_active": post_check_block_on_active,
+            "host_transport_post_check_blocker_active": post_check_blocker_active,
+            "host_transport_post_check_closure_status": post_check_closure_status,
+            "host_transport_post_check_error_code": post_check_error_code,
+            "stale_reasons": stale_reasons,
+            "upstream_validator_rc": 1,
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     if strict_context and not host_visible_governed_channel_ok:
         payload = {
@@ -803,6 +977,13 @@ def main() -> int:
         "protocol_triggered": bool(validator_payload.get("protocol_triggered", False)),
         "protocol_trigger_reasons": validator_payload.get("protocol_trigger_reasons", []),
         "protocol_trigger_confidence": validator_payload.get("protocol_trigger_confidence", 0.0),
+        "host_transport_post_check_state_file": post_check_state_file,
+        "host_transport_post_check_state_path": post_check_state_path,
+        "host_transport_post_check_state_status": post_check_state_status,
+        "host_transport_post_check_block_on_active": post_check_block_on_active,
+        "host_transport_post_check_blocker_active": post_check_blocker_active,
+        "host_transport_post_check_closure_status": post_check_closure_status,
+        "host_transport_post_check_error_code": post_check_error_code,
         "blocker_receipt_path": validator_payload.get("blocker_receipt_path", ""),
         "stale_reasons": validator_payload.get("stale_reasons", []),
         "upstream_validator_rc": p.returncode,

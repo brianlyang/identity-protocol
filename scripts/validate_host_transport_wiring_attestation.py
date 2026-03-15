@@ -5,6 +5,7 @@ import argparse
 import errno
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,9 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_STATE_FILE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION,
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
@@ -163,6 +167,110 @@ def _pick_host_gateway_contract(task: dict[str, Any]) -> tuple[dict[str, Any], s
     return {}, ""
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _write_post_check_closure_state(
+    *,
+    pack_path: Path,
+    closure_state_file: str,
+    closure_state_doc: dict[str, Any],
+) -> tuple[bool, str, str]:
+    state_path = _resolve_pack_relative_path(
+        pack_path,
+        closure_state_file,
+        HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+    )
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            return False, str(state_path), _format_privilege_escalation_reason(
+                path=state_path.parent,
+                scope="host_transport_post_check_state_dir_write",
+                exc=exc,
+            )
+        return False, str(state_path), f"host_transport_post_check_state_dir_write_failed:{type(exc).__name__}"
+
+    try:
+        state_path.write_text(json.dumps(closure_state_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            return False, str(state_path), _format_privilege_escalation_reason(
+                path=state_path,
+                scope="host_transport_post_check_state_write",
+                exc=exc,
+            )
+        return False, str(state_path), f"host_transport_post_check_state_write_failed:{type(exc).__name__}"
+    return True, str(state_path), ""
+
+
+def _finalize_with_post_check_state(
+    *,
+    payload: dict[str, Any],
+    pack_path: Path,
+    args: argparse.Namespace,
+    closure_state_file: str,
+    post_check_block_on_active: bool,
+) -> int:
+    checked_at_utc = _utc_now_iso()
+    attestation_status = str(payload.get("host_transport_wiring_attestation_status", "")).strip().upper()
+    if attestation_status not in {STATUS_PASS_REQUIRED, STATUS_FAIL_REQUIRED}:
+        attestation_status = STATUS_FAIL_REQUIRED
+        payload["host_transport_wiring_attestation_status"] = STATUS_FAIL_REQUIRED
+    stale_reasons = _as_list(payload.get("stale_reasons"))
+    if attestation_status != STATUS_PASS_REQUIRED and not str(payload.get("error_code", "")).strip():
+        payload["error_code"] = ERR_INVALID
+    blocker_active = bool(post_check_block_on_active) and attestation_status != STATUS_PASS_REQUIRED
+    closure_state_doc: dict[str, Any] = {
+        "schema_version": HOST_VISIBLE_SURFACE_POST_CHECK_SCHEMA_VERSION,
+        "identity_id": str(payload.get("identity_id", "")).strip(),
+        "catalog_path": str(payload.get("catalog_path", "")).strip(),
+        "pack_path": str(payload.get("pack_path", "")).strip(),
+        "task_path": str(payload.get("task_path", "")).strip(),
+        "validator": HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR,
+        "closure_status": attestation_status,
+        "block_on_active": bool(post_check_block_on_active),
+        "blocker_active": bool(blocker_active),
+        "error_code": str(payload.get("error_code", "")).strip(),
+        "stale_reasons": stale_reasons,
+        "live_receipt_required": bool(args.require_live_receipts),
+        "required_actor_id": str(args.require_actor_id or "").strip(),
+        "required_session_id": str(args.require_session_id or "").strip(),
+        "required_run_id": str(args.require_run_id or "").strip(),
+        "checked_at_utc": checked_at_utc,
+    }
+    ok, resolved_state_path, write_reason = _write_post_check_closure_state(
+        pack_path=pack_path,
+        closure_state_file=closure_state_file,
+        closure_state_doc=closure_state_doc,
+    )
+
+    payload["host_transport_post_check_closure_state_file"] = str(closure_state_file).strip() or HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
+    payload["host_transport_post_check_closure_state_path"] = resolved_state_path
+    payload["host_transport_post_check_block_on_active"] = bool(post_check_block_on_active)
+    payload["host_transport_post_check_blocker_active"] = bool(blocker_active)
+    payload["host_transport_post_check_closure_status"] = attestation_status
+    payload["host_transport_post_check_checked_at_utc"] = checked_at_utc
+    payload["host_transport_post_check_state_write_status"] = STATUS_PASS_REQUIRED if ok else STATUS_FAIL_REQUIRED
+
+    if not ok:
+        if write_reason and write_reason not in stale_reasons:
+            stale_reasons.append(write_reason)
+        payload["stale_reasons"] = stale_reasons
+        payload["host_transport_wiring_attestation_status"] = STATUS_FAIL_REQUIRED
+        payload["host_transport_wiring_attestation_live_coverage_status"] = STATUS_FAIL_REQUIRED
+        payload["host_transport_post_check_blocker_active"] = True
+        payload["host_transport_post_check_closure_status"] = STATUS_FAIL_REQUIRED
+        payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    _emit(payload, json_only=args.json_only)
+    return 0 if attestation_status == STATUS_PASS_REQUIRED else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate host transport visible-surface wiring attestation contract.")
     ap.add_argument("--catalog", required=True)
@@ -219,19 +327,33 @@ def main() -> int:
         "host_transport_wiring_attestation_strict_live_run_binding_required": bool(
             HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED
         ),
+        "host_transport_post_check_closure_state_file": HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+        "host_transport_post_check_closure_state_path": "",
+        "host_transport_post_check_block_on_active": bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+        "host_transport_post_check_blocker_active": False,
+        "host_transport_post_check_closure_status": STATUS_PASS_REQUIRED,
+        "host_transport_post_check_checked_at_utc": "",
+        "host_transport_post_check_state_write_status": "",
         "error_code": "",
         "stale_reasons": [],
     }
 
     issues: list[str] = []
+    post_check_closure_state_file = HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
+    post_check_block_on_active = bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE)
     host_visible_contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
     if not isinstance(host_visible_contract, dict):
         payload["host_transport_wiring_attestation_status"] = STATUS_FAIL_REQUIRED
         payload["host_transport_wiring_attestation_live_coverage_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_MISSING
         payload["stale_reasons"] = ["host_visible_surface_contract_missing"]
-        _emit(payload, json_only=args.json_only)
-        return 1
+        return _finalize_with_post_check_state(
+            payload=payload,
+            pack_path=pack_path,
+            args=args,
+            closure_state_file=post_check_closure_state_file,
+            post_check_block_on_active=post_check_block_on_active,
+        )
 
     if host_visible_contract.get("required") is not True:
         issues.append("host_visible_surface_required_flag_not_true")
@@ -249,6 +371,20 @@ def main() -> int:
 
     state_file = str(host_visible_contract.get("runtime_state_file", "")).strip() or HOST_VISIBLE_SURFACE_STATE_FILE
     receipt_pattern = str(host_visible_contract.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
+    post_check_closure_state_file = (
+        str(host_visible_contract.get("post_check_closure_state_file", "")).strip()
+        or HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
+    )
+    post_check_block_on_active = _as_bool(
+        host_visible_contract.get("post_check_block_on_active", HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+        default=bool(HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE),
+    )
+    payload["host_transport_post_check_closure_state_file"] = post_check_closure_state_file
+    payload["host_transport_post_check_block_on_active"] = bool(post_check_block_on_active)
+    if not str(host_visible_contract.get("post_check_closure_state_file", "")).strip():
+        issues.append("host_visible_surface_post_check_closure_state_file_missing")
+    if post_check_block_on_active is not True:
+        issues.append("host_visible_surface_post_check_block_on_active_not_true")
     max_age_raw = host_visible_contract.get(
         "runtime_receipt_max_age_seconds",
         HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
@@ -463,11 +599,13 @@ def main() -> int:
         payload["host_transport_wiring_attestation_status"] = STATUS_FAIL_REQUIRED
         payload["error_code"] = ERR_INVALID
         payload["stale_reasons"] = issues
-        _emit(payload, json_only=args.json_only)
-        return 1
-
-    _emit(payload, json_only=args.json_only)
-    return 0
+    return _finalize_with_post_check_state(
+        payload=payload,
+        pack_path=pack_path,
+        args=args,
+        closure_state_file=post_check_closure_state_file,
+        post_check_block_on_active=post_check_block_on_active,
+    )
 
 
 if __name__ == "__main__":

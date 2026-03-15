@@ -89,12 +89,19 @@ PY
 
 CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-visible"
+SEND_TIME_REPLY_FILE="${FIXTURE_ROOT}/send-time-governed-reply.txt"
 
 python3 scripts/repair_contract_backfill.py \
   --catalog "${CATALOG_PATH}" \
   --identity-id "${IDENTITY_ID}" \
   --apply \
   --json-only >/dev/null
+
+cat >"${SEND_TIME_REPLY_FILE}" <<'EOF'
+Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project
+Layer-Context: work_layer=protocol; source_layer=project
+SEND_TIME_GATE_PROBE_BODY
+EOF
 
 run_probe() {
   local name="$1"
@@ -156,6 +163,15 @@ elif name == "host_visible_commentary_bypass_blocked":
     token = "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status"
     if token not in reasons:
         raise SystemExit("host_visible_commentary_bypass_blocked: expected commentary fail-close token")
+elif name == "send_time_next_hop_blocked_by_post_check":
+    if rc == 0:
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: send_time_gate_status must be FAIL_REQUIRED")
+    token = "host_transport_post_check_blocker_active"
+    if token not in reasons:
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: expected blocker activation reason")
 elif name == "host_visible_commentary_session_binding_blocked":
     if rc == 0:
         raise SystemExit("host_visible_commentary_session_binding_blocked: expected non-zero rc")
@@ -421,6 +437,19 @@ run_probe host_visible_commentary_bypass_blocked \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
     --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe send_time_next_hop_blocked_by_post_check \
+  python3 scripts/validate_send_time_reply_gate.py \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --operation validate \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
     --json-only
 
 python3 - <<'PY' "${RESULT_ROOT}" "${MANIFEST_PATH}"

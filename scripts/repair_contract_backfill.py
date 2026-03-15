@@ -45,6 +45,8 @@ from create_identity_pack import (
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_STATE_FILE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
+    HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _derived_prompt_conformance_contract_skeleton,
@@ -711,6 +713,14 @@ def _normalize_host_visible_surface_contracts(task: dict[str, Any]) -> tuple[lis
             node["runtime_receipt_pattern"] = (
                 str(default.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
             )
+        if not str(node.get("post_check_closure_state_file", "")).strip():
+            node["post_check_closure_state_file"] = (
+                str(default.get("post_check_closure_state_file", "")).strip()
+                or HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE
+            )
+        node["post_check_block_on_active"] = bool(
+            node.get("post_check_block_on_active", HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE)
+        )
         max_age_raw = node.get("runtime_receipt_max_age_seconds")
         try:
             max_age_seconds = int(max_age_raw)
@@ -1197,6 +1207,8 @@ def main() -> int:
             )
             or not str((updated.get(k) or {}).get("runtime_state_file", "")).strip()
             or not str((updated.get(k) or {}).get("runtime_receipt_pattern", "")).strip()
+            or not str((updated.get(k) or {}).get("post_check_closure_state_file", "")).strip()
+            or not bool((updated.get(k) or {}).get("post_check_block_on_active", False))
             or _safe_int((updated.get(k) or {}).get("runtime_receipt_max_age_seconds", 0), default=0) <= 0
             or not isinstance((updated.get(k) or {}).get("required_attestation_fields"), list)
             or not set(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS).issubset(
