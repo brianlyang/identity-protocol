@@ -2121,7 +2121,75 @@ Checkpoint verdict update:
 1. migration closure is now checked as an explicit probe target, not only inferred from generic strict-validate failures.
 2. this reduces “code upgraded but active pack schema stale” blind spots in v1.6.6 closure.
 
-### 26.24 Strict default receipt requiredization for unique-entry validator (2026-03-15)
+### 26.24 Strict receipt default + coverage parity + cross-cwd/live fallback hardening (2026-03-15)
+
+Problem:
+
+1. protocol feedback repeatedly reported a strict-path false-green shape:
+   `protocol_unique_entry_gate_status=PASS_REQUIRED` while receipt sub-status could still be skipped when caller omitted `--require-entry-receipt`.
+2. coverage aggregation could therefore treat parent pass + child skipped as normal pass in strict governance accounting.
+3. send-time gate had a cross-cwd fragility risk because upstream first-line validator was invoked via repo-relative script path.
+4. lane/headstamp continuity needed a runtime live receipt fallback path when report/stamp evidence was absent or stale.
+
+Fix landed:
+
+1. `scripts/validate_protocol_unique_entry_gate.py`
+   - strict operations now requiredize entry receipt by default when contract requires strict-operation receipt:
+     - `protocol_unique_entry_receipt_required=true` from `strict_operation_contract` even without CLI opt-in.
+   - added explicit projection fields:
+     - `protocol_unique_entry_receipt_required_by_cli_flag`
+     - `protocol_unique_entry_receipt_required_by_contract`
+     - `protocol_unique_entry_receipt_required_strict_operation`
+     - `protocol_unique_entry_receipt_required_reason`.
+2. `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - added required negative probe `strict_receipt_default_blocked`:
+     - no `--require-entry-receipt`, strict operation context, expected `entry_receipt_missing`.
+3. `scripts/validate_required_gate_surface_drift.py`
+   - required workflow delegate set now includes `run_unique_entry_tuple_binding_probes_ci.sh`.
+   - required tokens now enforce presence of strict default receipt negative probe and migration closure probe.
+4. `scripts/validate_required_contract_coverage.py`
+   - added fail-close parity rule for unique-entry:
+     - parent `PASS_REQUIRED` + `protocol_unique_entry_receipt_required=true` + child `SKIPPED_NOT_REQUIRED`
+       => `FAIL_REQUIRED (IP-COV-UE-001)`.
+   - passed actor/session/run context to unique-entry and lane/headstamp validators in coverage execution.
+5. `scripts/validate_send_time_reply_gate.py`
+   - upstream validator path switched to absolute path resolved from current script directory (no cwd-relative dependency).
+6. `scripts/validate_protocol_lane_headstamp_continuity.py`
+   - added runtime host-visible receipt fallback (identity+actor+session+run bounded, max-age constrained).
+   - fallback now promotes lane evidence/source when live receipt is valid:
+     - `route_source_ref=host_visible_live_receipt_fallback`
+     - `headstamp_live_receipt_fallback_applied=true`.
+
+Replay:
+
+1. unique-entry tuple probe suite:
+   - `v166-unique-entry-tuple-probes-after-p0-absorb.log` (runtime replay artifact)
+   - includes `strict_receipt_default_blocked rc=1`.
+2. required surface drift:
+   - `v166-required-surface-after-p0-absorb-round2.json` (runtime replay artifact)
+   - `PASS_REQUIRED`.
+3. send-time cross-cwd parity replay:
+   - `v166-send-time-cwd-repo.json` (runtime replay artifact)
+   - `v166-send-time-cwd-ddm.json` (runtime replay artifact)
+   - both `PASS_REQUIRED`, `upstream_validator_rc=0`, `reply_evidence_mode=reply_log`.
+4. lane/headstamp live fallback fixture replay:
+   - `v166-lane-fallback-fixture-result.json` (runtime replay artifact)
+   - `protocol_lane_headstamp_status=PASS_REQUIRED`, `headstamp_live_receipt_fallback_applied=true`.
+5. serial self-test (3 rounds):
+   - `v166-selftest-serial3-final-summary.json` (runtime replay artifact)
+   - all rounds pass (`surface/trust/host_visible/unique_entry/docs_contract` all `rc=0`).
+6. serial deep-scan (3 rounds):
+   - `v166-deepscan-serial3-after-unique-entry-strict-default-summary.json` (runtime replay artifact)
+   - `all_passed=true` with each round `rc=0, p0=0, p1=0, ok=1, m2m_fail=0`.
+
+Checkpoint verdict update:
+
+1. strict unique-entry receipt optionality gap is closed at validator, CI probe, and required-surface governance layers.
+2. required coverage now fail-closes parent/child status inconsistencies for unique-entry receipt.
+3. send-time upstream validator invocation is cwd-stable.
+4. lane/headstamp continuity no longer relies solely on historical report evidence when live bounded receipt is available.
+
+### 26.25 Strict default receipt requiredization for unique-entry validator (2026-03-15)
 
 Problem:
 

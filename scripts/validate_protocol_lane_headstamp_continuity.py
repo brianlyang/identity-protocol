@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +45,12 @@ PRIMARY_CONTRACT_KEYS = (
     "protocol_lane_activation_headstamp_contract_v1",
     "protocol_lane_activation_headstamp_contract",
 )
+HOST_VISIBLE_CONTRACT_KEYS = (
+    "protocol_host_visible_surface_registry_contract_v1",
+    "protocol_host_visible_surface_registry_contract",
+)
+HOST_VISIBLE_RECEIPT_PATTERN_DEFAULT = "runtime/reports/host-visible-surface/host-visible-surface-*.json"
+HOST_VISIBLE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = 300
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -109,6 +116,75 @@ def _nonempty(*values: Any) -> str:
     return ""
 
 
+def _resolve_runtime_path(base_path: Path, raw: str) -> Path:
+    token = str(raw or "").strip()
+    if not token:
+        return Path("")
+    candidate = Path(token).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (base_path / candidate).resolve()
+
+
+def _select_host_visible_contract(task: dict[str, Any]) -> dict[str, Any]:
+    for key in HOST_VISIBLE_CONTRACT_KEYS:
+        node = task.get(key)
+        if isinstance(node, dict):
+            return node
+    return {}
+
+
+def _load_live_host_visible_receipt(
+    *,
+    pack_path: Path,
+    task: dict[str, Any],
+    identity_id: str,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+) -> tuple[dict[str, Any], str, int]:
+    contract = _select_host_visible_contract(task)
+    if not isinstance(contract, dict):
+        return {}, "", -1
+    pattern_raw = str(contract.get("runtime_receipt_pattern", "")).strip() or HOST_VISIBLE_RECEIPT_PATTERN_DEFAULT
+    glob_path = _resolve_runtime_path(pack_path, pattern_raw)
+    if not str(glob_path).strip():
+        return {}, "", -1
+    try:
+        max_age_seconds = int(contract.get("runtime_receipt_max_age_seconds", HOST_VISIBLE_RUNTIME_RECEIPT_MAX_AGE_SECONDS))
+    except Exception:
+        max_age_seconds = HOST_VISIBLE_RUNTIME_RECEIPT_MAX_AGE_SECONDS
+    now_epoch = int(time.time())
+    candidates = sorted(glob_path.parent.glob(glob_path.name), key=lambda p: p.stat().st_mtime, reverse=True)
+    for path in candidates:
+        try:
+            doc = load_json(path)
+        except Exception:
+            continue
+        if not isinstance(doc, dict):
+            continue
+        receipt_identity = str(doc.get("identity_id", "")).strip()
+        receipt_actor = str(doc.get("actor_id", "")).strip()
+        receipt_session = str(doc.get("session_id", "")).strip()
+        receipt_run_id = str(doc.get("run_id", "")).strip()
+        if receipt_identity and receipt_identity != identity_id:
+            continue
+        if actor_id and receipt_actor and receipt_actor != actor_id:
+            continue
+        if session_id and receipt_session and receipt_session != session_id:
+            continue
+        if run_id and receipt_run_id and receipt_run_id != run_id:
+            continue
+        try:
+            age_seconds = max(0, int(now_epoch - int(path.stat().st_mtime)))
+        except Exception:
+            age_seconds = -1
+        if max_age_seconds > 0 and age_seconds >= 0 and age_seconds > max_age_seconds:
+            continue
+        return doc, str(path.resolve()), age_seconds
+    return {}, "", -1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate protocol-lane activation and headstamp continuity contract.")
     ap.add_argument("--catalog", required=True)
@@ -120,6 +196,8 @@ def main() -> int:
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
     ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
+    ap.add_argument("--run-id", default="")
     ap.add_argument(
         "--operation",
         choices=["activate", "update", "readiness", "e2e", "ci", "validate", "scan", "three-plane", "inspection", "mutation"],
@@ -171,6 +249,10 @@ def main() -> int:
         "actor_binding_identity_id": "",
         "report_ref": "",
         "stamp_ref": "",
+        "headstamp_live_receipt_ref": "",
+        "headstamp_live_receipt_age_seconds": -1,
+        "headstamp_live_receipt_fallback_applied": False,
+        "headstamp_live_receipt_binding_status": STATUS_SKIPPED_NOT_REQUIRED,
         "stale_reasons": [],
         "evidence_ref": "",
     }
@@ -200,6 +282,20 @@ def main() -> int:
         report_doc.get("external_stamp") if isinstance(report_doc, dict) else "",
     )
     parsed_stamp = parse_identity_context_stamp(stamp_line) if stamp_line else {}
+    live_receipt_doc: dict[str, Any] = {}
+    live_receipt_ref = ""
+    live_receipt_age_seconds = -1
+    if not stamp_line:
+        live_receipt_doc, live_receipt_ref, live_receipt_age_seconds = _load_live_host_visible_receipt(
+            pack_path=pack_path,
+            task=task,
+            identity_id=args.identity_id,
+            actor_id=str(args.actor_id or "").strip(),
+            session_id=str(args.session_id or "").strip(),
+            run_id=str(args.run_id or "").strip(),
+        )
+        payload["headstamp_live_receipt_ref"] = live_receipt_ref
+        payload["headstamp_live_receipt_age_seconds"] = live_receipt_age_seconds
 
     explicit_expected_work = _norm_lane(args.expected_work_layer)
     intent = resolve_layer_intent(
@@ -232,14 +328,16 @@ def main() -> int:
         stamp_doc.get("intent_source"),
         stamp_doc.get("layer_intent_resolution_status"),
     )
+    if not route_source_ref and live_receipt_ref:
+        route_source_ref = "host_visible_live_receipt_fallback"
 
     payload["requested_lane"] = requested_lane or "instance"
     payload["resolved_lane"] = resolved_lane or "instance"
     payload["previous_lane"] = previous_lane
     payload["route_source_ref"] = route_source_ref
-    payload["lane_activation_evidence_ref"] = report_ref or stamp_ref
+    payload["lane_activation_evidence_ref"] = report_ref or stamp_ref or live_receipt_ref
     payload["protocol_request_detected"] = protocol_request_detected
-    payload["evidence_ref"] = report_ref or stamp_ref or str(task_path)
+    payload["evidence_ref"] = report_ref or stamp_ref or live_receipt_ref or str(task_path)
     payload["report_ref"] = report_ref
     payload["stamp_ref"] = stamp_ref
 
@@ -260,7 +358,7 @@ def main() -> int:
         lane_status = STATUS_FAIL_REQUIRED
         lane_error_code = ERR_ROUTE_NOT_CONFIGURED
         lane_reasons.append("protocol_route_source_missing")
-    elif protocol_request_detected and not (report_ref or stamp_ref):
+    elif protocol_request_detected and not (report_ref or stamp_ref or live_receipt_ref):
         lane_status = STATUS_FAIL_REQUIRED
         lane_error_code = ERR_LANE_RECEIPT_MISSING
         lane_reasons.append("lane_activation_receipt_missing")
@@ -269,10 +367,52 @@ def main() -> int:
     head_error_code = ""
     head_reasons: list[str] = []
 
-    if not stamp_line:
+    live_receipt_headstamp_ok = False
+    if not stamp_line and isinstance(live_receipt_doc, dict) and live_receipt_doc:
+        receipt_headstamp_status = str(live_receipt_doc.get("headstamp_first_line_status", "")).strip().upper()
+        receipt_send_time_status = str(live_receipt_doc.get("send_time_gate_status", "")).strip().upper()
+        if receipt_headstamp_status == STATUS_PASS_REQUIRED and receipt_send_time_status in {
+            STATUS_PASS_REQUIRED,
+            "NOT_APPLICABLE",
+        }:
+            live_receipt_headstamp_ok = True
+            payload["headstamp_live_receipt_fallback_applied"] = True
+            payload["headstamp_live_receipt_binding_status"] = STATUS_PASS_REQUIRED
+            payload["headstamp_present"] = True
+            payload["headstamp_has_layer_context"] = True
+            payload["headstamp_identity_id"] = str(live_receipt_doc.get("identity_id", "")).strip() or args.identity_id
+            payload["headstamp_actor_id"] = str(live_receipt_doc.get("actor_id", "")).strip()
+        else:
+            payload["headstamp_live_receipt_binding_status"] = STATUS_FAIL_REQUIRED
+            if receipt_headstamp_status != STATUS_PASS_REQUIRED:
+                head_reasons.append("headstamp_live_receipt_status_not_pass")
+            if receipt_send_time_status not in {STATUS_PASS_REQUIRED, "NOT_APPLICABLE"}:
+                head_reasons.append("headstamp_live_receipt_send_time_status_not_pass")
+    if not stamp_line and not live_receipt_headstamp_ok:
         head_status = STATUS_FAIL_REQUIRED
         head_error_code = ERR_HEADSTAMP_RECEIPT_MISSING
-        head_reasons.append("headstamp_receipt_missing")
+        if "headstamp_receipt_missing" not in head_reasons:
+            head_reasons.append("headstamp_receipt_missing")
+    elif live_receipt_headstamp_ok:
+        if payload["headstamp_identity_id"] and payload["headstamp_identity_id"] != args.identity_id:
+            head_status = STATUS_FAIL_REQUIRED
+            head_error_code = ERR_HEADSTAMP_ACTOR_BINDING_MISMATCH
+            head_reasons.append("headstamp_identity_mismatch")
+        else:
+            actor_id_effective = _nonempty(args.actor_id, payload["headstamp_actor_id"])
+            if actor_id_effective:
+                binding = load_actor_binding(
+                    catalog_path,
+                    actor_id_effective,
+                    identity_id=args.identity_id,
+                    session_id=str(args.session_id or "").strip(),
+                )
+                binding_identity = str(binding.get("identity_id", "")).strip()
+                payload["actor_binding_identity_id"] = binding_identity
+                if binding_identity and binding_identity != args.identity_id:
+                    head_status = STATUS_FAIL_REQUIRED
+                    head_error_code = ERR_HEADSTAMP_ACTOR_BINDING_MISMATCH
+                    head_reasons.append("actor_binding_identity_mismatch")
     elif not parsed_stamp or not parsed_stamp.get("_has_layer_context"):
         head_status = STATUS_FAIL_REQUIRED
         head_error_code = ERR_HEADSTAMP_MISSING_OR_MALFORMED

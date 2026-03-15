@@ -45,6 +45,8 @@ STRICT_SEND_TIME_OPERATIONS = {
     "three-plane",
     "send-time",
 }
+SCRIPT_PATH = Path(__file__).resolve()
+SCRIPT_DIR = SCRIPT_PATH.parent
 
 
 def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
@@ -666,7 +668,7 @@ def main() -> int:
     op_for_validator = "validate" if args.operation == "send-time" else args.operation
     cmd = [
         sys.executable,
-        "scripts/validate_reply_identity_context_first_line.py",
+        str((SCRIPT_DIR / "validate_reply_identity_context_first_line.py").resolve()),
         "--identity-id",
         args.identity_id,
         "--catalog",

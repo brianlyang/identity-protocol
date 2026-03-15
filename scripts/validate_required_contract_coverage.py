@@ -29,6 +29,7 @@ REASON_PASS = "IP-COV-000"
 REASON_SKIPPED = "IP-COV-001"
 REASON_FAIL = "IP-COV-999"
 REASON_LANE_REQUIRED = "IP-COV-LANE-001"
+REASON_REQUIRED_SUBCHECK_SKIPPED = "IP-COV-UE-001"
 
 STRICT_OPERATIONS = {"update", "readiness", "e2e", "ci", "validate"}
 SCRIPT_PATH = Path(__file__).resolve()
@@ -677,6 +678,15 @@ def _classify_from_payload(
 ) -> tuple[str, str]:
     status_key = STATUS_FIELD_BY_SCRIPT.get(script, "")
     validator_status = str(payload.get(status_key, "")).strip().upper() if status_key else ""
+    if (
+        script == "scripts/validate_protocol_unique_entry_gate.py"
+        and required
+        and validator_status == STATUS_PASS_REQUIRED
+    ):
+        receipt_required = bool(payload.get("protocol_unique_entry_receipt_required", False))
+        receipt_status = str(payload.get("protocol_unique_entry_receipt_status", "")).strip().upper()
+        if receipt_required and receipt_status == STATUS_SKIPPED_NOT_REQUIRED:
+            return STATUS_FAIL_REQUIRED, REASON_REQUIRED_SUBCHECK_SKIPPED
     if not validator_status:
         return _classify(required, fallback_rc)
     if validator_status == STATUS_PASS_REQUIRED:
@@ -751,6 +761,23 @@ def _run_validator(
         "scripts/validate_protocol_downsink_path_literal_lock.py",
     }:
         cmd += ["--operation", operation]
+    if script in {
+        "scripts/validate_protocol_lane_headstamp_continuity.py",
+        "scripts/validate_protocol_unique_entry_gate.py",
+    }:
+        if actor_id:
+            cmd += ["--actor-id", actor_id]
+        if session_id:
+            cmd += ["--session-id", session_id]
+        if run_id:
+            cmd += ["--run-id", run_id]
+    if script == "scripts/validate_protocol_lane_headstamp_continuity.py":
+        if expected_work_layer:
+            cmd += ["--expected-work-layer", expected_work_layer]
+        if expected_source_layer:
+            cmd += ["--expected-source-layer", expected_source_layer]
+        if layer_intent_text:
+            cmd += ["--layer-intent-text", layer_intent_text]
     if script == "scripts/validate_instance_protocol_split_receipt.py":
         cmd += ["--operation", operation, "--repo-catalog", str(repo_catalog_path)]
     if script == "scripts/validate_protocol_feedback_sidecar_contract.py":
