@@ -388,6 +388,20 @@ Interpretation lock:
    - persisted status artifact fields.
 4. Persisting stale green status while live checks fail is non-compliant with v1.6.5 governance.
 
+### 8.2 Budget baseline sync contract (mandatory)
+
+1. `identity/protocol/mappings/control-plane-budget.v1.6.yaml` is a machine-maintained control-plane budget artifact and must stay synchronized with live observed metrics after approved control-plane expansions.
+2. Manual ad-hoc edits are not accepted as the default maintenance path; budget refresh must be executed through:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+3. Budget refresh is valid only when followed by live validator replay:
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+4. Any budget refresh must remain stream-governed:
+   - update this governance doc and its paired review ledger in the same stream PR,
+   - keep one-stream-per-PR boundary green via `validate_stream_version_pr_boundary.py`.
+5. No hardcoded stream branching is allowed in budget tooling; active mappings must resolve through `*.current.yaml` aliases.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

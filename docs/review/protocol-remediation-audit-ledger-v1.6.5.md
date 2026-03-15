@@ -611,7 +611,7 @@ Outcome:
 2. Budget + status artifacts are both machine-synced and reproducible.
 3. Closure path now uses governance tooling (renderer + validators), not manual one-off edits.
 
-### 7.14 Serial closure evidence refresh after v1.6.6 freshness hardening (2026-03-15)
+### 7.15 Serial closure evidence refresh after v1.6.6 freshness hardening (2026-03-15)
 
 Context:
 

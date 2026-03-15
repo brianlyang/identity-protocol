@@ -1,17 +1,17 @@
 schema_version: 1
-budget_version: "v1.6"
-last_updated_utc: "2026-03-14T09:35:00Z"
+budget_version: v1.6
+last_updated_utc: '2026-03-15T02:45:40Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 153
-    fail: 156
+    warn: 154
+    fail: 157
   error_codes:
-    warn: 429
-    fail: 435
+    warn: 436
+    fail: 442
   error_code_families:
-    warn: 145
-    fail: 152
+    warn: 147
+    fail: 154
   mapping_rows_missing_in_bundle:
     warn: 0
     fail: 1
@@ -32,17 +32,17 @@ budgets:
       warn: 116
       fail: 121
     .github/workflows/_identity-required-gates.yml:
-      warn: 103
-      fail: 105
+      warn: 13
+      fail: 15
 convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: "2026-03-14T00:00:00Z"
+  baseline_snapshot_utc: '2026-03-15T02:45:40Z'
   ceilings:
-    validator_scripts: 153
-    error_codes: 429
-    error_code_families: 145
+    validator_scripts: 154
+    error_codes: 436
+    error_code_families: 147
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:
       scripts/identity_creator.py: 89
@@ -50,9 +50,11 @@ convergence_guard:
       scripts/report_three_plane_status.py: 78
       scripts/full_identity_protocol_scan.py: 85
       scripts/e2e_smoke_test.sh: 116
-      .github/workflows/_identity-required-gates.yml: 12
+      .github/workflows/_identity-required-gates.yml: 13
 error_code_family_strategy:
   mode: numeric_suffix_collapse
-  rationale: "Enforce convergence on stable contract families while preserving raw code telemetry."
-  family_regex: "s/-[0-9]+$//"
-  migration_note: "Raw error-code count remains monitored; promotion guard now also enforces family-level budgets and no-rebound ceilings."
+  rationale: Enforce convergence on stable contract families while preserving raw
+    code telemetry.
+  family_regex: s/-[0-9]+$//
+  migration_note: Raw error-code count remains monitored; promotion guard now also
+    enforces family-level budgets and no-rebound ceilings.
