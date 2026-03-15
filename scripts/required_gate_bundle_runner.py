@@ -1523,7 +1523,7 @@ def _build_headstamp_projection_payload(
         payload["send_time_gate_status"] = STATUS_FAIL_REQUIRED
         payload["reply_first_line_status"] = STATUS_FAIL_REQUIRED
         payload["required_contract"] = True
-        payload["error_code"] = "IP-GATE-ENTRY-001"
+        payload["error_code"] = ERR_ENTRY_CONTRACT
         payload["stale_reasons"] = [f"invalid_send_time_gate_status_token:{normalized}"]
         return payload
 
@@ -1941,7 +1941,7 @@ def main() -> int:
             row_contract_error_count += 1
         error_code = _extract_error_code(payload, err)
         if payload_contract_issues and not error_code:
-            error_code = "IP-GATE-ENTRY-002"
+            error_code = ERR_ENTRY_REQUIRED
 
         if status_value == STATUS_FAIL_REQUIRED:
             failure_count += 1
@@ -1988,18 +1988,46 @@ def main() -> int:
         failure_count += len(missing_targets)
 
     required_contract_any = any(bool(row.get("required_contract", False)) for row in result_rows)
-    failed_required_contract_count = sum(
-        1
-        for row in result_rows
-        if str(row.get("status", "")).upper() == STATUS_FAIL_REQUIRED
-    )
+    failed_required_rows = [
+        row for row in result_rows if str(row.get("status", "")).upper() == STATUS_FAIL_REQUIRED
+    ]
+    failed_required_contract_count = len(failed_required_rows)
+    failed_required_requirement_keys = [
+        str(row.get("requirement_key", "")).strip()
+        for row in failed_required_rows
+        if str(row.get("requirement_key", "")).strip()
+    ]
+    failed_required_target_names = [
+        str(row.get("target_name", "")).strip()
+        for row in failed_required_rows
+        if str(row.get("target_name", "")).strip()
+    ]
+    required_current_round_evidence_gap_rows = [
+        row for row in failed_required_rows if _row_has_required_current_round_evidence_gap(row)
+    ]
+    required_current_round_evidence_gap_keys = [
+        str(row.get("requirement_key", "")).strip()
+        for row in required_current_round_evidence_gap_rows
+        if str(row.get("requirement_key", "")).strip()
+    ]
+    required_current_round_evidence_gap_targets = [
+        str(row.get("target_name", "")).strip()
+        for row in required_current_round_evidence_gap_rows
+        if str(row.get("target_name", "")).strip()
+    ]
 
-    if mapping_errors or missing_targets or row_contract_error_count > 0:
+    if mapping_errors or missing_targets:
         bundle_status = STATUS_FAIL_REQUIRED
-        error_code = "IP-GATE-ENTRY-001"
+        error_code = ERR_ENTRY_CONTRACT
+    elif required_current_round_evidence_gap_rows:
+        bundle_status = STATUS_FAIL_REQUIRED
+        error_code = ERR_ENTRY_REQUIRED_EVIDENCE_GAP
+    elif row_contract_error_count > 0:
+        bundle_status = STATUS_FAIL_REQUIRED
+        error_code = ERR_ENTRY_CONTRACT
     elif failed_required_contract_count > 0:
         bundle_status = STATUS_FAIL_REQUIRED
-        error_code = "IP-GATE-ENTRY-002"
+        error_code = ERR_ENTRY_REQUIRED
     else:
         bundle_status = STATUS_PASS_REQUIRED
         error_code = ""
@@ -2085,6 +2113,12 @@ def main() -> int:
         "required_contract": required_contract_any,
         "required_contract_reason": required_contract_reason,
         "failed_required_contract_count": failed_required_contract_count,
+        "failed_required_requirement_keys": failed_required_requirement_keys,
+        "failed_required_target_names": failed_required_target_names,
+        "required_current_round_evidence_gap_count": len(required_current_round_evidence_gap_rows),
+        "required_current_round_evidence_gap_requirement_keys": required_current_round_evidence_gap_keys,
+        "required_current_round_evidence_gap_target_names": required_current_round_evidence_gap_targets,
+        "required_current_round_evidence_gap_detected": bool(required_current_round_evidence_gap_rows),
         "parity_operation_scope": parity_operation_scope,
         "send_time_gate_status": str(args.send_time_gate_status or "").strip().upper(),
         "outlet_bypass_detected": _parse_bool_token(args.outlet_bypass_detected),
@@ -2124,9 +2158,9 @@ def main() -> int:
                 mapping_errors.append(entry_issue)
             payload["mapping_errors"] = mapping_errors
             payload["bundle_status"] = STATUS_FAIL_REQUIRED
-            payload["error_code"] = "IP-GATE-ENTRY-002"
+            payload["error_code"] = ERR_ENTRY_REQUIRED
             bundle_status = STATUS_FAIL_REQUIRED
-            error_code = "IP-GATE-ENTRY-002"
+            error_code = ERR_ENTRY_REQUIRED
         else:
             if str(payload.get("bundle_status", "")).strip().upper() == STATUS_PASS_REQUIRED:
                 payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED
@@ -2195,7 +2229,7 @@ def main() -> int:
             target_status_field = effective_status_field_by_target.get(target_name, "status")
             target_payload = {
                 target_status_field: STATUS_FAIL_REQUIRED,
-                "error_code": "IP-GATE-ENTRY-001",
+                "error_code": ERR_ENTRY_CONTRACT,
                 "stale_reasons": stale_reasons,
                 "bundle_contract_id": BUNDLE_CONTRACT_ID,
                 "bundle_key": BUNDLE_KEY,
@@ -2286,7 +2320,7 @@ def main() -> int:
         if bundle_status == STATUS_FAIL_REQUIRED:
             target_payload[target_status_field] = STATUS_FAIL_REQUIRED
             if not str(target_payload.get("error_code", "")).strip():
-                target_payload["error_code"] = error_code or "IP-GATE-ENTRY-001"
+                target_payload["error_code"] = error_code or ERR_ENTRY_CONTRACT
             stale = list(target_payload.get("stale_reasons") or [])
             if "bundle_entry_contract_failed" not in stale:
                 stale.append("bundle_entry_contract_failed")
