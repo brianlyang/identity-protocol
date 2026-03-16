@@ -194,6 +194,7 @@ RUN_ID="probe-tuple-binding-run"
 RUN_ID_MIGRATION="probe-max-age-migration-run"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-tuple-binding/runtime/gate/protocol_ingress_wrapper.py"
 INGRESS_WRAPPER_PATH_MIGRATION="${FIXTURE_ROOT}/identity/probe-max-age-migration/runtime/gate/protocol_ingress_wrapper.py"
+SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-tuple-binding/runtime/gate/protocol_session_chain_wrapper.py"
 RECEIPT_PATH="${RESULT_ROOT}/receipt.validate.json"
 RECEIPT_TAMPERED_PATH="${RESULT_ROOT}/receipt.tampered.validate.json"
 RECEIPT_STALE_PATH="${RESULT_ROOT}/receipt.stale.validate.json"
@@ -369,6 +370,18 @@ elif name == "tuple_binding_active_runtime_contract_closure":
     status = str(doc.get("unique_entry_contract_migration_closure_status", "")).strip().upper()
     if status != "PASS_REQUIRED":
         raise SystemExit("tuple_binding_active_runtime_contract_closure: closure status must be PASS_REQUIRED")
+elif name == "wrapper_template_not_latest_blocked":
+    if rc == 0:
+        raise SystemExit("wrapper_template_not_latest_blocked: expected non-zero rc")
+    latest_status = str(doc.get("protocol_host_gateway_wrapper_template_latest_status", "")).strip().upper()
+    if latest_status != "FAIL_REQUIRED":
+        raise SystemExit("wrapper_template_not_latest_blocked: latest_status must be FAIL_REQUIRED")
+    canonical_status = str(doc.get("protocol_host_gateway_wrapper_template_canonical_load_status", "")).strip().upper()
+    if canonical_status != "PASS_REQUIRED":
+        raise SystemExit("wrapper_template_not_latest_blocked: canonical_load_status must be PASS_REQUIRED")
+    stale = [str(x).strip() for x in (doc.get("stale_reasons") or []) if str(x).strip()]
+    if not any("_not_latest" in token for token in stale):
+        raise SystemExit("wrapper_template_not_latest_blocked: expected not_latest stale reason")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -498,6 +511,25 @@ run_probe tuple_binding_stale_receipt_blocked \
   --actor-id "${ACTOR_ID}" \
   --session-id "${SESSION_ID}" \
   --entry-receipt "${RECEIPT_STALE_PATH}" \
+  --force-check \
+  --require-entry-receipt \
+  --json-only
+
+python3 - <<'PY' "${SESSION_CHAIN_WRAPPER_PATH}"
+from pathlib import Path
+path = Path(__import__("sys").argv[1]).resolve()
+path.write_text(path.read_text(encoding="utf-8") + "\n# ci_probe_wrapper_template_not_latest\n", encoding="utf-8")
+PY
+
+run_probe wrapper_template_not_latest_blocked \
+  python3 scripts/validate_protocol_unique_entry_gate.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --run-id "${RUN_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --entry-receipt "${RECEIPT_PATH}" \
   --force-check \
   --require-entry-receipt \
   --json-only
