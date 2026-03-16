@@ -22,6 +22,12 @@ from final_emit_contract_common import (
     FINAL_EMIT_POLICY_MODE,
     FINAL_EMIT_SCHEMA_ID,
 )
+from governed_reply_observability_common import (
+    build_identity_observability_projection,
+    build_sender_consumption_projection,
+    classify_headstamp_visibility,
+    parse_probe_identity_contexts,
+)
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
     ERR_HDSTAMP_MISSING_OR_MALFORMED,
@@ -72,6 +78,50 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
         print(json.dumps(payload, ensure_ascii=False))
     else:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _project_output_observability(
+    payload: dict[str, Any],
+    *,
+    expected_identity_id: str,
+    effective_bound_identity_id: str,
+    actor_id: str,
+    session_id: str,
+    probe_identity_contexts: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    augmented = dict(payload)
+    quoted_guard = {
+        "quoted_identity_context_binding_effect": str(
+            augmented.get("quoted_identity_context_binding_effect", "")
+        ).strip(),
+        "quoted_identity_context_refs": list(augmented.get("quoted_identity_contexts") or [])
+        or list(augmented.get("quoted_identity_context_refs") or []),
+    }
+    augmented.update(
+        build_identity_observability_projection(
+            expected_identity_id=expected_identity_id,
+            actor_id=actor_id,
+            session_id=session_id,
+            effective_bound_identity_id=effective_bound_identity_id,
+            quoted_identity_context_guard=quoted_guard,
+            probe_identity_contexts=probe_identity_contexts,
+        )
+    )
+    augmented.update(
+        classify_headstamp_visibility(
+            reply_first_line_status=augmented.get("reply_first_line_status", ""),
+            send_time_gate_status=augmented.get("send_time_gate_status", ""),
+            headstamp_first_line_status=augmented.get("headstamp_first_line_status", ""),
+        )
+    )
+    augmented.update(
+        build_sender_consumption_projection(
+            out_reply_file=augmented.get("out_reply_file", ""),
+            reply_transport_ref=augmented.get("reply_transport_ref", ""),
+            reply_emit_allowed=bool(augmented.get("reply_emit_allowed", False)),
+        )
+    )
+    return augmented
 
 
 def _parse_json_payload(raw: str) -> dict[str, Any] | None:
@@ -171,6 +221,80 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def _parse_stale_reasons(payload: dict[str, Any] | None) -> list[str]:
+    if not isinstance(payload, dict):
+        return []
+    raw = payload.get("stale_reasons")
+    if not isinstance(raw, list):
+        return []
+    return [str(item).strip() for item in raw if str(item).strip()]
+
+
+def _should_attempt_post_check_auto_recovery(
+    *,
+    compose_payload: dict[str, Any] | None,
+    strict_explicit_context_required: bool,
+) -> bool:
+    """
+    Attempt auto-recovery only when send-time failed before first-line gate due
+    post-check guard path, which manifests as:
+      - strict explicit context mode
+      - send_time_gate_status != PASS_REQUIRED
+      - reply_first_line_status == SKIPPED_NOT_REQUIRED (pre-first-line block)
+    """
+    if not strict_explicit_context_required:
+        return False
+    if not isinstance(compose_payload, dict):
+        return False
+    send_time_status = str(compose_payload.get("send_time_gate_status", "")).strip().upper()
+    if send_time_status == STATUS_PASS_REQUIRED:
+        return False
+    first_line_status = str(compose_payload.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != STATUS_SKIPPED_NOT_REQUIRED:
+        return False
+    error_code = str(compose_payload.get("send_time_error_code", "")).strip().upper()
+    return error_code == ERR_EGRESS_CONTRACT_FAILED
+
+
+def _run_post_check_auto_recovery(
+    *,
+    identity_id: str,
+    catalog_path: Path,
+    repo_catalog_path: Path,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+    requested_work_layer: str,
+) -> tuple[int, dict[str, Any] | None]:
+    recovery_cmd = [
+        sys.executable,
+        str((SCRIPT_DIR / "recover_host_visible_post_check_state.py").resolve()),
+        "--catalog",
+        str(catalog_path),
+        "--repo-catalog",
+        str(repo_catalog_path),
+        "--identity-id",
+        str(identity_id or "").strip(),
+        "--operation",
+        "send-time",
+        "--actor-id",
+        str(actor_id or "").strip(),
+        "--session-id",
+        str(session_id or "").strip(),
+        "--run-id",
+        str(run_id or "").strip(),
+        "--receipt-source",
+        "runtime_dialogue",
+        "--reply-transport-ref",
+        "runtime:final_emit_governed_auto_recovery",
+        "--json-only",
+    ]
+    if str(requested_work_layer or "").strip().lower() == "protocol":
+        recovery_cmd[recovery_cmd.index("--operation") + 1] = "inspection"
+    proc = subprocess.run(recovery_cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
+    return proc.returncode, _parse_json_payload(proc.stdout or "")
 
 
 def _is_privilege_escalation_error(exc: Exception) -> bool:
@@ -596,6 +720,8 @@ def main() -> int:
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
     ap.add_argument("--stdin-body", action="store_true")
+    ap.add_argument("--probe-context-json", default="")
+    ap.add_argument("--probe-context-file", default="")
     ap.add_argument("--work-layer", default="")
     ap.add_argument("--source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
@@ -620,6 +746,10 @@ def main() -> int:
         "protocol_lane_enforced"
         if protocol_lane_explicit_context_required
         else ("explicit_flag" if args.strict_explicit_context else "auto")
+    )
+    probe_identity_contexts = parse_probe_identity_contexts(
+        probe_context_json=str(args.probe_context_json or "").strip(),
+        probe_context_file=str(args.probe_context_file or "").strip(),
     )
 
     try:
@@ -653,7 +783,7 @@ def main() -> int:
             session_id=str(args.session_id or "").strip(),
         )
     except Exception as exc:
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_CONTEXT_RESOLVE,
             "stale_reasons": [f"context_resolution_failed:{exc}"],
@@ -666,26 +796,26 @@ def main() -> int:
             "protocol_explicit_context_required": bool(protocol_lane_explicit_context_required),
             "strict_explicit_context_required": bool(strict_explicit_context_required),
             "strict_explicit_context_mode": strict_explicit_context_mode,
-        }
+        }, expected_identity_id=str(args.identity_id or "").strip(), effective_bound_identity_id=str(args.identity_id or "").strip(), actor_id=str(args.actor_id or "").strip(), session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
 
     if not repo_catalog_path.exists():
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_CONTEXT_RESOLVE,
             "stale_reasons": [f"repo_catalog_missing:{repo_catalog_path}"],
             "repo_catalog_path": str(repo_catalog_path),
-        }
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
     if not catalog_path.exists():
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_IDENTITY_RESOLVE,
             "stale_reasons": [f"catalog_missing:{catalog_path}"],
             "catalog_path": str(catalog_path),
-        }
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
 
@@ -696,7 +826,7 @@ def main() -> int:
         session_id=str(args.session_id or "").strip(),
     )
     if str(authority.get("identity_authority_status", "")).strip().upper() != AUTHORITY_PASS_REQUIRED:
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": str(authority.get("identity_authority_error_code", "")).strip() or ERR_CONTEXT_RESOLVE,
             "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
@@ -713,41 +843,32 @@ def main() -> int:
             "protocol_explicit_context_required": bool(protocol_lane_explicit_context_required),
             "strict_explicit_context_required": bool(strict_explicit_context_required),
             "strict_explicit_context_mode": strict_explicit_context_mode,
-            "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
-            "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
-            "identity_authority_selected_identity_id": str(
-                authority.get("identity_authority_selected_identity_id", "")
-            ).strip(),
-            "identity_authority_authoritative_identity_id": str(
-                authority.get("identity_authority_authoritative_identity_id", "")
-            ).strip(),
-            "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
             "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
-            "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
-        }
+            **authority,
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
 
     outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
     if outlet_channel_id != FINAL_EMIT_CHANNEL_ID:
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_EGRESS_CONTRACT_FAILED,
             "stale_reasons": [f"non_canonical_outlet_channel:{outlet_channel_id}"],
             "outlet_channel_id": outlet_channel_id,
             "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
-        }
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
 
     try:
         body, body_mode = _resolve_body(args)
     except Exception as exc:
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_BODY_EMPTY,
             "stale_reasons": [f"body_invalid:{exc}"],
-        }
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
 
@@ -974,6 +1095,10 @@ def main() -> int:
         compose_cmd += ["--source-layer", str(args.source_layer).strip()]
     if str(args.layer_intent_text or "").strip():
         compose_cmd += ["--layer-intent-text", str(args.layer_intent_text).strip()]
+    if str(args.probe_context_json or "").strip():
+        compose_cmd += ["--probe-context-json", str(args.probe_context_json).strip()]
+    if str(args.probe_context_file or "").strip():
+        compose_cmd += ["--probe-context-file", str(args.probe_context_file).strip()]
     if str(args.out_reply_file or "").strip():
         compose_cmd += ["--out-reply-file", str(args.out_reply_file).strip()]
     if str(args.out_json or "").strip():
@@ -983,23 +1108,55 @@ def main() -> int:
 
     proc = subprocess.run(compose_cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
     compose_payload = _parse_json_payload(proc.stdout or "")
+    compose_attempt_count = 1
+    post_check_auto_recovery_attempted = False
+    post_check_auto_recovery_rc: int | None = None
+    post_check_auto_recovery_payload: dict[str, Any] | None = None
     if proc.returncode != 0 and compose_payload is None:
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_COMPOSE_RUNTIME,
             "compose_rc": proc.returncode,
             "stderr_tail": (proc.stderr or "").strip().splitlines()[-1] if (proc.stderr or "").strip() else "",
-        }
+            "compose_attempt_count": compose_attempt_count,
+            "post_check_auto_recovery_attempted": post_check_auto_recovery_attempted,
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
     if compose_payload is None:
-        payload = {
+        payload = _project_output_observability({
             "final_emit_guard_status": STATUS_FAIL_REQUIRED,
             "error_code": ERR_COMPOSE_JSON_MISSING,
             "compose_rc": proc.returncode,
-        }
+            "compose_attempt_count": compose_attempt_count,
+            "post_check_auto_recovery_attempted": post_check_auto_recovery_attempted,
+        }, expected_identity_id=identity_id, effective_bound_identity_id=identity_id, actor_id=actor_id, session_id=str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
         _emit(payload, json_only=args.json_only)
         return 1
+
+    if _should_attempt_post_check_auto_recovery(
+        compose_payload=compose_payload,
+        strict_explicit_context_required=bool(strict_explicit_context_required),
+    ):
+        post_check_auto_recovery_attempted = True
+        (
+            post_check_auto_recovery_rc,
+            post_check_auto_recovery_payload,
+        ) = _run_post_check_auto_recovery(
+            identity_id=identity_id,
+            catalog_path=catalog_path,
+            repo_catalog_path=repo_catalog_path,
+            actor_id=actor_id,
+            session_id=str(args.session_id or "").strip(),
+            run_id=run_id,
+            requested_work_layer=requested_work_layer,
+        )
+        if post_check_auto_recovery_rc == 0:
+            proc = subprocess.run(compose_cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
+            compose_payload_retry = _parse_json_payload(proc.stdout or "")
+            if compose_payload_retry is not None:
+                compose_payload = compose_payload_retry
+            compose_attempt_count = 2
 
     send_time_status = str(compose_payload.get("send_time_gate_status", "")).strip().upper()
     final_emit_status = str(compose_payload.get("final_emit_contract_status", "")).strip().upper()
@@ -1012,7 +1169,7 @@ def main() -> int:
         and emit_allowed
     )
 
-    payload: dict[str, Any] = {
+    payload = _project_output_observability({
         "final_emit_guard_status": STATUS_PASS_REQUIRED if pass_contract else STATUS_FAIL_REQUIRED,
         "error_code": "" if pass_contract else ERR_EGRESS_CONTRACT_FAILED,
         "compose_rc": proc.returncode,
@@ -1046,6 +1203,8 @@ def main() -> int:
         "body_mode": body_mode,
         "send_time_gate_status": send_time_status,
         "send_time_error_code": str(compose_payload.get("send_time_error_code", "")).strip(),
+        "reply_first_line_status": str(compose_payload.get("reply_first_line_status", "")).strip(),
+        "reply_transport_ref": str(compose_payload.get("reply_transport_ref", "")).strip(),
         "final_emit_contract_status": final_emit_status,
         "reply_emit_allowed": emit_allowed,
         "out_reply_file": out_reply_file,
@@ -1074,15 +1233,28 @@ def main() -> int:
         "quoted_identity_context_foreign_ids": list(
             compose_payload.get("quoted_identity_context_foreign_ids") or []
         ),
+        "quoted_identity_contexts": list(compose_payload.get("quoted_identity_contexts") or []),
         "quoted_identity_context_guard_status": str(
             compose_payload.get("quoted_identity_context_guard_status", "")
         ).strip(),
         "quoted_identity_context_binding_effect": str(
             compose_payload.get("quoted_identity_context_binding_effect", "")
         ).strip(),
-    }
+        "compose_attempt_count": compose_attempt_count,
+        "post_check_auto_recovery_attempted": post_check_auto_recovery_attempted,
+        "post_check_auto_recovery_rc": post_check_auto_recovery_rc,
+        "post_check_auto_recovery_status": str(
+            (post_check_auto_recovery_payload or {}).get("recovery_status", "")
+        ).strip(),
+        "post_check_auto_recovery_error_code": str(
+            (post_check_auto_recovery_payload or {}).get("error_code", "")
+        ).strip(),
+        "post_check_auto_recovery_stale_reasons": _parse_stale_reasons(post_check_auto_recovery_payload),
+    }, expected_identity_id=identity_id, effective_bound_identity_id=str(compose_payload.get("effective_bound_identity_id", "")).strip() or identity_id, actor_id=str(compose_payload.get("effective_bound_actor_id", "")).strip() or actor_id, session_id=str(compose_payload.get("effective_bound_session_id", "")).strip() or str(args.session_id or "").strip(), probe_identity_contexts=probe_identity_contexts)
     if not pass_contract:
-        payload["stale_reasons"] = ["egress_contract_not_pass"]
+        stale_reasons = ["egress_contract_not_pass"]
+        stale_reasons.extend(_parse_stale_reasons(compose_payload))
+        payload["stale_reasons"] = stale_reasons
         _emit(payload, json_only=args.json_only)
         return 1
 

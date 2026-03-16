@@ -66,7 +66,7 @@ def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate knowledge acquisition contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     ap.add_argument("--self-test", action="store_true")

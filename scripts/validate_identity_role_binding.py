@@ -136,7 +136,7 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity role-binding contract and activation switch guards")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--evidence", default="", help="optional explicit role-binding evidence json path")
     args = ap.parse_args()

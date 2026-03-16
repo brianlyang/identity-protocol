@@ -58,10 +58,11 @@ def main() -> int:
         help="path prefixes not allowed in release changes",
     )
     ap.add_argument(
-        "--catalog",
+        "--repo-catalog",
         default="identity/catalog/identities.yaml",
-        help="identity catalog path",
+        help="repository catalog path",
     )
+    ap.add_argument("--catalog", default="", help=argparse.SUPPRESS)
     args = ap.parse_args()
 
     base = args.base.strip() or _run_git(["rev-parse", "HEAD~1"])
@@ -85,7 +86,8 @@ def main() -> int:
         print("Hint: keep local-instance packs outside base repo release scope.")
         return 1
 
-    catalog_path = Path(args.catalog)
+    catalog_arg = str(args.repo_catalog or "").strip() or str(args.catalog or "").strip()
+    catalog_path = Path(catalog_arg)
     catalog = _load_catalog(catalog_path)
     identities = catalog.get("identities") or []
     bad_pack_paths: list[str] = []

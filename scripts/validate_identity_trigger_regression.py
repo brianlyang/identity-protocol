@@ -120,7 +120,7 @@ def _report_pattern_candidates(pattern: str, *, pack_root: Path, identity_id: st
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity trigger regression contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     args = ap.parse_args()

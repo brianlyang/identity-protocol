@@ -707,6 +707,7 @@ def _instance_plane_status(
             actor_id,
             "--session-id",
             str(getattr(args, "session_id", "") or "").strip(),
+            "--strict-session-primary",
         ]
     )
     validators["session_pointer"] = {

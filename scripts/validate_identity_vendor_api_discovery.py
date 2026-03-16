@@ -51,7 +51,7 @@ def _extract_candidates(report: dict[str, Any]) -> list[dict[str, Any]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate vendor/API discovery closure contract.")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     args = ap.parse_args()

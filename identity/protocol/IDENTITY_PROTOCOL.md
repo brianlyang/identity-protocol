@@ -166,14 +166,16 @@ For runtime identities, evidence/sample/log path patterns must be identity-scope
 Mandatory validator:
 - `scripts/validate_identity_instance_isolation.py`
 
-### State-source strategy (mandatory, v1.4.x)
+### State-source strategy (mandatory, v1.6 semantic freeze)
 
 To avoid catalog/META drift, protocol adopts **dual-write + strong consistency**:
 
-- single decision source: catalog status (`catalog.local.yaml` for runtime identities)
+- single decision source: runtime catalog status (`catalog.local.yaml` for runtime identities)
 - mirrored audit field: `META.status` is required and must equal catalog status
 - activation/switch operation must update both layers transactionally
-- any mismatch or multi-active state is a protocol violation
+- any mismatch is a protocol violation
+- `catalog_multi_active` is allowed for actor-scoped parallelism
+- `session_primary_binding` is mandatory in strict lanes (same actor/session tuple must not drift across identities)
 
 Mandatory validator:
 - `scripts/validate_identity_state_consistency.py`

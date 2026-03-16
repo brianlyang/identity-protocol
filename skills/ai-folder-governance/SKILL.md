@@ -1,3 +1,12 @@
+---
+name: ai-folder-governance
+description: Keep identity runtime artifacts in canonical folders and emit governance evidence.
+skill_id: ai-folder-governance
+version: 1.0.0
+owner: identity-protocol
+source: protocol-local
+---
+
 # AI Folder Governance
 
 ## Goal

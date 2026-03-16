@@ -46,7 +46,7 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Create a fresh production handoff log template")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--out", default="")
     ap.add_argument("--to-agent", default="sub-agent")

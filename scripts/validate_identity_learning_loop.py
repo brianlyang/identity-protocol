@@ -215,7 +215,7 @@ def _has_escalation_signal(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity learning loop evidence (reasoning + rulebook linkage)")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", default="", help="validate for explicit identity id")
     ap.add_argument("--current-task", default="")
     ap.add_argument("--run-report", default="")

@@ -165,10 +165,13 @@ FOREIGN_IDENTITY_ID="probe-foreign"
 ACTOR_ID="assistant:ci-probe"
 SESSION_ID="session-gateway-probe"
 SESSION_ID_FOREIGN="session-gateway-probe-foreign"
+SESSION_ID_CONFLICT="session-gateway-probe-conflict"
 SESSION_CHAIN_RUN_ID="probe-gateway-session-chain-headstamp"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
 EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
 SESSION_CHAIN_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper.py"
+SESSION_CHAIN_NON_JSON_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_session_chain_wrapper_non_json.py"
+GATEWAY_WRAPPER_INVOKER_PATH="${WORK_ROOT}/invoke_gateway_wrapper_final_emit_probe.py"
 export IDENTITY_PROTOCOL_GATEWAY_SIGNING_SECRET_PROBE_GATEWAY="gateway-env-secret-only"
 
 python3 scripts/repair_contract_backfill.py \
@@ -177,7 +180,7 @@ python3 scripts/repair_contract_backfill.py \
   --apply \
   --json-only >/dev/null
 
-python3 - <<'PY' "${CATALOG_PATH}" "${ACTOR_ID}" "${IDENTITY_ID}" "${FOREIGN_IDENTITY_ID}" "${SESSION_ID}" "${SESSION_ID_FOREIGN}"
+python3 - <<'PY' "${CATALOG_PATH}" "${ACTOR_ID}" "${IDENTITY_ID}" "${FOREIGN_IDENTITY_ID}" "${SESSION_ID}" "${SESSION_ID_FOREIGN}" "${SESSION_ID_CONFLICT}"
 from __future__ import annotations
 
 import json
@@ -196,6 +199,7 @@ identity_id = str(sys.argv[3]).strip()
 foreign_identity_id = str(sys.argv[4]).strip()
 session_id = str(sys.argv[5]).strip()
 session_id_foreign = str(sys.argv[6]).strip()
+session_id_conflict = str(sys.argv[7]).strip()
 now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 actor_store_path = actor_session_path(catalog_path, actor_id)
@@ -203,8 +207,8 @@ raw = {
     "schema_version": "actor_session_multibinding_v1",
     "actor_id": actor_id,
     "binding_key_mode": "actor_id+identity_id+session_id",
-    "binding_version": 2,
-    "compare_token": "2",
+    "binding_version": 4,
+    "compare_token": "4",
     "bindings": [
         {
             "actor_id": actor_id,
@@ -230,6 +234,30 @@ raw = {
             "binding_version": 2,
             "compare_token": "2",
         },
+        {
+            "actor_id": actor_id,
+            "identity_id": identity_id,
+            "session_id": session_id_conflict,
+            "catalog_path": str(catalog_path),
+            "status": "active",
+            "bound_at": now,
+            "updated_at": now,
+            "binding_ref": f"{actor_id}:{identity_id}:{session_id_conflict}:v3",
+            "binding_version": 3,
+            "compare_token": "3",
+        },
+        {
+            "actor_id": actor_id,
+            "identity_id": foreign_identity_id,
+            "session_id": session_id_conflict,
+            "catalog_path": str(catalog_path),
+            "status": "active",
+            "bound_at": now,
+            "updated_at": now,
+            "binding_ref": f"{actor_id}:{foreign_identity_id}:{session_id_conflict}:v4",
+            "binding_version": 4,
+            "compare_token": "4",
+        },
     ],
     "updated_at": now,
 }
@@ -242,6 +270,96 @@ normalized = normalize_actor_binding_store(
 write_actor_binding_store(actor_store_path, normalized)
 print(json.dumps({"actor_session_seed_path": str(actor_store_path), "binding_count": len(normalized.get("bindings") or [])}))
 PY
+
+cat > "${SESSION_CHAIN_NON_JSON_WRAPPER_PATH}" <<'PY'
+#!/usr/bin/env python3
+print("NON_JSON_SESSION_CHAIN_PAYLOAD")
+PY
+chmod +x "${SESSION_CHAIN_NON_JSON_WRAPPER_PATH}"
+
+cat > "${GATEWAY_WRAPPER_INVOKER_PATH}" <<'PY'
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+def _write_task(path: Path, doc: dict) -> None:
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def main() -> int:
+    if len(sys.argv) != 8:
+        raise SystemExit("usage: invoke_gateway_wrapper_final_emit_probe.py <repo_root> <catalog> <identity_id> <actor_id> <session_id> <run_id> <non_json_wrapper_rel>")
+
+    repo_root = Path(sys.argv[1]).expanduser().resolve()
+    catalog_path = Path(sys.argv[2]).expanduser().resolve()
+    identity_id = str(sys.argv[3]).strip()
+    actor_id = str(sys.argv[4]).strip()
+    session_id = str(sys.argv[5]).strip()
+    run_id = str(sys.argv[6]).strip()
+    non_json_wrapper_rel = str(sys.argv[7]).strip()
+
+    sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+    from gateway_wrapper_enforcement import run_gateway_wrapped_command  # type: ignore
+    from tool_vendor_governance_common import load_json, resolve_pack_and_task  # type: ignore
+
+    _pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
+    task = load_json(task_path)
+    if not isinstance(task, dict):
+        raise SystemExit("task_doc_invalid")
+    contract = task.get("protocol_host_unique_channel_contract_v1")
+    if not isinstance(contract, dict):
+        raise SystemExit("protocol_host_unique_channel_contract_v1_missing")
+
+    original_session_chain_wrapper = str(contract.get("session_chain_wrapper_path", "")).strip()
+    contract["session_chain_wrapper_path"] = non_json_wrapper_rel
+    _write_task(task_path, task)
+
+    cmd = [
+        sys.executable,
+        "scripts/final_emit_governed.py",
+        "--catalog",
+        str(catalog_path),
+        "--identity-id",
+        identity_id,
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id,
+        "--run-id",
+        run_id,
+        "--body-text",
+        "session chain non-json guard probe",
+        "--work-layer",
+        "instance",
+        "--source-layer",
+        "project",
+        "--json-only",
+    ]
+
+    try:
+        rc, out, err = run_gateway_wrapped_command(cmd=cmd, protocol_root=repo_root)
+        if str(out or "").strip():
+            print(str(out).strip())
+        if str(err or "").strip():
+            print(str(err).strip(), file=sys.stderr)
+        return int(rc)
+    finally:
+        if original_session_chain_wrapper:
+            contract["session_chain_wrapper_path"] = original_session_chain_wrapper
+        else:
+            contract.pop("session_chain_wrapper_path", None)
+        _write_task(task_path, task)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+PY
+chmod +x "${GATEWAY_WRAPPER_INVOKER_PATH}"
 
 run_probe() {
   local name="$1"
@@ -277,7 +395,28 @@ from pathlib import Path
 name = sys.argv[1]
 rc = int(sys.argv[2])
 stdout_path = Path(sys.argv[3])
-doc = json.loads(stdout_path.read_text(encoding="utf-8"))
+
+def load_json_tail(path: Path) -> dict:
+    raw = path.read_text(encoding="utf-8", errors="ignore")
+    text = raw.strip()
+    if not text:
+        raise SystemExit(f"{name}: stdout payload empty")
+    try:
+        doc = json.loads(text)
+        if isinstance(doc, dict):
+            return doc
+    except Exception:
+        pass
+    for line in reversed([ln.strip() for ln in text.splitlines() if ln.strip()]):
+        try:
+            doc = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(doc, dict):
+            return doc
+    raise SystemExit(f"{name}: unable to parse JSON payload from stdout tail")
+
+doc = load_json_tail(stdout_path)
 
 def stale_reasons(d: dict) -> list[str]:
     out: list[str] = []
@@ -335,6 +474,16 @@ elif name == "channel_bypass_emit":
         and "ingress_receipt_run_id_mismatch" not in reasons
     ):
         raise SystemExit("channel_bypass_emit: expected channel bypass attestation block")
+elif name == "session_chain_non_json_payload_blocked":
+    if rc == 0:
+        raise SystemExit("session_chain_non_json_payload_blocked: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if "session_chain_payload_missing_or_non_json" not in reasons:
+        raise SystemExit(
+            "session_chain_non_json_payload_blocked: expected session_chain_payload_missing_or_non_json stale reason"
+        )
+    if str(doc.get("error_code", "")).strip() != "IP-HDSTAMP-003":
+        raise SystemExit("session_chain_non_json_payload_blocked: expected IP-HDSTAMP-003")
 elif name == "egress_wrapper_direct_call_blocked":
     if rc == 0:
         raise SystemExit("egress_wrapper_direct_call_blocked: expected non-zero rc")
@@ -381,6 +530,14 @@ elif name == "session_chain_headstamp_first_line_required":
         raise SystemExit("session_chain_headstamp_first_line_required: final_emit_contract_status must be PASS_REQUIRED")
     if str(doc.get("entry_receipt_tuple_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("session_chain_headstamp_first_line_required: entry_receipt_tuple_status must be PASS_REQUIRED")
+    if str(doc.get("effective_bound_identity_id", "")).strip() != "probe-gateway":
+        raise SystemExit("session_chain_headstamp_first_line_required: expected effective_bound_identity_id probe-gateway")
+    if str(doc.get("headstamp_visibility_phase", "")).strip() != "first_line_visible_pass":
+        raise SystemExit("session_chain_headstamp_first_line_required: expected first_line_visible_pass phase")
+    if str(doc.get("sender_consumption_projection_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_headstamp_first_line_required: sender consumption projection must be PASS_REQUIRED")
+    if doc.get("next_hop_release_allowed") is not True:
+        raise SystemExit("session_chain_headstamp_first_line_required: next_hop_release_allowed must be true")
 elif name == "session_chain_protocol_lane_explicit_context_pass":
     if rc != 0:
         raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected zero rc")
@@ -399,6 +556,16 @@ elif name == "session_chain_protocol_lane_explicit_context_pass":
         first_line = str(preview[0] or "").strip()
     if "work_layer=protocol" not in first_line:
         raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected protocol headstamp first line")
+elif name == "session_chain_conflicting_session_primary_blocked":
+    if rc == 0:
+        raise SystemExit("session_chain_conflicting_session_primary_blocked: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if not any(str(reason).startswith("requested_session_primary_conflict:") for reason in reasons):
+        raise SystemExit(
+            "session_chain_conflicting_session_primary_blocked: expected requested_session_primary_conflict stale reason"
+        )
+    if str(doc.get("error_code", "")).strip() != "IP-ASB-201":
+        raise SystemExit("session_chain_conflicting_session_primary_blocked: expected IP-ASB-201")
 elif name == "strict_first_line_missing_evidence_blocked":
     if rc == 0:
         raise SystemExit("strict_first_line_missing_evidence_blocked: expected non-zero rc")
@@ -441,19 +608,28 @@ elif name == "quoted_foreign_identity_context_must_not_switch_identity":
     binding_effect = str(doc.get("quoted_identity_context_binding_effect", "")).strip().lower()
     if binding_effect != "none":
         raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected none binding effect")
+    if str(doc.get("effective_bound_identity_id", "")).strip() != "probe-gateway":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: effective bound identity must remain probe-gateway")
+    probe_contexts = doc.get("probe_identity_contexts") or []
+    if not isinstance(probe_contexts, list) or not probe_contexts:
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected probe identity contexts")
+    first_probe = probe_contexts[0] if isinstance(probe_contexts[0], dict) else {}
+    if str(first_probe.get("identity_id", "")).strip() != "probe-gateway":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: probe identity context must remain probe-gateway")
 elif name == "session_bound_other_identity_without_switch_receipt_must_fail":
     if rc == 0:
         raise SystemExit("session_bound_other_identity_without_switch_receipt_must_fail: expected non-zero rc")
     error_code = str(doc.get("error_code", "")).strip()
-    if error_code != "IP-HDSTAMP-002":
+    if error_code not in {"IP-HDSTAMP-002", "IP-IAUTH-001"}:
         raise SystemExit(
-            "session_bound_other_identity_without_switch_receipt_must_fail: expected IP-HDSTAMP-002 runtime binding mismatch"
+            "session_bound_other_identity_without_switch_receipt_must_fail: expected runtime binding or authoritative identity fail-close"
         )
     reasons = stale_reasons(doc)
     if (
         "session_scoped_actor_binding_missing" not in reasons
         and "actor_binding_lock_mismatch" not in reasons
         and "actor_bound_identity_mismatch" not in reasons
+        and "authoritative_identity_not_found_in_catalog:probe-foreign" not in reasons
     ):
         raise SystemExit(
             "session_bound_other_identity_without_switch_receipt_must_fail: expected actor/session strict mismatch reason"
@@ -809,6 +985,21 @@ run_probe session_chain_protocol_lane_explicit_context_pass \
   --message "session chain protocol explicit context probe" \
   --json-only
 
+run_probe session_chain_conflicting_session_primary_blocked \
+  python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID_CONFLICT}" \
+  --run-id "${SESSION_CHAIN_RUN_ID}-conflict" \
+  --work-layer instance \
+  --source-layer project \
+  --operation inspection \
+  --message "session chain conflicting session-primary probe" \
+  --json-only
+
+PROBE_CONTEXT_JSON="$(printf '{"identity_id":"%s","actor_id":"%s","session_id":"%s","role":"probe","source":"gateway_wrapper_trust_boundary"}' "${IDENTITY_ID}" "${ACTOR_ID}" "${SESSION_ID}")"
+
 run_probe quoted_foreign_identity_context_must_not_switch_identity \
   python3 scripts/compose_and_validate_governed_reply.py \
   --identity-id "${IDENTITY_ID}" \
@@ -816,6 +1007,7 @@ run_probe quoted_foreign_identity_context_must_not_switch_identity \
   --repo-catalog identity/catalog/identities.yaml \
   --actor-id "${ACTOR_ID}" \
   --session-id "${SESSION_ID}" \
+  --probe-context-json "${PROBE_CONTEXT_JSON}" \
   --work-layer protocol \
   --source-layer project \
   --layer-intent-text "protocol lane quoted foreign identity context must stay non-binding" \
@@ -860,6 +1052,16 @@ run_probe fixture_identity_runtime_egress_blocked \
   --session-id "session-gateway-probe-fixture" \
   --body-text "fixture identity runtime egress blocked probe" \
   --json-only
+
+run_probe session_chain_non_json_payload_blocked \
+  python3 "${GATEWAY_WRAPPER_INVOKER_PATH}" \
+  "${REPO_ROOT}" \
+  "${CATALOG_PATH}" \
+  "${IDENTITY_ID}" \
+  "${ACTOR_ID}" \
+  "${SESSION_ID}" \
+  "probe-gateway-session-chain-non-json" \
+  "identity/runtime/gate/protocol_session_chain_wrapper_non_json.py"
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"
 from __future__ import annotations

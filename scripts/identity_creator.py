@@ -991,6 +991,7 @@ def _activate_identity(
                 actor_id_resolved,
                 "--session-id",
                 session_id_resolved,
+                "--strict-session-primary",
                 "--canonical-out",
                 str(canonical_session_pointer),
                 "--mirror-out",

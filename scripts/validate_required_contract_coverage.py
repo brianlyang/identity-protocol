@@ -768,6 +768,85 @@ def _classify_from_payload(
     return _classify(required, fallback_rc)
 
 
+def _file_contains_token(path: Path, token: str, *, max_chars: int = 400_000) -> bool:
+    target = str(token or "").strip()
+    if not target:
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    return target in text[:max_chars]
+
+
+def _extract_bundle_id_from_text(raw: str) -> str:
+    patterns = (
+        r"cross_verification_bundle_id\s*[:=]\s*([^\s,;]+)",
+        r"bundle_id\s*[:=]\s*([^\s,;]+)",
+        r"evidence_bundle_id\s*[:=]\s*([^\s,;]+)",
+    )
+    for pat in patterns:
+        m = re.search(pat, raw, flags=re.IGNORECASE)
+        if m:
+            return str(m.group(1) or "").strip()
+    return ""
+
+
+def _resolve_cross_verification_bundle_context(
+    *,
+    catalog: str,
+    identity_id: str,
+    run_id: str,
+) -> tuple[str, str]:
+    try:
+        pack_path, _task_path = resolve_pack_and_task(Path(catalog).expanduser().resolve(), identity_id)
+    except Exception:
+        return "", ""
+    feedback_root = (pack_path / "runtime" / "protocol-feedback").resolve()
+    if not feedback_root.exists():
+        return "", ""
+
+    patterns = (
+        "outbox-to-protocol/*cross*verification*.*",
+        "outbox-to-protocol/*xverify*.*",
+        "outbox-to-protocol/FEEDBACK_BATCH_*.md",
+        "**/*cross*verification*.*",
+        "**/*intake*evidence*.*",
+        "**/*quorum*.*",
+    )
+    seen: set[str] = set()
+    candidates: list[Path] = []
+    for pattern in patterns:
+        for hit in feedback_root.glob(pattern):
+            if not hit.is_file():
+                continue
+            resolved = hit.resolve()
+            key = str(resolved)
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(resolved)
+    if not candidates:
+        return "", ""
+
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    selected = candidates[0]
+    run_token = str(run_id or "").strip()
+    if run_token:
+        filtered = [p for p in candidates if run_token in p.name or _file_contains_token(p, run_token)]
+        if filtered:
+            selected = filtered[0]
+    bundle_id = selected.stem
+    try:
+        raw = selected.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        raw = ""
+    parsed_bundle_id = _extract_bundle_id_from_text(raw)
+    if parsed_bundle_id:
+        bundle_id = parsed_bundle_id
+    return str(selected), str(bundle_id or "").strip()
+
+
 def _run_validator(
     script: str,
     catalog: str,
@@ -886,6 +965,19 @@ def _run_validator(
             cmd += ["--layer-intent-text", layer_intent_text]
     if script == "scripts/validate_run_id_report_selection.py" and run_id:
         cmd += ["--run-id", run_id]
+    if script in {
+        "scripts/validate_v16_cross_verification_tracks.py",
+        "scripts/validate_v16_intake_evidence_quorum.py",
+    }:
+        bundle_path, bundle_id = _resolve_cross_verification_bundle_context(
+            catalog=catalog,
+            identity_id=identity_id,
+            run_id=run_id,
+        )
+        if bundle_path:
+            cmd += ["--bundle", bundle_path]
+        if bundle_id:
+            cmd += ["--bundle-id", bundle_id]
     if force_required and script in FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS:
         cmd += ["--force-required"]
     cmd += list(extra_args)

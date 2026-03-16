@@ -3571,6 +3571,20 @@ def _as_list(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _session_primary_identity_ids(bindings: list[dict[str, Any]], session_id: str) -> list[str]:
+    token = str(session_id or "").strip()
+    if not token:
+        return []
+    identities = {
+        str(row.get("identity_id", "")).strip()
+        for row in bindings
+        if isinstance(row, dict)
+        and str(row.get("session_id", "")).strip() == token
+        and str(row.get("identity_id", "")).strip()
+    }
+    return sorted(identities)
+
+
 def _normalize_operation(value: str) -> str:
     return str(value or "").strip().lower()
 
@@ -3766,6 +3780,20 @@ def _select_latest_identity_bound_session(
     bindings = rows if isinstance(rows, list) else []
     identity_token = str(identity_id or "").strip()
     preferred_token = str(preferred_session_id or "").strip()
+    if preferred_token:
+        preferred_identity_ids = _session_primary_identity_ids(bindings, preferred_token)
+        if len(preferred_identity_ids) > 1:
+            return (
+                "",
+                "requested_session_primary_conflict:" + ",".join(preferred_identity_ids),
+                store_path,
+            )
+        if preferred_identity_ids and identity_token not in preferred_identity_ids:
+            return (
+                "",
+                "requested_session_bound_to_foreign_identity:" + ",".join(preferred_identity_ids),
+                store_path,
+            )
     selected_rows: list[dict[str, Any]] = []
     for row in bindings:
         if not isinstance(row, dict):
@@ -3832,6 +3860,10 @@ def _upsert_actor_session_binding(
     actor_token = str(actor_id or "").strip()
     if not actor_token or not identity_token or not session_token:
         return False, "binding_upsert_fields_missing", store_path
+    conflicting_identity_ids = _session_primary_identity_ids(bindings, session_token)
+    conflicting_identity_ids = [token for token in conflicting_identity_ids if token != identity_token]
+    if conflicting_identity_ids:
+        return False, "session_primary_conflict:" + ",".join(conflicting_identity_ids), store_path
     existing_index = -1
     for idx, row in enumerate(bindings):
         if not isinstance(row, dict):
@@ -3921,6 +3953,11 @@ def _resolve_effective_session_id(
     )
     if requested and mode == "preferred_session_bound":
         return requested, mode, False, str(store_path)
+    if requested and (
+        mode.startswith("requested_session_primary_conflict:")
+        or mode.startswith("requested_session_bound_to_foreign_identity:")
+    ):
+        return "", mode, False, str(store_path)
     if requested and resolved:
         return resolved, "requested_session_unbound_aligned_to_identity_latest", False, str(store_path)
     if resolved:
@@ -4035,7 +4072,7 @@ def main() -> int:
     if not resolved_session_id:
         return _fail(
             error_code="IP-ASB-201",
-            stale_reason="session_binding_resolution_failed",
+            stale_reason=str(session_binding_mode or "session_binding_resolution_failed"),
             json_only=args.json_only,
         )
     message = str(_resolve_message(args) or "").strip()
@@ -4271,6 +4308,25 @@ def main() -> int:
             "send_time_gate_status": egress_payload.get("send_time_gate_status", ""),
             "headstamp_status": egress_payload.get("headstamp_status", ""),
             "headstamp_first_line_status": headstamp_first_line_status,
+            "headstamp_visibility_phase": egress_payload.get("headstamp_visibility_phase", ""),
+            "headstamp_visibility_projection_status": egress_payload.get(
+                "headstamp_visibility_projection_status",
+                "",
+            ),
+            "headstamp_visibility_interpretation": egress_payload.get(
+                "headstamp_visibility_interpretation",
+                "",
+            ),
+            "effective_bound_identity_id": egress_payload.get("effective_bound_identity_id", ""),
+            "effective_bound_actor_id": egress_payload.get("effective_bound_actor_id", ""),
+            "effective_bound_session_id": egress_payload.get("effective_bound_session_id", ""),
+            "effective_identity_projection_status": egress_payload.get(
+                "effective_identity_projection_status",
+                "",
+            ),
+            "quoted_identity_contexts": egress_payload.get("quoted_identity_contexts", []),
+            "probe_identity_contexts": egress_payload.get("probe_identity_contexts", []),
+            "binding_effect_summary": egress_payload.get("binding_effect_summary", {}),
             "host_visible_surface_live_receipt_status": host_visible_receipt_status,
             "host_visible_surface_state_file": host_visible_state_file,
             "host_visible_surface_live_receipt_paths": host_visible_receipt_paths,
@@ -4284,6 +4340,24 @@ def main() -> int:
             "final_emit_schema_id": final_emit_schema_id,
             "final_emit_schema_status": final_emit_schema_status,
             "final_emit_contract_status": final_emit_contract_status,
+            "sender_consumption_contract_ref": egress_payload.get("sender_consumption_contract_ref", ""),
+            "sender_consumption_contract_required": egress_payload.get(
+                "sender_consumption_contract_required",
+                False,
+            ),
+            "sender_consumption_expected_transport_ref": egress_payload.get(
+                "sender_consumption_expected_transport_ref",
+                "",
+            ),
+            "sender_consumption_allowed_transport_refs": egress_payload.get(
+                "sender_consumption_allowed_transport_refs",
+                [],
+            ),
+            "sender_consumption_projection_status": egress_payload.get(
+                "sender_consumption_projection_status",
+                "",
+            ),
+            "next_hop_release_allowed": egress_payload.get("next_hop_release_allowed", False),
             "session_chain_parent_attestation_required": egress_payload.get(
                 "session_chain_parent_attestation_required",
                 False,

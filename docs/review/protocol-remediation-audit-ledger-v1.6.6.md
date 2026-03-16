@@ -2760,3 +2760,42 @@ Interpretation lock:
 1. runtime endpoint selection is consumer/runtime contract input, not protocol hardcoded default; explicit `transport_healthcheck_url` is the allowed declaration path.
 2. transport reachability failure is not semantic headstamp failure.
 3. privilege write denial is not unique-entry semantic failure even when it occurs on entry receipt persistence.
+
+### 26.41 v1.6.6 finish-line freeze + anti-forget wording lock (2026-03-17)
+
+Problem:
+
+1. field discussion could still drift back to "physical 100% interception" even though v1.6.6 was already frozen around pre-95/post-100 semantics.
+2. "has headstamp text" and "is allowed into next hop" were still too easy to conflate in incident reviews.
+3. key terms (`governed output`, `manual headstamp`, `host-direct output`, `next-hop-admissible output`) were not yet locked as required wording in anti-forget validation.
+
+Fix landed:
+
+1. `docs/governance/identity-host-unique-channel-governance-v1.6.6.md`
+   - adds authoritative finish-line wording:
+     - non-governed output one-hop death rule
+     - failure evidence dual-channel
+     - `post_gate_coverage_rate = 1.00`
+     - `next_hop_headstamp_rate = 1.00`
+2. terminology freeze added to governance:
+   - `governed output`
+   - `manual headstamp`
+   - `host-direct output`
+   - `next-hop-admissible output`
+3. `scripts/validate_required_gate_surface_drift.py`
+   - now treats the above v1.6.6 wording as anti-forget required tokens.
+   - also blocks protocol-repo hardcoded runtime endpoint literals such as
+     `HOST_TRANSPORT_REACHABILITY_DEFAULT_URL` and `http://127.0.0.1:3001/healthz`.
+
+Checkpoint verdict update:
+
+1. v1.6.6 closure wording is now explicitly infrastructure-scoped and no longer compatible with "physical 100% pre-send hook" phrasing.
+2. next-hop legality is now frozen as stronger than "headstamp text present".
+3. anti-forget drift validation now protects both wording scope and runtime-endpoint boundary.
+
+Interpretation lock:
+
+1. "headstamp present" is a necessary condition only; it is never sufficient to prove next-hop admissibility.
+2. non-governed output must die within one hop in controlled lanes.
+3. protocol base-repo may define transport reachability validation, but may not define consumer/runtime localhost defaults.
+4. assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence.

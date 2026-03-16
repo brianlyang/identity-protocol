@@ -387,7 +387,7 @@ def _run_self_test(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate master/sub handoff contract evidence")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--file", default="", help="validate one explicit handoff file")
     ap.add_argument("--self-test", action="store_true", help="run positive/negative sample self-test")

@@ -45,7 +45,7 @@ def _extract_option_matrix(report: dict[str, Any]) -> list[dict[str, Any]]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate vendor/API solution closure contract.")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     args = ap.parse_args()

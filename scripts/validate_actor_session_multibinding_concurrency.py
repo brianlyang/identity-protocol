@@ -12,6 +12,7 @@ from actor_session_common import (
     LEGACY_BINDING_KEY_MODE,
     SESSION_ONLY_BINDING_KEY_MODE,
     actor_session_path,
+    list_session_primary_conflicts,
     load_actor_binding_store,
     normalize_actor_binding_store,
     resolve_actor_id,
@@ -154,6 +155,7 @@ def main() -> int:
     non_activation_mutation_detected = False
     dropped_peer_session_count = 0
     rebind_receipt_status = STATUS_PASS_REQUIRED
+    session_primary_conflicts: list[dict[str, Any]] = []
     operation = str(args.operation or "validate").strip().lower()
 
     if fixture_mode:
@@ -220,6 +222,23 @@ def main() -> int:
                 stale_reasons.append("peer_sessions_dropped")
 
     if status == STATUS_PASS_REQUIRED:
+        session_primary_conflicts = list_session_primary_conflicts(
+            store,
+            session_id=str(args.session_id or "").strip(),
+        )
+        if session_primary_conflicts:
+            error_code = ERR_MB_001
+            status = STATUS_FAIL_REQUIRED
+            for conflict in session_primary_conflicts:
+                sid = str(conflict.get("session_id", "")).strip() or "missing"
+                identities = [str(x).strip() for x in (conflict.get("identity_ids") or []) if str(x).strip()]
+                stale_reasons.append(
+                    "session_primary_conflict:"
+                    f"{sid}:"
+                    f"{','.join(sorted(identities)) or 'missing_identity'}"
+                )
+
+    if status == STATUS_PASS_REQUIRED:
         latest_receipt = _latest_receipt(receipts)
         missing_receipt_fields = [
             k for k in RECEIPT_REQUIRED_FIELDS if not str(latest_receipt.get(k, "")).strip()
@@ -275,6 +294,8 @@ def main() -> int:
         "non_activation_mutation_detected": non_activation_mutation_detected,
         "rebind_receipt_status": rebind_receipt_status,
         "dropped_peer_session_count": dropped_peer_session_count,
+        "session_primary_conflict_count": len(session_primary_conflicts),
+        "session_primary_conflicts": session_primary_conflicts,
         "compare_token": compare_token,
         "binding_version": binding_version,
         "stale_reasons": sorted(set(stale_reasons)),

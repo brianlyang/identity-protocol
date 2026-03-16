@@ -1840,7 +1840,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Execute identity upgrade cycle using metrics + arbitration thresholds (safe-auto/review-required)."
     )
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--mode", choices=["review-required", "safe-auto"], default="review-required")
     ap.add_argument("--metrics-path", default="", help="optional route metrics artifact path override")

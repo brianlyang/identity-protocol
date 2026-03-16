@@ -95,7 +95,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Enforce that identity-core updates include self-upgrade execution evidence."
     )
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--base", default="")
     ap.add_argument("--head", default="HEAD")

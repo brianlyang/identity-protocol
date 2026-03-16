@@ -34,7 +34,7 @@ def _format_source_entry(src: dict[str, Any]) -> str:
 
 def main() -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    p.add_argument("--catalog", default="")
     p.add_argument("--output", default="identity/runtime/IDENTITY_COMPILED.md")
     p.add_argument("--identity-id", default="", help="explicit identity id for identity-neutral baseline")
     p.add_argument("--actor-id", default="", help="optional actor id used for actor-scoped identity resolution")

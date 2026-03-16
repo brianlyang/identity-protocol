@@ -4,8 +4,8 @@ _meta:
   schema_version: 1
   source_layer: protocol
   lifecycle_state: phase6_full_requirement_projection
-  last_updated_utc: "2026-03-14T05:10:00Z"
-  row_count: 38
+  last_updated_utc: "2026-03-16T05:28:00Z"
+  row_count: 41
   notes:
     - "Phase-1 mapping seed for ASB16-RQ-017..022/030."
     - "Phase-2 extension adds prompt-kernel rows for ASB16-RQ-014/015/027/031."
@@ -17,6 +17,7 @@ _meta:
     - "Post-audit alignment: RQ-018 canonical validator path now points to scripts/validate_dedup_monotonicity.py with wrapper compatibility retained."
     - "v1.6.2 multimodal stream adds RQ-034 multimodal plugin enforcement mapping row with central provider profile governance hooks."
     - "v1.6.8 path-immutability stream is promoted into motherline rows RQ-036/037/038 to avoid side-chain drift."
+    - "v1.6.5 rebound-absorber lane promotes rows RQ-039/040/041 into the motherline required bundle."
     - "Rows intentionally use canonical five-link tuple fields required by governance 4.15."
     - "Validator scripts referenced here may be planned-only until implementation commits land."
 
@@ -1096,6 +1097,96 @@ asb16-rq-038:
     - IP-DSPATH-002
     - IP-DSPATH-005
   mapping_state: phase6_v168_path_immutability_motherline
+
+asb16-rq-039:
+  requirement_id: ASB16-RQ-039
+  kernel_contract_id: rq_039_skill_installation_supply_chain_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_039_skill_installation_supply_chain_contract_v1
+  validator_ids:
+    - scripts/validate_skill_installation_supply_chain.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md#87-skill-supply-chain-absorber-contract-motherline-rq-039041-mandatory
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.5.md#722-skill-supply-chain-motherline-absorption-under-v165-no-rebound-2026-03-16
+  report_field_refs:
+    - skill_installation_supply_chain_status
+    - dependent_contract_keys
+    - missing_dependent_contract_keys
+    - required_capability_drivers
+    - missing_capability_drivers
+    - skill_path_integrity
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-SSUP-001
+    - IP-SSUP-002
+    - IP-SSUP-003
+  mapping_state: phase6_v165_skill_supply_chain_absorbed
+
+asb16-rq-040:
+  requirement_id: ASB16-RQ-040
+  kernel_contract_id: rq_040_skill_frontmatter_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_040_skill_frontmatter_contract_v1
+  validator_ids:
+    - scripts/validate_skill_frontmatter.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md#87-skill-supply-chain-absorber-contract-motherline-rq-039041-mandatory
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.5.md#722-skill-supply-chain-motherline-absorption-under-v165-no-rebound-2026-03-16
+  report_field_refs:
+    - skill_frontmatter_status
+    - required_frontmatter_fields
+    - frontmatter_rows
+    - missing_frontmatter_skills
+    - missing_required_field_rows
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-SFRONT-001
+    - IP-SFRONT-002
+    - IP-SFRONT-003
+    - IP-SFRONT-004
+  mapping_state: phase6_v165_skill_supply_chain_absorbed
+
+asb16-rq-041:
+  requirement_id: ASB16-RQ-041
+  kernel_contract_id: rq_041_skill_sync_drift_guard_contract_v1
+  kernel_source_path: identity/protocol/IDENTITY_RUNTIME.md#rq_041_skill_sync_drift_guard_contract_v1
+  validator_ids:
+    - scripts/validate_skill_sync_drift_guard.py
+  gate_surfaces:
+    - creator
+    - readiness
+    - e2e
+    - full-scan
+    - three-plane
+    - ci
+  governance_anchor: docs/governance/github-ruleset-super-linter-dual-layer-governance-v1.6.5.md#87-skill-supply-chain-absorber-contract-motherline-rq-039041-mandatory
+  review_anchor: docs/review/protocol-remediation-audit-ledger-v1.6.5.md#722-skill-supply-chain-motherline-absorption-under-v165-no-rebound-2026-03-16
+  report_field_refs:
+    - skill_sync_drift_guard_status
+    - required_skills
+    - drift_roots
+    - skill_sync_rows
+    - drift_skills
+    - missing_skills
+    - stale_reasons
+    - evidence_ref
+  error_code_refs:
+    - IP-SDRIFT-001
+    - IP-SDRIFT-002
+    - IP-SDRIFT-003
+  mapping_state: phase6_v165_skill_supply_chain_absorbed
 
 asb16-rq-030:
   requirement_id: ASB16-RQ-030

@@ -669,6 +669,7 @@ def main() -> int:
             actor_id,
             "--session-id",
             session_id,
+            "--strict-session-primary",
         ],
         [
             "python3",

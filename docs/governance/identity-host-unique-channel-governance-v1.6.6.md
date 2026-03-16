@@ -1356,3 +1356,59 @@ Interpretation lock:
 1. `127.0.0.1:3001` or any similar runtime endpoint is consumer/runtime configuration, not protocol-repo constant state.
 2. transport reachability failure, privilege boundary failure, and semantic headstamp failure must remain separate axes in replay output.
 3. required CI must prove both reachability fault isolation and privilege write fail-close behavior.
+
+### 5.24 v1.6.6 finish-line freeze: one-hop death + blocker evidence + canonical next-hop admission (2026-03-17)
+
+This checkpoint freezes the remaining v1.6.6 closure scope so later work cannot drift into
+"physical 100% interception" language or reduce closure to text-only headstamp checks.
+
+Authoritative finish-line definition:
+
+1. v1.6.6 target is:
+   - pre-send high coverage (`>=95%`)
+   - post-check `100%` detectability
+   - post-check `100%` next-hop blocking
+   - next-hop mandatory canonical headstamp
+2. v1.6.6 does **not** claim physical-layer `100%` host interception.
+3. any output outside canonical control lane must be governed by the non-governed output one-hop death rule.
+
+Finish lines (must all hold for v1.6.6 closure claim):
+
+1. Finish Line 1: non-governed output one-hop death rule
+   - any output without canonical control-lane attestation is not next-hop admissible.
+   - manual first-line text is insufficient.
+   - host-direct output is insufficient.
+2. Finish Line 2: failure evidence dual-channel
+   - sandbox / privilege / write-fail / timeout / reachability / unreadable-state faults must produce canonical blocker evidence.
+   - file receipt is preferred, but structured blocker payload is mandatory fallback.
+3. Finish Line 3: post-gate coverage authority
+   - `post_gate_coverage_rate = 1.00`
+   - when pre-send and post-check diverge, post-check is authoritative for next-hop release.
+4. Finish Line 4: canonical next-hop headstamp
+   - `next_hop_headstamp_rate = 1.00`
+   - only canonical governed headstamp counts; manual headstamp and host-direct output never count as pass.
+
+Terminology freeze (authoritative wording):
+
+1. governed output
+   - output produced through canonical control lane with valid attestation lineage.
+2. manual headstamp
+   - output that contains `Identity-Context:` text but lacks canonical control-lane attestation.
+   - assistant-visible self-printed headstamp is classified as manual headstamp, not closure evidence.
+3. host-direct output
+   - host/model visible output emitted outside governed egress lane.
+4. next-hop-admissible output
+   - the only output class allowed to enter the next strict controlled hop.
+
+Required relations:
+
+1. governed output is the only class that can become next-hop-admissible output.
+2. manual headstamp != governed output.
+3. host-direct output != next-hop-admissible output.
+4. first-line headstamp presence alone never proves next-hop admissibility.
+
+Anti-forget enforcement:
+
+1. `scripts/validate_required_gate_surface_drift.py` must require the above finish-line wording in v1.6.6 governance/review surfaces.
+2. `scripts/validate_required_gate_surface_drift.py` must reject protocol-repo hardcoded runtime endpoints such as `HOST_TRANSPORT_REACHABILITY_DEFAULT_URL` or `http://127.0.0.1:3001/healthz`.
+3. future validators/probes may extend v1.6.6 closure, but they must preserve these terms and finish-line definitions instead of introducing alternate wording.

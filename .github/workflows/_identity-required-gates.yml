@@ -278,6 +278,12 @@ jobs:
       - name: Validate installer version baseline probes (v1.6.8)
         run: bash scripts/ci/run_installer_version_baseline_probes_ci.sh
 
+      - name: Validate skill supply-chain probes (v1.6.5 absorber lane)
+        run: bash scripts/ci/run_skill_supply_chain_probes_ci.sh
+
+      - name: Validate semantic clarity probes (SEM-CLARITY-001)
+        run: bash scripts/ci/run_semantic_clarity_probes_ci.sh
+
       - name: Validate full-scan target regression (p0=0)
         run: |
           IDS="${IDS:-}"

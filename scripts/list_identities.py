@@ -18,7 +18,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="List identities from catalog with basic health signals")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--json", action="store_true", help="output json")
     args = ap.parse_args()
 

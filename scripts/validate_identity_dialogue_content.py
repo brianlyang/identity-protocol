@@ -107,7 +107,7 @@ def _derive_counts(report: dict[str, Any], synthesis: dict[str, Any]) -> dict[st
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate dialogue synthesis content governance contract.")
     ap.add_argument("--identity-id", required=True)
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--report", default="")
     ap.add_argument("--report-dir", default="")
     ap.add_argument("--enforce-mode", choices=["auto", "warn", "enforce"], default="auto")

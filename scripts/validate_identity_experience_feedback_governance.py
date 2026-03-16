@@ -133,7 +133,7 @@ def _identity_scoped_logs(paths: list[Path], identity_id: str) -> list[Path]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate experience feedback governance controls")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     args = ap.parse_args()

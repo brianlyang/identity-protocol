@@ -115,6 +115,14 @@ def main() -> int:
         action="store_true",
         help="fail if mirror/legacy-mirror pointer is missing or inconsistent (default: warning-only)",
     )
+    ap.add_argument(
+        "--strict-session-primary",
+        action="store_true",
+        help=(
+            "enforce session-primary semantics for strict lanes: "
+            "canonical/mirror identity mismatches and missing mirror become fail-close even under multi-active."
+        ),
+    )
     args = ap.parse_args()
 
     catalog_path = Path(args.catalog).expanduser().resolve()
@@ -174,6 +182,8 @@ def main() -> int:
         if args.canonical_out.strip()
         else _default_canonical_out(catalog_path)
     )
+    require_mirror_effective = bool(args.require_mirror or args.strict_session_primary)
+
     ok, reason = _validate_pointer(
         pointer_path=canonical_out,
         pointer_name="canonical",
@@ -182,7 +192,11 @@ def main() -> int:
         active_pack_path=expected_pack_path,
     )
     if not ok:
-        allow_multi_active_identity_mismatch = len(active_rows) > 1 and reason.startswith("canonical_identity_mismatch:")
+        allow_multi_active_identity_mismatch = (
+            (not args.strict_session_primary)
+            and len(active_rows) > 1
+            and reason.startswith("canonical_identity_mismatch:")
+        )
         if allow_multi_active_identity_mismatch:
             print(f"[WARN] {reason} (allowed under actor-scoped multi-active model)")
         else:
@@ -219,20 +233,22 @@ def main() -> int:
                 active_pack_path=expected_pack_path,
             )
             if not ok:
-                allow_multi_active_identity_mismatch = len(active_rows) > 1 and reason.startswith(
-                    f"{pointer_name}_identity_mismatch:"
+                allow_multi_active_identity_mismatch = (
+                    (not args.strict_session_primary)
+                    and len(active_rows) > 1
+                    and reason.startswith(f"{pointer_name}_identity_mismatch:")
                 )
-                if allow_multi_active_identity_mismatch and not args.require_mirror:
+                if allow_multi_active_identity_mismatch and not require_mirror_effective:
                     print(f"[WARN] {reason} (allowed under actor-scoped multi-active model)")
                     continue
-                if args.require_mirror:
+                if require_mirror_effective:
                     print(f"[FAIL] {reason}")
                     return 1
                 print(f"[WARN] {reason}")
                 continue
             print(f"[OK] {pointer_name} pointer aligned: {mirror_out}")
             continue
-        if args.require_mirror:
+        if require_mirror_effective:
             print(f"[FAIL] {pointer_name}_missing:{mirror_out}")
             return 1
         print(f"[WARN] {pointer_name} pointer not found (allowed): {mirror_out}")

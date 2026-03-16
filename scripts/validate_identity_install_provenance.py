@@ -67,7 +67,7 @@ def _glob_paths(pattern: str, *, pack_root: Path) -> list[Path]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate install provenance contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     args = ap.parse_args()

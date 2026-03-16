@@ -277,6 +277,56 @@ def load_actor_binding(
     return _select_binding(store, identity_id=identity_id, session_id=session_id)
 
 
+def list_session_primary_conflicts(
+    store: dict[str, Any],
+    *,
+    session_id: str = "",
+) -> list[dict[str, Any]]:
+    bindings = [x for x in (store.get("bindings") or []) if isinstance(x, dict)]
+    filter_session_id = str(session_id or "").strip()
+    by_session: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for row in bindings:
+        sid = str(row.get("session_id", "")).strip()
+        identity = str(row.get("identity_id", "")).strip()
+        if not sid or not identity:
+            continue
+        if filter_session_id and sid != filter_session_id:
+            continue
+        session_bucket = by_session.setdefault(sid, {})
+        identity_bucket = session_bucket.setdefault(identity, [])
+        identity_bucket.append(copy.deepcopy(row))
+
+    conflicts: list[dict[str, Any]] = []
+    for sid, identity_map in sorted(by_session.items()):
+        identity_ids = sorted(identity_map.keys())
+        if len(identity_ids) <= 1:
+            continue
+        entries: list[dict[str, Any]] = []
+        for identity in identity_ids:
+            rows = sorted(identity_map.get(identity, []), key=_entry_sort_key)
+            latest = copy.deepcopy(rows[-1]) if rows else {}
+            entries.append(
+                {
+                    "identity_id": identity,
+                    "binding_ref": str(latest.get("binding_ref", "")).strip(),
+                    "binding_version": _as_int(latest.get("binding_version")) or 0,
+                    "mutation_lane": str(latest.get("mutation_lane", "")).strip(),
+                    "run_id": str(latest.get("run_id", "")).strip(),
+                    "updated_at": str(latest.get("updated_at", "")).strip()
+                    or str(latest.get("bound_at", "")).strip(),
+                    "entry_count": len(rows),
+                }
+            )
+        conflicts.append(
+            {
+                "session_id": sid,
+                "identity_ids": identity_ids,
+                "entries": entries,
+            }
+        )
+    return conflicts
+
+
 def list_actor_bindings(catalog_path: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     root = actor_session_dir(catalog_path)

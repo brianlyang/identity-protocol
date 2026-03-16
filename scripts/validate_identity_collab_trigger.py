@@ -356,7 +356,7 @@ def _run_self_test(sample_root: Path) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity collaboration trigger contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--file", default="", help="validate explicit collaboration log file")
     ap.add_argument("--self-test", action="store_true")

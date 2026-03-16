@@ -16,6 +16,12 @@ from final_emit_contract_common import (
     FINAL_EMIT_SCHEMA_ID,
     FINAL_EMIT_SCHEMA_REQUIRED_FIELDS,
 )
+from governed_reply_observability_common import (
+    build_identity_observability_projection,
+    build_sender_consumption_projection,
+    classify_headstamp_visibility,
+    parse_probe_identity_contexts,
+)
 from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inject_legacy_error_fields
 from identity_runtime_authority_common import (
     STATUS_PASS_REQUIRED as AUTHORITY_PASS_REQUIRED,
@@ -185,6 +191,8 @@ def main() -> int:
     ap.add_argument("--session-id", default="")
     ap.add_argument("--body-text", default="")
     ap.add_argument("--body-file", default="")
+    ap.add_argument("--probe-context-json", default="")
+    ap.add_argument("--probe-context-file", default="")
     ap.add_argument("--work-layer", default="")
     ap.add_argument("--source-layer", default="")
     ap.add_argument("--layer-intent-text", default="")
@@ -207,9 +215,49 @@ def main() -> int:
         print(f"[FAIL] repo catalog not found: {repo_catalog_path}")
         return 2
 
+    probe_identity_contexts = parse_probe_identity_contexts(
+        probe_context_json=str(args.probe_context_json or "").strip(),
+        probe_context_file=str(args.probe_context_file or "").strip(),
+    )
+
+    def _project_payload(
+        payload: dict[str, Any],
+        *,
+        effective_bound_identity_id: str = "",
+        quoted_guard: dict[str, Any] | None = None,
+        actor_id_override: str = "",
+        session_id_override: str = "",
+    ) -> dict[str, Any]:
+        augmented = dict(payload)
+        augmented.update(
+            build_identity_observability_projection(
+                expected_identity_id=str(args.identity_id or "").strip(),
+                actor_id=str(actor_id_override or args.actor_id or "").strip(),
+                session_id=str(session_id_override or args.session_id or "").strip(),
+                effective_bound_identity_id=str(effective_bound_identity_id or "").strip(),
+                quoted_identity_context_guard=quoted_guard,
+                probe_identity_contexts=probe_identity_contexts,
+            )
+        )
+        augmented.update(
+            classify_headstamp_visibility(
+                reply_first_line_status=augmented.get("reply_first_line_status", ""),
+                send_time_gate_status=augmented.get("send_time_gate_status", ""),
+                headstamp_first_line_status=augmented.get("headstamp_first_line_status", ""),
+            )
+        )
+        augmented.update(
+            build_sender_consumption_projection(
+                out_reply_file=augmented.get("out_reply_file", ""),
+                reply_transport_ref=augmented.get("reply_transport_ref", ""),
+                reply_emit_allowed=bool(augmented.get("reply_emit_allowed", False)),
+            )
+        )
+        return augmented
+
     actor_id_input = str(args.actor_id or "").strip()
     if not actor_id_input:
-        payload = {
+        payload = _project_payload({
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(repo_catalog_path),
@@ -230,7 +278,7 @@ def main() -> int:
             "final_emit_schema_status": "FAIL_REQUIRED",
             "final_emit_contract_status": "FAIL_REQUIRED",
             "stale_reasons": ["actor_id_required"],
-        }
+        })
         out_json = str(args.out_json or "").strip()
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
@@ -247,7 +295,7 @@ def main() -> int:
         return 1
     session_id_input = str(args.session_id or "").strip()
     if not session_id_input:
-        payload = {
+        payload = _project_payload({
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(repo_catalog_path),
@@ -268,7 +316,7 @@ def main() -> int:
             "final_emit_schema_status": "FAIL_REQUIRED",
             "final_emit_contract_status": "FAIL_REQUIRED",
             "stale_reasons": ["session_id_required"],
-        }
+        }, actor_id_override=actor_id_input)
         out_json = str(args.out_json or "").strip()
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
@@ -336,19 +384,17 @@ def main() -> int:
             "resolved_actor_id": resolve_actor_id(actor_id_input),
             "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
             "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
-            "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
-            "identity_authority_selected_identity_id": str(
-                authority.get("identity_authority_selected_identity_id", "")
-            ).strip(),
-            "identity_authority_authoritative_identity_id": str(
-                authority.get("identity_authority_authoritative_identity_id", "")
-            ).strip(),
-            "identity_authority_resolution_mode": str(
-                authority.get("identity_authority_resolution_mode", "")
-            ).strip(),
             "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
-            "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         }
+        payload.update(authority)
+        out_json = str(args.out_json or "").strip()
+        if out_json:
+            out_json_path = Path(out_json).expanduser().resolve()
+            out_json_path.parent.mkdir(parents=True, exist_ok=True)
+            out_json_path.write_text(
+                json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
         print(
             json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False)
             if args.json_only
@@ -367,7 +413,7 @@ def main() -> int:
     session_id_effective = session_id_input
 
     if session_id_effective and not actor_bound_identity:
-        payload = {
+        payload = _project_payload({
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(repo_catalog_path),
@@ -394,7 +440,7 @@ def main() -> int:
             "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
             "actor_binding_session_id": str(actor_binding.get("session_id", "")),
             "stale_reasons": ["session_scoped_actor_binding_missing"],
-        }
+        }, actor_id_override=actor_id_effective, session_id_override=session_id_effective)
         out_json = str(args.out_json or "").strip()
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
@@ -411,7 +457,7 @@ def main() -> int:
         return 1
 
     if actor_bound_identity and actor_bound_identity != str(args.identity_id or "").strip():
-        payload = {
+        payload = _project_payload({
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
             "repo_catalog_path": str(repo_catalog_path),
@@ -451,7 +497,7 @@ def main() -> int:
             "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
             "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
             "actor_binding_session_id": str(actor_binding.get("session_id", "")),
-        }
+        }, effective_bound_identity_id=actor_bound_identity, actor_id_override=actor_id_effective, session_id_override=session_id_effective)
         out_json = str(args.out_json or "").strip()
         if out_json:
             out_json_path = Path(out_json).expanduser().resolve()
@@ -583,6 +629,12 @@ def main() -> int:
             "send_time_gate_status": str(validate_payload.get("send_time_gate_status", "")),
             "error_code": str(validate_payload.get("error_code", "")),
             "governed_outlet_enforced": bool(validate_payload.get("governed_outlet_enforced", False)),
+            "output_governance_mode": str(validate_payload.get("output_governance_mode", "")).strip(),
+            "control_lane_attestation_status": str(
+                validate_payload.get("control_lane_attestation_status", "")
+            ).strip(),
+            "next_hop_admission_status": str(validate_payload.get("next_hop_admission_status", "")).strip(),
+            "next_hop_admission_reason": str(validate_payload.get("next_hop_admission_reason", "")).strip(),
             "outlet_channel_id": str(validate_payload.get("outlet_channel_id", "")),
             "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
             "final_emit_policy_mode": str(validate_payload.get("final_emit_policy_mode", FINAL_EMIT_POLICY_MODE)),
@@ -623,6 +675,9 @@ def main() -> int:
                 "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "identity_id": args.identity_id,
                 "actor_id": actor_id_effective,
+                "effective_bound_identity_id": actor_bound_identity or str(args.identity_id or "").strip(),
+                "effective_bound_actor_id": actor_id_effective,
+                "effective_bound_session_id": session_id_effective,
                 "work_layer": work_layer,
                 "source_layer": source_layer,
                 "lock_state": str(ctx.lock_state or "").strip(),
@@ -650,6 +705,8 @@ def main() -> int:
                 "quoted_identity_context_binding_effect": str(
                     quoted_identity_context_guard.get("quoted_identity_context_binding_effect", "")
                 ).strip(),
+                "quoted_identity_contexts": list(quoted_identity_context_guard.get("quoted_identity_context_refs") or []),
+                "probe_identity_contexts": probe_identity_contexts,
             }
             final_emit_receipt_path.write_text(
                 json.dumps(final_emit_receipt, ensure_ascii=False, indent=2) + "\n",
@@ -662,7 +719,7 @@ def main() -> int:
         # keep temporary reply evidence for strict fail-closed replay
         pass
 
-    payload = {
+    payload = _project_payload({
         "identity_id": args.identity_id,
         "catalog_path": str(catalog_path),
         "repo_catalog_path": str(repo_catalog_path),
@@ -683,6 +740,12 @@ def main() -> int:
         "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
         "reply_outlet_guard_applied": bool(validate_payload.get("reply_outlet_guard_applied", False)),
         "governed_outlet_enforced": bool(validate_payload.get("governed_outlet_enforced", False)),
+        "output_governance_mode": str(validate_payload.get("output_governance_mode", "")).strip(),
+        "control_lane_attestation_status": str(
+            validate_payload.get("control_lane_attestation_status", "")
+        ).strip(),
+        "next_hop_admission_status": str(validate_payload.get("next_hop_admission_status", "")).strip(),
+        "next_hop_admission_reason": str(validate_payload.get("next_hop_admission_reason", "")).strip(),
         "outlet_channel_id": str(validate_payload.get("outlet_channel_id", str(args.outlet_channel_id or "").strip())),
         "final_emit_channel_id": str(validate_payload.get("final_emit_channel_id", FINAL_EMIT_CHANNEL_ID)),
         "final_emit_policy_mode": str(validate_payload.get("final_emit_policy_mode", FINAL_EMIT_POLICY_MODE)),
@@ -735,7 +798,21 @@ def main() -> int:
         "quoted_identity_context_binding_effect": str(
             quoted_identity_context_guard.get("quoted_identity_context_binding_effect", "")
         ).strip(),
-    }
+    }, effective_bound_identity_id=actor_bound_identity or str(args.identity_id or "").strip(), quoted_guard=quoted_identity_context_guard, actor_id_override=actor_id_effective, session_id_override=session_id_effective)
+
+    allow_reply_emit = (
+        proc.returncode == 0
+        and str(payload.get("send_time_gate_status", "")).strip().upper() == "PASS_REQUIRED"
+        and str(payload.get("final_emit_contract_status", "")).strip().upper() == "PASS_REQUIRED"
+    )
+    payload["reply_emit_allowed"] = allow_reply_emit
+    payload.update(
+        build_sender_consumption_projection(
+            out_reply_file=payload.get("out_reply_file", ""),
+            reply_transport_ref=payload.get("reply_transport_ref", ""),
+            reply_emit_allowed=allow_reply_emit,
+        )
+    )
 
     out_json = str(args.out_json or "").strip()
     if out_json:
@@ -746,12 +823,6 @@ def main() -> int:
             encoding="utf-8",
         )
 
-    allow_reply_emit = (
-        proc.returncode == 0
-        and str(payload.get("send_time_gate_status", "")).strip().upper() == "PASS_REQUIRED"
-        and str(payload.get("final_emit_contract_status", "")).strip().upper() == "PASS_REQUIRED"
-    )
-    payload["reply_emit_allowed"] = allow_reply_emit
     _emit(
         payload,
         json_only=args.json_only,

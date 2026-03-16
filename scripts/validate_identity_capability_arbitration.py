@@ -116,7 +116,7 @@ def _resolve_path(path_value: str, *, pack_root: Path) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate capability arbitration contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--report", default="")
     ap.add_argument("--upgrade-report", default="", help="optional execute_identity_upgrade report path")

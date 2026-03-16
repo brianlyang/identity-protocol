@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -106,6 +107,9 @@ BUNDLE_REQUIREMENT_ORDER: tuple[str, ...] = (
     "asb16-rq-036",
     "asb16-rq-037",
     "asb16-rq-038",
+    "asb16-rq-039",
+    "asb16-rq-040",
+    "asb16-rq-041",
 )
 
 TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
@@ -147,6 +151,9 @@ TARGET_NAME_BY_REQUIREMENT: dict[str, str] = {
     "asb16-rq-036": "downsink_path_immutability",
     "asb16-rq-037": "downsink_path_write_guard",
     "asb16-rq-038": "downsink_path_literal_lock",
+    "asb16-rq-039": "skill_installation_supply_chain",
+    "asb16-rq-040": "skill_frontmatter",
+    "asb16-rq-041": "skill_sync_drift_guard",
 }
 REQUIREMENT_BY_TARGET: dict[str, str] = {v: k for k, v in TARGET_NAME_BY_REQUIREMENT.items()}
 
@@ -189,6 +196,9 @@ STATUS_FIELD_BY_TARGET: dict[str, str] = {
     "downsink_path_immutability": "protocol_downsink_path_immutability_status",
     "downsink_path_write_guard": "protocol_downsink_path_write_guard_status",
     "downsink_path_literal_lock": "protocol_downsink_path_literal_lock_status",
+    "skill_installation_supply_chain": "skill_installation_supply_chain_status",
+    "skill_frontmatter": "skill_frontmatter_status",
+    "skill_sync_drift_guard": "skill_sync_drift_guard_status",
 }
 
 ERROR_FIELD_CANDIDATES: tuple[str, ...] = (
@@ -1680,6 +1690,83 @@ def _resolve_skill_path_active_repo_root_binding(
         return str(fallback_root), "bundle_repo_root_fallback", f"skill_path_active_repo_root_resolve_failed:{exc}"
 
 
+def _file_contains_token(path: Path, token: str, *, max_chars: int = 400_000) -> bool:
+    target = str(token or "").strip()
+    if not target:
+        return False
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+    return target in text[:max_chars]
+
+
+def _extract_bundle_id_from_text(raw: str) -> str:
+    patterns = (
+        r"cross_verification_bundle_id\s*[:=]\s*([^\s,;]+)",
+        r"bundle_id\s*[:=]\s*([^\s,;]+)",
+        r"evidence_bundle_id\s*[:=]\s*([^\s,;]+)",
+    )
+    for pat in patterns:
+        m = re.search(pat, raw, flags=re.IGNORECASE)
+        if m:
+            return str(m.group(1) or "").strip()
+    return ""
+
+
+def _resolve_cross_verification_bundle_context(
+    *,
+    pack_path: Path,
+    run_id: str,
+) -> tuple[str, str, str]:
+    feedback_root = (pack_path / "runtime" / "protocol-feedback").resolve()
+    if not feedback_root.exists():
+        return "", "", "cross_verification_bundle_feedback_root_missing"
+
+    patterns = (
+        "outbox-to-protocol/*cross*verification*.*",
+        "outbox-to-protocol/*xverify*.*",
+        "outbox-to-protocol/FEEDBACK_BATCH_*.md",
+        "**/*cross*verification*.*",
+        "**/*intake*evidence*.*",
+        "**/*quorum*.*",
+    )
+    seen: set[str] = set()
+    candidates: list[Path] = []
+    for pattern in patterns:
+        for hit in feedback_root.glob(pattern):
+            if not hit.is_file():
+                continue
+            resolved = hit.resolve()
+            key = str(resolved)
+            if key in seen:
+                continue
+            seen.add(key)
+            candidates.append(resolved)
+    if not candidates:
+        return "", "", "cross_verification_bundle_candidates_missing"
+
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    selected = candidates[0]
+    run_token = str(run_id or "").strip()
+    if run_token:
+        filtered = [
+            p for p in candidates if run_token in p.name or _file_contains_token(p, run_token)
+        ]
+        if filtered:
+            selected = filtered[0]
+
+    bundle_id = selected.stem
+    try:
+        raw = selected.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        raw = ""
+    extracted = _extract_bundle_id_from_text(raw)
+    if extracted:
+        bundle_id = extracted
+    return str(selected), str(bundle_id or "").strip(), "bundle_runtime_feedback_latest"
+
+
 def _is_strict_no_trim_operation(operation: str) -> bool:
     return str(operation or "").strip().lower() in set(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
 
@@ -1835,6 +1922,30 @@ def main() -> int:
     if not run_id_binding:
         mapping_errors.append("run_id_binding_missing")
         failure_count += 1
+
+    cross_verification_bundle_path = ""
+    cross_verification_bundle_id = ""
+    cross_verification_bundle_source = ""
+    cross_verification_bundle_error = ""
+    try:
+        pack_path_for_bundle, _task_path = resolve_pack_and_task(
+            Path(args.catalog).expanduser().resolve(),
+            str(args.identity_id),
+        )
+        (
+            cross_verification_bundle_path,
+            cross_verification_bundle_id,
+            cross_verification_bundle_source,
+        ) = _resolve_cross_verification_bundle_context(
+            pack_path=pack_path_for_bundle,
+            run_id=run_id_binding,
+        )
+    except Exception as exc:
+        cross_verification_bundle_error = f"cross_verification_bundle_context_resolve_failed:{exc}"
+    if cross_verification_bundle_error:
+        mapping_errors.append(cross_verification_bundle_error)
+        failure_count += 1
+
     wrapper_policy, wrapper_policy_errors = _resolve_wrapper_enforcement_policy(
         catalog_path=str(args.catalog),
         identity_id=str(args.identity_id),
@@ -2022,6 +2133,11 @@ def main() -> int:
                 cmd.extend(["--run-id", run_id_binding])
             if report_selected_path:
                 cmd.extend(["--report-selected-path", report_selected_path])
+        if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}:
+            if cross_verification_bundle_path:
+                cmd.extend(["--bundle", cross_verification_bundle_path])
+            if cross_verification_bundle_id:
+                cmd.extend(["--bundle-id", cross_verification_bundle_id])
 
         # RQ-032: if no concrete reply evidence is provided, project the upstream
         # gate signal instead of forcing a synthetic re-validation pass.
@@ -2113,6 +2229,21 @@ def main() -> int:
                 "surface_label": surface_label,
                 "stale_reasons": list(payload.get("stale_reasons") or []),
                 "evidence_ref": str(payload.get("evidence_ref", "")).strip(),
+                "cross_verification_bundle_path": (
+                    cross_verification_bundle_path
+                    if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
+                    else ""
+                ),
+                "cross_verification_bundle_id": (
+                    cross_verification_bundle_id
+                    if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
+                    else ""
+                ),
+                "cross_verification_bundle_source": (
+                    cross_verification_bundle_source
+                    if spec.target_name in {"cross_verification_tracks", "intake_evidence_quorum"}
+                    else ""
+                ),
                 "payload_contract_issues": payload_contract_issues,
                 "monotonic_policy": {
                     "strict_skip_policy": strict_skip_policy,
@@ -2258,6 +2389,10 @@ def main() -> int:
         "run_id_binding": run_id_binding,
         "session_id": session_id,
         "report_selected_path": report_selected_path,
+        "cross_verification_bundle_path": cross_verification_bundle_path,
+        "cross_verification_bundle_id": cross_verification_bundle_id,
+        "cross_verification_bundle_source": cross_verification_bundle_source,
+        "cross_verification_bundle_error": cross_verification_bundle_error,
         "actor_id": str(args.actor_id or "").strip(),
         "resolved_work_layer": str(args.resolved_work_layer or "").strip(),
         "resolved_source_layer": str(args.resolved_source_layer or "").strip(),

@@ -97,7 +97,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         description="Validate protocol baseline review prerequisites for identity update operations"
     )
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--evidence", default="", help="optional explicit evidence json path")
     args = ap.parse_args()

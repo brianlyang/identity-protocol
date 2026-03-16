@@ -58,7 +58,7 @@ def _resolve_current_task(catalog_path: Path, identity_id: str) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate capability orchestration contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     args = ap.parse_args()
 

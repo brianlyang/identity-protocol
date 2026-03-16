@@ -436,6 +436,34 @@ Interpretation lock:
    - pass evidence.
 4. status payload-level drifts (for example `checks.control_plane_budget.payload`) are part of the same mirror contract and require immediate renderer resync in the same checkpoint.
 
+### 8.6 Invariant-coupled rebound handling (mandatory)
+
+1. if rebound is caused by mapping row growth (for example new motherline requirement rows), absorber replay must include invariants parity, not only budget/status pair:
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+2. when `contract_binding_meta_row_count != contract_binding_actual_row_count`, closure is invalid until:
+   - mapping meta is corrected in the authoritative mapping file,
+   - budget + status mirrors are re-rendered,
+   - budget/status/invariants all return `PASS_REQUIRED`.
+3. this clause is still v1.6.5 scope because it is a control-plane no-rebound closure behavior, independent from whichever adjacent stream introduced the row growth.
+
+### 8.7 Skill supply-chain absorber contract (motherline RQ-039..041, mandatory)
+
+1. skill supply-chain controls (`installation/frontmatter/sync-drift`) are absorbed into v1.6.5 no-rebound governance and must not be attached to v1.6.10 stream semantics.
+2. motherline requirement rows:
+   - `asb16-rq-039` -> `rq_039_skill_installation_supply_chain_contract_v1`
+   - `asb16-rq-040` -> `rq_040_skill_frontmatter_contract_v1`
+   - `asb16-rq-041` -> `rq_041_skill_sync_drift_guard_contract_v1`
+3. absorber replay for this set must satisfy the same canonical sequence:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+4. stream boundary lock:
+   - v1.6.10 remains reserved for runtime dynamic file governance;
+   - skill supply-chain contract closure evidence belongs to v1.6.5 governance/review pair.
+
 ## 9) External references
 
 1. GitHub rulesets available rules:

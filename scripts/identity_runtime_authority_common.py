@@ -7,7 +7,12 @@ from typing import Any
 
 import yaml
 
-from actor_session_common import load_actor_binding, resolve_actor_id
+from actor_session_common import (
+    list_session_primary_conflicts,
+    load_actor_binding,
+    load_actor_binding_store,
+    resolve_actor_id,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
@@ -82,6 +87,10 @@ def _resolve_authoritative_identity(
         identity_id = str(binding.get("identity_id", "")).strip()
         if identity_id:
             return identity_id, "actor_binding_session_scoped", binding
+        store = load_actor_binding_store(catalog_path, actor)
+        conflicts = list_session_primary_conflicts(store, session_id=sid)
+        if conflicts:
+            return "", "actor_binding_session_primary_conflict", conflicts[0]
 
     if actor and not sid:
         binding = load_actor_binding(catalog_path, actor)
@@ -180,6 +189,23 @@ def validate_runtime_egress_identity_authority(
     )
     payload["identity_authority_authoritative_identity_id"] = authoritative_identity_id
     payload["identity_authority_resolution_mode"] = resolution_mode
+
+    if resolution_mode == "actor_binding_session_primary_conflict":
+        conflict_session_id = str(authority_doc.get("session_id", "")).strip() or sid
+        conflict_identity_ids = [
+            str(item).strip()
+            for item in (authority_doc.get("identity_ids") or [])
+            if str(item).strip()
+        ]
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [
+            "session_primary_identity_conflict:"
+            f"session_id={conflict_session_id or 'missing'}:"
+            f"identities={','.join(sorted(conflict_identity_ids)) or 'missing'}"
+        ]
+        payload["identity_authority_next_action"] = "repair_session_primary_conflict_then_retry"
+        return payload
 
     if authoritative_identity_id:
         authoritative_row = _identity_row(rows, authoritative_identity_id)

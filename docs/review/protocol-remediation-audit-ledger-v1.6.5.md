@@ -773,3 +773,72 @@ Result:
 1. status sync returned `PASS_REQUIRED` with `mismatch_count=0`.
 2. control-plane budget/drift/docs checks stayed green.
 3. mirror truthfulness contract remains satisfied under iterative delegate counter growth.
+
+### 7.21 No-rebound absorber replay after mapping-row growth + mirror drift (2026-03-16)
+
+Context:
+
+1. adjacent stream core growth introduced new motherline rows and telemetry deltas:
+   - `contract_binding_actual_row_count: 38 -> 41`
+   - `validator_scripts: 155 -> 158`
+   - `error_codes: 440 -> 460`
+   - `error_code_families: 150 -> 156`
+2. before absorber replay, control-plane checks reopened as expected:
+   - `validate_control_plane_budget` => `FAIL_REQUIRED` (`IP-CP-BUDGET-001`)
+   - `validate_control_plane_invariants` => `FAIL_REQUIRED` (`IP-CP-INV-001`, `meta_row_count_mismatch`)
+   - `validate_control_plane_status_sync` => `FAIL_REQUIRED` (`IP-CP-STATUS-001`)
+
+Action (canonical, alias-driven, serial):
+
+1. corrected authoritative mapping metadata parity:
+   - `identity/protocol/mappings/contract-binding.v1.6.yaml`
+   - `_meta.row_count: 41`
+2. replayed absorber sequence:
+   - `python3 scripts/render_control_plane_budget.py --write --json-only`
+   - `python3 scripts/render_control_plane_status.py --write --json-only`
+   - `python3 scripts/validate_control_plane_budget.py --json-only`
+   - `python3 scripts/validate_control_plane_status_sync.py --json-only`
+   - `python3 scripts/validate_control_plane_invariants.py --json-only`
+   - `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+
+Machine evidence snapshot:
+
+1. `/tmp/v165_no_rebound_budget_20260316.json` => `PASS_REQUIRED`
+2. `/tmp/v165_no_rebound_status_sync_20260316.json` => `PASS_REQUIRED`
+3. `/tmp/v165_no_rebound_invariants_20260316.json` => `PASS_REQUIRED`
+4. `/tmp/v165_no_rebound_surface_drift_20260316.json` => `PASS_REQUIRED`
+
+Result:
+
+1. v1.6.5 no-rebound absorber chain is re-closed without hardcoded/manual counter edits.
+2. budget/status/invariants are now machine-synced under the refreshed baseline.
+3. this checkpoint confirms v1.6.5 section 8.4/8.5 (and invariant-coupled extension) remained the governing closure path.
+
+### 7.22 Skill supply-chain motherline absorption under v1.6.5 no-rebound (2026-03-16)
+
+Context:
+
+1. skill supply-chain capability set (`RQ-039/040/041`) is accepted as protocol infrastructure.
+2. stream semantics were frozen to avoid v1.6.10 contamination:
+   - v1.6.10 reserved for runtime dynamic file governance;
+   - skill supply-chain closure absorbed into v1.6.5 no-rebound lane.
+
+Absorbed motherline rows:
+
+1. `asb16-rq-039` -> `scripts/validate_skill_installation_supply_chain.py`
+2. `asb16-rq-040` -> `scripts/validate_skill_frontmatter.py`
+3. `asb16-rq-041` -> `scripts/validate_skill_sync_drift_guard.py`
+
+Execution and validation notes:
+
+1. required-gate delegate wiring remains active:
+   - `scripts/ci/run_skill_supply_chain_probes_ci.sh`
+2. control-plane absorber sequence remains canonical:
+   - budget/status renderers + budget/status/invariants/surface-drift validators
+3. mapping metadata parity requirement is enforced:
+   - `contract_binding_meta_row_count == contract_binding_actual_row_count`
+
+Result:
+
+1. skill supply-chain contracts are now recorded as v1.6.5 absorber scope (not v1.6.10 stream semantics).
+2. one-stream-per-PR boundary remains auditable and machine-replayable.

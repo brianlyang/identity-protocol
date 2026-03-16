@@ -283,6 +283,11 @@ def main() -> int:
     attestation_status = str(attestation_payload.get("host_transport_wiring_attestation_status", "")).strip().upper()
     send_time_status = str(send_time_payload.get("send_time_gate_status", "")).strip().upper()
     send_time_post_check_blocker = bool(send_time_payload.get("host_transport_post_check_blocker_active", False))
+    next_hop_admission_status = str(send_time_payload.get("next_hop_admission_status", "")).strip().upper()
+    output_governance_mode = str(send_time_payload.get("output_governance_mode", "")).strip()
+    control_lane_attestation_status = str(
+        send_time_payload.get("control_lane_attestation_status", "")
+    ).strip().upper()
 
     stale_reasons: list[str] = []
     if reachability_rc != 0 or reachability_status != STATUS_PASS_REQUIRED:
@@ -295,6 +300,8 @@ def main() -> int:
         stale_reasons.append("send_time_gate_not_pass")
     if send_time_post_check_blocker:
         stale_reasons.append("send_time_post_check_blocker_active")
+    if next_hop_admission_status and next_hop_admission_status != STATUS_PASS_REQUIRED:
+        stale_reasons.append("next_hop_admission_not_pass")
 
     closure_ok = len(stale_reasons) == 0
     payload: dict[str, Any] = {
@@ -316,7 +323,11 @@ def main() -> int:
             "transport_reachability_status": reachability_status,
             "pre_send_gate_status": send_time_status,
             "post_check_detectability_status": attestation_status,
-            "next_hop_ready_status": STATUS_PASS_REQUIRED if not send_time_post_check_blocker else STATUS_FAIL_REQUIRED,
+            "next_hop_ready_status": next_hop_admission_status or (
+                STATUS_PASS_REQUIRED if not send_time_post_check_blocker else STATUS_FAIL_REQUIRED
+            ),
+            "output_governance_mode": output_governance_mode,
+            "control_lane_attestation_status": control_lane_attestation_status,
         },
         "steps": {
             "reachability": {
@@ -345,6 +356,9 @@ def main() -> int:
                 "status": send_time_status,
                 "error_code": str(send_time_payload.get("error_code", "")).strip(),
                 "post_check_blocker_active": send_time_post_check_blocker,
+                "next_hop_admission_status": next_hop_admission_status,
+                "output_governance_mode": output_governance_mode,
+                "control_lane_attestation_status": control_lane_attestation_status,
                 "stderr_tail": send_time_stderr_tail,
             },
         },

@@ -123,7 +123,7 @@ def _resolve_path_with_pack(path_value: str, pack_root: Path) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity update lifecycle contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--replay-evidence", default="")
     args = ap.parse_args()

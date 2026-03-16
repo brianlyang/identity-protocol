@@ -103,7 +103,7 @@ def _resolve_log_files(pattern: str, *, pack_root: Path, identity_id: str) -> li
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Export route quality metrics from handoff production logs")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--out", default="")
     ap.add_argument(

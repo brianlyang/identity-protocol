@@ -52,6 +52,11 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
+NEXT_HOP_ADMISSION_CONTRACT_ID = "next_hop_admission_tuple_contract_v1"
+OUTPUT_GOVERNANCE_MODE_GOVERNED = "governed"
+OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP = "manual_headstamp"
+OUTPUT_GOVERNANCE_MODE_HOST_DIRECT = "host_direct"
+OUTPUT_GOVERNANCE_MODE_NON_GOVERNED = "non_governed"
 STRICT_SEND_TIME_OPERATIONS = {
     "activate",
     "update",
@@ -138,6 +143,119 @@ def _inject_chat_egress_uniqueness_fields(payload: dict[str, Any]) -> dict[str, 
     out["chat_egress_uniqueness_reason"] = uniqueness_reason
     out["chat_egress_uniqueness_error_code"] = uniqueness_error_code
     out["chat_egress_uniqueness_observed_send_time_status"] = send_time_status
+    return out
+
+
+def _derive_output_governance_mode(payload: dict[str, Any]) -> str:
+    outlet_channel_id = str(payload.get("outlet_channel_id", "")).strip()
+    evidence_mode = str(payload.get("reply_evidence_mode", "")).strip().lower()
+    reply_outlet_guard_applied = bool(payload.get("reply_outlet_guard_applied", False))
+    if evidence_mode == "reply_text":
+        return OUTPUT_GOVERNANCE_MODE_HOST_DIRECT
+    if evidence_mode in {"stamp_json", "stamp_json_composed_reply"}:
+        return OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP
+    if evidence_mode in {"missing", "invalid_input"}:
+        return OUTPUT_GOVERNANCE_MODE_NON_GOVERNED
+    if not _is_governed_outlet(outlet_channel_id) or not _is_host_visible_governed_channel(outlet_channel_id):
+        return OUTPUT_GOVERNANCE_MODE_NON_GOVERNED
+    if not reply_outlet_guard_applied:
+        return OUTPUT_GOVERNANCE_MODE_HOST_DIRECT
+    return OUTPUT_GOVERNANCE_MODE_GOVERNED
+
+
+def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    out = dict(payload or {})
+    send_time_status = str(out.get("send_time_gate_status", "")).strip().upper()
+    first_line_status = str(out.get("reply_first_line_status", "")).strip().upper()
+    final_emit_contract_status = str(out.get("final_emit_contract_status", "")).strip().upper()
+    chat_uniqueness_status = str(out.get("chat_egress_uniqueness_status", "")).strip().upper()
+    chat_uniqueness_reason = str(out.get("chat_egress_uniqueness_reason", "")).strip()
+    chat_uniqueness_error_code = str(out.get("chat_egress_uniqueness_error_code", "")).strip()
+    stale_reasons = [str(item).strip() for item in (out.get("stale_reasons") or []) if str(item).strip()]
+    outlet_channel_id = str(out.get("outlet_channel_id", "")).strip()
+    reply_outlet_guard_applied = bool(out.get("reply_outlet_guard_applied", False))
+    outlet_bypass_detected = bool(out.get("outlet_bypass_detected", False))
+    output_governance_mode = _derive_output_governance_mode(out)
+    out["output_governance_mode"] = output_governance_mode
+
+    control_lane_attestation_status = STATUS_PASS_REQUIRED
+    control_lane_attestation_reason = "canonical_control_lane_attested"
+    if not _is_governed_outlet(outlet_channel_id) or not _is_host_visible_governed_channel(outlet_channel_id):
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "non_governed_control_lane"
+    elif not reply_outlet_guard_applied:
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "reply_outlet_guard_missing"
+    elif outlet_bypass_detected:
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "outlet_bypass_detected"
+    elif final_emit_contract_status != STATUS_PASS_REQUIRED:
+        control_lane_attestation_status = STATUS_FAIL_REQUIRED
+        control_lane_attestation_reason = "final_emit_contract_not_pass"
+    out["control_lane_attestation_status"] = control_lane_attestation_status
+    out["control_lane_attestation_reason"] = control_lane_attestation_reason
+
+    post_check_blocker_status = STATUS_PASS_REQUIRED
+    post_check_blocker_reason = "post_check_clear"
+    if send_time_status == STATUS_SKIPPED_NOT_REQUIRED:
+        post_check_blocker_status = STATUS_SKIPPED_NOT_REQUIRED
+        post_check_blocker_reason = "send_time_gate_not_required"
+    elif (
+        str(out.get("send_time_block_stage", "")).strip() == "pre_first_line_post_check_state_unavailable"
+        or _stale_reason_contains(stale_reasons, "host_transport_post_check_state_unavailable")
+    ):
+        post_check_blocker_status = STATUS_FAIL_REQUIRED
+        post_check_blocker_reason = "post_check_state_unavailable"
+    elif (
+        str(out.get("send_time_block_stage", "")).strip() == "pre_first_line_post_check_blocker_active"
+        or _stale_reason_contains(stale_reasons, "host_transport_post_check_blocker_active")
+        or bool(out.get("host_transport_post_check_blocker_active", False))
+    ):
+        post_check_blocker_status = STATUS_FAIL_REQUIRED
+        post_check_blocker_reason = "post_check_blocker_active"
+    out["post_check_blocker_status"] = post_check_blocker_status
+    out["post_check_blocker_reason"] = post_check_blocker_reason
+
+    next_hop_admission_status = STATUS_PASS_REQUIRED
+    next_hop_admission_reason = "governed_next_hop_admissible"
+    next_hop_admission_error_code = ""
+    if send_time_status == STATUS_SKIPPED_NOT_REQUIRED:
+        next_hop_admission_status = STATUS_SKIPPED_NOT_REQUIRED
+        next_hop_admission_reason = "send_time_gate_not_required"
+    elif output_governance_mode == OUTPUT_GOVERNANCE_MODE_MANUAL_HEADSTAMP:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "manual_headstamp_not_next_hop_admissible"
+    elif output_governance_mode == OUTPUT_GOVERNANCE_MODE_HOST_DIRECT:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "host_direct_output_not_next_hop_admissible"
+    elif output_governance_mode == OUTPUT_GOVERNANCE_MODE_NON_GOVERNED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "non_governed_output_not_next_hop_admissible"
+    elif control_lane_attestation_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "control_lane_attestation_not_pass"
+    elif post_check_blocker_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = post_check_blocker_reason
+    elif first_line_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "canonical_headstamp_not_pass"
+    elif send_time_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "send_time_gate_not_pass"
+    elif chat_uniqueness_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = chat_uniqueness_reason or "chat_egress_uniqueness_not_pass"
+    if next_hop_admission_status == STATUS_FAIL_REQUIRED:
+        next_hop_admission_error_code = (
+            str(out.get("error_code", "")).strip()
+            or chat_uniqueness_error_code
+            or CHAT_EGRESS_RAW_BYPASS_ERROR_CODE
+        )
+    out["next_hop_admission_contract_id"] = NEXT_HOP_ADMISSION_CONTRACT_ID
+    out["next_hop_admission_status"] = next_hop_admission_status
+    out["next_hop_admission_reason"] = next_hop_admission_reason
+    out["next_hop_admission_error_code"] = next_hop_admission_error_code
     return out
 
 
@@ -402,6 +520,7 @@ def _is_final_emit_schema_pass(schema_status: str) -> bool:
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     payload = _inject_chat_egress_uniqueness_fields(payload)
+    payload = _inject_next_hop_admission_fields(payload)
     payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))

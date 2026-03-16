@@ -572,7 +572,7 @@ def _iter_target_identities(catalog: dict[str, Any], only_identity: str, all_ide
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Validate identity runtime ORRL contract")
-    ap.add_argument("--catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--catalog", default="")
     ap.add_argument("--current-task", default="", help="optional explicit CURRENT_TASK path")
     ap.add_argument("--identity-id", default="", help="validate only this identity id")
     ap.add_argument("--all-identities", action="store_true", help="validate all identities from catalog")
