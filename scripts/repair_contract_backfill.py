@@ -1425,6 +1425,8 @@ def main() -> int:
         if meta_changed:
             _safe_dump_yaml(meta_path, meta_doc)
             applied = True
+        if host_gateway_wrapper_artifacts_refreshed:
+            applied = True
 
     if missing_after:
         status = STATUS_FAIL_REQUIRED

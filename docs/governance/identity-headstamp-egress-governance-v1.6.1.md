@@ -373,3 +373,33 @@ deepening base for v1.6.1 headstamp semantics.
 
 1. CI gateway trust-boundary probes MUST include a negative case where strict operation omits first-line evidence and is blocked.
 2. Surface-drift validator MUST assert this probe invocation exists, so future refactors cannot silently remove it.
+
+## 14) Three-plane host-visible precheck run-id closure (2026-03-16)
+
+### 14.1 Problem statement
+
+1. `three-plane` strict execution could enter send-time gate with host-visible post-check state seeded by a stale recovery run id.
+2. This created deterministic false red on headstamp path:
+   - `IP-HDSTAMP-003`
+   - stale reasons containing `host_visible_surface_live_channel_run_id_mismatch:*`.
+3. Required-gate bundle could also consume a non-session run token, amplifying tuple drift in strict lanes.
+
+### 14.2 Normative closure rules (MUST)
+
+1. `report_three_plane_status.py` MUST derive strict run binding from session tuple first:
+   - `session_id=run:<id>` => run token `<id>`.
+2. Before compose/send-time checks, three-plane MUST run host-visible post-check recovery with the same tuple:
+   - `recover_host_visible_post_check_state --operation three-plane --actor-id --session-id --run-id <session-derived>`.
+3. Required-gate bundle invocations inside three-plane MUST inherit:
+   - session-derived run token (highest priority),
+   - execution report tuple pointer (`--report-selected-path`) when available.
+
+### 14.3 Fail-close boundary
+
+1. If host-visible recovery fails (`recovery_status=FAIL_REQUIRED`), three-plane remains blocked.
+2. This is infrastructure fail-close; no identity-specific allowlist or manual receipt editing is permitted.
+
+### 14.4 Non-hardcode guarantee
+
+1. Closure uses tuple-derived tokens and runtime report path fallback.
+2. No identity id literal pinning and no absolute-path hardcoding is introduced.

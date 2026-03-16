@@ -193,3 +193,28 @@ Observed after fix:
 3. New negative probe passes (`strict_first_line_missing_evidence_blocked`) in:
    - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
 4. Required surface drift now checks this probe wiring exists, preventing regression by omission.
+
+## 11) Three-plane run-id/post-check closure replay (2026-03-16)
+
+### 11.1 Reconfirmed failure mode (before closure)
+
+1. Three-plane strict run showed:
+   - `compose_governed_reply_preflight` -> `IP-HDSTAMP-003`
+   - `send_time_reply_gate` -> `IP-HDSTAMP-003`
+2. Stale reasons were run-id drift in host-visible live post-check state
+   (`host_visible_surface_live_channel_run_id_mismatch:*`).
+
+### 11.2 Landed infrastructure closure
+
+1. `scripts/report_three_plane_status.py` now:
+   - derives run token from `session_id` (run tuple first),
+   - runs `recover_host_visible_post_check_state` before compose/send-time gate,
+   - injects `--report-selected-path` fallback for required gate bundle invocations.
+2. Required-gate bundle run-id binding in three-plane is now session-priority, reducing tuple drift amplification.
+3. Added instance-plane machine projection:
+   - `host_visible_post_check_recovery` block in output payload.
+
+### 11.3 Replay acceptance intent
+
+1. Three-plane strict execution should no longer fail headstamp lane solely because of stale recovery run-id.
+2. Remaining failures (if any) must map to real required contracts, not host-visible tuple drift artifacts.

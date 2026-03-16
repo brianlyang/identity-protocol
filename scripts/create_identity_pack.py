@@ -3215,6 +3215,7 @@ HOST_VISIBLE_SURFACE_RECEIPT_PATTERN_DEFAULT = "runtime/reports/host-visible-sur
 HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
 HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "__TEMPLATE_HOST_VISIBLE_FIXTURE_RECEIPT_SOURCE__"
+HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS = {"scan", "ci", "three-plane"}
 PRIVILEGE_ESCALATION_ERROR_CODE = "IP-PRIV-ESC-001"
 PRIVILEGE_ESCALATION_REASON_PREFIX = "privilege_escalation_required"
 PRIVILEGE_ESCALATION_REMEDIATION_HINT = "rerun_with_host_privilege_escalation"
@@ -3378,6 +3379,17 @@ def _as_list(value: Any) -> list[str]:
     return [str(item).strip() for item in value if str(item).strip()]
 
 
+def _normalize_operation(value: str) -> str:
+    return str(value or "").strip().lower()
+
+
+def _select_host_visible_receipt_source(operation: str) -> str:
+    op = _normalize_operation(operation)
+    if op in HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS:
+        return HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+    return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
+
+
 def _receipt_path_for_channel(
     *,
     receipt_glob_path: Path,
@@ -3402,6 +3414,7 @@ def _record_host_visible_surface_receipts(
     *,
     contract: dict[str, Any],
     contract_path: Path,
+    operation: str,
     identity_id: str,
     actor_id: str,
     session_id: str,
@@ -3463,6 +3476,7 @@ def _record_host_visible_surface_receipts(
         "send_time_gate_status": str(send_time_gate_status or "").strip().upper(),
         "final_emit_contract_status": str(final_emit_contract_status or "").strip().upper(),
     }
+    receipt_source = _select_host_visible_receipt_source(operation)
 
     receipt_paths: list[str] = []
     receipt_paths_by_channel: dict[str, str] = {}
@@ -3484,7 +3498,7 @@ def _record_host_visible_surface_receipts(
             "run_id": str(run_id or "").strip(),
             "reply_transport_ref": str(out_reply_file),
             "emit_channel_id": str(channel).strip(),
-            HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+            HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD: receipt_source,
         }
         payload.update(status_map)
         missing_fields = sorted(field for field in required_attestation_fields if field not in payload)
@@ -3529,7 +3543,7 @@ def _record_host_visible_surface_receipts(
         pass_ok = all(str(status_map.get(field, "")).upper() == STATUS_PASS_REQUIRED for field in status_fields)
         channel_doc["last_receipt_path"] = latest_receipt_path
         channel_doc["last_status"] = STATUS_PASS_REQUIRED if pass_ok else STATUS_FAIL_REQUIRED
-        channel_doc["receipt_source"] = HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+        channel_doc["receipt_source"] = receipt_source
         channel_doc["last_run_id"] = str(run_id or "").strip()
         channel_doc["updated_at_utc"] = now
         channels_doc[channel] = channel_doc
@@ -4002,6 +4016,7 @@ def main() -> int:
     ) = _record_host_visible_surface_receipts(
         contract=contract,
         contract_path=contract_path,
+        operation=str(args.operation).strip(),
         identity_id=str(args.identity_id).strip(),
         actor_id=str(args.actor_id).strip(),
         session_id=str(resolved_session_id).strip(),
@@ -4024,6 +4039,7 @@ def main() -> int:
             stale_reason=reason,
             json_only=args.json_only,
         )
+    host_visible_receipt_source = _select_host_visible_receipt_source(str(args.operation).strip())
     _emit(
         {
             "protocol_session_chain_wrapper_status": STATUS_PASS_REQUIRED,
@@ -4060,7 +4076,7 @@ def main() -> int:
             "host_visible_surface_live_receipt_status": host_visible_receipt_status,
             "host_visible_surface_state_file": host_visible_state_file,
             "host_visible_surface_live_receipt_paths": host_visible_receipt_paths,
-            "host_visible_surface_live_receipt_source": HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+            "host_visible_surface_live_receipt_source": host_visible_receipt_source,
             "emit_channel_id": final_emit_channel_id,
             "outlet_channel_id": outlet_channel_id,
             "outlet_preflight_receipt": outlet_preflight_receipt,

@@ -28,6 +28,7 @@ IP_ERROR_CODE_RE = re.compile(r"\b(IP-[A-Z0-9-]+)\b")
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 SESSION_ID_FALLBACK = ""
+REPORT_SELECTED_PATH_FALLBACK = ""
 
 M2M_VALIDATOR_NAMES: set[str] = {
     "actor_session_binding",
@@ -104,12 +105,25 @@ def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
         script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
         if script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+    if "--report-selected-path" not in run_cmd and REPORT_SELECTED_PATH_FALLBACK:
+        script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
+        if script == REQUIRED_GATE_BUNDLE_SCRIPT:
+            run_cmd.extend(["--report-selected-path", REPORT_SELECTED_PATH_FALLBACK])
     rc, out, err = _run_gateway_wrapped_command(
         cmd=run_cmd,
         protocol_root=PROTOCOL_ROOT,
         passthrough_cwd=run_cwd,
     )
     return rc, (out or "").strip(), (err or "").strip()
+
+
+def _derive_run_id_from_session_id(session_id: str) -> str:
+    token = str(session_id or "").strip()
+    if not token:
+        return ""
+    if token.startswith("run:") and len(token) > 4:
+        return token.split(":", 1)[1].strip()
+    return token
 
 
 def _extract_error_code_from_validator(entry: dict[str, Any]) -> str:
@@ -572,9 +586,11 @@ def _instance_plane_status(
     report_path: Path | None,
     resolved: dict[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any]]:
+    global REPORT_SELECTED_PATH_FALLBACK
     if report_path is None:
         return "NOT_STARTED", {"reason": "execution_report_not_found"}
 
+    REPORT_SELECTED_PATH_FALLBACK = str(report_path).strip()
     data = _load_json(str(report_path))
     ew = data.get("experience_writeback") or {}
     mandatory = all(
@@ -608,6 +624,8 @@ def _instance_plane_status(
     expected_work_layer = str(getattr(args, "expected_work_layer", "") or "").strip().lower()
     expected_source_layer = str(getattr(args, "expected_source_layer", "") or "").strip().lower()
     actor_id = resolve_actor_id(str(getattr(args, "actor_id", "") or "").strip())
+    session_id_value = str(getattr(args, "session_id", "") or "").strip()
+    session_run_id = _derive_run_id_from_session_id(session_id_value)
     resolved_ctx = resolved or {}
     resolved_source_hint = str(resolved_ctx.get("source_layer", "") or "").strip().lower()
     effective_source_layer = expected_source_layer or (
@@ -624,7 +642,7 @@ def _instance_plane_status(
         catalog_path=Path(args.catalog).expanduser().resolve(),
         identity_id=args.identity_id,
         actor_id=actor_id,
-        session_id=str(getattr(args, "session_id", "") or "").strip(),
+        session_id=session_id_value,
         resolved_pack_path=resolved_pack_path,
     )
     effective_work_layer = expected_work_layer
@@ -943,7 +961,8 @@ def _instance_plane_status(
         )
     )
     bundle_run_token = (
-        str(args.required_gates_run_id or "").strip()
+        str(session_run_id or "").strip()
+        or str(args.required_gates_run_id or "").strip()
         or str(report_run_id or "").strip()
         or f"three-plane-{args.identity_id}"
     )
@@ -1139,6 +1158,43 @@ def _instance_plane_status(
     }
     layer_intent_status = str(layer_intent_payload.get("layer_intent_resolution_status", "")).strip().upper()
     if rc_layer_intent != 0 or layer_intent_status == "FAIL_REQUIRED":
+        hard_boundary = True
+
+    host_visible_recovery_run_id = (
+        str(session_run_id or "").strip()
+        or str(args.required_gates_run_id or "").strip()
+        or str(report_run_id or "").strip()
+        or f"three-plane-{args.identity_id}"
+    )
+    host_visible_recovery_cmd = [
+        "python3",
+        "scripts/recover_host_visible_post_check_state.py",
+        "--catalog",
+        args.catalog,
+        "--repo-catalog",
+        args.repo_catalog,
+        "--identity-id",
+        args.identity_id,
+        "--operation",
+        "three-plane",
+        "--actor-id",
+        actor_id,
+        "--session-id",
+        session_id_value,
+        "--run-id",
+        host_visible_recovery_run_id,
+        "--json-only",
+    ]
+    rc_host_visible_recovery, out_host_visible_recovery, err_host_visible_recovery = _run(host_visible_recovery_cmd)
+    host_visible_recovery_payload = _parse_json_payload(out_host_visible_recovery) or {}
+    validators["host_visible_post_check_recovery"] = {
+        "rc": rc_host_visible_recovery,
+        "ok": rc_host_visible_recovery == 0,
+        "out": out_host_visible_recovery,
+        "err": err_host_visible_recovery,
+    }
+    host_visible_recovery_status = str(host_visible_recovery_payload.get("recovery_status", "")).strip().upper()
+    if rc_host_visible_recovery != 0 or host_visible_recovery_status == "FAIL_REQUIRED":
         hard_boundary = True
 
     compose_send_time_cmd = [
@@ -4582,6 +4638,17 @@ def _instance_plane_status(
             "lag_commits": refresh_payload.get("lag_commits"),
             "report_selected_path": refresh_payload.get("report_selected_path", ""),
             "stale_reasons": refresh_payload.get("stale_reasons", []),
+        },
+        "host_visible_post_check_recovery": {
+            "recovery_status": host_visible_recovery_payload.get("recovery_status"),
+            "error_code": host_visible_recovery_payload.get("error_code", ""),
+            "operation": host_visible_recovery_payload.get("operation", ""),
+            "run_id": host_visible_recovery_payload.get("run_id", ""),
+            "receipt_source": host_visible_recovery_payload.get("receipt_source", ""),
+            "allowed_live_receipt_sources": host_visible_recovery_payload.get("allowed_live_receipt_sources", ""),
+            "attestation_status": host_visible_recovery_payload.get("attestation_status", ""),
+            "attestation_error_code": host_visible_recovery_payload.get("attestation_error_code", ""),
+            "stale_reasons": host_visible_recovery_payload.get("stale_reasons", []),
         },
         "response_identity_stamp": {
             "render_status": "PASS" if rc_stamp_render == 0 else "FAIL",
