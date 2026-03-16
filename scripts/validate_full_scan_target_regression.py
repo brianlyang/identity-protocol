@@ -18,6 +18,7 @@ ERR_P0_REGRESSION = "IP-SCAN-REG-001"
 ERR_SCAN_CMD_FAILED = "IP-SCAN-REG-002"
 ERR_REPORT_INVALID = "IP-SCAN-REG-003"
 ERR_M2M_REGRESSION = "IP-SCAN-REG-004"
+ERR_THREE_PLANE_SUMMARY_CONFLICT = "IP-SCAN-REG-005"
 
 SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = SCRIPT_PATH.parent.parent
@@ -89,6 +90,42 @@ def _extract_m2m_fail_rows(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
                     "m2m_failed_validator_count": int(
                         m2m_projection.get("m2m_failed_validator_count", 0) or 0
                     ),
+                }
+            )
+    return rows
+
+
+def _extract_three_plane_summary_conflicts(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for catalog in report_doc.get("catalogs") or []:
+        if not isinstance(catalog, dict):
+            continue
+        layer = str(catalog.get("layer", "")).strip()
+        for item in catalog.get("identities") or []:
+            if not isinstance(item, dict):
+                continue
+            profile = str(item.get("profile", "")).strip().lower()
+            status = str(item.get("status", "")).strip().lower()
+            if not (status == "active" and profile == "runtime"):
+                continue
+            severity = str(item.get("severity", "")).strip().upper()
+            checks = item.get("checks") or {}
+            if not isinstance(checks, dict):
+                continue
+            three_plane = checks.get("three_plane") or {}
+            if not isinstance(three_plane, dict):
+                continue
+            if bool(three_plane.get("ok", False)):
+                continue
+            if severity != "OK":
+                continue
+            rows.append(
+                {
+                    "layer": layer,
+                    "identity_id": str(item.get("identity_id", "")).strip(),
+                    "severity": severity,
+                    "three_plane_rc": int(three_plane.get("rc", 1) or 1),
+                    "three_plane_tail": str(three_plane.get("tail", "")).strip(),
                 }
             )
     return rows
@@ -261,6 +298,7 @@ def main() -> int:
         "p1_count": None,
         "ok_count": None,
         "p0_rows": [],
+        "three_plane_summary_conflicts": [],
         "m2m_pass_count": None,
         "m2m_fail_count": None,
         "m2m_fail_rows": [],
@@ -309,6 +347,7 @@ def main() -> int:
     payload["p1_count"] = int(summary.get("p1", 0) or 0)
     payload["ok_count"] = int(summary.get("ok", 0) or 0)
     payload["p0_rows"] = _extract_p0_rows(report_doc)
+    payload["three_plane_summary_conflicts"] = _extract_three_plane_summary_conflicts(report_doc)
     summary_m2m = report_doc.get("summary_m2m")
     if isinstance(summary_m2m, dict):
         payload["summary_m2m"] = summary_m2m
@@ -338,6 +377,12 @@ def main() -> int:
 
     if bool(args.enforce_m2m_pass) and int(payload["m2m_fail_count"] or 0) != 0:
         payload["error_code"] = ERR_M2M_REGRESSION
+        _emit(payload, json_only=args.json_only)
+        return 1
+
+    if payload["three_plane_summary_conflicts"]:
+        payload["error_code"] = ERR_THREE_PLANE_SUMMARY_CONFLICT
+        payload["stale_reasons"] = ["three_plane_failed_but_summary_marked_ok"]
         _emit(payload, json_only=args.json_only)
         return 1
 

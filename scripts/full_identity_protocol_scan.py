@@ -858,6 +858,7 @@ def _severity_for_row(row: dict[str, Any]) -> str:
             "multimodal_plugin_enforcement",
             "reasoning_loop_failclose_enforcement",
             "e2e_hermetic_runtime_import",
+            "three_plane",
         )
     )
     prompt_fail = (not is_fixture) and any(
@@ -3132,7 +3133,10 @@ def main() -> int:
                 "--json-only",
             ]
             if is_active_runtime:
-                runtime_report_dir_path = Path(str(row.get("pack_path", ""))).expanduser().resolve() / "runtime" / "reports"
+                runtime_pack_root = resolved_pack_path
+                if not isinstance(runtime_pack_root, Path):
+                    runtime_pack_root = Path(str(row.get("pack_path", ""))).expanduser().resolve()
+                runtime_report_dir_path = runtime_pack_root / "runtime" / "reports"
                 runtime_report_dir = str(runtime_report_dir_path)
                 checks["session_pointer"] = [
                     "python3",

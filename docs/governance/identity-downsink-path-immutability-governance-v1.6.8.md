@@ -590,3 +590,28 @@ Interpretation lock:
 1. `probe_gateway_timeout_guard.py` returns `gateway_timeout_guard_probe_status=PASS_REQUIRED`.
 2. Gateway trust-boundary suite remains green with timeout probe enabled.
 3. Control-plane quartet remains `PASS_REQUIRED` after timeout governance landing.
+
+## 20) Full-scan strict summary coherence + timeout profile governance (2026-03-16)
+
+### 20.1 Problem statement
+
+1. `full_identity_protocol_scan` previously allowed an active-runtime row to remain `severity=OK` while `checks.three_plane` had timeout fail-close payloads.
+2. Prompt activation/lifecycle checks used report roots derived from unresolved relative catalog row paths, which could miss real runtime reports under project-layer packs.
+3. A single generic timeout default increased false timeout risk for long-running control-plane/status scans.
+
+### 20.2 Mandatory behavior
+
+1. Active runtime severity projection must treat `three_plane` failure as core failure (cannot remain `OK`).
+2. Runtime report discovery in full scan must bind to resolved identity pack root (from resolved context), not unresolved relative catalog literals.
+3. Timeout governance must support command-class profile windows:
+   - `report_three_plane_status` and `validate_control_plane_status_sync` use extended bounded profiles;
+   - context resolve path keeps short bounded timeout with explicit retry envelope.
+4. Fail-close semantics remain strict:
+   - timeout still emits `IP-CTX-TOOL-001` + `CTX_TOOL_TIMEOUT`;
+   - profile extension reduces false positives but does not suppress timeout failures.
+
+### 20.3 Required regression gate
+
+1. `validate_full_scan_target_regression.py` must fail-close when:
+   - active runtime row has `three_plane` failure while summary severity remains `OK`.
+2. This gate is infrastructure-level and identity-agnostic; no per-identity exception paths are allowed.

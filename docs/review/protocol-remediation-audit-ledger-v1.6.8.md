@@ -643,3 +643,41 @@ Checkpoint verdict update:
 1. Timeout events are now first-class fail-close signals (structured + machine-readable), not ambiguous stderr noise.
 2. Strict chain no longer silently proceeds after context-timeout precheck failures.
 3. Closure remains infrastructure-driven and identity-agnostic (no hardcoded instance branches).
+
+## 21) Full-scan strict summary coherence + path/time profile hardening (2026-03-16)
+
+### 21.1 Problem reconfirmed
+
+1. Audit replay showed a false-green window: `checks.three_plane` timeout fail-close existed while full-scan summary remained `ok=1`.
+2. Prompt activation/lifecycle report lookup could miss project-layer runtime reports when catalog row `pack_path` stayed relative.
+3. Generic wrapper timeout default (single value) was too coarse for long-running status scan classes.
+
+### 21.2 Landed closure set
+
+1. `scripts/full_identity_protocol_scan.py`
+   - adds `three_plane` into core severity fail set for active runtime rows.
+   - resolves runtime report directory from resolved pack root context, not unresolved relative row literals.
+2. `scripts/validate_full_scan_target_regression.py`
+   - adds explicit conflict detector for `three_plane failed + severity OK` and fail-closes (`IP-SCAN-REG-005`).
+3. `scripts/protocol_infra_contract.py` + `scripts/gateway_wrapper_enforcement.py`
+   - introduces command-class timeout profile defaults for long-running control-plane paths.
+4. `identity/protocol/mappings/stream-doc-registry.v1.6.yaml`
+   - adds missing legacy archival classification for `identity-runtime-file-governance-control-plane-v1.6.10.md` so docs contract stays green.
+
+### 21.3 Replay evidence (serial)
+
+1. Positive baseline:
+   - `full_identity_protocol_scan --target base-repo-architect` => `summary.p0=0, ok=1`, `three_plane rc=0`.
+2. Forced timeout negative:
+   - `IDENTITY_PROTOCOL_GATEWAY_CMD_TIMEOUT_SECONDS=1` + same scan => `summary.p0=1`, no false-green.
+3. Regression gate:
+   - `validate_full_scan_target_regression.py --enforce-m2m-pass` passes on normal profile, fails under forced-timeout profile.
+4. Control-plane + docs contract:
+   - budget/status_sync/invariants/surface_drift all `PASS_REQUIRED`;
+   - `docs_command_contract_check` passes after registry archival classification sync.
+
+### 21.4 Verdict update
+
+1. Full-scan summary semantics now align with strict three-plane fail-close semantics.
+2. Runtime report lookup is source-layer-correct under project catalog relative pack paths.
+3. Timeout governance moved from single default to command-class profiles without weakening fail-close.

@@ -23,6 +23,7 @@ from protocol_infra_contract import (
     CTX_TOOL_TIMEOUT_REASON_PREFIX,
     GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT,
     GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT,
+    GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS,
     HOST_GATEWAY_CONTRACT_KEYS as INFRA_HOST_GATEWAY_CONTRACT_KEYS,
     HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
     HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER,
@@ -107,6 +108,14 @@ def _is_context_resolve_cmd(cmd: list[str]) -> bool:
 def _resolve_command_timeout_seconds(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
     env_map = env if isinstance(env, dict) else os.environ
     default_timeout = int(GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT)
+    script_hint = _script_hint_from_cmd(cmd)
+    for script_name, timeout_value in GATEWAY_WRAPPER_TIMEOUT_PROFILE_SECONDS:
+        name_token = str(script_name or "").strip()
+        if not name_token:
+            continue
+        if script_hint.endswith(name_token):
+            default_timeout = _safe_positive_int(timeout_value, default_timeout)
+            break
     env_token = str(env_map.get(DEFAULT_TIMEOUT_ENV, "")).strip()
     if _is_context_resolve_cmd(cmd):
         default_timeout = int(GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT)
