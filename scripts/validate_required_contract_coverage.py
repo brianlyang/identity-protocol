@@ -84,6 +84,9 @@ STATUS_FIELD_BY_SCRIPT = {
     "scripts/validate_protocol_downsink_path_immutability.py": "protocol_downsink_path_immutability_status",
     "scripts/validate_protocol_downsink_path_write_guard.py": "protocol_downsink_path_write_guard_status",
     "scripts/validate_protocol_downsink_path_literal_lock.py": "protocol_downsink_path_literal_lock_status",
+    "scripts/validate_skill_installation_supply_chain.py": "skill_installation_supply_chain_status",
+    "scripts/validate_skill_frontmatter.py": "skill_frontmatter_status",
+    "scripts/validate_skill_sync_drift_guard.py": "skill_sync_drift_guard_status",
 }
 PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "release_plane_cloud_evidence",
@@ -124,6 +127,9 @@ PROTOCOL_GOVERNANCE_TARGET_NAMES = {
     "downsink_path_immutability",
     "downsink_path_write_guard",
     "downsink_path_literal_lock",
+    "skill_installation_supply_chain",
+    "skill_frontmatter",
+    "skill_sync_drift_guard",
 }
 
 INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
@@ -146,6 +152,9 @@ INSTANCE_STRICT_REQUIRED_FLOOR_TARGET_NAMES = {
     "downsink_path_immutability",
     "downsink_path_write_guard",
     "downsink_path_literal_lock",
+    "skill_installation_supply_chain",
+    "skill_frontmatter",
+    "skill_sync_drift_guard",
 }
 
 FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
@@ -174,6 +183,9 @@ FORCE_REQUIRED_CAPABLE_VALIDATOR_SCRIPTS = {
     "scripts/validate_protocol_downsink_path_immutability.py",
     "scripts/validate_protocol_downsink_path_write_guard.py",
     "scripts/validate_protocol_downsink_path_literal_lock.py",
+    "scripts/validate_skill_installation_supply_chain.py",
+    "scripts/validate_skill_frontmatter.py",
+    "scripts/validate_skill_sync_drift_guard.py",
 }
 
 
@@ -519,6 +531,36 @@ TARGETS = (
             "rq_020_skill_path_integrity_contract_v1",
         ),
         validator_script="scripts/validate_v16_skill_path_integrity.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="skill_installation_supply_chain",
+        contract_keys=(
+            "skill_installation_supply_chain_contract_v1",
+            "skill_installation_supply_chain_contract",
+            "rq_039_skill_installation_supply_chain_contract_v1",
+        ),
+        validator_script="scripts/validate_skill_installation_supply_chain.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="skill_frontmatter",
+        contract_keys=(
+            "skill_frontmatter_contract_v1",
+            "skill_frontmatter_contract",
+            "rq_040_skill_frontmatter_contract_v1",
+        ),
+        validator_script="scripts/validate_skill_frontmatter.py",
+        validator_args=("--json-only",),
+    ),
+    ContractTarget(
+        name="skill_sync_drift_guard",
+        contract_keys=(
+            "skill_sync_drift_guard_contract_v1",
+            "skill_sync_drift_guard_contract",
+            "rq_041_skill_sync_drift_guard_contract_v1",
+        ),
+        validator_script="scripts/validate_skill_sync_drift_guard.py",
         validator_args=("--json-only",),
     ),
     ContractTarget(

@@ -57,6 +57,7 @@ HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_host_visible_sur
 UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh"
 DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_downsink_path_immutability_probes_ci.sh"
 INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_installer_version_baseline_probes_ci.sh"
+SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_skill_supply_chain_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
@@ -65,6 +66,7 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT,
     DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
     INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT,
+    SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
@@ -109,6 +111,11 @@ DOWNSINK_PATH_IMMUTABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = 
 INSTALLER_VERSION_BASELINE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/identity_installer.py",
     "scripts/check_version_baseline_migration_closure.py",
+)
+SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_skill_installation_supply_chain.py",
+    "scripts/validate_skill_frontmatter.py",
+    "scripts/validate_skill_sync_drift_guard.py",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -178,6 +185,9 @@ BUNDLE_REQUIREMENT_KEYS: tuple[str, ...] = (
     "asb16-rq-033",
     "asb16-rq-034",
     "asb16-rq-035",
+    "asb16-rq-039",
+    "asb16-rq-040",
+    "asb16-rq-041",
 )
 
 ACTOR_ID_REQUIRED_SCRIPTS: tuple[str, ...] = (
@@ -1308,6 +1318,57 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + installer_missing_tokens))
 
+    skill_supply_chain_probe_delegate_path = repo_root / SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT
+    if not skill_supply_chain_probe_delegate_path.exists():
+        missing_surface_files.append(SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(skill_supply_chain_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts and script not in text
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_frontmatter_missing_probe = all(
+            token in text
+            for token in (
+                "validate_skill_frontmatter.py",
+                "IP-SFRONT-001",
+                "probe frontmatter_missing_blocked",
+            )
+        )
+        has_drift_probe = all(
+            token in text
+            for token in (
+                "validate_skill_sync_drift_guard.py",
+                "IP-SDRIFT-001",
+                "probe drift_detected_blocked",
+            )
+        )
+        has_supply_chain_probe = all(
+            token in text
+            for token in (
+                "validate_skill_installation_supply_chain.py",
+                "IP-SSUP-001",
+                "probe supply_chain_dependency_blocked",
+            )
+        )
+        skill_probe_missing_tokens: list[str] = []
+        if not has_frontmatter_missing_probe:
+            skill_probe_missing_tokens.append("skill_frontmatter_negative_probe_invocation_missing")
+        if not has_drift_probe:
+            skill_probe_missing_tokens.append("skill_sync_drift_negative_probe_invocation_missing")
+        if not has_supply_chain_probe:
+            skill_probe_missing_tokens.append("skill_supply_chain_negative_probe_invocation_missing")
+        if skill_probe_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + skill_probe_missing_tokens))
+
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():
         missing_surface_files.append(DIALOGUE_FEEDBACK_BUNDLE_SCRIPT)
@@ -1438,6 +1499,10 @@ def main() -> int:
         "installer_version_baseline_probe_ci_delegate_script": INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT,
         "installer_version_baseline_delegate_required_python_scripts": list(
             INSTALLER_VERSION_BASELINE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "skill_supply_chain_probe_ci_delegate_script": SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT,
+        "skill_supply_chain_delegate_required_python_scripts": list(
+            SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS
         ),
         "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),
