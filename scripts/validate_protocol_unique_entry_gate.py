@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from create_identity_pack import _host_gateway_wrapper_template_attestation_policy
 from tool_vendor_governance_common import contract_required, load_json, resolve_pack_and_task
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
@@ -330,6 +331,16 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _load_canonical_wrapper_template_attestation_policy() -> tuple[dict[str, Any], str]:
+    try:
+        policy = _host_gateway_wrapper_template_attestation_policy()
+    except Exception as exc:
+        return {}, f"canonical_wrapper_template_policy_load_failed:{type(exc).__name__}:{exc}"
+    if not isinstance(policy, dict):
+        return {}, "canonical_wrapper_template_policy_invalid_type"
+    return policy, ""
+
+
 def _validate_signer_policy(node: Any, *, issue_prefix: str, issues: list[str]) -> str:
     if not isinstance(node, dict):
         issues.append(f"{issue_prefix}_missing")
@@ -594,6 +605,12 @@ def main() -> int:
         "protocol_host_gateway_wrapper_template_ingress_sha256": "",
         "protocol_host_gateway_wrapper_template_egress_sha256": "",
         "protocol_host_gateway_wrapper_template_session_chain_sha256": "",
+        "protocol_host_gateway_wrapper_template_canonical_attestation_id": "",
+        "protocol_host_gateway_wrapper_template_canonical_ingress_sha256": "",
+        "protocol_host_gateway_wrapper_template_canonical_egress_sha256": "",
+        "protocol_host_gateway_wrapper_template_canonical_session_chain_sha256": "",
+        "protocol_host_gateway_wrapper_template_canonical_load_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_host_gateway_wrapper_template_latest_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_session_chain_semantic_status": STATUS_SKIPPED_NOT_REQUIRED,
         "protocol_host_gateway_host_visible_surface_contract_ref": "",
         "protocol_host_visible_surface_contract_status": STATUS_SKIPPED_NOT_REQUIRED,
@@ -618,6 +635,58 @@ def main() -> int:
         "error_code": "",
         "stale_reasons": [],
     }
+    canonical_template_policy, canonical_template_policy_error = _load_canonical_wrapper_template_attestation_policy()
+    canonical_template_attestation_id = str(canonical_template_policy.get("attestation_id", "")).strip()
+    canonical_template_ingress_sha = str(
+        canonical_template_policy.get("ingress_wrapper_template_sha256", "")
+    ).strip()
+    canonical_template_egress_sha = str(
+        canonical_template_policy.get("egress_wrapper_template_sha256", "")
+    ).strip()
+    canonical_template_session_chain_sha = str(
+        canonical_template_policy.get("session_chain_wrapper_template_sha256", "")
+    ).strip()
+    canonical_template_semantic_tokens = set(
+        _as_str_list(canonical_template_policy.get("session_chain_required_semantic_tokens"))
+    )
+    canonical_template_tuple_fields = set(_as_str_list(canonical_template_policy.get("required_tuple_fields")))
+    if not canonical_template_policy_error:
+        canonical_policy_missing_fields: list[str] = []
+        if not canonical_template_attestation_id:
+            canonical_policy_missing_fields.append("attestation_id")
+        if not canonical_template_ingress_sha:
+            canonical_policy_missing_fields.append("ingress_wrapper_template_sha256")
+        if not canonical_template_egress_sha:
+            canonical_policy_missing_fields.append("egress_wrapper_template_sha256")
+        if not canonical_template_session_chain_sha:
+            canonical_policy_missing_fields.append("session_chain_wrapper_template_sha256")
+        missing_semantic_tokens = sorted(
+            token
+            for token in HOST_GATEWAY_SESSION_CHAIN_REQUIRED_SEMANTIC_TOKENS
+            if token not in canonical_template_semantic_tokens
+        )
+        if missing_semantic_tokens:
+            canonical_policy_missing_fields.append(
+                "session_chain_required_semantic_tokens_missing:" + ",".join(missing_semantic_tokens)
+            )
+        missing_tuple_fields = sorted(
+            field for field in HOST_GATEWAY_REQUIRED_TUPLE_FIELDS if field not in canonical_template_tuple_fields
+        )
+        if missing_tuple_fields:
+            canonical_policy_missing_fields.append("required_tuple_fields_missing:" + ",".join(missing_tuple_fields))
+        if canonical_policy_missing_fields:
+            canonical_template_policy_error = (
+                "canonical_wrapper_template_policy_missing_fields:" + "|".join(canonical_policy_missing_fields)
+            )
+    payload["protocol_host_gateway_wrapper_template_canonical_attestation_id"] = canonical_template_attestation_id
+    payload["protocol_host_gateway_wrapper_template_canonical_ingress_sha256"] = canonical_template_ingress_sha
+    payload["protocol_host_gateway_wrapper_template_canonical_egress_sha256"] = canonical_template_egress_sha
+    payload["protocol_host_gateway_wrapper_template_canonical_session_chain_sha256"] = (
+        canonical_template_session_chain_sha
+    )
+    payload["protocol_host_gateway_wrapper_template_canonical_load_status"] = (
+        STATUS_FAIL_REQUIRED if canonical_template_policy_error else STATUS_PASS_REQUIRED
+    )
 
     if not required:
         payload["stale_reasons"] = ["contract_not_required"]
@@ -913,6 +982,33 @@ def main() -> int:
                 host_gateway_issues.append("host_gateway_wrapper_template_semantic_tokens_missing")
             if not HOST_GATEWAY_REQUIRED_TUPLE_FIELDS.issubset(required_tuple_fields):
                 host_gateway_issues.append("host_gateway_wrapper_template_required_tuple_fields_missing")
+            if canonical_template_policy_error:
+                host_gateway_issues.append(
+                    "host_gateway_wrapper_template_canonical_policy_unavailable:" + canonical_template_policy_error
+                )
+            else:
+                if attestation_id != canonical_template_attestation_id:
+                    host_gateway_issues.append("host_gateway_wrapper_template_attestation_not_latest:attestation_id")
+                if ingress_template_sha != canonical_template_ingress_sha:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_attestation_not_latest:ingress_wrapper_template_sha256"
+                    )
+                if egress_template_sha != canonical_template_egress_sha:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_attestation_not_latest:egress_wrapper_template_sha256"
+                    )
+                if session_chain_template_sha != canonical_template_session_chain_sha:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_attestation_not_latest:session_chain_wrapper_template_sha256"
+                    )
+                if semantic_tokens != canonical_template_semantic_tokens:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_attestation_not_latest:session_chain_required_semantic_tokens"
+                    )
+                if required_tuple_fields != canonical_template_tuple_fields:
+                    host_gateway_issues.append(
+                        "host_gateway_wrapper_template_attestation_not_latest:required_tuple_fields"
+                    )
         if not isinstance(operation_profile_policy, dict):
             host_gateway_issues.append("host_gateway_operation_profile_policy_missing")
         else:
@@ -1147,6 +1243,12 @@ def main() -> int:
                     host_gateway_issues.append("host_gateway_egress_wrapper_template_sha256_mismatch")
                 if expected_session_chain_sha and session_chain_wrapper_sha != expected_session_chain_sha:
                     host_gateway_issues.append("host_gateway_session_chain_wrapper_template_sha256_mismatch")
+                if canonical_template_ingress_sha and ingress_wrapper_sha != canonical_template_ingress_sha:
+                    host_gateway_issues.append("host_gateway_ingress_wrapper_template_sha256_not_latest")
+                if canonical_template_egress_sha and egress_wrapper_sha != canonical_template_egress_sha:
+                    host_gateway_issues.append("host_gateway_egress_wrapper_template_sha256_not_latest")
+                if canonical_template_session_chain_sha and session_chain_wrapper_sha != canonical_template_session_chain_sha:
+                    host_gateway_issues.append("host_gateway_session_chain_wrapper_template_sha256_not_latest")
             if not any("wrapper_template" in issue for issue in host_gateway_issues):
                 payload["protocol_host_gateway_wrapper_template_attestation_status"] = STATUS_PASS_REQUIRED
             else:
@@ -1266,6 +1368,23 @@ def main() -> int:
                             if runtime_template_attestation.get(field) != contract_template_attestation.get(field):
                                 host_gateway_issues.append(
                                     "host_gateway_runtime_contract_wrapper_template_attestation_parity_mismatch:" + field
+                                )
+                    if not canonical_template_policy_error:
+                        canonical_runtime_pairs = {
+                            "attestation_id": canonical_template_attestation_id,
+                            "ingress_wrapper_template_sha256": canonical_template_ingress_sha,
+                            "egress_wrapper_template_sha256": canonical_template_egress_sha,
+                            "session_chain_wrapper_template_sha256": canonical_template_session_chain_sha,
+                            "session_chain_required_semantic_tokens": sorted(canonical_template_semantic_tokens),
+                            "required_tuple_fields": sorted(canonical_template_tuple_fields),
+                        }
+                        for field, expected_value in canonical_runtime_pairs.items():
+                            observed_value = runtime_template_attestation.get(field)
+                            if field in {"session_chain_required_semantic_tokens", "required_tuple_fields"}:
+                                observed_value = sorted(_as_str_list(observed_value))
+                            if observed_value != expected_value:
+                                host_gateway_issues.append(
+                                    "host_gateway_runtime_contract_wrapper_template_attestation_not_latest:" + field
                                 )
                 runtime_visible_surface_contract = runtime_gateway_contract.get(
                     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY
@@ -1548,6 +1667,26 @@ def main() -> int:
         payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_FAIL_REQUIRED
     elif payload["protocol_host_gateway_session_chain_semantic_status"] == STATUS_SKIPPED_NOT_REQUIRED:
         payload["protocol_host_gateway_session_chain_semantic_status"] = STATUS_PASS_REQUIRED
+
+    wrapper_template_latest_issue_prefixes = (
+        "host_gateway_wrapper_template_canonical_policy_unavailable:",
+        "host_gateway_wrapper_template_attestation_not_latest:",
+        "host_gateway_runtime_contract_wrapper_template_attestation_not_latest:",
+    )
+    wrapper_template_latest_issue_exact = {
+        "host_gateway_ingress_wrapper_template_sha256_not_latest",
+        "host_gateway_egress_wrapper_template_sha256_not_latest",
+        "host_gateway_session_chain_wrapper_template_sha256_not_latest",
+    }
+    wrapper_template_latest_issue_detected = any(
+        issue in wrapper_template_latest_issue_exact
+        or any(issue.startswith(prefix) for prefix in wrapper_template_latest_issue_prefixes)
+        for issue in host_gateway_issues
+    )
+    if canonical_template_policy_error or wrapper_template_latest_issue_detected:
+        payload["protocol_host_gateway_wrapper_template_latest_status"] = STATUS_FAIL_REQUIRED
+    else:
+        payload["protocol_host_gateway_wrapper_template_latest_status"] = STATUS_PASS_REQUIRED
 
     if host_visible_surface_issues:
         payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED

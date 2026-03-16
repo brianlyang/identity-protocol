@@ -70,6 +70,27 @@ Acceptance signals:
 - `host_gateway_wrapper_artifacts_refreshed=true` when wrapper hash changes
 - `applied=true` whenever wrapper artifacts changed, even if task/catalog/meta payloads were already up-to-date
 
+## Canonical Latest Template Parity (required 100%)
+
+`runtime==contract` is not sufficient for closure. Protocol must also enforce:
+
+1. Contract wrapper-template attestation equals canonical template attestation from protocol source.
+2. Runtime wrapper file hashes equal canonical template hashes.
+3. Runtime gateway contract wrapper-template attestation equals canonical template attestation.
+
+Fail-close validator surface:
+
+- `scripts/validate_protocol_unique_entry_gate.py`
+  - `protocol_host_gateway_wrapper_template_canonical_load_status`
+  - `protocol_host_gateway_wrapper_template_latest_status`
+
+Failure examples (all must hard fail):
+
+- `host_gateway_wrapper_template_canonical_policy_unavailable:*`
+- `host_gateway_wrapper_template_attestation_not_latest:*`
+- `host_gateway_*_wrapper_template_sha256_not_latest`
+- `host_gateway_runtime_contract_wrapper_template_attestation_not_latest:*`
+
 ## Official One-Command Closure
 
 Use:
@@ -151,6 +172,7 @@ catalog + identity and auto-links refs into `evidence-index/INDEX.md`.
 - `HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE = 1.0`
 - `HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE = 1.0`
 - `HOST_VISIBLE_FALSE_GREEN_MAX_RATE = 0.0`
+- `HOST_GATEWAY_WRAPPER_TEMPLATE_CANONICAL_LATEST_REQUIRED_RATE = 1.0`
 - `PROTOCOL_FEEDBACK_OUTBOX_CANONICAL_RATE = 1.0`
 - `PROTOCOL_FEEDBACK_INBOX_CANONICAL_RATE = 1.0`
 - `PROTOCOL_FEEDBACK_INDEX_LINKAGE_REQUIRED_RATE = 1.0`
