@@ -96,6 +96,27 @@ The command performs, in order:
 
 Single JSON output carries step status + closure status.
 
+## Official Feedback Outbox Routing
+
+Human-generated P0 notices must be emitted through canonical identity feedback outbox,
+not ad-hoc project activity folders.
+
+Use:
+
+```bash
+python3 scripts/emit_protocol_feedback_batch.py \
+  --catalog <catalog_path> \
+  --identity-id <identity_id> \
+  --title "<feedback title>" \
+  --slug <short_slug> \
+  --body-file <markdown_notice_file> \
+  --summary-json <optional_summary_json> \
+  --json-only
+```
+
+The command resolves `<pack>/runtime/protocol-feedback/outbox-to-protocol` from
+catalog + identity and auto-links refs into `evidence-index/INDEX.md`.
+
 ## Metrics (Protocol Constants)
 
 - `HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE = 0.95`
