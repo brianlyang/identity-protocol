@@ -1104,6 +1104,14 @@ Interpretation lock:
 This checkpoint defines the control-plane closure model for residual host sender risk:
 `95% pre-send hard gating + 100% post-check detectability + next-hop hard block`.
 
+Semantic freeze (v1.6.6 authoritative wording):
+
+1. Pre-send `>=95%` is a probabilistic prevention layer; it is not claimed as 100%.
+2. Post-check next-hop is a deterministic decision layer:
+   - `100% detectable`
+   - `100% fail-close block on violation`
+   - `100% next-hop headstamp required when release is allowed`
+
 Contract upgrades:
 
 1. Host-visible contract must declare:
@@ -1131,6 +1139,7 @@ Implementation anchors:
      - `send_time_block_stage=pre_first_line_post_check_*`
      - `reply_first_line_missing_count=0`
 5. `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - required positive probe `send_time_governed_pass_headstamp_required` (next-hop release must keep headstamp + governed uniqueness).
    - required probe `send_time_next_hop_blocked_by_post_check`.
    - required probe `send_time_next_hop_blocked_on_missing_post_check_state`.
 6. `scripts/full_identity_protocol_scan.py`
@@ -1153,12 +1162,19 @@ Metrics (must all pass for closure claim):
 2. `post_check_detectability_rate = 1.00`
 3. `next_hop_block_rate = 1.00`
 4. `false_green_rate = 0.00`
+5. `post_gate_coverage_rate = 1.00`
+6. `chat_egress_uniqueness_rate = 1.00`
+7. `next_hop_headstamp_rate = 1.00`
 
 Minimum verification cadence (operator baseline):
 
-1. `3` serial self-test rounds.
-2. `3` serial deep-scan rounds.
-3. At least one negative probe run proving:
+1. `5` serial self-test rounds.
+2. `5` serial deep-scan rounds.
+3. Each round must include:
+   - `scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+4. At least one negative probe run proving:
    - post-check blocker activation,
    - next-hop strict send-time hard block,
    - blocker reason projection in validator payload.
@@ -1206,3 +1222,54 @@ Interpretation lock:
 1. Current actor contamination remains hard-blocking (`FAIL_REQUIRED` / `IP-ASB-203`).
 2. Non-target actor contamination is no longer allowed to masquerade as current actor hard failure.
 3. Global hygiene cleanup is still mandatory governance work, but does not override current actor strict closure outcome by default.
+
+### 5.21 Protocol lane explicit context + quoted foreign context non-binding guard (2026-03-16)
+
+This checkpoint closes a strict-lane ambiguity class where protocol replies could appear to "lose headstamp" or
+"switch identity" when orchestration omitted explicit context tuple forwarding.
+
+Contract upgrades:
+
+1. Protocol lane now has explicit context hard requirement at final egress.
+   - `scripts/final_emit_governed.py` must fail-close when `work_layer=protocol` and any of the following are missing:
+     - `--identity-id`
+     - `--catalog`
+     - `--repo-catalog`
+     - `--actor-id`
+     - `--session-id`
+   - fail-close reason is machine-explainable:
+     - `context_resolution_failed:protocol_work_layer_requires_explicit_context_args:*`
+2. Embedded/quoted foreign `Identity-Context` lines are now non-binding evidence only.
+   - `scripts/compose_and_validate_governed_reply.py` detects embedded quoted headstamp lines and projects:
+     - `quoted_identity_context_detected`
+     - `quoted_identity_context_foreign_ids`
+     - `quoted_identity_context_guard_status=PASS_REQUIRED`
+     - `quoted_identity_context_binding_effect=none`
+3. Host unique channel wrappers now propagate `--repo-catalog` consistently across session-chain -> ingress/egress.
+   - canonical templates in `scripts/create_identity_pack.py` include repo-catalog argument lane.
+   - wrapper artifacts are materialized by protocol tooling (not manual pack edits):
+     - `scripts/repair_contract_backfill.py --apply`
+
+Implementation anchors:
+
+1. `scripts/final_emit_governed.py`
+2. `scripts/compose_and_validate_governed_reply.py`
+3. `scripts/create_identity_pack.py`
+4. `scripts/repair_contract_backfill.py`
+5. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+6. `scripts/validate_required_gate_surface_drift.py`
+
+Required probe closure:
+
+1. `protocol_work_layer_explicit_context_required` (negative):
+   - protocol lane without explicit tuple must fail-close.
+2. `quoted_foreign_identity_context_must_not_switch_identity` (negative-to-safe):
+   - foreign quoted headstamp detected but identity binding must remain unchanged.
+3. `session_chain_protocol_lane_explicit_context_pass` (positive):
+   - protocol session-chain wrapper path must preserve first-line headstamp and final emit PASS tuple.
+
+Interpretation lock:
+
+1. This is protocol infrastructure hardening, not instance-local hotfix behavior.
+2. Reply text containing foreign `Identity-Context` is evidence-only and cannot drive identity resolution.
+3. "Headstamp missing" claims are invalid unless unique-channel wrapper path and send-time gate receipts both fail.

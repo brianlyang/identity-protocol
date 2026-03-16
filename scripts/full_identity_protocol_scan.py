@@ -21,6 +21,8 @@ from protocol_infra_contract import (
     GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT,
     HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
     HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE,
+    HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE,
+    HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE,
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
@@ -521,9 +523,14 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
     false_green_count = 0
     chat_egress_uniqueness_total = 0
     chat_egress_uniqueness_passed = 0
+    post_gate_coverage_total = 0
+    post_gate_coverage_passed = 0
+    next_hop_headstamp_total = 0
+    next_hop_headstamp_passed = 0
     next_hop_candidates: list[str] = []
     false_green_identities: list[str] = []
     chat_egress_uniqueness_fail_identities: list[str] = []
+    next_hop_headstamp_fail_identities: list[str] = []
 
     for row in runtime_rows:
         identity_id = str(row.get("identity_id", "")).strip()
@@ -538,10 +545,25 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             send_status = str(send_entry.get("send_time_gate_status", "")).strip().upper()
             first_line_gate_executed = bool(send_entry.get("reply_first_line_gate_executed", True))
             block_stage = str(send_entry.get("send_time_block_stage", "")).strip()
+            first_line_status = str(send_entry.get("reply_first_line_status", "")).strip().upper()
             if (not first_line_gate_executed) and block_stage.startswith("pre_first_line_post_check_"):
                 pre_send_not_reached += 1
             if bool(send_entry.get("ok", False)) and send_status in {"", STATUS_PASS_REQUIRED}:
                 pre_send_passed += 1
+            post_gate_coverage_total += 1
+            chat_contract_id = str(send_entry.get("chat_egress_uniqueness_contract_id", "")).strip()
+            chat_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
+            chat_reason = str(send_entry.get("chat_egress_uniqueness_reason", "")).strip()
+            chat_observed_status = str(
+                send_entry.get("chat_egress_uniqueness_observed_send_time_status", "")
+            ).strip().upper()
+            if (
+                chat_contract_id == HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID
+                and chat_status
+                and chat_reason
+                and chat_observed_status
+            ):
+                post_gate_coverage_passed += 1
             chat_egress_uniqueness_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
             if chat_egress_uniqueness_status:
                 chat_egress_uniqueness_total += 1
@@ -549,6 +571,12 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
                     chat_egress_uniqueness_passed += 1
                 elif identity_id:
                     chat_egress_uniqueness_fail_identities.append(identity_id)
+            if send_status == STATUS_PASS_REQUIRED:
+                next_hop_headstamp_total += 1
+                if first_line_status == STATUS_PASS_REQUIRED and first_line_gate_executed:
+                    next_hop_headstamp_passed += 1
+                elif identity_id:
+                    next_hop_headstamp_fail_identities.append(identity_id)
             post_check_state_status = str(send_entry.get("host_transport_post_check_state_status", "")).strip()
             post_check_state_unavailable = post_check_state_status in {
                 "STATE_UNCHECKED",
@@ -608,6 +636,14 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         passed=chat_egress_uniqueness_passed,
         total=chat_egress_uniqueness_total,
     )
+    post_gate_coverage_rate = _safe_rate(
+        passed=post_gate_coverage_passed,
+        total=post_gate_coverage_total,
+    )
+    next_hop_headstamp_rate = _safe_rate(
+        passed=next_hop_headstamp_passed,
+        total=next_hop_headstamp_total,
+    )
 
     pre_send_status = _status_by_min_rate(
         rate=pre_send_rate,
@@ -634,6 +670,16 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         min_rate=float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
         total=chat_egress_uniqueness_total,
     )
+    post_gate_coverage_status = _status_by_min_rate(
+        rate=post_gate_coverage_rate,
+        min_rate=float(HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE),
+        total=post_gate_coverage_total,
+    )
+    next_hop_headstamp_status = _status_by_min_rate(
+        rate=next_hop_headstamp_rate,
+        min_rate=float(HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE),
+        total=next_hop_headstamp_total,
+    )
 
     metric_statuses = (
         pre_send_status,
@@ -641,6 +687,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         next_hop_status,
         false_green_status,
         chat_egress_uniqueness_status,
+        post_gate_coverage_status,
+        next_hop_headstamp_status,
     )
     overall_status = STATUS_PASS_REQUIRED
     if any(status == STATUS_FAIL_REQUIRED for status in metric_statuses):
@@ -654,6 +702,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         and next_hop_status == STATUS_PASS_REQUIRED
         and false_green_status == STATUS_PASS_REQUIRED
         and chat_egress_uniqueness_status == STATUS_PASS_REQUIRED
+        and post_gate_coverage_status == STATUS_PASS_REQUIRED
+        and next_hop_headstamp_status == STATUS_PASS_REQUIRED
     )
 
     stale_reasons: list[str] = []
@@ -673,6 +723,14 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         stale_reasons.append("metric_chat_egress_uniqueness_rate_below_threshold")
     if chat_egress_uniqueness_status == STATUS_SKIPPED_NOT_REQUIRED:
         stale_reasons.append("metric_chat_egress_uniqueness_samples_missing")
+    if post_gate_coverage_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_post_gate_coverage_rate_below_threshold")
+    if post_gate_coverage_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_post_gate_coverage_samples_missing")
+    if next_hop_headstamp_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_next_hop_headstamp_rate_below_threshold")
+    if next_hop_headstamp_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_next_hop_headstamp_samples_missing")
 
     return {
         "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
@@ -686,6 +744,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "next_hop_block_rate_min": float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
             "false_green_rate_max": float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
             "chat_egress_uniqueness_rate_min": float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
+            "post_gate_coverage_rate_min": float(HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE),
+            "next_hop_headstamp_rate_min": float(HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE),
         },
         "samples": {
             "runtime_active_total": len(runtime_rows),
@@ -695,6 +755,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "next_hop_block_total": next_hop_total,
             "false_green_total": false_green_total,
             "chat_egress_uniqueness_total": chat_egress_uniqueness_total,
+            "post_gate_coverage_total": post_gate_coverage_total,
+            "next_hop_headstamp_total": next_hop_headstamp_total,
         },
         "metrics": {
             "pre_send_gate_pass_rate": pre_send_rate,
@@ -702,6 +764,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "next_hop_block_rate": next_hop_rate,
             "false_green_rate": false_green_rate,
             "chat_egress_uniqueness_rate": chat_egress_uniqueness_rate,
+            "post_gate_coverage_rate": post_gate_coverage_rate,
+            "next_hop_headstamp_rate": next_hop_headstamp_rate,
         },
         "metric_statuses": {
             "pre_send_gate_pass_rate_status": pre_send_status,
@@ -709,10 +773,13 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "next_hop_block_rate_status": next_hop_status,
             "false_green_rate_status": false_green_status,
             "chat_egress_uniqueness_rate_status": chat_egress_uniqueness_status,
+            "post_gate_coverage_rate_status": post_gate_coverage_status,
+            "next_hop_headstamp_rate_status": next_hop_headstamp_status,
         },
         "next_hop_block_identity_ids": sorted(set(next_hop_candidates)),
         "false_green_identity_ids": sorted(set(false_green_identities)),
         "chat_egress_uniqueness_fail_identity_ids": sorted(set(chat_egress_uniqueness_fail_identities)),
+        "next_hop_headstamp_fail_identity_ids": sorted(set(next_hop_headstamp_fail_identities)),
         "stale_reasons": stale_reasons,
     }
 

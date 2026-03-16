@@ -98,8 +98,7 @@ python3 scripts/repair_contract_backfill.py \
   --json-only >/dev/null
 
 cat >"${SEND_TIME_REPLY_FILE}" <<'EOF'
-Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project
-Layer-Context: work_layer=protocol; source_layer=project
+Identity-Context: actor_id=assistant:codex; identity_id=probe-visible; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project
 SEND_TIME_GATE_PROBE_BODY
 EOF
 
@@ -163,6 +162,29 @@ elif name == "host_visible_commentary_bypass_blocked":
     token = "host_visible_surface_live_channel_status_not_pass:commentary:headstamp_first_line_status"
     if token not in reasons:
         raise SystemExit("host_visible_commentary_bypass_blocked: expected commentary fail-close token")
+elif name == "send_time_governed_pass_headstamp_required":
+    if rc != 0:
+        raise SystemExit("send_time_governed_pass_headstamp_required: expected zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: send_time_gate_status must be PASS_REQUIRED")
+    first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
+    if first_line_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: reply_first_line_status must be PASS_REQUIRED")
+    if not bool(doc.get("reply_first_line_gate_executed", False)):
+        raise SystemExit("send_time_governed_pass_headstamp_required: reply_first_line_gate_executed must be true")
+    uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
+    if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
+        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_contract_id mismatch")
+    uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if uniqueness_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED")
+    uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
+    if uniqueness_reason != "governed_single_egress_enforced":
+        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_reason mismatch")
+    observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
+    if observed_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_observed_send_time_status mismatch")
 elif name == "send_time_next_hop_blocked_by_post_check":
     if rc == 0:
         raise SystemExit("send_time_next_hop_blocked_by_post_check: expected non-zero rc")
@@ -345,6 +367,23 @@ run_probe host_visible_live_receipts_pass \
     --require-actor-id assistant:ci-probe \
     --require-session-id run:ci-probe-session \
     --require-run-id run:ci-probe-receipt \
+    --json-only
+
+run_probe send_time_governed_pass_headstamp_required \
+  python3 scripts/validate_send_time_reply_gate.py \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --actor-id assistant:codex \
+    --operation validate \
+    --expected-work-layer protocol \
+    --expected-source-layer project \
+    --layer-intent-text "work_layer=protocol source_layer=project" \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
     --json-only
 
 python3 - <<'PY' "${CATALOG_PATH}" "${IDENTITY_ID}" "${REPO_ROOT}"

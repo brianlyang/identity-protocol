@@ -58,6 +58,7 @@ UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_unique_entry_tuple
 DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_downsink_path_immutability_probes_ci.sh"
 INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_installer_version_baseline_probes_ci.sh"
 SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_skill_supply_chain_probes_ci.sh"
+SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_semantic_clarity_probes_ci.sh"
 WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     REQUIRED_GATE_CI_DELEGATE_SCRIPT,
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
@@ -67,6 +68,7 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
     INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT,
     SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT,
+    SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT,
     FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT,
 )
 CI_DELEGATED_LINEAGE_SURFACES: tuple[str, ...] = (
@@ -118,6 +120,11 @@ SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_skill_frontmatter.py",
     "scripts/validate_skill_sync_drift_guard.py",
 )
+SEMANTIC_CLARITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_semantic_term_registry.py",
+    "scripts/validate_cli_catalog_default_semantics.py",
+    "scripts/validate_stream_scope_semantic_integrity.py",
+)
 RUNTIME_FILE_GOVERNANCE_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
 RUNTIME_FILE_GOVERNANCE_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
 RUNTIME_FILE_GOVERNANCE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
@@ -133,6 +140,26 @@ RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "required_contract_coverage_status",
     "scripts/validate_required_gate_surface_drift.py",
     "scripts/validate_required_contract_coverage.py",
+)
+HOST_VISIBLE_SEMANTIC_FREEZE_GOV_DOC = "docs/governance/identity-host-unique-channel-governance-v1.6.6.md"
+HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.6.md"
+HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
+    "Semantic freeze (v1.6.6 authoritative wording):",
+    "pre_send_gate_pass_rate >= 0.95",
+    "post_gate_coverage_rate = 1.00",
+    "chat_egress_uniqueness_rate = 1.00",
+    "next_hop_headstamp_rate = 1.00",
+    "`5` serial self-test rounds",
+    "`5` serial deep-scan rounds",
+    "scripts/ci/run_host_visible_surface_live_probes_ci.sh",
+    "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh",
+    "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh",
+)
+HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
+    "26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift",
+    "post_gate_coverage_rate",
+    "chat_egress_uniqueness_rate",
+    "next_hop_headstamp_rate",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -1202,6 +1229,15 @@ def main() -> int:
                 "--require-run-id",
             )
         )
+        has_send_time_positive_probe = all(
+            token in text
+            for token in (
+                "run_probe send_time_governed_pass_headstamp_required",
+                "send_time_governed_pass_headstamp_required: send_time_gate_status must be PASS_REQUIRED",
+                "send_time_governed_pass_headstamp_required: reply_first_line_status must be PASS_REQUIRED",
+                "send_time_governed_pass_headstamp_required: chat_egress_uniqueness_status must be PASS_REQUIRED",
+            )
+        )
         has_post_check_blocker_probe = all(
             token in text
             for token in (
@@ -1233,6 +1269,8 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_run_binding_negative_probe_invocation_missing")
         if not has_binding_negative_probe:
             host_visible_missing_tokens.append("host_visible_surface_commentary_session_binding_negative_probe_invocation_missing")
+        if not has_send_time_positive_probe:
+            host_visible_missing_tokens.append("host_visible_surface_send_time_positive_headstamp_probe_invocation_missing")
         if not has_post_check_blocker_probe:
             host_visible_missing_tokens.append("host_visible_surface_post_check_blocker_chat_egress_probe_invocation_missing")
         if not has_post_check_state_missing_probe:
@@ -1500,9 +1538,62 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + skill_probe_missing_tokens))
 
+    semantic_clarity_probe_delegate_path = repo_root / SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT
+    if not semantic_clarity_probe_delegate_path.exists():
+        missing_surface_files.append(SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(semantic_clarity_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in SEMANTIC_CLARITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts and script not in text
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+
+        has_semantic_term_negative_probe = all(
+            token in text
+            for token in (
+                "validate_semantic_term_registry.py",
+                "IP-SEMREG-001",
+                "negative semantic term forbidden phrase blocked",
+            )
+        )
+        has_cli_catalog_negative_probe = all(
+            token in text
+            for token in (
+                "validate_cli_catalog_default_semantics.py",
+                "IP-CLICAT-001",
+                "negative cli catalog fallback blocked",
+            )
+        )
+        has_stream_scope_negative_probe = all(
+            token in text
+            for token in (
+                "validate_stream_scope_semantic_integrity.py",
+                "IP-SSCOPE-001",
+                "negative stream scope alias fail-close blocked",
+            )
+        )
+        semantic_probe_missing_tokens: list[str] = []
+        if not has_semantic_term_negative_probe:
+            semantic_probe_missing_tokens.append("semantic_term_registry_negative_probe_invocation_missing")
+        if not has_cli_catalog_negative_probe:
+            semantic_probe_missing_tokens.append("cli_catalog_default_semantics_negative_probe_invocation_missing")
+        if not has_stream_scope_negative_probe:
+            semantic_probe_missing_tokens.append("stream_scope_semantic_integrity_negative_probe_invocation_missing")
+        if semantic_probe_missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + semantic_probe_missing_tokens))
+
     runtime_file_governance_docs = (
         (RUNTIME_FILE_GOVERNANCE_GOV_DOC, RUNTIME_FILE_GOVERNANCE_GOV_REQUIRED_TOKENS),
         (RUNTIME_FILE_GOVERNANCE_REVIEW_DOC, RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS),
+        (HOST_VISIBLE_SEMANTIC_FREEZE_GOV_DOC, HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS),
+        (HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_DOC, HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS),
     )
     for rel, required_tokens in runtime_file_governance_docs:
         path = repo_root / rel
@@ -1650,6 +1741,10 @@ def main() -> int:
         "skill_supply_chain_delegate_required_python_scripts": list(
             SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS
         ),
+        "semantic_clarity_probe_ci_delegate_script": SEMANTIC_CLARITY_PROBE_CI_DELEGATE_SCRIPT,
+        "semantic_clarity_delegate_required_python_scripts": list(
+            SEMANTIC_CLARITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
         "runtime_file_governance_governance_doc": RUNTIME_FILE_GOVERNANCE_GOV_DOC,
         "runtime_file_governance_review_doc": RUNTIME_FILE_GOVERNANCE_REVIEW_DOC,
         "runtime_file_governance_governance_doc_required_tokens": list(
@@ -1657,6 +1752,14 @@ def main() -> int:
         ),
         "runtime_file_governance_review_doc_required_tokens": list(
             RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS
+        ),
+        "host_visible_semantic_freeze_governance_doc": HOST_VISIBLE_SEMANTIC_FREEZE_GOV_DOC,
+        "host_visible_semantic_freeze_review_doc": HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_DOC,
+        "host_visible_semantic_freeze_governance_doc_required_tokens": list(
+            HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS
+        ),
+        "host_visible_semantic_freeze_review_doc_required_tokens": list(
+            HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS
         ),
         "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),

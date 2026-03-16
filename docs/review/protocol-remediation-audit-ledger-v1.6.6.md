@@ -2544,3 +2544,94 @@ Checkpoint verdict update:
 1. Current actor strict closure and global hygiene telemetry are now protocol-distinct and machine-projected.
 2. `IP-ASB-203` retains fail-close semantics for target actor scope; unrelated actor contamination no longer hard-blocks by default.
 3. This is a control-plane wiring change, not instance-local patching.
+
+### 26.36 Protocol lane explicit context hardening + wrapper tuple propagation (2026-03-16)
+
+Problem:
+
+1. protocol lane could still be invoked without full explicit context tuple at some wrapper paths,
+   allowing auto-resolution ambiguity under actor/session multibinding.
+2. quoted foreign `Identity-Context` lines inside body text could create operator-level "identity switched" confusion.
+3. session-chain wrapper templates did not uniformly forward `--repo-catalog`, causing protocol-lane fail-close in
+   final egress strict mode (`protocol_work_layer_requires_explicit_context_args:repo-catalog`).
+
+Fix landed:
+
+1. `scripts/final_emit_governed.py`
+   - protocol lane enforces explicit context tuple:
+     - `identity-id + catalog + repo-catalog + actor-id + session-id`
+   - emits strict mode telemetry:
+     - `strict_explicit_context_mode=protocol_lane_enforced`
+2. `scripts/compose_and_validate_governed_reply.py`
+   - adds quoted foreign headstamp guard projection:
+     - `quoted_identity_context_detected`
+     - `quoted_identity_context_foreign_ids`
+     - `quoted_identity_context_guard_status=PASS_REQUIRED`
+     - `quoted_identity_context_binding_effect=none`
+3. `scripts/create_identity_pack.py`
+   - ingress/egress/session-chain wrapper templates now carry repo-catalog forwarding in protocol lane path.
+4. `scripts/repair_contract_backfill.py --apply`
+   - materializes refreshed wrapper artifacts for runtime identities from canonical templates (no manual patching).
+5. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - adds required probe:
+     - `session_chain_protocol_lane_explicit_context_pass`
+6. `scripts/validate_required_gate_surface_drift.py`
+   - requires new probe invocation tokens and tuple assertions.
+
+Replay evidence (machine):
+
+1. `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - `protocol_work_layer_explicit_context_required` => `rc=1` (expected fail-close)
+   - `quoted_foreign_identity_context_must_not_switch_identity` => `rc=0` (expected safe)
+   - `session_chain_protocol_lane_explicit_context_pass` => `rc=0` (expected pass)
+2. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - `required_gate_surface_drift_status=PASS_REQUIRED`
+3. `python3 scripts/repair_contract_backfill.py --catalog <local_catalog> --identity-id base-repo-architect --apply --json-only`
+   - `host_gateway_wrapper_artifacts_refreshed=true`
+4. `python3 .identity/base-repo-architect/runtime/gate/protocol_session_chain_wrapper.py ... --work-layer protocol --json-only`
+   - `protocol_session_chain_wrapper_status=PASS_REQUIRED`
+   - `headstamp_first_line_status=PASS_REQUIRED`
+   - `send_time_gate_status=PASS_REQUIRED`
+   - `final_emit_guard_status=PASS_REQUIRED`
+
+Checkpoint verdict update:
+
+1. protocol strict lane now fail-closes deterministically when explicit tuple is missing.
+2. foreign quoted headstamps are now machine-detected but non-binding.
+3. wrapper propagation is template-driven + backfill-driven infrastructure behavior, not identity-local hardcoding.
+
+### 26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift (2026-03-16)
+
+Problem:
+
+1. field operations repeatedly conflated "pre-send guard miss" with "post-gate release decision", creating semantic drift in P0 headstamp incidents.
+2. closure text mentioned 95/100 model, but machine projection lacked explicit "post-gate coverage" and "next-hop headstamp" axes.
+3. operator baseline remained serial-3 and could under-sample residual bypass risk.
+
+Fix landed:
+
+1. semantic freeze in v1.6.6 governance:
+   - pre-send is `>=95%` probabilistic prevention only.
+   - post-gate is deterministic `100% detectability + 100% block + next-hop headstamp required`.
+2. `scripts/full_identity_protocol_scan.py` metrics expanded:
+   - `post_gate_coverage_rate`
+   - `chat_egress_uniqueness_rate`
+   - `next_hop_headstamp_rate`
+   - corresponding threshold + status + stale reason projections.
+3. `scripts/protocol_infra_contract.py` adds canonical thresholds:
+   - `HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE = 1.0`
+   - `HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE = 1.0`
+4. operator replay baseline upgraded to serial-5 (self-test + deep-scan) in governance text.
+5. `scripts/ci/run_host_visible_surface_live_probes_ci.sh` adds positive proof:
+   - `send_time_governed_pass_headstamp_required` must pass (`rc=0`) before negative fail-close probes run.
+
+Checkpoint verdict update:
+
+1. v1.6.6 closure semantics are now frozen as machine-enforceable metrics, not documentation-only phrasing.
+2. residual risk discussion must use the same metric tuple:
+   - `pre_send_gate_pass_rate`
+   - `post_gate_coverage_rate`
+   - `chat_egress_uniqueness_rate`
+   - `next_hop_block_rate`
+   - `next_hop_headstamp_rate`
+3. manual/headstamp text-only fixes remain explicitly out-of-contract.
