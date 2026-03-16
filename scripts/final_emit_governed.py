@@ -28,6 +28,10 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
+from identity_runtime_authority_common import (
+    STATUS_PASS_REQUIRED as AUTHORITY_PASS_REQUIRED,
+    validate_runtime_egress_identity_authority,
+)
 from tool_vendor_governance_common import resolve_pack_and_task
 from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_ERROR_CODE,
@@ -685,6 +689,45 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 1
 
+    authority = validate_runtime_egress_identity_authority(
+        catalog_path=catalog_path,
+        identity_id=identity_id,
+        actor_id=actor_id,
+        session_id=str(args.session_id or "").strip(),
+    )
+    if str(authority.get("identity_authority_status", "")).strip().upper() != AUTHORITY_PASS_REQUIRED:
+        payload = {
+            "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+            "error_code": str(authority.get("identity_authority_error_code", "")).strip() or ERR_CONTEXT_RESOLVE,
+            "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+            "identity_id": identity_id,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "resolved_actor_id": actor_id,
+            "run_id": str(args.run_id or "").strip(),
+            "catalog_resolution_mode": catalog_resolution_mode,
+            "repo_catalog_resolution_mode": repo_catalog_resolution_mode,
+            "identity_resolution_mode": identity_resolution_mode,
+            "actor_resolution_mode": actor_resolution_mode,
+            "requested_work_layer": requested_work_layer,
+            "protocol_explicit_context_required": bool(protocol_lane_explicit_context_required),
+            "strict_explicit_context_required": bool(strict_explicit_context_required),
+            "strict_explicit_context_mode": strict_explicit_context_mode,
+            "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+            "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+            "identity_authority_selected_identity_id": str(
+                authority.get("identity_authority_selected_identity_id", "")
+            ).strip(),
+            "identity_authority_authoritative_identity_id": str(
+                authority.get("identity_authority_authoritative_identity_id", "")
+            ).strip(),
+            "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+            "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+            "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+        }
+        _emit(payload, json_only=args.json_only)
+        return 1
+
     outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
     if outlet_channel_id != FINAL_EMIT_CHANNEL_ID:
         payload = {
@@ -982,6 +1025,17 @@ def main() -> int:
         "repo_catalog_resolution_mode": repo_catalog_resolution_mode,
         "identity_resolution_mode": identity_resolution_mode,
         "actor_resolution_mode": actor_resolution_mode,
+        "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+        "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+        "identity_authority_selected_identity_id": str(
+            authority.get("identity_authority_selected_identity_id", "")
+        ).strip(),
+        "identity_authority_authoritative_identity_id": str(
+            authority.get("identity_authority_authoritative_identity_id", "")
+        ).strip(),
+        "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+        "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         "requested_work_layer": requested_work_layer,
         "protocol_explicit_context_required": bool(protocol_lane_explicit_context_required),
         "strict_explicit_context_required": bool(strict_explicit_context_required),

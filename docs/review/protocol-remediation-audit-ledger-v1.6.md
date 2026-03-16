@@ -4036,6 +4036,80 @@ Verdict:
 2. scan-path regression now has explicit CI freeze (`p0=0`) instead of relying on manual deep-scan snapshots.
 3. residual blocker states in live runs remain instance evidence quality issues, not protocol control-plane wiring gaps.
 
+Round-21 runtime identity authority bypass closure (`HEAD=dirty`, 2026-03-16):
+
+1. issue restatement:
+   - the observed bad case was **not** a real runtime catalog switch.
+   - root cause was `pre-egress identity authority bypass`: a fixture/demo/inactive identity could be selected into runtime/protocol egress semantics before final outlet release.
+   - example class:
+     - emitted/attempted `identity_id=store-manager`
+     - actual project runtime authority remained `base-repo-closure-orchestrator`
+   - therefore the defect class is `fixture/demo identity mis-selected into runtime/protocol egress`, not “catalog switched”.
+2. infrastructure closure landed:
+   - new common gate:
+     - `scripts/identity_runtime_authority_common.py`
+   - canonical consumers wired:
+     - `scripts/render_identity_response_stamp.py`
+     - `scripts/compose_and_validate_governed_reply.py`
+     - `scripts/final_emit_governed.py`
+     - `scripts/validate_reply_identity_context_first_line.py`
+     - `scripts/sync_session_identity.py`
+   - required negative replay coverage extended:
+     - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+     - `scripts/validate_required_gate_surface_drift.py`
+3. authority freeze implemented in code:
+   - runtime/protocol egress candidate must satisfy:
+     - `status=active`
+     - `profile!=fixture`
+     - `runtime_mode!=demo_only`
+   - authority precedence is evaluated from actor/session binding → canonical session pointer → single active runtime identity → runtime default identity.
+   - fixture/demo identities are never runtime egress authorities.
+   - canonical session-primary writer now rejects fixture/demo identities as canonical runtime authority targets.
+4. machine error contract:
+   - error code: `IP-IAUTH-001`
+   - semantic meaning: `pre-egress identity authority bypass / non-runtime-eligible identity selected for runtime egress`
+5. replay evidence:
+   - runtime source confirmation:
+     - `python3 scripts/resolve_identity_context.py resolve --identity-id base-repo-closure-orchestrator`
+     - observed:
+       - `source_layer=project`
+       - `catalog_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/catalog.local.yaml`
+       - `pack_path=/Users/yangxi/claude/codex_project/weixinstore/.identity/base-repo-closure-orchestrator`
+   - negative:
+     - `python3 scripts/render_identity_response_stamp.py --identity-id store-manager ... --json-only`
+     - observed:
+       - rc=`1`
+       - `identity_authority_status=FAIL_REQUIRED`
+       - `error_code=IP-IAUTH-001`
+   - negative:
+     - `python3 scripts/final_emit_governed.py --identity-id store-manager ... --body-text 'probe body' --json-only`
+     - observed:
+       - rc=`1`
+       - `final_emit_guard_status=FAIL_REQUIRED`
+       - `error_code=IP-IAUTH-001`
+   - negative:
+     - `python3 scripts/validate_reply_identity_context_first_line.py --identity-id store-manager ... --reply-text 'Identity-Context: ... identity_id=store-manager ...' --json-only`
+     - observed:
+       - `reply_first_line_status=FAIL_REQUIRED`
+       - `error_code=IP-IAUTH-001`
+   - synthetic fixture-active proof:
+     - temporary catalog with `fixture-live(status=active, profile=fixture, runtime_mode=demo_only)`
+     - `python3 scripts/render_identity_response_stamp.py --identity-id fixture-live ... --json-only`
+     - observed:
+       - rc=`1`
+       - `error_code=IP-IAUTH-001`
+     - `python3 scripts/sync_session_identity.py --identity-id fixture-live ...`
+     - observed:
+       - fail-close:
+       - `identity is not runtime-eligible for canonical session authority`
+6. residual note:
+   - gateway full probe suite still contains an independent pre-existing assertion failure (`sender consumption projection`) unrelated to `IP-IAUTH-001`.
+   - this round closes authority selection bypass itself; it does not falsely claim the whole gateway suite is now globally green.
+7. verdict:
+   - fixture/demo/inactive identities can no longer be treated as runtime/protocol egress authorities on canonical stamp/compose/final-emit/first-line paths.
+   - canonical session-primary state can no longer be rewritten to fixture/demo identity targets.
+   - defect classification is now explicitly frozen under actor-session authority semantics, with egress chain fail-close downstream.
+
 ---
 
 ## 6) References

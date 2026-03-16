@@ -17,6 +17,10 @@ from final_emit_contract_common import (
     FINAL_EMIT_SCHEMA_REQUIRED_FIELDS,
 )
 from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inject_legacy_error_fields
+from identity_runtime_authority_common import (
+    STATUS_PASS_REQUIRED as AUTHORITY_PASS_REQUIRED,
+    validate_runtime_egress_identity_authority,
+)
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -300,6 +304,56 @@ def main() -> int:
         )
     except Exception as exc:
         print(f"[FAIL] unable to resolve identity stamp context: {exc}")
+        return 1
+
+    authority = validate_runtime_egress_identity_authority(
+        catalog_path=catalog_path,
+        identity_id=str(args.identity_id or "").strip(),
+        actor_id=actor_id_input,
+        session_id=str(args.session_id or "").strip(),
+    )
+    if str(authority.get("identity_authority_status", "")).strip().upper() != AUTHORITY_PASS_REQUIRED:
+        payload = {
+            "identity_id": args.identity_id,
+            "catalog_path": str(catalog_path),
+            "repo_catalog_path": str(repo_catalog_path),
+            "send_time_gate_status": "FAIL_REQUIRED",
+            "send_time_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+            "error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+            "reply_first_line_status": "FAIL_REQUIRED",
+            "reply_evidence_mode": "none",
+            "reply_sample_count": 0,
+            "reply_first_line_missing_count": 1,
+            "reply_outlet_guard_applied": True,
+            "governed_outlet_enforced": False,
+            "outlet_bypass_detected": True,
+            "outlet_channel_id": str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID,
+            "final_emit_channel_id": FINAL_EMIT_CHANNEL_ID,
+            "final_emit_policy_mode": FINAL_EMIT_POLICY_MODE,
+            "final_emit_schema_id": FINAL_EMIT_SCHEMA_ID,
+            "final_emit_schema_status": "FAIL_REQUIRED",
+            "final_emit_contract_status": "FAIL_REQUIRED",
+            "resolved_actor_id": resolve_actor_id(actor_id_input),
+            "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+            "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+            "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+            "identity_authority_selected_identity_id": str(
+                authority.get("identity_authority_selected_identity_id", "")
+            ).strip(),
+            "identity_authority_authoritative_identity_id": str(
+                authority.get("identity_authority_authoritative_identity_id", "")
+            ).strip(),
+            "identity_authority_resolution_mode": str(
+                authority.get("identity_authority_resolution_mode", "")
+            ).strip(),
+            "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+            "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+        }
+        print(
+            json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False)
+            if args.json_only
+            else json.dumps(inject_legacy_error_fields(payload), ensure_ascii=False, indent=2)
+        )
         return 1
 
     actor_id_effective = resolve_actor_id(actor_id_input)
@@ -646,6 +700,17 @@ def main() -> int:
         "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
         "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
         "actor_binding_session_id": str(actor_binding.get("session_id", "")),
+        "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+        "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+        "identity_authority_selected_identity_id": str(
+            authority.get("identity_authority_selected_identity_id", "")
+        ).strip(),
+        "identity_authority_authoritative_identity_id": str(
+            authority.get("identity_authority_authoritative_identity_id", "")
+        ).strip(),
+        "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+        "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         "quoted_identity_context_detected": bool(
             quoted_identity_context_guard.get("quoted_identity_context_detected", False)
         ),

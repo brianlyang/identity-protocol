@@ -356,8 +356,16 @@ def main() -> int:
         print(f"[FAIL] identity not found in catalog: {args.identity_id}")
         return 1
     status = str(target.get("status", "")).strip().lower()
+    profile = str(target.get("profile", "")).strip().lower()
+    runtime_mode = str(target.get("runtime_mode", "")).strip().lower()
     if status != "active":
         print(f"[FAIL] identity is not active; status={status}")
+        return 1
+    if profile == "fixture" or runtime_mode == "demo_only":
+        print(
+            "[FAIL] identity is not runtime-eligible for canonical session authority; "
+            f"profile={profile or 'missing'} runtime_mode={runtime_mode or 'missing'}"
+        )
         return 1
 
     canonical_out = Path(args.out).expanduser().resolve() if args.out.strip() else _default_canonical_out(catalog)

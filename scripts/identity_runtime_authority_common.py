@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from actor_session_common import load_actor_binding, resolve_actor_id
+
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+
+ERR_IDENTITY_AUTHORITY_VIOLATION = "IP-IAUTH-001"
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"yaml root must be object: {path}")
+    return data
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _canonical_session_pointer_path(catalog_path: Path) -> Path:
+    return (catalog_path.parent / "session" / "active_identity.json").resolve()
+
+
+def _identity_row(rows: list[dict[str, Any]], identity_id: str) -> dict[str, Any] | None:
+    target = str(identity_id or "").strip()
+    if not target:
+        return None
+    return next((row for row in rows if str(row.get("id", "")).strip() == target), None)
+
+
+def _identity_runtime_meta(row: dict[str, Any] | None) -> dict[str, Any]:
+    node = row if isinstance(row, dict) else {}
+    status = str(node.get("status", "")).strip().lower()
+    profile = str(node.get("profile", "")).strip().lower()
+    runtime_mode = str(node.get("runtime_mode", "")).strip().lower()
+    runtime_eligible = bool(
+        status == "active"
+        and profile != "fixture"
+        and runtime_mode != "demo_only"
+    )
+    stale_reasons: list[str] = []
+    if status != "active":
+        stale_reasons.append(f"identity_status_not_active:{status or 'missing'}")
+    if profile == "fixture":
+        stale_reasons.append("identity_profile_fixture")
+    if runtime_mode == "demo_only":
+        stale_reasons.append("identity_runtime_mode_demo_only")
+    return {
+        "status": status,
+        "profile": profile,
+        "runtime_mode": runtime_mode,
+        "runtime_eligible": runtime_eligible,
+        "stale_reasons": stale_reasons,
+    }
+
+
+def _resolve_authoritative_identity(
+    *,
+    catalog_path: Path,
+    catalog_doc: dict[str, Any],
+    rows: list[dict[str, Any]],
+    actor_id: str,
+    session_id: str,
+) -> tuple[str, str, dict[str, Any]]:
+    actor = resolve_actor_id(actor_id)
+    sid = str(session_id or "").strip()
+    if actor and sid:
+        binding = load_actor_binding(catalog_path, actor, session_id=sid)
+        identity_id = str(binding.get("identity_id", "")).strip()
+        if identity_id:
+            return identity_id, "actor_binding_session_scoped", binding
+
+    if actor and not sid:
+        binding = load_actor_binding(catalog_path, actor)
+        identity_id = str(binding.get("identity_id", "")).strip()
+        if identity_id:
+            return identity_id, "actor_binding_actor_scoped", binding
+
+    pointer_path = _canonical_session_pointer_path(catalog_path)
+    if pointer_path.exists():
+        pointer = _load_json(pointer_path)
+        identity_id = str(pointer.get("identity_id", "")).strip()
+        if identity_id:
+            return identity_id, "canonical_session_pointer", pointer
+
+    runtime_active_ids = [
+        str(row.get("id", "")).strip()
+        for row in rows
+        if _identity_runtime_meta(row).get("runtime_eligible")
+        and str(row.get("id", "")).strip()
+    ]
+    if len(runtime_active_ids) == 1:
+        identity_id = runtime_active_ids[0]
+        row = _identity_row(rows, identity_id) or {}
+        return identity_id, "catalog_single_active_runtime", row
+
+    default_identity = str(catalog_doc.get("default_identity", "")).strip()
+    if default_identity:
+        row = _identity_row(rows, default_identity)
+        if row and bool(_identity_runtime_meta(row).get("runtime_eligible")):
+            return default_identity, "catalog_default_runtime_identity", row
+
+    return "", "authority_unresolved", {}
+
+
+def validate_runtime_egress_identity_authority(
+    *,
+    catalog_path: Path,
+    identity_id: str,
+    actor_id: str = "",
+    session_id: str = "",
+) -> dict[str, Any]:
+    target_identity_id = str(identity_id or "").strip()
+    actor_raw = str(actor_id or "").strip()
+    actor = resolve_actor_id(actor_raw) if actor_raw else ""
+    sid = str(session_id or "").strip()
+
+    payload: dict[str, Any] = {
+        "identity_authority_status": STATUS_PASS_REQUIRED,
+        "identity_authority_error_code": "",
+        "identity_authority_selected_identity_id": target_identity_id,
+        "identity_authority_authoritative_identity_id": "",
+        "identity_authority_resolution_mode": "",
+        "identity_authority_selected_status": "",
+        "identity_authority_selected_profile": "",
+        "identity_authority_selected_runtime_mode": "",
+        "identity_authority_selected_runtime_eligible": False,
+        "identity_authority_authoritative_status": "",
+        "identity_authority_authoritative_profile": "",
+        "identity_authority_authoritative_runtime_mode": "",
+        "identity_authority_authoritative_runtime_eligible": False,
+        "identity_authority_actor_id": actor,
+        "identity_authority_session_id": sid,
+        "identity_authority_stale_reasons": [],
+        "identity_authority_next_action": "",
+    }
+
+    if not target_identity_id:
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = ["identity_id_missing"]
+        payload["identity_authority_next_action"] = "provide_runtime_identity_id_then_retry"
+        return payload
+
+    catalog_doc = _load_yaml(catalog_path)
+    rows = [row for row in (catalog_doc.get("identities") or []) if isinstance(row, dict)]
+    selected_row = _identity_row(rows, target_identity_id)
+    if not selected_row:
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [f"identity_not_found_in_catalog:{target_identity_id}"]
+        payload["identity_authority_next_action"] = "use_catalog_runtime_identity_then_retry"
+        return payload
+
+    selected_meta = _identity_runtime_meta(selected_row)
+    payload["identity_authority_selected_status"] = str(selected_meta.get("status", "")).strip()
+    payload["identity_authority_selected_profile"] = str(selected_meta.get("profile", "")).strip()
+    payload["identity_authority_selected_runtime_mode"] = str(selected_meta.get("runtime_mode", "")).strip()
+    payload["identity_authority_selected_runtime_eligible"] = bool(selected_meta.get("runtime_eligible", False))
+
+    authoritative_identity_id, resolution_mode, authority_doc = _resolve_authoritative_identity(
+        catalog_path=catalog_path,
+        catalog_doc=catalog_doc,
+        rows=rows,
+        actor_id=actor,
+        session_id=sid,
+    )
+    payload["identity_authority_authoritative_identity_id"] = authoritative_identity_id
+    payload["identity_authority_resolution_mode"] = resolution_mode
+
+    if authoritative_identity_id:
+        authoritative_row = _identity_row(rows, authoritative_identity_id)
+        authoritative_meta = _identity_runtime_meta(authoritative_row)
+        payload["identity_authority_authoritative_status"] = str(authoritative_meta.get("status", "")).strip()
+        payload["identity_authority_authoritative_profile"] = str(authoritative_meta.get("profile", "")).strip()
+        payload["identity_authority_authoritative_runtime_mode"] = str(
+            authoritative_meta.get("runtime_mode", "")
+        ).strip()
+        payload["identity_authority_authoritative_runtime_eligible"] = bool(
+            authoritative_meta.get("runtime_eligible", False)
+        )
+
+        if authoritative_row is None:
+            payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+            payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+            payload["identity_authority_stale_reasons"] = [
+                f"authoritative_identity_not_found_in_catalog:{authoritative_identity_id}",
+            ]
+            payload["identity_authority_next_action"] = "repair_authoritative_identity_binding_then_retry"
+            return payload
+
+        if not bool(authoritative_meta.get("runtime_eligible", False)):
+            payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+            payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+            authority_reasons = [
+                f"authoritative_identity_not_runtime_eligible:{authoritative_identity_id}",
+                *[
+                    f"authoritative_{reason}"
+                    for reason in authoritative_meta.get("stale_reasons", [])
+                    if str(reason).strip()
+                ],
+            ]
+            payload["identity_authority_stale_reasons"] = authority_reasons
+            payload["identity_authority_next_action"] = "repair_session_primary_runtime_identity_then_retry"
+            return payload
+
+    if not bool(selected_meta.get("runtime_eligible", False)):
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [
+            f"selected_identity_not_runtime_eligible:{target_identity_id}",
+            *[
+                f"selected_{reason}"
+                for reason in selected_meta.get("stale_reasons", [])
+                if str(reason).strip()
+            ],
+        ]
+        payload["identity_authority_next_action"] = "select_active_runtime_identity_then_retry"
+        return payload
+
+    if authoritative_identity_id and authoritative_identity_id != target_identity_id:
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [
+            f"identity_authority_mismatch:selected={target_identity_id}:authoritative={authoritative_identity_id}:source={resolution_mode}",
+        ]
+        if resolution_mode.startswith("actor_binding"):
+            payload["identity_authority_next_action"] = "use_session_primary_identity_or_run_gated_switch_then_retry"
+        else:
+            payload["identity_authority_next_action"] = "align_canonical_runtime_identity_then_retry"
+        return payload
+
+    return payload

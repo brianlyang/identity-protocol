@@ -23,7 +23,9 @@ fixture_root.mkdir(parents=True, exist_ok=True)
 
 identity_root = fixture_root / "identity"
 probe_pack = identity_root / "probe-gateway"
+probe_fixture_pack = identity_root / "probe-fixture"
 (probe_pack / "runtime" / "state").mkdir(parents=True, exist_ok=True)
+(probe_fixture_pack / "runtime" / "state").mkdir(parents=True, exist_ok=True)
 
 catalog = {
     "default_identity": "probe-gateway",
@@ -34,6 +36,13 @@ catalog = {
             "pack_path": str(probe_pack),
             "profile": "runtime",
             "runtime_mode": "local_only",
+        },
+        {
+            "id": "probe-fixture",
+            "status": "active",
+            "pack_path": str(probe_fixture_pack),
+            "profile": "fixture",
+            "runtime_mode": "demo_only",
         }
     ],
 }
@@ -461,6 +470,24 @@ elif name == "resolve_context_timeout_guard":
     error_code = str(doc.get("gateway_timeout_guard_probe_observed_error_code", "")).strip()
     if error_code != "IP-CTX-TOOL-001":
         raise SystemExit("resolve_context_timeout_guard: expected IP-CTX-TOOL-001 error code")
+elif name == "fixture_identity_runtime_egress_blocked":
+    if rc == 0:
+        raise SystemExit("fixture_identity_runtime_egress_blocked: expected non-zero rc")
+    error_code = str(doc.get("error_code", "")).strip()
+    if error_code != "IP-IAUTH-001":
+        raise SystemExit("fixture_identity_runtime_egress_blocked: expected IP-IAUTH-001")
+    status = str(doc.get("identity_authority_status", "")).strip().upper()
+    if status != "FAIL_REQUIRED":
+        raise SystemExit("fixture_identity_runtime_egress_blocked: expected FAIL_REQUIRED identity authority status")
+    selected = str(doc.get("identity_authority_selected_identity_id", "")).strip()
+    if selected != "probe-fixture":
+        raise SystemExit("fixture_identity_runtime_egress_blocked: expected selected probe-fixture")
+    authoritative = str(doc.get("identity_authority_authoritative_identity_id", "")).strip()
+    if authoritative != "probe-gateway":
+        raise SystemExit("fixture_identity_runtime_egress_blocked: expected authoritative probe-gateway")
+    reasons = stale_reasons(doc)
+    if "selected_identity_not_runtime_eligible:probe-fixture" not in reasons:
+        raise SystemExit("fixture_identity_runtime_egress_blocked: expected non-runtime-eligible reason")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -822,6 +849,16 @@ run_probe resolve_context_timeout_guard \
   --protocol-root "${REPO_ROOT}" \
   --timeout-seconds 1 \
   --sleep-seconds 2 \
+  --json-only
+
+run_probe fixture_identity_runtime_egress_blocked \
+  python3 scripts/final_emit_governed.py \
+  --identity-id "probe-fixture" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "session-gateway-probe-fixture" \
+  --body-text "fixture identity runtime egress blocked probe" \
   --json-only
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"

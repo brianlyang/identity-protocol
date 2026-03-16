@@ -5,6 +5,10 @@ import argparse
 import json
 from pathlib import Path
 
+from identity_runtime_authority_common import (
+    STATUS_PASS_REQUIRED,
+    validate_runtime_egress_identity_authority,
+)
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -71,6 +75,31 @@ def main() -> int:
         print(f"[FAIL] unable to resolve stamp context: {exc}")
         return 1
 
+    authority = validate_runtime_egress_identity_authority(
+        catalog_path=catalog_path,
+        identity_id=ctx.identity_id,
+        actor_id=args.actor_id,
+        session_id=str(args.session_id or "").strip(),
+    )
+    if str(authority.get("identity_authority_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        payload = {
+            "identity_id": ctx.identity_id,
+            "catalog_path": str(catalog_path),
+            "pack_path": str(ctx.pack_path),
+            "view": args.view,
+            "session_id": str(args.session_id or "").strip(),
+            "work_layer": str(args.work_layer or "").strip().lower() or "instance",
+            "source_layer": str(args.source_layer or "").strip().lower() or str(ctx.source_domain or ""),
+            "layer_intent_resolution_status": "FAIL_REQUIRED",
+            "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+            "error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+            "stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+            "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        }
+        payload.update(authority)
+        print(json.dumps(payload, ensure_ascii=False) if args.json_only else json.dumps(payload, ensure_ascii=False, indent=2))
+        return 1
+
     persist_session_trigger = not bool(args.no_persist_session_trigger)
     disclosure = resolve_disclosure_level(
         ctx,
@@ -128,6 +157,17 @@ def main() -> int:
         "protocol_trigger_reasons": list(intent.get("protocol_trigger_reasons") or []),
         "protocol_trigger_confidence": float(intent.get("protocol_trigger_confidence", 0.0) or 0.0),
         "layer_intent_text": str(args.layer_intent_text or "").strip(),
+        "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+        "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+        "identity_authority_selected_identity_id": str(
+            authority.get("identity_authority_selected_identity_id", "")
+        ).strip(),
+        "identity_authority_authoritative_identity_id": str(
+            authority.get("identity_authority_authoritative_identity_id", "")
+        ).strip(),
+        "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+        "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         "external_stamp": external,
         "internal_stamp": internal,
         "identity_context": render_structured_context(

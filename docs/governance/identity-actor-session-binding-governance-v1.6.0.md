@@ -78,6 +78,38 @@ Tag policy: `v1.6` remains locked until all `P0` requirement ledger rows are `DO
 3. New normative headstamp/HUD clauses, status promotion, and acceptance decisions must be written in v1.6.1 stream.
 4. If v1.6.0 and v1.6.1 differ on headstamp/HUD semantics, v1.6.1 is authoritative.
 
+### 0.2B Runtime egress identity authority freeze (v1.6 actor/session semantic anchor)
+
+1. Although headstamp/HUD execution moved to `v1.6.1` and host-visible unique-channel execution moved to `v1.6.6`, **runtime/protocol egress identity authority semantics remain anchored here** because the root problem belongs to actor-session binding, session-primary authority, and no-implicit-switch governance.
+2. Runtime/protocol egress authority precedence is frozen as:
+   - session-scoped actor binding
+   - canonical session pointer
+   - single active runtime identity in runtime catalog
+   - default runtime identity in runtime catalog
+   - fixture/demo identities are never eligible runtime egress authorities
+3. A runtime/protocol egress candidate is runtime-eligible only when all are true:
+   - `status == active`
+   - `profile != fixture`
+   - `runtime_mode != demo_only`
+4. `catalog_multi_active` is allowed at directory/catalog level; this does **not** authorize ambiguous outbound identity selection.
+5. Strict session lanes remain **single-primary**:
+   - one session may bind one authoritative runtime identity for egress;
+   - any change of authoritative runtime identity requires explicit gated-switch / switch receipt;
+   - implicit switch by quoted context, fixture fallback, historical pointer, or UI hint is invalid.
+6. `LOCK_MATCH` is not sufficient authority by itself:
+   - a stamp may not be emitted only because a historical/non-canonical binding produces `LOCK_MATCH`;
+   - canonical session-primary identity authority must also match.
+7. Any pre-egress authority mismatch or non-runtime-eligible identity selection is `FAIL_REQUIRED`:
+   - error family: `IP-IAUTH-001`
+   - semantic class: `pre-egress identity authority bypass`
+8. `v1.6.1` / `v1.6.6` execution surfaces must consume this authority freeze as an upstream hard gate:
+   - `scripts/render_identity_response_stamp.py`
+   - `scripts/compose_and_validate_governed_reply.py`
+   - `scripts/final_emit_governed.py`
+   - `scripts/validate_reply_identity_context_first_line.py`
+9. Canonical session-primary writers must enforce the same runtime-eligibility rule:
+   - fixture/demo identities may not be written into canonical runtime session authority state.
+
 ### 0.3 Release lock table (`v1.6` tag hard-locked)
 
 | Decision Gate | Unlock condition | Current state |

@@ -1111,6 +1111,15 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_fixture_identity_runtime_egress_probe = all(
+            token in text
+            for token in (
+                "run_probe fixture_identity_runtime_egress_blocked",
+                "python3 scripts/final_emit_governed.py",
+                "--identity-id \"probe-fixture\"",
+                "fixture identity runtime egress blocked probe",
+            )
+        )
         has_session_chain_non_json_probe = all(
             token in text
             for token in (
@@ -1175,6 +1184,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_channel_bypass_emit_probe_invocation_missing")
         if not has_context_timeout_probe:
             gateway_missing_tokens.append("gateway_context_timeout_probe_invocation_missing")
+        if not has_fixture_identity_runtime_egress_probe:
+            gateway_missing_tokens.append("gateway_fixture_identity_runtime_egress_probe_invocation_missing")
         if not has_session_chain_non_json_probe:
             gateway_missing_tokens.append("gateway_session_chain_non_json_probe_invocation_missing")
         if not has_protocol_explicit_context_probe:

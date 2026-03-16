@@ -13,6 +13,7 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_REPLY_EVIDENCE_MISSING,
     inject_legacy_error_fields,
 )
+from identity_runtime_authority_common import validate_runtime_egress_identity_authority
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -284,6 +285,13 @@ def main() -> int:
         print(f"[FAIL] unable to resolve stamp context: {exc}")
         return 1
 
+    authority = validate_runtime_egress_identity_authority(
+        catalog_path=catalog_path,
+        identity_id=ctx.identity_id,
+        actor_id=args.actor_id,
+        session_id=str(args.session_id or "").strip(),
+    )
+
     reply_samples: list[str] = []
     evidence_ref = ""
     stamp_doc: dict[str, Any] = {}
@@ -332,6 +340,10 @@ def main() -> int:
 
     stale_reasons: list[str] = []
     error_code = ""
+
+    if str(authority.get("identity_authority_status", "")).strip().upper() != STATUS_PASS_REQUIRED:
+        stale_reasons.extend(list(authority.get("identity_authority_stale_reasons") or []))
+        error_code = str(authority.get("identity_authority_error_code", "")).strip() or ERR_REPLY_FIRST_LINE
 
     if first_line_gate_enforced and len(first_lines) == 0:
         stale_reasons.append("reply_evidence_missing")
@@ -535,6 +547,17 @@ def main() -> int:
         "reply_sample_count": len(first_lines),
         "reply_evidence_ref": evidence_ref,
         "expected_identity_id": ctx.identity_id,
+        "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
+        "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
+        "identity_authority_selected_identity_id": str(
+            authority.get("identity_authority_selected_identity_id", "")
+        ).strip(),
+        "identity_authority_authoritative_identity_id": str(
+            authority.get("identity_authority_authoritative_identity_id", "")
+        ).strip(),
+        "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
+        "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
+        "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
         "blocker_receipt_path": str(receipt_path) if not ok else "",
         "stale_reasons": stale_reasons,
     }
@@ -548,6 +571,8 @@ def main() -> int:
             next_action = "use_valid_expected_source_layer(project|global)_then_retry"
         elif error_code == ERR_RUNTIME_BINDING_MISMATCH:
             next_action = "activate_actor_bound_identity_then_retry"
+        elif error_code == str(authority.get("identity_authority_error_code", "")).strip():
+            next_action = str(authority.get("identity_authority_next_action", "")).strip() or next_action
         receipt = blocker_receipt(
             error_code=error_code or ERR_REPLY_FIRST_LINE,
             expected_identity_id=ctx.identity_id,
