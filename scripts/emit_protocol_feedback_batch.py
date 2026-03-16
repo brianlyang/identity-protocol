@@ -18,6 +18,8 @@ from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+LANE_OUTBOX = "outbox"
+LANE_INBOX = "inbox"
 
 
 def _utc_token() -> str:
@@ -41,11 +43,22 @@ def _write_text(path: Path, text: str) -> None:
     path.write_text(normalized, encoding="utf-8")
 
 
-def _load_contract(task: dict[str, Any]) -> dict[str, Any]:
+def _load_outbox_contract(task: dict[str, Any]) -> dict[str, Any]:
     for key in (
         "protocol_feedback_ssot_archival_contract_v1",
         "protocol_feedback_ssot_archival_contract",
         "protocol_feedback_robustness_contract_v1",
+    ):
+        node = task.get(key)
+        if isinstance(node, dict):
+            return node
+    return {}
+
+
+def _load_inbox_contract(task: dict[str, Any]) -> dict[str, Any]:
+    for key in (
+        "protocol_feedback_canonical_inbox_channel_contract_v1",
+        "protocol_feedback_canonical_inbox_channel_contract",
     ):
         node = task.get(key)
         if isinstance(node, dict):
@@ -61,7 +74,7 @@ def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Emit protocol-feedback batch to canonical outbox path.")
+    ap = argparse.ArgumentParser(description="Emit protocol-feedback artifacts to canonical outbox/inbox channel path.")
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--title", default="")
@@ -69,6 +82,7 @@ def main() -> int:
     ap.add_argument("--body-file", required=True)
     ap.add_argument("--summary-json", default="")
     ap.add_argument("--feedback-root", default="")
+    ap.add_argument("--lane", choices=[LANE_OUTBOX, LANE_INBOX], default=LANE_OUTBOX)
     ap.add_argument("--json-only", action="store_true")
     args = ap.parse_args()
 
@@ -94,23 +108,36 @@ def main() -> int:
         print(f"[FAIL] {exc}")
         return 1
 
-    contract = _load_contract(task)
+    lane = str(args.lane or LANE_OUTBOX).strip().lower()
+    outbox_contract = _load_outbox_contract(task)
+    inbox_contract = _load_inbox_contract(task)
     feedback_root = resolve_feedback_root(pack_path, args.feedback_root)
     dirs = canonical_dirs(feedback_root)
-    outbox_dir = dirs["outbox_dir"]
+    channel_dir = dirs["outbox_dir"] if lane == LANE_OUTBOX else dirs["inbox_dir"]
     index_path = dirs["index_path"]
 
-    outbox_dir_rel = str(contract.get("outbox_dir", "")).strip()
-    if outbox_dir_rel:
-        outbox_dir = (feedback_root / outbox_dir_rel).resolve()
+    if lane == LANE_OUTBOX:
+        outbox_dir_rel = str(outbox_contract.get("outbox_dir", "")).strip()
+        if outbox_dir_rel:
+            channel_dir = (feedback_root / outbox_dir_rel).resolve()
+    else:
+        inbox_dir_rel = str(inbox_contract.get("inbox_dir", "")).strip()
+        if inbox_dir_rel:
+            channel_dir = (feedback_root / inbox_dir_rel).resolve()
 
     token = _utc_token()
     slug = _safe_slug(args.slug or args.title or body_path.stem)
-    batch_name = f"FEEDBACK_BATCH_{token}_{slug}.md"
-    batch_path = (outbox_dir / batch_name).resolve()
+    if lane == LANE_OUTBOX:
+        batch_name = f"FEEDBACK_BATCH_{token}_{slug}.md"
+        receipt_name = f"PROTOCOL_FEEDBACK_RECEIPT_{token}_{slug}.json"
+        summary_name = f"SUMMARY_{token}_{slug}.json"
+    else:
+        batch_name = f"PROTOCOL_INBOX_{token}_{slug}.md"
+        receipt_name = f"PROTOCOL_INBOX_RECEIPT_{token}_{slug}.json"
+        summary_name = f"INBOX_SUMMARY_{token}_{slug}.json"
+    batch_path = (channel_dir / batch_name).resolve()
     batch_rel = rel_to_feedback_root(batch_path, feedback_root)
-    receipt_name = f"PROTOCOL_FEEDBACK_RECEIPT_{token}_{slug}.json"
-    receipt_path = (outbox_dir / receipt_name).resolve()
+    receipt_path = (channel_dir / receipt_name).resolve()
     receipt_rel = rel_to_feedback_root(receipt_path, feedback_root)
 
     body = _read_text(body_path)
@@ -121,7 +148,7 @@ def main() -> int:
 
     summary_ref = ""
     if summary_path is not None:
-        summary_target = (outbox_dir / f"SUMMARY_{token}_{slug}.json").resolve()
+        summary_target = (channel_dir / summary_name).resolve()
         summary_target.parent.mkdir(parents=True, exist_ok=True)
         summary_target.write_text(_read_text(summary_path), encoding="utf-8")
         summary_ref = rel_to_feedback_root(summary_target, feedback_root)
@@ -131,6 +158,8 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(pack_path),
         "feedback_root": str(feedback_root),
+        "lane": lane,
+        "channel_dir": str(channel_dir),
         "batch_path": str(batch_path),
         "batch_ref": batch_rel,
         "summary_ref": summary_ref,
@@ -154,6 +183,8 @@ def main() -> int:
         "catalog_path": str(catalog_path),
         "resolved_pack_path": str(pack_path),
         "feedback_root": str(feedback_root),
+        "lane": lane,
+        "channel_dir": str(channel_dir),
         "batch_path": str(batch_path),
         "receipt_path": str(receipt_path),
         "index_path": str(index_path),

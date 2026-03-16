@@ -8,12 +8,14 @@ from typing import Any
 
 CANONICAL_REQUIRED_DIRS = (
     "outbox-to-protocol",
+    "inbox-from-protocol",
     "evidence-index",
     "upgrade-proposals",
 )
 
 DEFAULT_ACTIVITY_DIRS = (
     "outbox-to-protocol",
+    "inbox-from-protocol",
     "evidence-index",
     "upgrade-proposals",
     "issues",
@@ -45,11 +47,13 @@ def resolve_feedback_root(pack_path: Path, feedback_root: str = "") -> Path:
 
 def canonical_dirs(feedback_root: Path) -> dict[str, Path]:
     outbox_dir = (feedback_root / "outbox-to-protocol").resolve()
+    inbox_dir = (feedback_root / "inbox-from-protocol").resolve()
     evidence_dir = (feedback_root / "evidence-index").resolve()
     upgrade_dir = (feedback_root / "upgrade-proposals").resolve()
     index_path = (evidence_dir / "INDEX.md").resolve()
     return {
         "outbox_dir": outbox_dir,
+        "inbox_dir": inbox_dir,
         "evidence_dir": evidence_dir,
         "upgrade_dir": upgrade_dir,
         "index_path": index_path,

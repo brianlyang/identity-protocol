@@ -29,6 +29,7 @@ ERR_SPLIT_REQUIREDIZATION = "IP-PFB-CH-006"
 
 ALLOWED_FEEDBACK_DIRS = {
     "outbox-to-protocol",
+    "inbox-from-protocol",
     "evidence-index",
     "upgrade-proposals",
     "issues",

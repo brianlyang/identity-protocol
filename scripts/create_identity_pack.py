@@ -559,9 +559,20 @@ def _instance_protocol_split_receipt_contract_skeleton() -> dict:
 def _protocol_feedback_reply_channel_contract_skeleton() -> dict:
     return {
         "required": False,
+        "outbox_dir": "runtime/protocol-feedback/outbox-to-protocol",
         "primary_outbox_glob": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
         "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
         "enforcement_validator": "scripts/validate_protocol_feedback_reply_channel.py",
+    }
+
+
+def _protocol_feedback_inbox_channel_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "inbox_dir": "runtime/protocol-feedback/inbox-from-protocol",
+        "primary_inbox_glob": "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_*.md",
+        "required_index_path": "runtime/protocol-feedback/evidence-index/INDEX.md",
+        "enforcement_validator": "scripts/validate_protocol_feedback_inbox_channel.py",
     }
 
 
@@ -907,6 +918,11 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path_id": "runtime_protocol_feedback.outbox_dir",
                     "entry_type": "dir",
                     "path": "runtime/protocol-feedback/outbox-to-protocol",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.inbox_dir",
+                    "entry_type": "dir",
+                    "path": "runtime/protocol-feedback/inbox-from-protocol",
                 },
                 {
                     "path_id": "runtime_protocol_feedback.evidence_index",
@@ -1651,6 +1667,7 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "semantic_routing_guard_contract_v1": _semantic_routing_guard_contract_skeleton(),
         "instance_protocol_split_receipt_contract_v1": _instance_protocol_split_receipt_contract_skeleton(),
         "protocol_feedback_canonical_reply_channel_contract_v1": _protocol_feedback_reply_channel_contract_skeleton(),
+        "protocol_feedback_canonical_inbox_channel_contract_v1": _protocol_feedback_inbox_channel_contract_skeleton(),
         "protocol_feedback_sidecar_contract_v1": _protocol_feedback_sidecar_contract_skeleton(),
         "gated_switch_guard_contract_v1": _gated_switch_guard_contract_skeleton(),
         "protocol_lane_activation_headstamp_contract_v1": _protocol_lane_activation_headstamp_contract_skeleton(),

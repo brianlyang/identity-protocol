@@ -96,6 +96,13 @@ The command performs, in order:
 
 Single JSON output carries step status + closure status.
 
+## Official Feedback Channel Direction
+
+- `outbox-to-protocol`: instance -> protocol feedback lane (upstream escalation).
+- `inbox-from-protocol`: protocol -> instance feedback lane (downstream governance notice).
+
+Both lanes are canonical runtime paths under `runtime/protocol-feedback/` and both must be index-linked via `evidence-index/INDEX.md`.
+
 ## Official Feedback Outbox Routing
 
 Human-generated P0 notices must be emitted through canonical identity feedback outbox,
@@ -117,11 +124,35 @@ python3 scripts/emit_protocol_feedback_batch.py \
 The command resolves `<pack>/runtime/protocol-feedback/outbox-to-protocol` from
 catalog + identity and auto-links refs into `evidence-index/INDEX.md`.
 
+## Official Feedback Inbox Routing
+
+Protocol-side governance notices to an instance must use inbox lane, not outbox lane.
+
+Use:
+
+```bash
+python3 scripts/emit_protocol_feedback_batch.py \
+  --catalog <catalog_path> \
+  --identity-id <identity_id> \
+  --lane inbox \
+  --title "<protocol notice title>" \
+  --slug <short_slug> \
+  --body-file <markdown_notice_file> \
+  --summary-json <optional_summary_json> \
+  --json-only
+```
+
+The command resolves `<pack>/runtime/protocol-feedback/inbox-from-protocol` from
+catalog + identity and auto-links refs into `evidence-index/INDEX.md`.
+
 ## Metrics (Protocol Constants)
 
 - `HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE = 0.95`
 - `HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE = 1.0`
 - `HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE = 1.0`
 - `HOST_VISIBLE_FALSE_GREEN_MAX_RATE = 0.0`
+- `PROTOCOL_FEEDBACK_OUTBOX_CANONICAL_RATE = 1.0`
+- `PROTOCOL_FEEDBACK_INBOX_CANONICAL_RATE = 1.0`
+- `PROTOCOL_FEEDBACK_INDEX_LINKAGE_REQUIRED_RATE = 1.0`
 
 These thresholds are contract-level and must remain fail-close.
