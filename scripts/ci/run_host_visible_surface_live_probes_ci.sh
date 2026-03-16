@@ -169,6 +169,21 @@ elif name == "send_time_next_hop_blocked_by_post_check":
     gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
     if gate_status != "FAIL_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: send_time_gate_status must be FAIL_REQUIRED")
+    uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
+    if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_contract_id mismatch")
+    uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if uniqueness_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_status must be FAIL_REQUIRED")
+    uniqueness_error_code = str(doc.get("chat_egress_uniqueness_error_code", "")).strip()
+    if uniqueness_error_code != "IP-HDSTAMP-003":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_error_code mismatch")
+    uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
+    if uniqueness_reason != "post_check_blocker_active_next_hop_blocked":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_reason mismatch")
+    observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
+    if observed_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_observed_send_time_status mismatch")
     first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
     if first_line_status != "SKIPPED_NOT_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
@@ -188,6 +203,21 @@ elif name == "send_time_next_hop_blocked_on_missing_post_check_state":
     gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
     if gate_status != "FAIL_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: send_time_gate_status must be FAIL_REQUIRED")
+    uniqueness_contract_id = str(doc.get("chat_egress_uniqueness_contract_id", "")).strip()
+    if uniqueness_contract_id != "chat_egress_uniqueness_contract_v1":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_contract_id mismatch")
+    uniqueness_status = str(doc.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if uniqueness_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_status must be FAIL_REQUIRED")
+    uniqueness_error_code = str(doc.get("chat_egress_uniqueness_error_code", "")).strip()
+    if uniqueness_error_code != "IP-HDSTAMP-003":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_error_code mismatch")
+    uniqueness_reason = str(doc.get("chat_egress_uniqueness_reason", "")).strip()
+    if uniqueness_reason != "post_check_state_unavailable_fail_close":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_reason mismatch")
+    observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
+    if observed_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_observed_send_time_status mismatch")
     first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
     if first_line_status != "SKIPPED_NOT_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: reply_first_line_status must be SKIPPED_NOT_REQUIRED")

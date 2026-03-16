@@ -69,6 +69,27 @@ The objective is to move from "validator-centered" to "file-lifecycle-centered" 
 3. `runtime_plugins`
 4. `runtime_protocol_feedback`
 
+### 3.4 Chat egress uniqueness contract (v1.6.10 required)
+
+`chat_egress_uniqueness_contract_v1`
+
+This stream formalizes the governance boundary as:
+`95% pre-send pass + 100% post-check detectability + 100% next-hop block + 100% egress-uniqueness detectability`.
+
+Required machine fields (from send-time payload, strict lanes):
+
+1. `chat_egress_uniqueness_contract_id`
+2. `chat_egress_uniqueness_status`
+3. `chat_egress_uniqueness_reason`
+4. `chat_egress_uniqueness_error_code`
+5. `chat_egress_uniqueness_observed_send_time_status`
+
+Fail-close mapping (strict):
+
+1. post-check blocker active => `chat_egress_uniqueness_status=FAIL_REQUIRED`, `chat_egress_uniqueness_error_code=IP-HDSTAMP-003`, `chat_egress_uniqueness_reason=post_check_blocker_active_next_hop_blocked`
+2. post-check state missing/invalid/unreadable => `chat_egress_uniqueness_status=FAIL_REQUIRED`, `chat_egress_uniqueness_error_code=IP-HDSTAMP-003`, `chat_egress_uniqueness_reason=post_check_state_unavailable_fail_close`
+3. no silent downgrade to `SKIPPED_NOT_REQUIRED` for strict required probes
+
 ## 4) Validator and CI closure model
 
 ### 4.1 New validators (required)
@@ -91,12 +112,15 @@ The objective is to move from "validator-centered" to "file-lifecycle-centered" 
 3. mutation without governance receipt => `FAIL_REQUIRED`
 4. forged/mismatched `before_sha256`/`after_sha256` => `FAIL_REQUIRED`
 5. post-check state missing/invalid => next-hop hard block
+6. send-time `post_check_blocker_active` branch must emit `chat_egress_uniqueness_error_code=IP-HDSTAMP-003` + blocker reason
+7. send-time `post_check_state_unavailable` branch must emit `chat_egress_uniqueness_error_code=IP-HDSTAMP-003` + missing-state reason
 
 ### 4.3 Required positive probes
 
 1. registered file mutation by allowed writer with valid receipt => `PASS_REQUIRED`
 2. runtime/governance parity for all registry entries => `PASS_REQUIRED`
 3. strict update path with governance post-check clean => `PASS_REQUIRED`
+4. full-scan strict projection includes `chat_egress_uniqueness_status` and enforces required threshold
 
 ## 5) Conflict-avoidance matrix (must remain true)
 
@@ -105,6 +129,16 @@ The objective is to move from "validator-centered" to "file-lifecycle-centered" 
 3. No compatibility branch for legacy ad-hoc runtime paths.
 4. No hardcoded per-identity exceptions.
 5. No silent downgrade from `FAIL_REQUIRED` to `SKIPPED_NOT_REQUIRED` in strict operations.
+
+### 5.1 Wrapper mirror discipline (mandatory)
+
+1. `runtime/gate/protocol_ingress_wrapper.py`, `runtime/gate/protocol_egress_wrapper.py`, and `runtime/gate/protocol_session_chain_wrapper.py` are governed mirrors, not source of truth.
+2. Canonical control-plane source remains protocol repo scripts and contracts:
+   - `scripts/final_emit_governed.py`
+   - `scripts/validate_send_time_reply_gate.py`
+   - `scripts/protocol_infra_contract.py`
+3. Wrapper refresh is allowed and expected via protocol backfill/upgrade flows, but wrappers must never redefine channel governance semantics independently.
+4. Any `runtime wrapper == local contract` but `runtime wrapper != canonical template` condition is governance drift and must fail-close in strict lane.
 
 ## 6) Cross-verification synthesis (roundtable/vendor/reference/search/context7/openaidoc)
 
@@ -149,6 +183,7 @@ Each phase must be merge-safe and independently fail-close.
 3. `RUNTIME_FILE_UNAUTHORIZED_WRITER_BLOCK_RATE = 1.0`
 4. `RUNTIME_FILE_POST_CHECK_BLOCK_ON_INVALID_RATE = 1.0`
 5. `RUNTIME_FILE_FALSE_GREEN_MAX_RATE = 0.0`
+6. `HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE = 1.0`
 
 Serial acceptance baseline:
 

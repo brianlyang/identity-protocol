@@ -17,8 +17,11 @@ from final_emit_contract_common import (
     normalize_text,
 )
 from protocol_infra_contract import (
+    CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
+    CHAT_EGRESS_RAW_BYPASS_ERROR_CODE,
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
+    HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
 )
@@ -65,6 +68,73 @@ HOST_VISIBLE_GOVERNED_CHANNELS.add(normalize_text(FINAL_EMIT_CHANNEL_ID).lower()
 SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
 REPO_ROOT = SCRIPT_DIR.parent
+
+
+def _stale_reason_contains(stale_reasons: list[str] | tuple[str, ...], token: str) -> bool:
+    needle = str(token or "").strip()
+    if not needle:
+        return False
+    for reason in [str(item).strip() for item in stale_reasons if str(item).strip()]:
+        if reason == needle or reason.startswith(f"{needle}:"):
+            return True
+    return False
+
+
+def _inject_chat_egress_uniqueness_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    out = dict(payload or {})
+    stale_reasons = [str(item).strip() for item in (out.get("stale_reasons") or []) if str(item).strip()]
+    send_time_status = str(out.get("send_time_gate_status", "")).strip().upper()
+    first_line_status = str(out.get("reply_first_line_status", "")).strip().upper()
+    send_time_block_stage = str(out.get("send_time_block_stage", "")).strip()
+    error_code = str(out.get("error_code", "")).strip()
+    outlet_bypass_detected = bool(out.get("outlet_bypass_detected", False))
+
+    post_check_state_unavailable = (
+        send_time_block_stage == "pre_first_line_post_check_state_unavailable"
+        or _stale_reason_contains(stale_reasons, "host_transport_post_check_state_unavailable")
+    )
+    post_check_blocker_active = (
+        send_time_block_stage == "pre_first_line_post_check_blocker_active"
+        or _stale_reason_contains(stale_reasons, "host_transport_post_check_blocker_active")
+    )
+
+    uniqueness_status = STATUS_PASS_REQUIRED
+    uniqueness_reason = "governed_single_egress_enforced"
+    uniqueness_error_code = ""
+
+    if send_time_status == STATUS_SKIPPED_NOT_REQUIRED:
+        uniqueness_status = STATUS_SKIPPED_NOT_REQUIRED
+        uniqueness_reason = "send_time_gate_not_required"
+    elif (
+        send_time_status != STATUS_PASS_REQUIRED
+        or first_line_status != STATUS_PASS_REQUIRED
+        or outlet_bypass_detected
+        or post_check_state_unavailable
+        or post_check_blocker_active
+    ):
+        uniqueness_status = STATUS_FAIL_REQUIRED
+        if post_check_state_unavailable:
+            uniqueness_reason = "post_check_state_unavailable_fail_close"
+            uniqueness_error_code = CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE
+        elif post_check_blocker_active:
+            uniqueness_reason = "post_check_blocker_active_next_hop_blocked"
+            uniqueness_error_code = CHAT_EGRESS_RAW_BYPASS_ERROR_CODE
+        elif outlet_bypass_detected:
+            uniqueness_reason = "raw_or_nongoverned_egress_bypass_detected"
+            uniqueness_error_code = CHAT_EGRESS_RAW_BYPASS_ERROR_CODE
+        elif first_line_status != STATUS_PASS_REQUIRED:
+            uniqueness_reason = "headstamp_first_line_gate_failed"
+            uniqueness_error_code = error_code or CHAT_EGRESS_RAW_BYPASS_ERROR_CODE
+        else:
+            uniqueness_reason = "send_time_gate_not_pass"
+            uniqueness_error_code = error_code or CHAT_EGRESS_RAW_BYPASS_ERROR_CODE
+
+    out["chat_egress_uniqueness_contract_id"] = HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID
+    out["chat_egress_uniqueness_status"] = uniqueness_status
+    out["chat_egress_uniqueness_reason"] = uniqueness_reason
+    out["chat_egress_uniqueness_error_code"] = uniqueness_error_code
+    out["chat_egress_uniqueness_observed_send_time_status"] = send_time_status
+    return out
 
 
 def _is_fixture_identity(catalog_path: Path, identity_id: str) -> bool:
@@ -283,6 +353,7 @@ def _is_final_emit_schema_pass(schema_status: str) -> bool:
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
+    payload = _inject_chat_egress_uniqueness_fields(payload)
     payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))

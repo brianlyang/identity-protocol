@@ -1202,6 +1202,26 @@ def main() -> int:
                 "--require-run-id",
             )
         )
+        has_post_check_blocker_probe = all(
+            token in text
+            for token in (
+                "run_probe send_time_next_hop_blocked_by_post_check",
+                "chat_egress_uniqueness_contract_id mismatch",
+                "chat_egress_uniqueness_status must be FAIL_REQUIRED",
+                "IP-HDSTAMP-003",
+                "post_check_blocker_active_next_hop_blocked",
+            )
+        )
+        has_post_check_state_missing_probe = all(
+            token in text
+            for token in (
+                "run_probe send_time_next_hop_blocked_on_missing_post_check_state",
+                "chat_egress_uniqueness_contract_id mismatch",
+                "chat_egress_uniqueness_status must be FAIL_REQUIRED",
+                "IP-HDSTAMP-003",
+                "post_check_state_unavailable_fail_close",
+            )
+        )
         host_visible_missing_tokens: list[str] = []
         if not has_static_probe:
             host_visible_missing_tokens.append("host_visible_surface_static_probe_invocation_missing")
@@ -1213,6 +1233,10 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_run_binding_negative_probe_invocation_missing")
         if not has_binding_negative_probe:
             host_visible_missing_tokens.append("host_visible_surface_commentary_session_binding_negative_probe_invocation_missing")
+        if not has_post_check_blocker_probe:
+            host_visible_missing_tokens.append("host_visible_surface_post_check_blocker_chat_egress_probe_invocation_missing")
+        if not has_post_check_state_missing_probe:
+            host_visible_missing_tokens.append("host_visible_surface_post_check_state_missing_chat_egress_probe_invocation_missing")
         if host_visible_missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))

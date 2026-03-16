@@ -48,6 +48,8 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 4. Unauthorized writer attempts are hard blocked.
 5. Missing/invalid post-check state hard blocks next-hop.
 6. No existing v1.6.8 or v1.6.9 required checks are downgraded.
+7. strict send-time payload must project `chat_egress_uniqueness_*` fields with deterministic fail-close mapping.
+8. runtime wrappers are validated as canonical mirrors; no wrapper-local semantic override is allowed.
 
 ## 4) Probe matrix
 
@@ -58,6 +60,8 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 3. `probe_runtime_file_missing_receipt_blocked`
 4. `probe_runtime_file_hash_transition_invalid_blocked`
 5. `probe_runtime_file_post_check_state_missing_blocked`
+6. `probe_send_time_next_hop_blocked_by_post_check_chat_egress`
+7. `probe_send_time_next_hop_blocked_on_missing_post_check_state_chat_egress`
 
 ### 4.2 Positive (required green)
 
@@ -65,6 +69,7 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 2. `probe_runtime_file_writer_allowed_pass`
 3. `probe_runtime_file_post_check_clean_pass`
 4. `probe_runtime_file_fullscan_surface_pass`
+5. `probe_chat_egress_uniqueness_projection_pass`
 
 ## 5) Non-conflict assertions
 
@@ -88,6 +93,7 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 2. Required CI probes are wired and green/red semantics verified.
 3. 3 serial self-test rounds and 3 serial deep-scan rounds completed.
 4. Unified manifest generated with evidence hashes and timestamps.
+5. strict full-scan payload includes `chat_egress_uniqueness_status` and it is non-empty for runtime-active rows.
 
 ## 8) Evidence pointers for this stream
 
@@ -120,6 +126,8 @@ Required machine checks (all must be present and green in strict lane):
    - must include negative probe `probe_feedback_noncanonical_filename_write`
    - expected verdict: `protocol_downsink_path_write_guard_status=FAIL_REQUIRED`
 4. `bash scripts/ci/run_skill_supply_chain_probes_ci.sh`
+5. `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh`
+   - must assert `chat_egress_uniqueness_contract_id/status/reason/error_code` on both next-hop block branches
 
 Interpretation contract:
 

@@ -19,6 +19,8 @@ from protocol_infra_contract import (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     CTX_TOOL_TIMEOUT_MARKER,
     GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT,
+    HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
+    HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE,
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
@@ -517,8 +519,11 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
     next_hop_blocked = 0
     false_green_total = 0
     false_green_count = 0
+    chat_egress_uniqueness_total = 0
+    chat_egress_uniqueness_passed = 0
     next_hop_candidates: list[str] = []
     false_green_identities: list[str] = []
+    chat_egress_uniqueness_fail_identities: list[str] = []
 
     for row in runtime_rows:
         identity_id = str(row.get("identity_id", "")).strip()
@@ -537,6 +542,13 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
                 pre_send_not_reached += 1
             if bool(send_entry.get("ok", False)) and send_status in {"", STATUS_PASS_REQUIRED}:
                 pre_send_passed += 1
+            chat_egress_uniqueness_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
+            if chat_egress_uniqueness_status:
+                chat_egress_uniqueness_total += 1
+                if chat_egress_uniqueness_status == STATUS_PASS_REQUIRED:
+                    chat_egress_uniqueness_passed += 1
+                elif identity_id:
+                    chat_egress_uniqueness_fail_identities.append(identity_id)
             post_check_state_status = str(send_entry.get("host_transport_post_check_state_status", "")).strip()
             post_check_state_unavailable = post_check_state_status in {
                 "STATE_UNCHECKED",
@@ -592,6 +604,10 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
     post_check_rate = _safe_rate(passed=post_check_passed, total=post_check_total)
     next_hop_rate = _safe_rate(passed=next_hop_blocked, total=next_hop_total)
     false_green_rate = _safe_rate(passed=false_green_count, total=false_green_total)
+    chat_egress_uniqueness_rate = _safe_rate(
+        passed=chat_egress_uniqueness_passed,
+        total=chat_egress_uniqueness_total,
+    )
 
     pre_send_status = _status_by_min_rate(
         rate=pre_send_rate,
@@ -613,12 +629,18 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         max_rate=float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
         total=false_green_total,
     )
+    chat_egress_uniqueness_status = _status_by_min_rate(
+        rate=chat_egress_uniqueness_rate,
+        min_rate=float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
+        total=chat_egress_uniqueness_total,
+    )
 
     metric_statuses = (
         pre_send_status,
         post_check_status,
         next_hop_status,
         false_green_status,
+        chat_egress_uniqueness_status,
     )
     overall_status = STATUS_PASS_REQUIRED
     if any(status == STATUS_FAIL_REQUIRED for status in metric_statuses):
@@ -631,6 +653,7 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         and post_check_status == STATUS_PASS_REQUIRED
         and next_hop_status == STATUS_PASS_REQUIRED
         and false_green_status == STATUS_PASS_REQUIRED
+        and chat_egress_uniqueness_status == STATUS_PASS_REQUIRED
     )
 
     stale_reasons: list[str] = []
@@ -646,16 +669,23 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         stale_reasons.append("metric_next_hop_block_rate_insufficient_blocker_samples")
     if false_green_status == STATUS_FAIL_REQUIRED:
         stale_reasons.append("metric_false_green_rate_above_threshold")
+    if chat_egress_uniqueness_status == STATUS_FAIL_REQUIRED:
+        stale_reasons.append("metric_chat_egress_uniqueness_rate_below_threshold")
+    if chat_egress_uniqueness_status == STATUS_SKIPPED_NOT_REQUIRED:
+        stale_reasons.append("metric_chat_egress_uniqueness_samples_missing")
 
     return {
         "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
+        "chat_egress_uniqueness_contract_id": HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
         "host_visible_post_check_metrics_status": overall_status,
+        "chat_egress_uniqueness_status": chat_egress_uniqueness_status,
         "closure_claim_ready": bool(closure_claim_ready),
         "thresholds": {
             "pre_send_gate_pass_rate_min": float(HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE),
             "post_check_detectability_rate_min": float(HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE),
             "next_hop_block_rate_min": float(HOST_VISIBLE_NEXT_HOP_BLOCK_REQUIRED_RATE),
             "false_green_rate_max": float(HOST_VISIBLE_FALSE_GREEN_MAX_RATE),
+            "chat_egress_uniqueness_rate_min": float(HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE),
         },
         "samples": {
             "runtime_active_total": len(runtime_rows),
@@ -664,21 +694,25 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "post_check_detectability_total": post_check_total,
             "next_hop_block_total": next_hop_total,
             "false_green_total": false_green_total,
+            "chat_egress_uniqueness_total": chat_egress_uniqueness_total,
         },
         "metrics": {
             "pre_send_gate_pass_rate": pre_send_rate,
             "post_check_detectability_rate": post_check_rate,
             "next_hop_block_rate": next_hop_rate,
             "false_green_rate": false_green_rate,
+            "chat_egress_uniqueness_rate": chat_egress_uniqueness_rate,
         },
         "metric_statuses": {
             "pre_send_gate_pass_rate_status": pre_send_status,
             "post_check_detectability_rate_status": post_check_status,
             "next_hop_block_rate_status": next_hop_status,
             "false_green_rate_status": false_green_status,
+            "chat_egress_uniqueness_rate_status": chat_egress_uniqueness_status,
         },
         "next_hop_block_identity_ids": sorted(set(next_hop_candidates)),
         "false_green_identity_ids": sorted(set(false_green_identities)),
+        "chat_egress_uniqueness_fail_identity_ids": sorted(set(chat_egress_uniqueness_fail_identities)),
         "stale_reasons": stale_reasons,
     }
 
@@ -5011,7 +5045,11 @@ def main() -> int:
             print(f"[FAIL] target identities not found in selected catalogs: {missing}")
             return 2
 
-    payload["host_visible_post_check_metrics"] = _build_host_visible_post_check_metrics(rows=all_scanned_rows)
+    host_visible_post_check_metrics = _build_host_visible_post_check_metrics(rows=all_scanned_rows)
+    payload["host_visible_post_check_metrics"] = host_visible_post_check_metrics
+    payload["chat_egress_uniqueness_status"] = str(
+        host_visible_post_check_metrics.get("chat_egress_uniqueness_status", "")
+    ).strip() or STATUS_SKIPPED_NOT_REQUIRED
 
     if args.out:
         out = Path(args.out).expanduser().resolve()
