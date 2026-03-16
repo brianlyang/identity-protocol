@@ -1312,6 +1312,34 @@ def main() -> int:
                 "--probe-write-path \"runtime/protocol-feedback/outbox-to-protocol/freeform_note_probe.md\"",
             )
         )
+        has_feedback_inquiry_trigger_positive_probe = all(
+            token in text
+            for token in (
+                "run_probe probe_feedback_inquiry_requiredization_trigger_allowed",
+                "--probe-write-path \"runtime/protocol-feedback/outbox-to-protocol/INQUIRY_REQUIREDIZATION_TRIGGER_20260316T000000Z.json\"",
+            )
+        )
+        has_feedback_sanitization_positive_probe = all(
+            token in text
+            for token in (
+                "run_probe probe_feedback_sanitization_paraphrase_allowed",
+                "--probe-write-path \"runtime/protocol-feedback/outbox-to-protocol/SANITIZATION_PARAPHRASE_20260316T000000Z.json\"",
+            )
+        )
+        has_feedback_lane_lock_protocol_positive_probe = all(
+            token in text
+            for token in (
+                "run_probe probe_feedback_session_lane_lock_protocol_allowed",
+                "--probe-write-path \"runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260316T000000Z.json\"",
+            )
+        )
+        has_feedback_lane_lock_exit_positive_probe = all(
+            token in text
+            for token in (
+                "run_probe probe_feedback_session_lane_lock_exit_allowed",
+                "--probe-write-path \"runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260316T000000Z.json\"",
+            )
+        )
         has_broadcast_nonregistry_probe = all(
             token in text
             for token in (
@@ -1338,6 +1366,14 @@ def main() -> int:
             downsink_missing_tokens.append("downsink_feedback_nonregistry_probe_invocation_missing")
         if not has_feedback_filename_probe:
             downsink_missing_tokens.append("downsink_feedback_filename_probe_invocation_missing")
+        if not has_feedback_inquiry_trigger_positive_probe:
+            downsink_missing_tokens.append("downsink_feedback_inquiry_trigger_positive_probe_missing")
+        if not has_feedback_sanitization_positive_probe:
+            downsink_missing_tokens.append("downsink_feedback_sanitization_positive_probe_missing")
+        if not has_feedback_lane_lock_protocol_positive_probe:
+            downsink_missing_tokens.append("downsink_feedback_lane_lock_protocol_positive_probe_missing")
+        if not has_feedback_lane_lock_exit_positive_probe:
+            downsink_missing_tokens.append("downsink_feedback_lane_lock_exit_positive_probe_missing")
         if not has_broadcast_nonregistry_probe:
             downsink_missing_tokens.append("downsink_broadcast_nonregistry_probe_invocation_missing")
         if not has_literal_lock_probe:

@@ -4866,6 +4866,7 @@ Replay evidence (2026-03-09):
    - `runtime/state/**/*`
    - `runtime/plugins/**/*`
    - `runtime/gate/**/*`
+   - `runtime/protocol-feedback/**/*`
 3. Scanner exclude scope must always include:
    - `runtime/reports/**`
    - `sanitization-backups/**`

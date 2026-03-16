@@ -21,7 +21,8 @@ CONTROL_PLANE_GLOBS = (
     "META.yaml",
     "runtime/state/**/*",
     "runtime/plugins/**/*",
-    "runtime/gate/**/*",
+    "runtime/gate/**/*",  # downsink-path-lock: allow-nonregistry-literal
+    "runtime/protocol-feedback/**/*",  # downsink-path-lock: allow-nonregistry-literal
 )
 
 EXCLUDED_GLOBS = (

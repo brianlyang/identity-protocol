@@ -992,6 +992,26 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path": "runtime/protocol-feedback/outbox-to-protocol/*_PENDING_*.json",
                 },
                 {
+                    "path_id": "runtime_protocol_feedback.outbox_inquiry_requiredization_trigger",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/INQUIRY_REQUIREDIZATION_TRIGGER_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_sanitization_paraphrase",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/SANITIZATION_PARAPHRASE_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_session_lane_lock_protocol",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_session_lane_lock_exit",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_*.json",
+                },
+                {
                     "path_id": "runtime_protocol_feedback.outbox_broadcast",
                     "entry_type": "glob",
                     "path": "runtime/protocol-feedback/outbox-to-protocol/BROADCAST_*.json",

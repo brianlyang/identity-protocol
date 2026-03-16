@@ -111,6 +111,14 @@ Required machine checks (all must be present and green in strict lane):
 2. `python3 scripts/validate_required_contract_coverage.py --catalog <catalog> --identity-id <id> --operation validate --json-only`
    - payload must include `required_contract_coverage_status`
 3. `bash scripts/ci/run_downsink_path_immutability_probes_ci.sh`
+   - must include positive probes:
+     - `probe_feedback_inquiry_requiredization_trigger_allowed`
+     - `probe_feedback_sanitization_paraphrase_allowed`
+     - `probe_feedback_session_lane_lock_protocol_allowed`
+     - `probe_feedback_session_lane_lock_exit_allowed`
+   - expected verdict for each: `protocol_downsink_path_write_guard_status=PASS_REQUIRED`
+   - must include negative probe `probe_feedback_noncanonical_filename_write`
+   - expected verdict: `protocol_downsink_path_write_guard_status=FAIL_REQUIRED`
 4. `bash scripts/ci/run_skill_supply_chain_probes_ci.sh`
 
 Interpretation contract:

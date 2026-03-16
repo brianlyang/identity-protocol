@@ -64,6 +64,9 @@ from create_identity_pack import (
     _prompt_capability_matrix_contract_skeleton,
     _prompt_kernel_executable_coupling_contract_skeleton,
     _reasoning_loop_failclose_contract_skeleton,
+    _skill_frontmatter_contract_skeleton,
+    _skill_installation_supply_chain_contract_skeleton,
+    _skill_sync_drift_guard_contract_skeleton,
     materialize_protocol_host_gateway_artifacts,
 )
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
@@ -87,6 +90,9 @@ REQUIRED_INTAKE_KEYS = (
     "cross_workflow_evidence_schema_contract_v1",
     "skill_path_integrity_contract_v1",
     "route_workflow_version_pinning_contract_v1",
+    "skill_installation_supply_chain_contract_v1",
+    "skill_frontmatter_contract_v1",
+    "skill_sync_drift_guard_contract_v1",
 )
 
 REQUIRED_PROMPT_KEYS = (
@@ -146,6 +152,17 @@ HOST_VISIBLE_SURFACE_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
 DOWNSINK_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
     DOWNSINK_PATH_IMMUTABILITY_CONTRACT_KEY: _protocol_downsink_path_immutability_contract_skeleton(),
 }
+SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS: dict[str, dict[str, Any]] = {
+    "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton("default"),
+    "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
+    "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),
+}
+
+CAPABILITY_DRIVER_VALIDATOR_IDS: tuple[str, ...] = (
+    "scripts/validate_identity_tool_installation.py",
+    "scripts/validate_identity_vendor_api_discovery.py",
+    "scripts/validate_identity_vendor_api_solution.py",
+)
 
 ERR_PROMPT_WIRE_MISSING = "IP-PROMPT-WIRE-002"
 ERR_PROMPT_WIRE_INVALID = "IP-PROMPT-WIRE-003"
@@ -216,6 +233,77 @@ def _merge_required_skills(node: dict[str, Any], required_skill_id: str) -> bool
     values.append(required_skill_id)
     node["required_skills"] = values
     return True
+
+
+def _deep_merge(current: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
+    merged = json.loads(json.dumps(defaults))
+    for key, value in (current or {}).items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(value, merged[key])
+        else:
+            merged[key] = value
+    return merged
+
+
+def _merge_validator_ids(container: dict[str, Any], key: str, validator_ids: tuple[str, ...]) -> tuple[bool, list[str]]:
+    changed = False
+    node = container.get(key)
+    if isinstance(node, list):
+        rows = [str(x).strip() for x in node if str(x).strip()]
+    else:
+        rows = []
+    appended: list[str] = []
+    for validator_id in validator_ids:
+        if validator_id in rows:
+            continue
+        rows.append(validator_id)
+        appended.append(validator_id)
+        changed = True
+    if changed:
+        container[key] = rows
+    return changed, appended
+
+
+def _normalize_skill_supply_chain_contracts(task_doc: dict[str, Any], identity_id: str) -> list[str]:
+    restored: list[str] = []
+    defaults = {
+        "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton(identity_id),
+        "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
+        "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),
+    }
+    for key, default in defaults.items():
+        node = task_doc.get(key)
+        if not isinstance(node, dict):
+            task_doc[key] = json.loads(json.dumps(default))
+            restored.append(key)
+            continue
+        task_doc[key] = _deep_merge(node, default)
+    return restored
+
+
+def _normalize_capability_driver_validators(task_doc: dict[str, Any]) -> dict[str, list[str]]:
+    restored: dict[str, list[str]] = {
+        "required_validators": [],
+        "ci_enforcement_contract.required_validators": [],
+        "identity_update_lifecycle_contract.validation_contract.required_checks": [],
+    }
+    _, appended_root = _merge_validator_ids(task_doc, "required_validators", CAPABILITY_DRIVER_VALIDATOR_IDS)
+    if appended_root:
+        restored["required_validators"].extend(appended_root)
+
+    ci_contract = task_doc.get("ci_enforcement_contract")
+    if isinstance(ci_contract, dict):
+        _, appended_ci = _merge_validator_ids(ci_contract, "required_validators", CAPABILITY_DRIVER_VALIDATOR_IDS)
+        if appended_ci:
+            restored["ci_enforcement_contract.required_validators"].extend(appended_ci)
+
+    lifecycle_contract = task_doc.get("identity_update_lifecycle_contract")
+    validation_contract = lifecycle_contract.get("validation_contract") if isinstance(lifecycle_contract, dict) else None
+    if isinstance(validation_contract, dict):
+        _, appended_lc = _merge_validator_ids(validation_contract, "required_checks", CAPABILITY_DRIVER_VALIDATOR_IDS)
+        if appended_lc:
+            restored["identity_update_lifecycle_contract.validation_contract.required_checks"].extend(appended_lc)
+    return {k: v for k, v in restored.items() if v}
 
 
 def _safe_int(value: Any, *, default: int = 0) -> int:
@@ -905,20 +993,24 @@ def _normalize_downsink_path_contracts(task: dict[str, Any]) -> tuple[list[str],
             path_registry = {}
         default_registry = default.get("path_registry")
         if isinstance(default_registry, dict):
+            normalized_registry: dict[str, Any] = {}
             for domain, default_domain_node in default_registry.items():
+                if not isinstance(default_domain_node, dict):
+                    continue
+                default_anchor_ref = str(default_domain_node.get("anchor_ref", "")).strip()
+                default_entries = json.loads(json.dumps(default_domain_node.get("entries", [])))
                 current_domain_node = path_registry.get(domain)
                 if not isinstance(current_domain_node, dict):
-                    path_registry[domain] = json.loads(json.dumps(default_domain_node))
+                    normalized_registry[domain] = {
+                        "anchor_ref": default_anchor_ref,
+                        "entries": default_entries,
+                    }
                     continue
-                current_entries = current_domain_node.get("entries")
-                if not isinstance(current_entries, list) or not current_entries:
-                    current_domain_node["entries"] = json.loads(
-                        json.dumps((default_domain_node or {}).get("entries", []))
-                    )
-                anchor_ref = str(current_domain_node.get("anchor_ref", "")).strip()
-                if not anchor_ref:
-                    current_domain_node["anchor_ref"] = str((default_domain_node or {}).get("anchor_ref", "")).strip()
-                path_registry[domain] = current_domain_node
+                normalized_registry[domain] = {
+                    "anchor_ref": default_anchor_ref,
+                    "entries": default_entries,
+                }
+            path_registry = normalized_registry
         node["path_registry"] = path_registry
     restored_literal_lock_validator_keys = sorted(set(restored_literal_lock_validator_keys))
     return (
@@ -1001,9 +1093,14 @@ def main() -> int:
         k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(task_doc.get(k), dict)
     ]
     downsink_missing_before = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(task_doc.get(k), dict)]
+    skill_supply_chain_missing_before = [
+        k for k in SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS.keys() if not isinstance(task_doc.get(k), dict)
+    ]
     legacy_drift_before = _legacy_path_drift_fields(task_doc, args.identity_id)
 
     updated = _ensure_intake_p1_contracts(task_doc, args.identity_id)
+    restored_skill_supply_chain_contract_keys = _normalize_skill_supply_chain_contracts(updated, args.identity_id)
+    restored_capability_driver_validator_paths = _normalize_capability_driver_validators(updated)
     skill_contract = updated.get("skill_path_integrity_contract_v1")
     if isinstance(skill_contract, dict):
         _merge_required_skills(skill_contract, FILE_GOVERNANCE_SKILL_ID)
@@ -1046,6 +1143,9 @@ def main() -> int:
         k for k in REQUIRED_HOST_VISIBLE_SURFACE_KEYS if not isinstance(updated.get(k), dict)
     ]
     downsink_missing_after = [k for k in REQUIRED_DOWNSINK_KEYS if not isinstance(updated.get(k), dict)]
+    skill_supply_chain_missing_after = [
+        k for k in SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS.keys() if not isinstance(updated.get(k), dict)
+    ]
     prompt_invalid_after = [
         k
         for k in REQUIRED_PROMPT_KEYS
@@ -1496,6 +1596,10 @@ def main() -> int:
         status = STATUS_FAIL_REQUIRED
         error_code = ERR_DOWNSINK_WIRE_INVALID
         stale_reasons = ["required_downsink_contract_invalid_after_backfill"]
+    elif skill_supply_chain_missing_after:
+        status = STATUS_FAIL_REQUIRED
+        error_code = "IP-SSUP-001"
+        stale_reasons = ["required_skill_supply_chain_contract_keys_missing_after_backfill"]
     elif legacy_drift_after:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-CBKF-002"
@@ -1604,6 +1708,11 @@ def main() -> int:
         "restored_downsink_validator_keys": restored_downsink_validator_keys,
         "restored_downsink_write_guard_validator_keys": restored_downsink_write_guard_validator_keys,
         "restored_downsink_literal_lock_validator_keys": restored_downsink_literal_lock_validator_keys,
+        "required_skill_supply_chain_contract_keys": list(SKILL_SUPPLY_CHAIN_CONTRACT_DEFAULTS.keys()),
+        "missing_skill_supply_chain_contract_keys_before": skill_supply_chain_missing_before,
+        "missing_skill_supply_chain_contract_keys_after": skill_supply_chain_missing_after,
+        "restored_skill_supply_chain_contract_keys": restored_skill_supply_chain_contract_keys,
+        "restored_capability_driver_validator_paths": restored_capability_driver_validator_paths,
         "host_gateway_artifacts": gateway_artifacts,
         "unique_entry_contract_auto_wire_status": (
             STATUS_PASS_REQUIRED if not entry_missing_after and not entry_invalid_after else STATUS_FAIL_REQUIRED

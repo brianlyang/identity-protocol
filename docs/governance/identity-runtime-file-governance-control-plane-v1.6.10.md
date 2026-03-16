@@ -194,3 +194,53 @@ This stream remains draft/continuity, but anti-forget closure is machine-enforce
 4. skill artifact supply-chain probes (absorbed motherline controls) must stay wired through:
    - `scripts/ci/run_skill_supply_chain_probes_ci.sh`
 5. if any mapping row or doc clause is added without the above strict surfaces, it is a fail-close anti-forget breach.
+
+## 12) Fixed runtime/protocol-feedback downsink scope (mandatory)
+
+`runtime/protocol-feedback` is part of control-plane downsink and must be governed by fixed paths + fixed filename patterns, not free-form writes.
+
+Fixed subdirectories:
+
+1. `runtime/protocol-feedback/outbox-to-protocol/`
+2. `runtime/protocol-feedback/inbox-from-protocol/`
+3. `runtime/protocol-feedback/evidence-index/`
+4. `runtime/protocol-feedback/upgrade-proposals/`
+5. `runtime/protocol-feedback/atomic/`
+6. `runtime/protocol-feedback/roundtables/`
+7. `runtime/protocol-feedback/protocol-vendor-intel/`
+8. `runtime/protocol-feedback/business-partner-intel/`
+9. `runtime/protocol-feedback/vendor-intel/`
+10. `runtime/protocol-feedback/issues/`
+11. `runtime/protocol-feedback/review-notes/`
+12. `runtime/protocol-feedback/validation/`
+
+Fixed filename pattern families (representative required set):
+
+1. `outbox-to-protocol/FEEDBACK_BATCH_*.md`
+2. `outbox-to-protocol/*_RECEIPT_*.json`
+3. `outbox-to-protocol/*_SEED_*.md`
+4. `outbox-to-protocol/*_PACK_*.md`
+5. `outbox-to-protocol/REQUIREMENTS_*.md`
+6. `outbox-to-protocol/*_PENDING_*.json`
+7. `outbox-to-protocol/BROADCAST_*.json`
+8. `outbox-to-protocol/INQUIRY_REQUIREDIZATION_TRIGGER_*.json`
+9. `outbox-to-protocol/SANITIZATION_PARAPHRASE_*.json`
+10. `outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_*.json`
+11. `outbox-to-protocol/SESSION_LANE_LOCK_EXIT_*.json`
+12. `inbox-from-protocol/PROTOCOL_INBOX_*.md`
+13. `inbox-from-protocol/PROTOCOL_INBOX_RECEIPT_*.json`
+14. `evidence-index/INDEX.md`
+15. `upgrade-proposals/*.md`
+16. `atomic/*.receipt.json`, `atomic/*.batch.json`, `atomic/*.index.json`
+17. `roundtables/ROUNDTABLE_*.md`
+18. `protocol-vendor-intel/PROTOCOL_VENDOR_*.md`
+19. `business-partner-intel/BUSINESS_PARTNER_*.md`
+20. `vendor-intel/VENDOR_*.md`
+21. `issues/ISSUE_*.md`
+22. `review-notes/*.log`
+23. `validation/*.json`
+
+Fail-close rule:
+
+1. any file under `runtime/protocol-feedback/**` that does not match registry patterns is `FAIL_REQUIRED`.
+2. canonical directory + noncanonical filename is also `FAIL_REQUIRED`.

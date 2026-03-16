@@ -196,8 +196,7 @@ def _collect_runtime_write_candidates(pack_path: Path) -> list[Path]:
     out: list[Path] = []
     feedback_root = (pack_path / "runtime" / "protocol-feedback").resolve()
     if feedback_root.exists():
-        out.extend(p for p in feedback_root.rglob("FEEDBACK_BATCH_*") if p.is_file())
-        out.extend(p for p in feedback_root.rglob("INDEX.md") if p.is_file())
+        out.extend(p for p in feedback_root.rglob("*") if p.is_file())
     reports_root = (pack_path / "runtime" / "reports").resolve()
     if reports_root.exists():
         out.extend(p for p in reports_root.rglob("broadcast-receipt-*.json") if p.is_file())

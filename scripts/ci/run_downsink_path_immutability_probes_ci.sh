@@ -199,6 +199,38 @@ run_probe probe_canonical_write_guard_pass 0 protocol_downsink_path_write_guard_
   --operation validate \
   --json-only
 
+run_probe probe_feedback_inquiry_requiredization_trigger_allowed 0 protocol_downsink_path_write_guard_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_write_guard.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/INQUIRY_REQUIREDIZATION_TRIGGER_20260316T000000Z.json" \
+  --json-only
+
+run_probe probe_feedback_sanitization_paraphrase_allowed 0 protocol_downsink_path_write_guard_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_write_guard.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/SANITIZATION_PARAPHRASE_20260316T000000Z.json" \
+  --json-only
+
+run_probe probe_feedback_session_lane_lock_protocol_allowed 0 protocol_downsink_path_write_guard_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_write_guard.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_PROTOCOL_20260316T000000Z.json" \
+  --json-only
+
+run_probe probe_feedback_session_lane_lock_exit_allowed 0 protocol_downsink_path_write_guard_status PASS_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_write_guard.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/SESSION_LANE_LOCK_EXIT_20260316T000000Z.json" \
+  --json-only
+
 run_probe probe_canonical_literal_lock_pass 0 protocol_downsink_path_literal_lock_status PASS_REQUIRED \
   python3 scripts/validate_protocol_downsink_path_literal_lock.py \
   --catalog "${CATALOG_PATH}" \
@@ -276,6 +308,17 @@ run_probe probe_feedback_nonregistry_write 1 protocol_downsink_path_write_guard_
   --identity-id "${IDENTITY_ID}" \
   --operation validate \
   --probe-write-path "runtime/protocol-feedback/noncanonical/FEEDBACK_BATCH_probe.md" \
+  --json-only
+
+# Negative probe: protocol-feedback noncanonical filename under canonical directory
+restore_task
+rebuild_runtime_mirror
+run_probe probe_feedback_noncanonical_filename_write 1 protocol_downsink_path_write_guard_status FAIL_REQUIRED \
+  python3 scripts/validate_protocol_downsink_path_write_guard.py \
+  --catalog "${CATALOG_PATH}" \
+  --identity-id "${IDENTITY_ID}" \
+  --operation validate \
+  --probe-write-path "runtime/protocol-feedback/outbox-to-protocol/freeform_note_probe.md" \
   --json-only
 
 # Negative probe: broadcast receipt non-registry write
