@@ -2,12 +2,14 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TMP_ROOT_BASE="${RUNNER_TEMP:-${TMPDIR:-${GITHUB_WORKSPACE:-${REPO_ROOT}}/.tmp-runtime}}"
-WORK_ROOT="${HOST_VISIBLE_SURFACE_PROBE_WORK_ROOT:-${TMP_ROOT_BASE%/}/identity-host-visible-surface-probes}"
+PROJECT_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
+DEFAULT_WORK_ROOT="${PROJECT_ROOT}/.identity/_probe/identity-host-visible-surface-probes"
+WORK_ROOT="${HOST_VISIBLE_SURFACE_PROBE_WORK_ROOT:-${DEFAULT_WORK_ROOT}}"
 FIXTURE_ROOT="${WORK_ROOT}/fixtures"
 RESULT_ROOT="${WORK_ROOT}/results"
 MANIFEST_PATH="${WORK_ROOT}/manifest.host_visible_surface_live.json"
 
+rm -rf "${WORK_ROOT}"
 mkdir -p "${FIXTURE_ROOT}" "${RESULT_ROOT}"
 
 python3 - <<'PY' "${FIXTURE_ROOT}"
@@ -31,6 +33,7 @@ catalog = {
             "id": "probe-visible",
             "status": "active",
             "pack_path": str(probe_pack),
+            "canonical_scope": "USER",
             "profile": "runtime",
             "runtime_mode": "local_only",
         }
@@ -185,6 +188,39 @@ elif name == "send_time_governed_pass_headstamp_required":
     observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
     if observed_status != "PASS_REQUIRED":
         raise SystemExit("send_time_governed_pass_headstamp_required: chat_egress_uniqueness_observed_send_time_status mismatch")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: next_hop_admission_status must be PASS_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "governed":
+        raise SystemExit("send_time_governed_pass_headstamp_required: output_governance_mode must be governed")
+    control_lane_attestation_status = str(doc.get("control_lane_attestation_status", "")).strip().upper()
+    if control_lane_attestation_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: control_lane_attestation_status must be PASS_REQUIRED")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_status must be PASS_REQUIRED")
+    headstamp_consistency_mode = str(doc.get("headstamp_consistency_mode", "")).strip()
+    if headstamp_consistency_mode != "exact_match":
+        raise SystemExit("send_time_governed_pass_headstamp_required: headstamp_consistency_mode mismatch")
+elif name == "send_time_inline_reply_text_host_direct_blocked":
+    if rc == 0:
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: expected non-zero rc")
+    gate_status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if gate_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: send_time_gate_status must be FAIL_REQUIRED")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: next_hop_admission_status must be FAIL_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "host_direct":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: output_governance_mode must be host_direct")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "host_direct_output_not_next_hop_admissible":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: unexpected next_hop_admission_reason")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_inline_reply_text_host_direct_blocked: headstamp_consistency_status must be FAIL_REQUIRED")
 elif name == "send_time_next_hop_blocked_by_post_check":
     if rc == 0:
         raise SystemExit("send_time_next_hop_blocked_by_post_check: expected non-zero rc")
@@ -206,6 +242,18 @@ elif name == "send_time_next_hop_blocked_by_post_check":
     observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
     if observed_status != "FAIL_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: chat_egress_uniqueness_observed_send_time_status mismatch")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: next_hop_admission_status must be FAIL_REQUIRED")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "post_check_blocker_active":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: unexpected next_hop_admission_reason")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "governed":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: output_governance_mode must be governed")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_by_post_check: headstamp_consistency_status must be PASS_REQUIRED")
     first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
     if first_line_status != "SKIPPED_NOT_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_by_post_check: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
@@ -240,6 +288,18 @@ elif name == "send_time_next_hop_blocked_on_missing_post_check_state":
     observed_status = str(doc.get("chat_egress_uniqueness_observed_send_time_status", "")).strip().upper()
     if observed_status != "FAIL_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: chat_egress_uniqueness_observed_send_time_status mismatch")
+    next_hop_admission_status = str(doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_admission_status != "FAIL_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: next_hop_admission_status must be FAIL_REQUIRED")
+    next_hop_admission_reason = str(doc.get("next_hop_admission_reason", "")).strip()
+    if next_hop_admission_reason != "post_check_state_unavailable":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: unexpected next_hop_admission_reason")
+    headstamp_consistency_status = str(doc.get("headstamp_consistency_status", "")).strip().upper()
+    if headstamp_consistency_status != "PASS_REQUIRED":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: headstamp_consistency_status must be PASS_REQUIRED")
+    output_governance_mode = str(doc.get("output_governance_mode", "")).strip()
+    if output_governance_mode != "governed":
+        raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: output_governance_mode must be governed")
     first_line_status = str(doc.get("reply_first_line_status", "")).strip().upper()
     if first_line_status != "SKIPPED_NOT_REQUIRED":
         raise SystemExit("send_time_next_hop_blocked_on_missing_post_check_state: reply_first_line_status must be SKIPPED_NOT_REQUIRED")
@@ -311,6 +371,7 @@ import sys
 repo_root = Path(sys.argv[3]).resolve()
 sys.path.insert(0, str((repo_root / "scripts").resolve()))
 
+from actor_session_common import actor_session_path, write_actor_binding_store
 from tool_vendor_governance_common import resolve_pack_and_task
 
 catalog_path = Path(sys.argv[1]).resolve()
@@ -327,6 +388,44 @@ fields = {
     "final_emit_contract_status": "PASS_REQUIRED",
 }
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+actor_id = "assistant:ci-probe"
+session_id = "run:ci-probe-session"
+run_id = "run:ci-probe-receipt"
+
+binding_store = {
+    "schema_version": "actor_session_multibinding_v1",
+    "actor_id": actor_id,
+    "catalog_path": str(catalog_path),
+    "binding_key_mode": "actor_id+identity_id+session_id",
+    "binding_version": 1,
+    "compare_token": "1",
+    "session_entry_count": 1,
+    "bindings": [
+        {
+            "actor_id": actor_id,
+            "identity_id": identity_id,
+            "session_id": session_id,
+            "run_id": run_id,
+            "catalog_path": str(catalog_path),
+            "binding_version": 1,
+            "binding_ref": f"ci_fixture:{identity_id}:{session_id}",
+            "mutation_lane": "ci_fixture",
+            "bound_at": timestamp,
+            "updated_at": timestamp,
+        }
+    ],
+    "rebind_receipts": [],
+    "last_mutation": {
+        "mutation_lane": "ci_fixture",
+        "identity_id": identity_id,
+        "session_id": session_id,
+        "run_id": run_id,
+        "updated_at": timestamp,
+    },
+    "updated_at": timestamp,
+}
+write_actor_binding_store(actor_session_path(catalog_path, actor_id), binding_store)
+
 state_path = pack_path / "runtime" / "state" / "host_visible_surface_registry_state.json"
 state_doc = {
     "schema_version": "v1",
@@ -339,9 +438,9 @@ for idx, channel in enumerate(("commentary", "approval", "status", "final"), sta
         "emit_channel_id": channel,
         "created_at_utc": timestamp,
         "receipt_source": "ci_fixture",
-        "actor_id": "assistant:ci-probe",
-        "session_id": "run:ci-probe-session",
-        "run_id": "run:ci-probe-receipt",
+        "actor_id": actor_id,
+        "session_id": session_id,
+        "run_id": run_id,
     }
     payload.update(fields)
     path = receipt_dir / f"host-visible-surface-{idx:02d}-{channel}.json"
@@ -350,7 +449,7 @@ for idx, channel in enumerate(("commentary", "approval", "status", "final"), sta
         "last_receipt_path": str(path),
         "last_status": "PASS_REQUIRED",
         "receipt_source": "ci_fixture",
-        "last_run_id": "run:ci-probe-receipt",
+        "last_run_id": run_id,
         "updated_at_utc": timestamp,
     }
 state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -382,6 +481,20 @@ run_probe send_time_governed_pass_headstamp_required \
     --force-check \
     --enforce-send-time-gate \
     --reply-file "${SEND_TIME_REPLY_FILE}" \
+    --outlet-channel-id commentary \
+    --reply-outlet-guard-applied \
+    --json-only
+
+run_probe send_time_inline_reply_text_host_direct_blocked \
+  python3 scripts/validate_send_time_reply_gate.py \
+    --identity-id "${IDENTITY_ID}" \
+    --catalog "${CATALOG_PATH}" \
+    --repo-catalog identity/catalog/identities.yaml \
+    --actor-id assistant:codex \
+    --operation validate \
+    --force-check \
+    --enforce-send-time-gate \
+    --reply-text "Identity-Context: actor_id=assistant:codex; identity_id=${IDENTITY_ID}; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project" \
     --outlet-channel-id commentary \
     --reply-outlet-guard-applied \
     --json-only

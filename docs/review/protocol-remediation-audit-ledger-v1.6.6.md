@@ -2786,6 +2786,13 @@ Fix landed:
    - now treats the above v1.6.6 wording as anti-forget required tokens.
    - also blocks protocol-repo hardcoded runtime endpoint literals such as
      `HOST_TRANSPORT_REACHABILITY_DEFAULT_URL` and `http://127.0.0.1:3001/healthz`.
+4. canonical next-hop admission machine tuple is now part of v1.6.6 wording:
+   - `next_hop_admission_status`
+   - `next_hop_admission_reason`
+   - `output_governance_mode`
+   - `control_lane_attestation_status`
+   - `post_check_blocker_status`
+5. host-visible probe suite keeps an explicit negative proof that inline/self-printed reply text is classified as `host_direct` and blocked from next hop.
 
 Checkpoint verdict update:
 
@@ -2799,3 +2806,60 @@ Interpretation lock:
 2. non-governed output must die within one hop in controlled lanes.
 3. protocol base-repo may define transport reachability validation, but may not define consumer/runtime localhost defaults.
 4. assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence.
+
+### 26.42 v1.6.6 display headstamp vs canonical next-hop headstamp correction freeze (2026-03-17)
+
+Problem:
+
+1. human operators still require a visible identity headstamp to know who is currently speaking.
+2. previous discussion risked conflating:
+   - headstamp visible to humans
+   - headstamp canonical for next-hop admission
+3. that ambiguity creates a false binary:
+   - remove visible headstamp until full closure
+   - or accept any visible headstamp as if it proved governed output
+4. both interpretations are invalid for v1.6.6.
+
+Fix frozen:
+
+1. protocol now separates two layers:
+   - `display headstamp`
+   - `canonical next-hop headstamp`
+2. display headstamp remains mandatory for operator clarity.
+3. canonical next-hop headstamp remains the only class relevant to next-hop admissibility.
+4. a consistency-correction model is frozen:
+   - `PASS_REQUIRED`
+   - `AUTO_CORRECTED`
+   - `FAIL_REQUIRED`
+5. manual / pasted / host-direct headstamp text may be displayed, but may never become authority source or next-hop proof by text presence alone.
+
+Correction freeze:
+
+1. authoritative identity precedence is:
+   - session-scoped actor binding
+   - canonical session pointer
+   - single active runtime identity
+   - default runtime identity
+2. display headstamp is compared against authoritative identity.
+3. when mismatch is uniquely correctable and the visible headstamp is actually rewritten:
+   - protocol rewrites visible headstamp to authoritative identity
+   - records correction evidence
+   - next hop continues only on corrected authoritative headstamp
+4. when mismatch is not uniquely correctable, or no authoritative rewrite actually happened:
+   - next hop fails closed
+   - conflict/unresolved status may remain user-visible
+   - blocker evidence is mandatory
+
+Interpretation lock:
+
+1. display headstamp preserves usability.
+2. canonical next-hop headstamp preserves controlled-hop trust.
+3. "headstamp present" remains necessary only, never sufficient.
+4. this checkpoint does not alter the v1.6.6 pre-95/post-100 semantics, non-governed one-hop death rule, or failure evidence dual-channel rule.
+5. `AUTO_CORRECTED` is reserved for a real authoritative rewrite path; mismatch is uniquely correctable only when correction evidence exists, and mismatch is not uniquely correctable for admission purposes otherwise.
+
+Checkpoint verdict:
+
+1. human-visible headstamp remains preserved as operator HUD.
+2. v1.6.6 next-hop admissibility remains stricter than visible display.
+3. mismatch between visible headstamp and authoritative identity is now governed by one correction-state model instead of ad hoc interpretation.

@@ -17,6 +17,7 @@ from final_emit_contract_common import (
     normalize_status,
     normalize_text,
 )
+from governed_reply_observability_common import build_headstamp_consistency_projection
 from protocol_infra_contract import (
     CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
     CHAT_EGRESS_RAW_BYPASS_ERROR_CODE,
@@ -36,6 +37,7 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
+from response_stamp_common import parse_identity_context_stamp
 from tool_vendor_governance_common import load_json, resolve_pack_and_task
 
 ERR_SEND_TIME_GATE = ERR_HDSTAMP_MISSING_OR_MALFORMED
@@ -231,12 +233,12 @@ def _inject_next_hop_admission_fields(payload: dict[str, Any]) -> dict[str, Any]
     elif output_governance_mode == OUTPUT_GOVERNANCE_MODE_NON_GOVERNED:
         next_hop_admission_status = STATUS_FAIL_REQUIRED
         next_hop_admission_reason = "non_governed_output_not_next_hop_admissible"
-    elif control_lane_attestation_status != STATUS_PASS_REQUIRED:
-        next_hop_admission_status = STATUS_FAIL_REQUIRED
-        next_hop_admission_reason = "control_lane_attestation_not_pass"
     elif post_check_blocker_status != STATUS_PASS_REQUIRED:
         next_hop_admission_status = STATUS_FAIL_REQUIRED
         next_hop_admission_reason = post_check_blocker_reason
+    elif control_lane_attestation_status != STATUS_PASS_REQUIRED:
+        next_hop_admission_status = STATUS_FAIL_REQUIRED
+        next_hop_admission_reason = "control_lane_attestation_not_pass"
     elif first_line_status != STATUS_PASS_REQUIRED:
         next_hop_admission_status = STATUS_FAIL_REQUIRED
         next_hop_admission_reason = "canonical_headstamp_not_pass"
@@ -493,6 +495,18 @@ def _reply_transport_ref(args: argparse.Namespace, evidence_mode: str) -> str:
     return "unresolved"
 
 
+def _extract_display_headstamp_identity(reply_text: str) -> str:
+    for raw_line in str(reply_text or "").splitlines():
+        line = str(raw_line or "").strip()
+        if not line:
+            continue
+        if "Identity-Context:" not in line:
+            return ""
+        parsed = parse_identity_context_stamp(line)
+        return str(parsed.get("identity_id", "")).strip()
+    return ""
+
+
 def _is_governed_outlet(channel_id: str) -> bool:
     cid = str(channel_id or "").strip().lower()
     if not cid:
@@ -521,6 +535,27 @@ def _is_final_emit_schema_pass(schema_status: str) -> bool:
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
     payload = _inject_chat_egress_uniqueness_fields(payload)
     payload = _inject_next_hop_admission_fields(payload)
+    if not str(payload.get("headstamp_consistency_status", "")).strip():
+        payload.update(
+            build_headstamp_consistency_projection(
+                display_identity_id=str(
+                    payload.get(
+                        "display_headstamp_identity_id",
+                        payload.get("reply_first_line_identity_id", ""),
+                    )
+                ).strip(),
+                authoritative_identity_id=str(
+                    payload.get(
+                        "authoritative_identity_id",
+                        payload.get("identity_authority_authoritative_identity_id", ""),
+                    )
+                ).strip()
+                or str(payload.get("expected_identity_id", payload.get("identity_id", ""))).strip(),
+                correction_evidence_ref=str(
+                    payload.get("headstamp_correction_evidence_ref", "")
+                ).strip(),
+            )
+        )
     payload = inject_legacy_error_fields(payload)
     if json_only:
         print(json.dumps(payload, ensure_ascii=False))
@@ -669,6 +704,7 @@ def main() -> int:
         return 1
 
     strict_context = _is_strict_send_time_context(args.operation, args.enforce_send_time_gate)
+    display_headstamp_identity_id = _extract_display_headstamp_identity(reply_text)
     reply_transport_ref = _reply_transport_ref(args, evidence_mode)
     outlet_channel_id = str(args.outlet_channel_id or "").strip() or FINAL_EMIT_CHANNEL_ID
     host_visible_governed_channel_ok = _is_host_visible_governed_channel(outlet_channel_id)
@@ -752,6 +788,8 @@ def main() -> int:
             "reply_first_line_missing_count": 0,
             "reply_first_line_missing_refs": [],
             "expected_identity_id": args.identity_id,
+            "reply_first_line_identity_id": display_headstamp_identity_id,
+            "display_headstamp_identity_id": display_headstamp_identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
             "expected_source_layer_input": "",
@@ -824,6 +862,8 @@ def main() -> int:
             "reply_first_line_missing_count": 0,
             "reply_first_line_missing_refs": [],
             "expected_identity_id": args.identity_id,
+            "reply_first_line_identity_id": display_headstamp_identity_id,
+            "display_headstamp_identity_id": display_headstamp_identity_id,
             "reply_first_line_work_layer": "",
             "reply_first_line_source_layer": "",
             "expected_source_layer_input": "",
@@ -1305,6 +1345,7 @@ def main() -> int:
         "reply_first_line_missing_count": validator_payload.get("reply_first_line_missing_count", 0),
         "reply_first_line_missing_refs": validator_payload.get("reply_first_line_missing_refs", []),
         "expected_identity_id": validator_payload.get("expected_identity_id", ""),
+        "reply_first_line_identity_id": validator_payload.get("reply_first_line_identity_id", ""),
         "reply_first_line_work_layer": validator_payload.get("reply_first_line_work_layer", ""),
         "reply_first_line_source_layer": validator_payload.get("reply_first_line_source_layer", ""),
         "expected_source_layer_input": validator_payload.get("expected_source_layer_input", ""),
@@ -1321,6 +1362,19 @@ def main() -> int:
         "protocol_triggered": bool(validator_payload.get("protocol_triggered", False)),
         "protocol_trigger_reasons": validator_payload.get("protocol_trigger_reasons", []),
         "protocol_trigger_confidence": validator_payload.get("protocol_trigger_confidence", 0.0),
+        "identity_authority_status": validator_payload.get("identity_authority_status", ""),
+        "identity_authority_error_code": validator_payload.get("identity_authority_error_code", ""),
+        "identity_authority_selected_identity_id": validator_payload.get(
+            "identity_authority_selected_identity_id", ""
+        ),
+        "identity_authority_authoritative_identity_id": validator_payload.get(
+            "identity_authority_authoritative_identity_id", ""
+        ),
+        "identity_authority_resolution_mode": validator_payload.get("identity_authority_resolution_mode", ""),
+        "identity_authority_next_action": validator_payload.get("identity_authority_next_action", ""),
+        "identity_authority_stale_reasons": list(
+            validator_payload.get("identity_authority_stale_reasons") or []
+        ),
         "host_transport_post_check_state_file": post_check_state_file,
         "host_transport_post_check_state_path": post_check_state_path,
         "host_transport_post_check_state_status": post_check_state_status,
@@ -1332,6 +1386,26 @@ def main() -> int:
         "stale_reasons": validator_payload.get("stale_reasons", []),
         "upstream_validator_rc": p.returncode,
     }
+    payload.update(
+        build_headstamp_consistency_projection(
+            display_identity_id=str(
+                validator_payload.get(
+                    "display_headstamp_identity_id",
+                    validator_payload.get("reply_first_line_identity_id", ""),
+                )
+            ).strip(),
+            authoritative_identity_id=str(
+                validator_payload.get(
+                    "authoritative_identity_id",
+                    validator_payload.get("identity_authority_authoritative_identity_id", ""),
+                )
+            ).strip()
+            or str(args.identity_id or "").strip(),
+            correction_evidence_ref=str(
+                validator_payload.get("headstamp_correction_evidence_ref", "")
+            ).strip(),
+        )
+    )
     if str(error_code).strip() == ERR_RUNTIME_BINDING_MISMATCH:
         payload["outlet_bypass_detected"] = True
     if "blocker_receipt" in validator_payload:

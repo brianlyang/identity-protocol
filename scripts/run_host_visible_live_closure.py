@@ -285,6 +285,9 @@ def main() -> int:
     send_time_post_check_blocker = bool(send_time_payload.get("host_transport_post_check_blocker_active", False))
     next_hop_admission_status = str(send_time_payload.get("next_hop_admission_status", "")).strip().upper()
     output_governance_mode = str(send_time_payload.get("output_governance_mode", "")).strip()
+    headstamp_consistency_status = str(
+        send_time_payload.get("headstamp_consistency_status", "")
+    ).strip().upper()
     control_lane_attestation_status = str(
         send_time_payload.get("control_lane_attestation_status", "")
     ).strip().upper()
@@ -327,6 +330,7 @@ def main() -> int:
                 STATUS_PASS_REQUIRED if not send_time_post_check_blocker else STATUS_FAIL_REQUIRED
             ),
             "output_governance_mode": output_governance_mode,
+            "headstamp_consistency_status": headstamp_consistency_status,
             "control_lane_attestation_status": control_lane_attestation_status,
         },
         "steps": {
@@ -358,6 +362,7 @@ def main() -> int:
                 "post_check_blocker_active": send_time_post_check_blocker,
                 "next_hop_admission_status": next_hop_admission_status,
                 "output_governance_mode": output_governance_mode,
+                "headstamp_consistency_status": headstamp_consistency_status,
                 "control_lane_attestation_status": control_lane_attestation_status,
                 "stderr_tail": send_time_stderr_tail,
             },

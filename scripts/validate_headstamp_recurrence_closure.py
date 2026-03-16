@@ -20,6 +20,7 @@ from headstamp_error_family_common import (
     ERR_HDSTAMP_RECEIPT_MISSING,
     inject_legacy_error_fields,
 )
+from identity_runtime_authority_common import ERR_IDENTITY_AUTHORITY_VIOLATION
 from runtime_temp_path_common import runtime_temp_file
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -44,6 +45,7 @@ ERR_SYNTHETIC_EVIDENCE = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_NON_GOVERNED_OUTLET = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_FINAL_EMIT_CHANNEL_REQUIRED = ERR_HDSTAMP_RECEIPT_MISSING
 ERR_ACTOR_BOUND_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
+ERR_RUNTIME_AUTHORITY_MISMATCH = ERR_IDENTITY_AUTHORITY_VIOLATION
 
 STRICT_ACTOR_REQUIRED_OPS = {
     "activate",
@@ -427,7 +429,10 @@ def _actor_mismatch_probe(
         "binding_session_id": str(actor_binding.get("session_id", "")),
         "binding_entry_count": binding_entry_count,
     }
-    ok = rc != 0 and case["error_code"] == ERR_ACTOR_BOUND_MISMATCH
+    ok = rc != 0 and case["error_code"] in {
+        ERR_ACTOR_BOUND_MISMATCH,
+        ERR_RUNTIME_AUTHORITY_MISMATCH,
+    }
     if (
         not ok
         and rc == 0
@@ -691,11 +696,15 @@ def main() -> int:
         "error_code": str(payload_inline.get("error_code", "")),
         "send_time_gate_status": str(payload_inline.get("send_time_gate_status", "")),
         "reply_evidence_mode": str(payload_inline.get("reply_evidence_mode", "")),
+        "output_governance_mode": str(payload_inline.get("output_governance_mode", "")),
+        "next_hop_admission_status": str(payload_inline.get("next_hop_admission_status", "")),
     }
     inline_ok = (
         rc_inline != 0
         and str(payload_inline.get("error_code", "")) == ERR_SYNTHETIC_EVIDENCE
         and str(payload_inline.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_inline.get("next_hop_admission_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_inline.get("output_governance_mode", "")) == "host_direct"
     )
     if not inline_ok and not error_code:
         error_code = ERR_INLINE_NEGATIVE
@@ -719,12 +728,16 @@ def main() -> int:
         "send_time_gate_status": str(payload_nongov.get("send_time_gate_status", "")),
         "governed_outlet_enforced": bool(payload_nongov.get("governed_outlet_enforced", False)),
         "outlet_channel_id": str(payload_nongov.get("outlet_channel_id", "")),
+        "output_governance_mode": str(payload_nongov.get("output_governance_mode", "")),
+        "next_hop_admission_status": str(payload_nongov.get("next_hop_admission_status", "")),
     }
     nongov_error_code = str(payload_nongov.get("error_code", "")).strip()
     nongov_ok = (
         rc_nongov != 0
         and nongov_error_code in {ERR_NON_GOVERNED_OUTLET, ERR_FINAL_EMIT_CHANNEL_REQUIRED}
         and str(payload_nongov.get("send_time_gate_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_nongov.get("next_hop_admission_status", "")) == STATUS_FAIL_REQUIRED
+        and str(payload_nongov.get("output_governance_mode", "")) == "non_governed"
     )
     if not nongov_ok and not error_code:
         error_code = ERR_OUTLET_NEGATIVE
@@ -810,6 +823,8 @@ def main() -> int:
         "send_time_gate_status": str(payload_compose.get("send_time_gate_status", "")),
         "reply_first_line_status": str(payload_compose.get("reply_first_line_status", "")),
         "reply_outlet_guard_applied": bool(payload_compose.get("reply_outlet_guard_applied", False)),
+        "output_governance_mode": str(payload_compose.get("output_governance_mode", "")),
+        "next_hop_admission_status": str(payload_compose.get("next_hop_admission_status", "")),
         "first_line_prefix_ok": bool(first_line.startswith("Identity-Context:")),
         "out_reply_file": str(payload_compose.get("out_reply_file", "")),
     }
@@ -818,6 +833,8 @@ def main() -> int:
         and rc_compose == 0
         and str(payload_compose.get("send_time_gate_status", "")) == STATUS_PASS_REQUIRED
         and str(payload_compose.get("reply_first_line_status", "")) == STATUS_PASS_REQUIRED
+        and str(payload_compose.get("next_hop_admission_status", "")) == STATUS_PASS_REQUIRED
+        and str(payload_compose.get("output_governance_mode", "")) == "governed"
         and bool(first_line.startswith("Identity-Context:"))
     )
     if not compose_ok and not error_code:
@@ -847,11 +864,15 @@ def main() -> int:
             "send_time_gate_status": str(payload_cov.get("send_time_gate_status", "")),
             "reply_first_line_status": str(payload_cov.get("reply_first_line_status", "")),
             "reply_evidence_mode": str(payload_cov.get("reply_evidence_mode", "")),
+            "next_hop_admission_status": str(payload_cov.get("next_hop_admission_status", "")),
+            "output_governance_mode": str(payload_cov.get("output_governance_mode", "")),
         }
         coverage_equiv_ok = (
             rc_cov == 0
             and coverage_case["send_time_gate_status"] == STATUS_PASS_REQUIRED
             and coverage_case["reply_first_line_status"] == STATUS_PASS_REQUIRED
+            and coverage_case["next_hop_admission_status"] == STATUS_PASS_REQUIRED
+            and coverage_case["output_governance_mode"] == "governed"
         )
     else:
         coverage_case = {"rc": 2, "error": "compose_positive_not_available"}

@@ -22,6 +22,7 @@ from response_stamp_common import (
     resolve_layer_intent,
     resolve_stamp_context,
 )
+from governed_reply_observability_common import build_headstamp_consistency_projection
 from runtime_temp_path_common import runtime_temp_file
 from tool_vendor_governance_common import contract_required, load_json
 
@@ -547,6 +548,7 @@ def main() -> int:
         "reply_sample_count": len(first_lines),
         "reply_evidence_ref": evidence_ref,
         "expected_identity_id": ctx.identity_id,
+        "reply_first_line_identity_id": str(parsed_first.get("identity_id", "")).strip() if parsed_first else "",
         "identity_authority_status": str(authority.get("identity_authority_status", "")).strip(),
         "identity_authority_error_code": str(authority.get("identity_authority_error_code", "")).strip(),
         "identity_authority_selected_identity_id": str(
@@ -561,6 +563,15 @@ def main() -> int:
         "blocker_receipt_path": str(receipt_path) if not ok else "",
         "stale_reasons": stale_reasons,
     }
+    payload.update(
+        build_headstamp_consistency_projection(
+            display_identity_id=payload.get("reply_first_line_identity_id", ""),
+            authoritative_identity_id=str(
+                authority.get("identity_authority_authoritative_identity_id", "")
+            ).strip()
+            or ctx.identity_id,
+        )
+    )
 
     if not ok:
         first_line_identity = ""

@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "status_version": "v1.6",
-  "generated_at_utc": "2026-03-16T17:12:19Z",
-  "git_head_short": "8060a8e",
+  "generated_at_utc": "2026-03-16T17:55:52Z",
+  "git_head_short": "a679d49",
   "machine_promotion_policy": {
     "promotion_ready_requires": [
       "PASS_REQUIRED"
@@ -517,7 +517,12 @@
           "assistant-visible self-printed headstamp is classified as manual headstamp, not closure evidence.",
           "host-direct output",
           "next-hop-admissible output",
-          "inline/self-printed reply text is classified as `host_direct` and not next-hop admissible"
+          "inline/self-printed reply text is classified as `host_direct` and not next-hop admissible",
+          "display headstamp",
+          "canonical next-hop headstamp",
+          "authoritative identity precedence",
+          "AUTO_CORRECTED",
+          "display headstamp presence alone never proves next-hop admissibility"
         ],
         "host_visible_semantic_freeze_review_doc_required_tokens": [
           "26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift",
@@ -539,7 +544,11 @@
           "post_check_blocker_status",
           "host-direct output",
           "next-hop-admissible output",
-          "assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence."
+          "assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence.",
+          "display headstamp preserves usability",
+          "canonical next-hop headstamp preserves controlled-hop trust",
+          "mismatch is uniquely correctable",
+          "mismatch is not uniquely correctable"
         ],
         "dialogue_feedback_bundle_script": "scripts/run_identity_dialogue_feedback_bundle.py",
         "dialogue_feedback_bundle_required_surfaces": [

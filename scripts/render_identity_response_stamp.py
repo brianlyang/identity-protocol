@@ -9,6 +9,7 @@ from identity_runtime_authority_common import (
     STATUS_PASS_REQUIRED,
     validate_runtime_egress_identity_authority,
 )
+from governed_reply_observability_common import build_headstamp_consistency_projection
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
@@ -19,7 +20,6 @@ from response_stamp_common import (
     resolve_disclosure_level,
     resolve_stamp_context,
 )
-
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Render dynamic identity response stamp (external/internal).")
@@ -176,6 +176,15 @@ def main() -> int:
             source_layer=source_layer,
         ),
     }
+    payload.update(
+        build_headstamp_consistency_projection(
+            display_identity_id=ctx.identity_id,
+            authoritative_identity_id=str(
+                authority.get("identity_authority_authoritative_identity_id", "")
+            ).strip()
+            or ctx.identity_id,
+        )
+    )
 
     if args.out.strip():
         out_path = Path(args.out).expanduser().resolve()

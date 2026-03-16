@@ -7,6 +7,7 @@ from typing import Any
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+STATUS_AUTO_CORRECTED = "AUTO_CORRECTED"
 
 HEADSTAMP_VISIBILITY_FIRST_LINE_PASS = "first_line_visible_pass"
 HEADSTAMP_VISIBILITY_PRE_FIRST_LINE_BLOCK = "pre_first_line_blocked"
@@ -36,6 +37,86 @@ def _normalize_refs(raw_refs: Any) -> list[dict[str, str]]:
             }
         )
     return refs
+
+
+def build_headstamp_consistency_projection(
+    *,
+    display_identity_id: Any,
+    authoritative_identity_id: Any,
+    correction_evidence_ref: Any = "",
+    correction_applied: bool = False,
+    corrected_display_identity_id: Any = "",
+) -> dict[str, str]:
+    display = _normalize_text(display_identity_id)
+    authoritative = _normalize_text(authoritative_identity_id)
+    evidence_ref = _normalize_text(correction_evidence_ref)
+    corrected_display = _normalize_text(corrected_display_identity_id) or authoritative
+
+    if display and authoritative and display == authoritative:
+        return {
+            "display_headstamp_identity_id": display,
+            "authoritative_identity_id": authoritative,
+            "headstamp_consistency_status": STATUS_PASS_REQUIRED,
+            "headstamp_consistency_mode": "exact_match",
+            "headstamp_consistency_reason": "display_matches_authoritative_identity",
+            "headstamp_correction_from": "",
+            "headstamp_correction_to": "",
+            "headstamp_correction_evidence_ref": evidence_ref,
+        }
+
+    if correction_applied and display and authoritative and display != authoritative:
+        if not evidence_ref:
+            return {
+                "display_headstamp_identity_id": display,
+                "authoritative_identity_id": authoritative,
+                "headstamp_consistency_status": STATUS_FAIL_REQUIRED,
+                "headstamp_consistency_mode": "conflict_blocked",
+                "headstamp_consistency_reason": "correction_evidence_missing",
+                "headstamp_correction_from": display,
+                "headstamp_correction_to": authoritative,
+                "headstamp_correction_evidence_ref": "",
+            }
+        if corrected_display != authoritative:
+            return {
+                "display_headstamp_identity_id": corrected_display,
+                "authoritative_identity_id": authoritative,
+                "headstamp_consistency_status": STATUS_FAIL_REQUIRED,
+                "headstamp_consistency_mode": "conflict_blocked",
+                "headstamp_consistency_reason": "correction_target_not_authoritative",
+                "headstamp_correction_from": display,
+                "headstamp_correction_to": corrected_display,
+                "headstamp_correction_evidence_ref": evidence_ref,
+            }
+        return {
+            "display_headstamp_identity_id": corrected_display,
+            "authoritative_identity_id": authoritative,
+            "headstamp_consistency_status": STATUS_AUTO_CORRECTED,
+            "headstamp_consistency_mode": "auto_corrected",
+            "headstamp_consistency_reason": "display_rewritten_to_authoritative_identity",
+            "headstamp_correction_from": display,
+            "headstamp_correction_to": corrected_display,
+            "headstamp_correction_evidence_ref": evidence_ref,
+        }
+
+    if display and not authoritative:
+        reason = "authoritative_identity_unresolved"
+    elif not display and authoritative:
+        reason = "display_headstamp_missing"
+    elif display and authoritative:
+        reason = "display_authoritative_identity_mismatch"
+    else:
+        reason = "display_and_authoritative_identity_missing"
+
+    return {
+        "display_headstamp_identity_id": display,
+        "authoritative_identity_id": authoritative,
+        "headstamp_consistency_status": STATUS_FAIL_REQUIRED,
+        "headstamp_consistency_mode": "conflict_blocked",
+        "headstamp_consistency_reason": reason,
+        "headstamp_correction_from": display,
+        "headstamp_correction_to": authoritative,
+        "headstamp_correction_evidence_ref": evidence_ref,
+    }
 
 
 def parse_probe_identity_contexts(*, probe_context_json: str = "", probe_context_file: str = "") -> list[dict[str, Any]]:

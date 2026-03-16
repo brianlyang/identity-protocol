@@ -17,6 +17,7 @@ from final_emit_contract_common import (
     FINAL_EMIT_SCHEMA_REQUIRED_FIELDS,
 )
 from governed_reply_observability_common import (
+    build_headstamp_consistency_projection,
     build_identity_observability_projection,
     build_sender_consumption_projection,
     classify_headstamp_visibility,
@@ -253,6 +254,27 @@ def main() -> int:
                 reply_emit_allowed=bool(augmented.get("reply_emit_allowed", False)),
             )
         )
+        if not str(augmented.get("headstamp_consistency_status", "")).strip():
+            augmented.update(
+                build_headstamp_consistency_projection(
+                    display_identity_id=str(
+                        augmented.get(
+                            "display_headstamp_identity_id",
+                            augmented.get("reply_first_line_identity_id", ""),
+                        )
+                    ).strip(),
+                    authoritative_identity_id=str(
+                        augmented.get(
+                            "authoritative_identity_id",
+                            augmented.get("identity_authority_authoritative_identity_id", ""),
+                        )
+                    ).strip()
+                    or str(args.identity_id or "").strip(),
+                    correction_evidence_ref=str(
+                        augmented.get("headstamp_correction_evidence_ref", "")
+                    ).strip(),
+                )
+            )
         return augmented
 
     actor_id_input = str(args.actor_id or "").strip()
@@ -757,6 +779,7 @@ def main() -> int:
         "outlet_bypass_detected": bool(validate_payload.get("outlet_bypass_detected", False)),
         "reply_sample_count": validate_payload.get("reply_sample_count"),
         "reply_first_line_missing_count": validate_payload.get("reply_first_line_missing_count"),
+        "reply_first_line_identity_id": str(validate_payload.get("reply_first_line_identity_id", "")).strip(),
         "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),
         "out_reply_file": str(out_reply_path),
         "actor_binding_selection_mode": actor_binding_selection_mode,
@@ -774,6 +797,16 @@ def main() -> int:
         "identity_authority_resolution_mode": str(authority.get("identity_authority_resolution_mode", "")).strip(),
         "identity_authority_next_action": str(authority.get("identity_authority_next_action", "")).strip(),
         "identity_authority_stale_reasons": list(authority.get("identity_authority_stale_reasons") or []),
+        "display_headstamp_identity_id": str(validate_payload.get("display_headstamp_identity_id", "")).strip(),
+        "authoritative_identity_id": str(validate_payload.get("authoritative_identity_id", "")).strip(),
+        "headstamp_consistency_status": str(validate_payload.get("headstamp_consistency_status", "")).strip(),
+        "headstamp_consistency_mode": str(validate_payload.get("headstamp_consistency_mode", "")).strip(),
+        "headstamp_consistency_reason": str(validate_payload.get("headstamp_consistency_reason", "")).strip(),
+        "headstamp_correction_from": str(validate_payload.get("headstamp_correction_from", "")).strip(),
+        "headstamp_correction_to": str(validate_payload.get("headstamp_correction_to", "")).strip(),
+        "headstamp_correction_evidence_ref": str(
+            validate_payload.get("headstamp_correction_evidence_ref", "")
+        ).strip(),
         "quoted_identity_context_detected": bool(
             quoted_identity_context_guard.get("quoted_identity_context_detected", False)
         ),

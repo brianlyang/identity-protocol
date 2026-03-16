@@ -1388,6 +1388,17 @@ Finish lines (must all hold for v1.6.6 closure claim):
    - `next_hop_headstamp_rate = 1.00`
    - only canonical governed headstamp counts; manual headstamp and host-direct output never count as pass.
 
+Canonical next-hop admission machine tuple:
+
+1. `next_hop_admission_status`
+2. `next_hop_admission_reason`
+3. `output_governance_mode`
+4. `control_lane_attestation_status`
+5. `post_check_blocker_status`
+
+These fields must be emitted by canonical send-time validation and consumed by replay/scan/probe lanes.
+They exist to prevent downstream tooling from inferring next-hop legality by text-only heuristics.
+
 Terminology freeze (authoritative wording):
 
 1. governed output
@@ -1412,3 +1423,97 @@ Anti-forget enforcement:
 1. `scripts/validate_required_gate_surface_drift.py` must require the above finish-line wording in v1.6.6 governance/review surfaces.
 2. `scripts/validate_required_gate_surface_drift.py` must reject protocol-repo hardcoded runtime endpoints such as `HOST_TRANSPORT_REACHABILITY_DEFAULT_URL` or `http://127.0.0.1:3001/healthz`.
 3. future validators/probes may extend v1.6.6 closure, but they must preserve these terms and finish-line definitions instead of introducing alternate wording.
+4. `scripts/ci/run_host_visible_surface_live_probes_ci.sh` must keep at least one negative probe proving inline/self-printed reply text is classified as `host_direct` and not next-hop admissible.
+
+### 5.25 Display headstamp consistency correction freeze (2026-03-17)
+
+This checkpoint freezes the distinction between user-visible headstamp display and
+canonical next-hop admission semantics so v1.6.6 can preserve operator visibility
+without weakening controlled-hop closure.
+
+Authoritative principle:
+
+1. user-visible replies may retain a display headstamp so humans can identify the current speaking identity.
+2. display headstamp is not itself sufficient to prove governed output or next-hop admissibility.
+3. canonical next-hop headstamp remains governed by v1.6.6 controlled-hop rules.
+4. v1.6.6 does **not** claim physical-layer `100%` host interception.
+
+Definitions (authoritative wording):
+
+1. display headstamp
+   - a user-visible identity headstamp shown for operator visibility.
+2. canonical next-hop headstamp
+   - the controlled headstamp used to determine whether output is next-hop-admissible.
+3. authoritative identity
+   - the identity resolved from protocol authority sources, never from manual/pasted/display headstamp text.
+4. headstamp consistency correction
+   - protocol action that compares display headstamp against authoritative identity and either passes, auto-corrects, or blocks.
+
+Authoritative identity precedence:
+
+1. session-scoped actor binding
+2. canonical session pointer
+3. single active runtime identity
+4. default runtime identity
+5. manual/pasted/display headstamp text must never become an authority source
+
+Consistency states (machine-authoritative):
+
+1. `PASS_REQUIRED`
+   - display headstamp matches authoritative identity exactly.
+2. `AUTO_CORRECTED`
+   - display headstamp does not match authoritative identity, but protocol can uniquely determine the authoritative identity and rewrites visible headstamp to the corrected authoritative identity.
+3. `FAIL_REQUIRED`
+   - display headstamp does not match authoritative identity and protocol cannot uniquely determine a single authoritative correction target, or a binding / tuple / lane conflict remains active.
+
+Required relations:
+
+1. display headstamp must remain visible to human operators whenever user-visible output is emitted.
+2. display headstamp != canonical next-hop headstamp.
+3. display headstamp presence alone never proves next-hop admissibility.
+4. canonical next-hop admissibility must be decided from:
+   - authoritative identity
+   - tuple continuity
+   - lane/source continuity
+   - control-lane attestation
+   - blocker evidence
+   - post-check authority
+5. manual headstamp and host-direct output may remain user-visible, but they never become next-hop-admissible output by text presence alone.
+
+Correction rules:
+
+1. if display headstamp matches authoritative identity:
+   - `headstamp_consistency_status = PASS_REQUIRED`
+   - visible headstamp remains unchanged
+   - next hop may continue through normal governed evaluation.
+2. if display headstamp differs from authoritative identity but authoritative identity is uniquely resolvable and the protocol actually rewrites the visible headstamp to the authoritative identity:
+   - `headstamp_consistency_status = AUTO_CORRECTED`
+   - `headstamp_consistency_mode = auto_corrected`
+   - corrected visible headstamp must carry the authoritative identity
+   - correction evidence must be persisted in machine-readable form
+   - next hop may proceed only on corrected authoritative headstamp
+3. if display headstamp differs from authoritative identity and no authoritative rewrite was actually performed:
+   - mismatch is not uniquely correctable for admission purposes
+   - `headstamp_consistency_status = FAIL_REQUIRED`
+   - next hop must fail-close
+   - blocker evidence is mandatory
+4. manual/pasted/display headstamp text must never override authoritative identity precedence.
+
+Minimum machine contract fields:
+
+1. `display_headstamp_identity_id`
+2. `authoritative_identity_id`
+3. `headstamp_consistency_status`
+4. `headstamp_consistency_mode`
+5. `headstamp_consistency_reason`
+6. `headstamp_correction_from`
+7. `headstamp_correction_to`
+8. `headstamp_correction_evidence_ref`
+9. `next_hop_admission_status`
+
+Interpretation lock:
+
+1. display headstamp preserves human visibility.
+2. canonical next-hop headstamp preserves controlled-hop trust and controlled-hop admissibility.
+3. these layers must be named separately and validated separately.
+4. no validator or governance stream may collapse them back into one ambiguous notion of "headstamp present".

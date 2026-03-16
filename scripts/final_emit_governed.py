@@ -23,6 +23,7 @@ from final_emit_contract_common import (
     FINAL_EMIT_SCHEMA_ID,
 )
 from governed_reply_observability_common import (
+    build_headstamp_consistency_projection,
     build_identity_observability_projection,
     build_sender_consumption_projection,
     classify_headstamp_visibility,
@@ -121,6 +122,27 @@ def _project_output_observability(
             reply_emit_allowed=bool(augmented.get("reply_emit_allowed", False)),
         )
     )
+    if not str(augmented.get("headstamp_consistency_status", "")).strip():
+        augmented.update(
+            build_headstamp_consistency_projection(
+                display_identity_id=str(
+                    augmented.get(
+                        "display_headstamp_identity_id",
+                        augmented.get("reply_first_line_identity_id", ""),
+                    )
+                ).strip(),
+                authoritative_identity_id=str(
+                    augmented.get(
+                        "authoritative_identity_id",
+                        augmented.get("identity_authority_authoritative_identity_id", ""),
+                    )
+                ).strip()
+                or expected_identity_id,
+                correction_evidence_ref=str(
+                    augmented.get("headstamp_correction_evidence_ref", "")
+                ).strip(),
+            )
+        )
     return augmented
 
 
@@ -1204,10 +1226,21 @@ def main() -> int:
         "send_time_gate_status": send_time_status,
         "send_time_error_code": str(compose_payload.get("send_time_error_code", "")).strip(),
         "reply_first_line_status": str(compose_payload.get("reply_first_line_status", "")).strip(),
+        "reply_first_line_identity_id": str(compose_payload.get("reply_first_line_identity_id", "")).strip(),
         "reply_transport_ref": str(compose_payload.get("reply_transport_ref", "")).strip(),
         "final_emit_contract_status": final_emit_status,
         "reply_emit_allowed": emit_allowed,
         "out_reply_file": out_reply_file,
+        "display_headstamp_identity_id": str(compose_payload.get("display_headstamp_identity_id", "")).strip(),
+        "authoritative_identity_id": str(compose_payload.get("authoritative_identity_id", "")).strip(),
+        "headstamp_consistency_status": str(compose_payload.get("headstamp_consistency_status", "")).strip(),
+        "headstamp_consistency_mode": str(compose_payload.get("headstamp_consistency_mode", "")).strip(),
+        "headstamp_consistency_reason": str(compose_payload.get("headstamp_consistency_reason", "")).strip(),
+        "headstamp_correction_from": str(compose_payload.get("headstamp_correction_from", "")).strip(),
+        "headstamp_correction_to": str(compose_payload.get("headstamp_correction_to", "")).strip(),
+        "headstamp_correction_evidence_ref": str(
+            compose_payload.get("headstamp_correction_evidence_ref", "")
+        ).strip(),
         "outlet_channel_id": str(compose_payload.get("outlet_channel_id", "")),
         "governed_outlet_enforced": bool(compose_payload.get("governed_outlet_enforced", False)),
         "outlet_preflight_receipt": str(compose_payload.get("outlet_preflight_receipt", "")),

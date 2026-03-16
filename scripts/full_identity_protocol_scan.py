@@ -108,6 +108,8 @@ DEFAULT_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-prof
 DEFAULT_GATE_PROFILE_NAME = "strict_full"
 SCRIPT_PATH = Path(__file__).resolve()
 DEFAULT_REPO_ROOT = SCRIPT_PATH.parent.parent
+HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME = "manifest.host_visible_surface_live.json"
+HOST_VISIBLE_SURFACE_PROBE_SUITE = "host_visible_surface_live_probes"
 FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 SESSION_ID_FALLBACK = ""
@@ -149,6 +151,54 @@ def _safe_json_file(path: Path) -> dict[str, Any]:
     except Exception:
         return {}
     return doc if isinstance(doc, dict) else {}
+
+
+def _parse_path_list_arg(*, raw_value: str, repo_root: Path) -> list[Path]:
+    out: list[Path] = []
+    for token in re.split(r"[\s,]+", str(raw_value or "").strip()):
+        entry = str(token or "").strip()
+        if not entry:
+            continue
+        path = Path(entry).expanduser()
+        if not path.is_absolute():
+            path = (repo_root / path).resolve()
+        else:
+            path = path.resolve()
+        out.append(path)
+    return out
+
+
+def _discover_host_visible_probe_manifest_paths(
+    *,
+    repo_root: Path,
+    catalog_list: list[tuple[str, Path]],
+    explicit_manifest_arg: str,
+) -> list[Path]:
+    candidates: list[Path] = []
+    candidates.extend(_parse_path_list_arg(raw_value=explicit_manifest_arg, repo_root=repo_root))
+
+    for _layer, catalog_path in catalog_list:
+        resolved_catalog = Path(catalog_path).expanduser().resolve()
+        for base_dir in (resolved_catalog.parent, resolved_catalog.parent.parent):
+            candidate = (base_dir / HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME).resolve()
+            candidates.append(candidate)
+
+    candidates.extend(
+        [
+            (repo_root / ".identity" / "_probe" / "identity-host-visible-surface-probes" / HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME).resolve(),
+            (repo_root.parent / ".identity" / "_probe" / "identity-host-visible-surface-probes" / HOST_VISIBLE_SURFACE_PROBE_MANIFEST_NAME).resolve(),
+        ]
+    )
+
+    resolved_existing: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved_candidate = candidate.resolve()
+        if resolved_candidate in seen or not resolved_candidate.exists():
+            continue
+        seen.add(resolved_candidate)
+        resolved_existing.append(resolved_candidate)
+    return resolved_existing
 
 
 def _latest_lane_receipt(*, outbox_dir: Path, prefix: str, identity_id: str) -> Path | None:
@@ -509,8 +559,127 @@ def _stale_reason_contains(stale_reasons: list[str], token: str) -> bool:
     return False
 
 
-def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _is_external_next_hop_block_sample(send_doc: dict[str, Any]) -> bool:
+    next_hop_status = str(send_doc.get("next_hop_admission_status", "")).strip().upper()
+    if next_hop_status != STATUS_FAIL_REQUIRED:
+        return False
+
+    output_governance_mode = str(send_doc.get("output_governance_mode", "")).strip().lower()
+    if output_governance_mode in {"host_direct", "manual_headstamp", "non_governed"}:
+        return True
+
+    post_check_blocker_status = str(send_doc.get("post_check_blocker_status", "")).strip().upper()
+    if post_check_blocker_status == STATUS_FAIL_REQUIRED:
+        return True
+
+    next_hop_reason = str(send_doc.get("next_hop_admission_reason", "")).strip().lower()
+    if next_hop_reason.endswith("_not_next_hop_admissible"):
+        return True
+    if next_hop_reason in {"post_check_blocker_active", "post_check_state_unavailable"}:
+        return True
+
+    stale_reasons = [str(item).strip() for item in (send_doc.get("stale_reasons") or []) if str(item).strip()]
+    return _stale_reason_contains(stale_reasons, "host_transport_post_check_blocker_active") or _stale_reason_contains(
+        stale_reasons,
+        "host_transport_post_check_state_unavailable",
+    )
+
+
+def _load_external_next_hop_block_samples(
+    *,
+    manifest_paths: list[Path],
+    allowed_identity_ids: set[str],
+) -> dict[str, Any]:
+    samples: list[dict[str, Any]] = []
+    manifest_refs: list[str] = []
+    sample_refs: list[str] = []
+    seen_sample_keys: set[tuple[str, str, str]] = set()
+
+    for manifest_path in manifest_paths:
+        manifest_doc = _safe_json_file(manifest_path)
+        if str(manifest_doc.get("suite", "")).strip() != HOST_VISIBLE_SURFACE_PROBE_SUITE:
+            continue
+        manifest_refs.append(str(manifest_path))
+        results = manifest_doc.get("results")
+        if not isinstance(results, list):
+            continue
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+            stdout_ref = str(result.get("stdout_path", "")).strip()
+            if not stdout_ref:
+                continue
+            stdout_path = Path(stdout_ref).expanduser()
+            if not stdout_path.is_absolute():
+                stdout_path = (manifest_path.parent / stdout_path).resolve()
+            else:
+                stdout_path = stdout_path.resolve()
+            send_doc = _safe_json_file(stdout_path)
+            if not send_doc:
+                continue
+            identity_id = str(send_doc.get("identity_id", "")).strip()
+            if allowed_identity_ids and identity_id not in allowed_identity_ids:
+                continue
+            if not _is_external_next_hop_block_sample(send_doc):
+                continue
+            probe_name = str(result.get("probe_name", "")).strip()
+            dedup_key = (identity_id, probe_name, str(stdout_path))
+            if dedup_key in seen_sample_keys:
+                continue
+            seen_sample_keys.add(dedup_key)
+            sample_refs.append(str(stdout_path))
+            samples.append(
+                {
+                    "identity_id": identity_id,
+                    "probe_name": probe_name,
+                    "manifest_path": str(manifest_path),
+                    "stdout_path": str(stdout_path),
+                    "next_hop_admission_reason": str(send_doc.get("next_hop_admission_reason", "")).strip(),
+                    "output_governance_mode": str(send_doc.get("output_governance_mode", "")).strip(),
+                    "blocked": str(send_doc.get("next_hop_admission_status", "")).strip().upper() == STATUS_FAIL_REQUIRED,
+                }
+            )
+
+    return {
+        "manifest_paths": sorted(set(manifest_refs)),
+        "sample_refs": sorted(set(sample_refs)),
+        "samples": samples,
+    }
+
+
+def _next_hop_admission_status_for_row(send_entry: dict[str, Any]) -> str:
+    explicit = str(send_entry.get("next_hop_admission_status", "")).strip().upper()
+    if explicit:
+        return explicit
+    send_status = str(send_entry.get("send_time_gate_status", "")).strip().upper()
+    first_line_status = str(send_entry.get("reply_first_line_status", "")).strip().upper()
+    uniqueness_status = str(send_entry.get("chat_egress_uniqueness_status", "")).strip().upper()
+    if (
+        send_status == STATUS_PASS_REQUIRED
+        and first_line_status == STATUS_PASS_REQUIRED
+        and uniqueness_status == STATUS_PASS_REQUIRED
+    ):
+        return STATUS_PASS_REQUIRED
+    if send_status == STATUS_SKIPPED_NOT_REQUIRED:
+        return STATUS_SKIPPED_NOT_REQUIRED
+    return STATUS_FAIL_REQUIRED
+
+
+def _build_host_visible_post_check_metrics(
+    *,
+    rows: list[dict[str, Any]],
+    external_next_hop_block_samples: list[dict[str, Any]] | None = None,
+    external_next_hop_block_manifest_paths: list[str] | None = None,
+    external_next_hop_block_sample_refs: list[str] | None = None,
+) -> dict[str, Any]:
     runtime_rows = [row for row in rows if _summary_bucket_for_row(row) == "runtime_active"]
+    external_next_hop_block_samples = list(external_next_hop_block_samples or [])
+    external_next_hop_block_manifest_paths = [
+        str(item).strip() for item in (external_next_hop_block_manifest_paths or []) if str(item).strip()
+    ]
+    external_next_hop_block_sample_refs = [
+        str(item).strip() for item in (external_next_hop_block_sample_refs or []) if str(item).strip()
+    ]
 
     pre_send_total = 0
     pre_send_passed = 0
@@ -528,6 +697,9 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
     next_hop_headstamp_total = 0
     next_hop_headstamp_passed = 0
     next_hop_candidates: list[str] = []
+    next_hop_admission_fail_identities: list[str] = []
+    external_next_hop_block_total = 0
+    external_next_hop_blocked = 0
     false_green_identities: list[str] = []
     chat_egress_uniqueness_fail_identities: list[str] = []
     next_hop_headstamp_fail_identities: list[str] = []
@@ -571,9 +743,17 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
                     chat_egress_uniqueness_passed += 1
                 elif identity_id:
                     chat_egress_uniqueness_fail_identities.append(identity_id)
-            if send_status == STATUS_PASS_REQUIRED:
+            next_hop_admission_status = _next_hop_admission_status_for_row(send_entry)
+            output_governance_mode = str(send_entry.get("output_governance_mode", "")).strip()
+            if next_hop_admission_status == STATUS_FAIL_REQUIRED and identity_id:
+                next_hop_admission_fail_identities.append(identity_id)
+            if next_hop_admission_status == STATUS_PASS_REQUIRED:
                 next_hop_headstamp_total += 1
-                if first_line_status == STATUS_PASS_REQUIRED and first_line_gate_executed:
+                if (
+                    first_line_status == STATUS_PASS_REQUIRED
+                    and first_line_gate_executed
+                    and output_governance_mode in {"", "governed"}
+                ):
                     next_hop_headstamp_passed += 1
                 elif identity_id:
                     next_hop_headstamp_fail_identities.append(identity_id)
@@ -627,6 +807,19 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
                 false_green_count += 1
                 if identity_id:
                     false_green_identities.append(identity_id)
+
+    for sample in external_next_hop_block_samples:
+        if not isinstance(sample, dict):
+            continue
+        external_next_hop_block_total += 1
+        next_hop_total += 1
+        identity_id = str(sample.get("identity_id", "")).strip()
+        if identity_id:
+            next_hop_candidates.append(identity_id)
+            next_hop_admission_fail_identities.append(identity_id)
+        if bool(sample.get("blocked", False)):
+            external_next_hop_blocked += 1
+            next_hop_blocked += 1
 
     pre_send_rate = _safe_rate(passed=pre_send_passed, total=pre_send_total)
     post_check_rate = _safe_rate(passed=post_check_passed, total=post_check_total)
@@ -768,6 +961,8 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "pre_send_gate_not_reached_total": pre_send_not_reached,
             "post_check_detectability_total": post_check_total,
             "next_hop_block_total": next_hop_total,
+            "next_hop_block_probe_total": external_next_hop_block_total,
+            "next_hop_block_probe_blocked_total": external_next_hop_blocked,
             "false_green_total": false_green_total,
             "chat_egress_uniqueness_total": chat_egress_uniqueness_total,
             "post_gate_coverage_total": post_gate_coverage_total,
@@ -791,7 +986,10 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
             "post_gate_coverage_rate_status": post_gate_coverage_status,
             "next_hop_headstamp_rate_status": next_hop_headstamp_status,
         },
+        "next_hop_block_probe_manifest_paths": sorted(set(external_next_hop_block_manifest_paths)),
+        "next_hop_block_probe_sample_refs": sorted(set(external_next_hop_block_sample_refs)),
         "next_hop_block_identity_ids": sorted(set(next_hop_candidates)),
+        "next_hop_admission_fail_identity_ids": sorted(set(next_hop_admission_fail_identities)),
         "false_green_identity_ids": sorted(set(false_green_identities)),
         "chat_egress_uniqueness_fail_identity_ids": sorted(set(chat_egress_uniqueness_fail_identities)),
         "next_hop_headstamp_fail_identity_ids": sorted(set(next_hop_headstamp_fail_identities)),
@@ -1285,6 +1483,14 @@ def main() -> int:
         default=DEFAULT_GATE_PROFILE_FILE,
         help="layer-targeted gate profile mapping file passed to required gate bundle runner",
     )
+    ap.add_argument(
+        "--host-visible-probe-manifest",
+        default=os.environ.get("HOST_VISIBLE_PROBE_MANIFEST", ""),
+        help=(
+            "optional host-visible surface probe manifest path(s) (space/comma separated). "
+            "when omitted, scan auto-discovers canonical manifest paths near selected catalogs and base-repo .identity/_probe."
+        ),
+    )
     ap.add_argument("--out", default="")
     args = ap.parse_args()
 
@@ -1427,7 +1633,16 @@ def main() -> int:
         scan_mode=args.scan_mode,
         target_set=target_set,
     )
+    external_next_hop_block_evidence = _load_external_next_hop_block_samples(
+        manifest_paths=_discover_host_visible_probe_manifest_paths(
+            repo_root=repo_root,
+            catalog_list=catalog_list,
+            explicit_manifest_arg=str(args.host_visible_probe_manifest or "").strip(),
+        ),
+        allowed_identity_ids=set(runtime_active_identity_ids),
+    )
     payload["runtime_active_identity_ids"] = runtime_active_identity_ids
+    payload["host_visible_probe_manifest_paths"] = external_next_hop_block_evidence.get("manifest_paths", [])
     shared_session_unbound_identities: list[str] = []
     if (
         args.scan_mode == "full"
@@ -5389,7 +5604,12 @@ def main() -> int:
             print(f"[FAIL] target identities not found in selected catalogs: {missing}")
             return 2
 
-    host_visible_post_check_metrics = _build_host_visible_post_check_metrics(rows=all_scanned_rows)
+    host_visible_post_check_metrics = _build_host_visible_post_check_metrics(
+        rows=all_scanned_rows,
+        external_next_hop_block_samples=external_next_hop_block_evidence.get("samples", []),
+        external_next_hop_block_manifest_paths=external_next_hop_block_evidence.get("manifest_paths", []),
+        external_next_hop_block_sample_refs=external_next_hop_block_evidence.get("sample_refs", []),
+    )
     payload["host_visible_post_check_metrics"] = host_visible_post_check_metrics
     payload["chat_egress_uniqueness_status"] = str(
         host_visible_post_check_metrics.get("chat_egress_uniqueness_status", "")
