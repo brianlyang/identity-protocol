@@ -4880,3 +4880,16 @@ Replay evidence (2026-03-09):
 3. `total_match_count`
 4. `path_residue_status`
 5. `identity_home`
+
+### A4) Unified headstamp closure semantics (authoritative wording)
+
+1. Current-phase objective is fixed to:
+   - **Pre-control guarantee 95%** on controllable protocol lanes.
+   - **Post-check next-hop 100%** detectability and hard blocking.
+2. Governance communication must use this wording consistently; avoid reframing the phase target as “host pre-send 100% mandatory”.
+3. Runtime fail-close baseline in this phase:
+   - if post-check state is missing/invalid/mismatch, next-hop must block with fail-close receipt.
+   - no pass-through is allowed when headstamp continuity is not provable on the next hop.
+4. Ownership baseline:
+   - protocol-side enforces detectability + next-hop blocker contracts;
+   - instance-side fixes lane/runtime implementations surfaced by those contracts.
