@@ -118,6 +118,22 @@ SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_skill_frontmatter.py",
     "scripts/validate_skill_sync_drift_guard.py",
 )
+RUNTIME_FILE_GOVERNANCE_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
+RUNTIME_FILE_GOVERNANCE_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
+RUNTIME_FILE_GOVERNANCE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
+    "One-to-one anti-forget correspondence matrix (mandatory)",
+    "scripts/validate_required_contract_coverage.py",
+    "scripts/validate_required_gate_surface_drift.py",
+    "scripts/ci/run_skill_supply_chain_probes_ci.sh",
+    "scripts/ci/run_downsink_path_immutability_probes_ci.sh",
+)
+RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
+    "v1.6.10 one-to-one correspondence replay checklist",
+    "required_gate_surface_drift_status",
+    "required_contract_coverage_status",
+    "scripts/validate_required_gate_surface_drift.py",
+    "scripts/validate_required_contract_coverage.py",
+)
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
     "merge_group:",
@@ -1403,6 +1419,21 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
             missing_execution_tokens[rel] = sorted(set(existing_tokens + skill_probe_missing_tokens))
 
+    runtime_file_governance_docs = (
+        (RUNTIME_FILE_GOVERNANCE_GOV_DOC, RUNTIME_FILE_GOVERNANCE_GOV_REQUIRED_TOKENS),
+        (RUNTIME_FILE_GOVERNANCE_REVIEW_DOC, RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS),
+    )
+    for rel, required_tokens in runtime_file_governance_docs:
+        path = repo_root / rel
+        if not path.exists():
+            missing_surface_files.append(rel)
+            continue
+        text = _read_text(path)
+        missing_tokens = [token for token in required_tokens if token not in text]
+        if missing_tokens:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + [f"runtime_file_governance_token_missing:{tok}" for tok in missing_tokens]))
+
     dialogue_bundle_path = repo_root / DIALOGUE_FEEDBACK_BUNDLE_SCRIPT
     if not dialogue_bundle_path.exists():
         missing_surface_files.append(DIALOGUE_FEEDBACK_BUNDLE_SCRIPT)
@@ -1537,6 +1568,14 @@ def main() -> int:
         "skill_supply_chain_probe_ci_delegate_script": SKILL_SUPPLY_CHAIN_PROBE_CI_DELEGATE_SCRIPT,
         "skill_supply_chain_delegate_required_python_scripts": list(
             SKILL_SUPPLY_CHAIN_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "runtime_file_governance_governance_doc": RUNTIME_FILE_GOVERNANCE_GOV_DOC,
+        "runtime_file_governance_review_doc": RUNTIME_FILE_GOVERNANCE_REVIEW_DOC,
+        "runtime_file_governance_governance_doc_required_tokens": list(
+            RUNTIME_FILE_GOVERNANCE_GOV_REQUIRED_TOKENS
+        ),
+        "runtime_file_governance_review_doc_required_tokens": list(
+            RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS
         ),
         "dialogue_feedback_bundle_script": DIALOGUE_FEEDBACK_BUNDLE_SCRIPT,
         "dialogue_feedback_bundle_required_surfaces": list(DIALOGUE_FEEDBACK_BUNDLE_REQUIRED_SURFACES),

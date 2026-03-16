@@ -14,6 +14,11 @@ Execution mode: v1.6.x continuity stream. This stream extends v1.6.8 and v1.6.9 
    - `docs/governance/identity-headstamp-last-hop-closure-governance-v1.6.9.md`
 3. Any proposal that bypasses v1.6.x motherline mapping is out-of-scope.
 4. This stream is protocol infrastructure only, not instance-specific patching.
+5. Current-pointer continuity refs (mandatory):
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 
 ## 1) Problem statement (frozen)
 
@@ -175,3 +180,17 @@ Serial acceptance baseline:
 8. https://developers.openai.com/api/docs/guides/evaluation-best-practices/
 9. https://developers.openai.com/cookbook/examples/realtime_eval_guide/
 10. https://developers.openai.com/cookbook/examples/agents_sdk/app_assistant_voice_agents/
+
+## 11) One-to-one anti-forget correspondence matrix (mandatory)
+
+This stream remains draft/continuity, but anti-forget closure is machine-enforced:
+
+1. runtime-file governance correspondence must stay wired through:
+   - `scripts/validate_required_gate_surface_drift.py`
+2. strict coverage visibility must stay wired through:
+   - `scripts/validate_required_contract_coverage.py`
+3. runtime-file mutation/path immutability probes must stay wired through:
+   - `scripts/ci/run_downsink_path_immutability_probes_ci.sh`
+4. skill artifact supply-chain probes (absorbed motherline controls) must stay wired through:
+   - `scripts/ci/run_skill_supply_chain_probes_ci.sh`
+5. if any mapping row or doc clause is added without the above strict surfaces, it is a fail-close anti-forget breach.

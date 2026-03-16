@@ -8,6 +8,12 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 1. Close runtime file governance gaps without introducing v1.7.x divergence.
 2. Convert runtime file writes from script-local behavior into contract-governed control plane behavior.
 3. Keep existing v1.6.8 and v1.6.9 guarantees intact.
+4. Current-pointer continuity refs (mandatory):
+   - `identity/protocol/mappings/contract-binding.current.yaml`
+   - `identity/protocol/mappings/control-plane-status.current.yaml`
+   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
+   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
 
 ## 1) Frozen risks
 
@@ -93,3 +99,21 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 1. `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
 2. `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
 3. `docs/governance/identity-headstamp-last-hop-closure-governance-v1.6.9.md`
+
+## 10) v1.6.10 one-to-one correspondence replay checklist
+
+Replay objective: prevent v1.6.10 clause drift from becoming "doc-only memory".
+
+Required machine checks (all must be present and green in strict lane):
+
+1. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+   - must report `required_gate_surface_drift_status=PASS_REQUIRED`
+2. `python3 scripts/validate_required_contract_coverage.py --catalog <catalog> --identity-id <id> --operation validate --json-only`
+   - payload must include `required_contract_coverage_status`
+3. `bash scripts/ci/run_downsink_path_immutability_probes_ci.sh`
+4. `bash scripts/ci/run_skill_supply_chain_probes_ci.sh`
+
+Interpretation contract:
+
+1. if any v1.6.10 clause is added/changed without strict-surface projection, classify as anti-forget regression.
+2. anti-forget regressions are fail-close and cannot be downgraded to warning in strict operations.
