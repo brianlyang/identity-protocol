@@ -1032,6 +1032,16 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_session_chain_protocol_probe = all(
+            token in text
+            for token in (
+                "run_probe session_chain_protocol_lane_explicit_context_pass",
+                "python3 \"${SESSION_CHAIN_WRAPPER_PATH}\"",
+                "--repo-catalog identity/catalog/identities.yaml",
+                "--work-layer protocol",
+                "session chain protocol explicit context probe",
+            )
+        )
         has_strict_default_first_line_probe = all(
             token in text
             for token in (
@@ -1113,6 +1123,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_egress_wrapper_direct_probe_invocation_missing")
         if not has_session_chain_headstamp_probe:
             gateway_missing_tokens.append("gateway_session_chain_headstamp_probe_invocation_missing")
+        if not has_session_chain_protocol_probe:
+            gateway_missing_tokens.append("gateway_session_chain_protocol_probe_invocation_missing")
         if not has_strict_default_first_line_probe:
             gateway_missing_tokens.append("gateway_strict_default_first_line_probe_invocation_missing")
         if not has_direct_text_emit_probe:
@@ -1293,6 +1305,13 @@ def main() -> int:
                 "--probe-write-path \"runtime/protocol-feedback/noncanonical/FEEDBACK_BATCH_probe.md\"",
             )
         )
+        has_feedback_filename_probe = all(
+            token in text
+            for token in (
+                "run_probe probe_feedback_noncanonical_filename_write",
+                "--probe-write-path \"runtime/protocol-feedback/outbox-to-protocol/freeform_note_probe.md\"",
+            )
+        )
         has_broadcast_nonregistry_probe = all(
             token in text
             for token in (
@@ -1317,6 +1336,8 @@ def main() -> int:
             downsink_missing_tokens.append("downsink_symlink_escape_probe_invocation_missing")
         if not has_feedback_nonregistry_probe:
             downsink_missing_tokens.append("downsink_feedback_nonregistry_probe_invocation_missing")
+        if not has_feedback_filename_probe:
+            downsink_missing_tokens.append("downsink_feedback_filename_probe_invocation_missing")
         if not has_broadcast_nonregistry_probe:
             downsink_missing_tokens.append("downsink_broadcast_nonregistry_probe_invocation_missing")
         if not has_literal_lock_probe:

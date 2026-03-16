@@ -538,6 +538,53 @@ def _vendor_api_solution_contract_skeleton(identity_id: str) -> dict:
     }
 
 
+def _skill_installation_supply_chain_contract_skeleton(identity_id: str) -> dict:
+    return {
+        "required": False,
+        "contract_id": "rq_039_skill_installation_supply_chain_contract_v1",
+        "artifact_type": "skill",
+        "required_capability_drivers": [
+            "scripts/validate_identity_tool_installation.py",
+            "scripts/validate_identity_vendor_api_discovery.py",
+            "scripts/validate_identity_vendor_api_solution.py",
+        ],
+        "dependent_contract_keys": [
+            "tool_installation_contract",
+            "vendor_api_discovery_contract",
+            "vendor_api_solution_contract",
+            "skill_path_integrity_contract_v1",
+        ],
+        "installation_receipt_path_pattern": f"identity/runtime/reports/skill-installation-{identity_id}-*.json",
+        "validator": "scripts/validate_skill_installation_supply_chain.py",
+    }
+
+
+def _skill_frontmatter_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "contract_id": "rq_040_skill_frontmatter_contract_v1",
+        "required_frontmatter_fields": [
+            "skill_id",
+            "version",
+            "owner",
+            "source",
+        ],
+        "strict_require_frontmatter": True,
+        "validator": "scripts/validate_skill_frontmatter.py",
+    }
+
+
+def _skill_sync_drift_guard_contract_skeleton() -> dict:
+    return {
+        "required": False,
+        "contract_id": "rq_041_skill_sync_drift_guard_contract_v1",
+        "artifact_type": "skill",
+        "drift_check_mode": "sha256",
+        "allow_missing_skills": False,
+        "validator": "scripts/validate_skill_sync_drift_guard.py",
+    }
+
+
 def _semantic_routing_guard_contract_skeleton() -> dict:
     return {
         "required": False,
@@ -915,14 +962,49 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
             "anchor_ref": "identity_pack_root_ref",
             "entries": [
                 {
-                    "path_id": "runtime_protocol_feedback.outbox_dir",
-                    "entry_type": "dir",
-                    "path": "runtime/protocol-feedback/outbox-to-protocol",
+                    "path_id": "runtime_protocol_feedback.outbox_feedback_batch",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/FEEDBACK_BATCH_*.md",
                 },
                 {
-                    "path_id": "runtime_protocol_feedback.inbox_dir",
-                    "entry_type": "dir",
-                    "path": "runtime/protocol-feedback/inbox-from-protocol",
+                    "path_id": "runtime_protocol_feedback.outbox_receipt",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/*_RECEIPT_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_seed",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/*_SEED_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_pack",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/*_PACK_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_requirements",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/REQUIREMENTS_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_pending",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/*_PENDING_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.outbox_broadcast",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/BROADCAST_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.inbox_primary",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.inbox_receipt",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_RECEIPT_*.json",
                 },
                 {
                     "path_id": "runtime_protocol_feedback.evidence_index",
@@ -930,9 +1012,59 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path": "runtime/protocol-feedback/evidence-index/INDEX.md",
                 },
                 {
-                    "path_id": "runtime_protocol_feedback.upgrade_proposals_dir",
-                    "entry_type": "dir",
-                    "path": "runtime/protocol-feedback/upgrade-proposals",
+                    "path_id": "runtime_protocol_feedback.upgrade_proposals_md",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/upgrade-proposals/*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.atomic_receipt",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/atomic/*.receipt.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.atomic_batch",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/atomic/*.batch.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.atomic_index",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/atomic/*.index.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.roundtables",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/roundtables/ROUNDTABLE_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.protocol_vendor_intel",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/protocol-vendor-intel/PROTOCOL_VENDOR_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.business_partner_intel",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/business-partner-intel/BUSINESS_PARTNER_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.vendor_intel",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/vendor-intel/VENDOR_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.issues",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/issues/ISSUE_*.md",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.review_notes",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/review-notes/*.log",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.validation",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/validation/*.json",
                 },
             ],
         },
@@ -1664,6 +1796,9 @@ def _ensure_tool_vendor_governance_contracts(task: dict, identity_id: str) -> di
         "tool_installation_contract": _tool_installation_contract_skeleton(identity_id),
         "vendor_api_discovery_contract": _vendor_api_discovery_contract_skeleton(identity_id),
         "vendor_api_solution_contract": _vendor_api_solution_contract_skeleton(identity_id),
+        "skill_installation_supply_chain_contract_v1": _skill_installation_supply_chain_contract_skeleton(identity_id),
+        "skill_frontmatter_contract_v1": _skill_frontmatter_contract_skeleton(),
+        "skill_sync_drift_guard_contract_v1": _skill_sync_drift_guard_contract_skeleton(),
         "semantic_routing_guard_contract_v1": _semantic_routing_guard_contract_skeleton(),
         "instance_protocol_split_receipt_contract_v1": _instance_protocol_split_receipt_contract_skeleton(),
         "protocol_feedback_canonical_reply_channel_contract_v1": _protocol_feedback_reply_channel_contract_skeleton(),
@@ -2368,7 +2503,7 @@ def main() -> int:
     ap.add_argument("--envelope-json", default="")
     ap.add_argument("--stdin-json", action="store_true")
     ap.add_argument("--catalog", default="")
-    ap.add_argument("--repo-catalog", default="")
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", default="")
     ap.add_argument("--operation", default="")
     ap.add_argument("--run-id", default="")
@@ -2929,7 +3064,7 @@ def main() -> int:
     ap.add_argument("--envelope-json", default="")
     ap.add_argument("--stdin-json", action="store_true")
     ap.add_argument("--catalog", default="")
-    ap.add_argument("--repo-catalog", default="")
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", default="")
     ap.add_argument("--actor-id", default="")
     ap.add_argument("--session-id", default="")
@@ -3784,6 +3919,7 @@ def main() -> int:
         )
     )
     ap.add_argument("--catalog", required=True)
+    ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--actor-id", required=True)
     ap.add_argument("--session-id", default="")
@@ -3846,6 +3982,7 @@ def main() -> int:
 
     run_id = str(args.run_id or "").strip() or f"session-chain-{int(time.time())}"
     catalog_path_resolved = Path(args.catalog).expanduser().resolve()
+    repo_catalog_path = str(args.repo_catalog or "").strip()
     resolved_session_id, session_binding_mode, session_binding_upserted, actor_session_store_path = (
         _resolve_effective_session_id(
             catalog_path=catalog_path_resolved,
@@ -3897,6 +4034,8 @@ def main() -> int:
         str(args.source_layer).strip() or DEFAULT_SOURCE_LAYER,
         "--json-only",
     ]
+    if repo_catalog_path:
+        ingress_cmd.extend(["--repo-catalog", repo_catalog_path])
     ingress_proc = subprocess.run(ingress_cmd, capture_output=True, text=True)
     ingress_payload = _parse_stdout_json(ingress_proc.stdout)
     if ingress_proc.returncode != 0:
@@ -3940,6 +4079,8 @@ def main() -> int:
         str(out_reply_path),
         "--json-only",
     ]
+    if repo_catalog_path:
+        egress_cmd.extend(["--repo-catalog", repo_catalog_path])
     egress_env = dict(os.environ)
     egress_env["IDENTITY_PROTOCOL_SESSION_CHAIN_WRAPPER_PATH"] = str(Path(__file__).resolve())
     egress_proc = subprocess.run(egress_cmd, capture_output=True, text=True, env=egress_env)
@@ -4583,6 +4724,9 @@ def _default_required_checks() -> list[str]:
         "scripts/validate_sidecar_cwd_parity.py",
         "scripts/validate_docs_bridge_consistency.py",
         "scripts/validate_contract_mapping_coverage.py",
+        "scripts/validate_identity_tool_installation.py",
+        "scripts/validate_identity_vendor_api_discovery.py",
+        "scripts/validate_identity_vendor_api_solution.py",
         "scripts/validate_prompt_bootstrap_capability.py",
         "scripts/validate_prompt_capability_matrix.py",
         "scripts/validate_refresh_strict_business_interference.py",

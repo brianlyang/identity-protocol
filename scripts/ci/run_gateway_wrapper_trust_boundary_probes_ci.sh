@@ -372,6 +372,24 @@ elif name == "session_chain_headstamp_first_line_required":
         raise SystemExit("session_chain_headstamp_first_line_required: final_emit_contract_status must be PASS_REQUIRED")
     if str(doc.get("entry_receipt_tuple_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("session_chain_headstamp_first_line_required: entry_receipt_tuple_status must be PASS_REQUIRED")
+elif name == "session_chain_protocol_lane_explicit_context_pass":
+    if rc != 0:
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected zero rc")
+    status = str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected PASS_REQUIRED wrapper status")
+    if str(doc.get("headstamp_first_line_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: headstamp_first_line_status must be PASS_REQUIRED")
+    if str(doc.get("send_time_gate_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: send_time_gate_status must be PASS_REQUIRED")
+    if str(doc.get("final_emit_guard_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: final_emit_guard_status must be PASS_REQUIRED")
+    preview = doc.get("reply_preview")
+    first_line = ""
+    if isinstance(preview, list) and preview:
+        first_line = str(preview[0] or "").strip()
+    if "work_layer=protocol" not in first_line:
+        raise SystemExit("session_chain_protocol_lane_explicit_context_pass: expected protocol headstamp first line")
 elif name == "strict_first_line_missing_evidence_blocked":
     if rc == 0:
         raise SystemExit("strict_first_line_missing_evidence_blocked: expected non-zero rc")
@@ -748,6 +766,20 @@ run_probe session_chain_headstamp_first_line_required \
   --source-layer project \
   --operation inspection \
   --message "session chain headstamp required probe" \
+  --json-only
+
+run_probe session_chain_protocol_lane_explicit_context_pass \
+  python3 "${SESSION_CHAIN_WRAPPER_PATH}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --identity-id "${IDENTITY_ID}" \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --run-id "${SESSION_CHAIN_RUN_ID}-protocol" \
+  --work-layer protocol \
+  --source-layer project \
+  --operation inspection \
+  --message "session chain protocol explicit context probe" \
   --json-only
 
 run_probe quoted_foreign_identity_context_must_not_switch_identity \
