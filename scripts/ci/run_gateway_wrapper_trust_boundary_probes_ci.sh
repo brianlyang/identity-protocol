@@ -316,6 +316,18 @@ elif name == "strict_first_line_missing_evidence_blocked":
     enforce_mode = str(doc.get("reply_first_line_gate_enforce_mode", "")).strip().lower()
     if enforce_mode != "strict_default":
         raise SystemExit("strict_first_line_missing_evidence_blocked: expected strict_default enforce mode")
+elif name == "resolve_context_timeout_guard":
+    if rc != 0:
+        raise SystemExit("resolve_context_timeout_guard: expected zero rc")
+    status = str(doc.get("gateway_timeout_guard_probe_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("resolve_context_timeout_guard: expected PASS_REQUIRED status")
+    marker_present = bool(doc.get("gateway_timeout_guard_probe_marker_present", False))
+    if not marker_present:
+        raise SystemExit("resolve_context_timeout_guard: expected timeout marker present")
+    error_code = str(doc.get("gateway_timeout_guard_probe_observed_error_code", "")).strip()
+    if error_code != "IP-CTX-TOOL-001":
+        raise SystemExit("resolve_context_timeout_guard: expected IP-CTX-TOOL-001 error code")
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -621,6 +633,13 @@ run_probe strict_first_line_missing_evidence_blocked \
   --identity-id "${IDENTITY_ID}" \
   --operation validate \
   --force-check \
+  --json-only
+
+run_probe resolve_context_timeout_guard \
+  python3 scripts/probe_gateway_timeout_guard.py \
+  --protocol-root "${REPO_ROOT}" \
+  --timeout-seconds 1 \
+  --sleep-seconds 2 \
   --json-only
 
 python3 - <<'PY' "${MANIFEST_PATH}" "${RESULT_ROOT}"

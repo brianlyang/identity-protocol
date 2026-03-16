@@ -595,3 +595,51 @@ Checkpoint verdict update:
 
 1. `ASB16-RQ-020` now has deterministic root-resolution provenance and strict ambiguity fail-close semantics.
 2. Bundle-level propagation closes caller-omission risk without identity-specific hardcoding.
+
+## 20) Context-timeout fail-close closure (2026-03-16)
+
+### 20.1 Risk reconfirmed
+
+1. Runtime reports showed occasional long-block symptoms on context precheck path (tooling stall), not deterministic protocol logic deadlock.
+2. Without timeout marker segregation, strict chains could continue and later fail as “stale”, mixing transport delay with true governance defects.
+
+### 20.2 Landed closure set
+
+1. Canonical timeout contract constants added in `scripts/protocol_infra_contract.py`:
+   - `IP-CTX-TOOL-001`
+   - `CTX_TOOL_TIMEOUT`
+   - `context_tool_timeout`
+   - default timeout windows for generic wrapper commands and context resolve path.
+2. Wrapper execution hardening in `scripts/gateway_wrapper_enforcement.py`:
+   - bounded subprocess timeout for passthrough + wrapper delegates
+   - structured timeout payload (marker + error code) on timeout fail-close.
+3. Bundle runner hardening in `scripts/required_gate_bundle_runner.py`:
+   - central `_run` timeout guard
+   - timeout result converted to machine-parsable payload with `IP-CTX-TOOL-001`.
+4. Strict scan chain guard in `scripts/full_identity_protocol_scan.py`:
+   - resolve precheck timeout triggers retry with expanded bounded timeout
+   - timeout marker still present => block strict downstream chain for that identity.
+5. Required probe expansion:
+   - new script `scripts/probe_gateway_timeout_guard.py`
+   - `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` adds `resolve_context_timeout_guard`.
+6. Surface drift enforcement:
+   - `scripts/validate_required_gate_surface_drift.py` now requires timeout-probe invocation + delegated script lineage.
+
+### 20.3 Replay evidence (serial)
+
+1. Timeout negative probe:
+   - `python3 scripts/probe_gateway_timeout_guard.py --protocol-root . --timeout-seconds 1 --sleep-seconds 2 --json-only`
+   - result: `gateway_timeout_guard_probe_status=PASS_REQUIRED`, rc=124, marker present.
+2. Gateway trust-boundary suite:
+   - `bash scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - includes `resolve_context_timeout_guard` and passes.
+3. Control-plane sync after landing:
+   - `render_control_plane_budget.py --write --json-only`
+   - `render_control_plane_status.py --write --json-only`
+   - budget/status/invariants/surface drift validators all `PASS_REQUIRED`.
+
+### 20.4 Verdict update
+
+1. Timeout events are now first-class fail-close signals (structured + machine-readable), not ambiguous stderr noise.
+2. Strict chain no longer silently proceeds after context-timeout precheck failures.
+3. Closure remains infrastructure-driven and identity-agnostic (no hardcoded instance branches).

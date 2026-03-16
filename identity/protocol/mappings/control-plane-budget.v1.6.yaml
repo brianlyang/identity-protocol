@@ -1,17 +1,17 @@
 schema_version: 1
 budget_version: v1.6
-last_updated_utc: '2026-03-16T00:37:51Z'
+last_updated_utc: '2026-03-16T02:55:31Z'
 policy_mode: dual_threshold_with_family_convergence
 budgets:
   validator_scripts:
-    warn: 154
-    fail: 157
-  error_codes:
-    warn: 445
-    fail: 451
-  error_code_families:
-    warn: 151
+    warn: 155
     fail: 158
+  error_codes:
+    warn: 449
+    fail: 455
+  error_code_families:
+    warn: 153
+    fail: 160
   mapping_rows_missing_in_bundle:
     warn: 0
     fail: 1
@@ -38,11 +38,11 @@ convergence_guard:
   enabled: true
   mode: no_rebound
   enforce_mode: fail_required
-  baseline_snapshot_utc: '2026-03-16T00:37:51Z'
+  baseline_snapshot_utc: '2026-03-16T02:55:31Z'
   ceilings:
-    validator_scripts: 154
-    error_codes: 445
-    error_code_families: 151
+    validator_scripts: 155
+    error_codes: 449
+    error_code_families: 153
     mapping_rows_missing_in_bundle: 0
     direct_validate_calls:
       scripts/identity_creator.py: 89

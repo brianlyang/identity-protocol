@@ -89,6 +89,7 @@ MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
 GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     CANONICAL_FINAL_EMIT_SCRIPT,
+    "scripts/probe_gateway_timeout_guard.py",
 )
 HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/repair_contract_backfill.py",
@@ -1030,6 +1031,16 @@ def main() -> int:
                 "--ingress-receipt",
             )
         )
+        has_context_timeout_probe = all(
+            token in text
+            for token in (
+                "run_probe resolve_context_timeout_guard",
+                "python3 scripts/probe_gateway_timeout_guard.py",
+                "--timeout-seconds 1",
+                "--sleep-seconds 2",
+                "--json-only",
+            )
+        )
         has_session_chain_tuple_assertions = all(
             token in text
             for token in (
@@ -1054,6 +1065,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_direct_text_emit_probe_invocation_missing")
         if not has_channel_bypass_emit_probe:
             gateway_missing_tokens.append("gateway_channel_bypass_emit_probe_invocation_missing")
+        if not has_context_timeout_probe:
+            gateway_missing_tokens.append("gateway_context_timeout_probe_invocation_missing")
         if not has_session_chain_tuple_assertions:
             gateway_missing_tokens.append("gateway_session_chain_tuple_assertions_missing")
         if gateway_missing_tokens:

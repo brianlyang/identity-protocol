@@ -17,6 +17,8 @@ from gateway_wrapper_enforcement import run_gateway_wrapped_command as _run_gate
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    CTX_TOOL_TIMEOUT_MARKER,
+    GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT,
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
@@ -109,6 +111,7 @@ SESSION_ID_FALLBACK = ""
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
+CONTEXT_TIMEOUT_ENV = "IDENTITY_PROTOCOL_GATEWAY_CONTEXT_TIMEOUT_SECONDS"
 
 
 @dataclass
@@ -194,21 +197,71 @@ def _detect_session_lane_lock(
 
 
 def _run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> CheckResult:
+    def _contains_timeout_marker(*, stdout_text: str, stderr_text: str, tail_text: str) -> bool:
+        marker = str(CTX_TOOL_TIMEOUT_MARKER or "").strip()
+        if not marker:
+            return False
+        merged = "\n".join(
+            token for token in (stdout_text, stderr_text, tail_text) if str(token or "").strip()
+        )
+        return marker in merged
+
+    def _finalize(rc_value: int, out_value: str, err_value: str) -> CheckResult:
+        out_text_local = str(out_value or "").strip()
+        err_text_local = str(err_value or "").strip()
+        tail_local = out_text_local.splitlines()[-1] if out_text_local else (
+            err_text_local.splitlines()[-1] if err_text_local else ""
+        )
+        return CheckResult(
+            rc=rc_value,
+            ok=rc_value == 0,
+            tail=tail_local,
+            stdout=out_text_local,
+            stderr=err_text_local,
+        )
+
     run_cmd = list(cmd)
     script = str(run_cmd[1]).strip() if len(run_cmd) >= 2 else ""
     if "--session-id" not in run_cmd and SESSION_ID_FALLBACK:
         if script in {REQUIRED_GATE_BUNDLE_SCRIPT, FINAL_EMIT_SCRIPT}:
             run_cmd.extend(["--session-id", SESSION_ID_FALLBACK])
+    first_env = dict(env or {})
     rc, out, err = _run_gateway_wrapped_command(
         cmd=run_cmd,
         protocol_root=cwd,
         passthrough_cwd=cwd,
-        passthrough_env=env,
+        passthrough_env=first_env or None,
     )
-    out_text = out.strip()
-    err_text = err.strip()
-    tail = out_text.splitlines()[-1] if out_text else (err_text.splitlines()[-1] if err_text else "")
-    return CheckResult(rc=rc, ok=rc == 0, tail=tail, stdout=out_text, stderr=err_text)
+    first = _finalize(rc, out, err)
+    if script.endswith("resolve_identity_context.py") and _contains_timeout_marker(
+        stdout_text=first.stdout,
+        stderr_text=first.stderr,
+        tail_text=first.tail,
+    ):
+        retry_env = dict(first_env)
+        retry_timeout = str(max(int(GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT), 5) * 2)
+        retry_env[CONTEXT_TIMEOUT_ENV] = retry_timeout
+        rc_retry, out_retry, err_retry = _run_gateway_wrapped_command(
+            cmd=run_cmd,
+            protocol_root=cwd,
+            passthrough_cwd=cwd,
+            passthrough_env=retry_env,
+        )
+        retry = _finalize(rc_retry, out_retry, err_retry)
+        if retry.ok:
+            return retry
+        return retry
+    return first
+
+
+def _check_has_ctx_timeout_marker(check: CheckResult) -> bool:
+    marker = str(CTX_TOOL_TIMEOUT_MARKER or "").strip()
+    if not marker:
+        return False
+    merged = "\n".join(
+        token for token in (check.stdout, check.stderr, check.tail) if str(token or "").strip()
+    )
+    return marker in merged
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -1182,6 +1235,27 @@ def main() -> int:
                         resolved_pack_path = Path(fallback_pack).expanduser().resolve()
                     except Exception:
                         resolved_pack_path = None
+            if _check_has_ctx_timeout_marker(resolve):
+                item["checks"]["context_timeout_guard"] = {
+                    "rc": resolve.rc,
+                    "ok": False,
+                    "tail": "CTX_TOOL_TIMEOUT resolve_identity_context_precheck_timeout",
+                }
+                item["context_timeout_guard_blocked"] = True
+                item["severity"] = "P0"
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                _update_target_severity(iid, "P0")
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
 
             effective_source_layer = expected_source_layer or ("global" if layer == "global" else "project")
             lane_lock_hint = _detect_session_lane_lock(

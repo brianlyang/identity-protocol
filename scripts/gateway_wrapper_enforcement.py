@@ -18,6 +18,11 @@ from final_emit_contract_common import (
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    CTX_TOOL_TIMEOUT_ERROR_CODE,
+    CTX_TOOL_TIMEOUT_MARKER,
+    CTX_TOOL_TIMEOUT_REASON_PREFIX,
+    GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT,
+    GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT,
     HOST_GATEWAY_CONTRACT_KEYS as INFRA_HOST_GATEWAY_CONTRACT_KEYS,
     HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
     HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER as INFRA_HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER,
@@ -34,6 +39,9 @@ FINAL_EMIT_SCRIPT = CANONICAL_FINAL_EMIT_SCRIPT
 REQUIRED_GATE_BUNDLE_SCRIPT = CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
+TIMEOUT_RETURN_CODE = 124
+DEFAULT_TIMEOUT_ENV = "IDENTITY_PROTOCOL_GATEWAY_CMD_TIMEOUT_SECONDS"
+CONTEXT_TIMEOUT_ENV = "IDENTITY_PROTOCOL_GATEWAY_CONTEXT_TIMEOUT_SECONDS"
 FINAL_EMIT_TUPLE_REQUIRED_FIELDS: tuple[str, ...] = (
     "outlet_channel_id",
     "outlet_preflight_receipt",
@@ -73,6 +81,47 @@ def _normalize_bool(value: Any) -> bool:
         return value
     token = str(value or "").strip().lower()
     return token in {"1", "true", "yes", "y", "on"}
+
+
+def _safe_positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(str(value or "").strip())
+    except Exception:
+        return int(default)
+    if parsed <= 0:
+        return int(default)
+    return parsed
+
+
+def _script_hint_from_cmd(cmd: list[str]) -> str:
+    if len(cmd) < 2:
+        return ""
+    return str(cmd[1] or "").strip()
+
+
+def _is_context_resolve_cmd(cmd: list[str]) -> bool:
+    script = _script_hint_from_cmd(cmd)
+    return script.endswith("resolve_identity_context.py")
+
+
+def _resolve_command_timeout_seconds(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
+    env_map = env if isinstance(env, dict) else os.environ
+    default_timeout = int(GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT)
+    env_token = str(env_map.get(DEFAULT_TIMEOUT_ENV, "")).strip()
+    if _is_context_resolve_cmd(cmd):
+        default_timeout = int(GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT)
+        context_token = str(env_map.get(CONTEXT_TIMEOUT_ENV, "")).strip()
+        if context_token:
+            env_token = context_token
+    return _safe_positive_int(env_token, default_timeout)
+
+
+def _timeout_reason(*, cmd: list[str], timeout_seconds: int, scope: str) -> str:
+    script = _script_hint_from_cmd(cmd) or "unknown_command"
+    return (
+        f"{CTX_TOOL_TIMEOUT_MARKER}:{CTX_TOOL_TIMEOUT_REASON_PREFIX}:"
+        f"{scope}:{script}:timeout_seconds={int(timeout_seconds)}"
+    )
 
 
 def _project_final_emit_tuple_from_session_chain(
@@ -272,13 +321,24 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
         session_chain_cmd.extend(["--out-reply-file", out_reply_file])
 
     print("$", " ".join(session_chain_cmd))
-    p_chain = subprocess.run(
-        session_chain_cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(protocol_root),
-        env=child_env,
-    )
+    timeout_seconds = _resolve_command_timeout_seconds(session_chain_cmd, env=child_env)
+    try:
+        p_chain = subprocess.run(
+            session_chain_cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(protocol_root),
+            env=child_env,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        return _emit_fail_payload(
+            _timeout_reason(
+                cmd=session_chain_cmd,
+                timeout_seconds=timeout_seconds,
+                scope="session_chain_wrapper",
+            )
+        )
     if p_chain.stderr.strip():
         print(p_chain.stderr.strip())
     if p_chain.returncode != 0:
@@ -513,13 +573,24 @@ def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_roo
         ingress_cmd.extend(["--envelope-json", json.dumps(envelope, ensure_ascii=False)])
 
     print("$", " ".join(ingress_cmd))
-    p_ingress = subprocess.run(
-        ingress_cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(protocol_root),
-        env=child_env,
-    )
+    timeout_seconds = _resolve_command_timeout_seconds(ingress_cmd, env=child_env)
+    try:
+        p_ingress = subprocess.run(
+            ingress_cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(protocol_root),
+            env=child_env,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        return _emit_fail_payload(
+            _timeout_reason(
+                cmd=ingress_cmd,
+                timeout_seconds=timeout_seconds,
+                scope="ingress_wrapper",
+            )
+        )
     if p_ingress.stdout.strip():
         print(p_ingress.stdout.strip())
     if p_ingress.stderr.strip():
@@ -540,13 +611,34 @@ def run_gateway_wrapped_command(
         return run_required_gate_bundle_via_ingress_wrapper(cmd=cmd, protocol_root=protocol_root)
     print("$", " ".join(cmd))
     run_cwd = passthrough_cwd.resolve() if isinstance(passthrough_cwd, Path) else protocol_root
-    p = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        cwd=str(run_cwd),
-        env=passthrough_env,
-    )
+    timeout_seconds = _resolve_command_timeout_seconds(cmd, env=passthrough_env)
+    try:
+        p = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(run_cwd),
+            env=passthrough_env,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        payload = {
+            "gateway_wrapper_status": STATUS_FAIL_REQUIRED,
+            "context_timeout_guard_status": STATUS_FAIL_REQUIRED,
+            "context_timeout_marker": CTX_TOOL_TIMEOUT_MARKER,
+            "error_code": CTX_TOOL_TIMEOUT_ERROR_CODE,
+            "timeout_seconds": int(timeout_seconds),
+            "stale_reasons": [
+                _timeout_reason(
+                    cmd=cmd,
+                    timeout_seconds=timeout_seconds,
+                    scope="gateway_passthrough",
+                )
+            ],
+        }
+        out = json.dumps(payload, ensure_ascii=False)
+        print(out)
+        return TIMEOUT_RETURN_CODE, out, str(exc)
     if p.stdout.strip():
         print(p.stdout.strip())
     if p.stderr.strip():

@@ -18,6 +18,10 @@ from typing import Any
 import yaml
 
 from protocol_infra_contract import (
+    CTX_TOOL_TIMEOUT_ERROR_CODE,
+    CTX_TOOL_TIMEOUT_MARKER,
+    CTX_TOOL_TIMEOUT_REASON_PREFIX,
+    GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT,
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
@@ -267,6 +271,7 @@ ENTRY_RECEIPT_STATE_FILE = "required_gate_bundle_entry.latest.json"
 ENTRY_RECEIPT_HISTORY_DIR = "required-gate-bundle-entry"
 WRAPPER_PROOF_MAX_AGE_SECONDS_DEFAULT = 300
 WRAPPER_PROOF_NONCE_STATE_FILE = "required_gate_wrapper_nonce_state.json"
+DEFAULT_TIMEOUT_ENV = "IDENTITY_PROTOCOL_GATEWAY_CMD_TIMEOUT_SECONDS"
 
 
 @dataclass(frozen=True)
@@ -316,6 +321,31 @@ def _safe_int(value: Any, *, default: int = 0) -> int:
         return int(value)
     except Exception:
         return int(default)
+
+
+def _resolve_subprocess_timeout_seconds() -> int:
+    env_token = str(os.environ.get(DEFAULT_TIMEOUT_ENV, "")).strip()
+    fallback = int(GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT)
+    parsed = _safe_int(env_token, default=fallback)
+    if parsed <= 0:
+        return fallback
+    return parsed
+
+
+def _build_timeout_payload(*, cmd: list[str], timeout_seconds: int) -> dict[str, Any]:
+    script = str(cmd[1] if len(cmd) >= 2 else "unknown_command").strip() or "unknown_command"
+    reason = (
+        f"{CTX_TOOL_TIMEOUT_MARKER}:{CTX_TOOL_TIMEOUT_REASON_PREFIX}:"
+        f"required_gate_bundle_runner:{script}:timeout_seconds={int(timeout_seconds)}"
+    )
+    return {
+        "bundle_status": STATUS_FAIL_REQUIRED,
+        "error_code": CTX_TOOL_TIMEOUT_ERROR_CODE,
+        "context_timeout_guard_status": STATUS_FAIL_REQUIRED,
+        "context_timeout_marker": CTX_TOOL_TIMEOUT_MARKER,
+        "timeout_seconds": int(timeout_seconds),
+        "stale_reasons": [reason],
+    }
 
 
 def _is_privilege_escalation_error(exc: Exception) -> bool:
@@ -1278,8 +1308,20 @@ def _load_gate_profile_selection(
 
 
 def _run(cmd: list[str], *, cwd: Path | None = None) -> tuple[int, str, str]:
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(cwd) if cwd else None)
-    return int(proc.returncode), proc.stdout, proc.stderr
+    timeout_seconds = _resolve_subprocess_timeout_seconds()
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(cwd) if cwd else None,
+            timeout=timeout_seconds,
+        )
+        return int(proc.returncode), proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        payload = _build_timeout_payload(cmd=cmd, timeout_seconds=timeout_seconds)
+        out = json.dumps(payload, ensure_ascii=False)
+        return 124, out, str(exc)
 
 
 def _parse_payload(stdout_text: str) -> dict[str, Any]:

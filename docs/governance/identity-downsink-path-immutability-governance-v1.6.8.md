@@ -554,3 +554,39 @@ Interpretation lock:
 1. No user absolute-path literals are introduced.
 2. No identity-specific branching is introduced.
 3. Existing path immutability and installer atomic baseline closure semantics remain unchanged.
+
+## 19) Context-timeout fail-close governance (2026-03-16)
+
+### 19.1 Problem statement
+
+1. Tooling-layer blocking (for example occasional wrapper/session call stalls) is not equivalent to protocol logic failure, but can contaminate strict freshness windows and generate noisy false-fail outcomes.
+2. Prior behavior lacked a machine-stable timeout marker, making “real stale” vs “precheck timeout” hard to separate in governance outputs.
+3. Required CI had no deterministic negative probe proving timeout fail-close semantics.
+
+### 19.2 Mandatory protocol behavior
+
+1. Wrapper command execution must enforce bounded timeout with alias-driven defaults:
+   - generic command timeout default: `GATEWAY_WRAPPER_SUBPROCESS_TIMEOUT_SECONDS_DEFAULT`
+   - context resolve timeout default: `GATEWAY_CONTEXT_RESOLVE_TIMEOUT_SECONDS_DEFAULT`
+2. Timeout events must emit structured fail-close evidence:
+   - error code: `IP-CTX-TOOL-001`
+   - marker: `CTX_TOOL_TIMEOUT`
+   - stale reason token prefixed with `context_tool_timeout`.
+3. Strict scan precheck must stop downstream strict chain when context resolve timeout marker is present; no “continue and guess” behavior is allowed.
+4. Timeout governance must remain non-hardcoded:
+   - no identity allowlist
+   - no user-path literals
+   - env override allowed only through canonical timeout env keys.
+
+### 19.3 Required CI proof
+
+1. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh` must include:
+   - `run_probe resolve_context_timeout_guard`
+   - `python3 scripts/probe_gateway_timeout_guard.py --timeout-seconds 1 --sleep-seconds 2 --json-only`
+2. `validate_required_gate_surface_drift.py` must enforce timeout-probe wiring tokens and delegated script lineage.
+
+### 19.4 Acceptance criteria
+
+1. `probe_gateway_timeout_guard.py` returns `gateway_timeout_guard_probe_status=PASS_REQUIRED`.
+2. Gateway trust-boundary suite remains green with timeout probe enabled.
+3. Control-plane quartet remains `PASS_REQUIRED` after timeout governance landing.
