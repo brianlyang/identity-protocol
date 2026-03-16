@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import subprocess
 import sys
@@ -24,6 +25,9 @@ from protocol_infra_contract import (
     HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
 from headstamp_error_family_common import (
     ERR_HDSTAMP_ACTOR_LAYER_MISMATCH,
@@ -115,7 +119,7 @@ def _inject_chat_egress_uniqueness_fields(payload: dict[str, Any]) -> dict[str, 
         uniqueness_status = STATUS_FAIL_REQUIRED
         if post_check_state_unavailable:
             uniqueness_reason = "post_check_state_unavailable_fail_close"
-            uniqueness_error_code = CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE
+            uniqueness_error_code = error_code or CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE
         elif post_check_blocker_active:
             uniqueness_reason = "post_check_blocker_active_next_hop_blocked"
             uniqueness_error_code = CHAT_EGRESS_RAW_BYPASS_ERROR_CODE
@@ -189,6 +193,28 @@ def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: st
     return (pack_path / token).resolve()
 
 
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: str, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path or "").strip()
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
+
+
 def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "state_file": HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
@@ -204,8 +230,19 @@ def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) 
         pack_path, task_path = resolve_pack_and_task(catalog_path, identity_id)
         task = load_json(task_path)
     except Exception as exc:
-        payload["state_status"] = "STATE_RESOLVE_FAILED"
-        payload["stale_reasons"] = [f"host_transport_post_check_state_resolve_failed:{type(exc).__name__}"]
+        if _is_privilege_escalation_error(exc):
+            payload["state_status"] = "STATE_PERMISSION_DENIED"
+            payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+            payload["stale_reasons"] = [
+                _format_privilege_escalation_reason(
+                    path=str(catalog_path),
+                    scope="host_transport_post_check_state_resolve",
+                    exc=exc,
+                )
+            ]
+        else:
+            payload["state_status"] = "STATE_RESOLVE_FAILED"
+            payload["stale_reasons"] = [f"host_transport_post_check_state_resolve_failed:{type(exc).__name__}"]
         return payload
 
     contract = task.get(HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY)
@@ -239,8 +276,19 @@ def _load_host_transport_post_check_state(catalog_path: Path, identity_id: str) 
     try:
         state_doc = load_json(state_path)
     except Exception as exc:
-        payload["state_status"] = "STATE_INVALID"
-        payload["stale_reasons"] = [f"host_transport_post_check_state_invalid:{type(exc).__name__}"]
+        if _is_privilege_escalation_error(exc):
+            payload["state_status"] = "STATE_PERMISSION_DENIED"
+            payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+            payload["stale_reasons"] = [
+                _format_privilege_escalation_reason(
+                    path=str(state_path),
+                    scope="host_transport_post_check_state_read",
+                    exc=exc,
+                )
+            ]
+        else:
+            payload["state_status"] = "STATE_INVALID"
+            payload["stale_reasons"] = [f"host_transport_post_check_state_invalid:{type(exc).__name__}"]
         return payload
 
     payload["state_status"] = "STATE_PRESENT"
@@ -534,6 +582,7 @@ def main() -> int:
         "STATE_INVALID",
         "STATE_RESOLVE_FAILED",
         "STATE_CONTRACT_MISSING",
+        "STATE_PERMISSION_DENIED",
     }
 
     if strict_context and post_check_block_on_active and post_check_state_unavailable:
@@ -545,6 +594,12 @@ def main() -> int:
         stale_reasons.extend(
             [f"host_transport_post_check_reason:{reason}" for reason in post_check_stale_reasons if str(reason).strip()]
         )
+        unavailable_error_code = (
+            post_check_error_code
+            or CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE
+        )
+        if post_check_state_status == "STATE_PERMISSION_DENIED":
+            unavailable_error_code = PRIVILEGE_ESCALATION_ERROR_CODE
         payload = {
             "identity_id": args.identity_id,
             "catalog_path": str(catalog_path),
@@ -556,7 +611,7 @@ def main() -> int:
             "expected_source_layer": str(args.expected_source_layer or "").strip(),
             "layer_intent_text": str(args.layer_intent_text or "").strip(),
             "send_time_gate_status": STATUS_FAIL_REQUIRED,
-            "error_code": ERR_POST_CHECK_BLOCKER_ACTIVE,
+            "error_code": unavailable_error_code,
             "reply_first_line_status": STATUS_SKIPPED_NOT_REQUIRED,
             "reply_first_line_gate_executed": False,
             "send_time_block_stage": "pre_first_line_post_check_state_unavailable",

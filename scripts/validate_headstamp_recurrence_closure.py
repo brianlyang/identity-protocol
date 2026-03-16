@@ -268,6 +268,16 @@ def _resolve_effective_session_id(
     return "", "session_missing"
 
 
+def _derive_run_id_from_session_id(session_id: str) -> str:
+    token = str(session_id or "").strip()
+    if not token or ":" not in token:
+        return ""
+    prefix, value = token.split(":", 1)
+    if str(prefix or "").strip().lower() != "run":
+        return ""
+    return str(value or "").strip()
+
+
 def _catalog_identity_ids(catalog_path: Path, *, include_fixture: bool = True) -> list[str]:
     try:
         data = yaml.safe_load(catalog_path.read_text(encoding="utf-8")) or {}
@@ -595,8 +605,12 @@ def main() -> int:
         stem=f"headstamp-closure-coverage-receipt-{args.identity_id}",
         ext="json",
     ).resolve()
+    session_bound_run_id = _derive_run_id_from_session_id(session_id_effective)
     recovery_run_token = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    recovery_run_id = f"headstamp-recurrence-recovery-{args.identity_id}-{recovery_run_token}"
+    recovery_run_id = (
+        session_bound_run_id
+        or f"headstamp-recurrence-recovery-{args.identity_id}-{recovery_run_token}"
+    )
     mismatch_reply = runtime_temp_file(
         channel="headstamp-closure",
         operation=operation or "validate",

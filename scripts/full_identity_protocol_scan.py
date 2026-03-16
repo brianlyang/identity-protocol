@@ -23,7 +23,6 @@ from protocol_infra_contract import (
     HOST_VISIBLE_CHAT_EGRESS_UNIQUENESS_REQUIRED_RATE,
     HOST_VISIBLE_NEXT_HOP_HEADSTAMP_REQUIRED_RATE,
     HOST_VISIBLE_POST_GATE_COVERAGE_REQUIRED_RATE,
-    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_PRE_SEND_GATE_MIN_PASS_RATE,
     HOST_VISIBLE_POST_CHECK_DETECTABILITY_REQUIRED_RATE,
@@ -116,6 +115,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
 CONTEXT_TIMEOUT_ENV = "IDENTITY_PROTOCOL_GATEWAY_CONTEXT_TIMEOUT_SECONDS"
+ERR_SESSION_MAP_REQUIRED = "IP-ASB-SESSION-MAP-001"
 
 
 @dataclass
@@ -690,8 +690,19 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         post_gate_coverage_status,
         next_hop_headstamp_status,
     )
+    strict_skip_fail_reasons: list[str] = []
+    if next_hop_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("next_hop_block_samples_missing")
+    if chat_egress_uniqueness_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("chat_egress_uniqueness_samples_missing")
+    if post_gate_coverage_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("post_gate_coverage_samples_missing")
+    if next_hop_headstamp_status == STATUS_SKIPPED_NOT_REQUIRED:
+        strict_skip_fail_reasons.append("next_hop_headstamp_samples_missing")
     overall_status = STATUS_PASS_REQUIRED
     if any(status == STATUS_FAIL_REQUIRED for status in metric_statuses):
+        overall_status = STATUS_FAIL_REQUIRED
+    elif strict_skip_fail_reasons:
         overall_status = STATUS_FAIL_REQUIRED
     elif any(status == STATUS_SKIPPED_NOT_REQUIRED for status in metric_statuses):
         overall_status = STATUS_SKIPPED_NOT_REQUIRED
@@ -731,6 +742,10 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         stale_reasons.append("metric_next_hop_headstamp_rate_below_threshold")
     if next_hop_headstamp_status == STATUS_SKIPPED_NOT_REQUIRED:
         stale_reasons.append("metric_next_hop_headstamp_samples_missing")
+    if strict_skip_fail_reasons:
+        stale_reasons.append(
+            "metric_strict_skip_fail_close:" + ",".join(sorted(set(strict_skip_fail_reasons)))
+        )
 
     return {
         "contract_id": "rq_036_host_visible_post_check_next_hop_block_contract_v1",
@@ -780,6 +795,7 @@ def _build_host_visible_post_check_metrics(*, rows: list[dict[str, Any]]) -> dic
         "false_green_identity_ids": sorted(set(false_green_identities)),
         "chat_egress_uniqueness_fail_identity_ids": sorted(set(chat_egress_uniqueness_fail_identities)),
         "next_hop_headstamp_fail_identity_ids": sorted(set(next_hop_headstamp_fail_identities)),
+        "strict_skip_fail_close_reasons": sorted(set(strict_skip_fail_reasons)),
         "stale_reasons": stale_reasons,
     }
 
@@ -832,6 +848,132 @@ def _infer_target_source_layer_from_env(*, project_catalog: Path, global_catalog
     return ""
 
 
+def _parse_session_id_map_literal(raw: str) -> tuple[dict[str, str], list[str]]:
+    mapping: dict[str, str] = {}
+    errors: list[str] = []
+    token = str(raw or "").strip()
+    if not token:
+        return mapping, errors
+    for part in re.split(r"[,\n]+", token):
+        entry = str(part or "").strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            errors.append(f"session_id_map_invalid_entry_missing_equals:{entry}")
+            continue
+        identity_id, session_id = [x.strip() for x in entry.split("=", 1)]
+        if not identity_id or not session_id:
+            errors.append(f"session_id_map_invalid_entry_empty_field:{entry}")
+            continue
+        mapping[identity_id] = session_id
+    return mapping, errors
+
+
+def _load_session_id_map(*, map_file: str, map_inline: str, repo_root: Path) -> tuple[dict[str, str], list[str], str]:
+    mapping: dict[str, str] = {}
+    errors: list[str] = []
+    source = ""
+    inline = str(map_inline or "").strip()
+    file_token = str(map_file or "").strip()
+    if inline and file_token:
+        return {}, ["session_id_map_conflict_inline_and_file"], source
+    if inline:
+        parsed, parse_errors = _parse_session_id_map_literal(inline)
+        mapping.update(parsed)
+        errors.extend(parse_errors)
+        source = "inline"
+        return mapping, errors, source
+    if not file_token:
+        return mapping, errors, source
+
+    path = Path(file_token).expanduser()
+    if not path.is_absolute():
+        path = (repo_root / file_token).resolve()
+    else:
+        path = path.resolve()
+    source = str(path)
+    if not path.exists():
+        return {}, [f"session_id_map_file_not_found:{path}"], source
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        return {}, [f"session_id_map_file_read_failed:{exc}"], source
+
+    parsed_doc: Any = None
+    try:
+        parsed_doc = json.loads(raw)
+    except Exception:
+        try:
+            parsed_doc = yaml.safe_load(raw)
+        except Exception:
+            parsed_doc = None
+
+    if not isinstance(parsed_doc, dict):
+        return {}, [f"session_id_map_file_invalid_root:{path}"], source
+    for key, value in parsed_doc.items():
+        identity_id = str(key or "").strip()
+        session_id = str(value or "").strip()
+        if not identity_id or not session_id:
+            errors.append(f"session_id_map_file_invalid_entry:{key}")
+            continue
+        mapping[identity_id] = session_id
+    return mapping, errors, source
+
+
+def _collect_runtime_active_identity_ids(
+    *,
+    catalog_list: list[tuple[str, Path]],
+    scan_mode: str,
+    target_set: set[str],
+) -> list[str]:
+    out: set[str] = set()
+    for _layer, catalog in catalog_list:
+        rows = _catalog_rows(catalog) if catalog.exists() else []
+        for row in rows:
+            identity_id = str(row.get("id", "")).strip()
+            if not identity_id:
+                continue
+            if scan_mode == "target" and identity_id not in target_set:
+                continue
+            profile = str(row.get("profile", "")).strip().lower()
+            runtime_mode = str(row.get("runtime_mode", "")).strip().lower()
+            status = str(row.get("status", "")).strip().lower()
+            if status == "active" and profile == "runtime" and runtime_mode != "demo_only":
+                out.add(identity_id)
+    return sorted(out)
+
+
+def _is_session_bound_for_identity(
+    *,
+    catalog_list: list[tuple[str, Path]],
+    actor_id: str,
+    identity_id: str,
+    session_id: str,
+) -> bool:
+    token = str(session_id or "").strip()
+    if not token:
+        return False
+    for _layer, catalog in catalog_list:
+        if not catalog.exists():
+            continue
+        rows = _catalog_rows(catalog)
+        present = any(str(row.get("id", "")).strip() == identity_id for row in rows)
+        if not present:
+            continue
+        try:
+            binding = load_actor_binding(
+                catalog,
+                actor_id,
+                identity_id=identity_id,
+                session_id=token,
+            )
+        except Exception:
+            binding = {}
+        if binding:
+            return True
+    return False
+
+
 def _resolve_effective_scan_session_id(
     *,
     catalog_path: Path,
@@ -868,6 +1010,18 @@ def _resolve_effective_scan_session_id(
     if requested:
         return requested, "requested_unbound_no_fallback", False
     return "", "missing", False
+
+
+def _derive_run_id_from_session_id(session_id: str) -> str:
+    token = str(session_id or "").strip()
+    if not token:
+        return ""
+    if ":" not in token:
+        return ""
+    prefix, value = token.split(":", 1)
+    if str(prefix or "").strip().lower() != "run":
+        return ""
+    return str(value or "").strip()
 
 
 def _scope_hint_for_row(layer: str, row: dict[str, Any]) -> str:
@@ -1106,6 +1260,22 @@ def main() -> int:
         help="explicit actor session id for strict full-scan execution (e.g., run:<run_id>)",
     )
     ap.add_argument(
+        "--session-id-map",
+        default="",
+        help=(
+            "optional per-identity strict session map (identity=session,identity=session). "
+            "when provided, each identity uses its mapped session instead of global --session-id."
+        ),
+    )
+    ap.add_argument(
+        "--session-id-map-file",
+        default="",
+        help=(
+            "optional JSON/YAML mapping file: {\"identity_id\": \"run:<id>\"}. "
+            "used for multi-active strict scans to avoid shared-session noise."
+        ),
+    )
+    ap.add_argument(
         "--gate-profile",
         default=os.environ.get("FULL_SCAN_GATE_PROFILE", DEFAULT_GATE_PROFILE_NAME),
         help="required-gate bundle profile for scan mode (default strict_full)",
@@ -1152,11 +1322,31 @@ def main() -> int:
         print("[FAIL] IP-ACTOR-ENTRY-001 explicit --actor-id is required for strict full-scan execution")
         return 1
     session_id_input = str(args.session_id or "").strip()
-    if not session_id_input:
-        print("[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id is required for strict full-scan execution")
-        return 1
     actor_id = resolve_actor_id(actor_id_input)
-    SESSION_ID_FALLBACK = session_id_input
+    (
+        session_id_map,
+        session_id_map_errors,
+        session_id_map_source,
+    ) = _load_session_id_map(
+        map_file=str(args.session_id_map_file or "").strip(),
+        map_inline=str(args.session_id_map or "").strip(),
+        repo_root=repo_root,
+    )
+    if session_id_map_errors:
+        print(
+            "[FAIL] "
+            + "; ".join(
+                [f"{ERR_SESSION_MAP_REQUIRED} {reason}" for reason in session_id_map_errors]
+            )
+        )
+        return 1
+    if not session_id_input and not session_id_map:
+        print(
+            "[FAIL] IP-ASB-SESSION-ENTRY-001 explicit --session-id (or --session-id-map/--session-id-map-file) "
+            "is required for strict full-scan execution"
+        )
+        return 1
+    SESSION_ID_FALLBACK = session_id_input or next(iter(session_id_map.values()), "")
     if args.scan_mode == "target" and not target_set:
         print("[FAIL] --scan-mode target requires --identity-ids (or IDENTITY_IDS env).")
         return 2
@@ -1210,6 +1400,10 @@ def main() -> int:
         "target_identities": sorted(target_set),
         "target_source_layer_mode": target_source_layer_mode,
         "target_source_layer_effective": effective_target_source_layer,
+        "session_id_input": session_id_input,
+        "session_id_map_source": session_id_map_source,
+        "session_id_map_size": len(session_id_map),
+        "session_id_map_identity_ids": sorted(session_id_map.keys()),
         "gate_profile": gate_profile,
         "gate_profile_file": gate_profile_file,
         "catalog_dedup_skips": catalog_dedup_skips,
@@ -1228,6 +1422,46 @@ def main() -> int:
             "identity_ids": [],
         },
     }
+    runtime_active_identity_ids = _collect_runtime_active_identity_ids(
+        catalog_list=catalog_list,
+        scan_mode=args.scan_mode,
+        target_set=target_set,
+    )
+    payload["runtime_active_identity_ids"] = runtime_active_identity_ids
+    shared_session_unbound_identities: list[str] = []
+    if (
+        args.scan_mode == "full"
+        and len(runtime_active_identity_ids) > 1
+        and not session_id_map
+        and session_id_input
+    ):
+        for identity_id in runtime_active_identity_ids:
+            if not _is_session_bound_for_identity(
+                catalog_list=catalog_list,
+                actor_id=actor_id,
+                identity_id=identity_id,
+                session_id=session_id_input,
+            ):
+                shared_session_unbound_identities.append(identity_id)
+        if shared_session_unbound_identities:
+            payload["preflight_status"] = STATUS_FAIL_REQUIRED
+            payload["preflight_error_code"] = ERR_SESSION_MAP_REQUIRED
+            payload["preflight_stale_reasons"] = [
+                "shared_session_unbound_for_multi_active_runtime",
+                f"recommend_session_id_map_for_identities:{','.join(shared_session_unbound_identities)}",
+            ]
+            if args.out:
+                out = Path(args.out).expanduser().resolve()
+                out.parent.mkdir(parents=True, exist_ok=True)
+                out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                print(f"[OK] wrote: {out}")
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+            print(
+                "[FAIL] "
+                f"{ERR_SESSION_MAP_REQUIRED} strict full-scan detected multi-active runtime identities "
+                f"without per-identity session map; unbound={shared_session_unbound_identities}"
+            )
+            return 1
     target_severity_map: dict[str, str] = {}
     target_m2m_map: dict[str, str] = {}
     all_scanned_rows: list[dict[str, Any]] = []
@@ -1360,11 +1594,14 @@ def main() -> int:
                 continue
 
             effective_source_layer = expected_source_layer or ("global" if layer == "global" else "project")
+            requested_session_for_row = str(session_id_map.get(iid, session_id_input)).strip()
+            if iid in session_id_map:
+                item["session_id_map_applied"] = True
             lane_lock_hint = _detect_session_lane_lock(
                 catalog_path=catalog,
                 identity_id=iid,
                 actor_id=actor_id,
-                session_id=session_id_input,
+                session_id=requested_session_for_row,
                 resolved_pack_path=resolved_pack_path,
             )
             effective_work_layer = expected_work_layer
@@ -1450,21 +1687,50 @@ def main() -> int:
             row_is_active_runtime = row_status == "active" and row_profile == "runtime"
             row_is_fixture = row_profile == "fixture" or row_runtime_mode == "demo_only"
 
+            if row_is_active_runtime and not requested_session_for_row:
+                item["checks"]["requested_session_binding"] = {
+                    "rc": 1,
+                    "ok": False,
+                    "tail": (
+                        f"{ERR_SESSION_MAP_REQUIRED} active runtime identity missing strict session selector "
+                        "(provide --session-id or identity entry in --session-id-map)"
+                    ),
+                }
+                item["session_id_requested"] = requested_session_for_row
+                item["session_id_effective"] = ""
+                item["session_id_resolution_mode"] = "missing_explicit_session_selector"
+                item["session_id_requested_bound"] = False
+                item["requested_session_binding_required"] = True
+                item["m2m_projection"] = _classify_m2m_projection(checks=item.get("checks", {}))
+                payload["summary_m2m"]["total_identities"] += 1
+                current_m2m = str(item["m2m_projection"].get("m2m_binding_closure_status", "")).upper()
+                if current_m2m == "PASS":
+                    payload["summary_m2m"]["pass"] += 1
+                else:
+                    payload["summary_m2m"]["fail"] += 1
+                _update_target_m2m(iid, current_m2m)
+                item["severity"] = "P0"
+                _update_target_severity(iid, str(item["severity"]))
+                _record_summary(item)
+                all_scanned_rows.append(item)
+                layer_out["identities"].append(item)
+                continue
+
             scan_session_id, session_resolution_mode, requested_session_bound = _resolve_effective_scan_session_id(
                 catalog_path=catalog,
                 actor_id=actor_id,
                 identity_id=iid,
-                requested_session_id=session_id_input,
+                requested_session_id=requested_session_for_row,
             )
             if not scan_session_id:
-                scan_session_id = session_id_input
-            SESSION_ID_FALLBACK = scan_session_id or session_id_input
-            item["session_id_requested"] = session_id_input
+                scan_session_id = requested_session_for_row
+            SESSION_ID_FALLBACK = scan_session_id or requested_session_for_row or session_id_input
+            item["session_id_requested"] = requested_session_for_row
             item["session_id_effective"] = scan_session_id
             item["session_id_resolution_mode"] = session_resolution_mode
             item["session_id_requested_bound"] = requested_session_bound
             item["requested_session_binding_required"] = row_is_active_runtime
-            if row_is_active_runtime and session_id_input and not requested_session_bound:
+            if row_is_active_runtime and requested_session_for_row and not requested_session_bound:
                 item["checks"]["requested_session_binding"] = {
                     "rc": 1,
                     "ok": False,
@@ -1484,7 +1750,7 @@ def main() -> int:
                 all_scanned_rows.append(item)
                 layer_out["identities"].append(item)
                 continue
-            if (not row_is_active_runtime) and session_id_input and not requested_session_bound:
+            if (not row_is_active_runtime) and requested_session_for_row and not requested_session_bound:
                 item["checks"]["requested_session_binding"] = {
                     "rc": 0,
                     "ok": True,
@@ -1547,7 +1813,8 @@ def main() -> int:
                     ext="json",
                 )
             )
-            required_gate_bundle_run_id = f"scan-{layer}-{iid}"
+            session_bound_run_id = _derive_run_id_from_session_id(scan_session_id)
+            required_gate_bundle_run_id = session_bound_run_id or f"scan-{layer}-{iid}"
             required_gate_bundle_receipt = str(
                 runtime_temp_file(
                     channel="required-gate-bundle",
@@ -1907,9 +2174,9 @@ def main() -> int:
                     "--run-id",
                     required_gate_bundle_run_id,
                     "--receipt-source",
-                    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+                    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
                     "--allowed-live-receipt-sources",
-                    f"{HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE},{HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE}",
+                    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
                     "--json-only",
                 ],
                 "host_transport_wiring_attestation": [
@@ -3250,6 +3517,7 @@ def main() -> int:
                     actor_id,
                     "--session-id",
                     scan_session_id,
+                    "--strict-session-primary",
                 ]
                 checks["prompt_activation"] = [
                     "python3",
@@ -3335,7 +3603,6 @@ def main() -> int:
                 if name == "host_transport_wiring_attestation":
                     allowed_sources = {
                         HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
-                        HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
                     }
                     allowed_sources.update(
                         str(token).strip()

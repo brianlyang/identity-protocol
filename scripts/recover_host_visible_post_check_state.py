@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import re
 import subprocess
@@ -12,6 +13,7 @@ from typing import Any
 
 from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+    HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
     HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
@@ -20,6 +22,9 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_STATE_FILE,
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
 from tool_vendor_governance_common import resolve_pack_and_task
 
@@ -27,7 +32,7 @@ STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_MISSING = "IP-HDSTAMP-001"
 ERR_INVALID = "IP-HDSTAMP-003"
-FIXTURE_ALLOWED_OPERATIONS = {"scan", "ci", "three-plane"}
+FIXTURE_ALLOWED_OPERATIONS = set(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS)
 
 SCRIPT_PATH = Path(__file__).resolve()
 SCRIPT_DIR = SCRIPT_PATH.parent
@@ -64,13 +69,69 @@ def _resolve_runtime_path(pack_path: Path, raw_path: str, default_rel: str) -> P
 def _read_json_or_default(path: Path, default: dict[str, Any]) -> dict[str, Any]:
     if not path.exists():
         return dict(default)
-    data = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="host_visible_recovery_state_read",
+                    exc=exc,
+                )
+            ) from exc
+        return dict(default)
+    data = json.loads(raw)
     return data if isinstance(data, dict) else dict(default)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path.parent,
+                    scope="host_visible_recovery_dir_write",
+                    exc=exc,
+                )
+            ) from exc
+        raise
+    try:
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        if _is_privilege_escalation_error(exc):
+            raise PermissionError(
+                _format_privilege_escalation_reason(
+                    path=path,
+                    scope="host_visible_recovery_write",
+                    exc=exc,
+                )
+            ) from exc
+        raise
+
+
+def _is_privilege_escalation_error(exc: Exception) -> bool:
+    if isinstance(exc, PermissionError):
+        return True
+    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
+        errno.EACCES,
+        errno.EPERM,
+        errno.EROFS,
+    }:
+        return True
+    return False
+
+
+def _format_privilege_escalation_reason(*, path: Path, scope: str, exc: Exception) -> str:
+    safe_scope = str(scope or "").strip() or "unknown_scope"
+    safe_path = str(path.expanduser().resolve())
+    safe_exc = type(exc).__name__
+    return (
+        f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:{safe_scope}:path={safe_path}:error={safe_exc}:"
+        f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+    )
 
 
 def _receipt_path_for_channel(*, receipt_glob_path: Path, channel: str, run_id: str, now_token: str) -> Path:
@@ -105,16 +166,10 @@ def _parse_json_payload(stdout: str) -> dict[str, Any]:
 
 
 def _default_receipt_source_for_operation(operation: str) -> str:
-    op = str(operation or "").strip().lower()
-    if op in FIXTURE_ALLOWED_OPERATIONS:
-        return HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
     return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
 
 
 def _default_allowed_sources_for_operation(operation: str) -> str:
-    op = str(operation or "").strip().lower()
-    if op in FIXTURE_ALLOWED_OPERATIONS:
-        return f"{HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE},{HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE}"
     return HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
 
 
@@ -177,6 +232,18 @@ def main() -> int:
         "error_code": "",
         "stale_reasons": [],
     }
+    session_token = str(args.session_id or "").strip()
+    run_token = str(args.run_id or "").strip()
+    if session_token.lower().startswith("run:"):
+        session_bound_run_id = str(session_token.split(":", 1)[1]).strip()
+        if session_bound_run_id and session_bound_run_id != run_token:
+            base_payload["error_code"] = ERR_INVALID
+            base_payload["stale_reasons"] = [
+                "recovery_run_id_session_mismatch:"
+                f"session_run_id={session_bound_run_id}:requested_run_id={run_token or 'missing'}"
+            ]
+            _emit(base_payload, json_only=args.json_only)
+            return 1
 
     if operation not in FIXTURE_ALLOWED_OPERATIONS and receipt_source == HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE:
         base_payload["error_code"] = ERR_INVALID
@@ -255,7 +322,18 @@ def main() -> int:
         if missing_fields:
             issues.append(f"recovery_receipt_missing_required_fields:{channel}:{','.join(missing_fields)}")
             continue
-        _write_json(receipt_path, receipt_payload)
+        try:
+            _write_json(receipt_path, receipt_payload)
+        except PermissionError as exc:
+            base_payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+            base_payload["stale_reasons"] = [str(exc)]
+            _emit(base_payload, json_only=args.json_only)
+            return 1
+        except Exception as exc:
+            base_payload["error_code"] = ERR_INVALID
+            base_payload["stale_reasons"] = [f"host_visible_recovery_receipt_write_failed:{channel}:{type(exc).__name__}"]
+            _emit(base_payload, json_only=args.json_only)
+            return 1
         receipt_paths.append(str(receipt_path))
         receipt_paths_by_channel[str(channel).strip()] = str(receipt_path)
 
@@ -269,15 +347,21 @@ def main() -> int:
             "updated_at_utc": "",
         }
 
-    state_doc = _read_json_or_default(
-        state_path,
-        {
-            "schema_version": "v1",
-            "identity_id": str(args.identity_id).strip(),
-            "channels": default_channels,
-            "updated_at_utc": "",
-        },
-    )
+    try:
+        state_doc = _read_json_or_default(
+            state_path,
+            {
+                "schema_version": "v1",
+                "identity_id": str(args.identity_id).strip(),
+                "channels": default_channels,
+                "updated_at_utc": "",
+            },
+        )
+    except PermissionError as exc:
+        base_payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+        base_payload["stale_reasons"] = [str(exc)]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
     channels_doc = state_doc.get("channels")
     if not isinstance(channels_doc, dict):
         channels_doc = {}
@@ -295,7 +379,18 @@ def main() -> int:
     state_doc["identity_id"] = str(args.identity_id).strip()
     state_doc["channels"] = channels_doc
     state_doc["updated_at_utc"] = now
-    _write_json(state_path, state_doc)
+    try:
+        _write_json(state_path, state_doc)
+    except PermissionError as exc:
+        base_payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+        base_payload["stale_reasons"] = [str(exc)]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
+    except Exception as exc:
+        base_payload["error_code"] = ERR_INVALID
+        base_payload["stale_reasons"] = [f"host_visible_recovery_state_write_failed:{type(exc).__name__}"]
+        _emit(base_payload, json_only=args.json_only)
+        return 1
 
     base_payload.update(
         {

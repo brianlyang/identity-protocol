@@ -32,7 +32,11 @@ from protocol_infra_contract import (
     HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY as INFRA_HOST_GATEWAY_WRAPPER_TEMPLATE_ATTESTATION_KEY,
     HOST_VISIBLE_SURFACE_RECEIPT_PATTERN as INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN,
     HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED as INFRA_HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED,
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE as INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS as INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
+    HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES as INFRA_HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES,
+    HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS as INFRA_HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
+    HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE as INFRA_HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY,
     HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID,
     HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE as INFRA_HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE,
@@ -41,6 +45,9 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS,
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS as INFRA_HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_STATE_FILE as INFRA_HOST_VISIBLE_SURFACE_STATE_FILE,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE,
+    UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS as INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS,
 )
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
@@ -93,7 +100,18 @@ HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS = set(INFRA_HOST_VISIBLE_SURFAC
 HOST_VISIBLE_SURFACE_STATE_FILE = INFRA_HOST_VISIBLE_SURFACE_STATE_FILE
 HOST_VISIBLE_SURFACE_RECEIPT_PATTERN = INFRA_HOST_VISIBLE_SURFACE_RECEIPT_PATTERN
 HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED = INFRA_HOST_VISIBLE_SURFACE_STRICT_LIVE_RUN_BINDING_REQUIRED
+HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS = INFRA_HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS
+HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES = set(
+    INFRA_HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES
+)
+HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS = set(
+    INFRA_HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS
+)
+HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = INFRA_HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+ENTRY_RECEIPT_SELECTOR_POLICY_ID = INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID
+ENTRY_RECEIPT_SELECTOR_PRECEDENCE = list(INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE)
+ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS = list(INFRA_UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS)
 HOST_GATEWAY_ALLOWED_FIELDS = {
     "contract_id",
     "required",
@@ -184,6 +202,9 @@ HOST_VISIBLE_SURFACE_ALLOWED_FIELDS = {
     "host_release_mode_required",
     "post_check_closure_state_file",
     "post_check_block_on_active",
+    "runtime_live_receipt_sources",
+    "fixture_receipt_source",
+    "fixture_allowed_operations",
 }
 RUNTIME_GATEWAY_ALLOWED_FIELDS = {
     "schema_version",
@@ -399,26 +420,50 @@ def _resolve_pack_relative_path(pack_path: Path, raw_path: str, fallback_rel: st
     return (pack_path / token).resolve()
 
 
-def _resolve_entry_receipt_path(*, pack_path: Path, explicit_path: str, operation: str) -> Path | None:
+def _collect_entry_receipt_candidates(
+    *,
+    pack_path: Path,
+    explicit_path: str,
+    operation: str,
+) -> list[tuple[Path, str]]:
+    candidates: list[tuple[Path, str]] = []
     if str(explicit_path or "").strip():
         p = Path(explicit_path).expanduser().resolve()
-        return p if p.exists() and p.is_file() else None
+        if p.exists() and p.is_file():
+            candidates.append((p, "explicit"))
+        return candidates
 
     operation_token = str(operation or "").strip().lower()
     if operation_token:
-        by_operation = (pack_path / "runtime" / "state" / f"required_gate_bundle_entry.{operation_token}.json").resolve()
+        by_operation = (
+            pack_path / "runtime" / "state" / f"required_gate_bundle_entry.{operation_token}.json"
+        ).resolve()
         if by_operation.exists() and by_operation.is_file():
-            return by_operation
+            candidates.append((by_operation, "operation_state"))
 
     latest = (pack_path / "runtime" / "state" / ENTRY_RECEIPT_STATE_FILE).resolve()
     if latest.exists() and latest.is_file():
-        return latest
+        candidates.append((latest, "latest_state"))
 
     history_dir = (pack_path / "runtime" / "reports" / "required-gate-bundle-entry").resolve()
-    if not history_dir.exists() or not history_dir.is_dir():
-        return None
-    candidates = sorted(history_dir.glob(ENTRY_RECEIPT_HISTORY_GLOB), key=lambda x: x.stat().st_mtime, reverse=True)
-    return candidates[0].resolve() if candidates else None
+    if history_dir.exists() and history_dir.is_dir():
+        history_candidates = sorted(
+            history_dir.glob(ENTRY_RECEIPT_HISTORY_GLOB),
+            key=lambda x: x.stat().st_mtime,
+            reverse=True,
+        )
+        for item in history_candidates:
+            candidates.append((item.resolve(), "history"))
+
+    seen: set[Path] = set()
+    deduped: list[tuple[Path, str]] = []
+    for path, source in candidates:
+        resolved = path.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        deduped.append((resolved, source))
+    return deduped
 
 
 def _first_receipt_value(
@@ -429,6 +474,150 @@ def _first_receipt_value(
         if value:
             return (value.lower(), field) if lower else (value, field)
     return "", ""
+
+
+def _safe_file_mtime_epoch(path: Path) -> int:
+    try:
+        return int(path.stat().st_mtime)
+    except Exception:
+        return 0
+
+
+def _evaluate_entry_receipt_candidate(
+    *,
+    receipt: dict[str, Any],
+    candidate_path: Path,
+    candidate_source: str,
+    expected_operation: str,
+    expected_run_id: str,
+    expected_actor_id: str,
+    expected_session_id: str,
+    expected_catalog_path: str,
+) -> dict[str, Any]:
+    receipt_operation, _ = _first_receipt_value(receipt, ENTRY_RECEIPT_OPERATION_FIELDS, lower=True)
+    receipt_run_id, _ = _first_receipt_value(receipt, ENTRY_RECEIPT_RUN_ID_FIELDS)
+    receipt_actor_id, _ = _first_receipt_value(receipt, ENTRY_RECEIPT_ACTOR_ID_FIELDS)
+    receipt_session_id, _ = _first_receipt_value(receipt, ENTRY_RECEIPT_SESSION_ID_FIELDS)
+    receipt_bundle_status = str(receipt.get("bundle_status", "")).strip().upper()
+    receipt_catalog_path = str(receipt.get("catalog_path", "")).strip()
+    operation_match = bool(receipt_operation and receipt_operation == expected_operation)
+    run_match = bool(expected_run_id and receipt_run_id == expected_run_id)
+    actor_match = bool(expected_actor_id and receipt_actor_id == expected_actor_id)
+    session_match = bool(expected_session_id and receipt_session_id == expected_session_id)
+    tuple_expected_count = 1 + sum(1 for token in (expected_run_id, expected_actor_id, expected_session_id) if token)
+    tuple_match_count = int(operation_match) + int(run_match) + int(actor_match) + int(session_match)
+    same_tuple = tuple_match_count == tuple_expected_count
+    same_catalog = bool(expected_catalog_path and receipt_catalog_path and receipt_catalog_path == expected_catalog_path)
+    bundle_status_pass = receipt_bundle_status == STATUS_PASS_REQUIRED
+    payload_epoch, payload_field = _extract_receipt_payload_timestamp_epoch(receipt)
+    effective_epoch = payload_epoch or _safe_file_mtime_epoch(candidate_path)
+    origin_rank = {
+        "explicit": 3,
+        "operation_state": 2,
+        "latest_state": 1,
+        "history": 0,
+    }.get(str(candidate_source or "").strip(), 0)
+    return {
+        "path": str(candidate_path),
+        "source": str(candidate_source),
+        "operation": receipt_operation,
+        "run_id": receipt_run_id,
+        "actor_id": receipt_actor_id,
+        "session_id": receipt_session_id,
+        "catalog_path": receipt_catalog_path,
+        "bundle_status": receipt_bundle_status,
+        "tuple_match_count": tuple_match_count,
+        "tuple_expected_count": tuple_expected_count,
+        "same_tuple": same_tuple,
+        "same_catalog": same_catalog,
+        "bundle_status_pass": bundle_status_pass,
+        "effective_epoch": int(effective_epoch),
+        "effective_epoch_source": payload_field or "file_mtime",
+        "sort_key": (
+            int(same_tuple),
+            int(tuple_match_count),
+            int(same_catalog),
+            int(bundle_status_pass),
+            int(effective_epoch),
+            int(origin_rank),
+        ),
+    }
+
+
+def _select_entry_receipt_candidate(
+    *,
+    candidates: list[tuple[Path, str]],
+    expected_operation: str,
+    expected_run_id: str,
+    expected_actor_id: str,
+    expected_session_id: str,
+    expected_catalog_path: str,
+) -> tuple[Path | None, dict[str, Any], list[str]]:
+    payload: dict[str, Any] = {
+        "selector_policy_id": ENTRY_RECEIPT_SELECTOR_POLICY_ID,
+        "selector_precedence": list(ENTRY_RECEIPT_SELECTOR_PRECEDENCE),
+        "selector_source_fields": list(ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS),
+        "candidate_count": 0,
+        "selected_path": "",
+        "selected_source": "",
+        "selected_sort_key": [],
+        "selected_reason_tokens": [],
+        "candidate_preview": [],
+    }
+    issues: list[str] = []
+    scored: list[dict[str, Any]] = []
+    for candidate_path, source in candidates:
+        try:
+            receipt = _load_receipt(candidate_path)
+        except Exception as exc:
+            issues.append(f"entry_receipt_candidate_invalid:{candidate_path.name}:{type(exc).__name__}")
+            continue
+        scored.append(
+            _evaluate_entry_receipt_candidate(
+                receipt=receipt,
+                candidate_path=candidate_path,
+                candidate_source=source,
+                expected_operation=expected_operation,
+                expected_run_id=expected_run_id,
+                expected_actor_id=expected_actor_id,
+                expected_session_id=expected_session_id,
+                expected_catalog_path=expected_catalog_path,
+            )
+        )
+    payload["candidate_count"] = len(scored)
+    payload["candidate_preview"] = [
+        {
+            "path": row["path"],
+            "source": row["source"],
+            "operation": row["operation"],
+            "run_id": row["run_id"],
+            "actor_id": row["actor_id"],
+            "session_id": row["session_id"],
+            "catalog_path": row["catalog_path"],
+            "bundle_status": row["bundle_status"],
+            "same_tuple": row["same_tuple"],
+            "same_catalog": row["same_catalog"],
+            "bundle_status_pass": row["bundle_status_pass"],
+        }
+        for row in scored[:8]
+    ]
+    if not scored:
+        return None, payload, issues
+    ranked = sorted(scored, key=lambda row: row.get("sort_key", ()), reverse=True)
+    selected = ranked[0]
+    payload["selected_path"] = str(selected.get("path", ""))
+    payload["selected_source"] = str(selected.get("source", ""))
+    payload["selected_sort_key"] = list(selected.get("sort_key", ()))
+    reasons: list[str] = []
+    if selected.get("same_tuple"):
+        reasons.append("same_tuple")
+    if selected.get("same_catalog"):
+        reasons.append("same_catalog")
+    if selected.get("bundle_status_pass"):
+        reasons.append("bundle_status_pass")
+    reasons.append("newest")
+    payload["selected_reason_tokens"] = reasons
+    return Path(str(selected.get("path", "")).strip()).resolve(), payload, issues
 
 
 def _load_receipt(path: Path) -> dict[str, Any]:
@@ -551,6 +740,14 @@ def main() -> int:
         "protocol_unique_entry_receipt_payload_timestamp_epoch": 0,
         "protocol_unique_entry_receipt_payload_timestamp_field": "",
         "protocol_unique_entry_receipt_status": STATUS_SKIPPED_NOT_REQUIRED,
+        "protocol_unique_entry_receipt_selector_policy_id": "",
+        "protocol_unique_entry_receipt_selector_precedence": [],
+        "protocol_unique_entry_receipt_selector_source_fields": [],
+        "protocol_unique_entry_receipt_selector_candidate_count": 0,
+        "protocol_unique_entry_receipt_selector_selected_source": "",
+        "protocol_unique_entry_receipt_selector_selected_sort_key": [],
+        "protocol_unique_entry_receipt_selector_selected_reason_tokens": [],
+        "protocol_unique_entry_receipt_selector_candidate_preview": [],
         "protocol_unique_entry_receipt_path": "",
         "protocol_unique_entry_receipt_bundle_key": "",
         "protocol_unique_entry_receipt_run_id": "",
@@ -621,6 +818,9 @@ def main() -> int:
         "protocol_host_visible_surface_receipt_pattern": "",
         "protocol_host_visible_surface_runtime_receipt_max_age_seconds": 0,
         "protocol_host_visible_surface_strict_live_run_binding_required": True,
+        "protocol_host_visible_surface_runtime_live_receipt_sources": [],
+        "protocol_host_visible_surface_fixture_receipt_source": "",
+        "protocol_host_visible_surface_fixture_allowed_operations": [],
         "protocol_host_visible_surface_required_attestation_fields": [],
         "protocol_host_visible_surface_required_pass_status_fields": [],
         "protocol_host_visible_surface_live_probe_delegate": "",
@@ -716,6 +916,15 @@ def main() -> int:
     except Exception:
         entry_receipt_max_age_seconds = 0
     entry_receipt_required_fields = _as_str_set(contract.get("entry_receipt_required_fields"))
+    entry_receipt_selector_policy_id = str(
+        contract.get("entry_receipt_selector_policy_id", "")
+    ).strip()
+    entry_receipt_selector_precedence = _as_str_list(
+        contract.get("entry_receipt_selector_precedence")
+    )
+    entry_receipt_selector_source_fields = _as_str_list(
+        contract.get("entry_receipt_selector_source_fields")
+    )
 
     payload["protocol_unique_entry_script"] = entry_script
     payload["protocol_unique_entry_bundle_key"] = bundle_key
@@ -727,6 +936,13 @@ def main() -> int:
     payload["protocol_unique_entry_receipt_history_pattern"] = entry_receipt_history_pattern
     payload["protocol_unique_entry_receipt_max_age_seconds"] = entry_receipt_max_age_seconds
     payload["protocol_unique_entry_receipt_required_fields"] = sorted(entry_receipt_required_fields)
+    payload["protocol_unique_entry_receipt_selector_policy_id"] = entry_receipt_selector_policy_id
+    payload["protocol_unique_entry_receipt_selector_precedence"] = list(
+        entry_receipt_selector_precedence
+    )
+    payload["protocol_unique_entry_receipt_selector_source_fields"] = list(
+        entry_receipt_selector_source_fields
+    )
 
     if contract.get("required") is not True:
         issues.append("contract_required_flag_not_true")
@@ -752,6 +968,12 @@ def main() -> int:
         issues.append("entry_receipt_max_age_seconds_invalid")
     if not entry_receipt_required_fields:
         issues.append("entry_receipt_required_fields_missing")
+    if entry_receipt_selector_policy_id != ENTRY_RECEIPT_SELECTOR_POLICY_ID:
+        issues.append("entry_receipt_selector_policy_id_mismatch")
+    if list(entry_receipt_selector_precedence) != list(ENTRY_RECEIPT_SELECTOR_PRECEDENCE):
+        issues.append("entry_receipt_selector_precedence_mismatch")
+    if list(entry_receipt_selector_source_fields) != list(ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS):
+        issues.append("entry_receipt_selector_source_fields_mismatch")
 
     if issues:
         payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
@@ -805,8 +1027,30 @@ def main() -> int:
                 )
             )
         )
+        runtime_live_sources = set(
+            _as_str_list(host_visible_surface_contract.get("runtime_live_receipt_sources"))
+        )
+        if not runtime_live_sources:
+            runtime_live_sources = set(HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES)
+        fixture_receipt_source = str(
+            host_visible_surface_contract.get("fixture_receipt_source", "")
+        ).strip() or HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+        fixture_allowed_operations = {
+            str(token).strip().lower()
+            for token in _as_str_list(host_visible_surface_contract.get("fixture_allowed_operations"))
+            if str(token).strip()
+        }
+        if not fixture_allowed_operations:
+            fixture_allowed_operations = set(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS)
         payload["protocol_host_visible_surface_strict_live_run_binding_required"] = (
             strict_live_run_binding_required
+        )
+        payload["protocol_host_visible_surface_runtime_live_receipt_sources"] = sorted(
+            runtime_live_sources
+        )
+        payload["protocol_host_visible_surface_fixture_receipt_source"] = fixture_receipt_source
+        payload["protocol_host_visible_surface_fixture_allowed_operations"] = sorted(
+            fixture_allowed_operations
         )
         if not state_file:
             host_visible_surface_issues.append("host_visible_surface_state_file_missing")
@@ -818,6 +1062,16 @@ def main() -> int:
             host_visible_surface_issues.append("host_visible_surface_runtime_receipt_max_age_seconds_invalid")
         if not strict_live_run_binding_required:
             host_visible_surface_issues.append("host_visible_surface_strict_live_run_binding_required_not_true")
+        if not runtime_live_sources:
+            host_visible_surface_issues.append("host_visible_surface_runtime_live_receipt_sources_missing")
+        if HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE not in runtime_live_sources:
+            host_visible_surface_issues.append(
+                "host_visible_surface_runtime_live_receipt_sources_missing_runtime_dialogue"
+            )
+        if fixture_receipt_source != HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE:
+            host_visible_surface_issues.append("host_visible_surface_fixture_receipt_source_mismatch")
+        if set(fixture_allowed_operations) != set(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS):
+            host_visible_surface_issues.append("host_visible_surface_fixture_allowed_operations_mismatch")
         attestation_fields = set(_as_str_list(host_visible_surface_contract.get("required_attestation_fields")))
         payload["protocol_host_visible_surface_required_attestation_fields"] = sorted(attestation_fields)
         if not HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS.issubset(attestation_fields):
@@ -1779,19 +2033,60 @@ def main() -> int:
         return 1
 
     if receipt_required:
-        receipt_path = _resolve_entry_receipt_path(
+        receipt_candidates = _collect_entry_receipt_candidates(
             pack_path=pack_path,
             explicit_path=str(args.entry_receipt or ""),
             operation=str(args.operation),
+        )
+        receipt_path, selector_payload, selector_issues = _select_entry_receipt_candidate(
+            candidates=receipt_candidates,
+            expected_operation=str(args.operation).strip().lower(),
+            expected_run_id=run_id,
+            expected_actor_id=actor_id,
+            expected_session_id=session_id,
+            expected_catalog_path=str(catalog_path),
+        )
+        payload["protocol_unique_entry_receipt_selector_policy_id"] = str(
+            selector_payload.get("selector_policy_id", "")
+        ).strip()
+        payload["protocol_unique_entry_receipt_selector_precedence"] = list(
+            selector_payload.get("selector_precedence", []) or []
+        )
+        payload["protocol_unique_entry_receipt_selector_source_fields"] = list(
+            selector_payload.get("selector_source_fields", []) or []
+        )
+        payload["protocol_unique_entry_receipt_selector_candidate_count"] = int(
+            selector_payload.get("candidate_count", 0) or 0
+        )
+        payload["protocol_unique_entry_receipt_selector_selected_source"] = str(
+            selector_payload.get("selected_source", "")
+        ).strip()
+        payload["protocol_unique_entry_receipt_selector_selected_sort_key"] = list(
+            selector_payload.get("selected_sort_key", []) or []
+        )
+        payload["protocol_unique_entry_receipt_selector_selected_reason_tokens"] = list(
+            selector_payload.get("selected_reason_tokens", []) or []
+        )
+        payload["protocol_unique_entry_receipt_selector_candidate_preview"] = list(
+            selector_payload.get("candidate_preview", []) or []
         )
         if receipt_path is None:
             payload["protocol_unique_entry_gate_status"] = STATUS_FAIL_REQUIRED
             payload["protocol_unique_entry_receipt_status"] = STATUS_FAIL_REQUIRED
             payload["error_code"] = ERR_CONTRACT_INVALID
-            payload["stale_reasons"] = ["entry_receipt_missing"]
+            payload["stale_reasons"] = (
+                list(selector_issues)
+                + [
+                    "entry_receipt_missing",
+                    "entry_receipt_selector_no_eligible_candidate",
+                ]
+            )
             _emit(payload, json_only=args.json_only)
             return 1
         payload["protocol_unique_entry_receipt_path"] = str(receipt_path)
+        if selector_issues:
+            payload.setdefault("stale_reasons", [])
+            payload["stale_reasons"] = list(payload.get("stale_reasons") or []) + list(selector_issues)
         try:
             receipt = _load_receipt(receipt_path)
         except Exception as exc:

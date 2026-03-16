@@ -18,6 +18,7 @@ from final_emit_contract_common import (
 from protocol_infra_contract import (
     CANONICAL_FINAL_EMIT_SCRIPT,
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
     CTX_TOOL_TIMEOUT_ERROR_CODE,
     CTX_TOOL_TIMEOUT_MARKER,
     CTX_TOOL_TIMEOUT_REASON_PREFIX,
@@ -30,6 +31,9 @@ from protocol_infra_contract import (
     HOST_GATEWAY_DEFAULT_SIGNING_KEY as INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY,
     HOST_GATEWAY_REQUIRED_DISPATCH_MODE as INFRA_HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
     HOST_GATEWAY_REQUIRED_RELEASE_MODE as INFRA_HOST_GATEWAY_REQUIRED_RELEASE_MODE,
+    PRIVILEGE_ESCALATION_ERROR_CODE,
+    PRIVILEGE_ESCALATION_REASON_PREFIX,
+    PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
 
 HOST_GATEWAY_CONTRACT_KEYS = INFRA_HOST_GATEWAY_CONTRACT_KEYS
@@ -92,6 +96,56 @@ def _safe_positive_int(value: Any, default: int) -> int:
     if parsed <= 0:
         return int(default)
     return parsed
+
+
+def _looks_like_json_dict(raw: str) -> bool:
+    text = str(raw or "").strip()
+    if not text:
+        return False
+    try:
+        payload = json.loads(text)
+    except Exception:
+        return False
+    return isinstance(payload, dict)
+
+
+def _classify_subprocess_failure(*, stdout_text: str, stderr_text: str) -> tuple[str, str] | None:
+    merged = "\n".join([str(stdout_text or ""), str(stderr_text or "")]).strip().lower()
+    if not merged:
+        return None
+    privilege_tokens = (
+        "permission denied",
+        "operation not permitted",
+        "read-only file system",
+        "eacces",
+        "eperm",
+        "erofs",
+        "privilege_escalation_required",
+    )
+    if any(token in merged for token in privilege_tokens):
+        return (
+            PRIVILEGE_ESCALATION_ERROR_CODE,
+            (
+                f"{PRIVILEGE_ESCALATION_REASON_PREFIX}:gateway_subprocess:"
+                f"hint={PRIVILEGE_ESCALATION_REMEDIATION_HINT}:error_code={PRIVILEGE_ESCALATION_ERROR_CODE}"
+            ),
+        )
+    reachability_tokens = (
+        "127.0.0.1:3001",
+        "connection refused",
+        "failed to connect",
+        "network is unreachable",
+        "connection reset",
+        "connect timeout",
+        "connection timed out",
+        "socket",
+    )
+    if any(token in merged for token in reachability_tokens):
+        return (
+            CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
+            "host_transport_reachability_unavailable:localhost_or_socket_unreachable",
+        )
+    return None
 
 
 def _script_hint_from_cmd(cmd: list[str]) -> str:
@@ -351,6 +405,22 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
     if p_chain.stderr.strip():
         print(p_chain.stderr.strip())
     if p_chain.returncode != 0:
+        classified = _classify_subprocess_failure(
+            stdout_text=p_chain.stdout or "",
+            stderr_text=p_chain.stderr or "",
+        )
+        if classified and not _looks_like_json_dict(p_chain.stdout or ""):
+            code, reason = classified
+            payload = {
+                "final_emit_guard_status": STATUS_FAIL_REQUIRED,
+                "error_code": code,
+                "stale_reasons": [reason],
+                "compose_rc": int(p_chain.returncode),
+                "gateway_wrapper_failure_scope": "session_chain_wrapper_subprocess",
+            }
+            out = json.dumps(payload, ensure_ascii=False)
+            print(out)
+            return p_chain.returncode, out, p_chain.stderr or ""
         if p_chain.stdout.strip():
             print(p_chain.stdout.strip())
         return p_chain.returncode, p_chain.stdout or "", p_chain.stderr or ""
@@ -361,6 +431,11 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
             chain_payload = {}
     except Exception:
         chain_payload = {}
+
+    if not chain_payload:
+        if p_chain.stdout.strip():
+            print(p_chain.stdout.strip())
+        return _emit_fail_payload("session_chain_payload_missing_or_non_json")
 
     if chain_payload:
         final_guard = str(
@@ -458,9 +533,7 @@ def run_final_emit_via_instance_wrappers(*, cmd: list[str], protocol_root: Path)
             return 0, normalized, p_chain.stderr or ""
         print(reply_text)
         return 0, reply_text, p_chain.stderr or ""
-    if p_chain.stdout.strip():
-        print(p_chain.stdout.strip())
-    return 0, p_chain.stdout or "", p_chain.stderr or ""
+    return _emit_fail_payload("session_chain_payload_missing_or_non_json")
 
 
 def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_root: Path) -> tuple[int, str, str]:
@@ -604,6 +677,22 @@ def run_required_gate_bundle_via_ingress_wrapper(*, cmd: list[str], protocol_roo
         print(p_ingress.stdout.strip())
     if p_ingress.stderr.strip():
         print(p_ingress.stderr.strip())
+    if p_ingress.returncode != 0:
+        classified = _classify_subprocess_failure(
+            stdout_text=p_ingress.stdout or "",
+            stderr_text=p_ingress.stderr or "",
+        )
+        if classified and not _looks_like_json_dict(p_ingress.stdout or ""):
+            code, reason = classified
+            payload = {
+                "bundle_status": STATUS_FAIL_REQUIRED,
+                "error_code": code,
+                "stale_reasons": [reason],
+                "gateway_wrapper_failure_scope": "ingress_wrapper_subprocess",
+            }
+            out = json.dumps(payload, ensure_ascii=False)
+            print(out)
+            return p_ingress.returncode, out, p_ingress.stderr or ""
     return p_ingress.returncode, p_ingress.stdout or "", p_ingress.stderr or ""
 
 
@@ -652,4 +741,20 @@ def run_gateway_wrapped_command(
         print(p.stdout.strip())
     if p.stderr.strip():
         print(p.stderr.strip())
+    if p.returncode != 0:
+        classified = _classify_subprocess_failure(
+            stdout_text=p.stdout or "",
+            stderr_text=p.stderr or "",
+        )
+        if classified and not _looks_like_json_dict(p.stdout or ""):
+            code, reason = classified
+            payload = {
+                "gateway_wrapper_status": STATUS_FAIL_REQUIRED,
+                "error_code": code,
+                "stale_reasons": [reason],
+                "gateway_wrapper_failure_scope": "gateway_passthrough_subprocess",
+            }
+            out = json.dumps(payload, ensure_ascii=False)
+            print(out)
+            return p.returncode, out, p.stderr or ""
     return p.returncode, p.stdout or "", p.stderr or ""

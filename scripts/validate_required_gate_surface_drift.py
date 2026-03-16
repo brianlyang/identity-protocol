@@ -149,6 +149,9 @@ HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
     "post_gate_coverage_rate = 1.00",
     "chat_egress_uniqueness_rate = 1.00",
     "next_hop_headstamp_rate = 1.00",
+    "runtime_live_receipt_sources = [runtime_dialogue]",
+    "fixture_allowed_operations = [ci]",
+    "entry_receipt_selector_precedence = same_tuple > same_catalog > bundle_status_pass > newest",
     "`5` serial self-test rounds",
     "`5` serial deep-scan rounds",
     "scripts/ci/run_host_visible_surface_live_probes_ci.sh",
@@ -157,9 +160,12 @@ HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
 )
 HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift",
+    "26.38 v1.6.6 P0 closure supplement (live source + selector + continuity)",
     "post_gate_coverage_rate",
     "chat_egress_uniqueness_rate",
     "next_hop_headstamp_rate",
+    "runtime_live_receipt_sources = [runtime_dialogue]",
+    "entry_receipt_selector_precedence = same_tuple > same_catalog > bundle_status_pass > newest",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -1105,6 +1111,15 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_session_chain_non_json_probe = all(
+            token in text
+            for token in (
+                "run_probe session_chain_non_json_payload_blocked",
+                "session_chain_payload_missing_or_non_json",
+                "protocol_session_chain_wrapper_non_json.py",
+                "invoke_gateway_wrapper_final_emit_probe.py",
+            )
+        )
         has_protocol_explicit_context_probe = all(
             token in text
             for token in (
@@ -1160,6 +1175,8 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_channel_bypass_emit_probe_invocation_missing")
         if not has_context_timeout_probe:
             gateway_missing_tokens.append("gateway_context_timeout_probe_invocation_missing")
+        if not has_session_chain_non_json_probe:
+            gateway_missing_tokens.append("gateway_session_chain_non_json_probe_invocation_missing")
         if not has_protocol_explicit_context_probe:
             gateway_missing_tokens.append("gateway_protocol_explicit_context_probe_invocation_missing")
         if not has_quoted_foreign_context_probe:

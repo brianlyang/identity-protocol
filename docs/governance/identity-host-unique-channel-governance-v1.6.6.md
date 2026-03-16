@@ -1149,12 +1149,29 @@ Implementation anchors:
      - `host_visible_post_check_metrics.metric_statuses.*`
    - strict scan execution order must run `host_transport_wiring_attestation` before `send_time_reply_gate` to avoid stale closure-state pre-read in same turn.
    - strict scan orchestration must invoke `host_visible_post_check_recovery` before host/send gates, using explicit tuple-bound reseed + live attestation.
-   - scan-time host attestation allowlist baseline is `runtime_dialogue,ci_fixture`; tuple/run/freshness gates remain fail-close.
+   - scan-time host attestation allowlist baseline is `runtime_dialogue` only; fixture source is probe-lane-only.
 7. `scripts/recover_host_visible_post_check_state.py`
    - controlled recovery entry for blocker-active deadlock:
      - reseed channel receipts + runtime state with explicit tuple binding
      - immediately rerun live attestation (`--require-live-receipts`)
      - no manual state-file edits are allowed
+
+P0 closure hardening (2026-03-16 supplement, still v1.6.6 scope):
+
+1. Host-visible live source policy freeze:
+   - `runtime_live_receipt_sources = [runtime_dialogue]`
+   - `fixture_allowed_operations = [ci]`
+   - any strict runtime operation that accepts fixture source is invalid.
+2. Post-check recovery tuple continuity freeze:
+   - recovery must not self-generate run tuple.
+   - `session_id=run:<id>` and `run_id=<id>` mismatch is fail-close (`recovery_run_id_session_mismatch`).
+3. Unique-entry receipt selector freeze:
+   - deterministic precedence is fixed:
+     `entry_receipt_selector_precedence = same_tuple > same_catalog > bundle_status_pass > newest`.
+   - selector must emit machine-readable candidate/selection projection for audit replay.
+4. Outlet bypass bridge freeze:
+   - `IP-OUTLET-003` handling remains enforced via wrapper-only execution chain.
+   - bypass remediation must be protocol-wiring changes, not instance-local patch receipts.
 
 Metrics (must all pass for closure claim):
 
@@ -1273,3 +1290,32 @@ Interpretation lock:
 1. This is protocol infrastructure hardening, not instance-local hotfix behavior.
 2. Reply text containing foreign `Identity-Context` is evidence-only and cannot drive identity resolution.
 3. "Headstamp missing" claims are invalid unless unique-channel wrapper path and send-time gate receipts both fail.
+
+### 5.22 Post-check fail-close attribution + tuple continuity hardening (2026-03-16)
+
+This checkpoint closes two recurring ambiguity classes that produced false P0 interpretation:
+
+1. strict scan/recovery tuple continuity drift (`session_id=run:<id>` but recovery/checks used a different `run_id`);
+2. permission/reachability execution faults being reported as generic headstamp failures without machine-readable attribution.
+
+Contract upgrades:
+
+1. scan lane run/session continuity is now deterministic:
+   - `scripts/full_identity_protocol_scan.py` derives strict `run_id` from `session_id=run:<id>` when available.
+   - `scripts/validate_headstamp_recurrence_closure.py` recovery precheck inherits the same session-bound `run_id`.
+2. send-time post-check unavailable path now preserves escalation attribution:
+   - `scripts/validate_send_time_reply_gate.py` marks permission-read failures as
+     - `host_transport_post_check_state_status=STATE_PERMISSION_DENIED`
+     - `error_code=IP-PRIV-ESC-001`
+   - `chat_egress_uniqueness_error_code` mirrors the same fail-close code.
+3. gateway subprocess failure classification is now structured (no silent fallthrough):
+   - `scripts/gateway_wrapper_enforcement.py` emits machine payload when child process fails without JSON:
+     - privilege family: `IP-PRIV-ESC-001`
+     - localhost/socket reachability family: stale reason prefix
+       `host_transport_reachability_unavailable:*`
+
+Interpretation lock:
+
+1. P0 "headstamp bypass" must not be declared when root cause is permission/reachability execution fault.
+2. tuple-bound strict lanes use `session_id=run:<id>` as canonical run binding source.
+3. all such execution faults remain fail-close (no downgrade to warning-only).

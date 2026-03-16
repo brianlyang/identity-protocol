@@ -2635,3 +2635,92 @@ Checkpoint verdict update:
    - `next_hop_block_rate`
    - `next_hop_headstamp_rate`
 3. manual/headstamp text-only fixes remain explicitly out-of-contract.
+
+### 26.38 v1.6.6 P0 closure supplement (live source + selector + continuity) (2026-03-16)
+
+Problem:
+
+1. strict runtime lanes could still inherit fixture semantics in some replay paths, creating source contamination risk.
+2. unique-entry receipt selection was path-order-first and could become non-deterministic under multi-receipt coexistence.
+3. post-check recovery accepted tuple input but lacked explicit `session_id/run_id` coherence fail-close.
+
+Fix landed:
+
+1. host-visible live source policy freeze in protocol contract + validators:
+   - `runtime_live_receipt_sources = [runtime_dialogue]`
+   - `fixture_allowed_operations = [ci]`
+2. strict scan/recovery paths now seed runtime source only:
+   - `recover_host_visible_post_check_state` default source remains `runtime_dialogue`
+   - full-scan strict recovery path no longer writes fixture source.
+3. recovery tuple continuity hardening:
+   - `session_id=run:<id>` with mismatched `run_id` is fail-close (`recovery_run_id_session_mismatch`).
+4. unique-entry deterministic selector hardening:
+   - `entry_receipt_selector_precedence = same_tuple > same_catalog > bundle_status_pass > newest`
+   - selector emits machine-readable candidate projection and selected sort rationale.
+
+Replay (serial, machine evidence):
+
+1. self-test serial-5 (host-visible + gateway + unique-entry probes):
+   - `activity/_identity_upgrade/v166_probe_serial5_recheck_20260316T174157Z/SUMMARY.json`
+   - result: `all_rounds_pass=true`
+2. deep-scan serial-5 target replay:
+   - `activity/_identity_upgrade/v166_target_deepscan_serial5_recheck_20260316T173349Z/SUMMARY.json`
+   - result: `m2m_all_pass=true`
+   - result: `chat_egress_uniqueness_status=PASS_REQUIRED` per round
+   - result: `post_gate_coverage_rate_status=PASS_REQUIRED` per round
+   - result: `next_hop_headstamp_rate_status=PASS_REQUIRED` per round
+
+Checkpoint verdict update:
+
+1. v1.6.6 now includes deterministic receipt-selection semantics and strict runtime-source freeze as protocol infrastructure behavior.
+2. residual P0 items are explicitly non-m2m lanes (`IP-OUTLET-003`, `IP-WRB-002`, `IP-COV-000`, etc.), not headstamp semantic ambiguity.
+
+### 26.39 v1.6.6 tuple/run continuity + permission/reachability attribution hardening (2026-03-16)
+
+Problem:
+
+1. strict scan lanes could regress when `session_id=run:<id>` and internal recovery used another run token, cascading to
+   `host_visible_post_check_recovery -> host_transport_wiring_attestation -> send_time` false failures.
+2. permission and localhost socket failures could be observed as unstructured subprocess errors, causing P0 misclassification.
+
+Fix landed:
+
+1. `scripts/full_identity_protocol_scan.py`
+   - `required_gate_bundle_run_id` now derives from session-bound run token when available.
+2. `scripts/validate_headstamp_recurrence_closure.py`
+   - recovery precheck run id now reuses `session_id=run:<id>` binding before fallback generation.
+3. `scripts/recover_host_visible_post_check_state.py`
+   - write/read paths now emit explicit privilege fail-close (`IP-PRIV-ESC-001`) with machine remediation hint.
+4. `scripts/validate_send_time_reply_gate.py`
+   - post-check unavailable branch now preserves permission attribution:
+     - `STATE_PERMISSION_DENIED`
+     - `error_code=IP-PRIV-ESC-001`
+5. `scripts/gateway_wrapper_enforcement.py`
+   - subprocess non-JSON failures now emit structured fail payloads:
+     - privilege escalation classification
+     - localhost/socket reachability classification (`host_transport_reachability_unavailable:*`)
+6. `scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh`
+   - fixture contract updated for selector policy fields required by v1.6.6 deterministic selector.
+
+Replay evidence (machine):
+
+1. Probe serial-5:
+   - `activity/_identity_upgrade/v166_probe_serial5_recheck4_20260316T132237Z/SUMMARY.json`
+   - result: `all_rounds_pass=true`
+2. Target deep-scan serial-5:
+   - `activity/_identity_upgrade/v166_target_deepscan_serial5_recheck3_20260316T132601Z/SUMMARY.json`
+   - result: `m2m_all_pass=true`
+   - result: `host_visible_post_check_recovery_ok=true` (all rounds)
+   - result: `host_transport_wiring_attestation_ok=true` (all rounds)
+   - result: `send_time_reply_gate_ok=true` (all rounds)
+   - result: `headstamp_recurrence_closure_ok=true` (all rounds)
+3. Permission + reachability attribution probes:
+   - `activity/_identity_upgrade/v166_postcheck_privilege_reachability_failclose_20260316T133740Z/SUMMARY.json`
+   - permission case: `error_code=IP-PRIV-ESC-001`, `state_status=STATE_PERMISSION_DENIED`
+   - reachability case: stale reason contains `host_transport_reachability_unavailable`
+
+Checkpoint verdict update:
+
+1. v1.6.6 strict tuple continuity is restored without instance-side patching.
+2. permission/reachability faults are now explicitly attributable and remain fail-close.
+3. remaining P0 in target deep-scan is still non-m2m release/env lanes (`IP-OUTLET-003`, `IP-WRB-002`, `IP-COV-000`, etc.).

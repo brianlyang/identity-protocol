@@ -139,6 +139,20 @@ HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS: tuple[str, ...] = (
 HOST_VISIBLE_SURFACE_RECEIPT_SOURCE_FIELD = "receipt_source"
 HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE = "runtime_dialogue"
 HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE = "ci_fixture"
+HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES: tuple[str, ...] = (
+    HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+)
+HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS: tuple[str, ...] = ("ci",)
+
+# Unique-entry receipt selector contract (deterministic candidate choice).
+UNIQUE_ENTRY_RECEIPT_SELECTOR_POLICY_ID = "entry_receipt_selector_tuple_source_status_newest_v1"
+UNIQUE_ENTRY_RECEIPT_SELECTOR_PRECEDENCE: tuple[str, ...] = (
+    "same_tuple",
+    "same_catalog",
+    "bundle_status_pass",
+    "newest",
+)
+UNIQUE_ENTRY_RECEIPT_SELECTOR_SOURCE_FIELDS: tuple[str, ...] = ("catalog_path",)
 
 # Multimodal runtime stage null-proof receipts.
 MULTIMODAL_RUNTIME_STAGE_RECEIPT_DIR = "runtime/reports/multimodal-runtime-stage"

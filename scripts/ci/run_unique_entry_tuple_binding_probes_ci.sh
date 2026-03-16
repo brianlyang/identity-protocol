@@ -92,6 +92,14 @@ task = {
             "bundle_status",
             "error_code",
         ],
+        "entry_receipt_selector_policy_id": "entry_receipt_selector_tuple_source_status_newest_v1",
+        "entry_receipt_selector_precedence": [
+            "same_tuple",
+            "same_catalog",
+            "bundle_status_pass",
+            "newest",
+        ],
+        "entry_receipt_selector_source_fields": ["catalog_path"],
     },
     "protocol_host_unique_channel_contract_v1": {
         "required": True,

@@ -26,6 +26,8 @@ from protocol_infra_contract import (
     HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_MAX_AGE_SECONDS,
     HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE,
+    HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES,
+    HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS,
     HOST_VISIBLE_SURFACE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_CLOSURE_STATE_FILE,
     HOST_VISIBLE_SURFACE_POST_CHECK_BLOCK_ON_ACTIVE,
@@ -41,7 +43,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 
 ERR_MISSING = "IP-HDSTAMP-001"
 ERR_INVALID = "IP-HDSTAMP-003"
-FIXTURE_ALLOWED_OPERATIONS = {"scan", "ci", "three-plane"}
+FIXTURE_ALLOWED_OPERATIONS = set(HOST_VISIBLE_SURFACE_FIXTURE_ALLOWED_OPERATIONS)
 
 
 def _emit(payload: dict[str, Any], *, json_only: bool) -> None:
@@ -333,6 +335,13 @@ def main() -> int:
         "host_transport_wiring_attestation_state_file": "",
         "host_transport_wiring_attestation_receipt_pattern": "",
         "host_transport_wiring_attestation_runtime_receipt_max_age_seconds": 0,
+        "host_transport_wiring_attestation_runtime_live_receipt_sources": list(
+            HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES
+        ),
+        "host_transport_wiring_attestation_fixture_receipt_source": HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE,
+        "host_transport_wiring_attestation_fixture_allowed_operations": sorted(
+            FIXTURE_ALLOWED_OPERATIONS
+        ),
         "host_transport_wiring_attestation_live_receipt_required": bool(args.require_live_receipts),
         "host_transport_wiring_attestation_allowed_live_receipt_sources": _parse_csv(
             args.allowed_live_receipt_sources
@@ -420,12 +429,41 @@ def main() -> int:
 
     required_attestation_fields = set(_as_list(host_visible_contract.get("required_attestation_fields")))
     required_pass_status_fields = set(_as_list(host_visible_contract.get("required_pass_status_fields")))
+    runtime_live_sources = set(_as_list(host_visible_contract.get("runtime_live_receipt_sources")))
+    if not runtime_live_sources:
+        runtime_live_sources = set(HOST_VISIBLE_SURFACE_RUNTIME_ALLOWED_LIVE_RECEIPT_SOURCES)
+    fixture_receipt_source = (
+        str(host_visible_contract.get("fixture_receipt_source", "")).strip()
+        or HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE
+    )
+    fixture_allowed_operations = {
+        str(token).strip().lower()
+        for token in _as_list(host_visible_contract.get("fixture_allowed_operations"))
+        if str(token).strip()
+    }
+    if not fixture_allowed_operations:
+        fixture_allowed_operations = set(FIXTURE_ALLOWED_OPERATIONS)
+    payload["host_transport_wiring_attestation_runtime_live_receipt_sources"] = sorted(
+        runtime_live_sources
+    )
+    payload["host_transport_wiring_attestation_fixture_receipt_source"] = fixture_receipt_source
+    payload["host_transport_wiring_attestation_fixture_allowed_operations"] = sorted(
+        fixture_allowed_operations
+    )
     if not set(HOST_VISIBLE_SURFACE_REQUIRED_ATTESTATION_FIELDS).issubset(required_attestation_fields):
         issues.append("host_visible_surface_required_attestation_fields_missing")
     if not set(HOST_VISIBLE_SURFACE_REQUIRED_PASS_STATUS_FIELDS).issubset(required_pass_status_fields):
         issues.append("host_visible_surface_required_pass_status_fields_missing")
     if runtime_receipt_max_age_seconds <= 0:
         issues.append("host_visible_surface_runtime_receipt_max_age_seconds_invalid")
+    if not runtime_live_sources:
+        issues.append("host_visible_surface_runtime_live_receipt_sources_missing")
+    if HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE not in runtime_live_sources:
+        issues.append("host_visible_surface_runtime_live_receipt_sources_missing_runtime_dialogue")
+    if fixture_receipt_source != HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE:
+        issues.append("host_visible_surface_fixture_receipt_source_mismatch")
+    if set(FIXTURE_ALLOWED_OPERATIONS) != set(fixture_allowed_operations):
+        issues.append("host_visible_surface_fixture_allowed_operations_mismatch")
 
     dispatch_mode_required = str(host_visible_contract.get("host_dispatch_mode_required", "")).strip().lower()
     release_mode_required = str(host_visible_contract.get("host_release_mode_required", "")).strip().lower()
@@ -474,16 +512,29 @@ def main() -> int:
         )
         if strict_live_run_binding_required and not required_run_id:
             issues.append("host_visible_surface_live_run_id_required_missing")
-        allowed_sources = set(_parse_csv(args.allowed_live_receipt_sources))
-        if not allowed_sources:
-            allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
-        fixture_allowed = str(args.operation or "").strip() in FIXTURE_ALLOWED_OPERATIONS
+        requested_allowed_sources = set(_parse_csv(args.allowed_live_receipt_sources))
+        operation_token = str(args.operation or "").strip().lower()
+        fixture_allowed = operation_token in fixture_allowed_operations
         payload["host_transport_wiring_attestation_fixture_source_allowed"] = fixture_allowed
-        if not fixture_allowed and HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE in allowed_sources:
-            allowed_sources.discard(HOST_VISIBLE_SURFACE_FIXTURE_RECEIPT_SOURCE)
+        allowed_sources = set(runtime_live_sources)
+        if fixture_allowed and fixture_receipt_source:
+            allowed_sources.add(fixture_receipt_source)
+        invalid_requested_sources = {
+            token for token in requested_allowed_sources if token and token not in allowed_sources
+        }
+        if invalid_requested_sources:
+            issues.append(
+                "host_visible_surface_live_requested_source_outside_contract:"
+                + ",".join(sorted(invalid_requested_sources))
+            )
+        if (
+            not fixture_allowed
+            and fixture_receipt_source
+            and fixture_receipt_source in requested_allowed_sources
+        ):
             issues.append(
                 "host_visible_surface_live_fixture_source_forbidden_for_operation:"
-                f"{str(args.operation or '').strip() or 'unknown'}"
+                f"{operation_token or 'unknown'}"
             )
         if not allowed_sources:
             allowed_sources = {HOST_VISIBLE_SURFACE_RUNTIME_RECEIPT_SOURCE}
