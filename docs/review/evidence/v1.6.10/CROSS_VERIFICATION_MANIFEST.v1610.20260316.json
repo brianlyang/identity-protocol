@@ -1,0 +1,44 @@
+{
+  "stream_version": "v1.6.10",
+  "generated_at_utc": "2026-03-16T00:00:00Z",
+  "status": "DRAFT",
+  "lanes": [
+    {
+      "lane": "roundtable_internal",
+      "refs": [
+        "docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md",
+        "docs/governance/identity-headstamp-last-hop-closure-governance-v1.6.9.md"
+      ]
+    },
+    {
+      "lane": "vendor_reference",
+      "refs": [
+        "https://github.com/open-policy-agent/opa/tree/main/docs",
+        "https://github.com/sigstore/docs",
+        "https://w3c.github.io/trace-context/",
+        "https://slsa.dev/spec/v1.0/"
+      ]
+    },
+    {
+      "lane": "context7",
+      "refs": [
+        "/open-policy-agent/opa",
+        "/open-telemetry/opentelemetry-specification",
+        "/sigstore/docs"
+      ]
+    },
+    {
+      "lane": "openaidoc",
+      "refs": [
+        "https://developers.openai.com/api/docs/guides/evals/",
+        "https://developers.openai.com/api/docs/guides/evaluation-best-practices/",
+        "https://developers.openai.com/cookbook/examples/realtime_eval_guide/",
+        "https://developers.openai.com/cookbook/examples/agents_sdk/app_assistant_voice_agents/"
+      ]
+    }
+  ],
+  "notes": [
+    "v1.6.10 is a continuity stream and must not introduce v1.7.x branch semantics.",
+    "This manifest is reference-only evidence capture and does not claim implementation closure."
+  ]
+}
