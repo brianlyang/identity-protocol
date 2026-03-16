@@ -154,7 +154,8 @@ Serial acceptance baseline:
 ## 9) Evidence and report contract
 
 1. Evidence root:
-   - `activity/evidence/v1610-runtime-file-governance/<date>/`
+   - PR-tracked manifest: `docs/review/evidence/v1.6.10/`
+   - runtime run artifacts: `activity/evidence/v1610-runtime-file-governance/<date>/`
 2. Required artifacts:
    - governance parity snapshot
    - mutation receipt matrix
