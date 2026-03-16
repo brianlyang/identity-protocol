@@ -162,7 +162,6 @@ def main() -> int:
 
     hits: list[ResidueHit] = []
     for candidate in _iter_control_plane_files(identity_home):
-        scanned_files += 0
         hit = _scan_file(candidate, DEFAULT_FORBIDDEN_TOKEN)
         if hit is not None:
             hits.append(hit)
