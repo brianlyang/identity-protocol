@@ -48,6 +48,28 @@ The model is designed for infrastructure operation in protocol scripts, not inst
 
 If forbidden operation still requests `ci_fixture`, validation fails closed.
 
+This policy is enforced in two places and must stay equivalent:
+
+1. Validator side (`validate_host_transport_wiring_attestation.py`, `recover_host_visible_post_check_state.py`)
+2. Runtime wrapper template side (`create_identity_pack.py` -> generated `protocol_session_chain_wrapper.py`)
+
+Any policy drift between these two surfaces is treated as a protocol defect.
+
+## Wrapper Regeneration Baseline
+
+Template fixes are not complete until runtime wrappers are regenerated for active instances.
+
+Required regeneration path:
+
+```bash
+python3 scripts/repair_contract_backfill.py --catalog <catalog_path> --identity-id <identity_id> --apply --json-only
+```
+
+Acceptance signals:
+
+- `host_gateway_wrapper_artifacts_refreshed=true` when wrapper hash changes
+- `applied=true` whenever wrapper artifacts changed, even if task/catalog/meta payloads were already up-to-date
+
 ## Official One-Command Closure
 
 Use:
