@@ -2310,9 +2310,15 @@ def main() -> int:
                 mapping_errors.append(entry_issue)
             payload["mapping_errors"] = mapping_errors
             payload["bundle_status"] = STATUS_FAIL_REQUIRED
-            payload["error_code"] = ERR_ENTRY_REQUIRED
+            if PRIVILEGE_ESCALATION_ERROR_CODE in str(receipt_error):
+                payload["error_code"] = PRIVILEGE_ESCALATION_ERROR_CODE
+            else:
+                payload["error_code"] = ERR_ENTRY_REQUIRED
             bundle_status = STATUS_FAIL_REQUIRED
-            error_code = ERR_ENTRY_REQUIRED
+            if PRIVILEGE_ESCALATION_ERROR_CODE in str(receipt_error):
+                error_code = PRIVILEGE_ESCALATION_ERROR_CODE
+            else:
+                error_code = ERR_ENTRY_REQUIRED
         else:
             if str(payload.get("bundle_status", "")).strip().upper() == STATUS_PASS_REQUIRED:
                 payload["protocol_unique_entry_receipt_status"] = STATUS_PASS_REQUIRED

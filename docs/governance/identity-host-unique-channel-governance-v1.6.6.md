@@ -1319,3 +1319,40 @@ Interpretation lock:
 1. P0 "headstamp bypass" must not be declared when root cause is permission/reachability execution fault.
 2. tuple-bound strict lanes use `session_id=run:<id>` as canonical run binding source.
 3. all such execution faults remain fail-close (no downgrade to warning-only).
+
+### 5.23 Host transport dependency isolation + privilege write probes (2026-03-17)
+
+This checkpoint upgrades two previously implicit runtime dependencies into protocol-controlled surfaces:
+
+1. host transport reachability is now an explicit validator lane, not a side effect of headstamp/send-time failure;
+2. privilege-denied write paths on strict control-plane writers are now required negative probes, not ad-hoc manual replay.
+
+Contract upgrades:
+
+1. host transport reachability must be resolved explicitly:
+   - validator: `scripts/validate_host_transport_reachability.py`
+   - CI delegate: `scripts/ci/run_host_transport_reachability_probes_ci.sh`
+   - transport URL must be provided explicitly or resolved from instance contract field
+     `transport_healthcheck_url`
+   - hardcoded protocol-repo defaults for business/runtime host endpoints are forbidden
+2. reachability failure is a first-class protocol fault:
+   - `error_code=IP-HTR-001`
+   - `transport_reachability_status`
+   - `transport_failure_class`
+   - stale reason prefix `host_transport_reachability_unavailable:*`
+3. official live closure must isolate dependency failure before downstream noise:
+   - `scripts/run_host_visible_live_closure.py` runs reachability validation first
+   - reachability failure short-circuits recovery/attestation/send-time with fail-close output
+4. privilege write-denied probes are required for core strict writers:
+   - CI delegate: `scripts/ci/run_privilege_escalation_write_probes_ci.sh`
+   - minimum probes:
+     - unique-entry receipt write denied
+     - host-visible recovery write denied
+     - post-check closure state write denied
+   - required error family: `IP-PRIV-ESC-001`
+
+Interpretation lock:
+
+1. `127.0.0.1:3001` or any similar runtime endpoint is consumer/runtime configuration, not protocol-repo constant state.
+2. transport reachability failure, privilege boundary failure, and semantic headstamp failure must remain separate axes in replay output.
+3. required CI must prove both reachability fault isolation and privilege write fail-close behavior.

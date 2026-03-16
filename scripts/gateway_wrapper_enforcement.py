@@ -31,6 +31,8 @@ from protocol_infra_contract import (
     HOST_GATEWAY_DEFAULT_SIGNING_KEY as INFRA_HOST_GATEWAY_DEFAULT_SIGNING_KEY,
     HOST_GATEWAY_REQUIRED_DISPATCH_MODE as INFRA_HOST_GATEWAY_REQUIRED_DISPATCH_MODE,
     HOST_GATEWAY_REQUIRED_RELEASE_MODE as INFRA_HOST_GATEWAY_REQUIRED_RELEASE_MODE,
+    HOST_TRANSPORT_REACHABILITY_ERROR_CODE,
+    HOST_TRANSPORT_REACHABILITY_REASON_PREFIX,
     PRIVILEGE_ESCALATION_ERROR_CODE,
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
@@ -142,8 +144,8 @@ def _classify_subprocess_failure(*, stdout_text: str, stderr_text: str) -> tuple
     )
     if any(token in merged for token in reachability_tokens):
         return (
-            CHAT_EGRESS_POST_CHECK_STATE_UNAVAILABLE_ERROR_CODE,
-            "host_transport_reachability_unavailable:localhost_or_socket_unreachable",
+            HOST_TRANSPORT_REACHABILITY_ERROR_CODE,
+            f"{HOST_TRANSPORT_REACHABILITY_REASON_PREFIX}:localhost_or_socket_unreachable",
         )
     return None
 

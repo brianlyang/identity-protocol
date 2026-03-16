@@ -1,135 +1,136 @@
 # Protocol Remediation Audit Ledger (v1.6.10 runtime file governance)
 
-Status: Draft for review (protocol-only, 2026-03-16)
-Scope: review ledger for runtime file lifecycle governance closure in v1.6.x stream
+Status: Active review ledger draft (boundary freeze, 2026-03-17)
+Scope: audit ledger for runtime dynamic file governance boundary closure in v1.6.x stream
 
 ## 0) Audit objective
 
-1. Close runtime file governance gaps without introducing v1.7.x divergence.
-2. Convert runtime file writes from script-local behavior into contract-governed control plane behavior.
-3. Keep existing v1.6.8 and v1.6.9 guarantees intact.
-4. Current-pointer continuity refs (mandatory):
-   - `identity/protocol/mappings/contract-binding.current.yaml`
-   - `identity/protocol/mappings/control-plane-status.current.yaml`
-   - `identity/protocol/mappings/control-plane-invariants.current.yaml`
-   - `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
-   - `identity/protocol/mappings/stream-doc-registry.current.yaml`
+Current-pointer continuity refs (mandatory):
+
+- `identity/protocol/mappings/contract-binding.current.yaml`
+- `identity/protocol/mappings/control-plane-status.current.yaml`
+- `identity/protocol/mappings/control-plane-invariants.current.yaml`
+- `identity/protocol/mappings/doc-evidence-allowlist.current.yaml`
+- `identity/protocol/mappings/stream-doc-registry.current.yaml`
+- `identity/protocol/mappings/semantic-term-registry.current.yaml`
+- `identity/protocol/mappings/stream-scope-matrix.current.yaml`
+
+1. Freeze the boundary between protocol-generated gateway shells, protocol-controlled mirror artifacts, and instance-autonomous runtime.
+2. Ensure v1.6.10 is implementation-grade rather than doc-only.
+3. Keep v1.6.6 wrapper-only guarantees and v1.6.8 downsink immutability guarantees intact.
+4. Ensure v1.6.10 does not absorb skill supply-chain topics.
 
 ## 1) Frozen risks
 
-1. Runtime file mutation can occur without unified provenance receipt.
-2. Writer identity constraints are not yet universally enforced across runtime domains.
-3. Post-check state can become a partial control unless all strict lanes hard-block on invalid/missing state.
-4. Full-scan aggregation may under-report runtime file governance drift unless requiredized.
+1. Wrapper governance may be over-expanded into blanket runtime ownership.
+2. Mirror artifacts may be mislabeled as shells.
+3. Runtime autonomy may be weakened by wording alone, without explicit contract elevation.
+4. Draft docs may cite non-landed validators and therefore miss code-landing quality.
 
-## 2) Planned implementation scope (single PR)
+## 2) Landed strengthening required for closure
 
-### 2.1 Contract and generation
+### 2.1 Canonical protocol contract
 
-1. Add `protocol_runtime_file_governance_contract_v1` generation in creator/backfill path.
-2. Add runtime mirror parity checks.
+1. `scripts/protocol_infra_contract.py` must define:
+   - `PROTOCOL_GENERATED_GATEWAY_SHELL_PATHS`
+   - `PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS`
+   - canonical terms for the three ownership classes
+2. The closed shell set must remain exactly three wrapper files.
+3. The mirror floor must include `runtime/gate/protocol_gateway_contract.json` and may only expand through explicit protocol declarations.
 
 ### 2.2 Validators
 
-1. Add `validate_runtime_file_governance.py`.
-2. Add `validate_runtime_file_write_guard.py`.
-3. Add `validate_runtime_file_governance_post_check.py`.
+1. `scripts/validate_runtime_file_boundary_governance.py`
+2. `scripts/validate_semantic_term_registry.py`
+3. `scripts/validate_stream_scope_semantic_integrity.py`
+4. `scripts/validate_required_gate_surface_drift.py`
 
-### 2.3 CI and scan wiring
+### 2.3 CI and replay wiring
 
-1. Add required probes in CI.
-2. Add v1.6.10 governance status to full scan aggregate report.
+1. `bash scripts/ci/run_semantic_clarity_probes_ci.sh`
+2. `bash scripts/ci/run_downsink_path_immutability_probes_ci.sh`
+3. Existing v1.6.6 wrapper / host-visible replay lanes remain green.
 
 ## 3) Mandatory review checklist
 
-1. Contract schema rejects additional properties in strict mode.
-2. Registry entries are anchor-resolved and path-immutable.
-3. Every strict mutation has a valid receipt tuple and hash transition proof.
-4. Unauthorized writer attempts are hard blocked.
-5. Missing/invalid post-check state hard blocks next-hop.
-6. No existing v1.6.8 or v1.6.9 required checks are downgraded.
-7. strict send-time payload must project `chat_egress_uniqueness_*` fields with deterministic fail-close mapping.
-8. runtime wrappers are validated as canonical mirrors; no wrapper-local semantic override is allowed.
+1. `protocol_generated_gateway_shell` appears in governance + review docs.
+2. `protocol_controlled_mirror_artifact` appears in governance + review docs.
+3. `instance_autonomous_runtime` appears in governance + review docs.
+4. Governance doc explicitly states: runtime default is `instance_autonomous_runtime` unless explicitly declared as `protocol_controlled_mirror_artifact`.
+5. Shell set is exactly:
+   - `runtime/gate/protocol_ingress_wrapper.py`
+   - `runtime/gate/protocol_egress_wrapper.py`
+   - `runtime/gate/protocol_session_chain_wrapper.py`
+6. `runtime/gate/protocol_gateway_contract.json` is treated as mirror artifact, not shell code.
+7. `v1.6.10` exists in active stream registry and is not listed under legacy archival docs.
+8. `v1.6.10` does not absorb `ASB16-RQ-039/040/041`.
+9. No non-landed “must-have validator” remains in doc text.
 
 ## 4) Probe matrix
 
-### 4.1 Negative (required red)
+### 4.1 Positive (required green)
 
-1. `probe_runtime_file_unregistered_mutation_blocked`
-2. `probe_runtime_file_unauthorized_writer_blocked`
-3. `probe_runtime_file_missing_receipt_blocked`
-4. `probe_runtime_file_hash_transition_invalid_blocked`
-5. `probe_runtime_file_post_check_state_missing_blocked`
-6. `probe_send_time_next_hop_blocked_by_post_check_chat_egress`
-7. `probe_send_time_next_hop_blocked_on_missing_post_check_state_chat_egress`
+1. `probe_runtime_file_boundary_governance_pass`
+2. `probe_semantic_term_registry_pass`
+3. `probe_stream_scope_semantic_integrity_pass_or_skip`
+4. `probe_downsink_path_immutability_pass`
 
-### 4.2 Positive (required green)
+### 4.2 Negative (required red)
 
-1. `probe_runtime_file_registered_mutation_pass`
-2. `probe_runtime_file_writer_allowed_pass`
-3. `probe_runtime_file_post_check_clean_pass`
-4. `probe_runtime_file_fullscan_surface_pass`
-5. `probe_chat_egress_uniqueness_projection_pass`
+1. `probe_runtime_boundary_doc_missing_required_tokens_blocked`
+2. `probe_runtime_boundary_forbidden_phrase_blocked`
+3. `probe_runtime_boundary_stream_registry_missing_active_row_blocked`
+4. `probe_runtime_boundary_shell_mirror_overlap_blocked`
 
 ## 5) Non-conflict assertions
 
-1. No compatibility shim for deprecated runtime paths.
-2. No identity-specific exception list.
-3. No bypass path that can emit host-visible output without existing headstamp/entry gates.
-4. No downgrade of strict update required contracts.
+1. No new protocol claim may convert all runtime files into protocol-owned artifacts.
+2. No wrapper-local semantic override is allowed.
+3. No instance-local runtime file may be promoted to protocol-generated solely by path adjacency.
+4. No skill supply-chain file or requirement may be co-streamed into v1.6.10.
 
-## 6) Cross-verification lanes (must all be cited)
+## 6) Cross-verification lanes
 
-1. Roundtable lane: v1.6.8 + v1.6.9 inheritance consistency.
-2. Vendor lane: OPA policy/test model, Sigstore artifact provenance, OpenTelemetry observability model.
-3. Reference lane: SLSA + W3C trace context.
-4. Search lane: OpenAI eval and tracing practice guidance for production loops.
-5. Context7 lane: machine-retrieved library docs for OPA/OpenTelemetry/Sigstore.
-6. OpenAIDoc lane: official OpenAI eval/tracing references.
+1. Roundtable lane: v1.6.6 + v1.6.8 inheritance remains coherent.
+2. Vendor lane: OPA + Sigstore boundary/provenance models support the distinction between generated shells and governed mirrors.
+3. Reference lane: SLSA + Trace Context reinforce provenance/observability boundaries.
+4. Search/OpenAIDoc lane: eval/tracing guidance supports machine-checked boundaries and explicit workflow visibility.
 
-## 7) Acceptance criteria (PR merge gate)
+## 7) Acceptance criteria
 
-1. All new validators return deterministic JSON output.
-2. Required CI probes are wired and green/red semantics verified.
-3. 3 serial self-test rounds and 3 serial deep-scan rounds completed.
-4. Unified manifest generated with evidence hashes and timestamps.
-5. strict full-scan payload includes `chat_egress_uniqueness_status` and it is non-empty for runtime-active rows.
+Machine status fields that must remain visible in strict lane documentation and replay payloads:
 
-## 8) Evidence pointers for this stream
+- `required_gate_surface_drift_status`
+- `required_contract_coverage_status`
 
-1. `docs/review/evidence/v1.6.10/CROSS_VERIFICATION_MANIFEST.v1610.20260316.json` (PR-tracked manifest)
-2. `activity/evidence/v1610-runtime-file-governance/2026-03-16/` (runtime-local additional run artifacts in implementation phase)
+1. `python3 scripts/validate_runtime_file_boundary_governance.py --json-only` => `PASS_REQUIRED`
+2. `python3 scripts/validate_semantic_term_registry.py --json-only` => `PASS_REQUIRED`
+3. `python3 scripts/validate_stream_scope_semantic_integrity.py --base HEAD --head HEAD --json-only` => `SKIPPED_NOT_REQUIRED` or valid strict verdict
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only` => `PASS_REQUIRED`
+5. `python3 scripts/validate_required_contract_coverage.py --catalog <catalog> --identity-id <id> --operation validate --json-only` => payload includes `required_contract_coverage_status`
+6. `bash scripts/ci/run_semantic_clarity_probes_ci.sh` => positive lane green, negative lanes red-as-expected
+7. Wrapper replay / host-visible continuity lanes remain non-regressed.
 
-## 9) References
+## 8) Evidence pointers
 
-1. `docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md`
-2. `docs/governance/identity-downsink-path-immutability-governance-v1.6.8.md`
-3. `docs/governance/identity-headstamp-last-hop-closure-governance-v1.6.9.md`
+1. `docs/review/evidence/v1.6.10/CROSS_VERIFICATION_MANIFEST.v1610.20260316.json`
+2. `activity/evidence/v1610-runtime-file-governance/<date>/`
 
-## 10) v1.6.10 one-to-one correspondence replay checklist
+## 9) v1.6.10 one-to-one correspondence replay checklist
 
-Replay objective: prevent v1.6.10 clause drift from becoming "doc-only memory".
+Replay objective: prevent v1.6.10 boundary text from becoming doc-only memory.
 
-Required machine checks (all must be present and green in strict lane):
+Required machine checks:
 
-1. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
-   - must report `required_gate_surface_drift_status=PASS_REQUIRED`
-2. `python3 scripts/validate_required_contract_coverage.py --catalog <catalog> --identity-id <id> --operation validate --json-only`
-   - payload must include `required_contract_coverage_status`
-3. `bash scripts/ci/run_downsink_path_immutability_probes_ci.sh`
-   - must include positive probes:
-     - `probe_feedback_inquiry_requiredization_trigger_allowed`
-     - `probe_feedback_sanitization_paraphrase_allowed`
-     - `probe_feedback_session_lane_lock_protocol_allowed`
-     - `probe_feedback_session_lane_lock_exit_allowed`
-   - expected verdict for each: `protocol_downsink_path_write_guard_status=PASS_REQUIRED`
-   - must include negative probe `probe_feedback_noncanonical_filename_write`
-   - expected verdict: `protocol_downsink_path_write_guard_status=FAIL_REQUIRED`
-4. `bash scripts/ci/run_skill_supply_chain_probes_ci.sh`
-5. `bash scripts/ci/run_host_visible_surface_live_probes_ci.sh`
-   - must assert `chat_egress_uniqueness_contract_id/status/reason/error_code` on both next-hop block branches
+1. `python3 scripts/validate_runtime_file_boundary_governance.py --json-only`
+2. `python3 scripts/validate_semantic_term_registry.py --json-only`
+3. `python3 scripts/validate_stream_scope_semantic_integrity.py --base HEAD --head HEAD --json-only`
+4. `python3 scripts/validate_required_gate_surface_drift.py --json-only`
+5. `python3 scripts/validate_required_contract_coverage.py --catalog <catalog> --identity-id <id> --operation validate --json-only`
+6. `bash scripts/ci/run_semantic_clarity_probes_ci.sh`
+7. `bash scripts/ci/run_downsink_path_immutability_probes_ci.sh`
 
 Interpretation contract:
 
-1. if any v1.6.10 clause is added/changed without strict-surface projection, classify as anti-forget regression.
-2. anti-forget regressions are fail-close and cannot be downgraded to warning in strict operations.
+1. If any v1.6.10 clause changes without the boundary validator and semantic clarity replay, classify as anti-forget regression.
+2. Anti-forget regressions are fail-close in strict operations.

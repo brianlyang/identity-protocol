@@ -2724,3 +2724,39 @@ Checkpoint verdict update:
 1. v1.6.6 strict tuple continuity is restored without instance-side patching.
 2. permission/reachability faults are now explicitly attributable and remain fail-close.
 3. remaining P0 in target deep-scan is still non-m2m release/env lanes (`IP-OUTLET-003`, `IP-WRB-002`, `IP-COV-000`, etc.).
+
+### 26.40 v1.6.6 host transport dependency isolation + privilege write probes (2026-03-17)
+
+Problem:
+
+1. localhost/socket unavailability was classified after the fact, but not governed as an explicit protocol dependency surface.
+2. strict control-plane writers still lacked required negative probes for privilege-denied write paths, leaving implementation stronger than CI doctrine.
+3. protocol tooling risked accidental runtime-endpoint hardcoding if reachability checks baked business host URLs into base-repo constants.
+
+Fix landed:
+
+1. `scripts/validate_host_transport_reachability.py`
+   - introduced as first-class transport validator.
+   - output now separates:
+     - `transport_reachability_status`
+     - `transport_failure_class`
+     - `error_code=IP-HTR-001`
+2. `scripts/run_host_visible_live_closure.py`
+   - reachability validation now runs before recovery/attestation/send-time.
+   - dependency failure short-circuits later steps to avoid downstream noise.
+3. `scripts/gateway_wrapper_enforcement.py`
+   - localhost/socket subprocess faults now preserve dedicated reachability family (`IP-HTR-001`) instead of collapsing into generic headstamp code.
+4. `scripts/required_gate_bundle_runner.py`
+   - unique-entry receipt persistence now preserves `IP-PRIV-ESC-001` on privilege-denied write failure.
+5. required probe lanes added:
+   - `scripts/ci/run_host_transport_reachability_probes_ci.sh`
+   - `scripts/ci/run_privilege_escalation_write_probes_ci.sh`
+6. anti-forget drift validator updated:
+   - `scripts/validate_required_gate_surface_drift.py`
+   - workflow delegate wiring now required in `.github/workflows/_identity-required-gates.yml`
+
+Interpretation lock:
+
+1. runtime endpoint selection is consumer/runtime contract input, not protocol hardcoded default; explicit `transport_healthcheck_url` is the allowed declaration path.
+2. transport reachability failure is not semantic headstamp failure.
+3. privilege write denial is not unique-entry semantic failure even when it occurs on entry receipt persistence.

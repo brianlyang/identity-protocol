@@ -203,3 +203,15 @@ strict_docs:
       - '^activity/evidence/v168-path-immutability/\d{4}-\d{2}-\d{2}/path_registry_snapshot\..+\.json$'
       - '^activity/evidence/v168-path-immutability/\d{4}-\d{2}-\d{2}/path_probe_matrix\..+\.json$'
       - '^activity/evidence/v168-path-immutability/\d{4}-\d{2}-\d{2}/ci_required_probe_report\..+\.json$'
+
+  docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1610-runtime-file-governance/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1610-runtime-file-governance/\d{4}-\d{2}-\d{2}/.+_summary\.json$'
+
+  docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md:
+    max_activity_refs: 20
+    allowed_activity_patterns:
+      - '^activity/evidence/v1610-runtime-file-governance/\d{4}-\d{2}-\d{2}/EVIDENCE_MANIFEST\..+\.json$'
+      - '^activity/evidence/v1610-runtime-file-governance/\d{4}-\d{2}-\d{2}/.+_summary\.json$'

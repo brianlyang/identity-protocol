@@ -41,6 +41,14 @@ INFRA_CONTRACT_FORBIDDEN_LITERAL_TARGETS: tuple[str, ...] = (
     "EXPECTED_ENTRY_SCRIPT",
     "EXPECTED_EGRESS_SCRIPT",
 )
+HOST_TRANSPORT_FORBIDDEN_DEFAULT_LITERALS: tuple[str, ...] = (
+    "HOST_TRANSPORT_REACHABILITY_DEFAULT_URL",
+    "http://127.0.0.1:3001/healthz",
+)
+HOST_TRANSPORT_FORBIDDEN_DEFAULT_SCAN_DIRS: tuple[str, ...] = (
+    "scripts",
+    "identity/protocol",
+)
 GATEWAY_WRAPPER_BUS_REQUIRED_IMPORT = "gateway_wrapper_enforcement"
 GATEWAY_WRAPPER_BUS_REQUIRED_CALL = "run_gateway_wrapped_command"
 GATEWAY_WRAPPER_BUS_FORBIDDEN_LEGACY_HELPERS: tuple[str, ...] = (
@@ -54,6 +62,12 @@ FULL_SCAN_TARGET_CI_DELEGATE_SCRIPT = "scripts/ci/run_full_scan_target_regressio
 MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_monotonic_floor_probes_ci.sh"
 GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh"
 HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_host_visible_surface_live_probes_ci.sh"
+HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT = (
+    "scripts/ci/run_host_transport_reachability_probes_ci.sh"
+)
+PRIVILEGE_ESCALATION_WRITE_PROBE_CI_DELEGATE_SCRIPT = (
+    "scripts/ci/run_privilege_escalation_write_probes_ci.sh"
+)
 UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh"
 DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_downsink_path_immutability_probes_ci.sh"
 INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT = "scripts/ci/run_installer_version_baseline_probes_ci.sh"
@@ -64,6 +78,8 @@ WORKFLOW_REQUIRED_EXECUTION_SCRIPTS: tuple[str, ...] = (
     MONOTONIC_FLOOR_PROBE_CI_DELEGATE_SCRIPT,
     GATEWAY_TRUST_BOUNDARY_PROBE_CI_DELEGATE_SCRIPT,
     HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
+    HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT,
+    PRIVILEGE_ESCALATION_WRITE_PROBE_CI_DELEGATE_SCRIPT,
     UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT,
     DOWNSINK_PATH_IMMUTABILITY_PROBE_CI_DELEGATE_SCRIPT,
     INSTALLER_VERSION_BASELINE_PROBE_CI_DELEGATE_SCRIPT,
@@ -100,6 +116,14 @@ HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/repair_contract_backfill.py",
     "scripts/validate_host_transport_wiring_attestation.py",
 )
+HOST_TRANSPORT_REACHABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    "scripts/validate_host_transport_reachability.py",
+)
+PRIVILEGE_ESCALATION_WRITE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
+    CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
+    "scripts/recover_host_visible_post_check_state.py",
+    "scripts/validate_host_transport_wiring_attestation.py",
+)
 UNIQUE_ENTRY_TUPLE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_protocol_unique_entry_gate.py",
     "scripts/repair_contract_backfill.py",
@@ -124,20 +148,29 @@ SEMANTIC_CLARITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     "scripts/validate_semantic_term_registry.py",
     "scripts/validate_cli_catalog_default_semantics.py",
     "scripts/validate_stream_scope_semantic_integrity.py",
+    "scripts/validate_runtime_file_boundary_governance.py",
 )
 RUNTIME_FILE_GOVERNANCE_GOV_DOC = "docs/governance/identity-runtime-file-governance-control-plane-v1.6.10.md"
 RUNTIME_FILE_GOVERNANCE_REVIEW_DOC = "docs/review/protocol-remediation-audit-ledger-v1.6.10-runtime-file-governance.md"
 RUNTIME_FILE_GOVERNANCE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
     "One-to-one anti-forget correspondence matrix (mandatory)",
+    "protocol_generated_gateway_shell",
+    "protocol_controlled_mirror_artifact",
+    "instance_autonomous_runtime",
+    "scripts/validate_runtime_file_boundary_governance.py",
     "scripts/validate_required_contract_coverage.py",
     "scripts/validate_required_gate_surface_drift.py",
-    "scripts/ci/run_skill_supply_chain_probes_ci.sh",
+    "scripts/ci/run_semantic_clarity_probes_ci.sh",
     "scripts/ci/run_downsink_path_immutability_probes_ci.sh",
 )
 RUNTIME_FILE_GOVERNANCE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "v1.6.10 one-to-one correspondence replay checklist",
+    "protocol_generated_gateway_shell",
+    "protocol_controlled_mirror_artifact",
+    "instance_autonomous_runtime",
     "required_gate_surface_drift_status",
     "required_contract_coverage_status",
+    "scripts/validate_runtime_file_boundary_governance.py",
     "scripts/validate_required_gate_surface_drift.py",
     "scripts/validate_required_contract_coverage.py",
 )
@@ -155,8 +188,19 @@ HOST_VISIBLE_SEMANTIC_FREEZE_GOV_REQUIRED_TOKENS: tuple[str, ...] = (
     "`5` serial self-test rounds",
     "`5` serial deep-scan rounds",
     "scripts/ci/run_host_visible_surface_live_probes_ci.sh",
+    "scripts/ci/run_host_transport_reachability_probes_ci.sh",
+    "scripts/ci/run_privilege_escalation_write_probes_ci.sh",
     "scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh",
     "scripts/ci/run_unique_entry_tuple_binding_probes_ci.sh",
+    "scripts/validate_host_transport_reachability.py",
+    "transport_healthcheck_url",
+    "non-governed output one-hop death rule",
+    "failure evidence dual-channel",
+    "governed output",
+    "manual headstamp",
+    "assistant-visible self-printed headstamp is classified as manual headstamp, not closure evidence.",
+    "host-direct output",
+    "next-hop-admissible output",
 )
 HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "26.37 Pre-95/Post-100 semantic freeze + serial-5 replay uplift",
@@ -166,6 +210,14 @@ HOST_VISIBLE_SEMANTIC_FREEZE_REVIEW_REQUIRED_TOKENS: tuple[str, ...] = (
     "next_hop_headstamp_rate",
     "runtime_live_receipt_sources = [runtime_dialogue]",
     "entry_receipt_selector_precedence = same_tuple > same_catalog > bundle_status_pass > newest",
+    "26.40 v1.6.6 host transport dependency isolation + privilege write probes",
+    "scripts/validate_host_transport_reachability.py",
+    "26.41 v1.6.6 finish-line freeze + anti-forget wording lock",
+    "non-governed output one-hop death rule",
+    "failure evidence dual-channel",
+    "host-direct output",
+    "next-hop-admissible output",
+    "assistant-visible self-printed headstamp is manual headstamp, not governed-output evidence.",
 )
 SUPER_LINTER_REQUIRED_TOKENS: tuple[str, ...] = (
     "name: super-linter",
@@ -808,6 +860,29 @@ def _invalid_bundle_arg_values_for_surface(*, surface_path: Path, text: str) -> 
     return rows
 
 
+def _scan_host_transport_forbidden_defaults(repo_root: Path) -> dict[str, list[str]]:
+    hits: dict[str, list[str]] = {}
+    allowed_suffixes = {".py", ".md", ".json", ".yaml", ".yml"}
+    self_path = Path(__file__).resolve()
+    for rel_dir in HOST_TRANSPORT_FORBIDDEN_DEFAULT_SCAN_DIRS:
+        base = repo_root / rel_dir
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in allowed_suffixes:
+                continue
+            if path.resolve() == self_path:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            matched = [token for token in HOST_TRANSPORT_FORBIDDEN_DEFAULT_LITERALS if token in text]
+            if matched:
+                hits[str(path.relative_to(repo_root))] = matched
+    return hits
+
+
 def _missing_bundle_skill_path_active_repo_root_tokens(text: str) -> list[str]:
     body = str(text or "")
     if not body:
@@ -852,6 +927,7 @@ def main() -> int:
     bundle_arg_value_invalid: dict[str, list[dict[str, Any]]] = {}
     bundle_runner_skill_path_active_repo_root_missing: list[str] = []
     dialogue_bundle_missing: dict[str, list[str]] = {}
+    host_transport_forbidden_default_hits = _scan_host_transport_forbidden_defaults(repo_root)
 
     for rel in STRICT_SURFACES:
         path = repo_root / rel
@@ -1303,9 +1379,65 @@ def main() -> int:
             host_visible_missing_tokens.append("host_visible_surface_post_check_blocker_chat_egress_probe_invocation_missing")
         if not has_post_check_state_missing_probe:
             host_visible_missing_tokens.append("host_visible_surface_post_check_state_missing_chat_egress_probe_invocation_missing")
-        if host_visible_missing_tokens:
+    if host_visible_missing_tokens:
+        existing_tokens = list(missing_execution_tokens.get(rel, []))
+        missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
+
+    reachability_probe_delegate_path = repo_root / HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT
+    if not reachability_probe_delegate_path.exists():
+        missing_surface_files.append(HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(reachability_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in HOST_TRANSPORT_REACHABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+        missing_tokens: list[str] = []
+        if "run_probe host_transport_reachability_pass" not in text:
+            missing_tokens.append("host_transport_reachability_positive_probe_invocation_missing")
+        if "run_probe host_transport_reachability_connection_refused_blocked" not in text:
+            missing_tokens.append("host_transport_reachability_negative_probe_invocation_missing")
+        if "IP-HTR-001" not in text:
+            missing_tokens.append("host_transport_reachability_error_family_assertion_missing")
+        if "host_transport_reachability_unavailable:" not in text:
+            missing_tokens.append("host_transport_reachability_reason_prefix_assertion_missing")
+        if missing_tokens:
             existing_tokens = list(missing_execution_tokens.get(rel, []))
-            missing_execution_tokens[rel] = sorted(set(existing_tokens + host_visible_missing_tokens))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
+
+    privilege_probe_delegate_path = repo_root / PRIVILEGE_ESCALATION_WRITE_PROBE_CI_DELEGATE_SCRIPT
+    if not privilege_probe_delegate_path.exists():
+        missing_surface_files.append(PRIVILEGE_ESCALATION_WRITE_PROBE_CI_DELEGATE_SCRIPT)
+    else:
+        rel = PRIVILEGE_ESCALATION_WRITE_PROBE_CI_DELEGATE_SCRIPT
+        text = _read_text(privilege_probe_delegate_path)
+        invoked_python_scripts = _extract_shell_invocations(text, executable="python3")
+        missing_python = [
+            script
+            for script in PRIVILEGE_ESCALATION_WRITE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+            if script not in invoked_python_scripts
+        ]
+        if missing_python:
+            existing = list(missing_lineage_refs.get(rel, []))
+            missing_lineage_refs[rel] = sorted(set(existing + missing_python))
+        missing_tokens: list[str] = []
+        if "run_probe probe_unique_entry_receipt_write_denied" not in text:
+            missing_tokens.append("privilege_probe_unique_entry_write_denied_missing")
+        if "run_probe probe_host_visible_recovery_write_denied" not in text:
+            missing_tokens.append("privilege_probe_host_visible_recovery_write_denied_missing")
+        if "run_probe probe_post_check_closure_state_write_denied" not in text:
+            missing_tokens.append("privilege_probe_post_check_state_write_denied_missing")
+        if "IP-PRIV-ESC-001" not in text:
+            missing_tokens.append("privilege_probe_error_family_assertion_missing")
+        if missing_tokens:
+            existing_tokens = list(missing_execution_tokens.get(rel, []))
+            missing_execution_tokens[rel] = sorted(set(existing_tokens + missing_tokens))
 
     unique_entry_probe_delegate_path = repo_root / UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT
     if not unique_entry_probe_delegate_path.exists():
@@ -1707,7 +1839,13 @@ def main() -> int:
     elif gateway_wrapper_bus_missing or infra_contract_missing:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-009"
-    elif missing_lineage_refs or missing_execution_tokens or forbidden_hits or dialogue_bundle_missing:
+    elif (
+        missing_lineage_refs
+        or missing_execution_tokens
+        or forbidden_hits
+        or dialogue_bundle_missing
+        or host_transport_forbidden_default_hits
+    ):
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-002"
     elif missing_final_egress_wrapper or forbidden_direct_egress_hits:
@@ -1752,6 +1890,14 @@ def main() -> int:
         "host_visible_surface_probe_ci_delegate_script": HOST_VISIBLE_SURFACE_PROBE_CI_DELEGATE_SCRIPT,
         "host_visible_surface_delegate_required_python_scripts": list(
             HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "host_transport_reachability_probe_ci_delegate_script": HOST_TRANSPORT_REACHABILITY_PROBE_CI_DELEGATE_SCRIPT,
+        "host_transport_reachability_delegate_required_python_scripts": list(
+            HOST_TRANSPORT_REACHABILITY_DELEGATED_REQUIRED_PYTHON_SCRIPTS
+        ),
+        "privilege_escalation_write_probe_ci_delegate_script": PRIVILEGE_ESCALATION_WRITE_PROBE_CI_DELEGATE_SCRIPT,
+        "privilege_escalation_write_delegate_required_python_scripts": list(
+            PRIVILEGE_ESCALATION_WRITE_DELEGATED_REQUIRED_PYTHON_SCRIPTS
         ),
         "unique_entry_tuple_probe_ci_delegate_script": UNIQUE_ENTRY_TUPLE_PROBE_CI_DELEGATE_SCRIPT,
         "unique_entry_tuple_delegate_required_python_scripts": list(
@@ -1802,6 +1948,9 @@ def main() -> int:
         "missing_execution_tokens": missing_execution_tokens,
         "dialogue_bundle_missing": dialogue_bundle_missing,
         "forbidden_hits": forbidden_hits,
+        "host_transport_forbidden_default_literals": list(HOST_TRANSPORT_FORBIDDEN_DEFAULT_LITERALS),
+        "host_transport_forbidden_default_scan_dirs": list(HOST_TRANSPORT_FORBIDDEN_DEFAULT_SCAN_DIRS),
+        "host_transport_forbidden_default_hits": host_transport_forbidden_default_hits,
         "final_egress_wrapper_script": FINAL_EGRESS_WRAPPER_SCRIPT,
         "final_egress_required_surfaces": list(FINAL_EGRESS_REQUIRED_SURFACES),
         "missing_final_egress_wrapper": missing_final_egress_wrapper,

@@ -1,0 +1,81 @@
+schema_version: 1
+registry_version: v1
+stream_version: v1.6
+updated_at_utc: "2026-03-17T00:00:00Z"
+
+terms:
+  - term_id: catalog_multi_active
+    canonical_term: catalog_multi_active
+    aliases:
+      - "catalog multi-active"
+      - "actor-scoped multi-active"
+    semantics: "Catalog may contain multiple runtime+active identities; this is not a violation by itself."
+    allowed_scope:
+      - catalog
+      - runtime_status
+
+  - term_id: session_primary_binding
+    canonical_term: session_primary_binding
+    aliases:
+      - "session-primary binding"
+      - "strict session single-primary"
+      - "会话单主"
+    semantics: "In strict lane, actor_id+session_id tuple must bind to one identity and fail-close on drift."
+    allowed_scope:
+      - strict_lane
+      - send_time_gate
+
+  - term_id: protocol_generated_gateway_shell
+    canonical_term: protocol_generated_gateway_shell
+    aliases:
+      - "protocol gateway shell"
+      - "wrapper strong-control"
+      - "protocol-generated wrapper shell"
+    semantics: "Thin protocol-controlled boundary shell generated from protocol canonical template; closed set is ingress/egress/session-chain wrappers only."
+    allowed_scope:
+      - runtime_gate
+      - stream_v1_6_10
+
+  - term_id: protocol_controlled_mirror_artifact
+    canonical_term: protocol_controlled_mirror_artifact
+    aliases:
+      - "protocol-controlled mirror"
+      - "mirror constrained"
+      - "governed mirror artifact"
+    semantics: "Protocol-contract-controlled mirror/downsink artifact; schema/path are protocol-governed but it is not gateway shell code."
+    allowed_scope:
+      - runtime_gate
+      - runtime_state
+      - runtime_reports
+      - stream_v1_6_10
+
+  - term_id: instance_autonomous_runtime
+    canonical_term: instance_autonomous_runtime
+    aliases:
+      - "runtime default autonomy"
+      - "instance runtime autonomy"
+      - "runtime 默认自治"
+    semantics: "Default class for runtime files not explicitly elevated into protocol-controlled mirror or gateway shell governance."
+    allowed_scope:
+      - instance_runtime
+      - stream_v1_6_10
+
+forbidden_phrases:
+  - phrase: "multi-active state is a protocol violation"
+    replacement: "catalog_multi_active is allowed; enforce session_primary_binding in strict lanes"
+    rationale: "Prevents catalog-lane and session-lane semantics from being conflated."
+
+  - phrase: "all protocol-governed instance runtime files under `runtime/state`, `runtime/gate`, `runtime/plugins`, and `runtime/protocol-feedback`"
+    replacement: "runtime default is instance_autonomous_runtime; only protocol_generated_gateway_shell and explicit protocol_controlled_mirror_artifact entries are protocol-governed"
+    rationale: "Prevents blanket protocol ownership claims over all runtime files."
+
+  - phrase: "`runtime/gate/protocol_ingress_wrapper.py`, `runtime/gate/protocol_egress_wrapper.py`, and `runtime/gate/protocol_session_chain_wrapper.py` are governed mirrors, not source of truth."
+    replacement: "the three wrapper files are protocol_generated_gateway_shell, while protocol_gateway_contract.json is a protocol_controlled_mirror_artifact"
+    rationale: "Prevents gateway shell and mirror artifact semantics from being conflated."
+
+scan_roots:
+  - identity/protocol/IDENTITY_PROTOCOL.md
+  - identity/protocol/IDENTITY_RUNTIME.md
+
+include_active_stream_docs: true
+active_stream_registry: identity/protocol/mappings/stream-doc-registry.current.yaml

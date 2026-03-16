@@ -266,6 +266,12 @@ jobs:
       - name: Validate host visible surface live probes (v1.6.6)
         run: bash scripts/ci/run_host_visible_surface_live_probes_ci.sh
 
+      - name: Validate host transport reachability probes (v1.6.6)
+        run: bash scripts/ci/run_host_transport_reachability_probes_ci.sh
+
+      - name: Validate privilege escalation write probes (v1.6.6)
+        run: bash scripts/ci/run_privilege_escalation_write_probes_ci.sh
+
       - name: Validate downsink path immutability probes (v1.6.8)
         run: bash scripts/ci/run_downsink_path_immutability_probes_ci.sh
 

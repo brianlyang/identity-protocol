@@ -29,6 +29,19 @@ HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER = "runtime/gate/protocol_session_chai
 HOST_GATEWAY_DEFAULT_RUNTIME_CONTRACT = "runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_DEFAULT_SIGNING_KEY = "runtime/state/protocol_gateway_signing_key.txt"
 
+# Runtime file governance boundary classes (v1.6.10).
+PROTOCOL_GENERATED_GATEWAY_SHELL_TERM = "protocol_generated_gateway_shell"
+PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_TERM = "protocol_controlled_mirror_artifact"
+INSTANCE_AUTONOMOUS_RUNTIME_TERM = "instance_autonomous_runtime"
+PROTOCOL_GENERATED_GATEWAY_SHELL_PATHS: tuple[str, ...] = (
+    HOST_GATEWAY_DEFAULT_INGRESS_WRAPPER,
+    HOST_GATEWAY_DEFAULT_EGRESS_WRAPPER,
+    HOST_GATEWAY_DEFAULT_SESSION_CHAIN_WRAPPER,
+)
+PROTOCOL_CONTROLLED_MIRROR_ARTIFACT_PATHS: tuple[str, ...] = (
+    HOST_GATEWAY_DEFAULT_RUNTIME_CONTRACT,
+)
+
 # Wrapper runtime contract paths (identity-relative form).
 HOST_GATEWAY_RELATIVE_CONTRACT_PATH = "identity/runtime/gate/protocol_gateway_contract.json"
 HOST_GATEWAY_RELATIVE_INGRESS_WRAPPER_PATH = "identity/runtime/gate/protocol_ingress_wrapper.py"
@@ -82,6 +95,15 @@ HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_KEY = "host_visible_surface_registry_cont
 HOST_VISIBLE_SURFACE_REGISTRY_CONTRACT_ID = "host_visible_surface_registry_contract_v1"
 HOST_VISIBLE_SURFACE_REGISTRY_VALIDATOR = "scripts/validate_host_transport_wiring_attestation.py"
 HOST_VISIBLE_SURFACE_REGISTRY_LIVE_PROBE_DELEGATE = "scripts/ci/run_host_visible_surface_live_probes_ci.sh"
+HOST_TRANSPORT_REACHABILITY_VALIDATOR = "scripts/validate_host_transport_reachability.py"
+HOST_TRANSPORT_REACHABILITY_LIVE_PROBE_DELEGATE = (
+    "scripts/ci/run_host_transport_reachability_probes_ci.sh"
+)
+HOST_TRANSPORT_REACHABILITY_TIMEOUT_SECONDS = 3
+HOST_TRANSPORT_REACHABILITY_ERROR_CODE = "IP-HTR-001"
+HOST_TRANSPORT_REACHABILITY_REASON_PREFIX = "host_transport_reachability_unavailable"
+HOST_TRANSPORT_REACHABILITY_URL_FIELD = "transport_healthcheck_url"
+HOST_TRANSPORT_REACHABILITY_TIMEOUT_FIELD = "transport_healthcheck_timeout_seconds"
 HOST_VISIBLE_SURFACE_REQUIRED_CHANNELS: tuple[str, ...] = (
     "commentary",
     "approval",
