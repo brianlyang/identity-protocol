@@ -95,6 +95,10 @@ Minimum fields:
    - `runtime/reports/broadcast/broadcast-ack-*.json`
 3. `runtime_protocol_feedback`
    - `runtime/protocol-feedback/outbox-to-protocol/`
+   - canonical outbox summary mirrors:
+     - `runtime/protocol-feedback/outbox-to-protocol/SUMMARY_*.json`
+   - canonical inbox summary mirrors:
+     - `runtime/protocol-feedback/inbox-from-protocol/INBOX_SUMMARY_*.json`
    - `runtime/protocol-feedback/evidence-index/INDEX.md`
    - `runtime/protocol-feedback/upgrade-proposals/`
 4. `protocol_broadcast_source`

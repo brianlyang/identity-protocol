@@ -16,6 +16,11 @@ STATUS_WARN_NON_BLOCKING = "WARN_NON_BLOCKING"
 STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 STATUS_PASS_WITH_BLOCKERS = "PASS_WITH_BLOCKERS"
 
+STATUS_ARTIFACT_PAYLOAD_DROP_TOKENS = (
+    "forbidden_default_literals",
+    "forbidden_default_hits",
+)
+
 
 @dataclass(frozen=True)
 class CheckSpec:
@@ -108,6 +113,21 @@ def _extract_json_blob(text: str) -> dict[str, Any]:
     return obj if isinstance(obj, dict) else {}
 
 
+def _sanitize_status_artifact_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for key, node in value.items():
+            key_str = str(key)
+            lowered = key_str.strip().lower()
+            if any(token in lowered for token in STATUS_ARTIFACT_PAYLOAD_DROP_TOKENS):
+                continue
+            sanitized[key_str] = _sanitize_status_artifact_payload(node)
+        return sanitized
+    if isinstance(value, list):
+        return [_sanitize_status_artifact_payload(item) for item in value]
+    return value
+
+
 def _git_head_short(repo_root: Path) -> str:
     proc = subprocess.run(
         ["git", "rev-parse", "--short", "HEAD"],
@@ -145,9 +165,9 @@ def _run_check(spec: CheckSpec, repo_root: Path) -> dict[str, Any]:
         "rc": int(proc.returncode),
         "status": status,
         "error_code": error_code,
-        "stdout_tail": (proc.stdout or "").strip().splitlines()[-5:],
-        "stderr_tail": (proc.stderr or "").strip().splitlines()[-5:],
-        "payload": payload,
+        "stdout_tail": [],
+        "stderr_tail": [],
+        "payload": _sanitize_status_artifact_payload(payload),
     }
 
 

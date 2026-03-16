@@ -992,6 +992,11 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path": "runtime/protocol-feedback/outbox-to-protocol/*_RECEIPT_*.json",
                 },
                 {
+                    "path_id": "runtime_protocol_feedback.outbox_summary",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/outbox-to-protocol/SUMMARY_*.json",
+                },
+                {
                     "path_id": "runtime_protocol_feedback.outbox_seed",
                     "entry_type": "glob",
                     "path": "runtime/protocol-feedback/outbox-to-protocol/*_SEED_*.md",
@@ -1045,6 +1050,11 @@ def _protocol_downsink_path_registry_skeleton() -> dict:
                     "path_id": "runtime_protocol_feedback.inbox_receipt",
                     "entry_type": "glob",
                     "path": "runtime/protocol-feedback/inbox-from-protocol/PROTOCOL_INBOX_RECEIPT_*.json",
+                },
+                {
+                    "path_id": "runtime_protocol_feedback.inbox_summary",
+                    "entry_type": "glob",
+                    "path": "runtime/protocol-feedback/inbox-from-protocol/INBOX_SUMMARY_*.json",
                 },
                 {
                     "path_id": "runtime_protocol_feedback.evidence_index",

@@ -208,6 +208,9 @@ Observed result:
    - downsink write-guard validator
    - downsink literal-lock validator
    - dynamic mapping coverage validator (`--force-required`)
+4. Canonical protocol-feedback summary artifacts are treated as registry-owned downsink writes:
+   - `runtime/protocol-feedback/outbox-to-protocol/SUMMARY_*.json`
+   - `runtime/protocol-feedback/inbox-from-protocol/INBOX_SUMMARY_*.json`
 
 ### 12.2 Deep-scan replay (5 rounds, serial)
 
