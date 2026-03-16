@@ -85,8 +85,8 @@ Scope: review ledger for runtime file lifecycle governance closure in v1.6.x str
 
 ## 8) Evidence pointers for this stream
 
-1. `activity/evidence/v1610-runtime-file-governance/2026-03-16/CROSS_VERIFICATION_MANIFEST.v1610.20260316.json`
-2. `activity/evidence/v1610-runtime-file-governance/2026-03-16/` (additional run artifacts in implementation phase)
+1. `docs/review/evidence/v1.6.10/CROSS_VERIFICATION_MANIFEST.v1610.20260316.json` (PR-tracked manifest)
+2. `activity/evidence/v1610-runtime-file-governance/2026-03-16/` (runtime-local additional run artifacts in implementation phase)
 
 ## 9) References
 
