@@ -152,8 +152,10 @@ PY
 
 CATALOG_PATH="${FIXTURE_ROOT}/catalog.yaml"
 IDENTITY_ID="probe-gateway"
+FOREIGN_IDENTITY_ID="probe-foreign"
 ACTOR_ID="assistant:ci-probe"
 SESSION_ID="session-gateway-probe"
+SESSION_ID_FOREIGN="session-gateway-probe-foreign"
 SESSION_CHAIN_RUN_ID="probe-gateway-session-chain-headstamp"
 INGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_ingress_wrapper.py"
 EGRESS_WRAPPER_PATH="${FIXTURE_ROOT}/identity/probe-gateway/runtime/gate/protocol_egress_wrapper.py"
@@ -165,6 +167,72 @@ python3 scripts/repair_contract_backfill.py \
   --identity-id "${IDENTITY_ID}" \
   --apply \
   --json-only >/dev/null
+
+python3 - <<'PY' "${CATALOG_PATH}" "${ACTOR_ID}" "${IDENTITY_ID}" "${FOREIGN_IDENTITY_ID}" "${SESSION_ID}" "${SESSION_ID_FOREIGN}"
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+repo_root = Path.cwd()
+sys.path.insert(0, str((repo_root / "scripts").resolve()))
+
+from actor_session_common import normalize_actor_binding_store, actor_session_path, write_actor_binding_store
+
+catalog_path = Path(sys.argv[1]).expanduser().resolve()
+actor_id = str(sys.argv[2]).strip()
+identity_id = str(sys.argv[3]).strip()
+foreign_identity_id = str(sys.argv[4]).strip()
+session_id = str(sys.argv[5]).strip()
+session_id_foreign = str(sys.argv[6]).strip()
+now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+actor_store_path = actor_session_path(catalog_path, actor_id)
+raw = {
+    "schema_version": "actor_session_multibinding_v1",
+    "actor_id": actor_id,
+    "binding_key_mode": "actor_id+identity_id+session_id",
+    "binding_version": 2,
+    "compare_token": "2",
+    "bindings": [
+        {
+            "actor_id": actor_id,
+            "identity_id": identity_id,
+            "session_id": session_id,
+            "catalog_path": str(catalog_path),
+            "status": "active",
+            "bound_at": now,
+            "updated_at": now,
+            "binding_ref": f"{actor_id}:{identity_id}:{session_id}:v1",
+            "binding_version": 1,
+            "compare_token": "1",
+        },
+        {
+            "actor_id": actor_id,
+            "identity_id": foreign_identity_id,
+            "session_id": session_id_foreign,
+            "catalog_path": str(catalog_path),
+            "status": "active",
+            "bound_at": now,
+            "updated_at": now,
+            "binding_ref": f"{actor_id}:{foreign_identity_id}:{session_id_foreign}:v2",
+            "binding_version": 2,
+            "compare_token": "2",
+        },
+    ],
+    "updated_at": now,
+}
+normalized = normalize_actor_binding_store(
+    data=raw,
+    actor_id=actor_id,
+    catalog_path=catalog_path,
+    actor_session_file=actor_store_path,
+)
+write_actor_binding_store(actor_store_path, normalized)
+print(json.dumps({"actor_session_seed_path": str(actor_store_path), "binding_count": len(normalized.get("bindings") or [])}))
+PY
 
 run_probe() {
   local name="$1"
@@ -316,6 +384,53 @@ elif name == "strict_first_line_missing_evidence_blocked":
     enforce_mode = str(doc.get("reply_first_line_gate_enforce_mode", "")).strip().lower()
     if enforce_mode != "strict_default":
         raise SystemExit("strict_first_line_missing_evidence_blocked: expected strict_default enforce mode")
+elif name == "protocol_work_layer_explicit_context_required":
+    if rc == 0:
+        raise SystemExit("protocol_work_layer_explicit_context_required: expected non-zero rc")
+    reasons = stale_reasons(doc)
+    if not any("protocol_work_layer_requires_explicit_context_args" in reason for reason in reasons):
+        raise SystemExit("protocol_work_layer_explicit_context_required: expected explicit context stale reason")
+    mode = str(doc.get("strict_explicit_context_mode", "")).strip().lower()
+    if mode != "protocol_lane_enforced":
+        raise SystemExit("protocol_work_layer_explicit_context_required: expected protocol_lane_enforced mode")
+elif name == "quoted_foreign_identity_context_must_not_switch_identity":
+    if rc != 0:
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected zero rc")
+    status = str(doc.get("send_time_gate_status", "")).strip().upper()
+    if status != "PASS_REQUIRED":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected PASS_REQUIRED send-time gate")
+    if str(doc.get("identity_id", "")).strip() != "probe-gateway":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected identity_id probe-gateway")
+    if not bool(doc.get("quoted_identity_context_detected", False)):
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected quoted identity context detection")
+    if not bool(doc.get("quoted_identity_context_foreign_detected", False)):
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected foreign detection")
+    foreign_ids = {str(x).strip() for x in (doc.get("quoted_identity_context_foreign_ids") or []) if str(x).strip()}
+    if "probe-foreign" not in foreign_ids:
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected probe-foreign in foreign ids")
+    guard_status = str(doc.get("quoted_identity_context_guard_status", "")).strip().upper()
+    if guard_status != "PASS_REQUIRED":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected PASS_REQUIRED guard status")
+    binding_effect = str(doc.get("quoted_identity_context_binding_effect", "")).strip().lower()
+    if binding_effect != "none":
+        raise SystemExit("quoted_foreign_identity_context_must_not_switch_identity: expected none binding effect")
+elif name == "session_bound_other_identity_without_switch_receipt_must_fail":
+    if rc == 0:
+        raise SystemExit("session_bound_other_identity_without_switch_receipt_must_fail: expected non-zero rc")
+    error_code = str(doc.get("error_code", "")).strip()
+    if error_code != "IP-HDSTAMP-002":
+        raise SystemExit(
+            "session_bound_other_identity_without_switch_receipt_must_fail: expected IP-HDSTAMP-002 runtime binding mismatch"
+        )
+    reasons = stale_reasons(doc)
+    if (
+        "session_scoped_actor_binding_missing" not in reasons
+        and "actor_binding_lock_mismatch" not in reasons
+        and "actor_bound_identity_mismatch" not in reasons
+    ):
+        raise SystemExit(
+            "session_bound_other_identity_without_switch_receipt_must_fail: expected actor/session strict mismatch reason"
+        )
 elif name == "resolve_context_timeout_guard":
     if rc != 0:
         raise SystemExit("resolve_context_timeout_guard: expected zero rc")
@@ -567,6 +682,15 @@ run_probe direct_text_emit \
   --strict-explicit-context \
   --json-only
 
+run_probe protocol_work_layer_explicit_context_required \
+  python3 scripts/final_emit_governed.py \
+  --catalog "${CATALOG_PATH}" \
+  --actor-id "${ACTOR_ID}" \
+  --work-layer protocol \
+  --source-layer project \
+  --body-text "protocol explicit context guard probe" \
+  --json-only
+
 run_probe channel_bypass_emit \
   python3 "${EGRESS_WRAPPER_PATH}" \
   --catalog "${CATALOG_PATH}" \
@@ -624,6 +748,32 @@ run_probe session_chain_headstamp_first_line_required \
   --source-layer project \
   --operation inspection \
   --message "session chain headstamp required probe" \
+  --json-only
+
+run_probe quoted_foreign_identity_context_must_not_switch_identity \
+  python3 scripts/compose_and_validate_governed_reply.py \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID}" \
+  --work-layer protocol \
+  --source-layer project \
+  --layer-intent-text "protocol lane quoted foreign identity context must stay non-binding" \
+  --body-text $'quoted foreign identity context guard probe\n> Identity-Context: actor_id=assistant:ci-probe; identity_id=probe-foreign; scope=USER; lock=LOCK_MATCH; source=project | Layer-Context: work_layer=protocol; source_layer=project' \
+  --json-only
+
+run_probe session_bound_other_identity_without_switch_receipt_must_fail \
+  python3 scripts/compose_and_validate_governed_reply.py \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "${SESSION_ID_FOREIGN}" \
+  --work-layer protocol \
+  --source-layer project \
+  --layer-intent-text "protocol lane strict session binding mismatch must fail-close" \
+  --body-text "session bound foreign identity mismatch probe" \
   --json-only
 
 run_probe strict_first_line_missing_evidence_blocked \

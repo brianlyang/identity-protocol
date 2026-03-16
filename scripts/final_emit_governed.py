@@ -609,17 +609,35 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    requested_work_layer = str(args.work_layer or "").strip().lower()
+    protocol_lane_explicit_context_required = requested_work_layer == "protocol"
+    strict_explicit_context_required = bool(args.strict_explicit_context or protocol_lane_explicit_context_required)
+    strict_explicit_context_mode = (
+        "protocol_lane_enforced"
+        if protocol_lane_explicit_context_required
+        else ("explicit_flag" if args.strict_explicit_context else "auto")
+    )
+
     try:
-        if args.strict_explicit_context:
+        if strict_explicit_context_required:
             missing: list[str] = []
             if not str(args.identity_id or "").strip():
                 missing.append("identity-id")
             if not str(args.catalog or "").strip():
                 missing.append("catalog")
+            if protocol_lane_explicit_context_required and not str(args.repo_catalog or "").strip():
+                missing.append("repo-catalog")
             if not str(args.actor_id or "").strip():
                 missing.append("actor-id")
+            if protocol_lane_explicit_context_required and not str(args.session_id or "").strip():
+                missing.append("session-id")
             if missing:
-                raise ValueError(f"missing required explicit context args: {','.join(missing)}")
+                if protocol_lane_explicit_context_required:
+                    raise ValueError(
+                        "protocol_work_layer_requires_explicit_context_args:"
+                        + ",".join(sorted(set(missing)))
+                    )
+                raise ValueError(f"missing required explicit context args: {','.join(sorted(set(missing)))}")
 
         catalog_path, catalog_resolution_mode = _resolve_catalog(args)
         repo_catalog_path, repo_catalog_resolution_mode = _resolve_repo_catalog(args)
@@ -637,7 +655,13 @@ def main() -> int:
             "stale_reasons": [f"context_resolution_failed:{exc}"],
             "identity_id": str(args.identity_id or "").strip(),
             "catalog": str(args.catalog or "").strip(),
+            "repo_catalog": str(args.repo_catalog or "").strip(),
             "actor_id": str(args.actor_id or "").strip(),
+            "session_id": str(args.session_id or "").strip(),
+            "requested_work_layer": requested_work_layer,
+            "protocol_explicit_context_required": bool(protocol_lane_explicit_context_required),
+            "strict_explicit_context_required": bool(strict_explicit_context_required),
+            "strict_explicit_context_mode": strict_explicit_context_mode,
         }
         _emit(payload, json_only=args.json_only)
         return 1
@@ -958,8 +982,16 @@ def main() -> int:
         "repo_catalog_resolution_mode": repo_catalog_resolution_mode,
         "identity_resolution_mode": identity_resolution_mode,
         "actor_resolution_mode": actor_resolution_mode,
+        "requested_work_layer": requested_work_layer,
+        "protocol_explicit_context_required": bool(protocol_lane_explicit_context_required),
+        "strict_explicit_context_required": bool(strict_explicit_context_required),
+        "strict_explicit_context_mode": strict_explicit_context_mode,
+        "strict_explicit_context_status": (
+            STATUS_PASS_REQUIRED if strict_explicit_context_required else STATUS_SKIPPED_NOT_REQUIRED
+        ),
         "body_mode": body_mode,
         "send_time_gate_status": send_time_status,
+        "send_time_error_code": str(compose_payload.get("send_time_error_code", "")).strip(),
         "final_emit_contract_status": final_emit_status,
         "reply_emit_allowed": emit_allowed,
         "out_reply_file": out_reply_file,
@@ -979,6 +1011,21 @@ def main() -> int:
         "egress_wrapper_parent_attestation_ppid": egress_wrapper_parent_attestation_ppid,
         "egress_wrapper_parent_attestation_expected_path": egress_wrapper_parent_attestation_expected_path,
         "egress_wrapper_parent_attestation_command_sha256": egress_wrapper_parent_attestation_command_sha256,
+        "quoted_identity_context_detected": bool(compose_payload.get("quoted_identity_context_detected", False)),
+        "quoted_identity_context_line_count": int(compose_payload.get("quoted_identity_context_line_count", 0) or 0),
+        "quoted_identity_context_ids": list(compose_payload.get("quoted_identity_context_ids") or []),
+        "quoted_identity_context_foreign_detected": bool(
+            compose_payload.get("quoted_identity_context_foreign_detected", False)
+        ),
+        "quoted_identity_context_foreign_ids": list(
+            compose_payload.get("quoted_identity_context_foreign_ids") or []
+        ),
+        "quoted_identity_context_guard_status": str(
+            compose_payload.get("quoted_identity_context_guard_status", "")
+        ).strip(),
+        "quoted_identity_context_binding_effect": str(
+            compose_payload.get("quoted_identity_context_binding_effect", "")
+        ).strip(),
     }
     if not pass_contract:
         payload["stale_reasons"] = ["egress_contract_not_pass"]

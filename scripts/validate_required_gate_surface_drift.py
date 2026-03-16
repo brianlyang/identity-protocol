@@ -91,6 +91,7 @@ MONOTONIC_PROBE_REQUIRED_TARGET = "multimodal_plugin_enforcement"
 GATEWAY_TRUST_BOUNDARY_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
     CANONICAL_REQUIRED_GATE_BUNDLE_SCRIPT,
     CANONICAL_FINAL_EMIT_SCRIPT,
+    "scripts/compose_and_validate_governed_reply.py",
     "scripts/probe_gateway_timeout_guard.py",
 )
 HOST_VISIBLE_SURFACE_DELEGATED_REQUIRED_PYTHON_SCRIPTS: tuple[str, ...] = (
@@ -1051,6 +1052,33 @@ def main() -> int:
                 "--json-only",
             )
         )
+        has_protocol_explicit_context_probe = all(
+            token in text
+            for token in (
+                "run_probe protocol_work_layer_explicit_context_required",
+                "python3 scripts/final_emit_governed.py",
+                "--work-layer protocol",
+                "--body-text \"protocol explicit context guard probe\"",
+            )
+        )
+        has_quoted_foreign_context_probe = all(
+            token in text
+            for token in (
+                "run_probe quoted_foreign_identity_context_must_not_switch_identity",
+                "python3 scripts/compose_and_validate_governed_reply.py",
+                "quoted foreign identity context guard probe",
+                "quoted_identity_context_foreign_ids",
+            )
+        )
+        has_session_bound_foreign_probe = all(
+            token in text
+            for token in (
+                "run_probe session_bound_other_identity_without_switch_receipt_must_fail",
+                "--session-id \"${SESSION_ID_FOREIGN}\"",
+                "session bound foreign identity mismatch probe",
+                "session_scoped_actor_binding_missing",
+            )
+        )
         has_session_chain_tuple_assertions = all(
             token in text
             for token in (
@@ -1077,6 +1105,12 @@ def main() -> int:
             gateway_missing_tokens.append("gateway_channel_bypass_emit_probe_invocation_missing")
         if not has_context_timeout_probe:
             gateway_missing_tokens.append("gateway_context_timeout_probe_invocation_missing")
+        if not has_protocol_explicit_context_probe:
+            gateway_missing_tokens.append("gateway_protocol_explicit_context_probe_invocation_missing")
+        if not has_quoted_foreign_context_probe:
+            gateway_missing_tokens.append("gateway_quoted_foreign_context_probe_invocation_missing")
+        if not has_session_bound_foreign_probe:
+            gateway_missing_tokens.append("gateway_session_bound_foreign_probe_invocation_missing")
         if not has_session_chain_tuple_assertions:
             gateway_missing_tokens.append("gateway_session_chain_tuple_assertions_missing")
         if gateway_missing_tokens:

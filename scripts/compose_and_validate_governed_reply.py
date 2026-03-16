@@ -20,6 +20,7 @@ from headstamp_error_family_common import ERR_HDSTAMP_ACTOR_LAYER_MISMATCH, inje
 from response_stamp_common import (
     ALLOWED_SOURCE_LAYERS,
     ALLOWED_WORK_LAYERS,
+    parse_identity_context_stamp,
     render_external_stamp_with_layer_context,
     resolve_disclosure_level,
     resolve_layer_intent,
@@ -32,6 +33,82 @@ REPO_ROOT = SCRIPT_DIR.parent
 ERR_RUNTIME_BINDING_MISMATCH = ERR_HDSTAMP_ACTOR_LAYER_MISMATCH
 ERR_ACTOR_ENTRY_REQUIRED = "IP-ACTOR-ENTRY-001"
 ERR_SESSION_ENTRY_REQUIRED = "IP-ASB-SESSION-ENTRY-001"
+STATUS_PASS_REQUIRED = "PASS_REQUIRED"
+
+
+def _normalize_embedded_identity_context_line(raw_line: str) -> str:
+    line = str(raw_line or "").strip()
+    if not line:
+        return ""
+
+    # Strip common quoted/bullet prefixes to prevent pasted foreign headstamps
+    # from being interpreted as executable routing input.
+    trimmed = line
+    while True:
+        changed = False
+        for prefix in (">", "-", "*"):
+            if trimmed.startswith(prefix):
+                trimmed = trimmed[len(prefix) :].lstrip()
+                changed = True
+        if not changed:
+            break
+
+    marker = "Identity-Context:"
+    idx = trimmed.find(marker)
+    if idx < 0:
+        return ""
+    return trimmed[idx:].strip()
+
+
+def _inspect_embedded_identity_context(
+    *,
+    body_text: str,
+    expected_identity_id: str,
+) -> dict[str, Any]:
+    expected_id = str(expected_identity_id or "").strip()
+    refs: list[dict[str, Any]] = []
+    identities: set[str] = set()
+    foreign_ids: set[str] = set()
+
+    for line_no, raw_line in enumerate(str(body_text or "").splitlines(), start=1):
+        normalized = _normalize_embedded_identity_context_line(raw_line)
+        if not normalized:
+            continue
+        parsed = parse_identity_context_stamp(normalized)
+        identity_id = str(parsed.get("identity_id", "")).strip()
+        actor_id = str(parsed.get("actor_id", "")).strip()
+        if identity_id:
+            identities.add(identity_id)
+            if expected_id and identity_id != expected_id:
+                foreign_ids.add(identity_id)
+        refs.append(
+            {
+                "line_no": line_no,
+                "identity_id": identity_id,
+                "actor_id": actor_id,
+                "raw": normalized,
+            }
+        )
+
+    foreign_detected = bool(foreign_ids)
+    guard_reason = "no_embedded_identity_context"
+    if refs and foreign_detected:
+        guard_reason = "embedded_foreign_identity_context_ignored"
+    elif refs:
+        guard_reason = "embedded_identity_context_same_identity_ignored"
+
+    return {
+        "quoted_identity_context_detected": bool(refs),
+        "quoted_identity_context_line_count": len(refs),
+        "quoted_identity_context_ids": sorted(identities),
+        "quoted_identity_context_foreign_detected": foreign_detected,
+        "quoted_identity_context_foreign_ids": sorted(foreign_ids),
+        "quoted_identity_context_refs": refs[:8],
+        "quoted_identity_context_guard_applied": True,
+        "quoted_identity_context_guard_reason": guard_reason,
+        "quoted_identity_context_guard_status": STATUS_PASS_REQUIRED,
+        "quoted_identity_context_binding_effect": "none",
+    }
 
 
 def _load_body(args: argparse.Namespace) -> str:
@@ -208,6 +285,10 @@ def main() -> int:
     except Exception as exc:
         print(f"[FAIL] invalid body input: {exc}")
         return 2
+    quoted_identity_context_guard = _inspect_embedded_identity_context(
+        body_text=body,
+        expected_identity_id=str(args.identity_id or "").strip(),
+    )
 
     try:
         ctx = resolve_stamp_context(
@@ -458,6 +539,21 @@ def main() -> int:
             "reply_transport_ref": str(validate_payload.get("reply_transport_ref", "")),
             "reply_evidence_mode": str(validate_payload.get("reply_evidence_mode", "")),
             "blocker_receipt_path": str(validate_payload.get("blocker_receipt_path", "")),
+            "quoted_identity_context_detected": bool(
+                quoted_identity_context_guard.get("quoted_identity_context_detected", False)
+            ),
+            "quoted_identity_context_foreign_detected": bool(
+                quoted_identity_context_guard.get("quoted_identity_context_foreign_detected", False)
+            ),
+            "quoted_identity_context_foreign_ids": list(
+                quoted_identity_context_guard.get("quoted_identity_context_foreign_ids") or []
+            ),
+            "quoted_identity_context_guard_status": str(
+                quoted_identity_context_guard.get("quoted_identity_context_guard_status", "")
+            ).strip(),
+            "quoted_identity_context_binding_effect": str(
+                quoted_identity_context_guard.get("quoted_identity_context_binding_effect", "")
+            ).strip(),
         }
         preflight_receipt_path.write_text(
             json.dumps(preflight_receipt, ensure_ascii=False, indent=2) + "\n",
@@ -485,6 +581,21 @@ def main() -> int:
                 "final_emit_schema_required_fields": list(FINAL_EMIT_SCHEMA_REQUIRED_FIELDS),
                 "final_emit_schema_status": "PASS_REQUIRED",
                 "final_emit_contract_status": str(validate_payload.get("final_emit_contract_status", "PASS_REQUIRED")),
+                "quoted_identity_context_detected": bool(
+                    quoted_identity_context_guard.get("quoted_identity_context_detected", False)
+                ),
+                "quoted_identity_context_foreign_detected": bool(
+                    quoted_identity_context_guard.get("quoted_identity_context_foreign_detected", False)
+                ),
+                "quoted_identity_context_foreign_ids": list(
+                    quoted_identity_context_guard.get("quoted_identity_context_foreign_ids") or []
+                ),
+                "quoted_identity_context_guard_status": str(
+                    quoted_identity_context_guard.get("quoted_identity_context_guard_status", "")
+                ).strip(),
+                "quoted_identity_context_binding_effect": str(
+                    quoted_identity_context_guard.get("quoted_identity_context_binding_effect", "")
+                ).strip(),
             }
             final_emit_receipt_path.write_text(
                 json.dumps(final_emit_receipt, ensure_ascii=False, indent=2) + "\n",
@@ -535,6 +646,30 @@ def main() -> int:
         "actor_binding_key_mode": str(actor_binding_store.get("binding_key_mode", "")),
         "actor_binding_compare_token": str(actor_binding_store.get("compare_token", "")),
         "actor_binding_session_id": str(actor_binding.get("session_id", "")),
+        "quoted_identity_context_detected": bool(
+            quoted_identity_context_guard.get("quoted_identity_context_detected", False)
+        ),
+        "quoted_identity_context_line_count": int(quoted_identity_context_guard.get("quoted_identity_context_line_count", 0) or 0),
+        "quoted_identity_context_ids": list(quoted_identity_context_guard.get("quoted_identity_context_ids") or []),
+        "quoted_identity_context_foreign_detected": bool(
+            quoted_identity_context_guard.get("quoted_identity_context_foreign_detected", False)
+        ),
+        "quoted_identity_context_foreign_ids": list(
+            quoted_identity_context_guard.get("quoted_identity_context_foreign_ids") or []
+        ),
+        "quoted_identity_context_refs": list(quoted_identity_context_guard.get("quoted_identity_context_refs") or []),
+        "quoted_identity_context_guard_applied": bool(
+            quoted_identity_context_guard.get("quoted_identity_context_guard_applied", False)
+        ),
+        "quoted_identity_context_guard_reason": str(
+            quoted_identity_context_guard.get("quoted_identity_context_guard_reason", "")
+        ).strip(),
+        "quoted_identity_context_guard_status": str(
+            quoted_identity_context_guard.get("quoted_identity_context_guard_status", "")
+        ).strip(),
+        "quoted_identity_context_binding_effect": str(
+            quoted_identity_context_guard.get("quoted_identity_context_binding_effect", "")
+        ).strip(),
     }
 
     out_json = str(args.out_json or "").strip()
