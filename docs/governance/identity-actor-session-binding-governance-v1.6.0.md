@@ -4847,3 +4847,36 @@ Replay evidence (2026-03-09):
 68. `https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create/`
 69. `https://developers.openai.com/api/docs/guides/function-calling/#strict-mode`
 70. `https://github.com/openai/codex`
+
+## v1.6.0 Addendum (2026-03-16): Control-plane scoped residue scan
+
+### A1) Problem statement
+
+1. Broad scans over archival trees (`runtime/reports`, `sanitization-backups`) can surface historical `.agents/identity` literals and trigger false P0 attribution.
+2. Ownership then drifts between protocol and instance, slowing P0 closure.
+
+### A2) Mandatory behavior
+
+1. Canonical scanner: `scripts/scan_identity_path_residue.py`.
+2. Scanner include scope must be control-plane only:
+   - `catalog.local.yaml`
+   - `CURRENT_TASK.json`
+   - `IDENTITY_PROMPT.md`
+   - `META.yaml`
+   - `runtime/state/**/*`
+   - `runtime/plugins/**/*`
+   - `runtime/gate/**/*`
+3. Scanner exclude scope must always include:
+   - `runtime/reports/**`
+   - `sanitization-backups/**`
+   - `*.bak*`
+4. Attribution rule:
+   - scoped scan `PASS_REQUIRED` + live headstamp loss => default to instance-governance issue unless cross-instance protocol transport bypass evidence exists.
+
+### A3) Required scan metrics
+
+1. `scanned_file_count`
+2. `hit_count`
+3. `total_match_count`
+4. `path_residue_status`
+5. `identity_home`
