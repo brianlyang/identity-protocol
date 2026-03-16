@@ -4824,6 +4824,11 @@ def main() -> int:
                         "host_transport_post_check_blocker_active",
                         "host_transport_post_check_closure_status",
                         "host_transport_post_check_error_code",
+                        "chat_egress_uniqueness_contract_id",
+                        "chat_egress_uniqueness_status",
+                        "chat_egress_uniqueness_reason",
+                        "chat_egress_uniqueness_error_code",
+                        "chat_egress_uniqueness_observed_send_time_status",
                         "stale_reasons",
                     ):
                         if k in send_doc:
@@ -4859,6 +4864,11 @@ def main() -> int:
                         "host_transport_post_check_blocker_active",
                         "host_transport_post_check_closure_status",
                         "host_transport_post_check_error_code",
+                        "chat_egress_uniqueness_contract_id",
+                        "chat_egress_uniqueness_status",
+                        "chat_egress_uniqueness_reason",
+                        "chat_egress_uniqueness_error_code",
+                        "chat_egress_uniqueness_observed_send_time_status",
                         "stale_reasons",
                     ):
                         if k in send_validate_doc:
