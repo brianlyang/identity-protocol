@@ -43,6 +43,50 @@ def resolve_pack_and_task(catalog_path: Path, identity_id: str) -> tuple[Path, P
     return pack, task_path
 
 
+def _find_parent_marker(path: Path, marker: str) -> Path | None:
+    resolved = path.expanduser().resolve()
+    for parent in [resolved, *resolved.parents]:
+        if parent.name == marker:
+            return parent
+    return None
+
+
+def derive_active_repo_root(*, catalog_path: Path, pack_path: Path, cwd: Path | None = None) -> tuple[Path, str]:
+    """
+    Resolve active repo root deterministically from runtime context without hardcoded user paths.
+
+    Resolution order (deterministic):
+    1) project-local catalog marker (.identity)
+    2) legacy project-local catalog marker (.agents)
+    3) pack path markers (.identity / .agents)
+    4) cwd identity-protocol-local parent
+    5) cwd fallback
+    """
+    catalog_resolved = catalog_path.expanduser().resolve()
+    pack_resolved = pack_path.expanduser().resolve()
+
+    catalog_identity_marker = _find_parent_marker(catalog_resolved, ".identity")
+    if catalog_identity_marker is not None:
+        return catalog_identity_marker.parent.resolve(), "catalog_project_identity_home"
+
+    catalog_agents_marker = _find_parent_marker(catalog_resolved, ".agents")
+    if catalog_agents_marker is not None:
+        return catalog_agents_marker.parent.resolve(), "catalog_agents_identity_home"
+
+    pack_identity_marker = _find_parent_marker(pack_resolved, ".identity")
+    if pack_identity_marker is not None:
+        return pack_identity_marker.parent.resolve(), "pack_project_identity_home"
+
+    pack_agents_marker = _find_parent_marker(pack_resolved, ".agents")
+    if pack_agents_marker is not None:
+        return pack_agents_marker.parent.resolve(), "pack_agents_identity_home"
+
+    cwd_resolved = (cwd or Path.cwd()).expanduser().resolve()
+    if cwd_resolved.name == "identity-protocol-local":
+        return cwd_resolved.parent.resolve(), "cwd_identity_protocol_parent"
+    return cwd_resolved, "cwd_fallback"
+
+
 def resolve_report_path(
     *,
     report: str,

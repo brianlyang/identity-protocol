@@ -548,3 +548,50 @@ Checkpoint verdict update:
 
 1. v1.6.8 now closes installer-path anti-forget drift at install-time, not only post-repair.
 2. Runtime readiness interpretation is protected from cross-identity report selection noise by tuple-isolated auto mode.
+
+## 19) Skill path root-binding hardening (2026-03-16)
+
+### 19.1 Problem reconfirmed
+
+1. `validate_skill_path_integrity` could degrade to cwd-dependent repo-root inference when caller omitted `--active-repo-root`.
+2. In strict operations this ambiguity could blur root-misalignment vs true skill-path failures.
+3. Bundle caller omissions could reintroduce this gap across scan/three-plane delegated execution.
+
+### 19.2 Landed closure set
+
+1. Shared deterministic resolver:
+   - `scripts/tool_vendor_governance_common.py`
+   - new `derive_active_repo_root(catalog_path, pack_path, cwd)` helper (catalog/pack markers first, cwd fallback last).
+2. Validator hardening:
+   - `scripts/validate_skill_path_integrity.py`
+   - emits:
+     - `active_repo_root_resolution_source`
+     - `active_repo_root_explicit`
+   - strict fail-close branch:
+     - when root resolution degrades to ambiguous cwd fallback without explicit root
+     - error family: `IP-SPATH-005`
+3. Required bundle runner wiring:
+   - `scripts/required_gate_bundle_runner.py`
+   - always injects `--active-repo-root` for target `skill_path_integrity`, derived from runtime context when caller omits it.
+4. Surface drift enforcement:
+   - `scripts/validate_required_gate_surface_drift.py`
+   - adds token contract for bundle-side `skill_path_integrity` root wiring.
+5. Kernel contract note update:
+   - `identity/protocol/IDENTITY_RUNTIME.md` (`rq_020_skill_path_integrity_contract_v1` semantics + `IP-SPATH-005`).
+
+### 19.3 Replay evidence (serial)
+
+1. Compile sanity:
+   - `python3 -m py_compile scripts/tool_vendor_governance_common.py scripts/validate_skill_path_integrity.py scripts/required_gate_bundle_runner.py scripts/validate_required_gate_surface_drift.py`
+2. Positive deterministic-root replay (project catalog):
+   - `validate_skill_path_integrity ... --operation validate --json-only`
+   - result includes `active_repo_root_resolution_source=catalog_project_identity_home` and `PASS_REQUIRED`.
+3. Negative strict ambiguity replay (`/tmp` catalog + strict operation + no root):
+   - result `FAIL_REQUIRED`, `error_code=IP-SPATH-005`, stale reason includes `active_repo_root_cwd_fallback_not_allowed_for_strict`.
+4. Drift gate replay:
+   - `validate_required_gate_surface_drift.py --json-only` confirms bundle-side root wiring tokens present.
+
+### 19.4 Verdict update
+
+1. `ASB16-RQ-020` now has deterministic root-resolution provenance and strict ambiguity fail-close semantics.
+2. Bundle-level propagation closes caller-omission risk without identity-specific hardcoding.

@@ -7,7 +7,13 @@ import os
 from pathlib import Path
 from typing import Any
 
-from tool_vendor_governance_common import contract_required, load_json, load_yaml, resolve_pack_and_task
+from tool_vendor_governance_common import (
+    contract_required,
+    derive_active_repo_root,
+    load_json,
+    load_yaml,
+    resolve_pack_and_task,
+)
 
 STATUS_PASS_REQUIRED = "PASS_REQUIRED"
 STATUS_SKIPPED_NOT_REQUIRED = "SKIPPED_NOT_REQUIRED"
@@ -17,6 +23,7 @@ ERR_PATH_MISSING = "IP-SPATH-001"
 ERR_PATH_OUT_OF_LAYOUT = "IP-SPATH-002"
 ERR_OVERRIDE_FORMAT = "IP-SPATH-003"
 ERR_SKILL_DECLARATION_MISSING = "IP-SPATH-004"
+ERR_ACTIVE_REPO_ROOT_BINDING = "IP-SPATH-005"
 
 STRICT_OPERATIONS = {
     "activate",
@@ -91,26 +98,6 @@ def _detect_layout_mode(catalog_path: Path) -> str:
     if "/.agents/identity/" in p or "/.codex/identity/" in p:
         return "legacy_compat"
     return "custom"
-
-
-def _find_parent_marker(path: Path, marker: str) -> Path | None:
-    for parent in [path.resolve(), *path.resolve().parents]:
-        if parent.name == marker:
-            return parent
-    return None
-
-
-def _default_repo_root(*, catalog_path: Path, pack_path: Path) -> Path:
-    marker = _find_parent_marker(catalog_path, ".agents")
-    if marker is not None:
-        return marker.parent.resolve()
-    marker = _find_parent_marker(pack_path, ".agents")
-    if marker is not None:
-        return marker.parent.resolve()
-    cwd = Path.cwd().resolve()
-    if cwd.name == "identity-protocol-local":
-        return cwd.parent.resolve()
-    return cwd
 
 
 def _default_runtime_root() -> Path:
@@ -322,11 +309,15 @@ def main() -> int:
     if layout_mode == "auto":
         layout_mode = _detect_layout_mode(catalog_path)
 
-    active_repo_root = (
-        Path(args.active_repo_root).expanduser().resolve()
-        if _nonempty(args.active_repo_root)
-        else _default_repo_root(catalog_path=catalog_path, pack_path=pack_path)
-    )
+    active_repo_root_explicit = _nonempty(args.active_repo_root)
+    if active_repo_root_explicit:
+        active_repo_root = Path(args.active_repo_root).expanduser().resolve()
+        active_repo_root_source = "cli_explicit"
+    else:
+        active_repo_root, active_repo_root_source = derive_active_repo_root(
+            catalog_path=catalog_path,
+            pack_path=pack_path,
+        )
     active_runtime_root = (
         Path(args.active_runtime_root).expanduser().resolve()
         if _nonempty(args.active_runtime_root)
@@ -342,6 +333,8 @@ def main() -> int:
         "auto_required_signal": auto_required,
         "layout_mode": layout_mode,
         "active_repo_root": str(active_repo_root),
+        "active_repo_root_resolution_source": active_repo_root_source,
+        "active_repo_root_explicit": bool(active_repo_root_explicit),
         "active_runtime_root": str(active_runtime_root),
         "allowed_skill_roots": [],
         "required_skills": [],
@@ -372,6 +365,21 @@ def main() -> int:
         payload["stale_reasons"] = ["contract_not_required"]
         _emit(payload, json_only=args.json_only)
         return 0
+
+    if (
+        args.operation in STRICT_OPERATIONS
+        and not active_repo_root_explicit
+        and str(active_repo_root_source).strip().lower() == "cwd_fallback"
+    ):
+        payload["path_integrity_status"] = STATUS_FAIL_REQUIRED
+        payload["path_integrity_error_code"] = ERR_ACTIVE_REPO_ROOT_BINDING
+        payload["error_code"] = ERR_ACTIVE_REPO_ROOT_BINDING
+        payload["stale_reasons"] = [
+            "active_repo_root_resolution_ambiguous",
+            "active_repo_root_cwd_fallback_not_allowed_for_strict",
+        ]
+        _emit(payload, json_only=args.json_only)
+        return 1
 
     contract_skills = _collect_contract_skills(contract if isinstance(contract, dict) else {})
     capability_skills = _collect_capability_skills(task)

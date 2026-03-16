@@ -106,6 +106,15 @@ Required receipt fields:
 - `path_integrity_status`
 - `path_integrity_error_code`
 
+Recommended determinism field:
+
+- `active_repo_root_resolution_source`
+
+Hard semantics:
+
+1. Strict operations must not silently rely on ambiguous cwd fallback for `active_repo_root`.
+2. When `active_repo_root` cannot be derived from catalog/pack context and falls back to cwd in strict mode, fail-close must use dedicated family `IP-SPATH-005`.
+
 ### rq_021_route_workflow_version_pinning_contract_v1
 
 Required receipt fields:

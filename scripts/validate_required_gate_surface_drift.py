@@ -220,6 +220,11 @@ BUNDLE_ARGS_FORBID_UNKNOWN: tuple[str, ...] = (
     "--final-emit-contract-status",
     "--final-emit-schema-status",
 )
+BUNDLE_SKILL_PATH_ACTIVE_REPO_ROOT_REQUIRED_TOKENS: tuple[str, ...] = (
+    "skill_path_active_repo_root",
+    "if spec.target_name == \"skill_path_integrity\":",
+    "--active-repo-root",
+)
 CANONICAL_GATE_PROFILE_FILE = "identity/protocol/mappings/layer-targeted-gate-profile.current.yaml"
 
 VERSIONED_SCRIPT_ALIAS_RE = re.compile(r"^(?P<prefix>validate|normalize|emit)_v\d+_(?P<tail>.+)\.py$")
@@ -742,6 +747,13 @@ def _invalid_bundle_arg_values_for_surface(*, surface_path: Path, text: str) -> 
     return rows
 
 
+def _missing_bundle_skill_path_active_repo_root_tokens(text: str) -> list[str]:
+    body = str(text or "")
+    if not body:
+        return list(BUNDLE_SKILL_PATH_ACTIVE_REPO_ROOT_REQUIRED_TOKENS)
+    return [token for token in BUNDLE_SKILL_PATH_ACTIVE_REPO_ROOT_REQUIRED_TOKENS if token not in body]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detect strict-surface direct validator drift against bundle-runner lineage.")
     parser.add_argument("--repo-root", default=".")
@@ -777,6 +789,7 @@ def main() -> int:
     session_id_passthrough_missing: dict[str, dict[str, list[str]]] = {}
     bundle_arg_contract_missing: dict[str, list[dict[str, Any]]] = {}
     bundle_arg_value_invalid: dict[str, list[dict[str, Any]]] = {}
+    bundle_runner_skill_path_active_repo_root_missing: list[str] = []
     dialogue_bundle_missing: dict[str, list[str]] = {}
 
     for rel in STRICT_SURFACES:
@@ -1331,6 +1344,24 @@ def main() -> int:
             existing_tokens = list(missing_execution_tokens.get(WORKFLOW_REQUIRED_GATE_SURFACE, []))
             missing_execution_tokens[WORKFLOW_REQUIRED_GATE_SURFACE] = sorted(set(existing_tokens + missing_tokens))
 
+    bundle_runner_path = repo_root / BUNDLE_RUNNER_SCRIPT
+    if bundle_runner_path.exists():
+        bundle_runner_text = _read_text(bundle_runner_path)
+        bundle_runner_skill_path_active_repo_root_missing = _missing_bundle_skill_path_active_repo_root_tokens(
+            bundle_runner_text
+        )
+        if bundle_runner_skill_path_active_repo_root_missing:
+            existing_tokens = list(missing_execution_tokens.get(BUNDLE_RUNNER_SCRIPT, []))
+            missing_execution_tokens[BUNDLE_RUNNER_SCRIPT] = sorted(
+                set(
+                    existing_tokens
+                    + [
+                        f"bundle_skill_path_active_repo_root_wiring_missing:{token}"
+                        for token in bundle_runner_skill_path_active_repo_root_missing
+                    ]
+                )
+            )
+
     if mapping_errors or missing_surface_files:
         status = STATUS_FAIL_REQUIRED
         error_code = "IP-GATE-ENTRY-001"
@@ -1429,6 +1460,10 @@ def main() -> int:
         "bundle_runner_required_args": list(BUNDLE_REQUIRED_ARGS),
         "bundle_arg_contract_missing": bundle_arg_contract_missing,
         "bundle_args_forbid_unknown": list(BUNDLE_ARGS_FORBID_UNKNOWN),
+        "bundle_skill_path_active_repo_root_required_tokens": list(
+            BUNDLE_SKILL_PATH_ACTIVE_REPO_ROOT_REQUIRED_TOKENS
+        ),
+        "bundle_runner_skill_path_active_repo_root_missing": bundle_runner_skill_path_active_repo_root_missing,
         "bundle_args_forbid_noncanonical": {
             "--gate-profile-file": CANONICAL_GATE_PROFILE_FILE
         },

@@ -519,3 +519,38 @@ Interpretation lock:
 
 1. Installer and probe logic remain alias-driven and identity-agnostic.
 2. No identity allowlist or stream literal pinning is permitted in closure code paths.
+
+## 18) Skill path integrity root-binding hardening (2026-03-16)
+
+### 18.1 Scope and rationale
+
+1. `skill_path_integrity` is a required bundle target (`ASB16-RQ-020`) and must not degrade to cwd-dependent root inference under strict operations.
+2. Instance-layer orchestration may omit `--active-repo-root`; protocol layer must provide deterministic fallback from runtime catalog/pack context.
+3. Fail-close semantics must distinguish:
+   - true skill path missing/out-of-layout
+   - root-binding ambiguity.
+
+### 18.2 Mandatory protocol behavior
+
+1. `validate_skill_path_integrity.py` must resolve `active_repo_root` in this order:
+   - explicit `--active-repo-root`
+   - catalog/pack-derived project root
+   - cwd-derived fallback (only allowed outside strict fail-close branch)
+2. Strict operations (`activate/update/readiness/e2e/ci/validate/scan/three-plane/inspection/mutation`) must fail-close when root resolution is ambiguous cwd fallback and no explicit root is supplied.
+3. Dedicated error family:
+   - `IP-SPATH-005` (`active_repo_root` strict binding incomplete/ambiguous)
+4. Receipts must expose root resolution provenance:
+   - `active_repo_root_resolution_source`
+   - `active_repo_root_explicit`
+
+### 18.3 Required bundle runner wiring
+
+1. `required_gate_bundle_runner.py` must always inject `--active-repo-root` for target `skill_path_integrity`.
+2. When caller omits root, bundle runner must derive deterministic root from catalog/pack (non-hardcoded).
+3. Surface drift validator must enforce this wiring and fail-close when tokens are missing.
+
+### 18.4 Governance compatibility
+
+1. No user absolute-path literals are introduced.
+2. No identity-specific branching is introduced.
+3. Existing path immutability and installer atomic baseline closure semantics remain unchanged.

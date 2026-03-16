@@ -22,7 +22,7 @@ from protocol_infra_contract import (
     PRIVILEGE_ESCALATION_REASON_PREFIX,
     PRIVILEGE_ESCALATION_REMEDIATION_HINT,
 )
-from tool_vendor_governance_common import load_json, resolve_pack_and_task
+from tool_vendor_governance_common import derive_active_repo_root, load_json, resolve_pack_and_task
 
 try:
     import psutil  # type: ignore
@@ -1612,6 +1612,32 @@ def _resolve_input_path(repo_root: Path, raw_path: str) -> Path:
     return (repo_root / path).resolve()
 
 
+def _resolve_skill_path_active_repo_root_binding(
+    *,
+    catalog_path: str,
+    identity_id: str,
+    active_repo_root_arg: str,
+    repo_root: Path,
+) -> tuple[str, str, str]:
+    explicit = str(active_repo_root_arg or "").strip()
+    if explicit:
+        return str(Path(explicit).expanduser().resolve()), "cli_explicit", ""
+    try:
+        pack_path, _task_path = resolve_pack_and_task(
+            Path(catalog_path).expanduser().resolve(),
+            identity_id,
+        )
+        resolved_root, resolved_source = derive_active_repo_root(
+            catalog_path=Path(catalog_path).expanduser().resolve(),
+            pack_path=pack_path,
+            cwd=repo_root,
+        )
+        return str(resolved_root), str(resolved_source), ""
+    except Exception as exc:
+        fallback_root = repo_root.parent.resolve()
+        return str(fallback_root), "bundle_repo_root_fallback", f"skill_path_active_repo_root_resolve_failed:{exc}"
+
+
 def _is_strict_no_trim_operation(operation: str) -> bool:
     return str(operation or "").strip().lower() in set(STRICT_NO_TRIM_OPERATIONS_DEFAULT)
 
@@ -1622,6 +1648,7 @@ def main() -> int:
     parser.add_argument("--identity-id", required=True)
     parser.add_argument("--operation", default="validate")
     parser.add_argument("--repo-catalog", default="")
+    parser.add_argument("--active-repo-root", default="")
     parser.add_argument("--contract-mapping", default="")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--report-selected-path", default="")
@@ -1774,6 +1801,20 @@ def main() -> int:
     if wrapper_policy_errors:
         failure_count += len(wrapper_policy_errors)
 
+    (
+        skill_path_active_repo_root,
+        skill_path_active_repo_root_source,
+        skill_path_active_repo_root_error,
+    ) = _resolve_skill_path_active_repo_root_binding(
+        catalog_path=str(args.catalog),
+        identity_id=str(args.identity_id),
+        active_repo_root_arg=str(args.active_repo_root or ""),
+        repo_root=repo_root,
+    )
+    if skill_path_active_repo_root_error:
+        mapping_errors.append(skill_path_active_repo_root_error)
+        failure_count += 1
+
     strict_operation = _is_strict_no_trim_operation(operation_normalized)
     wrapper_required_surface_label = str(
         wrapper_policy.get("required_surface_label", DEFAULT_HOST_WRAPPER_SURFACE_LABEL)
@@ -1920,6 +1961,9 @@ def main() -> int:
                 cmd.extend(["--final-emit-policy-mode", str(args.final_emit_policy_mode).strip()])
             if str(args.final_emit_schema_status or "").strip():
                 cmd.extend(["--final-emit-schema-status", str(args.final_emit_schema_status).strip()])
+
+        if spec.target_name == "skill_path_integrity":
+            cmd.extend(["--active-repo-root", skill_path_active_repo_root])
 
         if spec.target_name in {
             "multimodal_plugin_enforcement",
@@ -2132,6 +2176,8 @@ def main() -> int:
         "missing_targets": missing_targets,
         "results": result_rows,
         "surface_label": surface_label,
+        "skill_path_active_repo_root": skill_path_active_repo_root,
+        "skill_path_active_repo_root_source": skill_path_active_repo_root_source,
         "wrapper_surface_required_label": wrapper_required_surface_label,
         "wrapper_required_surface_status": str(
             wrapper_policy.get("required_wrapper_surface_status", STATUS_PASS_REQUIRED)
