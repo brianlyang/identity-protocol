@@ -436,6 +436,9 @@ For each v1.6.6 implementation round, evidence must include:
 
 The first three are required payload artifacts, and manifest is the required tuple index (`command`, `rc`, `sha256`, `timestamp`).
 
+Replay commands documented for v1.6.6 MUST write named output artifacts under
+`activity/evidence/v166-host-channel/<date>/...`; ephemeral `/tmp/...` paths remain execution-local scratch only and are not admissible as normative replay evidence.
+
 ## 3) Four-track cross verification (frozen consensus)
 
 ### T1 Roundtable (repo machine replay)
