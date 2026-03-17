@@ -641,7 +641,7 @@ def _resolve_repo_catalog(args: argparse.Namespace) -> tuple[Path, str]:
     return _default_repo_catalog_path(), "repo_default"
 
 
-def _resolve_actor_id(args: argparse.Namespace) -> tuple[str, str]:
+def _resolve_strict_actor_id(args: argparse.Namespace) -> tuple[str, str]:
     actor_raw = str(args.actor_id or "").strip()
     if actor_raw:
         return resolve_protocol_actor_id(actor_raw), "explicit"
@@ -780,7 +780,7 @@ def main() -> int:
 
         catalog_path, catalog_resolution_mode = _resolve_catalog(args)
         repo_catalog_path, repo_catalog_resolution_mode = _resolve_repo_catalog(args)
-        actor_id, actor_resolution_mode = _resolve_actor_id(args)
+        actor_id, actor_resolution_mode = _resolve_strict_actor_id(args)
         identity_id, identity_resolution_mode = _resolve_identity_id(
             args=args,
             catalog_path=catalog_path,

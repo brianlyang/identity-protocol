@@ -11,6 +11,7 @@ STATUS_FAIL_REQUIRED = "FAIL_REQUIRED"
 ERR_RESPONSE_AUTHORITY_CONSUMER = "IP-HDSTAMP-CONSUMER-001"
 
 DEFAULT_TARGET_FILES = (
+    "scripts/final_emit_governed.py",
     "scripts/render_identity_response_stamp.py",
     "scripts/compose_and_validate_governed_reply.py",
     "scripts/validate_reply_identity_context_first_line.py",
@@ -22,6 +23,7 @@ DEFAULT_TARGET_FILES = (
 )
 
 FORBID_HOST_FALLBACK_RESOLVER = {
+    "scripts/final_emit_governed.py",
     "scripts/render_identity_response_stamp.py",
     "scripts/compose_and_validate_governed_reply.py",
     "scripts/validate_reply_identity_context_first_line.py",
