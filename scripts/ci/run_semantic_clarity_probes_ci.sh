@@ -18,8 +18,9 @@ python3 scripts/validate_stream_scope_semantic_integrity.py --base HEAD --head H
 python3 scripts/validate_runtime_file_boundary_governance.py --json-only > "$TMP_ROOT/runtime_boundary_positive.json"
 python3 scripts/validate_strict_actor_entry_semantics.py --json-only > "$TMP_ROOT/strict_actor_entry_positive.json"
 python3 scripts/validate_response_authority_consumer_semantics.py --json-only > "$TMP_ROOT/authority_consumer_positive.json"
+python3 scripts/validate_activate_cwd_invariance.py --json-only > "$TMP_ROOT/activate_cwd_positive.json"
 
-python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" <<'PY'
+python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" "$TMP_ROOT/activate_cwd_positive.json" <<'PY'
 import json,sys
 semantic=json.load(open(sys.argv[1]))
 cli=json.load(open(sys.argv[2]))
@@ -27,12 +28,14 @@ stream=json.load(open(sys.argv[3]))
 boundary=json.load(open(sys.argv[4]))
 strict_actor=json.load(open(sys.argv[5]))
 authority=json.load(open(sys.argv[6]))
+activate_cwd=json.load(open(sys.argv[7]))
 assert semantic.get("semantic_term_registry_status") == "PASS_REQUIRED", semantic
 assert cli.get("cli_catalog_default_semantics_status") == "PASS_REQUIRED", cli
 assert stream.get("stream_scope_semantic_integrity_status") == "SKIPPED_NOT_REQUIRED", stream
 assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED", boundary
 assert strict_actor.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", strict_actor
 assert authority.get("response_authority_consumer_semantics_status") == "PASS_REQUIRED", authority
+assert activate_cwd.get("activate_cwd_invariance_status") == "PASS_REQUIRED", activate_cwd
 print("[PASS] positive semantic clarity lane")
 PY
 
