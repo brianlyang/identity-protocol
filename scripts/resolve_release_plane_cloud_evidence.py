@@ -105,6 +105,28 @@ def _default_run_url(server_url: str, repository: str, run_id: str) -> str:
     return f"{server}/{repo}/actions/runs/{token}"
 
 
+def _classify_github_http_status(status_code: int, headers: dict[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
+    raw_headers = headers or {}
+    remaining = str(raw_headers.get("X-RateLimit-Remaining", "") or "").strip()
+    reset_epoch = str(raw_headers.get("X-RateLimit-Reset", "") or "").strip()
+    detail: dict[str, Any] = {
+        "adapter_http_status": int(status_code),
+        "github_rate_limit_remaining": remaining,
+        "github_rate_limit_reset_epoch": reset_epoch,
+    }
+    if status_code == 401:
+        return "release_plane_github_jobs_auth_unauthorized", detail
+    if status_code in {403, 429} and remaining == "0":
+        return "release_plane_github_jobs_rate_limited", detail
+    if status_code == 403:
+        return "release_plane_github_jobs_forbidden", detail
+    if status_code == 404:
+        return "release_plane_github_jobs_not_found", detail
+    if 500 <= int(status_code) <= 599:
+        return f"release_plane_github_jobs_server_error:{status_code}", detail
+    return f"release_plane_github_jobs_http_error:{status_code}", detail
+
+
 def _write_canonical_checks_json(
     *,
     identity_id: str,
@@ -210,6 +232,9 @@ def resolve_release_cloud_evidence(
         "github_token_env": github_token_env,
         "required_checks_count": 0,
         "stale_reasons": [],
+        "adapter_http_status": "",
+        "github_rate_limit_remaining": "",
+        "github_rate_limit_reset_epoch": "",
     }
 
     if explicit_checks_json:
@@ -281,7 +306,9 @@ def resolve_release_cloud_evidence(
         )
     except urllib.error.HTTPError as exc:
         payload["release_cloud_evidence_adapter_status"] = STATUS_FAIL_REQUIRED
-        payload["stale_reasons"] = [f"release_plane_github_jobs_http_error:{exc.code}"]
+        reason, detail = _classify_github_http_status(int(exc.code), dict(exc.headers or {}))
+        payload["stale_reasons"] = [reason]
+        payload.update(detail)
         return payload
     except urllib.error.URLError as exc:
         payload["release_cloud_evidence_adapter_status"] = STATUS_FAIL_REQUIRED
