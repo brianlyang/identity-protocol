@@ -169,10 +169,14 @@ for ID in ${IDS}; do
     python3 scripts/report_three_plane_status.py --identity-id "$ID" --catalog "${CATALOG_PATH}" --repo-catalog "${REPO_CATALOG_PATH}" --actor-id "$HEADSTAMP_ACTOR_ID" --session-id "$HEADSTAMP_SESSION_ID" --execution-report "$UPGRADE_REPORT" --expected-work-layer protocol --expected-source-layer project --out "$THREE_PLANE_REPORT_JSON"
     IDENTITY_ID="$ID" CATALOG_PATH="$CATALOG_PATH" REPO_CATALOG_PATH="$REPO_CATALOG_PATH" HEAD_SHA="$HEAD_SHA" GITHUB_REF_NAME="${GITHUB_REF_NAME:-main}" HEADSTAMP_ACTOR_ID="$HEADSTAMP_ACTOR_ID" HEADSTAMP_SESSION_ID="$HEADSTAMP_SESSION_ID" UPGRADE_REPORT_PATH="$UPGRADE_REPORT" THREE_PLANE_REPORT_PATH="$THREE_PLANE_REPORT_JSON" python3 - <<'PY'
 import json
+import importlib.util
+import io
 import os
 import subprocess
 import sys
 import tempfile
+from contextlib import redirect_stdout
+from pathlib import Path
 
 report_path = os.environ["UPGRADE_REPORT_PATH"]
 three_plane_path = os.environ["THREE_PLANE_REPORT_PATH"]
@@ -451,6 +455,111 @@ with tempfile.TemporaryDirectory(prefix="release-cloud-evidence-ci-") as tmpdir:
     adapter_payload = jobs_three_plane_payload.get("release_cloud_evidence_adapter") or {}
     if str(adapter_payload.get("release_cloud_evidence_adapter_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("[FAIL] expected three-plane adapter status PASS_REQUIRED for jobs-json probe")
+
+    repo_root = os.getcwd()
+    full_scan_script = Path(repo_root) / "scripts" / "full_identity_protocol_scan.py"
+    sys.path.insert(0, str(Path(repo_root) / "scripts"))
+    sys.path.insert(0, repo_root)
+    spec = importlib.util.spec_from_file_location("full_scan_release_adapter_probe_mod", full_scan_script)
+    if spec is None or spec.loader is None:
+        raise SystemExit("[FAIL] unable to load full_identity_protocol_scan.py for release adapter parity probe")
+    full_scan_mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = full_scan_mod
+    spec.loader.exec_module(full_scan_mod)
+
+    command_log = []
+
+    def fake_full_scan_run(cmd, cwd, env=None):
+        command_log.append(list(cmd))
+        target = cmd[1] if len(cmd) > 1 else ""
+        if target.endswith("validate_release_plane_cloud_evidence.py"):
+            return full_scan_mod.CheckResult(
+                rc=0,
+                ok=True,
+                tail="PASS_REQUIRED",
+                stdout=json.dumps(jobs_payload),
+                stderr="",
+            )
+        if target.endswith("report_three_plane_status.py"):
+            return full_scan_mod.CheckResult(
+                rc=0,
+                ok=True,
+                tail="CLOSED",
+                stdout=json.dumps(jobs_three_plane_payload),
+                stderr="",
+            )
+        return full_scan_mod.CheckResult(rc=0, ok=True, tail="PASS_REQUIRED", stdout="{}", stderr="")
+
+    full_scan_mod._run = fake_full_scan_run
+    full_scan_out_path = Path(tmpdir) / "full-scan-jobs-pass.json"
+    argv = [
+        str(full_scan_script),
+        "--repo-root",
+        repo_root,
+        "--scan-mode",
+        "target",
+        "--identity-ids",
+        identity_id,
+        "--project-catalog",
+        catalog_path,
+        "--actor-id",
+        headstamp_actor_id,
+        "--session-id",
+        headstamp_session_id,
+        "--target-branch",
+        github_ref_name,
+        "--release-head-sha",
+        head_sha,
+        "--required-gates-run-id",
+        "ci-synthetic-run",
+        "--run-url",
+        "https://example.invalid/run/ci-synthetic-run",
+        "--workflow-file-sha",
+        head_sha,
+        "--run-head-sha",
+        head_sha,
+        "--run-workflow-file-sha",
+        head_sha,
+        "--jobs-json",
+        jobs_pass_path,
+        "--out",
+        str(full_scan_out_path),
+    ]
+    old_argv = sys.argv
+    sys.argv = argv
+    full_scan_stdout = io.StringIO()
+    with redirect_stdout(full_scan_stdout):
+        rc = full_scan_mod.main()
+    sys.argv = old_argv
+    if rc != 0:
+        raise SystemExit(f"[FAIL] expected full-scan adapter parity probe to pass, got rc={rc}: {full_scan_stdout.getvalue()}")
+
+    full_scan_payload = json.loads(full_scan_out_path.read_text(encoding="utf-8"))
+    full_scan_row = ((full_scan_payload.get("catalogs") or [{}])[0].get("identities") or [{}])[0]
+    full_scan_release = ((full_scan_row.get("checks") or {}).get("release_plane_cloud_evidence") or {})
+    if str(full_scan_release.get("release_plane_cloud_evidence_status", "")).strip().upper() != "PASS_REQUIRED":
+        raise SystemExit("[FAIL] expected full-scan release-plane consumer to preserve validator PASS_REQUIRED")
+    if str((full_scan_release.get("conditions") or {}).get("required_checks_status", "")).strip().upper() != "PASS":
+        raise SystemExit("[FAIL] expected full-scan release-plane consumer to preserve required_checks_status=PASS")
+    if str((full_scan_row.get("three_plane") or {}).get("release", "")).strip().upper() != "CLOSED":
+        raise SystemExit("[FAIL] expected full-scan three-plane projection to preserve release=CLOSED")
+
+    release_cmd = next(
+        cmd for cmd in command_log if len(cmd) > 1 and str(cmd[1]).endswith("validate_release_plane_cloud_evidence.py")
+    )
+    three_cmd = next(
+        cmd for cmd in command_log if len(cmd) > 1 and str(cmd[1]).endswith("report_three_plane_status.py")
+    )
+    if "--checks-json" not in release_cmd or "--checks-json" not in three_cmd:
+        raise SystemExit("[FAIL] expected full-scan parity probe to route both consumers through canonical checks-json")
+    if "--jobs-json" in release_cmd or "--jobs-json" in three_cmd:
+        raise SystemExit("[FAIL] full-scan parity probe must fan out canonical checks-json, not raw jobs-json")
+    release_checks_idx = release_cmd.index("--checks-json") + 1
+    three_checks_idx = three_cmd.index("--checks-json") + 1
+    if release_cmd[release_checks_idx] != three_cmd[three_checks_idx]:
+        raise SystemExit("[FAIL] expected full-scan consumers to share one canonical checks-json path")
+
+    print("[OK] release adapter consumer parity probe passed: validator/three-plane/full-scan stay aligned")
 
 print("[OK] release cloud evidence checks-state probes passed: EVIDENCE_MISSING/EMPTY_SET/FAILED/PASS remain distinct")
 PY
