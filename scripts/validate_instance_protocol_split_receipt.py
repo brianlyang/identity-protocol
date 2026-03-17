@@ -170,6 +170,8 @@ def main() -> int:
     ap.add_argument("--catalog", required=True)
     ap.add_argument("--identity-id", required=True)
     ap.add_argument("--repo-catalog", default="identity/catalog/identities.yaml")
+    ap.add_argument("--actor-id", default="")
+    ap.add_argument("--session-id", default="")
     ap.add_argument("--receipt", default="")
     ap.add_argument("--expected-work-layer", default="")
     ap.add_argument("--expected-source-layer", default="")
@@ -209,6 +211,8 @@ def main() -> int:
                 identity_id=args.identity_id,
                 catalog_path=catalog_path,
                 repo_catalog_path=repo_catalog_path,
+                actor_id=args.actor_id,
+                session_id=str(args.session_id or "").strip(),
             ).source_domain
         except Exception:
             source_default = "auto"
