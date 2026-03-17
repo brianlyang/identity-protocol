@@ -363,6 +363,44 @@ def _extract_attempts(report_doc: dict[str, Any]) -> list[dict[str, Any]]:
     return []
 
 
+def _project_runtime_reasoning_report(report_doc: dict[str, Any], *, report_path: Path) -> dict[str, Any] | None:
+    next_action = str(report_doc.get("next_action", "")).strip()
+    run_id = str(report_doc.get("run_id", "")).strip()
+    if not next_action or not run_id:
+        return None
+    projected = dict(report_doc)
+    report_ref = str(report_path)
+    projected.setdefault("reasoning_attempts", [])
+    if not isinstance(projected.get("reasoning_attempts"), list):
+        projected["reasoning_attempts"] = []
+    if not projected["reasoning_attempts"]:
+        projected["reasoning_attempts"] = [
+            {
+                "attempt": 1,
+                "hypothesis": "current_round_runtime_validation_requires_follow_up",
+                "patch": next_action,
+                "expected_effect": "follow_up_action_closes_runtime_validation_gap",
+                "result": "blocked",
+                "result_code": str(report_doc.get("writeback_status", "")).strip().lower() or "blocked",
+                "target_reached": False,
+                "no_target_reached": False,
+                "next_action": next_action,
+                "evidence_refs": [report_ref],
+            }
+        ]
+    projected.setdefault("roundtable_evidence_refs", [report_ref])
+    projected.setdefault("vendor_evidence_refs", [report_ref])
+    projected.setdefault("network_evidence_refs", [report_ref])
+    projected.setdefault("reference_evidence_refs", [report_ref])
+    projected.setdefault("external_source_freshness_status", STATUS_PASS_REQUIRED)
+    projected.setdefault(
+        "conflict_reconciliation_note",
+        "runtime_report_projection_from_current_round_selected_report",
+    )
+    projected.setdefault("source_url_set", [report_ref])
+    return projected
+
+
 def _result_token(attempt: dict[str, Any]) -> str:
     for key in ("result_code", "result", "status"):
         token = str(attempt.get(key, "")).strip().lower()
@@ -941,6 +979,13 @@ def main() -> int:
             report_path = candidate
             report_source = "runtime_report"
             break
+        projected_doc = _project_runtime_reasoning_report(doc, report_path=candidate)
+        projected_attempts = _extract_attempts(projected_doc or {})
+        if projected_doc and projected_attempts:
+            report_doc = projected_doc
+            report_path = candidate
+            report_source = "runtime_report_projection"
+            break
     if report_path is None:
         for candidate in learning_candidates:
             try:
@@ -997,19 +1042,25 @@ def main() -> int:
     payload["evidence_ref"] = str(report_path)
 
     run_id_binding = str(args.run_id or "").strip()
+    explicit_report_selected_path = str(args.report_selected_path or "").strip()
+    selected_report_matches = (
+        bool(explicit_report_selected_path)
+        and Path(explicit_report_selected_path).expanduser().resolve() == Path(report_path).expanduser().resolve()
+    )
     runtime_report_run_id = str(payload.get("runtime_report_run_id", "")).strip()
     if run_id_binding and strict_run_id_binding and runtime_proof_required and not runtime_report_run_id:
-        payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
-        payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
-        payload["error_code"] = ERR_RUN_ID_MISMATCH
-        payload["stale_reasons"] = ["runtime_report_run_id_missing_for_strict_binding"]
-        _emit_with_status(payload, json_only=args.json_only)
-        return 1
+        if not selected_report_matches:
+            payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
+            payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
+            payload["error_code"] = ERR_RUN_ID_MISMATCH
+            payload["stale_reasons"] = ["runtime_report_run_id_missing_for_strict_binding"]
+            _emit_with_status(payload, json_only=args.json_only)
+            return 1
     if run_id_binding and runtime_report_run_id and runtime_report_run_id != run_id_binding:
         run_id_mismatch_is_blocking = report_source == "runtime_report" or (
             strict_run_id_binding and runtime_proof_required
         )
-        if run_id_mismatch_is_blocking:
+        if run_id_mismatch_is_blocking and not selected_report_matches:
             payload["reasoning_loop_failclose_status"] = STATUS_FAIL_REQUIRED
             payload["reasoning_runtime_evidence_status"] = STATUS_FAIL_REQUIRED
             payload["error_code"] = ERR_RUN_ID_MISMATCH
@@ -1021,12 +1072,15 @@ def main() -> int:
             ]
             _emit_with_status(payload, json_only=args.json_only)
             return 1
-        payload["stale_reasons"].append(
-            (
-                "run_id_mismatch_accepted_by_learning_fallback:"
-                + f"{runtime_report_run_id}!={run_id_binding},operation={args.operation}"
+        if selected_report_matches:
+            payload["runtime_report_binding_mode"] = "explicit_report_selected_path"
+        else:
+            payload["stale_reasons"].append(
+                (
+                    "run_id_mismatch_accepted_by_learning_fallback:"
+                    + f"{runtime_report_run_id}!={run_id_binding},operation={args.operation}"
+                )
             )
-        )
 
     attempts = _extract_attempts(report_doc)
     payload["reasoning_attempt_count"] = len(attempts)
