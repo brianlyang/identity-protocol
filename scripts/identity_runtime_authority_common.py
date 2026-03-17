@@ -91,12 +91,35 @@ def _resolve_authoritative_identity(
         conflicts = list_session_primary_conflicts(store, session_id=sid)
         if conflicts:
             return "", "actor_binding_session_primary_conflict", conflicts[0]
+        return "", "actor_binding_session_binding_missing", {
+            "actor_id": actor,
+            "session_id": sid,
+            "actor_session_path": str(store.get("actor_session_path", "")).strip(),
+        }
 
     if actor and not sid:
         binding = load_actor_binding(catalog_path, actor)
         identity_id = str(binding.get("identity_id", "")).strip()
         if identity_id:
             return identity_id, "actor_binding_actor_scoped", binding
+        store = load_actor_binding_store(catalog_path, actor)
+        bound_identity_ids = sorted(
+            {
+                str(item.get("identity_id", "")).strip()
+                for item in (store.get("bindings") or [])
+                if isinstance(item, dict) and str(item.get("identity_id", "")).strip()
+            }
+        )
+        if bound_identity_ids:
+            return "", "actor_binding_actor_scope_ambiguous", {
+                "actor_id": actor,
+                "identity_ids": bound_identity_ids,
+                "actor_session_path": str(store.get("actor_session_path", "")).strip(),
+            }
+        return "", "actor_binding_actor_scope_missing", {
+            "actor_id": actor,
+            "actor_session_path": str(store.get("actor_session_path", "")).strip(),
+        }
 
     pointer_path = _canonical_session_pointer_path(catalog_path)
     if pointer_path.exists():
@@ -205,6 +228,49 @@ def validate_runtime_egress_identity_authority(
             f"identities={','.join(sorted(conflict_identity_ids)) or 'missing'}"
         ]
         payload["identity_authority_next_action"] = "repair_session_primary_conflict_then_retry"
+        return payload
+
+    if resolution_mode == "actor_binding_session_binding_missing":
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [
+            "session_primary_identity_missing:"
+            f"actor_id={actor or 'missing'}:"
+            f"session_id={sid or 'missing'}"
+        ]
+        payload["identity_authority_next_action"] = "bind_session_primary_identity_then_retry"
+        return payload
+
+    if resolution_mode == "actor_binding_actor_scope_ambiguous":
+        ambiguous_identity_ids = [
+            str(item).strip()
+            for item in (authority_doc.get("identity_ids") or [])
+            if str(item).strip()
+        ]
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [
+            "actor_scoped_identity_ambiguous:"
+            f"actor_id={actor or 'missing'}:"
+            f"identities={','.join(sorted(ambiguous_identity_ids)) or 'missing'}"
+        ]
+        payload["identity_authority_next_action"] = "provide_session_id_or_explicit_identity_then_retry"
+        return payload
+
+    if resolution_mode == "actor_binding_actor_scope_missing":
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = [
+            f"actor_scoped_identity_missing:actor_id={actor or 'missing'}"
+        ]
+        payload["identity_authority_next_action"] = "bind_actor_identity_or_pass_identity_explicitly_then_retry"
+        return payload
+
+    if resolution_mode == "authority_unresolved":
+        payload["identity_authority_status"] = STATUS_FAIL_REQUIRED
+        payload["identity_authority_error_code"] = ERR_IDENTITY_AUTHORITY_VIOLATION
+        payload["identity_authority_stale_reasons"] = ["authoritative_identity_unresolved"]
+        payload["identity_authority_next_action"] = "provide_runtime_authority_context_then_retry"
         return payload
 
     if authoritative_identity_id:

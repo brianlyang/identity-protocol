@@ -212,6 +212,8 @@ def _session_data(catalog_path: Path, actor_id: str, identity_id: str, session_i
         payload = dict(actor_binding)
         payload["session_pointer_source"] = "actor"
         return payload
+    if str(actor_id or "").strip():
+        return {}
     p = _session_pointer_path(catalog_path)
     if not p.exists():
         return {}

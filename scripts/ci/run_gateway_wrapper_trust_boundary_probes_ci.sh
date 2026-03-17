@@ -860,6 +860,25 @@ elif name == "fixture_identity_runtime_egress_blocked":
     reasons = stale_reasons(doc)
     if "selected_identity_not_runtime_eligible:probe-fixture" not in reasons:
         raise SystemExit("fixture_identity_runtime_egress_blocked: expected non-runtime-eligible reason")
+elif name == "session_bound_missing_primary_identity_must_fail":
+    if rc == 0:
+        raise SystemExit("session_bound_missing_primary_identity_must_fail: expected non-zero rc")
+    error_code = str(doc.get("error_code", "")).strip()
+    if error_code != "IP-IAUTH-001":
+        raise SystemExit("session_bound_missing_primary_identity_must_fail: expected IP-IAUTH-001")
+    status = str(doc.get("identity_authority_status", "")).strip().upper()
+    if status != "FAIL_REQUIRED":
+        raise SystemExit("session_bound_missing_primary_identity_must_fail: expected FAIL_REQUIRED identity authority status")
+    resolution_mode = str(doc.get("identity_authority_resolution_mode", "")).strip()
+    if resolution_mode != "actor_binding_session_binding_missing":
+        raise SystemExit(
+            "session_bound_missing_primary_identity_must_fail: expected actor_binding_session_binding_missing"
+        )
+    reasons = stale_reasons(doc)
+    if not any(str(reason).startswith("session_primary_identity_missing:") for reason in reasons):
+        raise SystemExit(
+            "session_bound_missing_primary_identity_must_fail: expected session_primary_identity_missing stale reason"
+        )
 else:
     raise SystemExit(f"unknown probe: {name}")
 PY
@@ -1270,8 +1289,18 @@ run_probe fixture_identity_runtime_egress_blocked \
   --catalog "${CATALOG_PATH}" \
   --repo-catalog identity/catalog/identities.yaml \
   --actor-id "${ACTOR_ID}" \
-  --session-id "session-gateway-probe-fixture" \
+  --session-id "${SESSION_ID}" \
   --body-text "fixture identity runtime egress blocked probe" \
+  --json-only
+
+run_probe session_bound_missing_primary_identity_must_fail \
+  python3 scripts/final_emit_governed.py \
+  --identity-id "${IDENTITY_ID}" \
+  --catalog "${CATALOG_PATH}" \
+  --repo-catalog identity/catalog/identities.yaml \
+  --actor-id "${ACTOR_ID}" \
+  --session-id "session-gateway-probe-unbound" \
+  --body-text "session bound missing primary identity probe" \
   --json-only
 
 run_probe session_chain_non_json_payload_blocked \

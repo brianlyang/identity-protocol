@@ -675,35 +675,10 @@ def _resolve_identity_id(
             "identity-id is ambiguous under actor multibinding; pass --identity-id or --session-id explicitly "
             f"(actor={actor_id}, bound_identities={sorted(bound_identity_ids)})"
         )
-
-    session_active = (catalog_path.parent / "session" / "active_identity.json").resolve()
-    if session_active.exists():
-        try:
-            active_payload = _load_json(session_active)
-            active_identity_id = str(active_payload.get("identity_id", "")).strip()
-            if active_identity_id:
-                return active_identity_id, "session_active"
-        except Exception:
-            pass
-
-    doc = _load_yaml(catalog_path)
-    rows = [x for x in (doc.get("identities") or []) if isinstance(x, dict)]
-    active_rows = [x for x in rows if str(x.get("status", "")).strip().lower() == "active"]
-    active_ids = [str(x.get("id", "")).strip() for x in active_rows if str(x.get("id", "")).strip()]
-    if len(active_ids) == 1:
-        return active_ids[0], "catalog_single_active"
-
-    default_identity = str(doc.get("default_identity", "")).strip()
-    if default_identity:
-        return default_identity, "catalog_default_identity"
-
-    all_ids = [str(x.get("id", "")).strip() for x in rows if str(x.get("id", "")).strip()]
-    if len(all_ids) == 1:
-        return all_ids[0], "catalog_single_row"
-
     raise RuntimeError(
-        "identity-id is ambiguous under auto mode; pass --identity-id explicitly "
-        f"(active_ids={active_ids}, all_ids={all_ids})"
+        "identity-id is unresolved under strict actor authority; pass --identity-id explicitly "
+        "or establish an actor/session binding before final emit "
+        f"(actor={actor_id}, session_id={session_id or 'missing'})"
     )
 
 
