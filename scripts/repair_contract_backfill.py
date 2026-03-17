@@ -51,8 +51,11 @@ from create_identity_pack import (
     UNIQUE_EGRESS_SCRIPT,
     UNIQUE_INGRESS_SCRIPT,
     _derived_prompt_conformance_contract_skeleton,
+    _default_identity_prompt_markdown,
     _ensure_intake_p1_contracts,
+    _ensure_identity_prompt_governance_kernel,
     _multimodal_plugin_enforcement_contract_skeleton,
+    _provider_bindings_template_text,
     _protocol_lane_activation_headstamp_contract_skeleton,
     _host_gateway_signer_secret_env,
     _host_gateway_wrapper_template_attestation_policy,
@@ -331,6 +334,92 @@ def _safe_load_yaml(path: Path) -> dict[str, Any]:
 
 def _safe_dump_yaml(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
+
+
+def _identity_title_description(
+    *,
+    identity_id: str,
+    task_doc: dict[str, Any],
+    meta_doc: dict[str, Any],
+) -> tuple[str, str]:
+    title = str(meta_doc.get("title", "")).strip()
+    description = str(meta_doc.get("description", "")).strip()
+    if not title:
+        agent = task_doc.get("agent_identity")
+        if isinstance(agent, dict):
+            title = str(agent.get("title", "")).strip()
+            if not description:
+                description = str(agent.get("description", "")).strip()
+    if not title:
+        title = str(identity_id or "").strip()
+    return title, description
+
+
+def _ensure_identity_prompt_runtime_governance(
+    *,
+    pack_path: Path,
+    identity_id: str,
+    title: str,
+    description: str,
+    apply: bool,
+) -> dict[str, Any]:
+    prompt_path = (pack_path / "IDENTITY_PROMPT.md").resolve()
+    prompt_exists_before = prompt_path.exists()
+    if prompt_exists_before:
+        prompt_before = prompt_path.read_text(encoding="utf-8", errors="ignore")
+    else:
+        prompt_before = _default_identity_prompt_markdown(
+            identity_id=identity_id,
+            title=title,
+            description=description,
+        )
+    prompt_after, governance_tokens_inserted, prompt_changed = _ensure_identity_prompt_governance_kernel(
+        prompt_before,
+        identity_id=identity_id,
+        title=title,
+        description=description,
+    )
+    prompt_written = False
+    if apply and (prompt_changed or not prompt_exists_before):
+        prompt_path.parent.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text(prompt_after, encoding="utf-8")
+        prompt_written = True
+    return {
+        "path": str(prompt_path),
+        "existed_before": prompt_exists_before,
+        "changed": bool(prompt_changed or not prompt_exists_before),
+        "applied": prompt_written,
+        "governance_tokens_inserted": governance_tokens_inserted,
+        "prompt_bytes_before": len(prompt_before.encode("utf-8")),
+        "prompt_bytes_after": len(prompt_after.encode("utf-8")),
+    }
+
+
+def _ensure_provider_bindings_template(
+    *,
+    pack_path: Path,
+    repo_root: Path,
+    apply: bool,
+) -> dict[str, Any]:
+    binding_path = (pack_path / "runtime" / "plugins" / "provider-bindings.local.yaml").resolve()
+    binding_exists_before = binding_path.exists()
+    binding_before = ""
+    if binding_exists_before:
+        binding_before = binding_path.read_text(encoding="utf-8", errors="ignore")
+    binding_after = binding_before or _provider_bindings_template_text(repo_root=repo_root)
+    binding_changed = not binding_exists_before or binding_before != binding_after
+    binding_written = False
+    if apply and binding_changed:
+        binding_path.parent.mkdir(parents=True, exist_ok=True)
+        binding_path.write_text(binding_after, encoding="utf-8")
+        binding_written = True
+    return {
+        "path": str(binding_path),
+        "existed_before": binding_exists_before,
+        "changed": binding_changed,
+        "applied": binding_written,
+        "bytes_after": len(binding_after.encode("utf-8")),
+    }
 
 
 def _task_version_snapshot(task_doc: dict[str, Any]) -> dict[str, Any]:
@@ -1090,6 +1179,11 @@ def main() -> int:
     meta_path = (pack_path / "META.yaml").resolve()
     meta_doc = _safe_load_yaml(meta_path)
     meta_before = json.loads(json.dumps(meta_doc)) if isinstance(meta_doc, dict) else {}
+    identity_title, identity_description = _identity_title_description(
+        identity_id=str(args.identity_id or "").strip(),
+        task_doc=task_doc,
+        meta_doc=meta_doc,
+    )
 
     before = json.loads(json.dumps(task_doc))
     response_stamp_profile_present_before = isinstance(before.get("response_stamp_profile"), dict)
@@ -1529,10 +1623,29 @@ def main() -> int:
             host_gateway_wrapper_artifact_changed_paths.append(wrapper_key)
     host_gateway_wrapper_artifacts_refreshed = bool(host_gateway_wrapper_artifact_changed_paths)
 
+    prompt_runtime_governance_result = _ensure_identity_prompt_runtime_governance(
+        pack_path=pack_path,
+        identity_id=str(args.identity_id or "").strip(),
+        title=identity_title,
+        description=identity_description,
+        apply=args.apply,
+    )
+    provider_bindings_template_result = _ensure_provider_bindings_template(
+        pack_path=pack_path,
+        repo_root=repo_root,
+        apply=args.apply,
+    )
+
     task_changed = before != updated
     catalog_changed = catalog_row_version_changed
     meta_changed = meta_version_changed
-    changed = task_changed or catalog_changed or meta_changed
+    changed = (
+        task_changed
+        or catalog_changed
+        or meta_changed
+        or bool(prompt_runtime_governance_result.get("changed"))
+        or bool(provider_bindings_template_result.get("changed"))
+    )
     applied = False
     if args.apply:
         if task_changed:
@@ -1545,6 +1658,10 @@ def main() -> int:
             _safe_dump_yaml(meta_path, meta_doc)
             applied = True
         if host_gateway_wrapper_artifacts_refreshed:
+            applied = True
+        if prompt_runtime_governance_result.get("applied"):
+            applied = True
+        if provider_bindings_template_result.get("applied"):
             applied = True
 
     if missing_after:
@@ -1667,11 +1784,15 @@ def main() -> int:
         "meta_versions_before": meta_versions_before,
         "meta_versions_after": meta_versions_after,
         "meta_path": str(meta_path),
+        "identity_prompt_title": identity_title,
+        "identity_prompt_description": identity_description,
         "host_gateway_wrapper_artifacts_refreshed": host_gateway_wrapper_artifacts_refreshed,
         "host_gateway_wrapper_artifact_changed_paths": host_gateway_wrapper_artifact_changed_paths,
         "host_gateway_wrapper_snapshot_before": host_gateway_wrapper_snapshot_before,
         "host_gateway_wrapper_snapshot_after": host_gateway_wrapper_snapshot_after,
         "host_gateway_artifact_materialization_invoked": host_gateway_artifact_materialization_invoked,
+        "identity_prompt_runtime_governance": prompt_runtime_governance_result,
+        "provider_bindings_template_backfill": provider_bindings_template_result,
         "applied": applied,
         "response_stamp_profile_present_before": response_stamp_profile_present_before,
         "response_stamp_profile_present_after": response_stamp_profile_present_after,
