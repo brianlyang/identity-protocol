@@ -688,14 +688,16 @@ elif name == "session_chain_fresh_run_receipt_seed_replay_pass":
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected zero rc")
     if str(doc.get("protocol_session_chain_wrapper_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED wrapper status")
-    if doc.get("host_visible_receipt_seed_attempted") is not True:
-        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected seed attempt")
-    if int(doc.get("host_visible_receipt_seed_replay_count") or 0) != 1:
-        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected replay count 1")
-    if str(doc.get("host_visible_receipt_seed_gate_status", "")).strip().upper() != "PASS_REQUIRED":
-        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED seed gate status")
-    if str(doc.get("host_visible_receipt_seed_gate_reason", "")).strip() != "seed_eligible":
-        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected seed_eligible reason")
+    if doc.get("host_visible_receipt_seed_attempted") is not False:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected seed attempt skipped on clean first pass")
+    if int(doc.get("host_visible_receipt_seed_replay_count") or 0) != 0:
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected replay count 0 on clean first pass")
+    if str(doc.get("host_visible_receipt_seed_gate_status", "")).strip().upper() != "SKIPPED_NOT_REQUIRED":
+        raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected SKIPPED_NOT_REQUIRED seed gate status")
+    if str(doc.get("host_visible_receipt_seed_gate_reason", "")).strip() != "initial_egress_pass_required":
+        raise SystemExit(
+            "session_chain_fresh_run_receipt_seed_replay_pass: expected initial_egress_pass_required reason"
+        )
     if str(doc.get("host_visible_surface_live_receipt_status", "")).strip().upper() != "PASS_REQUIRED":
         raise SystemExit("session_chain_fresh_run_receipt_seed_replay_pass: expected PASS_REQUIRED live receipt status")
     if str(doc.get("reply_transport_binding_status", "")).strip().upper() != "PASS_REQUIRED":
