@@ -608,20 +608,6 @@ def _release_plane_status(args: argparse.Namespace) -> tuple[str, dict[str, Any]
         if isinstance(raw, list):
             checks = [x for x in raw if isinstance(x, dict)]
 
-    if not args.required_gates_run_id:
-        detail = {
-            "conditions": {
-                "target_branch_explicit": bool(args.target_branch),
-                "release_head_sha_explicit": bool(args.release_head_sha),
-                "required_gates_run_id_accessible": False,
-                "run_head_matches_release_head": False,
-                "required_checks_all_success": False,
-                "workflow_file_sha_matches": False,
-            },
-            "required_checks_set": checks,
-        }
-        return "NOT_STARTED", detail
-
     cond = {
         "target_branch_explicit": bool(args.target_branch),
         "release_head_sha_explicit": bool(args.release_head_sha),
@@ -630,6 +616,19 @@ def _release_plane_status(args: argparse.Namespace) -> tuple[str, dict[str, Any]
         "required_checks_all_success": bool(checks) and all(str(x.get("status", "")).lower() == "success" for x in checks),
         "workflow_file_sha_matches": args.run_workflow_file_sha == args.workflow_file_sha and bool(args.workflow_file_sha),
     }
+    has_release_baseline = any(
+        (
+            bool(args.target_branch),
+            bool(args.release_head_sha),
+            bool(args.workflow_file_sha),
+            bool(args.run_head_sha),
+            bool(args.run_workflow_file_sha),
+            bool(args.run_url),
+            bool(args.checks_json),
+        )
+    )
+    if not args.required_gates_run_id:
+        return ("BLOCKED" if has_release_baseline else "NOT_STARTED"), {"conditions": cond, "required_checks_set": checks}
     return ("CLOSED" if all(cond.values()) else "BLOCKED"), {"conditions": cond, "required_checks_set": checks}
 
 
@@ -4765,6 +4764,12 @@ def main() -> int:
         args.target_branch = _git_current_branch()
     if not args.release_head_sha:
         args.release_head_sha = _git_head_sha()
+    if not args.workflow_file_sha:
+        args.workflow_file_sha = args.release_head_sha
+    if not args.run_head_sha:
+        args.run_head_sha = args.release_head_sha
+    if not args.run_workflow_file_sha:
+        args.run_workflow_file_sha = args.workflow_file_sha
 
     preferred_pack = str(resolved.get("resolved_pack_path") or resolved.get("pack_path") or "")
     report_path = Path(args.execution_report).expanduser().resolve() if args.execution_report else _latest_report(
