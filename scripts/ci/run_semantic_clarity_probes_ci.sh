@@ -453,6 +453,7 @@ import json,sys
 obj=json.load(open(sys.argv[1]))
 assert obj.get("error_code") == "IP-HDSTAMP-CONSUMER-001", obj
 reasons=set(obj.get("stale_reasons") or [])
+assert "authority_consumer_registry_coverage_missing" in reasons, obj
 assert "stamp_context_session_passthrough_missing" in reasons, obj
 assert "host_fallback_actor_resolver_forbidden" in reasons, obj
 assert "compatibility_pointer_literal_forbidden" in reasons, obj
