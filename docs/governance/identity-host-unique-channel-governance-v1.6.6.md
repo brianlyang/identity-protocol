@@ -1582,3 +1582,27 @@ Interpretation lock:
 1. declaration/render/wiring ownership remains with `v1.6.1`.
 2. truth/consistency/admission/remediation ownership remains with `v1.6.6`.
 3. no future wording may collapse `display_headstamp`, runtime render output, `machine_headstamp`, and `headstamp_admission_receipt` into one undifferentiated "headstamp present" concept.
+
+### 5.28 clean-pass seed replay probe semantics alignment (2026-03-17)
+
+Problem:
+
+1. `dcf2530` closed the display-admission / seed-replay loop so a clean first-pass egress no longer needs a synthetic seed replay.
+2. the trust-boundary CI probe still expected seed replay on a fresh clean pass and therefore drifted from runtime behavior.
+
+Mandatory behavior:
+
+1. on a clean first-pass session-chain egress:
+   - `host_visible_receipt_seed_attempted = false`
+   - `host_visible_receipt_seed_replay_count = 0`
+   - `host_visible_receipt_seed_gate_status = SKIPPED_NOT_REQUIRED`
+   - `host_visible_receipt_seed_gate_reason = initial_egress_pass_required`
+2. seed replay remains required only when initial egress fails and the payload is seed-eligible.
+3. trust-boundary CI must encode both cases explicitly:
+   - clean-pass skip
+   - hard-prereq seed block
+
+Interpretation lock:
+
+1. “seed replay available” does not mean “seed replay always mandatory”.
+2. `v1.6.6` owns the admission rule and the probe wording must follow the runtime contract, not the older expectation.

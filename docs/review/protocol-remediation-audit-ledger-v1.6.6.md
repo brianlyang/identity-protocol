@@ -2961,3 +2961,43 @@ Checkpoint verdict:
 1. display declaration lineage is now frozen from declaration surface to runtime render surface.
 2. strict human-visible next hop is now explicitly an AND rule, not a text-presence heuristic.
 3. `manual_headstamp` is now pinned as render-origin shorthand only, while truth and admission stay with machine-controlled receipt fields.
+
+### 26.45 v1.6.6 trust-boundary probe alignment for clean-pass seed semantics (2026-03-17)
+
+Problem:
+
+1. `dcf2530` changed the runtime so clean first-pass session-chain egress skips seed replay.
+2. the trust-boundary probe still asserted the older “fresh clean pass must seed once” behavior and failed even when the runtime contract was correct.
+
+Fix frozen:
+
+1. `scripts/ci/run_gateway_wrapper_trust_boundary_probes_ci.sh`
+   - fresh clean-pass probe now expects:
+     - `host_visible_receipt_seed_attempted = false`
+     - `host_visible_receipt_seed_replay_count = 0`
+     - `host_visible_receipt_seed_gate_status = SKIPPED_NOT_REQUIRED`
+     - `host_visible_receipt_seed_gate_reason = initial_egress_pass_required`
+2. fixture runtime-egress probe now uses a bound session so it still verifies:
+   - authoritative runtime identity remains `probe-gateway`
+   - selected fixture identity is blocked as non-runtime-eligible
+3. added explicit negative probe:
+   - `session_bound_missing_primary_identity_must_fail`
+   - verifies `identity_authority_resolution_mode = actor_binding_session_binding_missing`
+
+Replay evidence:
+
+1. gateway trust-boundary suite:
+   - manifest: `/private/var/folders/3x/xy0h9s6x5p790dzwwrdzq3kh0000gn/T/identity-gateway-boundary-probes/manifest.gateway_wrapper_trust_boundary.json`
+   - verdict:
+     - suite exits `0`
+     - `count = 20`
+     - includes:
+       - `fixture_identity_runtime_egress_blocked`
+       - `session_bound_missing_primary_identity_must_fail`
+       - `session_chain_fresh_run_receipt_seed_replay_pass`
+
+Checkpoint verdict:
+
+1. probe wording is now aligned with the live admission contract.
+2. clean first-pass egress no longer produces false CI red due to obsolete seed expectations.
+3. missing session-primary binding is now explicitly locked as a trust-boundary failure mode.
