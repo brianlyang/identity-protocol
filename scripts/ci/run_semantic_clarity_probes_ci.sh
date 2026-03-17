@@ -15,19 +15,22 @@ python3 scripts/validate_semantic_term_registry.py --json-only > "$TMP_ROOT/sema
 python3 scripts/validate_cli_catalog_default_semantics.py --json-only > "$TMP_ROOT/cli_catalog_positive.json"
 python3 scripts/validate_stream_scope_semantic_integrity.py --base HEAD --head HEAD --json-only > "$TMP_ROOT/stream_scope_positive.json"
 python3 scripts/validate_runtime_file_boundary_governance.py --json-only > "$TMP_ROOT/runtime_boundary_positive.json"
+python3 scripts/validate_strict_actor_entry_semantics.py --json-only > "$TMP_ROOT/strict_actor_entry_positive.json"
 python3 scripts/validate_response_authority_consumer_semantics.py --json-only > "$TMP_ROOT/authority_consumer_positive.json"
 
-python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/authority_consumer_positive.json" <<'PY'
+python3 - "$TMP_ROOT/semantic_term_positive.json" "$TMP_ROOT/cli_catalog_positive.json" "$TMP_ROOT/stream_scope_positive.json" "$TMP_ROOT/runtime_boundary_positive.json" "$TMP_ROOT/strict_actor_entry_positive.json" "$TMP_ROOT/authority_consumer_positive.json" <<'PY'
 import json,sys
 semantic=json.load(open(sys.argv[1]))
 cli=json.load(open(sys.argv[2]))
 stream=json.load(open(sys.argv[3]))
 boundary=json.load(open(sys.argv[4]))
-authority=json.load(open(sys.argv[5]))
+strict_actor=json.load(open(sys.argv[5]))
+authority=json.load(open(sys.argv[6]))
 assert semantic.get("semantic_term_registry_status") == "PASS_REQUIRED", semantic
 assert cli.get("cli_catalog_default_semantics_status") == "PASS_REQUIRED", cli
 assert stream.get("stream_scope_semantic_integrity_status") == "SKIPPED_NOT_REQUIRED", stream
 assert boundary.get("runtime_file_boundary_governance_status") == "PASS_REQUIRED", boundary
+assert strict_actor.get("strict_actor_entry_semantics_status") == "PASS_REQUIRED", strict_actor
 assert authority.get("response_authority_consumer_semantics_status") == "PASS_REQUIRED", authority
 print("[PASS] positive semantic clarity lane")
 PY
@@ -458,6 +461,42 @@ assert "stamp_context_session_passthrough_missing" in reasons, obj
 assert "host_fallback_actor_resolver_forbidden" in reasons, obj
 assert "compatibility_pointer_literal_forbidden" in reasons, obj
 print("[PASS] negative authority consumer drift probe blocked")
+PY
+
+echo "[info] semantic clarity probes: negative lane (strict actor entry fallback)"
+mkdir -p "$TMP_ROOT/neg-strict-actor/scripts"
+cat > "$TMP_ROOT/neg-strict-actor/scripts/bad_strict_actor_entry.py" <<'PY'
+import argparse
+import os
+from actor_session_common import resolve_actor_id
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--actor-id", default=os.environ.get("CODEX_ACTOR_ID", "assistant:codex"))
+
+def run():
+    actor = resolve_actor_id("")
+    cmd = ["python3", "scripts/render_identity_response_stamp.py", "--actor-id", actor]
+    return cmd
+PY
+set +e
+python3 scripts/validate_strict_actor_entry_semantics.py \
+  --repo-root "$TMP_ROOT/neg-strict-actor" \
+  --scripts-root scripts \
+  --json-only > "$TMP_ROOT/strict_actor_entry_negative.json"
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]]; then
+  echo "[FAIL] expected strict actor entry fallback probe to fail"
+  exit 1
+fi
+python3 - "$TMP_ROOT/strict_actor_entry_negative.json" <<'PY'
+import json,sys
+obj=json.load(open(sys.argv[1]))
+assert obj.get("error_code") == "IP-ACTOR-ENTRY-SEM-001", obj
+reasons=set(obj.get("stale_reasons") or [])
+assert "strict_actor_default_literal_forbidden" in reasons, obj
+assert "strict_actor_entry_gate_missing" in reasons, obj
+print("[PASS] negative strict actor entry fallback blocked")
 PY
 
 echo "[info] semantic clarity probes: negative lane (stream scope matrix alias fail-close)"
