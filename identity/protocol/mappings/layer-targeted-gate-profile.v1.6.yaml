@@ -32,6 +32,43 @@ profiles:
           - asb16-rq-018
           - asb16-rq-019
 
+  three_plane_core:
+    mode: targeted
+    allowed_operations:
+      - three-plane
+      - scan
+    require_work_layers:
+      - protocol
+      - instance
+    requirement_keys:
+      - asb16-rq-001
+      - asb16-rq-002
+      - asb16-rq-007
+      - asb16-rq-008
+      - asb16-rq-009
+      - asb16-rq-010
+      - asb16-rq-011
+      - asb16-rq-014
+      - asb16-rq-015
+      - asb16-rq-023
+      - asb16-rq-024
+      - asb16-rq-025
+      - asb16-rq-026
+      - asb16-rq-027
+      - asb16-rq-028
+      - asb16-rq-031
+      - asb16-rq-032
+      - asb16-rq-020
+      - asb16-rq-033
+      - asb16-rq-034
+      - asb16-rq-035
+      - asb16-rq-036
+      - asb16-rq-037
+      - asb16-rq-038
+      - asb16-rq-039
+      - asb16-rq-040
+      - asb16-rq-041
+
   inspection_targeted:
     mode: targeted
     allowed_operations:
