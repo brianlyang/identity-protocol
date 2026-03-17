@@ -481,3 +481,19 @@ deepening base for v1.6.1 headstamp semantics.
    - `authoritative_identity_id`
 3. This explanatory envelope is display-only and MUST NOT be consumed as governed proof, native attestation, or next-hop admission pass by itself.
 4. Governed proof remains with controlled-runtime artifacts and the v1.6.6 admission chain; the shared operator envelope only standardizes the visible/operator-readable outer shape.
+
+### 15.8 Host-native chat panel non-blocking exclusion freeze (2026-03-17)
+
+1. A host-owned native chat panel with no developer-wirable native attestation path MUST NOT remain a v1.6.1 / v1.6.6 closure blocker.
+2. When such a surface emits the shared explanatory operator envelope, the machine segment MUST freeze the following tuple:
+   - `verification_source = not_claimed`
+   - `surface_class = host_native_chat_panel`
+   - `native_attestation_wiring_capability = unavailable`
+   - `closure_blocker_scope = EXCLUDED_NON_BLOCKING`
+   - `current_chat_surface_native_machine_attested = false`
+   - `next_hop_admission_status = FAIL_REQUIRED`
+3. `EXCLUDED_NON_BLOCKING` is not a synthetic pass:
+   - identity consistency fields remain mandatory,
+   - controlled-runtime governed proof remains authoritative,
+   - the host-native panel stays explanatory-only.
+4. Aggregators MAY exclude this surface from blocker sets only when the tuple in clause 2 is present; otherwise the surface remains an ordinary non-claim explanatory envelope and receives no automatic exclusion.
