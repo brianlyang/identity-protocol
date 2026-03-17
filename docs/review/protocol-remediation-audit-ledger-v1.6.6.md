@@ -3195,3 +3195,40 @@ Checkpoint verdict:
    - instance-plane closure authority
    - release-plane evidence-state semantics
 2. future drift is more likely to fail fast in CI instead of leaking back into three-plane observability.
+
+### 26.52 release-plane checks evidence accessibility / verdict split (2026-03-17)
+
+Problem:
+
+1. after `6647b6a`, release plane was correctly `BLOCKED`, but `required_checks_all_success = false` still covered two materially different situations:
+   - no checks evidence was supplied
+   - checks evidence was supplied and failed
+2. that made the local three-plane output less actionable than it should be for release follow-up.
+
+Fix frozen:
+
+1. `scripts/report_three_plane_status.py`
+   - now projects:
+     - `required_checks_evidence_accessible`
+     - `required_checks_set_present`
+     - `required_checks_status`
+2. for the current local release gap, three-plane now reports:
+   - `required_checks_evidence_accessible = false`
+   - `required_checks_set_present = false`
+   - `required_checks_status = EVIDENCE_MISSING`
+   - instead of only a bare `required_checks_all_success = false`
+
+Replay evidence:
+
+1. `python3 scripts/report_three_plane_status.py ... --out /tmp/three_plane_after_release_checks_split.json`
+2. release-plane detail now shows:
+   - `required_gates_run_id_present = false`
+   - `run_url_present = false`
+   - `required_checks_evidence_accessible = false`
+   - `required_checks_set_present = false`
+   - `required_checks_status = EVIDENCE_MISSING`
+
+Checkpoint verdict:
+
+1. release-plane observability now separates “evidence missing” from “checks failed”.
+2. the next release-plane work can target evidence accessibility first, then checks verdicts, without re-litigating aggregation semantics.
