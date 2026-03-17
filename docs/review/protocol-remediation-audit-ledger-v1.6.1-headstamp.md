@@ -304,3 +304,20 @@ Observed after fix:
      - `display_headstamp_identity_id`
      - `authoritative_identity_id`
 3. This keeps the visible template unified without conflating chat-surface display with controlled-runtime admission evidence.
+
+### 13.6 Host-native chat panel exclusion tuple freeze (2026-03-17)
+
+1. This round freezes the host-owned chat-panel boundary as a machine-readable exclusion tuple instead of leaving it as recurring verbal clarification.
+2. Landed anchors:
+   - `scripts/response_stamp_common.py`
+     - shared field order now reserves stable positions for `surface_class`, `native_attestation_wiring_capability`, `closure_blocker_scope`, and `current_chat_surface_native_machine_attested`.
+   - `identity/protocol/plugins/templates/response-stamp.operator_dual_segment_v1.json`
+     - template order mirrors the same explanatory-surface tuple.
+   - `scripts/validate_response_stamp_operator_envelope.py`
+     - now validates `closure_blocker_scope = EXCLUDED_NON_BLOCKING` only when the envelope also proves `verification_source = not_claimed`, `surface_class = host_native_chat_panel`, `native_attestation_wiring_capability = unavailable`, `current_chat_surface_native_machine_attested = false`, and `next_hop_admission_status = FAIL_REQUIRED`.
+   - `scripts/ci/run_semantic_clarity_probes_ci.sh`
+     - adds a probe that replays the full tuple and requires `explanatory_surface_exclusion_status = PASS_REQUIRED`.
+3. Effect:
+   - host-native official chat panels can keep the standardized two-line envelope,
+   - the envelope remains explanatory-only,
+   - aggregator consumers now have a frozen machine tuple they can use to exclude this surface from blocker sets without inventing a synthetic pass.
