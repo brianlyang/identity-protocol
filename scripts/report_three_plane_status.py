@@ -663,6 +663,27 @@ def _repo_plane_status(args: argparse.Namespace, resolved: dict[str, Any]) -> tu
     return status, checks
 
 
+def _instance_execution_closed(
+    *,
+    mandatory: bool,
+    validators_all_ok: bool,
+    capability_status: str,
+    all_ok: bool,
+    writeback_status: str,
+    permission_state: str,
+    post_execution_mandatory_status: str,
+) -> bool:
+    if not (mandatory and validators_all_ok):
+        return False
+    if capability_status not in {"ACTIVATED", "NOT_REQUIRED"}:
+        return False
+    # The post-execution validator is the closure contract authority for strict runs,
+    # including the non-upgrade path where writeback stays NOT_REQUIRED by design.
+    if post_execution_mandatory_status == "PASS_REQUIRED":
+        return True
+    return all_ok and writeback_status == "WRITTEN" and permission_state == "WRITEBACK_WRITTEN"
+
+
 def _instance_plane_status(
     args: argparse.Namespace,
     report_path: Path | None,
@@ -4600,8 +4621,15 @@ def _instance_plane_status(
     }
 
     validators_all_ok = all(v.get("ok", False) for v in validators.values())
-    capability_strict_ok = cap_status in {"ACTIVATED", "NOT_REQUIRED"}
-    if all_ok and wb == "WRITTEN" and ps == "WRITEBACK_WRITTEN" and mandatory and validators_all_ok and capability_strict_ok:
+    if _instance_execution_closed(
+        mandatory=mandatory,
+        validators_all_ok=validators_all_ok,
+        capability_status=cap_status,
+        all_ok=all_ok,
+        writeback_status=wb,
+        permission_state=ps,
+        post_execution_mandatory_status=post_exec_status,
+    ):
         return "CLOSED", detail
     if hard_boundary:
         return "BLOCKED", detail
