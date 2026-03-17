@@ -217,6 +217,9 @@ v1.6.10 is implementation-grade only if every clause above is bound to landed ma
 6. response/headstamp authority-consumer drift must fail-close through:
    - `scripts/validate_response_authority_consumer_semantics.py`
    - negative probe: missing `session_id` passthrough / `resolve_actor_id()` host fallback / compatibility-pointer literal reuse.
+   - any script that calls `resolve_stamp_context()` or `validate_runtime_egress_identity_authority()` must either
+     live in the validator default scan set or declare `AUTHORITY_CONSUMER_EXEMPT = True`; unregistered consumers
+     fail-close before they become silent authority side doors.
 
 ## 10) References
 

@@ -169,6 +169,8 @@ Interpretation contract:
      compatibility-pointer literals as authority hints.
    - default scan set now includes `scripts/final_emit_governed.py`, so final single-entry egress stays under the
      same authority-consumer drift guard as render/compose/first-line validators.
+   - authority-provider / validator helper modules now declare `AUTHORITY_CONSUMER_EXEMPT = True`, and the validator
+     fail-closes any newly discovered authority consumer that is neither registered nor explicitly exempt.
 
 ### 10.3 Replay evidence
 
@@ -178,7 +180,7 @@ Interpretation contract:
    - no actor context + compatibility pointer only => render path fail-closes instead of adopting pointer authority
    - env actor + bound session => render path restores headstamp output deterministically
    - negative authority-consumer drift probe => static validator blocks missing session passthrough, host fallback
-     resolver reuse, and compatibility-pointer literal reuse
+     resolver reuse, compatibility-pointer literal reuse, and unregistered authority-consumer surfaces
 2. live runtime replay:
    - `/tmp/actor_session_authority_residue_apply_20260317.json`
    - `/tmp/actor_session_authority_residue_scan_20260317.json`
