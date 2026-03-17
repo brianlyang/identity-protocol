@@ -171,6 +171,14 @@ def main() -> int:
         ]
         _emit(payload, json_only=args.json_only)
         return 0
+    if args.operation in {"update", "validate"} and not payload["requiredization_current_round_linked"]:
+        payload["stale_reasons"] = [
+            "required_contract_not_applicable_current_round_unmaterialized"
+            if requested_run_id
+            else "required_contract_not_applicable_no_current_round_evidence_source"
+        ]
+        _emit(payload, json_only=args.json_only)
+        return 0
 
     send_time_gate_status = str(report_doc.get("send_time_gate_status", "")).strip().upper()
     governed_outlet = bool(report_doc.get("governed_outlet_enforced", False))
