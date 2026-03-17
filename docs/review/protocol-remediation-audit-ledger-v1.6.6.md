@@ -3159,3 +3159,39 @@ Checkpoint verdict:
 
 1. three-plane no longer hides release evidence gaps behind a partially-initialized `NOT_STARTED` state.
 2. remaining non-closure is now explicitly the cloud release evidence gap, not release-plane baseline drift.
+
+### 26.51 anti-forget guard for release-plane baseline-known / evidence-missing semantics (2026-03-17)
+
+Problem:
+
+1. `6647b6a` corrected the runtime aggregation semantics, but that release-plane distinction could still drift later:
+   - baseline known + cloud evidence missing => `BLOCKED`
+   - not `NOT_STARTED`
+2. without an explicit probe, future changes could silently collapse the distinction back into the older ambiguous state.
+
+Fix frozen:
+
+1. `scripts/ci/run_required_runtime_gates_ci.sh`
+   - now reuses the generated three-plane report and asserts:
+     - `release_plane_status = BLOCKED`
+     - `run_head_matches_release_head = true`
+     - `workflow_file_sha_matches = true`
+     - `required_gates_run_id_accessible = false`
+     - `required_checks_all_success = false`
+2. the same CI segment already guards strict non-upgrade instance closure, so acceptance now has paired anti-forget rails:
+   - instance-plane non-upgrade closure
+   - release-plane baseline/evidence separation
+
+Replay evidence:
+
+1. `bash -n scripts/ci/run_required_runtime_gates_ci.sh`
+2. replay assertion output:
+   - `instance_closure_assertion=PASS`
+   - `release_baseline_assertion=PASS`
+
+Checkpoint verdict:
+
+1. acceptance now protects both sides of the aggregation boundary:
+   - instance-plane closure authority
+   - release-plane evidence-state semantics
+2. future drift is more likely to fail fast in CI instead of leaking back into three-plane observability.
