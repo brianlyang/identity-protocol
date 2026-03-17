@@ -1693,3 +1693,32 @@ Interpretation lock:
 
 1. this is an acceptance aggregation alignment, not a relaxation of writeback continuity or send-time governance.
 2. remaining `Conditional Go` after this alignment must come from repo-plane / release-plane conditions or genuine validator failures, not stale duplicated instance-plane closure logic.
+
+### 5.32 release-plane baseline normalization for three-plane aggregation (2026-03-17)
+
+Problem:
+
+1. `report_three_plane_status.py` defaulted `target_branch` and `release_head_sha`, but left the release-plane comparison tuple partially unset:
+   - `workflow_file_sha`
+   - `run_head_sha`
+   - `run_workflow_file_sha`
+2. as a result, local three-plane aggregation could report release plane as an undifferentiated `NOT_STARTED` with four false conditions, even though:
+   - branch/head baseline was already known
+   - the real missing inputs were the cloud run binding and required-check result set
+
+Mandatory behavior:
+
+1. three-plane aggregation MUST normalize the release-plane comparison baseline exactly as release-readiness does:
+   - `workflow_file_sha := release_head_sha` when omitted
+   - `run_head_sha := release_head_sha` when omitted
+   - `run_workflow_file_sha := workflow_file_sha` when omitted
+2. once that baseline exists, missing release cloud evidence must be expressed as release-plane `BLOCKED`, not a generic `NOT_STARTED`.
+3. in that state, the condition matrix must isolate the true unresolved items:
+   - `required_gates_run_id_accessible = false`
+   - `required_checks_all_success = false`
+   while head/sha parity remains machine-visible as pass.
+
+Interpretation lock:
+
+1. this does not close release plane without cloud evidence.
+2. it removes release-plane observability drift so `Conditional Go` points at the real missing release evidence instead of a stale partially-initialized baseline.
