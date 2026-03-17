@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **acceptance closure hardening for update review-required flow**:
+  - tightened `scripts/execute_identity_upgrade.py` post-check execution so
+    strict validators receive repo/actor/session/run tuple context explicitly,
+    and `required_gate_bundle_runner.py` is executed through the canonical
+    gateway wrapper path instead of raw subprocess calls.
+  - extended `scripts/repair_contract_backfill.py` to backfill canonical
+    acceptance self-test assets into existing runtime packs:
+    - experience-feedback rulebooks now converge to the shared contract schema
+    - handoff positive/negative fixture samples are restored when missing
+  - updated `scripts/create_identity_pack.py` neutral scaffolding to emit the
+    same canonical self-test assets at creation time, removing the need for
+    later repair-only convergence on fresh packs.
+
 - **v1.6.5 dual-layer governance/review stream bootstrap**:
   - added canonical governance/review stream docs for GitHub rulesets +
     super-linter dual-layer hardening:
