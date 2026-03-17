@@ -137,10 +137,11 @@ def main() -> int:
         _emit(payload, json_only=args.json_only)
         return 0
 
+    cloud_evidence_present = bool(run_url or checks_json)
     linked = bool(target_branch and release_head_sha and required_gates_run_id and run_url and workflow_file_sha and run_head_sha and run_workflow_file_sha)
     payload["requiredization_current_round_linked"] = linked
     if not linked:
-        if args.operation in {"scan", "three-plane", "inspection"}:
+        if (not cloud_evidence_present) and args.operation in {"update", "validate", "scan", "three-plane", "inspection"}:
             payload["stale_reasons"] = ["required_contract_not_applicable_missing_release_evidence"]
             _emit(payload, json_only=args.json_only)
             return 0
