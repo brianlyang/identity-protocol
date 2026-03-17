@@ -32,6 +32,7 @@ class StampContext:
     pack_ref: str
 
 
+AUTHORITY_CONSUMER_EXEMPT = True  # Provider module; not a direct authority-consuming surface.
 ALLOWED_DISCLOSURE_LEVELS = {"minimal", "standard", "verbose", "audit"}
 DEFAULT_DISCLOSURE_LEVEL = "standard"
 ALLOWED_RESPONSE_STAMP_FORMATS = {"header_line", "structured_block", "mail_header"}
