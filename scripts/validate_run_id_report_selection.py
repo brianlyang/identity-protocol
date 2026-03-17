@@ -174,6 +174,15 @@ def main() -> int:
                 payload["stale_reasons"] = ["required_contract_not_applicable_no_current_round_evidence_source"]
                 _emit(payload, json_only=args.json_only)
                 return 0
+        if (
+            args.operation in {"update", "validate"}
+            and selection_strategy == "run_id_not_found"
+            and run_id
+            and not explicit_report
+        ):
+            payload["stale_reasons"] = ["required_contract_not_applicable_current_round_unmaterialized"]
+            _emit(payload, json_only=args.json_only)
+            return 0
         if selection_strategy in {"no_reports"} and args.operation in INSPECTION_OPERATIONS:
             payload["stale_reasons"] = ["required_contract_not_applicable_no_reports"]
             _emit(payload, json_only=args.json_only)
